@@ -6,10 +6,23 @@
 	let { message }: { message: ChatMessage } = $props();
 	let html = $state('');
 
+	// Streaming fires this effect many times per second; renderMarkdown() is async
+	// (waits on shiki's one-time highlighter load), so calls can resolve out of
+	// order. Only ever apply the result of the most recently *started* call.
+	let latestCall = 0;
 	$effect(() => {
-		renderMarkdown(message.content).then((rendered) => {
-			html = rendered;
-		});
+		const content = message.content;
+		const callId = ++latestCall;
+		renderMarkdown(content)
+			.then((rendered) => {
+				if (callId === latestCall) html = rendered;
+			})
+			.catch((err) => {
+				if (callId === latestCall) {
+					console.error('renderMarkdown failed', err);
+					html = content;
+				}
+			});
 	});
 </script>
 
