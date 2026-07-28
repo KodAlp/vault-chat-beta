@@ -8,6 +8,7 @@
 	let messages = $state<ChatMessage[]>([]);
 	let input = $state('');
 	let model = $state('qwen3:8b');
+	let thinkMode = $state(false);
 	let isStreaming = $state(false);
 	let errorMessage = $state('');
 	let listEl: HTMLDivElement | undefined;
@@ -28,18 +29,32 @@
 		scrollToBottom();
 
 		isStreaming = true;
-		let raw = '';
-		let flushed = '';
+		let rawContent = '';
+		let flushedContent = '';
+		let rawThinking = '';
+		let flushedThinking = '';
 		const flush = () => {
-			if (raw === flushed) return;
-			flushed = raw;
-			assistantMessage.content = raw;
-			scrollToBottom();
+			let changed = false;
+			if (rawContent !== flushedContent) {
+				flushedContent = rawContent;
+				assistantMessage.content = rawContent;
+				changed = true;
+			}
+			if (rawThinking !== flushedThinking) {
+				flushedThinking = rawThinking;
+				assistantMessage.thinking = rawThinking;
+				changed = true;
+			}
+			if (changed) scrollToBottom();
 		};
 		const timer = setInterval(flush, FLUSH_INTERVAL_MS);
 
 		try {
-			const requestBody: ChatRequestBody = { messages: messages.slice(0, -1), model };
+			const requestBody: ChatRequestBody = {
+				messages: messages.slice(0, -1),
+				model,
+				think: thinkMode
+			};
 			const res = await fetch('/api/chat', {
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
@@ -60,7 +75,8 @@
 					const line = part.trim();
 					if (!line.startsWith('data:')) continue;
 					const event = JSON.parse(line.slice(5)) as StreamEvent;
-					if (event.type === 'delta') raw += event.content;
+					if (event.type === 'delta') rawContent += event.content;
+					else if (event.type === 'thinking') rawThinking += event.content;
 					else if (event.type === 'done') assistantMessage.sources = event.sources;
 					else if (event.type === 'error') errorMessage = event.message;
 				}
@@ -85,7 +101,13 @@
 <div class="chat">
 	<header>
 		<h1>Vault Chat</h1>
-		<ModelPicker bind:model />
+		<div class="header-controls">
+			<label class="think-toggle" title="Açıkken model önce akıl yürütür (yavaş ama daha derin), süreç sohbette görünür. Kapalıyken hızlı cevap verir.">
+				<input type="checkbox" bind:checked={thinkMode} />
+				Derin düşün
+			</label>
+			<ModelPicker bind:model />
+		</div>
 	</header>
 
 	<div class="messages" bind:this={listEl}>
@@ -134,6 +156,22 @@
 	header h1 {
 		font-size: 1.05rem;
 		margin: 0;
+	}
+
+	.header-controls {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+	}
+
+	.think-toggle {
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
+		font-size: 0.85rem;
+		color: var(--muted);
+		cursor: pointer;
+		user-select: none;
 	}
 
 	.messages {

@@ -23,8 +23,12 @@ export const POST: RequestHandler = async ({ request }) => {
 					: [];
 				const promptMessages = buildPromptMessages(body.messages, sources);
 
-				for await (const delta of streamChat(body.model, promptMessages)) {
-					send({ type: 'delta', content: delta });
+				for await (const piece of streamChat(body.model, promptMessages, body.think ?? false)) {
+					send(
+						piece.kind === 'thinking'
+							? { type: 'thinking', content: piece.text }
+							: { type: 'delta', content: piece.text }
+					);
 				}
 				send({ type: 'done', sources });
 			} catch (err) {

@@ -18,6 +18,7 @@ export type ChatRole = 'user' | 'assistant';
 export interface ChatMessage {
 	role: ChatRole;
 	content: string;
+	thinking?: string;
 	sources?: RetrievedChunk[];
 }
 
@@ -25,6 +26,7 @@ export interface ChatRequestBody {
 	messages: ChatMessage[];
 	model: string;
 	domains?: string[];
+	think?: boolean;
 }
 
 export interface OllamaModel {
@@ -36,5 +38,6 @@ export interface OllamaModel {
 /** SSE event shapes streamed by POST /api/chat. */
 export type StreamEvent =
 	| { type: 'delta'; content: string }
+	| { type: 'thinking'; content: string }
 	| { type: 'done'; sources: RetrievedChunk[] }
 	| { type: 'error'; message: string };

@@ -14,6 +14,12 @@
 </script>
 
 <div class="message {message.role}">
+	{#if message.role === 'assistant' && message.thinking}
+		<details class="thinking" open>
+			<summary>Düşünme süreci</summary>
+			<pre>{message.thinking}</pre>
+		</details>
+	{/if}
 	<div class="bubble">
 		{@html html}
 	</div>
@@ -58,5 +64,25 @@
 
 	.bubble :global(p:last-child) {
 		margin-bottom: 0;
+	}
+
+	.thinking {
+		max-width: 70ch;
+		margin-bottom: 0.4rem;
+		font-size: 0.8rem;
+		color: var(--muted);
+	}
+
+	.thinking summary {
+		cursor: pointer;
+	}
+
+	.thinking pre {
+		max-height: 12rem;
+		overflow-y: auto;
+		white-space: pre-wrap;
+		background: none;
+		padding: 0.4rem 0 0 0.5rem;
+		font-family: var(--font-sans);
 	}
 </style>
