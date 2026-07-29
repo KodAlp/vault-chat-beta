@@ -58,9 +58,18 @@
 
 	.bubble {
 		max-width: 70ch;
+		min-width: 0;
 		padding: 0.6rem 0.9rem;
 		border-radius: 10px;
 		line-height: 1.55;
+		/* KaTeX doesn't line-wrap (long sums, matrices, wide fractions) — contain
+		   it with a horizontal scrollbar instead of letting it break out past
+		   the bubble/chat column. */
+		overflow-x: auto;
+	}
+
+	.bubble :global(.katex-display) {
+		margin: 0.5rem 0;
 	}
 
 	.user .bubble {

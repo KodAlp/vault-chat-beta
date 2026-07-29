@@ -65,3 +65,42 @@ pre {
 a {
 	color: var(--accent);
 }
+
+/* shiki's dual-theme output bakes the light theme in as plain inline
+   color/background-color and stashes the dark values in --shiki-dark(-bg)
+   custom properties on the same elements — without this override every
+   code block stays light-themed regardless of the app's actual theme.
+   Overriding inline styles from a stylesheet requires !important; this is
+   shiki's own documented pattern for CSS-variable dual themes. */
+@media (prefers-color-scheme: dark) {
+	.shiki,
+	.shiki span {
+		color: var(--shiki-dark) !important;
+		background-color: var(--shiki-dark-bg) !important;
+	}
+}
+
+/* Scrollbars default to the OS/browser theme (usually light), which clashes
+   with the app's dark mode. Match them to the app's own palette everywhere. */
+* {
+	scrollbar-color: var(--border) var(--bg);
+	scrollbar-width: thin;
+}
+
+::-webkit-scrollbar {
+	width: 10px;
+	height: 10px;
+}
+
+::-webkit-scrollbar-track {
+	background: var(--bg);
+}
+
+::-webkit-scrollbar-thumb {
+	background: var(--border);
+	border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+	background: var(--muted);
+}
