@@ -1,23 +1,24 @@
 <script lang="ts">
 	import type { ChatMessage, ChatRequestBody, StreamEvent } from '$lib/types';
 	import Message from './Message.svelte';
-	import ModelPicker from './ModelPicker.svelte';
-	import ChatHistory from './ChatHistory.svelte';
+	import { settings } from '$lib/settings.svelte';
+	import { takePendingMessage } from '$lib/pending-message';
+
+	let { chatId }: { chatId: string } = $props();
 
 	const FLUSH_INTERVAL_MS = 50;
-
 	const STICK_THRESHOLD_PX = 80;
 
 	let messages = $state<ChatMessage[]>([]);
 	let input = $state('');
-	let model = $state('qwen3:8b');
 	let thinkMode = $state(false);
 	let isStreaming = $state(false);
 	let errorMessage = $state('');
 	let isAtBottom = $state(true);
 	let listEl: HTMLDivElement | undefined;
 	let abortController: AbortController | undefined;
-	let currentChatId = $state<string | undefined>();
+
+	let activeModel = $derived(thinkMode ? settings.reasoningModel : settings.fastModel);
 
 	function handleScroll() {
 		if (!listEl) return;
@@ -72,9 +73,10 @@
 		try {
 			const requestBody: ChatRequestBody = {
 				messages: messages.slice(0, -1),
-				model,
+				model: activeModel,
 				think: thinkMode,
-				chatId: currentChatId
+				chatId,
+				titleModel: settings.defaultModel
 			};
 			const res = await fetch('/api/chat', {
 				method: 'POST',
@@ -97,11 +99,11 @@
 					const line = part.trim();
 					if (!line.startsWith('data:')) continue;
 					const event = JSON.parse(line.slice(5)) as StreamEvent;
-					if (event.type === 'chatId') currentChatId = event.chatId;
-					else if (event.type === 'delta') rawContent += event.content;
+					if (event.type === 'delta') rawContent += event.content;
 					else if (event.type === 'thinking') rawThinking += event.content;
 					else if (event.type === 'done') assistantMessage.sources = event.sources;
 					else if (event.type === 'error') errorMessage = event.message;
+					// 'chatId' event ignored — this screen always already knows its id.
 				}
 			}
 		} catch (err) {
@@ -126,16 +128,13 @@
 		abortController?.abort();
 	}
 
-	async function loadChat(chatId: string) {
-		if (isStreaming) return;
+	async function loadChat(id: string) {
 		errorMessage = '';
 		try {
-			const res = await fetch(`/api/chats/${chatId}`);
+			const res = await fetch(`/api/chats/${id}`);
 			if (!res.ok) throw new Error();
-			const data = (await res.json()) as { chat: { model: string }; messages: ChatMessage[] };
+			const data = (await res.json()) as { messages: ChatMessage[] };
 			messages = data.messages;
-			currentChatId = chatId;
-			model = data.chat.model;
 			isAtBottom = true;
 			scrollToBottom(true);
 		} catch {
@@ -143,12 +142,19 @@
 		}
 	}
 
-	function newChat() {
-		if (isStreaming) return;
-		messages = [];
-		currentChatId = undefined;
-		errorMessage = '';
-	}
+	// Re-runs whenever the chatId prop changes (not just on first mount) — a
+	// SvelteKit navigation between two /chat/[id] routes can reuse the same
+	// component instance, so onMount alone would miss that.
+	$effect(() => {
+		const id = chatId;
+		const pendingQuestion = takePendingMessage(id);
+		if (pendingQuestion) {
+			input = pendingQuestion;
+			send();
+		} else {
+			loadChat(id);
+		}
+	});
 
 	function handleKeydown(e: KeyboardEvent) {
 		if (e.key === 'Enter' && !e.shiftKey) {
@@ -160,20 +166,10 @@
 
 <div class="chat">
 	<header>
-		<h1>Vault Chat</h1>
-		<div class="header-controls">
-			<label class="think-toggle" for="think-mode" title="Açıkken model önce akıl yürütür (yavaş ama daha derin), süreç sohbette görünür. Kapalıyken hızlı cevap verir.">
-				<input id="think-mode" name="think-mode" type="checkbox" bind:checked={thinkMode} />
-				Derin düşün
-			</label>
-			{#if currentChatId}
-				<a class="export-link" href="/api/chats/{currentChatId}/export?format=md" download title="Markdown olarak indir">.md</a>
-				<a class="export-link" href="/api/chats/{currentChatId}/export?format=json" download title="JSON olarak indir">.json</a>
-			{/if}
-			<ChatHistory onSelect={loadChat} />
-			<button class="new-chat" onclick={newChat} disabled={isStreaming}>Yeni konuşma</button>
-			<ModelPicker bind:model />
-		</div>
+		<label class="think-toggle" for="think-mode" title="Açıkken muhakeme modeli önce akıl yürütür (yavaş ama daha derin), süreç sohbette görünür. Kapalıyken hızlı model kullanılır.">
+			<input id="think-mode" name="think-mode" type="checkbox" bind:checked={thinkMode} />
+			Derin düşün
+		</label>
 	</header>
 
 	<div class="messages-wrap">
@@ -217,28 +213,15 @@
 	.chat {
 		display: flex;
 		flex-direction: column;
-		height: 100dvh;
-		max-width: 900px;
-		margin: 0 auto;
+		height: 100%;
 	}
 
 	header {
 		display: flex;
 		align-items: center;
-		justify-content: space-between;
-		padding: 0.75rem 1rem;
+		justify-content: flex-end;
+		padding: 0.5rem 1rem;
 		border-bottom: 1px solid var(--border);
-	}
-
-	header h1 {
-		font-size: 1.05rem;
-		margin: 0;
-	}
-
-	.header-controls {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
 	}
 
 	.think-toggle {
@@ -249,28 +232,6 @@
 		color: var(--muted);
 		cursor: pointer;
 		user-select: none;
-	}
-
-	.export-link {
-		font-size: 0.8rem;
-		color: var(--muted);
-		border: 1px solid var(--border);
-		border-radius: 6px;
-		padding: 0.25rem 0.45rem;
-		text-decoration: none;
-	}
-
-	.export-link:hover {
-		color: var(--accent);
-		border-color: var(--accent);
-	}
-
-	.new-chat {
-		font-size: 0.85rem;
-		padding: 0 0.75rem;
-		background: transparent;
-		color: var(--fg);
-		border: 1px solid var(--border);
 	}
 
 	.messages-wrap {
