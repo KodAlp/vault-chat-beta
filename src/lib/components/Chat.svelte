@@ -118,7 +118,7 @@
 			<p class="empty">Kasandaki notlar hakkında bir soru sor.</p>
 		{/if}
 		{#each messages as message, i (i)}
-			<Message {message} />
+			<Message {message} streaming={isStreaming && i === messages.length - 1} />
 		{/each}
 	</div>
 

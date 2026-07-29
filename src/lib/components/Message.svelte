@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { renderMarkdown } from '$lib/markdown';
+	import { renderMarkdown, stabilizeForStreaming } from '$lib/markdown';
 	import type { ChatMessage } from '$lib/types';
 	import SourceList from './SourceList.svelte';
 
-	let { message }: { message: ChatMessage } = $props();
+	let { message, streaming = false }: { message: ChatMessage; streaming?: boolean } = $props();
 	let html = $state('');
 
 	// Streaming fires this effect many times per second; renderMarkdown() is async
@@ -11,7 +11,9 @@
 	// order. Only ever apply the result of the most recently *started* call.
 	let latestCall = 0;
 	$effect(() => {
-		const content = message.content;
+		// Only in-flight messages get the truncation guard — a completed message
+		// always renders its exact final text, never trimmed.
+		const content = streaming ? stabilizeForStreaming(message.content) : message.content;
 		const callId = ++latestCall;
 		renderMarkdown(content)
 			.then((rendered) => {
