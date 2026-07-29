@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { settings } from '$lib/settings.svelte';
-	import { quizGenerationStatus, startQuizGeneration } from '$lib/quiz-generation.svelte';
+	import { quizGeneration, startQuizGeneration } from '$lib/quiz-generation.svelte';
 	import type { QuizGenerationRequest } from '$lib/types';
 
 	let { chatId }: { chatId: string } = $props();
@@ -15,7 +15,7 @@
 	let tf = $state(2);
 	let openCount = $state(2);
 
-	let alreadyGenerating = $derived(quizGenerationStatus.phase === 'generating');
+	let alreadyGenerating = $derived(quizGeneration.status.phase === 'generating');
 
 	onMount(async () => {
 		try {

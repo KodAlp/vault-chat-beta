@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { quizGenerationStatus, dismissQuizGeneration } from '$lib/quiz-generation.svelte';
+	import { quizGeneration, dismissQuizGeneration } from '$lib/quiz-generation.svelte';
 
 	const STAGE_LABELS: Record<string, string> = {
 		retrieving: 'Kaynaklar aranıyor...',
@@ -10,23 +10,23 @@
 	};
 
 	function viewQuiz() {
-		if (quizGenerationStatus.phase !== 'done') return;
-		const quizId = quizGenerationStatus.quizId;
+		if (quizGeneration.status.phase !== 'done') return;
+		const quizId = quizGeneration.status.quizId;
 		dismissQuizGeneration();
 		goto(`/study/quiz/${quizId}`);
 	}
 </script>
 
-{#if quizGenerationStatus.phase === 'generating'}
+{#if quizGeneration.status.phase === 'generating'}
 	<div class="toast generating">
 		<span class="spinner" aria-hidden="true"></span>
-		<span>{STAGE_LABELS[quizGenerationStatus.stage] ?? 'İşleniyor...'}</span>
+		<span>{STAGE_LABELS[quizGeneration.status.stage] ?? 'İşleniyor...'}</span>
 	</div>
-{:else if quizGenerationStatus.phase === 'done'}
+{:else if quizGeneration.status.phase === 'done'}
 	<button class="toast done" onclick={viewQuiz}>✓ Test hazır — görüntülemek için tıkla</button>
-{:else if quizGenerationStatus.phase === 'error'}
+{:else if quizGeneration.status.phase === 'error'}
 	<div class="toast error">
-		<span>Test oluşturulamadı: {quizGenerationStatus.message}</span>
+		<span>Test oluşturulamadı: {quizGeneration.status.message}</span>
 		<button class="dismiss" onclick={dismissQuizGeneration} title="Kapat">✕</button>
 	</div>
 {/if}

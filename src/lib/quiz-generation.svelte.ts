@@ -13,11 +13,18 @@ export type QuizGenerationStatus =
  * generation can take. Any page can render a widget reading this; the
  * fetch loop itself lives here so it isn't tied to any one component's
  * lifetime.
+ *
+ * Boxed in a const object on purpose: Svelte 5 forbids exporting a `let`
+ * $state binding that gets reassigned (compiler error state_invalid_export)
+ * — only mutating a property of an exported const is allowed. Consumers
+ * read `quizGeneration.status`, never reassign `quizGeneration` itself.
  */
-export let quizGenerationStatus = $state<QuizGenerationStatus>({ phase: 'idle' });
+export const quizGeneration = $state<{ status: QuizGenerationStatus }>({
+	status: { phase: 'idle' }
+});
 
 export async function startQuizGeneration(body: QuizGenerationRequest): Promise<void> {
-	quizGenerationStatus = { phase: 'generating', stage: 'retrieving' };
+	quizGeneration.status = { phase: 'generating', stage: 'retrieving' };
 
 	try {
 		const res = await fetch('/api/generate/quiz', {
@@ -41,16 +48,16 @@ export async function startQuizGeneration(body: QuizGenerationRequest): Promise<
 				if (!line.startsWith('data:')) continue;
 				const event = JSON.parse(line.slice(5)) as QuizGenerationEvent;
 				if (event.type === 'progress') {
-					quizGenerationStatus = { phase: 'generating', stage: event.stage };
+					quizGeneration.status = { phase: 'generating', stage: event.stage };
 				} else if (event.type === 'done') {
-					quizGenerationStatus = { phase: 'done', quizId: event.quizId };
+					quizGeneration.status = { phase: 'done', quizId: event.quizId };
 				} else if (event.type === 'error') {
-					quizGenerationStatus = { phase: 'error', message: event.message };
+					quizGeneration.status = { phase: 'error', message: event.message };
 				}
 			}
 		}
 	} catch (err) {
-		quizGenerationStatus = {
+		quizGeneration.status = {
 			phase: 'error',
 			message: err instanceof Error ? err.message : 'Bilinmeyen hata'
 		};
@@ -58,5 +65,5 @@ export async function startQuizGeneration(body: QuizGenerationRequest): Promise<
 }
 
 export function dismissQuizGeneration(): void {
-	quizGenerationStatus = { phase: 'idle' };
+	quizGeneration.status = { phase: 'idle' };
 }
