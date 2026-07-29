@@ -24,6 +24,13 @@ const QUERY_EXTRACT_SYSTEM_PROMPT =
  * versus a clean topical phrase (verified empirically: the exact same prompt
  * through the existing /api/chat domain filter also returned nothing useful).
  * Strip the instruction framing via a quick model call before retrieving.
+ *
+ * temperature:0 is load-bearing here, not cosmetic: without it this call uses
+ * the model's default (non-zero) sampling, so the *same* user prompt can
+ * extract a *different* query text on each call — and therefore sometimes
+ * find nothing and sometimes find good matches, purely by sampling luck. That
+ * inconsistency is what got reported as a suspected race condition; it
+ * wasn't concurrency, it was this call being non-deterministic.
  */
 async function extractTopicalQuery(prompt: string, model: string): Promise<string> {
 	const messages: OllamaChatMessage[] = [
@@ -31,7 +38,7 @@ async function extractTopicalQuery(prompt: string, model: string): Promise<strin
 		{ role: 'user', content: prompt }
 	];
 	let text = '';
-	for await (const piece of streamChat(model, messages, false)) {
+	for await (const piece of streamChat(model, messages, false, undefined, { temperature: 0 })) {
 		if (piece.kind === 'content') text += piece.text;
 	}
 	return text.trim() || prompt;
@@ -92,14 +99,26 @@ Context dışında hiçbir bilgi kullanma — context'te olmayan bir konuda soru
 
 Kurallar:
 - Türkçe yaz. Matematik sadece $...$ (satır içi) veya $$...$$ (blok) içinde, asla çıplak LaTeX.
-- Her sorunun source_path alanı, o soruyu hangi kaynak parçasından ürettiysen o parçanın source_path
-  etiketinin değeriyle BİREBİR AYNI olmalı — SADECE dosya yolu (örn. "wiki/math/calculus.md"),
-  başka hiçbir şey ekleme veya çıkarma.
-- heading_path alanı da aynı şekilde ilgili parçanın heading_path etiketinin değeriyle birebir aynı olmalı.
+- Her sorunun source_path alanı, o soruyu hangi kaynak parçasından ürettiysen SADECE o parçanın
+  KENDİ source_path etiketinin değeriyle BİREBİR AYNI olmalı (dosya yolu, başka hiçbir şey ekleme
+  veya çıkarma). Kaynak parçalarının METİN İÇERİĞİNDE geçen başka dosya adları/[[bağlantılar]]
+  varsa (örn. bir parça başka bir kaynağa atıfta bulunuyor olabilir) BUNLARI source_path olarak
+  KULLANMA — sadece o parçanın en üstündeki source_path etiketini kullan, metnin içinde adı geçen
+  değil.
+- heading_path alanı da aynı şekilde ilgili parçanın KENDİ heading_path etiketinin değeriyle
+  birebir aynı olmalı.
 - Çoktan seçmeli sorularda options tam olarak 5 seçenek içermeli, answer bu 5 seçenekten biriyle birebir aynı metin olmalı.
 - Doğru/yanlış sorularda answer tam olarak "true" veya "false" olmalı.
 - explanation alanı doğru cevabın nedenini 1-3 cümlede açıklamalı.
 - Notların seviyesine (depth) uygun zorlukta sorular sor.
+- Açık uçlu sorular SOMUT, kontrol edilebilir bir sonuç gerektirmeli — öğrenciyi
+  gerçekten hesaplama/türetme/kanıtlama yapmaya zorla. "X nasıl hesaplanır?",
+  "Y'yi açıkla" gibi yöntem anlatımı isteyen sorulardan KAÇIN; bunun yerine
+  somut bir girdi ver ve öğrenciden onu çözmesini/hesaplamasını iste.
+  Matematik/hesaplama içeren kaynaklarda örnek: "$f(x) = x^2 + 3x$ fonksiyonunun
+  $x=2$ noktasındaki türevini hesapla" YAZ, "türev nasıl hesaplanır?" YAZMA —
+  cevap somut bir sayı/ifade olmalı (answer alanına o sonucu yaz), açıklama
+  değil.
 
 <context>
 ${contextBlock}
@@ -156,9 +175,13 @@ export async function generateQuiz(
 	onProgress?.('validating');
 	let parsed = parseAndValidate(raw, validPaths);
 
-	if (!parsed.ok) {
+	// Two retry attempts, not one — the source_path-confused-with-a-name-
+	// mentioned-in-the-text failure mode (a chunk's own text referencing
+	// another file) needs more than one nudge to reliably self-correct.
+	const MAX_RETRIES = 2;
+	for (let attempt = 0; !parsed.ok && attempt < MAX_RETRIES; attempt++) {
 		onProgress?.('retrying');
-		const retryPrompt = `${input.prompt}\n\nÖnceki cevabın geçersizdi: ${parsed.error}\nSADECE geçerli JSON döndür, source_path'leri context'ten birebir kopyala.`;
+		const retryPrompt = `${input.prompt}\n\nÖnceki cevabın geçersizdi: ${parsed.error}\nSADECE geçerli JSON döndür. source_path, kullandığın kaynak parçasının EN ÜSTÜNDEKİ source_path etiketiyle birebir aynı olmalı — parçanın metin içeriğinde adı geçen başka bir dosya değil.`;
 		raw = await callModel(input.model, systemPrompt, retryPrompt);
 		parsed = parseAndValidate(raw, validPaths);
 	}
