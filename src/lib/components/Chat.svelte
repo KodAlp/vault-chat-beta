@@ -102,8 +102,12 @@
 			}
 		} catch (err) {
 			// User-initiated stop — keep whatever partial answer already streamed in,
-			// don't show it as an error.
-			if (!(err instanceof DOMException && err.name === 'AbortError')) {
+			// don't show it as an error. Mark it so Message.svelte can show something
+			// other than a blank bubble if nothing had streamed in yet (e.g. stopped
+			// during the thinking phase, before any answer content arrived).
+			if (err instanceof DOMException && err.name === 'AbortError') {
+				assistantMessage.interrupted = true;
+			} else {
 				errorMessage = err instanceof Error ? err.message : 'Bilinmeyen hata';
 			}
 		} finally {

@@ -21,6 +21,7 @@ export interface ChatMessage {
 	content: string;
 	thinking?: string;
 	sources?: RetrievedChunk[];
+	interrupted?: boolean;
 }
 
 export interface ChatRequestBody {
