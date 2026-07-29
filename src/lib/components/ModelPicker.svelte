@@ -18,7 +18,7 @@
 	});
 </script>
 
-<select bind:value={model} title={loadError || 'Model seç'}>
+<select id="model-picker" name="model-picker" bind:value={model} title={loadError || 'Model seç'}>
 	{#if models.length === 0}
 		<option value={model}>{model}</option>
 	{/if}

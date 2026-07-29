@@ -24,8 +24,11 @@
 		errorMessage = '';
 		input = '';
 		messages.push({ role: 'user', content: question });
-		const assistantMessage: ChatMessage = { role: 'assistant', content: '' };
-		messages.push(assistantMessage);
+		messages.push({ role: 'assistant', content: '' });
+		// $state arrays deep-proxy their contents on push — grab the reference back
+		// out of the array so later mutations hit the reactive proxy, not the
+		// original plain object (which the UI never sees updates to).
+		const assistantMessage = messages[messages.length - 1];
 		scrollToBottom();
 
 		isStreaming = true;
@@ -102,8 +105,8 @@
 	<header>
 		<h1>Vault Chat</h1>
 		<div class="header-controls">
-			<label class="think-toggle" title="Açıkken model önce akıl yürütür (yavaş ama daha derin), süreç sohbette görünür. Kapalıyken hızlı cevap verir.">
-				<input type="checkbox" bind:checked={thinkMode} />
+			<label class="think-toggle" for="think-mode" title="Açıkken model önce akıl yürütür (yavaş ama daha derin), süreç sohbette görünür. Kapalıyken hızlı cevap verir.">
+				<input id="think-mode" name="think-mode" type="checkbox" bind:checked={thinkMode} />
 				Derin düşün
 			</label>
 			<ModelPicker bind:model />
@@ -125,6 +128,8 @@
 
 	<footer>
 		<textarea
+			id="chat-input"
+			name="chat-input"
 			bind:value={input}
 			onkeydown={handleKeydown}
 			placeholder="Soru yaz... (Enter: gönder, Shift+Enter: yeni satır)"
