@@ -13,19 +13,21 @@
 	--font-mono: ui-monospace, 'Cascadia Code', 'Consolas', monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-	:root {
-		--bg: #16161a;
-		--fg: #e6e6e6;
-		--muted: #9498a1;
-		--border: #2b2b30;
-		--bubble-user: #26264a;
-		--bubble-assistant: #212126;
-		--accent: #818cf8;
-		--accent-fg: #16161a;
-		--error: #f87171;
-		--code-bg: #1e1e22;
-	}
+/* +layout.svelte always resolves "system" to a concrete light/dark value via
+   matchMedia and sets data-theme explicitly — CSS never needs to guess via
+   @media (prefers-color-scheme) itself, which can't be overridden by a manual
+   in-app choice since it only reflects actual OS state. */
+:root[data-theme='dark'] {
+	--bg: #16161a;
+	--fg: #e6e6e6;
+	--muted: #9498a1;
+	--border: #2b2b30;
+	--bubble-user: #26264a;
+	--bubble-assistant: #212126;
+	--accent: #818cf8;
+	--accent-fg: #16161a;
+	--error: #f87171;
+	--code-bg: #1e1e22;
 }
 
 * {
@@ -72,12 +74,10 @@ a {
    code block stays light-themed regardless of the app's actual theme.
    Overriding inline styles from a stylesheet requires !important; this is
    shiki's own documented pattern for CSS-variable dual themes. */
-@media (prefers-color-scheme: dark) {
-	.shiki,
-	.shiki span {
-		color: var(--shiki-dark) !important;
-		background-color: var(--shiki-dark-bg) !important;
-	}
+:root[data-theme='dark'] .shiki,
+:root[data-theme='dark'] .shiki span {
+	color: var(--shiki-dark) !important;
+	background-color: var(--shiki-dark-bg) !important;
 }
 
 /* Scrollbars default to the OS/browser theme (usually light), which clashes
