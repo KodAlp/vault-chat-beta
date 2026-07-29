@@ -104,3 +104,22 @@ a {
 ::-webkit-scrollbar-thumb:hover {
 	background: var(--muted);
 }
+
+/* KaTeX's own error fallback (throwOnError:false) is bright red inline text
+   showing raw backslash-laden LaTeX source — reads as "content is broken /
+   missing" rather than "this one formula didn't render". Local models do
+   occasionally emit malformed LaTeX (a forgotten closing brace, a dangling
+   operator) that markdown.ts's repair pass can't always fully fix; when that
+   happens, show it as a clearly-contained, muted source block instead.
+   !important needed to override KaTeX's own inline style="color:#cc0000". */
+.katex-error {
+	display: inline-block;
+	font-family: var(--font-mono);
+	font-size: 0.85em;
+	color: var(--muted) !important;
+	background: var(--code-bg);
+	border: 1px solid var(--border);
+	border-radius: 4px;
+	padding: 0.1rem 0.4rem;
+	white-space: pre-wrap;
+}

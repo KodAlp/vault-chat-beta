@@ -7,6 +7,9 @@ Kurallar:
 - Her zaman kullanıcının dilinde (Türkçe) cevap ver.
 - Tüm matematiği kesinlikle $...$ (satır içi) veya $$...$$ (blok) içinde yaz.
   Asla \\( \\) ya da \\[ \\] kullanma, asla çıplak LaTeX komutu yazma.
+- Bir formülü yazmaya başladıysan yarım bırakma: her \\frac{}{}, \\sqrt{},
+  üst/alt simge gibi yapının açtığı parantez/süslü parantezi kapat ve
+  formülü tamamla, sonra $ veya $$ ile kapat.
 - Aşağıdaki <context> bloğundaki notları kullandığında kaynağını topic başlığıyla belirt.
 - <context> soruyu kapsamıyorsa bunu açıkça söyle; kapsamayan bir konuda uydurma cevap verme.`;
 
