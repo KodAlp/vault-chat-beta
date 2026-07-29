@@ -35,8 +35,8 @@
 
 		errorMessage = '';
 		input = '';
-		messages.push({ role: 'user', content: question });
-		messages.push({ role: 'assistant', content: '' });
+		messages.push({ id: crypto.randomUUID(), role: 'user', content: question });
+		messages.push({ id: crypto.randomUUID(), role: 'assistant', content: '' });
 		// $state arrays deep-proxy their contents on push — grab the reference back
 		// out of the array so later mutations hit the reactive proxy, not the
 		// original plain object (which the UI never sees updates to).
@@ -131,7 +131,7 @@
 			{#if messages.length === 0}
 				<p class="empty">Kasandaki notlar hakkında bir soru sor.</p>
 			{/if}
-			{#each messages as message, i (i)}
+			{#each messages as message, i (message.id)}
 				<Message {message} streaming={isStreaming && i === messages.length - 1} />
 			{/each}
 		</div>
