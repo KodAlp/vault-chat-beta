@@ -3,6 +3,7 @@ import { retrieve } from './retrieve';
 import { getMessages } from './chats-db';
 import { Cards, CARDS_JSON_SCHEMA } from './cards-schema';
 import { createDeck, type NewCard } from './study-db';
+import { renderUserSkillsBlock } from './userSkills';
 import type { RetrievedChunk } from '$lib/types';
 
 export interface GenerateCardsInput {
@@ -93,30 +94,36 @@ function parseAndValidate(raw: string, chunksByPath: Map<string, RetrievedChunk>
 	return { ok: true, items };
 }
 
-function buildSystemPrompt(count: number, contextBlock: string): string {
-	return `Sen bir bilgi kartı (flashcard) hazırlama asistanısın. Aşağıdaki <context> bloğu, her biri
-source_path/heading_path/depth etiketleriyle işaretlenmiş kaynak parçalarından oluşuyor. SADECE bu
-parçalardaki bilgiye dayanarak, tam olarak ${count} adet bilgi kartı hazırla.
+/** Exported for /api/skills/preview — lets the settings page show exactly
+ * how a scope's system prompt is assembled without a real generation call. */
+export function buildSystemPrompt(count: number, contextBlock: string, userSkillsBlock: string): string {
+	const taskIntro = `Sen bir bilgi kartı (flashcard) hazırlama asistanısın. Aşağıdaki <context> bloğu, her biri
+source_path/heading_path/depth etiketleriyle işaretlenmiş kaynak parçalarından oluşuyor. Tam olarak ${count} adet
+bilgi kartı hazırla.
 
-Kurallar:
-- Türkçe yaz. Matematik sadece $...$ (satır içi) veya $$...$$ (blok) içinde, asla çıplak LaTeX.
-- Context dışında hiçbir bilgi kullanma — context'te olmayan bir konuda kart üretme.
 - "front" alanı bir HATIRLATMA İPUCU olmalı, trivia değil: "Laplace dönüşümünün yakınsama
   bölgesi neyi belirler?" YAZ, "ROC nedir?" YAZMA. Kartı gören kişi, cevabı hatırlamaya
   zorlanmalı — soru doğrudan tanımı tekrar etmemeli.
 - "back" alanı front'un cevabı: tanım, türetim özeti veya somut sonuç. Kısa ve öz, ama eksiksiz
-  (self-contained — kart tek başına anlaşılır olmalı).
+  (self-contained — kart tek başına anlaşılır olmalı).`;
+
+	// Non-overridable, appended after any user skills — see userSkills.ts and
+	// the user-skills skill doc's "assembly order" section.
+	const invariants = `Kurallar:
+- SADECE <context> bloğundaki bilgiye dayanarak kart üret. Context dışında hiçbir bilgi
+  kullanma — context'te olmayan bir konuda kart üretme.
+- Türkçe yaz. Matematik sadece $...$ (satır içi) veya $$...$$ (blok) içinde, asla çıplak LaTeX.
 - Her kartın source_path alanı, o kartı hangi kaynak parçasından ürettiysen SADECE o parçanın
   KENDİ source_path etiketinin değeriyle BİREBİR AYNI olmalı (dosya yolu, başka hiçbir şey ekleme
   veya çıkarma). Kaynak parçalarının METİN İÇERİĞİNDE geçen başka dosya adları/[[bağlantılar]]
   varsa BUNLARI source_path olarak KULLANMA — sadece o parçanın en üstündeki source_path
   etiketini kullan.
 - heading_path alanı da aynı şekilde ilgili parçanın KENDİ heading_path etiketinin değeriyle
-  birebir aynı olmalı.
+  birebir aynı olmalı.`;
 
-<context>
-${contextBlock}
-</context>`;
+	return [taskIntro, userSkillsBlock, invariants, `<context>\n${contextBlock}\n</context>`]
+		.filter(Boolean)
+		.join('\n\n');
 }
 
 /** Foreground pipeline — mirrors generate-quiz.ts exactly (see that file's
@@ -152,9 +159,8 @@ export async function generateCards(
 				`source_path: ${c.path}\nheading_path: ${c.heading_path}\ndepth: ${c.depth}\n\n${c.display_text}`
 		)
 		.join('\n\n---\n\n');
-	const systemPrompt = buildSystemPrompt(input.count, contextBlock);
-	// Faz 4 hook: 'flashcards' scope'lu user-skill içeriği (varsa) burada
-	// systemPrompt'a eklenecek. user-skills sistemi henüz yok (Faz 4).
+	const userSkillsBlock = await renderUserSkillsBlock('flashcards');
+	const systemPrompt = buildSystemPrompt(input.count, contextBlock, userSkillsBlock);
 
 	onProgress?.('generating');
 	let raw = await callModel(input.model, systemPrompt, input.prompt);

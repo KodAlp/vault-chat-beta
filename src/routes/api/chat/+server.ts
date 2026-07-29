@@ -41,7 +41,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
 			try {
 				sources = lastUser ? await retrieve(lastUser.content, { domains: body.domains }) : [];
-				const promptMessages = buildPromptMessages(body.messages, sources);
+				const promptMessages = await buildPromptMessages(body.messages, sources);
 
 				for await (const piece of streamChat(
 					body.model,

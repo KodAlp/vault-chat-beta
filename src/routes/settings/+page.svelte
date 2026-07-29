@@ -91,6 +91,12 @@
 		</label>
 	</section>
 
+	<section>
+		<h2>Kullanıcı Skill'leri</h2>
+		<p class="hint">Sohbet, test ve bilgi kartı üretimini kişiselleştir.</p>
+		<a class="skills-link" href="/settings/skills">Skill'leri yönet →</a>
+	</section>
+
 	<section class="placeholder">
 		<h2>Model indirme &amp; API bağlantıları</h2>
 		<p>Yakında (Faz 6).</p>
@@ -175,5 +181,12 @@
 	.warn {
 		color: var(--error);
 		font-size: 0.85rem;
+	}
+
+	.skills-link {
+		font-size: 0.9rem;
+		color: var(--accent);
+		text-decoration: none;
+		font-weight: 600;
 	}
 </style>

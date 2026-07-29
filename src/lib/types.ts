@@ -139,3 +139,18 @@ export interface CardView {
 	source_path: string;
 	heading_path: string;
 }
+
+export type UserSkillScope = 'chat' | 'quiz' | 'flashcards';
+
+export interface UserSkillStatus {
+	name: string;
+	/** Path relative to data/skills/, e.g. "_examples/notation-preference.md". */
+	relPath: string;
+	description: string | null;
+	scope: 'all' | UserSkillScope[];
+	enabled: boolean;
+	priority: number;
+	charCount: number;
+	truncated: boolean;
+	parseError: string | null;
+}

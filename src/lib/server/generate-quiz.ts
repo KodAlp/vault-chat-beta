@@ -3,6 +3,7 @@ import { retrieve } from './retrieve';
 import { getMessages } from './chats-db';
 import { QuizItems, QUIZ_ITEMS_JSON_SCHEMA } from './quiz-schema';
 import { createQuiz, type NewQuizItem } from './study-db';
+import { renderUserSkillsBlock } from './userSkills';
 
 export interface GenerateQuizInput {
 	domains?: string[];
@@ -87,17 +88,29 @@ function parseAndValidate(raw: string, validPaths: Set<string>): ParseResult {
 	return { ok: true, items: result.data.items };
 }
 
-function buildSystemPrompt(
+/** Exported for /api/skills/preview — lets the settings page show exactly
+ * how a scope's system prompt is assembled without a real generation call. */
+export function buildSystemPrompt(
 	composition: GenerateQuizInput['composition'],
-	contextBlock: string
+	contextBlock: string,
+	userSkillsBlock: string
 ): string {
 	const total = composition.mc + composition.tf + composition.open;
-	return `Sen bir sınav hazırlama asistanısın. Aşağıdaki <context> bloğu, her biri source_path/heading_path/depth
-etiketleriyle işaretlenmiş kaynak parçalarından oluşuyor. SADECE bu parçalardaki bilgiye dayanarak, tam olarak
+	const taskIntro = `Sen bir sınav hazırlama asistanısın. Aşağıdaki <context> bloğu, her biri source_path/heading_path/depth
+etiketleriyle işaretlenmiş kaynak parçalarından oluşuyor. Tam olarak
 ${total} soruluk bir test hazırla: ${composition.mc} çoktan seçmeli (5 seçenek), ${composition.tf} doğru/yanlış, ${composition.open} açık uçlu.
-Context dışında hiçbir bilgi kullanma — context'te olmayan bir konuda soru sorma, kendi bilgin olsa bile.
+Notların seviyesine (depth) uygun zorlukta sorular sor. Açık uçlu sorular SOMUT, kontrol edilebilir bir sonuç
+gerektirmeli — öğrenciyi gerçekten hesaplama/türetme/kanıtlama yapmaya zorla. "X nasıl hesaplanır?", "Y'yi açıkla"
+gibi yöntem anlatımı isteyen sorulardan KAÇIN; bunun yerine somut bir girdi ver ve öğrenciden onu çözmesini/
+hesaplamasını iste. Matematik/hesaplama içeren kaynaklarda örnek: "$f(x) = x^2 + 3x$ fonksiyonunun $x=2$
+noktasındaki türevini hesapla" YAZ, "türev nasıl hesaplanır?" YAZMA — cevap somut bir sayı/ifade olmalı (answer
+alanına o sonucu yaz), açıklama değil.`;
 
-Kurallar:
+	// Non-overridable, appended after any user skills — see userSkills.ts and
+	// the user-skills skill doc's "assembly order" section.
+	const invariants = `Kurallar:
+- SADECE <context> bloğundaki bilgiye dayanarak sorular hazırla. Context dışında hiçbir bilgi
+  kullanma — context'te olmayan bir konuda soru sorma, kendi bilgin olsa bile.
 - Türkçe yaz. Matematik sadece $...$ (satır içi) veya $$...$$ (blok) içinde, asla çıplak LaTeX.
 - Her sorunun source_path alanı, o soruyu hangi kaynak parçasından ürettiysen SADECE o parçanın
   KENDİ source_path etiketinin değeriyle BİREBİR AYNI olmalı (dosya yolu, başka hiçbir şey ekleme
@@ -109,20 +122,11 @@ Kurallar:
   birebir aynı olmalı.
 - Çoktan seçmeli sorularda options tam olarak 5 seçenek içermeli, answer bu 5 seçenekten biriyle birebir aynı metin olmalı.
 - Doğru/yanlış sorularda answer tam olarak "true" veya "false" olmalı.
-- explanation alanı doğru cevabın nedenini 1-3 cümlede açıklamalı.
-- Notların seviyesine (depth) uygun zorlukta sorular sor.
-- Açık uçlu sorular SOMUT, kontrol edilebilir bir sonuç gerektirmeli — öğrenciyi
-  gerçekten hesaplama/türetme/kanıtlama yapmaya zorla. "X nasıl hesaplanır?",
-  "Y'yi açıkla" gibi yöntem anlatımı isteyen sorulardan KAÇIN; bunun yerine
-  somut bir girdi ver ve öğrenciden onu çözmesini/hesaplamasını iste.
-  Matematik/hesaplama içeren kaynaklarda örnek: "$f(x) = x^2 + 3x$ fonksiyonunun
-  $x=2$ noktasındaki türevini hesapla" YAZ, "türev nasıl hesaplanır?" YAZMA —
-  cevap somut bir sayı/ifade olmalı (answer alanına o sonucu yaz), açıklama
-  değil.
+- explanation alanı doğru cevabın nedenini 1-3 cümlede açıklamalı.`;
 
-<context>
-${contextBlock}
-</context>`;
+	return [taskIntro, userSkillsBlock, invariants, `<context>\n${contextBlock}\n</context>`]
+		.filter(Boolean)
+		.join('\n\n');
 }
 
 /**
@@ -165,9 +169,8 @@ export async function generateQuiz(
 				`source_path: ${c.path}\nheading_path: ${c.heading_path}\ndepth: ${c.depth}\n\n${c.display_text}`
 		)
 		.join('\n\n---\n\n');
-	const systemPrompt = buildSystemPrompt(input.composition, contextBlock);
-	// Faz 4 hook: 'quiz' scope'lu user-skill içeriği (varsa) burada systemPrompt'a
-	// eklenecek. user-skills sistemi henüz yok (Faz 4), şimdilik atlanıyor.
+	const userSkillsBlock = await renderUserSkillsBlock('quiz');
+	const systemPrompt = buildSystemPrompt(input.composition, contextBlock, userSkillsBlock);
 
 	onProgress?.('generating');
 	let raw = await callModel(input.model, systemPrompt, input.prompt);

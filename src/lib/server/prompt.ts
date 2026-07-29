@@ -1,10 +1,18 @@
 import type { ChatMessage, RetrievedChunk } from '$lib/types';
 import type { OllamaChatMessage } from './ollama';
+import { renderUserSkillsBlock } from './userSkills';
 
-const SYSTEM_PROMPT = `Sen bu kişisel bilgi kasasının (Obsidian tabanlı ikinci beyin) öğretici asistanısın.
+/** Exported for /api/skills/preview alongside the analogous constants in
+ * generate-quiz.ts/generate-cards.ts. */
+export const CORE_INTRO = `Sen bu kişisel bilgi kasasının (Obsidian tabanlı ikinci beyin) öğretici asistanısın.
+Her zaman kullanıcının dilinde (Türkçe) cevap ver.`;
 
-Kurallar:
-- Her zaman kullanıcının dilinde (Türkçe) cevap ver.
+/**
+ * Non-overridable, appended after any user skills — see userSkills.ts and
+ * the user-skills skill doc's "assembly order" section. Local models weight
+ * later instructions more heavily, so these must always be last.
+ */
+export const CORE_INVARIANTS = `Kurallar:
 - Tüm matematiği kesinlikle $...$ (satır içi) veya $$...$$ (blok) içinde yaz.
   Asla \\( \\) ya da \\[ \\] kullanma, asla çıplak LaTeX komutu yazma.
 - Bir formülü yazmaya başladıysan yarım bırakma: her \\frac{}{}, \\sqrt{},
@@ -17,10 +25,10 @@ Kurallar:
  * Injects retrieved chunks as a fenced <context> block above the latest user
  * question, each prefixed with its source path and frontmatter summary.
  */
-export function buildPromptMessages(
+export async function buildPromptMessages(
 	history: ChatMessage[],
 	chunks: RetrievedChunk[]
-): OllamaChatMessage[] {
+): Promise<OllamaChatMessage[]> {
 	const lastUser = history[history.length - 1];
 	const priorTurns: OllamaChatMessage[] = history
 		.slice(0, -1)
@@ -36,8 +44,11 @@ export function buildPromptMessages(
 					.join('\n\n---\n\n')}\n</context>\n\n`
 			: '';
 
+	const skillsBlock = await renderUserSkillsBlock('chat');
+	const systemPrompt = [CORE_INTRO, skillsBlock, CORE_INVARIANTS].filter(Boolean).join('\n\n');
+
 	return [
-		{ role: 'system', content: SYSTEM_PROMPT },
+		{ role: 'system', content: systemPrompt },
 		...priorTurns,
 		{ role: 'user', content: `${context}${lastUser.content}` }
 	];
