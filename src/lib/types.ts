@@ -29,6 +29,7 @@ export interface ChatRequestBody {
 	model: string;
 	domains?: string[];
 	think?: boolean;
+	chatId?: string;
 }
 
 export interface OllamaModel {
@@ -39,6 +40,7 @@ export interface OllamaModel {
 
 /** SSE event shapes streamed by POST /api/chat. */
 export type StreamEvent =
+	| { type: 'chatId'; chatId: string }
 	| { type: 'delta'; content: string }
 	| { type: 'thinking'; content: string }
 	| { type: 'done'; sources: RetrievedChunk[] }

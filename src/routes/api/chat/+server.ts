@@ -2,7 +2,9 @@ import type { RequestHandler } from './$types';
 import { retrieve } from '$lib/server/retrieve';
 import { buildPromptMessages } from '$lib/server/prompt';
 import { streamChat } from '$lib/server/ollama';
-import type { ChatRequestBody, StreamEvent } from '$lib/types';
+import { createChat, insertMessage, touchChat } from '$lib/server/chats-db';
+import { generateTitle } from '$lib/server/title';
+import type { ChatRequestBody, RetrievedChunk, StreamEvent } from '$lib/types';
 
 function sseEvent(event: StreamEvent): string {
 	return `data: ${JSON.stringify(event)}\n\n`;
@@ -25,10 +27,17 @@ export const POST: RequestHandler = async ({ request }) => {
 				}
 			};
 
+			const isNewChat = !body.chatId;
+			const chatId = body.chatId ?? createChat(body.model).id;
+			send({ type: 'chatId', chatId });
+			if (lastUser) insertMessage({ chatId, role: 'user', content: lastUser.content });
+
+			let sources: RetrievedChunk[] = [];
+			let finalContent = '';
+			let finalThinking = '';
+
 			try {
-				const sources = lastUser
-					? await retrieve(lastUser.content, { domains: body.domains })
-					: [];
+				sources = lastUser ? await retrieve(lastUser.content, { domains: body.domains }) : [];
 				const promptMessages = buildPromptMessages(body.messages, sources);
 
 				for await (const piece of streamChat(
@@ -37,11 +46,13 @@ export const POST: RequestHandler = async ({ request }) => {
 					body.think ?? false,
 					request.signal
 				)) {
-					send(
-						piece.kind === 'thinking'
-							? { type: 'thinking', content: piece.text }
-							: { type: 'delta', content: piece.text }
-					);
+					if (piece.kind === 'thinking') {
+						finalThinking += piece.text;
+						send({ type: 'thinking', content: piece.text });
+					} else {
+						finalContent += piece.text;
+						send({ type: 'delta', content: piece.text });
+					}
 				}
 				send({ type: 'done', sources });
 			} catch (err) {
@@ -51,6 +62,18 @@ export const POST: RequestHandler = async ({ request }) => {
 					send({ type: 'error', message: err instanceof Error ? err.message : 'Bilinmeyen hata' });
 				}
 			} finally {
+				// Persist whatever the assistant produced, even if stopped partway
+				// through — matches what stays visible on screen (see "Durduruldu").
+				insertMessage({
+					chatId,
+					role: 'assistant',
+					content: finalContent,
+					thinking: finalThinking || null,
+					sourcesJson: sources.length ? JSON.stringify(sources) : null
+				});
+				touchChat(chatId);
+				if (isNewChat && lastUser) void generateTitle(chatId, lastUser.content);
+
 				closed = true;
 				try {
 					controller.close();
