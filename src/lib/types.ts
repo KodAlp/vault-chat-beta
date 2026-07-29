@@ -90,3 +90,28 @@ export interface QuizView {
 	title: string;
 	model: string;
 }
+
+export interface SubmitAttemptRequest {
+	answers: { itemId: string; given: string }[];
+	/** For grading open questions — settings.fastModel client-side. */
+	fastModel: string;
+}
+
+export interface AttemptResultItem {
+	itemId: string;
+	question: string;
+	type: QuizItemType;
+	options: string[] | null;
+	given: string;
+	correctAnswer: string;
+	explanation: string;
+	isCorrect: boolean;
+	modelFeedback: string | null;
+	sourcePath: string;
+	headingPath: string;
+}
+
+export interface SubmitAttemptResponse {
+	score: number;
+	items: AttemptResultItem[];
+}
