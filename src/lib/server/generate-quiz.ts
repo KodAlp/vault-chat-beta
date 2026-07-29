@@ -87,7 +87,7 @@ function buildSystemPrompt(
 	const total = composition.mc + composition.tf + composition.open;
 	return `Sen bir sınav hazırlama asistanısın. Aşağıdaki <context> bloğu, her biri source_path/heading_path/depth
 etiketleriyle işaretlenmiş kaynak parçalarından oluşuyor. SADECE bu parçalardaki bilgiye dayanarak, tam olarak
-${total} soruluk bir test hazırla: ${composition.mc} çoktan seçmeli (4 seçenek), ${composition.tf} doğru/yanlış, ${composition.open} açık uçlu.
+${total} soruluk bir test hazırla: ${composition.mc} çoktan seçmeli (5 seçenek), ${composition.tf} doğru/yanlış, ${composition.open} açık uçlu.
 Context dışında hiçbir bilgi kullanma — context'te olmayan bir konuda soru sorma, kendi bilgin olsa bile.
 
 Kurallar:
@@ -96,7 +96,7 @@ Kurallar:
   etiketinin değeriyle BİREBİR AYNI olmalı — SADECE dosya yolu (örn. "wiki/math/calculus.md"),
   başka hiçbir şey ekleme veya çıkarma.
 - heading_path alanı da aynı şekilde ilgili parçanın heading_path etiketinin değeriyle birebir aynı olmalı.
-- Çoktan seçmeli sorularda options tam olarak 4 seçenek içermeli, answer bu 4 seçenekten biriyle birebir aynı metin olmalı.
+- Çoktan seçmeli sorularda options tam olarak 5 seçenek içermeli, answer bu 5 seçenekten biriyle birebir aynı metin olmalı.
 - Doğru/yanlış sorularda answer tam olarak "true" veya "false" olmalı.
 - explanation alanı doğru cevabın nedenini 1-3 cümlede açıklamalı.
 - Notların seviyesine (depth) uygun zorlukta sorular sor.

@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { goto } from '$app/navigation';
 	import { settings } from '$lib/settings.svelte';
-	import type { QuizGenerationEvent, QuizGenerationRequest } from '$lib/types';
+	import { quizGenerationStatus, startQuizGeneration } from '$lib/quiz-generation.svelte';
+	import type { QuizGenerationRequest } from '$lib/types';
 
 	let { chatId }: { chatId: string } = $props();
 
@@ -14,16 +14,8 @@
 	let mc = $state(6);
 	let tf = $state(2);
 	let openCount = $state(2);
-	let generating = $state(false);
-	let stage = $state('');
-	let errorMessage = $state('');
 
-	const STAGE_LABELS: Record<string, string> = {
-		retrieving: 'Kaynaklar aranıyor...',
-		generating: 'Sorular üretiliyor...',
-		validating: 'Doğrulanıyor...',
-		retrying: 'Doğrulama başarısız, tekrar deneniyor...'
-	};
+	let alreadyGenerating = $derived(quizGenerationStatus.phase === 'generating');
 
 	onMount(async () => {
 		try {
@@ -35,68 +27,39 @@
 	});
 
 	function openDialog() {
+		if (alreadyGenerating) return;
 		open = true;
-		errorMessage = '';
-		stage = '';
 	}
 
 	function closeDialog() {
-		if (generating) return;
 		open = false;
 	}
 
-	async function generate() {
-		if (!prompt.trim() || mc + tf + openCount <= 0) return;
-		generating = true;
-		errorMessage = '';
-		stage = 'retrieving';
-
-		try {
-			const body: QuizGenerationRequest = {
-				domains: selectedDomain ? [selectedDomain] : undefined,
-				chatId: useChatContext ? chatId : undefined,
-				prompt: prompt.trim(),
-				composition: { mc, tf, open: openCount },
-				model: settings.reasoningModel
-			};
-			const res = await fetch('/api/generate/quiz', {
-				method: 'POST',
-				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify(body)
-			});
-			if (!res.ok || !res.body) throw new Error(`İstek başarısız (${res.status})`);
-
-			const reader = res.body.getReader();
-			const decoder = new TextDecoder();
-			let buffer = '';
-			while (true) {
-				const { done, value } = await reader.read();
-				if (done) break;
-				buffer += decoder.decode(value, { stream: true });
-				const parts = buffer.split('\n\n');
-				buffer = parts.pop() ?? '';
-				for (const part of parts) {
-					const line = part.trim();
-					if (!line.startsWith('data:')) continue;
-					const event = JSON.parse(line.slice(5)) as QuizGenerationEvent;
-					if (event.type === 'progress') stage = event.stage;
-					else if (event.type === 'done') {
-						open = false;
-						goto(`/study/quiz/${event.quizId}`);
-					} else if (event.type === 'error') {
-						errorMessage = event.message;
-					}
-				}
-			}
-		} catch (err) {
-			errorMessage = err instanceof Error ? err.message : 'Bilinmeyen hata';
-		} finally {
-			generating = false;
-		}
+	/**
+	 * Fires the generation request into the shared background store and
+	 * closes immediately — this used to await the whole SSE stream inline,
+	 * blocking the dialog (and the overlay behind it) open for the 20s-2min
+	 * a real generation takes, which read as the page being frozen. Now the
+	 * request keeps running regardless of whether this dialog (or even this
+	 * page) stays open; QuizGenerationStatus shows live progress elsewhere.
+	 */
+	function generate() {
+		if (!prompt.trim() || mc + tf + openCount <= 0 || alreadyGenerating) return;
+		const body: QuizGenerationRequest = {
+			domains: selectedDomain ? [selectedDomain] : undefined,
+			chatId: useChatContext ? chatId : undefined,
+			prompt: prompt.trim(),
+			composition: { mc, tf, open: openCount },
+			model: settings.reasoningModel
+		};
+		open = false;
+		void startQuizGeneration(body);
 	}
 </script>
 
-<button class="trigger" onclick={openDialog} title="Test oluştur">📝<span>Test</span></button>
+<button class="trigger" onclick={openDialog} disabled={alreadyGenerating} title="Test oluştur">
+	📝<span>Test</span>
+</button>
 
 {#if open}
 	<div
@@ -117,7 +80,7 @@
 
 			<label class="field">
 				Domain (opsiyonel)
-				<select bind:value={selectedDomain} disabled={generating}>
+				<select bind:value={selectedDomain}>
 					<option value="">Tüm domainler</option>
 					{#each domains as d (d)}
 						<option value={d}>{d}</option>
@@ -126,7 +89,7 @@
 			</label>
 
 			<label class="checkbox-field">
-				<input type="checkbox" bind:checked={useChatContext} disabled={generating} />
+				<input type="checkbox" bind:checked={useChatContext} />
 				Bu konuşmayı bağlam olarak kullan
 			</label>
 
@@ -134,7 +97,6 @@
 				Ne tür bir test istiyorsun?
 				<textarea
 					bind:value={prompt}
-					disabled={generating}
 					placeholder="örn. Türev ve limit kavramları üzerine orta zorlukta bir test"
 				></textarea>
 			</label>
@@ -142,32 +104,21 @@
 			<div class="composition">
 				<label>
 					Çoktan seçmeli
-					<input type="number" min="0" max="20" bind:value={mc} disabled={generating} />
+					<input type="number" min="0" max="20" bind:value={mc} />
 				</label>
 				<label>
 					Doğru/Yanlış
-					<input type="number" min="0" max="20" bind:value={tf} disabled={generating} />
+					<input type="number" min="0" max="20" bind:value={tf} />
 				</label>
 				<label>
 					Açık uçlu
-					<input type="number" min="0" max="20" bind:value={openCount} disabled={generating} />
+					<input type="number" min="0" max="20" bind:value={openCount} />
 				</label>
 			</div>
 
-			{#if generating}
-				<p class="progress">{STAGE_LABELS[stage] ?? 'İşleniyor...'}</p>
-			{/if}
-			{#if errorMessage}
-				<p class="error">{errorMessage}</p>
-			{/if}
-
 			<div class="actions">
-				<button onclick={closeDialog} disabled={generating}>İptal</button>
-				<button
-					class="primary"
-					onclick={generate}
-					disabled={generating || !prompt.trim() || mc + tf + openCount <= 0}
-				>
+				<button onclick={closeDialog}>İptal</button>
+				<button class="primary" onclick={generate} disabled={!prompt.trim() || mc + tf + openCount <= 0}>
 					Oluştur
 				</button>
 			</div>
@@ -195,6 +146,11 @@
 
 	.trigger:hover {
 		color: var(--accent);
+	}
+
+	.trigger:disabled {
+		opacity: 0.4;
+		cursor: not-allowed;
 	}
 
 	.overlay {
@@ -274,16 +230,6 @@
 
 	.composition input {
 		width: 100%;
-	}
-
-	.progress {
-		color: var(--muted);
-		font-size: 0.85rem;
-	}
-
-	.error {
-		color: var(--error);
-		font-size: 0.85rem;
 	}
 
 	.actions {

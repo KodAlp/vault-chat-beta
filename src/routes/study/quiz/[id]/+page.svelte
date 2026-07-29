@@ -146,6 +146,7 @@
 							class:selected={answers[item.id] === option}
 							onclick={() => selectAnswer(option)}
 						>
+							<span class="option-letter">{String.fromCharCode(65 + i)})</span>
 							{@html optionsHtml[i] ?? option}
 						</button>
 					{/each}
@@ -266,6 +267,9 @@
 	}
 
 	.option {
+		display: flex;
+		align-items: baseline;
+		gap: 0.5rem;
 		text-align: left;
 		padding: 0.6rem 0.9rem;
 		border-radius: 8px;
@@ -274,6 +278,16 @@
 		color: var(--fg);
 		cursor: pointer;
 		font-size: 0.95rem;
+	}
+
+	.option-letter {
+		flex-shrink: 0;
+		font-weight: 600;
+		color: var(--muted);
+	}
+
+	.option.selected .option-letter {
+		color: var(--accent);
 	}
 
 	.option.selected {

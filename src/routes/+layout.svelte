@@ -2,6 +2,7 @@
 	import '../app.css';
 	import 'katex/dist/katex.min.css';
 	import { settings } from '$lib/settings.svelte';
+	import QuizGenerationStatus from '$lib/components/QuizGenerationStatus.svelte';
 
 	let { children } = $props();
 
@@ -26,3 +27,4 @@
 </script>
 
 {@render children()}
+<QuizGenerationStatus />

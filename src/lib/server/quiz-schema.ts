@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const QuizItem = z.object({
 	type: z.enum(['multiple_choice', 'true_false', 'open']),
 	question: z.string().min(1),
-	options: z.array(z.string()).length(4).optional(),
+	options: z.array(z.string()).length(5).optional(),
 	answer: z.string().min(1),
 	explanation: z.string().min(1),
 	source_path: z.string().min(1),
@@ -32,7 +32,7 @@ export const QUIZ_ITEMS_JSON_SCHEMA = {
 				properties: {
 					type: { type: 'string', enum: ['multiple_choice', 'true_false', 'open'] },
 					question: { type: 'string' },
-					options: { type: 'array', items: { type: 'string' } },
+					options: { type: 'array', items: { type: 'string' }, minItems: 5, maxItems: 5 },
 					answer: { type: 'string' },
 					explanation: { type: 'string' },
 					source_path: { type: 'string' },
