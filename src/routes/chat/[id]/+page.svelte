@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Chat from '$lib/components/Chat.svelte';
+	import ExportMenu from '$lib/components/ExportMenu.svelte';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -32,8 +33,7 @@
 	<aside class="panel-right">
 		<div class="right-top">
 			<a href="/" title="Ana sayfa">⌂</a>
-			<a href="/api/chats/{data.chatId}/export?format=md" download title="Markdown olarak indir">.md</a>
-			<a href="/api/chats/{data.chatId}/export?format=json" download title="JSON olarak indir">.json</a>
+			<ExportMenu chatId={data.chatId} />
 			<a href="/settings" title="Ayarlar">⚙</a>
 		</div>
 		<div class="right-bottom placeholder-text">Profil (yakında)</div>
