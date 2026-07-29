@@ -15,7 +15,15 @@ export const POST: RequestHandler = async ({ request }) => {
 	const stream = new ReadableStream({
 		async start(controller) {
 			const encoder = new TextEncoder();
-			const send = (event: StreamEvent) => controller.enqueue(encoder.encode(sseEvent(event)));
+			let closed = false;
+			const send = (event: StreamEvent) => {
+				if (closed) return;
+				try {
+					controller.enqueue(encoder.encode(sseEvent(event)));
+				} catch {
+					// controller already errored/closed (client disconnected mid-enqueue)
+				}
+			};
 
 			try {
 				const sources = lastUser
@@ -23,7 +31,12 @@ export const POST: RequestHandler = async ({ request }) => {
 					: [];
 				const promptMessages = buildPromptMessages(body.messages, sources);
 
-				for await (const piece of streamChat(body.model, promptMessages, body.think ?? false)) {
+				for await (const piece of streamChat(
+					body.model,
+					promptMessages,
+					body.think ?? false,
+					request.signal
+				)) {
 					send(
 						piece.kind === 'thinking'
 							? { type: 'thinking', content: piece.text }
@@ -32,9 +45,18 @@ export const POST: RequestHandler = async ({ request }) => {
 				}
 				send({ type: 'done', sources });
 			} catch (err) {
-				send({ type: 'error', message: err instanceof Error ? err.message : 'Bilinmeyen hata' });
+				// User-initiated stop (interrupt button / navigation) — propagates from
+				// the aborted Ollama fetch. Not a real error; say nothing.
+				if (!(err instanceof DOMException && err.name === 'AbortError')) {
+					send({ type: 'error', message: err instanceof Error ? err.message : 'Bilinmeyen hata' });
+				}
 			} finally {
-				controller.close();
+				closed = true;
+				try {
+					controller.close();
+				} catch {
+					// already closed/errored by the runtime when the client disconnected
+				}
 			}
 		}
 	});

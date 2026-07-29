@@ -15,6 +15,7 @@
 	let errorMessage = $state('');
 	let isAtBottom = $state(true);
 	let listEl: HTMLDivElement | undefined;
+	let abortController: AbortController | undefined;
 
 	function handleScroll() {
 		if (!listEl) return;
@@ -65,6 +66,7 @@
 		};
 		const timer = setInterval(flush, FLUSH_INTERVAL_MS);
 
+		abortController = new AbortController();
 		try {
 			const requestBody: ChatRequestBody = {
 				messages: messages.slice(0, -1),
@@ -74,7 +76,8 @@
 			const res = await fetch('/api/chat', {
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify(requestBody)
+				body: JSON.stringify(requestBody),
+				signal: abortController.signal
 			});
 			if (!res.ok || !res.body) throw new Error(`İstek başarısız (${res.status})`);
 
@@ -98,12 +101,21 @@
 				}
 			}
 		} catch (err) {
-			errorMessage = err instanceof Error ? err.message : 'Bilinmeyen hata';
+			// User-initiated stop — keep whatever partial answer already streamed in,
+			// don't show it as an error.
+			if (!(err instanceof DOMException && err.name === 'AbortError')) {
+				errorMessage = err instanceof Error ? err.message : 'Bilinmeyen hata';
+			}
 		} finally {
 			clearInterval(timer);
 			flush();
 			isStreaming = false;
+			abortController = undefined;
 		}
+	}
+
+	function stop() {
+		abortController?.abort();
 	}
 
 	function handleKeydown(e: KeyboardEvent) {
@@ -155,9 +167,11 @@
 			placeholder="Soru yaz... (Enter: gönder, Shift+Enter: yeni satır)"
 			disabled={isStreaming}
 		></textarea>
-		<button onclick={send} disabled={isStreaming || !input.trim()}>
-			{isStreaming ? '...' : 'Gönder'}
-		</button>
+		{#if isStreaming}
+			<button class="stop" onclick={stop}>Durdur</button>
+		{:else}
+			<button onclick={send} disabled={!input.trim()}>Gönder</button>
+		{/if}
 	</footer>
 </div>
 
@@ -272,5 +286,10 @@
 	button:disabled {
 		opacity: 0.5;
 		cursor: not-allowed;
+	}
+
+	button.stop {
+		background: var(--error);
+		color: var(--bg);
 	}
 </style>

@@ -49,16 +49,19 @@ export interface StreamPiece {
 export async function* streamChat(
 	model: string,
 	messages: OllamaChatMessage[],
-	think: boolean
+	think: boolean,
+	signal?: AbortSignal
 ): AsyncGenerator<StreamPiece> {
 	let res: Response;
 	try {
 		res = await fetch(`${OLLAMA_URL}/api/chat`, {
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify({ model, messages, stream: true, keep_alive: '10m', think })
+			body: JSON.stringify({ model, messages, stream: true, keep_alive: '10m', think }),
+			signal
 		});
-	} catch {
+	} catch (err) {
+		if (err instanceof DOMException && err.name === 'AbortError') throw err;
 		throw new Error('Ollama sunucusuna ulaşılamadı — "ollama serve" çalışıyor mu?');
 	}
 	if (!res.ok || !res.body) {
