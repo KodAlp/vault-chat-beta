@@ -154,3 +154,44 @@ export interface UserSkillStatus {
 	truncated: boolean;
 	parseError: string | null;
 }
+
+export interface LibraryNode {
+	name: string;
+	/** Relative to data/library/, forward-slash separated. */
+	path: string;
+	type: 'file' | 'folder';
+	needsReview?: boolean;
+	children?: LibraryNode[];
+}
+
+export interface LibrarySettings {
+	keepOriginals: boolean;
+}
+
+export type ImportResultStatus = 'converted' | 'skipped' | 'needs_review' | 'failed';
+
+export interface ImportResultItem {
+	fileName: string;
+	status: ImportResultStatus;
+	reason?: string;
+	path?: string;
+}
+
+export interface ImportSummary {
+	items: ImportResultItem[];
+}
+
+/** SSE event shapes streamed by POST /api/import and /api/import/batch. */
+export type ImportEvent =
+	| { type: 'progress'; stage: string; fileName?: string }
+	| { type: 'ready'; importId: string; proposed: { title: string; domain: string; level: string }; warnings: string[] }
+	| { type: 'item'; item: ImportResultItem }
+	| { type: 'done'; summary?: ImportSummary }
+	| { type: 'error'; message: string };
+
+/** SSE event shapes streamed by POST /api/library/import-obsidian. */
+export type ObsidianImportEvent =
+	| { type: 'progress'; stage: string; fileName?: string }
+	| { type: 'item'; item: ImportResultItem }
+	| { type: 'done'; summary: ImportSummary }
+	| { type: 'error'; message: string };

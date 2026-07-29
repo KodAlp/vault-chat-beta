@@ -1,0 +1,12 @@
+# Faz 5 (scoped): MarkItDown only — lightweight, CPU-only, installs in seconds.
+# Pandoc is used for .tex when present on PATH (system tool, not a Python
+# package) but isn't a hard requirement — convert.py degrades gracefully
+# when it's missing, same as the tools below.
+markitdown[all]
+
+# Deferred, optional, heavy (pull PyTorch + multi-GB model weights on first
+# run) — see .claude/skills/source-ingest/SKILL.md. convert.py detects their
+# absence via ImportError and reports a clear "not installed" message rather
+# than crashing or silently degrading output quality. Uncomment to opt in:
+# marker-pdf
+# docling

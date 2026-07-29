@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { env } from '$env/dynamic/public';
 	import { renderMarkdown } from '$lib/markdown';
+	import { obsidianUri, libraryViewerUrl } from '$lib/sourceLink';
 	import type { CardView, Grade } from '$lib/types';
 
 	type Phase = 'loading' | 'reviewing' | 'grading' | 'done' | 'empty' | 'error';
@@ -15,12 +15,6 @@
 
 	let frontHtml = $state('');
 	let backHtml = $state('');
-
-	const vaultName = env.PUBLIC_VAULT_NAME ?? '';
-	function obsidianUri(path: string): string {
-		const params = new URLSearchParams({ vault: vaultName, file: path.replace(/\.md$/, '') });
-		return `obsidian://open?${params.toString()}`;
-	}
 
 	onMount(async () => {
 		try {
@@ -100,6 +94,9 @@
 				<div class="face back">{@html backHtml}</div>
 				<a class="source-link" href={obsidianUri(card.source_path)} title={card.heading_path}>
 					{card.source_path}
+				</a>
+				<a class="source-link" href={libraryViewerUrl(card.source_path)} title="Kütüphanede görüntüle">
+					⇱
 				</a>
 			{/if}
 		</div>

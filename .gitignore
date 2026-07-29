@@ -5,5 +5,11 @@ data/*.db
 data/*.db-wal
 data/*.db-shm
 data/skills/
+data/library/
 .env
 !.env.example
+
+# Python sidecar (ingest/) — venv and any downloaded model weights, never
+# tracked; requirements.txt itself is the reproducible spec.
+ingest/__pycache__/
+ingest/.venv/

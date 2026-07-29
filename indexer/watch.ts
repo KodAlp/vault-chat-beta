@@ -3,6 +3,7 @@ import path from 'node:path';
 import { spawn } from 'node:child_process';
 import chokidar from 'chokidar';
 import { EXCLUDED_DIRS } from './excluded-dirs';
+import { resolveLibraryRoot } from './paths';
 
 try {
 	process.loadEnvFile();
@@ -10,7 +11,7 @@ try {
 	// .env is optional
 }
 
-const VAULT_PATH = path.resolve(process.cwd(), process.env.VAULT_PATH ?? '..');
+const LIBRARY_ROOT = resolveLibraryRoot();
 const DEBOUNCE_MS = 2000;
 
 let debounceTimer: NodeJS.Timeout | undefined;
@@ -44,7 +45,7 @@ function scheduleIndex() {
 }
 
 function isExcluded(filePath: string): boolean {
-	const rel = path.relative(VAULT_PATH, filePath);
+	const rel = path.relative(LIBRARY_ROOT, filePath);
 	return rel.split(path.sep).some((segment) => EXCLUDED_DIRS.has(segment));
 }
 
@@ -53,10 +54,10 @@ function onMarkdownEvent(filePath: string) {
 	scheduleIndex();
 }
 
-console.log(`[watch] izleniyor: ${VAULT_PATH}`);
+console.log(`[watch] izleniyor: ${LIBRARY_ROOT}`);
 console.log('[watch] Ctrl+C ile durdur. Varsayılan iş akışı manueldir — bu opsiyoneldir.');
 
-const watcher = chokidar.watch(VAULT_PATH, {
+const watcher = chokidar.watch(LIBRARY_ROOT, {
 	ignored: isExcluded,
 	ignoreInitial: true
 });

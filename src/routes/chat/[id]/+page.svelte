@@ -3,6 +3,7 @@
 	import ExportMenu from '$lib/components/ExportMenu.svelte';
 	import QuizDialog from '$lib/components/QuizDialog.svelte';
 	import CardsDialog from '$lib/components/CardsDialog.svelte';
+	import LibraryTree from '$lib/components/LibraryTree.svelte';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -24,7 +25,7 @@
 			{leftCollapsed ? '»' : '«'}
 		</button>
 		{#if !leftCollapsed}
-			<p class="placeholder-text">Kaynak kütüphanesi yakında</p>
+			<LibraryTree />
 		{/if}
 	</aside>
 
@@ -65,6 +66,7 @@
 		border-right: 1px solid var(--border);
 		padding: 0.75rem;
 		transition: width 0.15s ease;
+		min-height: 0;
 	}
 
 	.panel-left.collapsed {

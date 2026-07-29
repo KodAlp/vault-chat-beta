@@ -7,14 +7,15 @@ import { openDb, listKnownFiles, deleteFile, upsertFile, type FileRow } from './
 import { chunkMarkdown } from './chunk';
 import { embedDocuments } from './embed';
 import { EXCLUDED_DIRS } from './excluded-dirs';
+import { resolveLibraryRoot } from './paths';
 
 try {
 	process.loadEnvFile();
 } catch {
-	// .env is optional; OLLAMA_URL/VAULT_PATH/INDEX_DB_PATH fall back to defaults below
+	// .env is optional; OLLAMA_URL/LIBRARY_PATH/INDEX_DB_PATH fall back to defaults below
 }
 
-const VAULT_PATH = path.resolve(process.cwd(), process.env.VAULT_PATH ?? '..');
+const LIBRARY_ROOT = resolveLibraryRoot();
 const DB_PATH = path.resolve(
 	process.cwd(),
 	process.env.INDEX_DB_PATH ?? path.join('data', 'vault-index.db')
@@ -55,8 +56,8 @@ async function main() {
 	let skipped = 0;
 	let warnings = 0;
 
-	for (const absPath of walk(VAULT_PATH)) {
-		const relPath = path.relative(VAULT_PATH, absPath).split(path.sep).join('/');
+	for (const absPath of walk(LIBRARY_ROOT)) {
+		const relPath = path.relative(LIBRARY_ROOT, absPath).split(path.sep).join('/');
 		const raw = fs.readFileSync(absPath, 'utf-8');
 		const hash = sha256(raw);
 		seen.add(relPath);

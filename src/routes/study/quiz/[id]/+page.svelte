@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { env } from '$env/dynamic/public';
 	import { renderMarkdown } from '$lib/markdown';
 	import { settings } from '$lib/settings.svelte';
+	import { obsidianUri, libraryViewerUrl } from '$lib/sourceLink';
 	import type { PageProps } from './$types';
 	import type {
 		QuizItemView,
@@ -29,12 +29,6 @@
 
 	let questionHtml = $state('');
 	let optionsHtml = $state<string[]>([]);
-
-	const vaultName = env.PUBLIC_VAULT_NAME ?? '';
-	function obsidianUri(path: string): string {
-		const params = new URLSearchParams({ vault: vaultName, file: path.replace(/\.md$/, '') });
-		return `obsidian://open?${params.toString()}`;
-	}
 
 	onMount(async () => {
 		try {
@@ -197,6 +191,9 @@
 						{/if}
 						<a class="source-link" href={obsidianUri(r.item.sourcePath)} title={r.item.headingPath}>
 							{r.item.sourcePath}
+						</a>
+						<a class="source-link" href={libraryViewerUrl(r.item.sourcePath)} title="Kütüphanede görüntüle">
+							⇱
 						</a>
 					</div>
 				</div>

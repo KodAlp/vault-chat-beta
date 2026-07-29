@@ -92,6 +92,12 @@
 	</section>
 
 	<section>
+		<h2>Kütüphane</h2>
+		<p class="hint">Obsidian vault'undan içe aktar, belge yükleme ayarları.</p>
+		<a class="skills-link" href="/settings/library">Kütüphaneyi yönet →</a>
+	</section>
+
+	<section>
 		<h2>Kullanıcı Skill'leri</h2>
 		<p class="hint">Sohbet, test ve bilgi kartı üretimini kişiselleştir.</p>
 		<a class="skills-link" href="/settings/skills">Skill'leri yönet →</a>

@@ -65,6 +65,16 @@ export function listKnownFiles(db: Database.Database): Map<string, FileRow> {
 	return new Map(rows.map((r) => [r.path, r]));
 }
 
+/** Pure metadata rename — chunks/embeddings are unchanged, so this needs no
+ * re-chunk/re-embed. Used by the library tree's rename/move action. */
+export function renameFileInIndex(db: Database.Database, oldPath: string, newPath: string): void {
+	const tx = db.transaction(() => {
+		db.prepare('UPDATE files SET path = ? WHERE path = ?').run(newPath, oldPath);
+		db.prepare('UPDATE chunks SET path = ? WHERE path = ?').run(newPath, oldPath);
+	});
+	tx();
+}
+
 export function deleteFile(db: Database.Database, filePath: string): void {
 	const chunkIds = db.prepare('SELECT id FROM chunks WHERE path = ?').all(filePath) as {
 		id: number;
