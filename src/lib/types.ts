@@ -38,6 +38,17 @@ export interface OllamaModel {
 	modified_at: string;
 }
 
+/** Client-safe mirror of chats-db.ts's ChatRow — that module is server-only
+ * ($lib/server/), can't be imported from a component. Kept structurally
+ * identical to what GET /api/chats actually returns. */
+export interface ChatSummary {
+	id: string;
+	title: string | null;
+	model: string;
+	created_at: string;
+	updated_at: string;
+}
+
 /** SSE event shapes streamed by POST /api/chat. */
 export type StreamEvent =
 	| { type: 'chatId'; chatId: string }

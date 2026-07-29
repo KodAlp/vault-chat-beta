@@ -2,6 +2,7 @@
 	import type { ChatMessage, ChatRequestBody, StreamEvent } from '$lib/types';
 	import Message from './Message.svelte';
 	import ModelPicker from './ModelPicker.svelte';
+	import ChatHistory from './ChatHistory.svelte';
 
 	const FLUSH_INTERVAL_MS = 50;
 
@@ -16,6 +17,7 @@
 	let isAtBottom = $state(true);
 	let listEl: HTMLDivElement | undefined;
 	let abortController: AbortController | undefined;
+	let currentChatId = $state<string | undefined>();
 
 	function handleScroll() {
 		if (!listEl) return;
@@ -71,7 +73,8 @@
 			const requestBody: ChatRequestBody = {
 				messages: messages.slice(0, -1),
 				model,
-				think: thinkMode
+				think: thinkMode,
+				chatId: currentChatId
 			};
 			const res = await fetch('/api/chat', {
 				method: 'POST',
@@ -94,7 +97,8 @@
 					const line = part.trim();
 					if (!line.startsWith('data:')) continue;
 					const event = JSON.parse(line.slice(5)) as StreamEvent;
-					if (event.type === 'delta') rawContent += event.content;
+					if (event.type === 'chatId') currentChatId = event.chatId;
+					else if (event.type === 'delta') rawContent += event.content;
 					else if (event.type === 'thinking') rawThinking += event.content;
 					else if (event.type === 'done') assistantMessage.sources = event.sources;
 					else if (event.type === 'error') errorMessage = event.message;
@@ -122,6 +126,30 @@
 		abortController?.abort();
 	}
 
+	async function loadChat(chatId: string) {
+		if (isStreaming) return;
+		errorMessage = '';
+		try {
+			const res = await fetch(`/api/chats/${chatId}`);
+			if (!res.ok) throw new Error();
+			const data = (await res.json()) as { chat: { model: string }; messages: ChatMessage[] };
+			messages = data.messages;
+			currentChatId = chatId;
+			model = data.chat.model;
+			isAtBottom = true;
+			scrollToBottom(true);
+		} catch {
+			errorMessage = 'Konuşma yüklenemedi';
+		}
+	}
+
+	function newChat() {
+		if (isStreaming) return;
+		messages = [];
+		currentChatId = undefined;
+		errorMessage = '';
+	}
+
 	function handleKeydown(e: KeyboardEvent) {
 		if (e.key === 'Enter' && !e.shiftKey) {
 			e.preventDefault();
@@ -138,6 +166,12 @@
 				<input id="think-mode" name="think-mode" type="checkbox" bind:checked={thinkMode} />
 				Derin düşün
 			</label>
+			{#if currentChatId}
+				<a class="export-link" href="/api/chats/{currentChatId}/export?format=md" download title="Markdown olarak indir">.md</a>
+				<a class="export-link" href="/api/chats/{currentChatId}/export?format=json" download title="JSON olarak indir">.json</a>
+			{/if}
+			<ChatHistory onSelect={loadChat} />
+			<button class="new-chat" onclick={newChat} disabled={isStreaming}>Yeni konuşma</button>
 			<ModelPicker bind:model />
 		</div>
 	</header>
@@ -215,6 +249,28 @@
 		color: var(--muted);
 		cursor: pointer;
 		user-select: none;
+	}
+
+	.export-link {
+		font-size: 0.8rem;
+		color: var(--muted);
+		border: 1px solid var(--border);
+		border-radius: 6px;
+		padding: 0.25rem 0.45rem;
+		text-decoration: none;
+	}
+
+	.export-link:hover {
+		color: var(--accent);
+		border-color: var(--accent);
+	}
+
+	.new-chat {
+		font-size: 0.85rem;
+		padding: 0 0.75rem;
+		background: transparent;
+		color: var(--fg);
+		border: 1px solid var(--border);
 	}
 
 	.messages-wrap {
