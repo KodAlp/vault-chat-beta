@@ -2,6 +2,7 @@
 	import Chat from '$lib/components/Chat.svelte';
 	import ExportMenu from '$lib/components/ExportMenu.svelte';
 	import QuizDialog from '$lib/components/QuizDialog.svelte';
+	import CardsDialog from '$lib/components/CardsDialog.svelte';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -39,6 +40,7 @@
 		</div>
 		<div class="right-middle">
 			<QuizDialog chatId={data.chatId} />
+			<CardsDialog chatId={data.chatId} />
 		</div>
 		<div class="right-bottom placeholder-text">Profil (yakında)</div>
 	</aside>
@@ -122,6 +124,7 @@
 		display: flex;
 		flex-direction: column;
 		align-items: center;
+		gap: 1.1rem;
 	}
 
 	.right-bottom {

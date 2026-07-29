@@ -115,3 +115,27 @@ export interface SubmitAttemptResponse {
 	score: number;
 	items: AttemptResultItem[];
 }
+
+export interface CardGenerationRequest {
+	domains?: string[];
+	chatId?: string;
+	prompt: string;
+	count: number;
+	model: string;
+}
+
+/** SSE event shapes streamed by POST /api/generate/cards. */
+export type CardGenerationEvent =
+	| { type: 'progress'; stage: 'retrieving' | 'generating' | 'validating' | 'retrying' }
+	| { type: 'done'; deckId: string }
+	| { type: 'error'; message: string };
+
+export type Grade = 'again' | 'hard' | 'good' | 'easy';
+
+export interface CardView {
+	id: string;
+	front: string;
+	back: string;
+	source_path: string;
+	heading_path: string;
+}

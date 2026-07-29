@@ -3,6 +3,7 @@
 	import 'katex/dist/katex.min.css';
 	import { settings } from '$lib/settings.svelte';
 	import QuizGenerationStatus from '$lib/components/QuizGenerationStatus.svelte';
+	import CardGenerationStatus from '$lib/components/CardGenerationStatus.svelte';
 
 	let { children } = $props();
 
@@ -28,3 +29,4 @@
 
 {@render children()}
 <QuizGenerationStatus />
+<CardGenerationStatus />

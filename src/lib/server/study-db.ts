@@ -2,6 +2,7 @@ import Database from 'better-sqlite3';
 import path from 'node:path';
 import fs from 'node:fs';
 import { env } from '$env/dynamic/private';
+import type { CardSchedule } from './schedule';
 
 export interface QuizRow {
 	id: string;
@@ -89,6 +90,30 @@ function getDb(): Database.Database {
 				model_feedback TEXT
 			);
 			CREATE INDEX IF NOT EXISTS idx_attempt_answers_attempt_id ON attempt_answers(attempt_id);
+			CREATE TABLE IF NOT EXISTS decks (
+				id TEXT PRIMARY KEY,
+				name TEXT NOT NULL,
+				scope_json TEXT NOT NULL,
+				model TEXT NOT NULL,
+				created_at TEXT NOT NULL
+			);
+			CREATE TABLE IF NOT EXISTS cards (
+				id TEXT PRIMARY KEY,
+				deck_id TEXT NOT NULL REFERENCES decks(id) ON DELETE CASCADE,
+				front TEXT NOT NULL,
+				back TEXT NOT NULL,
+				source_path TEXT NOT NULL,
+				heading_path TEXT NOT NULL,
+				domain TEXT NOT NULL,
+				level TEXT NOT NULL,
+				ease REAL NOT NULL,
+				interval_days INTEGER NOT NULL,
+				due_at TEXT NOT NULL,
+				reps INTEGER NOT NULL,
+				lapses INTEGER NOT NULL
+			);
+			CREATE INDEX IF NOT EXISTS idx_cards_due ON cards(due_at);
+			CREATE INDEX IF NOT EXISTS idx_cards_deck_id ON cards(deck_id);
 		`);
 	}
 	return db;
@@ -194,4 +219,105 @@ export function getAttemptAnswers(attemptId: string): AttemptAnswerRow[] {
 	return getDb()
 		.prepare('SELECT * FROM attempt_answers WHERE attempt_id = ?')
 		.all(attemptId) as AttemptAnswerRow[];
+}
+
+export interface DeckRow {
+	id: string;
+	name: string;
+	scope_json: string;
+	model: string;
+	created_at: string;
+}
+
+export interface CardRow {
+	id: string;
+	deck_id: string;
+	front: string;
+	back: string;
+	source_path: string;
+	heading_path: string;
+	domain: string;
+	level: string;
+	ease: number;
+	interval_days: number;
+	due_at: string;
+	reps: number;
+	lapses: number;
+}
+
+export interface NewCard {
+	front: string;
+	back: string;
+	source_path: string;
+	heading_path: string;
+	domain: string;
+	level: string;
+}
+
+export function createDeck(name: string, scope: unknown, model: string, items: NewCard[]): string {
+	const id = crypto.randomUUID();
+	const now = new Date().toISOString();
+	const database = getDb();
+	const tx = database.transaction(() => {
+		database
+			.prepare(`INSERT INTO decks (id, name, scope_json, model, created_at) VALUES (?, ?, ?, ?, ?)`)
+			.run(id, name, JSON.stringify(scope), model, now);
+
+		const insertCard = database.prepare(
+			`INSERT INTO cards (id, deck_id, front, back, source_path, heading_path, domain, level, ease, interval_days, due_at, reps, lapses)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		);
+		for (const item of items) {
+			insertCard.run(
+				crypto.randomUUID(),
+				id,
+				item.front,
+				item.back,
+				item.source_path,
+				item.heading_path,
+				item.domain,
+				item.level,
+				2.5,
+				1,
+				now,
+				0,
+				0
+			);
+		}
+	});
+	tx();
+	return id;
+}
+
+export function getDeck(id: string): DeckRow | undefined {
+	return getDb().prepare('SELECT * FROM decks WHERE id = ?').get(id) as DeckRow | undefined;
+}
+
+export function getDeckCards(deckId: string): CardRow[] {
+	return getDb().prepare('SELECT * FROM cards WHERE deck_id = ?').all(deckId) as CardRow[];
+}
+
+export function getCard(id: string): CardRow | undefined {
+	return getDb().prepare('SELECT * FROM cards WHERE id = ?').get(id) as CardRow | undefined;
+}
+
+export function getDueCount(nowIso: string): number {
+	const row = getDb()
+		.prepare('SELECT COUNT(*) AS n FROM cards WHERE due_at <= ?')
+		.get(nowIso) as { n: number };
+	return row.n;
+}
+
+export function getDueCards(nowIso: string, limit: number): CardRow[] {
+	return getDb()
+		.prepare('SELECT * FROM cards WHERE due_at <= ? ORDER BY due_at ASC LIMIT ?')
+		.all(nowIso, limit) as CardRow[];
+}
+
+export function updateCardSchedule(id: string, s: CardSchedule): void {
+	getDb()
+		.prepare(
+			'UPDATE cards SET ease = ?, interval_days = ?, due_at = ?, reps = ?, lapses = ? WHERE id = ?'
+		)
+		.run(s.ease, s.interval_days, s.due_at, s.reps, s.lapses, id);
 }
