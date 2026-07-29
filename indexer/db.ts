@@ -43,12 +43,18 @@ export function openDb(dbPath: string): Database.Database {
 		);
 		CREATE INDEX IF NOT EXISTS idx_chunks_path ON chunks(path);
 	`);
-	// Dimension is baked into the virtual table DDL — changing EMBED_DIMS requires
-	// `npm run index -- --full` so this table gets dropped and rebuilt at the new size.
+	// Dimension AND distance metric are baked into the virtual table DDL —
+	// changing either requires `npm run index -- --full` so this table gets
+	// dropped and rebuilt. distance_metric=cosine is load-bearing: without it
+	// sqlite-vec defaults to L2, which on nomic-embed-text's ~768-dim vectors
+	// clusters almost everything around distance 0.85-0.97 regardless of actual
+	// relevance — silently breaking retrieve.ts's DISTANCE_THRESHOLD (always
+	// calibrated for cosine, ~0.55) so retrieval returned empty for nearly
+	// every query without ever raising an error.
 	db.exec(`
 		CREATE VIRTUAL TABLE IF NOT EXISTS vec_chunks USING vec0(
 			chunk_id INTEGER PRIMARY KEY,
-			embedding FLOAT[${EMBED_DIMS}]
+			embedding FLOAT[${EMBED_DIMS}] distance_metric=cosine
 		);
 	`);
 	return db;
