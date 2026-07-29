@@ -50,14 +50,25 @@ export async function* streamChat(
 	model: string,
 	messages: OllamaChatMessage[],
 	think: boolean,
-	signal?: AbortSignal
+	signal?: AbortSignal,
+	options?: { format?: object; temperature?: number }
 ): AsyncGenerator<StreamPiece> {
 	let res: Response;
 	try {
 		res = await fetch(`${OLLAMA_URL}/api/chat`, {
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify({ model, messages, stream: true, keep_alive: '10m', think }),
+			body: JSON.stringify({
+				model,
+				messages,
+				stream: true,
+				keep_alive: '10m',
+				think,
+				...(options?.format ? { format: options.format } : {}),
+				...(options?.temperature !== undefined
+					? { options: { temperature: options.temperature } }
+					: {})
+			}),
 			signal
 		});
 	} catch (err) {

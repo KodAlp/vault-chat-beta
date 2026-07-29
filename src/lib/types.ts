@@ -59,3 +59,34 @@ export type StreamEvent =
 	| { type: 'thinking'; content: string }
 	| { type: 'done'; sources: RetrievedChunk[] }
 	| { type: 'error'; message: string };
+
+export interface QuizGenerationRequest {
+	domains?: string[];
+	chatId?: string;
+	prompt: string;
+	composition: { mc: number; tf: number; open: number };
+	model: string;
+}
+
+/** SSE event shapes streamed by POST /api/generate/quiz. */
+export type QuizGenerationEvent =
+	| { type: 'progress'; stage: 'retrieving' | 'generating' | 'validating' | 'retrying' }
+	| { type: 'done'; quizId: string }
+	| { type: 'error'; message: string };
+
+export type QuizItemType = 'multiple_choice' | 'true_false' | 'open';
+
+export interface QuizItemView {
+	id: string;
+	type: QuizItemType;
+	question: string;
+	options: string[] | null;
+	source_path: string;
+	heading_path: string;
+}
+
+export interface QuizView {
+	id: string;
+	title: string;
+	model: string;
+}

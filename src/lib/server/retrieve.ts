@@ -93,3 +93,12 @@ export async function retrieve(
 	}
 	return results;
 }
+
+/** Domains actually present in the index, not a hardcoded list — stays
+ * accurate as the vault grows without needing to be kept in sync by hand. */
+export function listDomains(): string[] {
+	const rows = getDb()
+		.prepare(`SELECT DISTINCT d.value AS domain FROM files, json_each(files.domains_json) AS d ORDER BY d.value`)
+		.all() as { domain: string }[];
+	return rows.map((r) => r.domain);
+}
