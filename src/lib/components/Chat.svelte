@@ -5,15 +5,27 @@
 
 	const FLUSH_INTERVAL_MS = 50;
 
+	const STICK_THRESHOLD_PX = 80;
+
 	let messages = $state<ChatMessage[]>([]);
 	let input = $state('');
 	let model = $state('qwen3:8b');
 	let thinkMode = $state(false);
 	let isStreaming = $state(false);
 	let errorMessage = $state('');
+	let isAtBottom = $state(true);
 	let listEl: HTMLDivElement | undefined;
 
-	function scrollToBottom() {
+	function handleScroll() {
+		if (!listEl) return;
+		isAtBottom =
+			listEl.scrollHeight - listEl.scrollTop - listEl.clientHeight < STICK_THRESHOLD_PX;
+	}
+
+	/** During streaming, only follow new content if the user was already at the
+	 * bottom — otherwise a manual scroll-up gets yanked back down on every token. */
+	function scrollToBottom(force = false) {
+		if (!listEl || (!force && !isAtBottom)) return;
 		queueMicrotask(() => listEl?.scrollTo({ top: listEl.scrollHeight }));
 	}
 
@@ -29,7 +41,8 @@
 		// out of the array so later mutations hit the reactive proxy, not the
 		// original plain object (which the UI never sees updates to).
 		const assistantMessage = messages[messages.length - 1];
-		scrollToBottom();
+		isAtBottom = true;
+		scrollToBottom(true);
 
 		isStreaming = true;
 		let rawContent = '';
@@ -113,13 +126,20 @@
 		</div>
 	</header>
 
-	<div class="messages" bind:this={listEl}>
-		{#if messages.length === 0}
-			<p class="empty">Kasandaki notlar hakkında bir soru sor.</p>
+	<div class="messages-wrap">
+		<div class="messages" bind:this={listEl} onscroll={handleScroll}>
+			{#if messages.length === 0}
+				<p class="empty">Kasandaki notlar hakkında bir soru sor.</p>
+			{/if}
+			{#each messages as message, i (i)}
+				<Message {message} streaming={isStreaming && i === messages.length - 1} />
+			{/each}
+		</div>
+		{#if isStreaming && !isAtBottom}
+			<button class="scroll-to-bottom" onclick={() => scrollToBottom(true)}>
+				↓ en sona in
+			</button>
 		{/if}
-		{#each messages as message, i (i)}
-			<Message {message} streaming={isStreaming && i === messages.length - 1} />
-		{/each}
 	</div>
 
 	{#if errorMessage}
@@ -145,7 +165,7 @@
 	.chat {
 		display: flex;
 		flex-direction: column;
-		height: 100vh;
+		height: 100dvh;
 		max-width: 900px;
 		margin: 0 auto;
 	}
@@ -179,10 +199,31 @@
 		user-select: none;
 	}
 
-	.messages {
+	.messages-wrap {
+		position: relative;
 		flex: 1;
+		min-height: 0;
+	}
+
+	.messages {
+		height: 100%;
 		overflow-y: auto;
 		padding: 1rem;
+	}
+
+	.scroll-to-bottom {
+		position: absolute;
+		bottom: 1rem;
+		left: 50%;
+		transform: translateX(-50%);
+		padding: 0.4rem 0.9rem;
+		border-radius: 999px;
+		border: 1px solid var(--border);
+		background: var(--bg);
+		color: var(--fg);
+		font-size: 0.8rem;
+		cursor: pointer;
+		box-shadow: 0 2px 8px rgb(0 0 0 / 0.15);
 	}
 
 	.empty {
