@@ -30,6 +30,9 @@ export interface ChatRequestBody {
 	domains?: string[];
 	think?: boolean;
 	chatId?: string;
+	/** Model for background title generation on a new chat — settings.defaultModel
+	 * client-side. Falls back server-side if omitted. */
+	titleModel?: string;
 }
 
 export interface OllamaModel {

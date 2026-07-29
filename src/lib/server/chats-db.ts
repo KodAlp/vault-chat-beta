@@ -54,9 +54,14 @@ function getDb(): Database.Database {
 	return db;
 }
 
-export function createChat(model: string): ChatRow {
+/**
+ * Id is supplied by the caller, not generated here — the client generates it
+ * (crypto.randomUUID(), same convention as ChatMessage.id) so the welcome
+ * screen can navigate to /chat/{id} before the first message is even sent.
+ */
+export function createChat(id: string, model: string): ChatRow {
 	const now = new Date().toISOString();
-	const chat: ChatRow = { id: crypto.randomUUID(), title: null, model, created_at: now, updated_at: now };
+	const chat: ChatRow = { id, title: null, model, created_at: now, updated_at: now };
 	getDb()
 		.prepare(`INSERT INTO chats (id, title, model, created_at, updated_at) VALUES (?, ?, ?, ?, ?)`)
 		.run(chat.id, chat.title, chat.model, chat.created_at, chat.updated_at);

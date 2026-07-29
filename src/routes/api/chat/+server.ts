@@ -2,7 +2,7 @@ import type { RequestHandler } from './$types';
 import { retrieve } from '$lib/server/retrieve';
 import { buildPromptMessages } from '$lib/server/prompt';
 import { streamChat } from '$lib/server/ollama';
-import { createChat, insertMessage, touchChat } from '$lib/server/chats-db';
+import { createChat, getChat, insertMessage, touchChat } from '$lib/server/chats-db';
 import { generateTitle } from '$lib/server/title';
 import type { ChatRequestBody, RetrievedChunk, StreamEvent } from '$lib/types';
 
@@ -27,8 +27,11 @@ export const POST: RequestHandler = async ({ request }) => {
 				}
 			};
 
-			const isNewChat = !body.chatId;
-			const chatId = body.chatId ?? createChat(body.model).id;
+			// Client generates the id (welcome screen navigates to /chat/{id} before
+			// the first message is even sent) — this route just upserts it.
+			const chatId = body.chatId ?? crypto.randomUUID();
+			const isNewChat = !getChat(chatId);
+			if (isNewChat) createChat(chatId, body.model);
 			send({ type: 'chatId', chatId });
 			if (lastUser) insertMessage({ chatId, role: 'user', content: lastUser.content });
 
@@ -72,7 +75,7 @@ export const POST: RequestHandler = async ({ request }) => {
 					sourcesJson: sources.length ? JSON.stringify(sources) : null
 				});
 				touchChat(chatId);
-				if (isNewChat && lastUser) void generateTitle(chatId, lastUser.content);
+				if (isNewChat && lastUser) void generateTitle(chatId, lastUser.content, body.titleModel);
 
 				closed = true;
 				try {
