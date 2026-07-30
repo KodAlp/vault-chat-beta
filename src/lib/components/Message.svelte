@@ -44,7 +44,7 @@
 	{#if message.role === 'assistant' && message.thinking}
 		<ThinkingPanel thinking={message.thinking} {streaming} />
 	{/if}
-	<div class="bubble" class:interrupted={isEmptyInterrupted}>
+	<div class="bubble markdown-body" class:interrupted={isEmptyInterrupted}>
 		{#if isEmptyInterrupted}
 			Durduruldu
 		{:else}
@@ -109,11 +109,4 @@
 		margin: 0 0 0.3rem;
 	}
 
-	.bubble :global(p:first-child) {
-		margin-top: 0;
-	}
-
-	.bubble :global(p:last-child) {
-		margin-bottom: 0;
-	}
 </style>

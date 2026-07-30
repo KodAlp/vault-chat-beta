@@ -1,8 +1,9 @@
 import { sveltekit } from '@sveltejs/kit/vite';
+import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-	plugins: [sveltekit()],
+	plugins: [tailwindcss(), sveltekit()],
 	// Pin to IPv4 loopback explicitly. Vite's default host resolution picked
 	// whichever address "localhost" resolved to first on this machine (IPv6
 	// ::1), which some Windows setups (VPN/AV breaking IPv6 loopback) can't

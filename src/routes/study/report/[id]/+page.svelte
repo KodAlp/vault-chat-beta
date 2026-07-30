@@ -56,7 +56,7 @@
 			{#each renderedSections as r (r.section.id)}
 				<section class="report-section">
 					<h2>{r.section.heading}</h2>
-					<div class="body">{@html r.html}</div>
+					<div class="body markdown-body">{@html r.html}</div>
 					<div class="citations">
 						{#each r.section.source_paths as path (path)}
 							<a class="source-link" href={obsidianUri(path)} title="Obsidian'da aç">{path}</a>
