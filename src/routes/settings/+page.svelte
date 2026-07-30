@@ -2,9 +2,15 @@
 	import { onMount } from 'svelte';
 	import { settings, persistSettings } from '$lib/settings.svelte';
 	import type { OllamaModel } from '$lib/types';
+	import { isTauri, invoke } from '@tauri-apps/api/core';
 
 	let models = $state<OllamaModel[]>([]);
 	let loadError = $state('');
+
+	const runningInTauri = isTauri();
+	let vaultPath = $state('');
+	let vaultName = $state('');
+	let vaultSaveStatus = $state<'idle' | 'saved' | 'error'>('idle');
 
 	onMount(async () => {
 		try {
@@ -14,7 +20,37 @@
 		} catch {
 			loadError = 'Model listesi alınamadı — Ollama çalışıyor mu?';
 		}
+
+		if (runningInTauri) {
+			try {
+				const cfg = await invoke<{ vault_path: string; vault_name: string } | null>(
+					'get_vault_config'
+				);
+				if (cfg) {
+					vaultPath = cfg.vault_path;
+					vaultName = cfg.vault_name;
+				}
+			} catch {
+				// Settings page still usable without this — just starts blank.
+			}
+		}
 	});
+
+	async function pickVaultFolder() {
+		const { open } = await import('@tauri-apps/plugin-dialog');
+		const picked = await open({ directory: true, multiple: false });
+		if (typeof picked === 'string') vaultPath = picked;
+	}
+
+	async function saveVaultConfig() {
+		vaultSaveStatus = 'idle';
+		try {
+			await invoke('update_vault_config', { vaultPath, vaultName });
+			vaultSaveStatus = 'saved';
+		} catch {
+			vaultSaveStatus = 'error';
+		}
+	}
 </script>
 
 <svelte:head>
@@ -90,6 +126,33 @@
 			</select>
 		</label>
 	</section>
+
+	{#if runningInTauri}
+		<section>
+			<h2>Masaüstü — Kasa Konumu</h2>
+			<p class="hint">
+				Değişiklik bir sonraki uygulama başlatmasında etkili olur (sunucu şu an çalışırken kasa
+				yolu değiştirilemez).
+			</p>
+			<label class="field">
+				Kasa klasörü
+				<div class="path-row">
+					<input type="text" readonly value={vaultPath} placeholder="Henüz seçilmedi" />
+					<button type="button" onclick={pickVaultFolder}>Seç…</button>
+				</div>
+			</label>
+			<label class="field">
+				Obsidian'da görünen vault adı
+				<input type="text" bind:value={vaultName} />
+			</label>
+			<button type="button" class="save-btn" onclick={saveVaultConfig}>Kaydet</button>
+			{#if vaultSaveStatus === 'saved'}
+				<span class="hint saved">Kaydedildi — bir sonraki başlatmada uygulanır.</span>
+			{:else if vaultSaveStatus === 'error'}
+				<span class="warn">Kaydedilemedi.</span>
+			{/if}
+		</section>
+	{/if}
 
 	<section>
 		<h2>Kütüphane</h2>
@@ -170,7 +233,8 @@
 		color: var(--muted);
 	}
 
-	select {
+	select,
+	input[type='text'] {
 		background: var(--bg);
 		color: var(--fg);
 		border: 1px solid var(--border);
@@ -178,6 +242,35 @@
 		padding: 0.4rem 0.5rem;
 		font-size: 0.9rem;
 		max-width: 320px;
+	}
+
+	.path-row {
+		display: flex;
+		gap: 0.5rem;
+	}
+
+	.path-row input {
+		flex: 1;
+	}
+
+	.path-row button,
+	.save-btn {
+		padding: 0.4rem 0.9rem;
+		border-radius: 6px;
+		border: 1px solid var(--border);
+		background: transparent;
+		color: var(--fg);
+		cursor: pointer;
+		font-size: 0.85rem;
+	}
+
+	.save-btn {
+		margin-top: 0.25rem;
+	}
+
+	.saved {
+		color: #2e7d32;
+		margin-left: 0.6rem;
 	}
 
 	.warn {

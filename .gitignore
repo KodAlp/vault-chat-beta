@@ -1,5 +1,6 @@
 node_modules/
 build/
+dist-server/
 .svelte-kit/
 data/*.db
 data/*.db-wal
