@@ -42,6 +42,15 @@
     ],
     "flashcards": [
       "ollama"
+    ],
+    "report": [
+      "ollama"
+    ],
+    "mindmap": [
+      "ollama"
+    ],
+    "slides": [
+      "ollama"
     ]
   }
 }

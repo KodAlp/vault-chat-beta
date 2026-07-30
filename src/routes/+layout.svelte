@@ -4,6 +4,9 @@
 	import { settings } from '$lib/settings.svelte';
 	import QuizGenerationStatus from '$lib/components/QuizGenerationStatus.svelte';
 	import CardGenerationStatus from '$lib/components/CardGenerationStatus.svelte';
+	import ReportGenerationStatus from '$lib/components/ReportGenerationStatus.svelte';
+	import MindMapGenerationStatus from '$lib/components/MindMapGenerationStatus.svelte';
+	import SlidesGenerationStatus from '$lib/components/SlidesGenerationStatus.svelte';
 
 	let { children } = $props();
 
@@ -30,3 +33,6 @@
 {@render children()}
 <QuizGenerationStatus />
 <CardGenerationStatus />
+<ReportGenerationStatus />
+<MindMapGenerationStatus />
+<SlidesGenerationStatus />

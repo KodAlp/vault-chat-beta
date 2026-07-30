@@ -5,13 +5,16 @@ import { z } from 'zod';
 import { env } from '$env/dynamic/private';
 import type { UserSkillScope, UserSkillStatus } from '$lib/types';
 
-const SCOPES: UserSkillScope[] = ['chat', 'quiz', 'flashcards'];
+const SCOPES: UserSkillScope[] = ['chat', 'quiz', 'flashcards', 'mindmap', 'report', 'slides'];
 
 const Frontmatter = z.object({
 	name: z.string().min(1).optional(),
 	description: z.string().min(1),
 	scope: z
-		.union([z.literal('all'), z.array(z.enum(['chat', 'quiz', 'flashcards']))])
+		.union([
+			z.literal('all'),
+			z.array(z.enum(['chat', 'quiz', 'flashcards', 'mindmap', 'report', 'slides']))
+		])
 		.default('all'),
 	enabled: z.boolean().default(true),
 	priority: z.number().min(0).max(100).default(50)

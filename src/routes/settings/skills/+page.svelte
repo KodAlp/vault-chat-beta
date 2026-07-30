@@ -5,7 +5,10 @@
 	const SCOPE_LABELS: Record<UserSkillScope, string> = {
 		chat: 'Sohbet',
 		quiz: 'Test',
-		flashcards: 'Kartlar'
+		flashcards: 'Kartlar',
+		mindmap: 'Zihin haritası',
+		report: 'Rapor',
+		slides: 'Slayt'
 	};
 
 	const TEMPLATE = `---
@@ -191,6 +194,9 @@ Kurallar, tercihler, yasaklar... serbest markdown.
 				<option value="chat">Sohbet</option>
 				<option value="quiz">Test</option>
 				<option value="flashcards">Kartlar</option>
+				<option value="report">Rapor</option>
+				<option value="mindmap">Zihin haritası</option>
+				<option value="slides">Slayt</option>
 			</select>
 			<button onclick={runPreview}>Önizleme</button>
 		</div>

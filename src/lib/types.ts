@@ -149,7 +149,90 @@ export interface CardView {
 	heading_path: string;
 }
 
-export type UserSkillScope = 'chat' | 'quiz' | 'flashcards';
+export interface ReportGenerationRequest {
+	domains?: string[];
+	chatId?: string;
+	prompt: string;
+	model: string;
+}
+
+/** SSE event shapes streamed by POST /api/generate/report. */
+export type ReportGenerationEvent =
+	| { type: 'progress'; stage: 'retrieving' | 'generating' | 'validating' | 'retrying' }
+	| { type: 'done'; reportId: string }
+	| { type: 'error'; message: string };
+
+export interface ReportView {
+	id: string;
+	title: string;
+	model: string;
+}
+
+export interface ReportSectionView {
+	id: string;
+	heading: string;
+	body_markdown: string;
+	source_paths: string[];
+}
+
+export interface MindMapGenerationRequest {
+	domains?: string[];
+	chatId?: string;
+	prompt: string;
+	model: string;
+}
+
+/** SSE event shapes streamed by POST /api/generate/mindmap. */
+export type MindMapGenerationEvent =
+	| { type: 'progress'; stage: 'retrieving' | 'generating' | 'validating' | 'retrying' }
+	| { type: 'done'; mindmapId: string }
+	| { type: 'error'; message: string };
+
+export interface MindMapView {
+	id: string;
+	title: string;
+	model: string;
+}
+
+export interface MindMapNodeView {
+	id: string;
+	path: string[];
+	source_path: string;
+	heading_path: string;
+}
+
+export interface SlidesGenerationRequest {
+	domains?: string[];
+	chatId?: string;
+	prompt: string;
+	model: string;
+}
+
+/** SSE event shapes streamed by POST /api/generate/slides. Terminal field is
+ * `slideDeckId`, not `deckId` — cards already owns a `decks` table and
+ * `CardGenerationEvent.deckId`; reusing that name here would silently read
+ * as a card-deck reference at every call site. */
+export type SlidesGenerationEvent =
+	| { type: 'progress'; stage: 'retrieving' | 'generating' | 'validating' | 'retrying' }
+	| { type: 'done'; slideDeckId: string }
+	| { type: 'error'; message: string };
+
+export interface SlideDeckView {
+	id: string;
+	title: string;
+	model: string;
+	rendered_html: string;
+	rendered_css: string;
+}
+
+export interface SlideView {
+	id: string;
+	position: number;
+	content_markdown: string;
+	source_path: string;
+}
+
+export type UserSkillScope = 'chat' | 'quiz' | 'flashcards' | 'mindmap' | 'report' | 'slides';
 
 export interface UserSkillStatus {
 	name: string;

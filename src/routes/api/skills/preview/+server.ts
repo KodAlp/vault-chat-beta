@@ -4,6 +4,9 @@ import { renderUserSkillsBlock, ALL_SCOPES } from '$lib/server/userSkills';
 import { CORE_INTRO, CORE_INVARIANTS } from '$lib/server/prompt';
 import { buildSystemPrompt as buildQuizPrompt } from '$lib/server/generate-quiz';
 import { buildSystemPrompt as buildCardsPrompt } from '$lib/server/generate-cards';
+import { buildSystemPrompt as buildReportPrompt } from '$lib/server/generate-report';
+import { buildSystemPrompt as buildMindMapPrompt } from '$lib/server/generate-mindmap';
+import { buildSystemPrompt as buildSlidesPrompt } from '$lib/server/generate-slides';
 import type { UserSkillScope } from '$lib/types';
 
 const PLACEHOLDER_CONTEXT = '(örnek bağlam — gerçek üretimde burada kaynak parçaları olur)';
@@ -27,8 +30,14 @@ export const GET: RequestHandler = async ({ url }) => {
 		prompt = [CORE_INTRO, skillsBlock, CORE_INVARIANTS].filter(Boolean).join('\n\n');
 	} else if (scope === 'quiz') {
 		prompt = buildQuizPrompt({ mc: 6, tf: 2, open: 2 }, PLACEHOLDER_CONTEXT, skillsBlock);
-	} else {
+	} else if (scope === 'flashcards') {
 		prompt = buildCardsPrompt(10, PLACEHOLDER_CONTEXT, skillsBlock);
+	} else if (scope === 'report') {
+		prompt = buildReportPrompt(PLACEHOLDER_CONTEXT, skillsBlock);
+	} else if (scope === 'mindmap') {
+		prompt = buildMindMapPrompt(PLACEHOLDER_CONTEXT, skillsBlock);
+	} else {
+		prompt = buildSlidesPrompt(PLACEHOLDER_CONTEXT, skillsBlock);
 	}
 
 	return json({ scope, prompt });

@@ -114,6 +114,55 @@ function getDb(): Database.Database {
 			);
 			CREATE INDEX IF NOT EXISTS idx_cards_due ON cards(due_at);
 			CREATE INDEX IF NOT EXISTS idx_cards_deck_id ON cards(deck_id);
+			CREATE TABLE IF NOT EXISTS reports (
+				id TEXT PRIMARY KEY,
+				title TEXT NOT NULL,
+				scope_json TEXT NOT NULL,
+				model TEXT NOT NULL,
+				created_at TEXT NOT NULL
+			);
+			CREATE TABLE IF NOT EXISTS report_sections (
+				id TEXT PRIMARY KEY,
+				report_id TEXT NOT NULL REFERENCES reports(id) ON DELETE CASCADE,
+				position INTEGER NOT NULL,
+				heading TEXT NOT NULL,
+				body_markdown TEXT NOT NULL,
+				source_paths_json TEXT NOT NULL
+			);
+			CREATE INDEX IF NOT EXISTS idx_report_sections_report_id ON report_sections(report_id);
+			CREATE TABLE IF NOT EXISTS mindmaps (
+				id TEXT PRIMARY KEY,
+				title TEXT NOT NULL,
+				scope_json TEXT NOT NULL,
+				model TEXT NOT NULL,
+				created_at TEXT NOT NULL
+			);
+			CREATE TABLE IF NOT EXISTS mindmap_nodes (
+				id TEXT PRIMARY KEY,
+				mindmap_id TEXT NOT NULL REFERENCES mindmaps(id) ON DELETE CASCADE,
+				position INTEGER NOT NULL,
+				path_json TEXT NOT NULL,
+				source_path TEXT NOT NULL,
+				heading_path TEXT NOT NULL
+			);
+			CREATE INDEX IF NOT EXISTS idx_mindmap_nodes_mindmap_id ON mindmap_nodes(mindmap_id);
+			CREATE TABLE IF NOT EXISTS slidedecks (
+				id TEXT PRIMARY KEY,
+				title TEXT NOT NULL,
+				scope_json TEXT NOT NULL,
+				model TEXT NOT NULL,
+				created_at TEXT NOT NULL,
+				rendered_html TEXT NOT NULL,
+				rendered_css TEXT NOT NULL
+			);
+			CREATE TABLE IF NOT EXISTS slides (
+				id TEXT PRIMARY KEY,
+				deck_id TEXT NOT NULL REFERENCES slidedecks(id) ON DELETE CASCADE,
+				position INTEGER NOT NULL,
+				content_markdown TEXT NOT NULL,
+				source_path TEXT NOT NULL
+			);
+			CREATE INDEX IF NOT EXISTS idx_slides_deck_id ON slides(deck_id);
 		`);
 	}
 	return db;
@@ -320,4 +369,189 @@ export function updateCardSchedule(id: string, s: CardSchedule): void {
 			'UPDATE cards SET ease = ?, interval_days = ?, due_at = ?, reps = ?, lapses = ? WHERE id = ?'
 		)
 		.run(s.ease, s.interval_days, s.due_at, s.reps, s.lapses, id);
+}
+
+export interface ReportRow {
+	id: string;
+	title: string;
+	scope_json: string;
+	model: string;
+	created_at: string;
+}
+
+export interface ReportSectionRow {
+	id: string;
+	report_id: string;
+	position: number;
+	heading: string;
+	body_markdown: string;
+	source_paths_json: string;
+}
+
+export interface NewReportSection {
+	heading: string;
+	body_markdown: string;
+	source_paths: string[];
+}
+
+export function createReport(title: string, scope: unknown, model: string, sections: NewReportSection[]): string {
+	const id = crypto.randomUUID();
+	const now = new Date().toISOString();
+	const database = getDb();
+	const tx = database.transaction(() => {
+		database
+			.prepare(`INSERT INTO reports (id, title, scope_json, model, created_at) VALUES (?, ?, ?, ?, ?)`)
+			.run(id, title, JSON.stringify(scope), model, now);
+
+		const insertSection = database.prepare(
+			`INSERT INTO report_sections (id, report_id, position, heading, body_markdown, source_paths_json)
+			 VALUES (?, ?, ?, ?, ?, ?)`
+		);
+		sections.forEach((section, position) => {
+			insertSection.run(
+				crypto.randomUUID(),
+				id,
+				position,
+				section.heading,
+				section.body_markdown,
+				JSON.stringify(section.source_paths)
+			);
+		});
+	});
+	tx();
+	return id;
+}
+
+export function getReport(id: string): ReportRow | undefined {
+	return getDb().prepare('SELECT * FROM reports WHERE id = ?').get(id) as ReportRow | undefined;
+}
+
+export function getReportSections(reportId: string): ReportSectionRow[] {
+	return getDb()
+		.prepare('SELECT * FROM report_sections WHERE report_id = ? ORDER BY position ASC')
+		.all(reportId) as ReportSectionRow[];
+}
+
+export interface MindMapRow {
+	id: string;
+	title: string;
+	scope_json: string;
+	model: string;
+	created_at: string;
+}
+
+export interface MindMapNodeRow {
+	id: string;
+	mindmap_id: string;
+	position: number;
+	path_json: string;
+	source_path: string;
+	heading_path: string;
+}
+
+export interface NewMindMapNode {
+	path: string[];
+	source_path: string;
+	heading_path: string;
+}
+
+export function createMindMap(title: string, scope: unknown, model: string, nodes: NewMindMapNode[]): string {
+	const id = crypto.randomUUID();
+	const now = new Date().toISOString();
+	const database = getDb();
+	const tx = database.transaction(() => {
+		database
+			.prepare(`INSERT INTO mindmaps (id, title, scope_json, model, created_at) VALUES (?, ?, ?, ?, ?)`)
+			.run(id, title, JSON.stringify(scope), model, now);
+
+		const insertNode = database.prepare(
+			`INSERT INTO mindmap_nodes (id, mindmap_id, position, path_json, source_path, heading_path)
+			 VALUES (?, ?, ?, ?, ?, ?)`
+		);
+		nodes.forEach((node, position) => {
+			insertNode.run(
+				crypto.randomUUID(),
+				id,
+				position,
+				JSON.stringify(node.path),
+				node.source_path,
+				node.heading_path
+			);
+		});
+	});
+	tx();
+	return id;
+}
+
+export function getMindMap(id: string): MindMapRow | undefined {
+	return getDb().prepare('SELECT * FROM mindmaps WHERE id = ?').get(id) as MindMapRow | undefined;
+}
+
+export function getMindMapNodes(mindmapId: string): MindMapNodeRow[] {
+	return getDb()
+		.prepare('SELECT * FROM mindmap_nodes WHERE mindmap_id = ? ORDER BY position ASC')
+		.all(mindmapId) as MindMapNodeRow[];
+}
+
+export interface SlideDeckRow {
+	id: string;
+	title: string;
+	scope_json: string;
+	model: string;
+	created_at: string;
+	rendered_html: string;
+	rendered_css: string;
+}
+
+export interface SlideRow {
+	id: string;
+	deck_id: string;
+	position: number;
+	content_markdown: string;
+	source_path: string;
+}
+
+export interface NewSlide {
+	content_markdown: string;
+	source_path: string;
+}
+
+export function createSlideDeck(
+	title: string,
+	scope: unknown,
+	model: string,
+	slides: NewSlide[],
+	rendered: { html: string; css: string }
+): string {
+	const id = crypto.randomUUID();
+	const now = new Date().toISOString();
+	const database = getDb();
+	const tx = database.transaction(() => {
+		database
+			.prepare(
+				`INSERT INTO slidedecks (id, title, scope_json, model, created_at, rendered_html, rendered_css)
+				 VALUES (?, ?, ?, ?, ?, ?, ?)`
+			)
+			.run(id, title, JSON.stringify(scope), model, now, rendered.html, rendered.css);
+
+		const insertSlide = database.prepare(
+			`INSERT INTO slides (id, deck_id, position, content_markdown, source_path)
+			 VALUES (?, ?, ?, ?, ?)`
+		);
+		slides.forEach((slide, position) => {
+			insertSlide.run(crypto.randomUUID(), id, position, slide.content_markdown, slide.source_path);
+		});
+	});
+	tx();
+	return id;
+}
+
+export function getSlideDeck(id: string): SlideDeckRow | undefined {
+	return getDb().prepare('SELECT * FROM slidedecks WHERE id = ?').get(id) as SlideDeckRow | undefined;
+}
+
+export function getSlides(deckId: string): SlideRow[] {
+	return getDb()
+		.prepare('SELECT * FROM slides WHERE deck_id = ? ORDER BY position ASC')
+		.all(deckId) as SlideRow[];
 }

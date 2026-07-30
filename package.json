@@ -8,9 +8,10 @@
 		"build": "vite build",
 		"index": "tsx indexer/index-vault.ts",
 		"index:watch": "tsx indexer/watch.ts",
-		"test": "tsx --test src/lib/server/schedule.test.ts src/lib/server/providers/normalize.test.ts"
+		"test": "tsx --test src/lib/server/schedule.test.ts src/lib/server/providers/normalize.test.ts src/lib/mindmap-tree.test.ts"
 	},
 	"dependencies": {
+		"@marp-team/marp-core": "^4.4.0",
 		"@vscode/markdown-it-katex": "^1.1.1",
 		"better-sqlite3": "^11.9.1",
 		"chokidar": "^4.0.3",
@@ -18,6 +19,8 @@
 		"gray-matter": "^4.0.3",
 		"katex": "^0.16.21",
 		"markdown-it": "^14.1.0",
+		"markmap-lib": "^0.18.12",
+		"markmap-view": "^0.18.12",
 		"shiki": "^1.29.2",
 		"sqlite-vec": "^0.1.6",
 		"zod": "^4.4.3"

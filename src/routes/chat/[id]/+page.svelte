@@ -3,6 +3,9 @@
 	import ExportMenu from '$lib/components/ExportMenu.svelte';
 	import QuizDialog from '$lib/components/QuizDialog.svelte';
 	import CardsDialog from '$lib/components/CardsDialog.svelte';
+	import ReportDialog from '$lib/components/ReportDialog.svelte';
+	import MindMapDialog from '$lib/components/MindMapDialog.svelte';
+	import SlidesDialog from '$lib/components/SlidesDialog.svelte';
 	import LibraryTree from '$lib/components/LibraryTree.svelte';
 	import type { PageProps } from './$types';
 
@@ -42,6 +45,9 @@
 		<div class="right-middle">
 			<QuizDialog chatId={data.chatId} />
 			<CardsDialog chatId={data.chatId} />
+			<ReportDialog chatId={data.chatId} />
+			<MindMapDialog chatId={data.chatId} />
+			<SlidesDialog chatId={data.chatId} />
 		</div>
 		<div class="right-bottom placeholder-text">Profil (yakında)</div>
 	</aside>
