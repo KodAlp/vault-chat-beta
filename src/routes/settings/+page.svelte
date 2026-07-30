@@ -103,9 +103,10 @@
 		<a class="skills-link" href="/settings/skills">Skill'leri yönet →</a>
 	</section>
 
-	<section class="placeholder">
-		<h2>Model indirme &amp; API bağlantıları</h2>
-		<p>Yakında (Faz 6).</p>
+	<section>
+		<h2>Model Sağlayıcıları</h2>
+		<p class="hint">Ollama ve bulut sağlayıcıları (DeepSeek, ...), API anahtarları, görev zincirleri.</p>
+		<a class="skills-link" href="/settings/providers">Sağlayıcıları yönet →</a>
 	</section>
 </div>
 
@@ -142,11 +143,6 @@
 		margin-bottom: 2rem;
 		padding-bottom: 1.5rem;
 		border-bottom: 1px solid var(--border);
-	}
-
-	section.placeholder {
-		color: var(--muted);
-		border-bottom: none;
 	}
 
 	.theme-options {

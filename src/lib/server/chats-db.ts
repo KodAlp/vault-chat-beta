@@ -84,6 +84,10 @@ export function setChatTitle(id: string, title: string): void {
 	getDb().prepare('UPDATE chats SET title = ? WHERE id = ?').run(title, id);
 }
 
+export function updateChatModel(id: string, model: string): void {
+	getDb().prepare('UPDATE chats SET model = ? WHERE id = ?').run(model, id);
+}
+
 export interface InsertMessageInput {
 	chatId: string;
 	role: 'user' | 'assistant';

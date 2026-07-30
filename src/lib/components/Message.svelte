@@ -36,6 +36,11 @@
 </script>
 
 <div class="message {message.role}">
+	{#if message.role === 'assistant' && message.notices?.length}
+		{#each message.notices as notice (notice)}
+			<p class="notice">{notice}</p>
+		{/each}
+	{/if}
 	{#if message.role === 'assistant' && message.thinking}
 		<ThinkingPanel thinking={message.thinking} {streaming} />
 	{/if}
@@ -93,6 +98,15 @@
 	.bubble.interrupted {
 		color: var(--muted);
 		font-style: italic;
+	}
+
+	/* System aside from provider fallback — distinct from assistant prose,
+	   see the model-provider skill's "styled like system notes" rule. */
+	.notice {
+		font-size: 0.75rem;
+		color: var(--muted);
+		font-style: italic;
+		margin: 0 0 0.3rem;
 	}
 
 	.bubble :global(p:first-child) {

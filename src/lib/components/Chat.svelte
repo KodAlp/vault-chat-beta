@@ -1,5 +1,6 @@
 <script lang="ts">
-	import type { ChatMessage, ChatRequestBody, StreamEvent } from '$lib/types';
+	import { onMount } from 'svelte';
+	import type { ChatMessage, ChatRequestBody, ProviderModelOption, StreamEvent } from '$lib/types';
 	import Message from './Message.svelte';
 	import { settings } from '$lib/settings.svelte';
 	import { takePendingMessage } from '$lib/pending-message';
@@ -17,8 +18,39 @@
 	let isAtBottom = $state(true);
 	let listEl: HTMLDivElement | undefined;
 	let abortController: AbortController | undefined;
+	let modelOptions = $state<ProviderModelOption[]>([]);
+	/** Per-chat model/provider override — undefined means "use the task
+	 * default below", set once a chat is loaded (existing chats always
+	 * carry the model they were created with) or the user explicitly
+	 * picks one from the header dropdown. */
+	let overrideModel = $state<string | undefined>(undefined);
+	let hasChatRow = $state(false);
 
-	let activeModel = $derived(thinkMode ? settings.reasoningModel : settings.fastModel);
+	let activeModel = $derived(overrideModel ?? (thinkMode ? settings.reasoningModel : settings.fastModel));
+
+	onMount(async () => {
+		try {
+			const res = await fetch('/api/providers/models');
+			if (res.ok) modelOptions = (await res.json()) as ProviderModelOption[];
+		} catch {
+			// Header selector just shows the current model as a lone option — not fatal.
+		}
+	});
+
+	async function onModelChange(id: string) {
+		overrideModel = id;
+		if (hasChatRow) {
+			try {
+				await fetch(`/api/chats/${chatId}`, {
+					method: 'PATCH',
+					headers: { 'content-type': 'application/json' },
+					body: JSON.stringify({ model: id })
+				});
+			} catch {
+				// Best-effort persistence — the in-memory override still applies to this session.
+			}
+		}
+	}
 
 	function handleScroll() {
 		if (!listEl) return;
@@ -103,7 +135,12 @@
 					else if (event.type === 'thinking') rawThinking += event.content;
 					else if (event.type === 'done') assistantMessage.sources = event.sources;
 					else if (event.type === 'error') errorMessage = event.message;
-					// 'chatId' event ignored — this screen always already knows its id.
+					else if (event.type === 'notice') {
+						(assistantMessage.notices ??= []).push(event.message);
+					}
+					// Server creates the chat row before emitting this — its arrival
+					// is proof a later model-override PATCH now has a row to hit.
+					else if (event.type === 'chatId') hasChatRow = true;
 				}
 			}
 		} catch (err) {
@@ -133,8 +170,10 @@
 		try {
 			const res = await fetch(`/api/chats/${id}`);
 			if (!res.ok) throw new Error();
-			const data = (await res.json()) as { messages: ChatMessage[] };
+			const data = (await res.json()) as { chat: { model: string }; messages: ChatMessage[] };
 			messages = data.messages;
+			overrideModel = data.chat.model;
+			hasChatRow = true;
 			isAtBottom = true;
 			scrollToBottom(true);
 		} catch {
@@ -149,6 +188,8 @@
 		const id = chatId;
 		const pendingQuestion = takePendingMessage(id);
 		if (pendingQuestion) {
+			overrideModel = undefined;
+			hasChatRow = false;
 			input = pendingQuestion;
 			send();
 		} else {
@@ -166,6 +207,19 @@
 
 <div class="chat">
 	<header>
+		<select
+			class="model-select"
+			title="Bu konuşma için model/sağlayıcı seçimi"
+			value={activeModel}
+			onchange={(e) => onModelChange(e.currentTarget.value)}
+		>
+			{#if !modelOptions.some((m) => m.id === activeModel)}
+				<option value={activeModel}>{activeModel}</option>
+			{/if}
+			{#each modelOptions as m (m.providerId + '/' + m.id)}
+				<option value={m.id}>{m.providerLabel} · {m.id}</option>
+			{/each}
+		</select>
 		<label class="think-toggle" for="think-mode" title="Açıkken muhakeme modeli önce akıl yürütür (yavaş ama daha derin), süreç sohbette görünür. Kapalıyken hızlı model kullanılır.">
 			<input id="think-mode" name="think-mode" type="checkbox" bind:checked={thinkMode} />
 			Derin düşün
@@ -220,8 +274,19 @@
 		display: flex;
 		align-items: center;
 		justify-content: flex-end;
+		gap: 0.75rem;
 		padding: 0.5rem 1rem;
 		border-bottom: 1px solid var(--border);
+	}
+
+	.model-select {
+		background: var(--bg);
+		color: var(--fg);
+		border: 1px solid var(--border);
+		border-radius: 6px;
+		padding: 0.3rem 0.5rem;
+		font-size: 0.8rem;
+		max-width: 220px;
 	}
 
 	.think-toggle {

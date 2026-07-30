@@ -2,24 +2,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { env } from '$env/dynamic/private';
 import { OllamaAdapter } from './ollama';
-import { OpenAICompatAdapter, type Timeouts } from './openai-compat';
+import { OpenAICompatAdapter } from './openai-compat';
 import { secretStore } from './secrets';
+import { readProvidersFile, type ProviderConfigEntry, type ProvidersFile } from './config-store';
 import { ProviderError, type ChatRequest, type Chunk, type ProviderAdapter } from './types';
-
-interface ProviderConfigEntry {
-	id: string;
-	label: string;
-	baseUrl: string;
-	kind: 'ollama' | 'openai-compat';
-	reasoningDialect: 'think-tags' | 'reasoning_content' | 'none';
-	enabled: boolean;
-	timeouts: Timeouts;
-}
-
-interface ProvidersFile {
-	providers: ProviderConfigEntry[];
-	chains: Record<string, string[]>;
-}
 
 function providersJsonPath(): string {
 	return path.resolve(process.cwd(), env.PROVIDERS_PATH ?? path.join('data', 'providers.json'));
@@ -31,12 +17,13 @@ let adapters = new Map<string, ProviderAdapter>();
 
 /** mtime-cached like userSkills.ts's loader — cheap stat beats a watcher,
  * and resets the instantiated-adapter cache whenever the file actually
- * changes (e.g. a key was just added via the future settings UI). */
+ * changes (e.g. a key was just added via the settings UI, see
+ * config-store.ts's writers). */
 function loadConfig(): ProvidersFile {
 	const p = providersJsonPath();
 	const stat = fs.statSync(p);
 	if (cachedConfig && stat.mtimeMs === cachedMtime) return cachedConfig;
-	cachedConfig = JSON.parse(fs.readFileSync(p, 'utf-8')) as ProvidersFile;
+	cachedConfig = readProvidersFile();
 	cachedMtime = stat.mtimeMs;
 	adapters = new Map();
 	return cachedConfig;
@@ -89,6 +76,12 @@ export type FallbackEvent = Chunk | { type: 'notice'; message: string };
  *   answer from one provider onto another's continuation.
  * - A genuine caller-initiated abort (signal.aborted) is never treated as
  *   a failure to fall back from — it propagates as-is.
+ * - A NON-retryable failure (auth, bad_request, context_length) never falls
+ *   back either, regardless of chain position: a wrong API key or an
+ *   oversized prompt will fail identically on the next provider, and the
+ *   user needs to see the real cause immediately, not a masked provider
+ *   switch (skill's "no silent switching after first token" rule extends to
+ *   "no silent switching on a non-retryable error at all").
  */
 export async function* chatWithFallback(
 	taskType: string,
@@ -113,6 +106,7 @@ export async function* chatWithFallback(
 		} catch (err) {
 			if (signal.aborted) throw err;
 			if (sawText) throw err;
+			if (err instanceof ProviderError && !err.retryable) throw err;
 
 			const isLast = i === chain.length - 1;
 			if (isLast) throw err;

@@ -22,6 +22,10 @@ export interface ChatMessage {
 	thinking?: string;
 	sources?: RetrievedChunk[];
 	interrupted?: boolean;
+	/** Client-only, never persisted — provider-fallback notices ("deepseek
+	 * unavailable → switched to local model") that arrived while this
+	 * message streamed in. Rendered as a system aside, not assistant prose. */
+	notices?: string[];
 }
 
 export interface ChatRequestBody {
@@ -200,3 +204,25 @@ export type ObsidianImportEvent =
 	| { type: 'item'; item: ImportResultItem }
 	| { type: 'done'; summary: ImportSummary }
 	| { type: 'error'; message: string };
+
+/** GET /api/providers response shape — settings/providers page's model. */
+export interface ProviderStatus {
+	id: string;
+	label: string;
+	kind: 'ollama' | 'openai-compat';
+	baseUrl: string;
+	enabled: boolean;
+	needsKey: boolean;
+	keyStatus: 'connected' | 'none';
+	mask: string | null;
+}
+
+/** GET /api/providers/models response shape — chat header's per-chat
+ * model/provider override selector. */
+export interface ProviderModelOption {
+	providerId: string;
+	providerLabel: string;
+	id: string;
+	ctx: number;
+	caps: { tools: boolean; reasoning: boolean };
+}

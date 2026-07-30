@@ -1,29 +1,47 @@
 {
-	"providers": [
-		{
-			"id": "ollama",
-			"label": "Ollama (yerel)",
-			"baseUrl": "http://localhost:11434",
-			"kind": "ollama",
-			"reasoningDialect": "reasoning_content",
-			"enabled": true,
-			"timeouts": { "connectMs": 30000, "firstTokenMs": 120000, "idleMs": 30000 }
-		},
-		{
-			"id": "deepseek",
-			"label": "DeepSeek",
-			"baseUrl": "https://api.deepseek.com/v1",
-			"kind": "openai-compat",
-			"reasoningDialect": "reasoning_content",
-			"enabled": false,
-			"timeouts": { "connectMs": 5000, "firstTokenMs": 30000, "idleMs": 30000 }
-		}
-	],
-	"chains": {
-		"chat": ["ollama"],
-		"title": ["ollama"],
-		"grading": ["ollama"],
-		"quiz": ["ollama"],
-		"flashcards": ["ollama"]
-	}
+  "providers": [
+    {
+      "id": "ollama",
+      "label": "Ollama (yerel)",
+      "baseUrl": "http://localhost:11434",
+      "kind": "ollama",
+      "reasoningDialect": "reasoning_content",
+      "enabled": true,
+      "timeouts": {
+        "connectMs": 30000,
+        "firstTokenMs": 120000,
+        "idleMs": 30000
+      }
+    },
+    {
+      "id": "deepseek",
+      "label": "DeepSeek",
+      "baseUrl": "https://api.deepseek.com/v1",
+      "kind": "openai-compat",
+      "reasoningDialect": "reasoning_content",
+      "enabled": false,
+      "timeouts": {
+        "connectMs": 5000,
+        "firstTokenMs": 30000,
+        "idleMs": 30000
+      }
+    }
+  ],
+  "chains": {
+    "chat": [
+      "ollama"
+    ],
+    "title": [
+      "ollama"
+    ],
+    "grading": [
+      "ollama"
+    ],
+    "quiz": [
+      "ollama"
+    ],
+    "flashcards": [
+      "ollama"
+    ]
+  }
 }

@@ -3,12 +3,22 @@ import { retrieve } from '$lib/server/retrieve';
 import { buildPromptMessages } from '$lib/server/prompt';
 import { chatWithFallback } from '$lib/server/providers/registry';
 import { startFlight, endFlight } from '$lib/server/providers/inflight';
+import { ProviderError } from '$lib/server/providers/types';
 import { createChat, getChat, insertMessage, touchChat } from '$lib/server/chats-db';
 import { generateTitle } from '$lib/server/title';
 import type { ChatRequestBody, RetrievedChunk, StreamEvent } from '$lib/types';
 
 function sseEvent(event: StreamEvent): string {
 	return `data: ${JSON.stringify(event)}\n\n`;
+}
+
+/** Auth failures get a clean, actionable message instead of a raw HTTP body
+ * — the provider name + "check your key" is what the user can act on. */
+function chatErrorMessage(err: unknown): string {
+	if (err instanceof ProviderError && err.kind === 'auth') {
+		return `${err.providerId}: API anahtarı geçersiz veya eksik`;
+	}
+	return err instanceof Error ? err.message : 'Bilinmeyen hata';
 }
 
 export const POST: RequestHandler = async ({ request }) => {
@@ -74,7 +84,7 @@ export const POST: RequestHandler = async ({ request }) => {
 				// User-initiated stop (interrupt button / navigation) — propagates from
 				// the aborted Ollama fetch. Not a real error; say nothing.
 				if (!(err instanceof DOMException && err.name === 'AbortError')) {
-					send({ type: 'error', message: err instanceof Error ? err.message : 'Bilinmeyen hata' });
+					send({ type: 'error', message: chatErrorMessage(err) });
 				}
 			} finally {
 				request.signal.removeEventListener('abort', onClientAbort);
