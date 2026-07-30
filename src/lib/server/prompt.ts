@@ -1,5 +1,5 @@
 import type { ChatMessage, RetrievedChunk } from '$lib/types';
-import type { OllamaChatMessage } from './ollama';
+import type { ChatMessage as ProviderChatMessage } from './providers/types';
 import { renderUserSkillsBlock } from './userSkills';
 
 /** Exported for /api/skills/preview alongside the analogous constants in
@@ -28,9 +28,9 @@ export const CORE_INVARIANTS = `Kurallar:
 export async function buildPromptMessages(
 	history: ChatMessage[],
 	chunks: RetrievedChunk[]
-): Promise<OllamaChatMessage[]> {
+): Promise<ProviderChatMessage[]> {
 	const lastUser = history[history.length - 1];
-	const priorTurns: OllamaChatMessage[] = history
+	const priorTurns: ProviderChatMessage[] = history
 		.slice(0, -1)
 		.map(({ role, content }) => ({ role, content }));
 

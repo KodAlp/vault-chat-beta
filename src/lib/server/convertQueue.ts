@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import readline from 'node:readline';
+import { sharedJobMutex } from './jobMutex';
 
 export type ConvertEvent =
 	| { type: 'progress'; stage: string }
@@ -127,21 +128,14 @@ function runConvert(
  * (especially once Marker/Docling are added later); the skill doc is
  * explicit that the user's RAM/CPU belongs to Ollama first, so only one
  * conversion runs at a time regardless of how many uploads arrive at once.
+ * Shares `sharedJobMutex` with Faz 6's Ollama model-swap logic — a model
+ * load/unload and a running conversion must never overlap either.
  */
-let queueTail: Promise<unknown> = Promise.resolve();
-
 export function enqueueConversion(
 	inPath: string,
 	outDir: string,
 	tool: string,
 	onEvent?: (event: ConvertEvent) => void
 ): Promise<ConvertEvent & { type: 'done' }> {
-	const task = queueTail.then(
-		() => runConvert(inPath, outDir, tool, onEvent),
-		() => runConvert(inPath, outDir, tool, onEvent)
-	);
-	// Swallow rejection for chaining purposes only — the real result/error
-	// still propagates to this call's own caller via the returned `task`.
-	queueTail = task.catch(() => undefined);
-	return task;
+	return sharedJobMutex.run(() => runConvert(inPath, outDir, tool, onEvent));
 }

@@ -8,7 +8,7 @@
 		"build": "vite build",
 		"index": "tsx indexer/index-vault.ts",
 		"index:watch": "tsx indexer/watch.ts",
-		"test": "tsx --test src/lib/server/schedule.test.ts"
+		"test": "tsx --test src/lib/server/schedule.test.ts src/lib/server/providers/normalize.test.ts"
 	},
 	"dependencies": {
 		"@vscode/markdown-it-katex": "^1.1.1",

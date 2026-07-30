@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { streamChat, type OllamaChatMessage } from './ollama';
+import { chatWithFallback } from './providers/registry';
+import type { ChatMessage } from './providers/types';
 
 const GradeResult = z.object({ correct: z.boolean(), feedback: z.string() });
 export type GradeResultT = z.infer<typeof GradeResult>;
@@ -24,7 +25,7 @@ export async function gradeOpenAnswer(
 	studentAnswer: string,
 	model: string
 ): Promise<GradeResultT> {
-	const messages: OllamaChatMessage[] = [
+	const messages: ChatMessage[] = [
 		{ role: 'system', content: SYSTEM_PROMPT },
 		{
 			role: 'user',
@@ -32,11 +33,13 @@ export async function gradeOpenAnswer(
 		}
 	];
 	let text = '';
-	for await (const piece of streamChat(model, messages, false, undefined, {
-		format: GRADE_JSON_SCHEMA,
-		temperature: 0.2
-	})) {
-		if (piece.kind === 'content') text += piece.text;
+	const signal = new AbortController().signal;
+	for await (const event of chatWithFallback(
+		'grading',
+		{ model, messages, think: false, format: GRADE_JSON_SCHEMA, temperature: 0.2 },
+		signal
+	)) {
+		if (event.type === 'text') text += event.text;
 	}
 
 	try {

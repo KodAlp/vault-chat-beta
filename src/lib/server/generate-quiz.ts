@@ -1,4 +1,5 @@
-import { streamChat, type OllamaChatMessage } from './ollama';
+import { chatWithFallback } from './providers/registry';
+import type { ChatMessage } from './providers/types';
 import { retrieve } from './retrieve';
 import { getMessages } from './chats-db';
 import { QuizItems, QUIZ_ITEMS_JSON_SCHEMA } from './quiz-schema';
@@ -34,28 +35,31 @@ const QUERY_EXTRACT_SYSTEM_PROMPT =
  * wasn't concurrency, it was this call being non-deterministic.
  */
 async function extractTopicalQuery(prompt: string, model: string): Promise<string> {
-	const messages: OllamaChatMessage[] = [
+	const messages: ChatMessage[] = [
 		{ role: 'system', content: QUERY_EXTRACT_SYSTEM_PROMPT },
 		{ role: 'user', content: prompt }
 	];
 	let text = '';
-	for await (const piece of streamChat(model, messages, false, undefined, { temperature: 0 })) {
-		if (piece.kind === 'content') text += piece.text;
+	const signal = new AbortController().signal;
+	for await (const event of chatWithFallback('quiz', { model, messages, think: false, temperature: 0 }, signal)) {
+		if (event.type === 'text') text += event.text;
 	}
 	return text.trim() || prompt;
 }
 
 async function callModel(model: string, systemPrompt: string, userPrompt: string): Promise<string> {
-	const messages: OllamaChatMessage[] = [
+	const messages: ChatMessage[] = [
 		{ role: 'system', content: systemPrompt },
 		{ role: 'user', content: userPrompt }
 	];
 	let text = '';
-	for await (const piece of streamChat(model, messages, false, undefined, {
-		format: QUIZ_ITEMS_JSON_SCHEMA,
-		temperature: 0.3
-	})) {
-		if (piece.kind === 'content') text += piece.text;
+	const signal = new AbortController().signal;
+	for await (const event of chatWithFallback(
+		'quiz',
+		{ model, messages, think: false, format: QUIZ_ITEMS_JSON_SCHEMA, temperature: 0.3 },
+		signal
+	)) {
+		if (event.type === 'text') text += event.text;
 	}
 	return text;
 }

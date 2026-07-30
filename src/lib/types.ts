@@ -57,6 +57,11 @@ export type StreamEvent =
 	| { type: 'chatId'; chatId: string }
 	| { type: 'delta'; content: string }
 	| { type: 'thinking'; content: string }
+	/** Provider fallback notice (e.g. "deepseek unavailable → switched to
+	 * local model") — see the model-provider skill's fallback policy.
+	 * Not yet rendered specially client-side (Faz 6 UI is a later pass);
+	 * today's single-provider chains never actually trigger it. */
+	| { type: 'notice'; message: string }
 	| { type: 'done'; sources: RetrievedChunk[] }
 	| { type: 'error'; message: string };
 

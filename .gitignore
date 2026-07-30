@@ -6,6 +6,7 @@ data/*.db-wal
 data/*.db-shm
 data/skills/
 data/library/
+data/secrets.json
 .env
 !.env.example
 

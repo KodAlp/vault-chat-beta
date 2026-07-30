@@ -1,7 +1,8 @@
 import type { RequestHandler } from './$types';
 import { retrieve } from '$lib/server/retrieve';
 import { buildPromptMessages } from '$lib/server/prompt';
-import { streamChat } from '$lib/server/ollama';
+import { chatWithFallback } from '$lib/server/providers/registry';
+import { startFlight, endFlight } from '$lib/server/providers/inflight';
 import { createChat, getChat, insertMessage, touchChat } from '$lib/server/chats-db';
 import { generateTitle } from '$lib/server/title';
 import type { ChatRequestBody, RetrievedChunk, StreamEvent } from '$lib/types';
@@ -39,22 +40,33 @@ export const POST: RequestHandler = async ({ request }) => {
 			let finalContent = '';
 			let finalThinking = '';
 
+			// Server-side single-flight, independent of this one connection's own
+			// abort — a second message for the same chat (a race, a second tab)
+			// aborts this flight even if the original client connection never
+			// sends its own abort. Merged with the client's own request.signal so
+			// either cause stops generation identically.
+			const flight = startFlight(chatId);
+			const onClientAbort = () => flight.abort();
+			if (request.signal.aborted) flight.abort();
+			else request.signal.addEventListener('abort', onClientAbort);
+
 			try {
 				sources = lastUser ? await retrieve(lastUser.content, { domains: body.domains }) : [];
 				const promptMessages = await buildPromptMessages(body.messages, sources);
 
-				for await (const piece of streamChat(
-					body.model,
-					promptMessages,
-					body.think ?? false,
-					request.signal
+				for await (const event of chatWithFallback(
+					'chat',
+					{ model: body.model, messages: promptMessages, think: body.think ?? false },
+					flight.signal
 				)) {
-					if (piece.kind === 'thinking') {
-						finalThinking += piece.text;
-						send({ type: 'thinking', content: piece.text });
-					} else {
-						finalContent += piece.text;
-						send({ type: 'delta', content: piece.text });
+					if (event.type === 'reasoning') {
+						finalThinking += event.text;
+						send({ type: 'thinking', content: event.text });
+					} else if (event.type === 'text') {
+						finalContent += event.text;
+						send({ type: 'delta', content: event.text });
+					} else if (event.type === 'notice') {
+						send({ type: 'notice', message: event.message });
 					}
 				}
 				send({ type: 'done', sources });
@@ -65,6 +77,9 @@ export const POST: RequestHandler = async ({ request }) => {
 					send({ type: 'error', message: err instanceof Error ? err.message : 'Bilinmeyen hata' });
 				}
 			} finally {
+				request.signal.removeEventListener('abort', onClientAbort);
+				endFlight(chatId, flight);
+
 				// Persist whatever the assistant produced, even if stopped partway
 				// through — matches what stays visible on screen (see "Durduruldu").
 				insertMessage({
