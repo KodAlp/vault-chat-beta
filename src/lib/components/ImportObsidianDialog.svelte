@@ -1,5 +1,9 @@
 <script lang="ts">
 	import type { ObsidianImportEvent, ImportResultItem } from '$lib/types';
+	import { Button } from '$lib/components/ui/button';
+	import { Input } from '$lib/components/ui/input';
+	import { Badge } from '$lib/components/ui/badge';
+	import * as Dialog from '$lib/components/ui/dialog';
 
 	let open = $state(false);
 	let sourcePath = $state('');
@@ -14,10 +18,6 @@
 		phase = 'idle';
 		items = [];
 		errorMessage = '';
-	}
-
-	function close() {
-		open = false;
 	}
 
 	async function run() {
@@ -73,6 +73,12 @@
 		failed: 'başarısız'
 	};
 
+	const STATUS_BADGE_CLASS: Record<string, string> = {
+		converted: 'bg-primary/15 text-primary',
+		needs_review: 'bg-orange-500/20 text-amber-700 dark:text-amber-400',
+		failed: 'bg-destructive/15 text-destructive'
+	};
+
 	let counts = $derived(
 		items.reduce(
 			(acc, i) => {
@@ -84,235 +90,58 @@
 	);
 </script>
 
-<button class="trigger" onclick={openDialog}>İçe Aktar</button>
+<Button variant="outline" class="border-primary text-primary" onclick={openDialog}>İçe Aktar</Button>
 
-{#if open}
-	<div class="overlay" onclick={close} onkeydown={(e) => e.key === 'Escape' && close()} role="presentation">
-		<div class="dialog" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()} role="dialog" aria-modal="true" tabindex="-1">
-			<h2>Obsidian Vault'unu İçe Aktar</h2>
-			<p class="hint">Tek yönlü kopya — kaynak vault'una asla yazılmaz. Değişmemiş notlar yeniden içe aktarmada atlanır.</p>
+<Dialog.Root bind:open>
+	<Dialog.Content class="sm:max-w-lg">
+		<Dialog.Header>
+			<Dialog.Title>Obsidian Vault'unu İçe Aktar</Dialog.Title>
+			<Dialog.Description>
+				Tek yönlü kopya — kaynak vault'una asla yazılmaz. Değişmemiş notlar yeniden içe aktarmada
+				atlanır.
+			</Dialog.Description>
+		</Dialog.Header>
 
-			{#if phase === 'idle'}
-				<label class="field">
-					Kaynak vault yolu
-					<input type="text" bind:value={sourcePath} placeholder="örn. C:\Kullanıcılar\...\MyVault" />
-				</label>
-				<div class="actions">
-					<button onclick={close}>İptal</button>
-					<button class="primary" onclick={run} disabled={!sourcePath.trim()}>Başlat</button>
-				</div>
-			{:else if phase === 'running'}
-				<p class="status"><span class="spinner" aria-hidden="true"></span> {statusLabel}</p>
-				<p class="hint">{items.length} dosya işlendi...</p>
-			{:else if phase === 'done'}
-				<p class="summary">
-					{#each Object.entries(counts) as [status, n] (status)}
-						<span class="count">{STATUS_LABELS[status] ?? status}: {n}</span>
-					{/each}
-				</p>
-				<div class="result-list">
-					{#each items.filter((i) => i.status !== 'skipped') as item (item.fileName)}
-						<div class="result-row">
-							<span class="status-badge {item.status}">{STATUS_LABELS[item.status] ?? item.status}</span>
-							<span class="file-name">{item.fileName}</span>
-							{#if item.reason}<span class="reason">{item.reason}</span>{/if}
-						</div>
-					{/each}
-				</div>
-				<div class="actions">
-					<button class="primary" onclick={close}>Kapat</button>
-				</div>
-			{:else if phase === 'error'}
-				<p class="warn">{errorMessage}</p>
-				<div class="actions">
-					<button onclick={close}>Kapat</button>
-				</div>
-			{/if}
-		</div>
-	</div>
-{/if}
-
-<style>
-	.trigger {
-		padding: 0.5rem 1rem;
-		border-radius: 8px;
-		border: 1px solid var(--primary);
-		background: transparent;
-		color: var(--primary);
-		font-weight: 600;
-		cursor: pointer;
-		font-size: 0.9rem;
-	}
-
-	.overlay {
-		position: fixed;
-		inset: 0;
-		background: rgb(0 0 0 / 0.4);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		z-index: 100;
-	}
-
-	.dialog {
-		background: var(--background);
-		color: var(--foreground);
-		border: 1px solid var(--border);
-		border-radius: 12px;
-		padding: 1.25rem;
-		width: min(560px, 90vw);
-		max-height: 85vh;
-		overflow-y: auto;
-		box-shadow: 0 8px 24px rgb(0 0 0 / 0.25);
-	}
-
-	.dialog h2 {
-		margin: 0 0 0.5rem;
-		font-size: 1.1rem;
-	}
-
-	.hint {
-		font-size: 0.8rem;
-		color: var(--muted-foreground);
-		margin-bottom: 1rem;
-	}
-
-	.field {
-		display: flex;
-		flex-direction: column;
-		gap: 0.3rem;
-		font-size: 0.85rem;
-		margin-bottom: 0.9rem;
-	}
-
-	input[type='text'] {
-		background: var(--background);
-		color: var(--foreground);
-		border: 1px solid var(--border);
-		border-radius: 6px;
-		padding: 0.4rem 0.5rem;
-		font-family: var(--font-sans);
-		font-size: 0.9rem;
-	}
-
-	.status {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		font-size: 0.9rem;
-	}
-
-	.spinner {
-		display: inline-block;
-		width: 0.9rem;
-		height: 0.9rem;
-		border: 2px solid var(--border);
-		border-top-color: var(--primary);
-		border-radius: 50%;
-		animation: spin 0.7s linear infinite;
-	}
-
-	@keyframes spin {
-		to {
-			transform: rotate(360deg);
-		}
-	}
-
-	.summary {
-		display: flex;
-		gap: 0.6rem;
-		flex-wrap: wrap;
-		margin-bottom: 1rem;
-	}
-
-	.count {
-		font-size: 0.8rem;
-		border: 1px solid var(--border);
-		border-radius: 999px;
-		padding: 0.2rem 0.6rem;
-	}
-
-	.result-list {
-		display: flex;
-		flex-direction: column;
-		gap: 0.3rem;
-		max-height: 40vh;
-		overflow-y: auto;
-	}
-
-	.result-row {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		font-size: 0.8rem;
-		padding: 0.25rem 0;
-		border-bottom: 1px solid var(--border);
-	}
-
-	.status-badge {
-		font-size: 0.68rem;
-		border-radius: 999px;
-		padding: 0.1rem 0.5rem;
-		flex-shrink: 0;
-	}
-
-	.status-badge.converted {
-		background: color-mix(in srgb, var(--primary) 15%, transparent);
-		color: var(--primary);
-	}
-
-	.status-badge.needs_review {
-		background: color-mix(in srgb, orange 20%, transparent);
-		color: #b8860b;
-	}
-
-	.status-badge.failed {
-		background: color-mix(in srgb, var(--destructive) 15%, transparent);
-		color: var(--destructive);
-	}
-
-	.file-name {
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-
-	.reason {
-		color: var(--muted-foreground);
-		font-size: 0.72rem;
-	}
-
-	.warn {
-		color: var(--destructive);
-		font-size: 0.85rem;
-	}
-
-	.actions {
-		display: flex;
-		justify-content: flex-end;
-		gap: 0.5rem;
-		margin-top: 1rem;
-	}
-
-	.actions button {
-		padding: 0.45rem 1rem;
-		border-radius: 8px;
-		border: 1px solid var(--border);
-		background: transparent;
-		color: var(--foreground);
-		cursor: pointer;
-		font-size: 0.9rem;
-	}
-
-	.actions button.primary {
-		background: var(--primary);
-		color: var(--primary-foreground);
-		border-color: var(--primary);
-		font-weight: 600;
-	}
-
-	.actions button:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
-</style>
+		{#if phase === 'idle'}
+			<label class="flex flex-col gap-1 text-sm">
+				Kaynak vault yolu
+				<Input type="text" bind:value={sourcePath} placeholder="örn. C:\Kullanıcılar\...\MyVault" />
+			</label>
+			<Dialog.Footer>
+				<Button variant="outline" onclick={() => (open = false)}>İptal</Button>
+				<Button onclick={run} disabled={!sourcePath.trim()}>Başlat</Button>
+			</Dialog.Footer>
+		{:else if phase === 'running'}
+			<p class="flex items-center gap-2 text-sm">
+				<span class="inline-block size-3.5 animate-spin rounded-full border-2 border-border border-t-primary" aria-hidden="true"></span>
+				{statusLabel}
+			</p>
+			<p class="text-xs text-muted-foreground">{items.length} dosya işlendi...</p>
+		{:else if phase === 'done'}
+			<div class="mb-1 flex flex-wrap gap-1.5">
+				{#each Object.entries(counts) as [status, n] (status)}
+					<Badge variant="outline">{STATUS_LABELS[status] ?? status}: {n}</Badge>
+				{/each}
+			</div>
+			<div class="flex max-h-[40vh] flex-col gap-1 overflow-y-auto">
+				{#each items.filter((i) => i.status !== 'skipped') as item (item.fileName)}
+					<div class="flex items-center gap-2 border-b py-1 text-sm">
+						<span class="shrink-0 rounded-full px-2 py-0.5 text-[0.68rem] {STATUS_BADGE_CLASS[item.status] ?? ''}">
+							{STATUS_LABELS[item.status] ?? item.status}
+						</span>
+						<span class="overflow-hidden text-ellipsis whitespace-nowrap">{item.fileName}</span>
+						{#if item.reason}<span class="text-xs text-muted-foreground">{item.reason}</span>{/if}
+					</div>
+				{/each}
+			</div>
+			<Dialog.Footer>
+				<Button onclick={() => (open = false)}>Kapat</Button>
+			</Dialog.Footer>
+		{:else if phase === 'error'}
+			<p class="text-sm text-destructive">{errorMessage}</p>
+			<Dialog.Footer>
+				<Button variant="outline" onclick={() => (open = false)}>Kapat</Button>
+			</Dialog.Footer>
+		{/if}
+	</Dialog.Content>
+</Dialog.Root>
