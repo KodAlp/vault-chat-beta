@@ -1,6 +1,12 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import type { ProviderStatus } from '$lib/types';
+	import { Button } from '$lib/components/ui/button';
+	import { Input } from '$lib/components/ui/input';
+	import { Switch } from '$lib/components/ui/switch';
+	import { Badge } from '$lib/components/ui/badge';
+	import * as Card from '$lib/components/ui/card';
+	import * as Select from '$lib/components/ui/select';
 
 	const TASK_LABELS: Record<string, string> = {
 		chat: 'Sohbet',
@@ -152,332 +158,140 @@
 	<title>Model Sağlayıcıları — Vault Chat</title>
 </svelte:head>
 
-<div class="providers-page">
-	<header>
-		<a href="/settings">← Ayarlar</a>
-		<h1>Model Sağlayıcıları</h1>
-	</header>
+<div class="mx-auto max-w-3xl px-4 pt-6 pb-12">
+	<div class="mb-3 flex items-baseline gap-4">
+		<a href="/settings" class="text-sm text-muted-foreground hover:text-foreground">← Ayarlar</a>
+		<h1 class="text-xl font-semibold">Model Sağlayıcıları</h1>
+	</div>
 
-	<p class="hint">
+	<p class="mb-5 text-sm text-muted-foreground">
 		Yerel Ollama'yı ve isteğe bağlı bulut sağlayıcıları (DeepSeek, OpenAI, ...) yönet. Anahtarlar
-		sunucuda <code>data/secrets.json</code> içinde kalır, hiçbir zaman tarayıcıya gönderilmez.
+		sunucuda <code class="rounded bg-muted px-1 py-0.5 text-xs">data/secrets.json</code> içinde kalır,
+		hiçbir zaman tarayıcıya gönderilmez.
 	</p>
 
 	{#if loadError}
-		<p class="warn">{loadError}</p>
+		<p class="mb-4 text-sm text-destructive">{loadError}</p>
 	{/if}
 
-	<section>
-		<h2>Sağlayıcılar</h2>
-		<div class="list">
+	<section class="mb-8">
+		<h2 class="mb-3 text-base font-semibold">Sağlayıcılar</h2>
+		<div class="flex flex-col gap-3">
 			{#each providers as p (p.id)}
-				<div class="row">
-					<div class="main">
-						<div class="title-line">
-							<strong>{p.label}</strong>
-							<span class="chip">{p.kind === 'ollama' ? 'yerel' : 'bulut'}</span>
-							{#if p.needsKey}
-								<span class="chip" class:connected={p.keyStatus === 'connected'}>
-									{p.keyStatus === 'connected' ? `bağlı · ${p.mask}` : 'anahtar yok'}
-								</span>
+				<Card.Root>
+					<Card.Content class="flex flex-wrap justify-between gap-4">
+						<div class="min-w-[220px] flex-1">
+							<div class="flex flex-wrap items-center gap-1.5">
+								<strong class="text-sm">{p.label}</strong>
+								<Badge variant="outline">{p.kind === 'ollama' ? 'yerel' : 'bulut'}</Badge>
+								{#if p.needsKey}
+									<Badge variant={p.keyStatus === 'connected' ? 'default' : 'outline'}>
+										{p.keyStatus === 'connected' ? `bağlı · ${p.mask}` : 'anahtar yok'}
+									</Badge>
+								{/if}
+							</div>
+							<p class="mt-1 text-xs text-muted-foreground">{p.baseUrl}</p>
+
+							{#if keyEditingId === p.id}
+								<div class="mt-2 flex gap-1.5">
+									<Input
+										type="password"
+										placeholder="API anahtarı"
+										bind:value={keyDrafts[p.id]}
+										class="h-8 max-w-xs"
+										onkeydown={(e) => e.key === 'Enter' && saveKey(p)}
+									/>
+									<Button size="sm" onclick={() => saveKey(p)}>Kaydet</Button>
+									<Button size="sm" variant="ghost" onclick={() => (keyEditingId = null)}>İptal</Button>
+								</div>
+							{/if}
+
+							{#if testResults[p.id]}
+								<p class="mt-1.5 text-xs">{TEST_LABELS[testResults[p.id]] ?? testResults[p.id]}</p>
 							{/if}
 						</div>
-						<p class="description">{p.baseUrl}</p>
 
-						{#if keyEditingId === p.id}
-							<div class="key-editor">
-								<input
-									type="password"
-									placeholder="API anahtarı"
-									bind:value={keyDrafts[p.id]}
-									onkeydown={(e) => e.key === 'Enter' && saveKey(p)}
-								/>
-								<button class="primary" onclick={() => saveKey(p)}>Kaydet</button>
-								<button onclick={() => (keyEditingId = null)}>İptal</button>
-							</div>
-						{/if}
-
-						{#if testResults[p.id]}
-							<p class="test-result">{TEST_LABELS[testResults[p.id]] ?? testResults[p.id]}</p>
-						{/if}
-					</div>
-
-					<div class="controls">
-						<label class="toggle">
-							<input type="checkbox" checked={p.enabled} onchange={() => toggleEnabled(p)} />
-							Etkin
-						</label>
-						{#if p.needsKey}
-							<button onclick={() => openKeyEditor(p)}>
-								{p.keyStatus === 'connected' ? 'Anahtarı değiştir' : 'Anahtar ekle'}
-							</button>
-							{#if p.keyStatus === 'connected'}
-								<button class="danger" onclick={() => removeKey(p)}>Anahtarı sil</button>
+						<div class="flex flex-wrap items-center gap-2">
+							<label class="flex cursor-pointer items-center gap-1.5 text-xs">
+								<Switch checked={p.enabled} onCheckedChange={() => toggleEnabled(p)} />
+								Etkin
+							</label>
+							{#if p.needsKey}
+								<Button size="sm" variant="outline" onclick={() => openKeyEditor(p)}>
+									{p.keyStatus === 'connected' ? 'Anahtarı değiştir' : 'Anahtar ekle'}
+								</Button>
+								{#if p.keyStatus === 'connected'}
+									<Button size="sm" variant="destructive" onclick={() => removeKey(p)}>
+										Anahtarı sil
+									</Button>
+								{/if}
 							{/if}
-						{/if}
-						<button onclick={() => testConnection(p)} disabled={testingId === p.id}>
-							{testingId === p.id ? 'Test ediliyor...' : 'Bağlantıyı test et'}
-						</button>
-					</div>
-				</div>
+							<Button size="sm" variant="outline" onclick={() => testConnection(p)} disabled={testingId === p.id}>
+								{testingId === p.id ? 'Test ediliyor...' : 'Bağlantıyı test et'}
+							</Button>
+						</div>
+					</Card.Content>
+				</Card.Root>
 			{/each}
 		</div>
 	</section>
 
 	<section>
-		<h2>Görev başına varsayılan zincir</h2>
-		<p class="hint">
+		<h2 class="mb-1 text-base font-semibold">Görev başına varsayılan zincir</h2>
+		<p class="mb-4 text-sm text-muted-foreground">
 			Her görev tipi için sırayla denenecek sağlayıcılar. İlk sağlayıcı yanıt veremezse (ağ hatası,
 			zaman aşımı) bir sonrakine geçilir — yanlış API anahtarı gibi kalıcı hatalarda geçiş yapılmaz.
 		</p>
 		{#each Object.keys(TASK_LABELS) as taskType (taskType)}
-			<div class="chain-row">
-				<span class="task-label">{TASK_LABELS[taskType]}</span>
-				<div class="chain-items">
+			<div class="flex flex-wrap items-center gap-3 border-b py-2.5">
+				<span class="min-w-[140px] text-sm font-semibold">{TASK_LABELS[taskType]}</span>
+				<div class="flex flex-1 flex-wrap gap-1.5">
 					{#each chains[taskType] ?? [] as providerId, i (providerId + i)}
-						<span class="chain-chip">
+						<span class="inline-flex items-center gap-0.5 rounded-full border py-0.5 pr-1.5 pl-2.5 text-xs">
 							{labelFor(providerId)}
 							<button
-								class="icon-btn"
+								type="button"
+								class="px-0.5 text-muted-foreground disabled:opacity-30"
 								title="Yukarı taşı"
 								disabled={i === 0}
 								onclick={() => moveInChain(taskType, i, -1)}>↑</button
 							>
 							<button
-								class="icon-btn"
+								type="button"
+								class="px-0.5 text-muted-foreground disabled:opacity-30"
 								title="Aşağı taşı"
 								disabled={i === (chains[taskType]?.length ?? 0) - 1}
 								onclick={() => moveInChain(taskType, i, 1)}>↓</button
 							>
-							<button class="icon-btn" title="Kaldır" onclick={() => removeFromChain(taskType, i)}
-								>×</button
+							<button
+								type="button"
+								class="px-0.5 text-muted-foreground"
+								title="Kaldır"
+								onclick={() => removeFromChain(taskType, i)}>×</button
 							>
 						</span>
 					{:else}
-						<span class="hint">zincir boş</span>
+						<span class="text-sm text-muted-foreground">zincir boş</span>
 					{/each}
 				</div>
 				{#if availableToAdd(taskType).length > 0}
-					<div class="chain-add">
-						<select bind:value={addChainSelection[taskType]}>
-							<option value="">sağlayıcı ekle...</option>
-							{#each availableToAdd(taskType) as p (p.id)}
-								<option value={p.id}>{p.label}</option>
-							{/each}
-						</select>
-						<button onclick={() => addToChain(taskType)}>Ekle</button>
+					<div class="flex gap-1.5">
+						<Select.Root type="single" bind:value={addChainSelection[taskType]}>
+							<Select.Trigger size="sm" class="w-44">
+								{addChainSelection[taskType]
+									? labelFor(addChainSelection[taskType])
+									: 'sağlayıcı ekle...'}
+							</Select.Trigger>
+							<Select.Content>
+								{#each availableToAdd(taskType) as p (p.id)}
+									<Select.Item value={p.id} label={p.label}>{p.label}</Select.Item>
+								{/each}
+							</Select.Content>
+						</Select.Root>
+						<Button size="sm" variant="outline" onclick={() => addToChain(taskType)}>Ekle</Button>
 					</div>
 				{/if}
 			</div>
 		{/each}
 	</section>
 </div>
-
-<style>
-	.providers-page {
-		max-width: 760px;
-		margin: 0 auto;
-		padding: 1.5rem 1rem 3rem;
-	}
-
-	header {
-		display: flex;
-		align-items: baseline;
-		gap: 1rem;
-		margin-bottom: 0.75rem;
-	}
-
-	header a {
-		font-size: 0.9rem;
-		text-decoration: none;
-	}
-
-	h1 {
-		font-size: 1.3rem;
-		margin: 0;
-	}
-
-	h2 {
-		font-size: 1rem;
-		margin: 0 0 0.75rem;
-	}
-
-	section {
-		margin-bottom: 2rem;
-	}
-
-	.hint {
-		font-size: 0.85rem;
-		color: var(--muted-foreground);
-		margin-bottom: 1.25rem;
-	}
-
-	.warn {
-		color: var(--destructive);
-		font-size: 0.85rem;
-	}
-
-	.list {
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-	}
-
-	.row {
-		border: 1px solid var(--border);
-		border-radius: 10px;
-		padding: 0.9rem 1rem;
-		display: flex;
-		justify-content: space-between;
-		gap: 1rem;
-		flex-wrap: wrap;
-	}
-
-	.main {
-		flex: 1;
-		min-width: 220px;
-	}
-
-	.title-line {
-		display: flex;
-		align-items: center;
-		gap: 0.4rem;
-		flex-wrap: wrap;
-	}
-
-	.chip {
-		font-size: 0.7rem;
-		border: 1px solid var(--border);
-		border-radius: 999px;
-		padding: 0.1rem 0.5rem;
-		color: var(--muted-foreground);
-	}
-
-	.chip.connected {
-		color: #2e7d32;
-		border-color: #2e7d32;
-	}
-
-	.description {
-		font-size: 0.8rem;
-		color: var(--muted-foreground);
-		margin: 0.3rem 0 0;
-	}
-
-	.key-editor {
-		display: flex;
-		gap: 0.4rem;
-		margin-top: 0.6rem;
-	}
-
-	.test-result {
-		font-size: 0.8rem;
-		margin: 0.4rem 0 0;
-	}
-
-	.controls {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		flex-wrap: wrap;
-	}
-
-	.toggle {
-		display: flex;
-		align-items: center;
-		gap: 0.3rem;
-		font-size: 0.8rem;
-		cursor: pointer;
-	}
-
-	.controls button,
-	.key-editor button {
-		padding: 0.35rem 0.7rem;
-		border-radius: 6px;
-		border: 1px solid var(--border);
-		background: transparent;
-		color: var(--foreground);
-		cursor: pointer;
-		font-size: 0.8rem;
-	}
-
-	.controls button:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
-
-	.controls button.danger {
-		color: var(--destructive);
-		border-color: var(--destructive);
-	}
-
-	button.primary {
-		background: var(--primary);
-		color: var(--primary-foreground);
-		border-color: var(--primary);
-		font-weight: 600;
-	}
-
-	.chain-row {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		flex-wrap: wrap;
-		padding: 0.6rem 0;
-		border-bottom: 1px solid var(--border);
-	}
-
-	.task-label {
-		font-size: 0.85rem;
-		font-weight: 600;
-		min-width: 140px;
-	}
-
-	.chain-items {
-		display: flex;
-		gap: 0.4rem;
-		flex-wrap: wrap;
-		flex: 1;
-	}
-
-	.chain-chip {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.2rem;
-		font-size: 0.8rem;
-		border: 1px solid var(--border);
-		border-radius: 999px;
-		padding: 0.15rem 0.3rem 0.15rem 0.6rem;
-	}
-
-	.icon-btn {
-		border: none;
-		background: transparent;
-		color: var(--muted-foreground);
-		cursor: pointer;
-		font-size: 0.8rem;
-		padding: 0 0.15rem;
-		line-height: 1;
-	}
-
-	.icon-btn:disabled {
-		opacity: 0.3;
-		cursor: not-allowed;
-	}
-
-	.chain-add {
-		display: flex;
-		gap: 0.4rem;
-	}
-
-	select,
-	input[type='password'] {
-		background: var(--background);
-		color: var(--foreground);
-		border: 1px solid var(--border);
-		border-radius: 6px;
-		padding: 0.35rem 0.5rem;
-		font-family: var(--font-sans);
-		font-size: 0.85rem;
-	}
-</style>

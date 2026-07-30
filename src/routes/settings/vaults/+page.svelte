@@ -1,6 +1,11 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import type { VaultRecord } from '$lib/types';
+	import { Button } from '$lib/components/ui/button';
+	import { Input } from '$lib/components/ui/input';
+	import { Badge } from '$lib/components/ui/badge';
+	import * as Card from '$lib/components/ui/card';
+	import * as AlertDialog from '$lib/components/ui/alert-dialog';
 
 	let vaults = $state<VaultRecord[]>([]);
 	let activeVaultId = $state<string | null>(null);
@@ -105,255 +110,120 @@
 	<title>Vault'lar — Vault Chat</title>
 </svelte:head>
 
-<div class="vaults-settings">
-	<header>
-		<a href="/settings">← Ayarlar</a>
-		<h1>Vault'lar</h1>
-	</header>
+<div class="mx-auto max-w-2xl px-4 pt-6 pb-12">
+	<div class="mb-4 flex items-baseline gap-4">
+		<a href="/settings" class="text-sm text-muted-foreground hover:text-foreground">← Ayarlar</a>
+		<h1 class="text-xl font-semibold">Vault'lar</h1>
+	</div>
 
-	<p class="hint">
+	<p class="mb-6 text-sm text-muted-foreground">
 		Her vault kendi kaynak kütüphanesini ve arama indeksini tutar — birbirlerine karışmazlar.
 		Sohbet geçmişi vault başına ayrılır, sohbet ekranı her zaman aktif vault üzerinde çalışır.
 	</p>
 
 	{#if loadError}
-		<p class="warn">{loadError}</p>
+		<p class="mb-4 text-sm text-destructive">{loadError}</p>
 	{/if}
 
-	<section>
-		<h2>Mevcut vault'lar</h2>
-		<ul class="vault-list">
+	<Card.Root class="mb-6">
+		<Card.Header>
+			<Card.Title>Mevcut vault'lar</Card.Title>
+		</Card.Header>
+		<Card.Content class="flex flex-col gap-2">
 			{#each vaults as vault (vault.id)}
-				<li class="vault-row" class:active={vault.id === activeVaultId}>
+				<div
+					class="flex items-center justify-between gap-3 rounded-lg border px-3 py-2 text-sm"
+					class:border-primary={vault.id === activeVaultId}
+				>
 					{#if renamingId === vault.id}
-						<input
+						<Input
 							type="text"
 							bind:value={renameValue}
+							class="h-8 max-w-[16rem]"
 							onkeydown={(e) => e.key === 'Enter' && submitRename(vault.id)}
 						/>
-						<button type="button" onclick={() => submitRename(vault.id)}>Kaydet</button>
-						<button type="button" onclick={() => (renamingId = null)}>Vazgeç</button>
+						<div class="flex shrink-0 gap-1.5">
+							<Button size="sm" onclick={() => submitRename(vault.id)}>Kaydet</Button>
+							<Button size="sm" variant="ghost" onclick={() => (renamingId = null)}>Vazgeç</Button>
+						</div>
 					{:else}
-						<span class="name">
+						<span class="flex items-center gap-2">
 							{vault.name}
-							{#if vault.id === activeVaultId}<span class="badge">aktif</span>{/if}
-						</span>
-						<div class="actions">
-							{#if vault.id !== activeVaultId}
-								<button type="button" onclick={() => activate(vault.id)}>Aktif yap</button>
+							{#if vault.id === activeVaultId}
+								<Badge variant="secondary">aktif</Badge>
 							{/if}
-							<button type="button" onclick={() => startRename(vault)}>Yeniden adlandır</button>
-							<button type="button" class="danger" onclick={() => requestDelete(vault)}>Sil</button>
+						</span>
+						<div class="flex shrink-0 gap-1.5">
+							{#if vault.id !== activeVaultId}
+								<Button size="sm" variant="outline" onclick={() => activate(vault.id)}>
+									Aktif yap
+								</Button>
+							{/if}
+							<Button size="sm" variant="ghost" onclick={() => startRename(vault)}>
+								Yeniden adlandır
+							</Button>
+							<Button size="sm" variant="destructive" onclick={() => requestDelete(vault)}>
+								Sil
+							</Button>
 						</div>
 					{/if}
-				</li>
+				</div>
 			{/each}
-		</ul>
-	</section>
+		</Card.Content>
+	</Card.Root>
 
-	<section>
-		<h2>Yeni vault</h2>
-		<div class="new-vault-row">
-			<input
-				type="text"
-				placeholder="Vault adı"
-				bind:value={newVaultName}
-				onkeydown={(e) => e.key === 'Enter' && createVault()}
-			/>
-			<button type="button" onclick={createVault}>Oluştur</button>
-		</div>
-		{#if createError}
-			<p class="warn">{createError}</p>
-		{/if}
-	</section>
+	<Card.Root>
+		<Card.Header>
+			<Card.Title>Yeni vault</Card.Title>
+		</Card.Header>
+		<Card.Content>
+			<div class="flex gap-2">
+				<Input
+					type="text"
+					placeholder="Vault adı"
+					bind:value={newVaultName}
+					class="max-w-xs"
+					onkeydown={(e) => e.key === 'Enter' && createVault()}
+				/>
+				<Button onclick={createVault}>Oluştur</Button>
+			</div>
+			{#if createError}
+				<p class="mt-2 text-sm text-destructive">{createError}</p>
+			{/if}
+		</Card.Content>
+	</Card.Root>
 </div>
 
-{#if deleteTarget}
-	<div class="modal-backdrop">
-		<button
-			type="button"
-			class="modal-backdrop-close"
-			aria-label="Kapat"
-			onclick={() => (deleteTarget = null)}
-		></button>
-		<div class="modal" role="dialog" aria-modal="true">
-			<h2>"{deleteTarget.vault.name}" silinsin mi?</h2>
-			<p>
-				Kütüphanesi, arama indeksi ve
-				{#if deleteTarget.chatCount > 0}
-					<strong>{deleteTarget.chatCount} sohbet</strong>
-				{:else}
-					sohbet geçmişi (yok)
-				{/if}
-				kalıcı olarak silinecek. Bu işlem geri alınamaz.
-			</p>
+<AlertDialog.Root open={!!deleteTarget} onOpenChange={(open) => !open && (deleteTarget = null)}>
+	<AlertDialog.Content>
+		{#if deleteTarget}
+			<AlertDialog.Header>
+				<AlertDialog.Title>"{deleteTarget.vault.name}" silinsin mi?</AlertDialog.Title>
+				<AlertDialog.Description>
+					Kütüphanesi, arama indeksi ve
+					{#if deleteTarget.chatCount > 0}
+						<strong>{deleteTarget.chatCount} sohbet</strong>
+					{:else}
+						sohbet geçmişi (yok)
+					{/if}
+					kalıcı olarak silinecek. Bu işlem geri alınamaz.
+				</AlertDialog.Description>
+			</AlertDialog.Header>
 			{#if deleteError}
-				<p class="warn">{deleteError}</p>
+				<p class="text-sm text-destructive">{deleteError}</p>
 			{/if}
-			<div class="modal-actions">
-				<button type="button" onclick={() => (deleteTarget = null)}>Vazgeç</button>
-				<button type="button" class="danger" onclick={confirmDelete}>Sil</button>
-			</div>
-		</div>
-	</div>
-{/if}
-
-<style>
-	.vaults-settings {
-		max-width: 640px;
-		margin: 0 auto;
-		padding: 1.5rem 1rem 3rem;
-	}
-
-	header {
-		display: flex;
-		align-items: baseline;
-		gap: 1rem;
-		margin-bottom: 1rem;
-	}
-
-	header a {
-		font-size: 0.9rem;
-		text-decoration: none;
-	}
-
-	h1 {
-		font-size: 1.3rem;
-		margin: 0;
-	}
-
-	h2 {
-		font-size: 1rem;
-		margin: 0 0 0.75rem;
-	}
-
-	section {
-		margin-bottom: 2rem;
-		padding-bottom: 1.5rem;
-		border-bottom: 1px solid var(--border);
-	}
-
-	.hint {
-		font-size: 0.85rem;
-		color: var(--muted-foreground);
-		margin-bottom: 1.5rem;
-	}
-
-	.vault-list {
-		list-style: none;
-		margin: 0;
-		padding: 0;
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-	}
-
-	.vault-row {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 0.75rem;
-		padding: 0.5rem 0.75rem;
-		border: 1px solid var(--border);
-		border-radius: 6px;
-		font-size: 0.9rem;
-	}
-
-	.vault-row.active {
-		border-color: var(--primary);
-	}
-
-	.name {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-	}
-
-	.badge {
-		font-size: 0.7rem;
-		color: var(--primary);
-		border: 1px solid var(--primary);
-		border-radius: 999px;
-		padding: 0.1rem 0.5rem;
-	}
-
-	.actions {
-		display: flex;
-		gap: 0.4rem;
-	}
-
-	button {
-		padding: 0.35rem 0.7rem;
-		border-radius: 6px;
-		border: 1px solid var(--border);
-		background: transparent;
-		color: var(--foreground);
-		cursor: pointer;
-		font-size: 0.8rem;
-	}
-
-	button.danger {
-		border-color: var(--destructive);
-		color: var(--destructive);
-	}
-
-	.new-vault-row {
-		display: flex;
-		gap: 0.5rem;
-	}
-
-	input[type='text'] {
-		background: var(--background);
-		color: var(--foreground);
-		border: 1px solid var(--border);
-		border-radius: 6px;
-		padding: 0.4rem 0.5rem;
-		font-size: 0.9rem;
-		flex: 1;
-		max-width: 320px;
-	}
-
-	.warn {
-		color: var(--destructive);
-		font-size: 0.85rem;
-	}
-
-	.modal-backdrop {
-		position: fixed;
-		inset: 0;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		z-index: 100;
-	}
-
-	.modal-backdrop-close {
-		position: absolute;
-		inset: 0;
-		border: none;
-		padding: 0;
-		background: rgba(0, 0, 0, 0.5);
-		cursor: default;
-	}
-
-	.modal {
-		position: relative;
-		background: var(--background);
-		border: 1px solid var(--border);
-		border-radius: 8px;
-		padding: 1.5rem;
-		max-width: 420px;
-		width: 90%;
-	}
-
-	.modal h2 {
-		margin-top: 0;
-	}
-
-	.modal-actions {
-		display: flex;
-		justify-content: flex-end;
-		gap: 0.5rem;
-		margin-top: 1.5rem;
-	}
-</style>
+			<AlertDialog.Footer>
+				<AlertDialog.Cancel>Vazgeç</AlertDialog.Cancel>
+				<AlertDialog.Action
+					variant="destructive"
+					onclick={(e) => {
+						e.preventDefault();
+						confirmDelete();
+					}}
+				>
+					Sil
+				</AlertDialog.Action>
+			</AlertDialog.Footer>
+		{/if}
+	</AlertDialog.Content>
+</AlertDialog.Root>

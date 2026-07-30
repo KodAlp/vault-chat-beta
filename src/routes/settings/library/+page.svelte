@@ -2,6 +2,8 @@
 	import { onMount } from 'svelte';
 	import ImportObsidianDialog from '$lib/components/ImportObsidianDialog.svelte';
 	import type { LibrarySettings } from '$lib/types';
+	import { Switch } from '$lib/components/ui/switch';
+	import * as Card from '$lib/components/ui/card';
 
 	let settings = $state<LibrarySettings>({ keepOriginals: false });
 	let loadError = $state('');
@@ -33,86 +35,39 @@
 	<title>Kütüphane — Vault Chat</title>
 </svelte:head>
 
-<div class="library-settings">
-	<header>
-		<a href="/settings">← Ayarlar</a>
-		<h1>Kütüphane</h1>
-	</header>
+<div class="mx-auto max-w-2xl px-4 pt-6 pb-12">
+	<div class="mb-6 flex items-baseline gap-4">
+		<a href="/settings" class="text-sm text-muted-foreground hover:text-foreground">← Ayarlar</a>
+		<h1 class="text-xl font-semibold">Kütüphane</h1>
+	</div>
 
 	{#if loadError}
-		<p class="warn">{loadError}</p>
+		<p class="mb-4 text-sm text-destructive">{loadError}</p>
 	{/if}
 
-	<section>
-		<h2>Obsidian'dan İçe Aktar</h2>
-		<p class="hint">
-			Bir Obsidian vault'unu tek yönlü kopyalar (kaynağa asla yazılmaz). Wikilink'ler göreli
-			markdown linklerine çevrilir, eklerin kopyaları alınır, eksik frontmatter alanları
-			varsayılan değer + gözden geçirme rozeti alır.
-		</p>
-		<ImportObsidianDialog />
-	</section>
+	<Card.Root class="mb-6">
+		<Card.Header>
+			<Card.Title>Obsidian'dan İçe Aktar</Card.Title>
+			<Card.Description>
+				Bir Obsidian vault'unu tek yönlü kopyalar (kaynağa asla yazılmaz). Wikilink'ler göreli
+				markdown linklerine çevrilir, eklerin kopyaları alınır, eksik frontmatter alanları
+				varsayılan değer + gözden geçirme rozeti alır.
+			</Card.Description>
+		</Card.Header>
+		<Card.Content>
+			<ImportObsidianDialog />
+		</Card.Content>
+	</Card.Root>
 
-	<section>
-		<h2>Yükleme Ayarları</h2>
-		<label class="checkbox-field">
-			<input type="checkbox" bind:checked={settings.keepOriginals} onchange={persist} />
-			Dönüştürülen belgelerin orijinal dosyalarını sakla ({'data/library/_meta/originals/'})
-		</label>
-	</section>
+	<Card.Root>
+		<Card.Header>
+			<Card.Title>Yükleme Ayarları</Card.Title>
+		</Card.Header>
+		<Card.Content>
+			<label class="flex cursor-pointer items-center gap-2 text-sm">
+				<Switch bind:checked={settings.keepOriginals} onCheckedChange={persist} />
+				Dönüştürülen belgelerin orijinal dosyalarını sakla ({'data/library/_meta/originals/'})
+			</label>
+		</Card.Content>
+	</Card.Root>
 </div>
-
-<style>
-	.library-settings {
-		max-width: 640px;
-		margin: 0 auto;
-		padding: 1.5rem 1rem 3rem;
-	}
-
-	header {
-		display: flex;
-		align-items: baseline;
-		gap: 1rem;
-		margin-bottom: 1.5rem;
-	}
-
-	header a {
-		font-size: 0.9rem;
-		text-decoration: none;
-	}
-
-	h1 {
-		font-size: 1.3rem;
-		margin: 0;
-	}
-
-	h2 {
-		font-size: 1rem;
-		margin: 0 0 0.75rem;
-	}
-
-	section {
-		margin-bottom: 2rem;
-		padding-bottom: 1.5rem;
-		border-bottom: 1px solid var(--border);
-	}
-
-	.hint {
-		font-size: 0.85rem;
-		color: var(--muted-foreground);
-		margin-bottom: 1rem;
-	}
-
-	.checkbox-field {
-		display: flex;
-		align-items: center;
-		gap: 0.4rem;
-		font-size: 0.85rem;
-		cursor: pointer;
-	}
-
-	.warn {
-		color: var(--destructive);
-		font-size: 0.85rem;
-	}
-</style>
