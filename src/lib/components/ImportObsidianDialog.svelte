@@ -136,9 +136,9 @@
 	.trigger {
 		padding: 0.5rem 1rem;
 		border-radius: 8px;
-		border: 1px solid var(--accent);
+		border: 1px solid var(--primary);
 		background: transparent;
-		color: var(--accent);
+		color: var(--primary);
 		font-weight: 600;
 		cursor: pointer;
 		font-size: 0.9rem;
@@ -155,8 +155,8 @@
 	}
 
 	.dialog {
-		background: var(--bg);
-		color: var(--fg);
+		background: var(--background);
+		color: var(--foreground);
 		border: 1px solid var(--border);
 		border-radius: 12px;
 		padding: 1.25rem;
@@ -173,7 +173,7 @@
 
 	.hint {
 		font-size: 0.8rem;
-		color: var(--muted);
+		color: var(--muted-foreground);
 		margin-bottom: 1rem;
 	}
 
@@ -186,8 +186,8 @@
 	}
 
 	input[type='text'] {
-		background: var(--bg);
-		color: var(--fg);
+		background: var(--background);
+		color: var(--foreground);
 		border: 1px solid var(--border);
 		border-radius: 6px;
 		padding: 0.4rem 0.5rem;
@@ -207,7 +207,7 @@
 		width: 0.9rem;
 		height: 0.9rem;
 		border: 2px solid var(--border);
-		border-top-color: var(--accent);
+		border-top-color: var(--primary);
 		border-radius: 50%;
 		animation: spin 0.7s linear infinite;
 	}
@@ -257,8 +257,8 @@
 	}
 
 	.status-badge.converted {
-		background: color-mix(in srgb, var(--accent) 15%, transparent);
-		color: var(--accent);
+		background: color-mix(in srgb, var(--primary) 15%, transparent);
+		color: var(--primary);
 	}
 
 	.status-badge.needs_review {
@@ -267,8 +267,8 @@
 	}
 
 	.status-badge.failed {
-		background: color-mix(in srgb, var(--error) 15%, transparent);
-		color: var(--error);
+		background: color-mix(in srgb, var(--destructive) 15%, transparent);
+		color: var(--destructive);
 	}
 
 	.file-name {
@@ -278,12 +278,12 @@
 	}
 
 	.reason {
-		color: var(--muted);
+		color: var(--muted-foreground);
 		font-size: 0.72rem;
 	}
 
 	.warn {
-		color: var(--error);
+		color: var(--destructive);
 		font-size: 0.85rem;
 	}
 
@@ -299,15 +299,15 @@
 		border-radius: 8px;
 		border: 1px solid var(--border);
 		background: transparent;
-		color: var(--fg);
+		color: var(--foreground);
 		cursor: pointer;
 		font-size: 0.9rem;
 	}
 
 	.actions button.primary {
-		background: var(--accent);
-		color: var(--accent-fg);
-		border-color: var(--accent);
+		background: var(--primary);
+		color: var(--primary-foreground);
+		border-color: var(--primary);
 		font-weight: 600;
 	}
 

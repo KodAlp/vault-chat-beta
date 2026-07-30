@@ -236,13 +236,13 @@
 
 	.hint {
 		font-size: 0.75rem;
-		color: var(--muted);
+		color: var(--muted-foreground);
 	}
 
 	select,
 	input[type='text'] {
-		background: var(--bg);
-		color: var(--fg);
+		background: var(--background);
+		color: var(--foreground);
 		border: 1px solid var(--border);
 		border-radius: 6px;
 		padding: 0.4rem 0.5rem;
@@ -265,7 +265,7 @@
 		border-radius: 6px;
 		border: 1px solid var(--border);
 		background: transparent;
-		color: var(--fg);
+		color: var(--foreground);
 		cursor: pointer;
 		font-size: 0.85rem;
 	}
@@ -280,13 +280,13 @@
 	}
 
 	.warn {
-		color: var(--error);
+		color: var(--destructive);
 		font-size: 0.85rem;
 	}
 
 	.skills-link {
 		font-size: 0.9rem;
-		color: var(--accent);
+		color: var(--primary);
 		text-decoration: none;
 		font-weight: 600;
 	}

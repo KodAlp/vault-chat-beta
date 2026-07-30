@@ -130,7 +130,7 @@
 	.trigger {
 		background: transparent;
 		border: none;
-		color: var(--muted);
+		color: var(--muted-foreground);
 		font-size: 0.9rem;
 		cursor: pointer;
 		display: flex;
@@ -145,7 +145,7 @@
 	}
 
 	.trigger:hover {
-		color: var(--accent);
+		color: var(--primary);
 	}
 
 	.trigger:disabled {
@@ -164,8 +164,8 @@
 	}
 
 	.dialog {
-		background: var(--bg);
-		color: var(--fg);
+		background: var(--background);
+		color: var(--foreground);
 		border: 1px solid var(--border);
 		border-radius: 12px;
 		padding: 1.25rem;
@@ -200,8 +200,8 @@
 	select,
 	textarea,
 	input[type='number'] {
-		background: var(--bg);
-		color: var(--fg);
+		background: var(--background);
+		color: var(--foreground);
 		border: 1px solid var(--border);
 		border-radius: 6px;
 		padding: 0.4rem 0.5rem;
@@ -244,15 +244,15 @@
 		border-radius: 8px;
 		border: 1px solid var(--border);
 		background: transparent;
-		color: var(--fg);
+		color: var(--foreground);
 		cursor: pointer;
 		font-size: 0.9rem;
 	}
 
 	.actions button.primary {
-		background: var(--accent);
-		color: var(--accent-fg);
-		border-color: var(--accent);
+		background: var(--primary);
+		color: var(--primary-foreground);
+		border-color: var(--primary);
 		font-weight: 600;
 	}
 

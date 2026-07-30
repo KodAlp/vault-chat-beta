@@ -27,7 +27,7 @@
 		max-width: 70ch;
 		margin-bottom: 0.4rem;
 		font-size: 0.8rem;
-		color: var(--muted);
+		color: var(--muted-foreground);
 	}
 
 	.thinking summary {

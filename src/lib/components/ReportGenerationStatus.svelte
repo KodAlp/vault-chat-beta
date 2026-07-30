@@ -39,8 +39,8 @@
 		display: flex;
 		align-items: center;
 		gap: 0.6rem;
-		background: var(--bg);
-		color: var(--fg);
+		background: var(--background);
+		color: var(--foreground);
 		border: 1px solid var(--border);
 		border-radius: 999px;
 		padding: 0.6rem 1rem;
@@ -55,14 +55,14 @@
 	}
 
 	.toast.done {
-		border-color: var(--accent);
-		color: var(--accent);
+		border-color: var(--primary);
+		color: var(--primary);
 		font-weight: 600;
 	}
 
 	.toast.error {
-		border-color: var(--error);
-		color: var(--error);
+		border-color: var(--destructive);
+		color: var(--destructive);
 		max-width: min(360px, 80vw);
 	}
 
@@ -81,7 +81,7 @@
 		width: 0.9rem;
 		height: 0.9rem;
 		border: 2px solid var(--border);
-		border-top-color: var(--accent);
+		border-top-color: var(--primary);
 		border-radius: 50%;
 		animation: spin 0.7s linear infinite;
 		flex-shrink: 0;

@@ -308,12 +308,12 @@
 
 	.hint {
 		font-size: 0.85rem;
-		color: var(--muted);
+		color: var(--muted-foreground);
 		margin-bottom: 1.25rem;
 	}
 
 	.warn {
-		color: var(--error);
+		color: var(--destructive);
 		font-size: 0.85rem;
 	}
 
@@ -350,7 +350,7 @@
 		border: 1px solid var(--border);
 		border-radius: 999px;
 		padding: 0.1rem 0.5rem;
-		color: var(--muted);
+		color: var(--muted-foreground);
 	}
 
 	.chip.connected {
@@ -360,7 +360,7 @@
 
 	.description {
 		font-size: 0.8rem;
-		color: var(--muted);
+		color: var(--muted-foreground);
 		margin: 0.3rem 0 0;
 	}
 
@@ -396,7 +396,7 @@
 		border-radius: 6px;
 		border: 1px solid var(--border);
 		background: transparent;
-		color: var(--fg);
+		color: var(--foreground);
 		cursor: pointer;
 		font-size: 0.8rem;
 	}
@@ -407,14 +407,14 @@
 	}
 
 	.controls button.danger {
-		color: var(--error);
-		border-color: var(--error);
+		color: var(--destructive);
+		border-color: var(--destructive);
 	}
 
 	button.primary {
-		background: var(--accent);
-		color: var(--accent-fg);
-		border-color: var(--accent);
+		background: var(--primary);
+		color: var(--primary-foreground);
+		border-color: var(--primary);
 		font-weight: 600;
 	}
 
@@ -453,7 +453,7 @@
 	.icon-btn {
 		border: none;
 		background: transparent;
-		color: var(--muted);
+		color: var(--muted-foreground);
 		cursor: pointer;
 		font-size: 0.8rem;
 		padding: 0 0.15rem;
@@ -472,8 +472,8 @@
 
 	select,
 	input[type='password'] {
-		background: var(--bg);
-		color: var(--fg);
+		background: var(--background);
+		color: var(--foreground);
 		border: 1px solid var(--border);
 		border-radius: 6px;
 		padding: 0.35rem 0.5rem;

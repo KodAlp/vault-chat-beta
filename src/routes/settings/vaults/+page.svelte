@@ -235,7 +235,7 @@
 
 	.hint {
 		font-size: 0.85rem;
-		color: var(--muted);
+		color: var(--muted-foreground);
 		margin-bottom: 1.5rem;
 	}
 
@@ -260,7 +260,7 @@
 	}
 
 	.vault-row.active {
-		border-color: var(--accent);
+		border-color: var(--primary);
 	}
 
 	.name {
@@ -271,8 +271,8 @@
 
 	.badge {
 		font-size: 0.7rem;
-		color: var(--accent);
-		border: 1px solid var(--accent);
+		color: var(--primary);
+		border: 1px solid var(--primary);
 		border-radius: 999px;
 		padding: 0.1rem 0.5rem;
 	}
@@ -287,14 +287,14 @@
 		border-radius: 6px;
 		border: 1px solid var(--border);
 		background: transparent;
-		color: var(--fg);
+		color: var(--foreground);
 		cursor: pointer;
 		font-size: 0.8rem;
 	}
 
 	button.danger {
-		border-color: var(--error);
-		color: var(--error);
+		border-color: var(--destructive);
+		color: var(--destructive);
 	}
 
 	.new-vault-row {
@@ -303,8 +303,8 @@
 	}
 
 	input[type='text'] {
-		background: var(--bg);
-		color: var(--fg);
+		background: var(--background);
+		color: var(--foreground);
 		border: 1px solid var(--border);
 		border-radius: 6px;
 		padding: 0.4rem 0.5rem;
@@ -314,7 +314,7 @@
 	}
 
 	.warn {
-		color: var(--error);
+		color: var(--destructive);
 		font-size: 0.85rem;
 	}
 
@@ -338,7 +338,7 @@
 
 	.modal {
 		position: relative;
-		background: var(--bg);
+		background: var(--background);
 		border: 1px solid var(--border);
 		border-radius: 8px;
 		padding: 1.5rem;

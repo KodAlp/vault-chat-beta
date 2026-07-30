@@ -217,13 +217,13 @@
 	}
 
 	.status {
-		color: var(--muted);
+		color: var(--muted-foreground);
 		text-align: center;
 		margin-top: 3rem;
 	}
 
 	.status.error {
-		color: var(--error);
+		color: var(--destructive);
 	}
 
 	.progress-bar {
@@ -235,13 +235,13 @@
 
 	.progress-fill {
 		height: 100%;
-		background: var(--accent);
+		background: var(--primary);
 		transition: width 0.2s ease;
 	}
 
 	.progress-label {
 		font-size: 0.75rem;
-		color: var(--muted);
+		color: var(--muted-foreground);
 		margin: 0.4rem 0 1.5rem;
 	}
 
@@ -271,8 +271,8 @@
 		padding: 0.6rem 0.9rem;
 		border-radius: 8px;
 		border: 1px solid var(--border);
-		background: var(--bg);
-		color: var(--fg);
+		background: var(--background);
+		color: var(--foreground);
 		cursor: pointer;
 		font-size: 0.95rem;
 	}
@@ -280,15 +280,15 @@
 	.option-letter {
 		flex-shrink: 0;
 		font-weight: 600;
-		color: var(--muted);
+		color: var(--muted-foreground);
 	}
 
 	.option.selected .option-letter {
-		color: var(--accent);
+		color: var(--primary);
 	}
 
 	.option.selected {
-		border-color: var(--accent);
+		border-color: var(--primary);
 		background: var(--bubble-user);
 	}
 
@@ -299,8 +299,8 @@
 		padding: 0.6rem 0.75rem;
 		border-radius: 8px;
 		border: 1px solid var(--border);
-		background: var(--bg);
-		color: var(--fg);
+		background: var(--background);
+		color: var(--foreground);
 		font-family: var(--font-sans);
 		font-size: 0.95rem;
 	}
@@ -315,14 +315,14 @@
 		border-radius: 8px;
 		border: 1px solid var(--border);
 		background: transparent;
-		color: var(--fg);
+		color: var(--foreground);
 		cursor: pointer;
 	}
 
 	.nav button.primary {
-		background: var(--accent);
-		color: var(--accent-fg);
-		border-color: var(--accent);
+		background: var(--primary);
+		color: var(--primary-foreground);
+		border-color: var(--primary);
 		font-weight: 600;
 	}
 
@@ -346,11 +346,11 @@
 	}
 
 	.result-item.correct {
-		border-left: 3px solid var(--accent);
+		border-left: 3px solid var(--primary);
 	}
 
 	.result-item.incorrect {
-		border-left: 3px solid var(--error);
+		border-left: 3px solid var(--destructive);
 	}
 
 	.result-mark {
@@ -359,11 +359,11 @@
 	}
 
 	.result-item.correct .result-mark {
-		color: var(--accent);
+		color: var(--primary);
 	}
 
 	.result-item.incorrect .result-mark {
-		color: var(--error);
+		color: var(--destructive);
 	}
 
 	.result-body {
@@ -378,12 +378,12 @@
 	}
 
 	.correct-answer {
-		color: var(--error);
+		color: var(--destructive);
 	}
 
 	.explanation {
 		font-size: 0.9rem;
-		color: var(--muted);
+		color: var(--muted-foreground);
 		margin-top: 0.5rem;
 	}
 
@@ -396,7 +396,7 @@
 		display: inline-block;
 		margin-top: 0.6rem;
 		font-size: 0.75rem;
-		color: var(--muted);
+		color: var(--muted-foreground);
 		text-decoration: none;
 		border: 1px solid var(--border);
 		border-radius: 999px;
@@ -404,7 +404,7 @@
 	}
 
 	.source-link:hover {
-		color: var(--accent);
-		border-color: var(--accent);
+		color: var(--primary);
+		border-color: var(--primary);
 	}
 </style>

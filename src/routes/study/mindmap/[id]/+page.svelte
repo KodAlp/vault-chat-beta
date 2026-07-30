@@ -102,13 +102,13 @@
 	}
 
 	.status {
-		color: var(--muted);
+		color: var(--muted-foreground);
 		text-align: center;
 		margin-top: 3rem;
 	}
 
 	.status.error {
-		color: var(--error);
+		color: var(--destructive);
 	}
 
 	h1 {
@@ -121,7 +121,7 @@
 		height: 60vh;
 		border: 1px solid var(--border);
 		border-radius: 10px;
-		background: var(--bg);
+		background: var(--background);
 	}
 
 	h2 {
@@ -144,13 +144,13 @@
 	}
 
 	.node-path {
-		color: var(--muted);
+		color: var(--muted-foreground);
 		min-width: 200px;
 	}
 
 	.source-link {
 		font-size: 0.75rem;
-		color: var(--muted);
+		color: var(--muted-foreground);
 		text-decoration: none;
 		border: 1px solid var(--border);
 		border-radius: 999px;
@@ -158,7 +158,7 @@
 	}
 
 	.source-link:hover {
-		color: var(--accent);
-		border-color: var(--accent);
+		color: var(--primary);
+		border-color: var(--primary);
 	}
 </style>

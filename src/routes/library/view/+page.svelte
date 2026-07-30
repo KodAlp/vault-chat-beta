@@ -61,13 +61,13 @@
 
 	.path {
 		font-size: 0.75rem;
-		color: var(--muted);
+		color: var(--muted-foreground);
 		margin-bottom: 1.5rem;
 		font-family: ui-monospace, 'SF Mono', Consolas, monospace;
 	}
 
 	.error {
-		color: var(--error);
+		color: var(--destructive);
 	}
 
 	.content {
