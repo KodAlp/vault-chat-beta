@@ -130,7 +130,7 @@
 		<p class="progress-label">{currentIndex + 1} / {items.length}</p>
 
 		<div class="question-card">
-			<div class="question">{@html questionHtml}</div>
+			<div class="question markdown-body">{@html questionHtml}</div>
 
 			{#if item.type === 'multiple_choice' && item.options}
 				<div class="options">
@@ -180,12 +180,12 @@
 				<div class="result-item" class:correct={r.item.isCorrect} class:incorrect={!r.item.isCorrect}>
 					<div class="result-mark">{r.item.isCorrect ? '✓' : '✗'}</div>
 					<div class="result-body">
-						<div class="question">{@html r.questionHtml}</div>
+						<div class="question markdown-body">{@html r.questionHtml}</div>
 						<p class="given">Cevabın: {r.item.given || '(boş)'}</p>
 						{#if !r.item.isCorrect}
 							<p class="correct-answer">Doğru cevap: {r.item.correctAnswer}</p>
 						{/if}
-						<div class="explanation">{@html r.explanationHtml}</div>
+						<div class="explanation markdown-body">{@html r.explanationHtml}</div>
 						{#if r.item.modelFeedback}
 							<p class="model-feedback"><strong>Model değerlendirmesi:</strong> {r.item.modelFeedback}</p>
 						{/if}

@@ -88,10 +88,10 @@
 		<p class="progress-label">{currentIndex + 1} / {cards.length}</p>
 
 		<div class="card-box">
-			<div class="face front">{@html frontHtml}</div>
+			<div class="face front markdown-body">{@html frontHtml}</div>
 			{#if revealed}
 				<hr />
-				<div class="face back">{@html backHtml}</div>
+				<div class="face back markdown-body">{@html backHtml}</div>
 				<a class="source-link" href={obsidianUri(card.source_path)} title={card.heading_path}>
 					{card.source_path}
 				</a>

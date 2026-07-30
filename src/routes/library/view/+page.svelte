@@ -41,7 +41,7 @@
 	{#if error}
 		<p class="error">{error}</p>
 	{:else}
-		<div class="content">{@html html}</div>
+		<div class="content markdown-body">{@html html}</div>
 	{/if}
 </div>
 
