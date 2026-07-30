@@ -1,6 +1,13 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import type { UserSkillStatus, UserSkillScope } from '$lib/types';
+	import { Button } from '$lib/components/ui/button';
+	import { Input } from '$lib/components/ui/input';
+	import { Textarea } from '$lib/components/ui/textarea';
+	import { Badge } from '$lib/components/ui/badge';
+	import * as Card from '$lib/components/ui/card';
+	import * as Dialog from '$lib/components/ui/dialog';
+	import * as Select from '$lib/components/ui/select';
 
 	const SCOPE_LABELS: Record<UserSkillScope, string> = {
 		chat: 'Sohbet',
@@ -10,6 +17,8 @@
 		report: 'Rapor',
 		slides: 'Slayt'
 	};
+
+	const PREVIEW_SCOPES: UserSkillScope[] = ['chat', 'quiz', 'flashcards', 'report', 'mindmap', 'slides'];
 
 	const TEMPLATE = `---
 description: Bu skill ne yapar? (zorunlu)
@@ -51,7 +60,7 @@ Kurallar, tercihler, yasaklar... serbest markdown.
 		return scope === 'all' ? ['Tümü'] : scope.map((s) => SCOPE_LABELS[s]);
 	}
 
-	function budgetClass(charCount: number): string {
+	function budgetClass(charCount: number): 'green' | 'amber' | 'red' {
 		const pct = charCount / 4000;
 		if (pct >= 1) return 'red';
 		if (pct >= 0.7) return 'amber';
@@ -107,10 +116,6 @@ Kurallar, tercihler, yasaklar... serbest markdown.
 		editorRaw = TEMPLATE;
 		editorIsNew = true;
 		editorOpen = true;
-	}
-
-	function closeEditor() {
-		editorOpen = false;
 	}
 
 	async function saveEditor() {
@@ -171,419 +176,142 @@ Kurallar, tercihler, yasaklar... serbest markdown.
 	<title>Kullanıcı Skill'leri — Vault Chat</title>
 </svelte:head>
 
-<div class="skills-page">
-	<header>
-		<a href="/settings">← Ayarlar</a>
-		<h1>Kullanıcı Skill'leri</h1>
-	</header>
+<div class="mx-auto max-w-3xl px-4 pt-6 pb-12">
+	<div class="mb-3 flex items-baseline gap-4">
+		<a href="/settings" class="text-sm text-muted-foreground hover:text-foreground">← Ayarlar</a>
+		<h1 class="text-xl font-semibold">Kullanıcı Skill'leri</h1>
+	</div>
 
-	<p class="hint">
-		<code>data/skills/</code> içine bıraktığın markdown dosyaları sohbet, test ve bilgi kartı
-		üretimini özelleştirir. Matematik biçimi ve kaynak doğrulama kuralları her zaman en son
-		uygulanır — bir skill bunları geçersiz kılamaz.
+	<p class="mb-5 text-sm text-muted-foreground">
+		<code class="rounded bg-muted px-1 py-0.5 text-xs">data/skills/</code> içine bıraktığın markdown
+		dosyaları sohbet, test ve bilgi kartı üretimini özelleştirir. Matematik biçimi ve kaynak
+		doğrulama kuralları her zaman en son uygulanır — bir skill bunları geçersiz kılamaz.
 	</p>
 
 	{#if loadError}
-		<p class="warn">{loadError}</p>
+		<p class="mb-4 text-sm text-destructive">{loadError}</p>
 	{/if}
 
-	<div class="toolbar">
-		<button class="primary" onclick={openNewEditor}>+ Yeni skill</button>
-		<div class="preview-controls">
-			<select bind:value={previewScope}>
-				<option value="chat">Sohbet</option>
-				<option value="quiz">Test</option>
-				<option value="flashcards">Kartlar</option>
-				<option value="report">Rapor</option>
-				<option value="mindmap">Zihin haritası</option>
-				<option value="slides">Slayt</option>
-			</select>
-			<button onclick={runPreview}>Önizleme</button>
+	<div class="mb-5 flex flex-wrap items-center justify-between gap-3">
+		<Button onclick={openNewEditor}>+ Yeni skill</Button>
+		<div class="flex gap-1.5">
+			<Select.Root type="single" bind:value={previewScope}>
+				<Select.Trigger class="w-44">{SCOPE_LABELS[previewScope]}</Select.Trigger>
+				<Select.Content>
+					{#each PREVIEW_SCOPES as scope (scope)}
+						<Select.Item value={scope} label={SCOPE_LABELS[scope]}>{SCOPE_LABELS[scope]}</Select.Item>
+					{/each}
+				</Select.Content>
+			</Select.Root>
+			<Button variant="outline" onclick={runPreview}>Önizleme</Button>
 		</div>
 	</div>
 
-	<div class="list">
+	<div class="flex flex-col gap-3">
 		{#each skills as skill (skill.relPath)}
-			<div class="row">
-				<div class="main">
-					<div class="title-line">
-						<strong>{skill.name}</strong>
-						{#each scopeChips(skill.scope) as chip (chip)}
-							<span class="chip">{chip}</span>
-						{/each}
-						{#if skill.parseError}
-							<span class="badge error" title={skill.parseError}>hata</span>
-						{/if}
-						{#if skill.truncated}
-							<span class="badge warn-badge">kısaltıldı</span>
-						{/if}
+			<Card.Root>
+				<Card.Content class="flex flex-wrap justify-between gap-4">
+					<div class="min-w-[220px] flex-1">
+						<div class="flex flex-wrap items-center gap-1.5">
+							<strong class="text-sm">{skill.name}</strong>
+							{#each scopeChips(skill.scope) as chip (chip)}
+								<Badge variant="outline">{chip}</Badge>
+							{/each}
+							{#if skill.parseError}
+								<Badge variant="destructive" title={skill.parseError}>hata</Badge>
+							{/if}
+							{#if skill.truncated}
+								<Badge class="bg-amber-500/20 text-amber-700 dark:text-amber-400">kısaltıldı</Badge>
+							{/if}
+						</div>
+						<p class="mt-1 mb-2 text-sm text-muted-foreground">{skill.description ?? skill.relPath}</p>
+						<div class="h-1 w-40 overflow-hidden rounded-full bg-muted">
+							<div
+								class={[
+									'h-full',
+									budgetClass(skill.charCount) === 'green' && 'bg-emerald-600',
+									budgetClass(skill.charCount) === 'amber' && 'bg-amber-500',
+									budgetClass(skill.charCount) === 'red' && 'bg-destructive'
+								]}
+								style="width: {Math.min(100, (skill.charCount / 4000) * 100)}%"
+							></div>
+						</div>
+						<span class="text-xs text-muted-foreground">{skill.charCount} / 4000</span>
 					</div>
-					<p class="description">{skill.description ?? skill.relPath}</p>
-					<div class="budget-bar">
-						<div
-							class="budget-fill {budgetClass(skill.charCount)}"
-							style="width: {Math.min(100, (skill.charCount / 4000) * 100)}%"
-						></div>
-					</div>
-					<span class="char-count">{skill.charCount} / 4000</span>
-				</div>
 
-				<div class="controls">
-					<label class="toggle">
-						<input
-							type="checkbox"
-							checked={skill.enabled}
-							onchange={() => toggleEnabled(skill)}
-						/>
-						Etkin
-					</label>
-					<label class="priority">
-						Öncelik
-						<input
-							type="number"
-							min="0"
-							max="100"
-							value={skill.priority}
-							onchange={(e) => changePriority(skill, Number(e.currentTarget.value))}
-						/>
-					</label>
-					<button onclick={() => openEditor(skill)}>Düzenle</button>
-					<button class="danger" onclick={() => removeSkill(skill)}>Sil</button>
-				</div>
-			</div>
+					<div class="flex flex-wrap items-center gap-3">
+						<label class="flex cursor-pointer items-center gap-1.5 text-xs">
+							<input type="checkbox" checked={skill.enabled} onchange={() => toggleEnabled(skill)} class="accent-primary" />
+							Etkin
+						</label>
+						<label class="flex items-center gap-1.5 text-xs">
+							Öncelik
+							<Input
+								type="number"
+								min="0"
+								max="100"
+								value={skill.priority}
+								onchange={(e) => changePriority(skill, Number(e.currentTarget.value))}
+								class="h-7 w-16"
+							/>
+						</label>
+						<Button size="sm" variant="outline" onclick={() => openEditor(skill)}>Düzenle</Button>
+						<Button size="sm" variant="destructive" onclick={() => removeSkill(skill)}>Sil</Button>
+					</div>
+				</Card.Content>
+			</Card.Root>
 		{:else}
-			<p class="hint">Henüz skill yok. "_examples/" klasöründeki örnekler devre dışı olarak
-				geldi — düzenleyip etkinleştirebilirsin.</p>
+			<p class="text-sm text-muted-foreground">
+				Henüz skill yok. "_examples/" klasöründeki örnekler devre dışı olarak geldi — düzenleyip
+				etkinleştirebilirsin.
+			</p>
 		{/each}
 	</div>
 </div>
 
-{#if editorOpen}
-	<div class="overlay" onclick={closeEditor} onkeydown={(e) => e.key === 'Escape' && closeEditor()} role="presentation">
-		<div class="dialog" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()} role="dialog" aria-modal="true" tabindex="-1">
-			<h2>{editorIsNew ? 'Yeni skill' : editorName}</h2>
+<Dialog.Root bind:open={editorOpen}>
+	<Dialog.Content class="sm:max-w-lg">
+		<Dialog.Header>
+			<Dialog.Title>{editorIsNew ? 'Yeni skill' : editorName}</Dialog.Title>
+		</Dialog.Header>
 
-			{#if editorIsNew}
-				<label class="field">
-					İsim (kebab-case)
-					<input type="text" bind:value={editorName} placeholder="örn. math-notation" />
-				</label>
-			{/if}
-
-			<label class="field">
-				İçerik (frontmatter + markdown)
-				<textarea class="raw-editor" bind:value={editorRaw} spellcheck="false"></textarea>
+		{#if editorIsNew}
+			<label class="flex flex-col gap-1 text-sm">
+				İsim (kebab-case)
+				<Input type="text" bind:value={editorName} placeholder="örn. math-notation" />
 			</label>
+		{/if}
 
-			{#if editorError}
-				<p class="warn">{editorError}</p>
-			{/if}
+		<label class="flex flex-col gap-1 text-sm">
+			İçerik (frontmatter + markdown)
+			<Textarea bind:value={editorRaw} spellcheck="false" class="min-h-64 font-mono text-[0.82rem]" />
+		</label>
 
-			<div class="actions">
-				<button onclick={closeEditor}>İptal</button>
-				<button class="primary" onclick={saveEditor} disabled={editorSaving}>
-					{editorSaving ? 'Kaydediliyor...' : 'Kaydet'}
-				</button>
-			</div>
-		</div>
-	</div>
-{/if}
+		{#if editorError}
+			<p class="text-sm text-destructive">{editorError}</p>
+		{/if}
 
-{#if previewOpen}
-	<div class="overlay" onclick={() => (previewOpen = false)} onkeydown={(e) => e.key === 'Escape' && (previewOpen = false)} role="presentation">
-		<div class="dialog wide" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()} role="dialog" aria-modal="true" tabindex="-1">
-			<h2>Önizleme — {SCOPE_LABELS[previewScope]}</h2>
-			{#if previewLoading}
-				<p class="hint">Yükleniyor...</p>
-			{:else}
-				<pre class="preview-text">{previewText}</pre>
-			{/if}
-			<div class="actions">
-				<button onclick={() => (previewOpen = false)}>Kapat</button>
-			</div>
-		</div>
-	</div>
-{/if}
+		<Dialog.Footer>
+			<Button variant="outline" onclick={() => (editorOpen = false)}>İptal</Button>
+			<Button onclick={saveEditor} disabled={editorSaving}>
+				{editorSaving ? 'Kaydediliyor...' : 'Kaydet'}
+			</Button>
+		</Dialog.Footer>
+	</Dialog.Content>
+</Dialog.Root>
 
-<style>
-	.skills-page {
-		max-width: 760px;
-		margin: 0 auto;
-		padding: 1.5rem 1rem 3rem;
-	}
-
-	header {
-		display: flex;
-		align-items: baseline;
-		gap: 1rem;
-		margin-bottom: 0.75rem;
-	}
-
-	header a {
-		font-size: 0.9rem;
-		text-decoration: none;
-	}
-
-	h1 {
-		font-size: 1.3rem;
-		margin: 0;
-	}
-
-	.hint {
-		font-size: 0.85rem;
-		color: var(--muted-foreground);
-		margin-bottom: 1.25rem;
-	}
-
-	.warn {
-		color: var(--destructive);
-		font-size: 0.85rem;
-	}
-
-	.toolbar {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 1.25rem;
-		gap: 1rem;
-	}
-
-	.preview-controls {
-		display: flex;
-		gap: 0.5rem;
-	}
-
-	.list {
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-	}
-
-	.row {
-		border: 1px solid var(--border);
-		border-radius: 10px;
-		padding: 0.9rem 1rem;
-		display: flex;
-		justify-content: space-between;
-		gap: 1rem;
-		flex-wrap: wrap;
-	}
-
-	.main {
-		flex: 1;
-		min-width: 220px;
-	}
-
-	.title-line {
-		display: flex;
-		align-items: center;
-		gap: 0.4rem;
-		flex-wrap: wrap;
-	}
-
-	.chip {
-		font-size: 0.7rem;
-		border: 1px solid var(--border);
-		border-radius: 999px;
-		padding: 0.1rem 0.5rem;
-		color: var(--muted-foreground);
-	}
-
-	.badge {
-		font-size: 0.7rem;
-		border-radius: 999px;
-		padding: 0.1rem 0.5rem;
-	}
-
-	.badge.error {
-		background: color-mix(in srgb, var(--destructive) 15%, transparent);
-		color: var(--destructive);
-	}
-
-	.badge.warn-badge {
-		background: color-mix(in srgb, orange 20%, transparent);
-		color: #b8860b;
-	}
-
-	.description {
-		font-size: 0.85rem;
-		color: var(--muted-foreground);
-		margin: 0.3rem 0 0.5rem;
-	}
-
-	.budget-bar {
-		height: 4px;
-		background: var(--border);
-		border-radius: 999px;
-		overflow: hidden;
-		width: 160px;
-	}
-
-	.budget-fill {
-		height: 100%;
-	}
-
-	.budget-fill.green {
-		background: #2e7d32;
-	}
-
-	.budget-fill.amber {
-		background: #b8860b;
-	}
-
-	.budget-fill.red {
-		background: var(--destructive);
-	}
-
-	.char-count {
-		font-size: 0.7rem;
-		color: var(--muted-foreground);
-	}
-
-	.controls {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		flex-wrap: wrap;
-	}
-
-	.toggle {
-		display: flex;
-		align-items: center;
-		gap: 0.3rem;
-		font-size: 0.8rem;
-		cursor: pointer;
-	}
-
-	.priority {
-		display: flex;
-		align-items: center;
-		gap: 0.3rem;
-		font-size: 0.8rem;
-	}
-
-	.priority input {
-		width: 3.5rem;
-	}
-
-	.controls button {
-		padding: 0.35rem 0.7rem;
-		border-radius: 6px;
-		border: 1px solid var(--border);
-		background: transparent;
-		color: var(--foreground);
-		cursor: pointer;
-		font-size: 0.8rem;
-	}
-
-	.controls button.danger {
-		color: var(--destructive);
-		border-color: var(--destructive);
-	}
-
-	select,
-	input[type='text'],
-	input[type='number'] {
-		background: var(--background);
-		color: var(--foreground);
-		border: 1px solid var(--border);
-		border-radius: 6px;
-		padding: 0.35rem 0.5rem;
-		font-family: var(--font-sans);
-		font-size: 0.85rem;
-	}
-
-	button.primary {
-		background: var(--primary);
-		color: var(--primary-foreground);
-		border-color: var(--primary);
-		font-weight: 600;
-	}
-
-	.overlay {
-		position: fixed;
-		inset: 0;
-		background: rgb(0 0 0 / 0.4);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		z-index: 100;
-	}
-
-	.dialog {
-		background: var(--background);
-		color: var(--foreground);
-		border: 1px solid var(--border);
-		border-radius: 12px;
-		padding: 1.25rem;
-		width: min(560px, 90vw);
-		max-height: 85vh;
-		overflow-y: auto;
-		box-shadow: 0 8px 24px rgb(0 0 0 / 0.25);
-	}
-
-	.dialog.wide {
-		width: min(720px, 92vw);
-	}
-
-	.dialog h2 {
-		margin: 0 0 1rem;
-		font-size: 1.1rem;
-	}
-
-	.field {
-		display: flex;
-		flex-direction: column;
-		gap: 0.3rem;
-		font-size: 0.85rem;
-		margin-bottom: 0.9rem;
-	}
-
-	.raw-editor {
-		width: 100%;
-		min-height: 16rem;
-		resize: vertical;
-		font-family: ui-monospace, 'SF Mono', Consolas, monospace;
-		font-size: 0.82rem;
-		line-height: 1.5;
-		background: var(--background);
-		color: var(--foreground);
-		border: 1px solid var(--border);
-		border-radius: 6px;
-		padding: 0.6rem 0.7rem;
-	}
-
-	.preview-text {
-		white-space: pre-wrap;
-		font-family: ui-monospace, 'SF Mono', Consolas, monospace;
-		font-size: 0.8rem;
-		line-height: 1.5;
-		max-height: 60vh;
-		overflow-y: auto;
-		background: var(--bubble-assistant);
-		border-radius: 8px;
-		padding: 0.9rem;
-	}
-
-	.actions {
-		display: flex;
-		justify-content: flex-end;
-		gap: 0.5rem;
-		margin-top: 1rem;
-	}
-
-	.actions button {
-		padding: 0.45rem 1rem;
-		border-radius: 8px;
-		border: 1px solid var(--border);
-		background: transparent;
-		color: var(--foreground);
-		cursor: pointer;
-		font-size: 0.9rem;
-	}
-
-	.actions button:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
-</style>
+<Dialog.Root bind:open={previewOpen}>
+	<Dialog.Content class="sm:max-w-2xl">
+		<Dialog.Header>
+			<Dialog.Title>Önizleme — {SCOPE_LABELS[previewScope]}</Dialog.Title>
+		</Dialog.Header>
+		{#if previewLoading}
+			<p class="text-sm text-muted-foreground">Yükleniyor...</p>
+		{:else}
+			<pre class="max-h-[60vh] overflow-y-auto rounded-lg bg-muted p-3.5 font-mono text-xs whitespace-pre-wrap">{previewText}</pre>
+		{/if}
+		<Dialog.Footer>
+			<Button variant="outline" onclick={() => (previewOpen = false)}>Kapat</Button>
+		</Dialog.Footer>
+	</Dialog.Content>
+</Dialog.Root>
