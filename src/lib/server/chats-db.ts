@@ -7,6 +7,8 @@ export interface ChatRow {
 	id: string;
 	title: string | null;
 	model: string;
+	vault_id: string;
+	included_paths_json: string | null;
 	created_at: string;
 	updated_at: string;
 }
@@ -23,8 +25,11 @@ export interface MessageRow {
 
 let db: Database.Database | undefined;
 
-/** Separate from data/vault-index.db on purpose — this is user history, the
- * index is regenerable vault content. `npm run index --full` must never touch it. */
+/** Separate from data/vaults/<id>/index.db on purpose — this is user
+ * history, the index is regenerable vault content. `npm run index --full`
+ * must never touch it. Stays a single global DB (not one per vault) with a
+ * vault_id column — see vault-registry skill for why: sohbetler ileride
+ * vault-üstü bir "son konuşmalar" görünümü isteyebilir. */
 function getDb(): Database.Database {
 	if (!db) {
 		const dbPath = env.CHATS_DB_PATH ?? path.join('data', 'chats.db');
@@ -36,6 +41,8 @@ function getDb(): Database.Database {
 				id TEXT PRIMARY KEY,
 				title TEXT,
 				model TEXT NOT NULL,
+				vault_id TEXT NOT NULL DEFAULT 'default',
+				included_paths_json TEXT,
 				created_at TEXT NOT NULL,
 				updated_at TEXT NOT NULL
 			);
@@ -49,7 +56,22 @@ function getDb(): Database.Database {
 				created_at TEXT NOT NULL
 			);
 			CREATE INDEX IF NOT EXISTS idx_messages_chat_id ON messages(chat_id);
+			CREATE INDEX IF NOT EXISTS idx_chats_vault_id ON chats(vault_id);
 		`);
+		// vault_id/included_paths_json didn't exist before Faz 8 — a DB created
+		// by an older build won't have them yet. scripts/migrate-vaults.mjs
+		// handles the real one-time backfill (vault_id='default' for existing
+		// rows); this ALTER only guards a pre-Faz-8 DB that reaches getDb()
+		// before migration has run, so CREATE TABLE's DEFAULT can't help
+		// (defaults only apply to rows inserted after the column exists).
+		const cols = db.prepare('PRAGMA table_info(chats)').all() as { name: string }[];
+		const colNames = new Set(cols.map((c) => c.name));
+		if (!colNames.has('vault_id')) {
+			db.exec(`ALTER TABLE chats ADD COLUMN vault_id TEXT NOT NULL DEFAULT 'default'`);
+		}
+		if (!colNames.has('included_paths_json')) {
+			db.exec(`ALTER TABLE chats ADD COLUMN included_paths_json TEXT`);
+		}
 	}
 	return db;
 }
@@ -59,12 +81,22 @@ function getDb(): Database.Database {
  * (crypto.randomUUID(), same convention as ChatMessage.id) so the welcome
  * screen can navigate to /chat/{id} before the first message is even sent.
  */
-export function createChat(id: string, model: string): ChatRow {
+export function createChat(id: string, model: string, vaultId: string): ChatRow {
 	const now = new Date().toISOString();
-	const chat: ChatRow = { id, title: null, model, created_at: now, updated_at: now };
+	const chat: ChatRow = {
+		id,
+		title: null,
+		model,
+		vault_id: vaultId,
+		included_paths_json: null,
+		created_at: now,
+		updated_at: now
+	};
 	getDb()
-		.prepare(`INSERT INTO chats (id, title, model, created_at, updated_at) VALUES (?, ?, ?, ?, ?)`)
-		.run(chat.id, chat.title, chat.model, chat.created_at, chat.updated_at);
+		.prepare(
+			`INSERT INTO chats (id, title, model, vault_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)`
+		)
+		.run(chat.id, chat.title, chat.model, chat.vault_id, chat.created_at, chat.updated_at);
 	return chat;
 }
 
@@ -72,8 +104,26 @@ export function getChat(id: string): ChatRow | undefined {
 	return getDb().prepare('SELECT * FROM chats WHERE id = ?').get(id) as ChatRow | undefined;
 }
 
-export function listChats(limit = 50): ChatRow[] {
-	return getDb().prepare('SELECT * FROM chats ORDER BY updated_at DESC LIMIT ?').all(limit) as ChatRow[];
+export function listChats(vaultId: string, limit = 50): ChatRow[] {
+	return getDb()
+		.prepare('SELECT * FROM chats WHERE vault_id = ? ORDER BY updated_at DESC LIMIT ?')
+		.all(vaultId, limit) as ChatRow[];
+}
+
+/** Used by the vault-deletion confirm dialog (vaults.ts's
+ * describeVaultDeletion counter) and by deleteChatsForVault below. */
+export function countChatsForVault(vaultId: string): number {
+	const row = getDb()
+		.prepare('SELECT COUNT(*) AS n FROM chats WHERE vault_id = ?')
+		.get(vaultId) as { n: number };
+	return row.n;
+}
+
+/** Called before vaults.deleteVault() removes the vault's folder — chats.db
+ * is global, so vault deletion can't rely on the folder-delete cascading
+ * into it. ON DELETE CASCADE on messages.chat_id handles messages. */
+export function deleteChatsForVault(vaultId: string): void {
+	getDb().prepare('DELETE FROM chats WHERE vault_id = ?').run(vaultId);
 }
 
 export function touchChat(id: string): void {
@@ -86,6 +136,12 @@ export function setChatTitle(id: string, title: string): void {
 
 export function updateChatModel(id: string, model: string): void {
 	getDb().prepare('UPDATE chats SET model = ? WHERE id = ?').run(model, id);
+}
+
+export function updateChatIncludedPaths(id: string, includedPaths: string[] | null): void {
+	getDb()
+		.prepare('UPDATE chats SET included_paths_json = ? WHERE id = ?')
+		.run(includedPaths ? JSON.stringify(includedPaths) : null, id);
 }
 
 export interface InsertMessageInput {

@@ -1,13 +1,15 @@
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getReport, getReportSections } from '$lib/server/study-db';
+import { vaultFromUrl } from '$lib/server/requestVault';
 import type { ReportSectionView, ReportView } from '$lib/types';
 
-export const GET: RequestHandler = async ({ params }) => {
-	const report = getReport(params.id);
+export const GET: RequestHandler = async ({ params, url }) => {
+	const v = vaultFromUrl(url);
+	const report = getReport(v, params.id);
 	if (!report) error(404, 'Rapor bulunamadı');
 
-	const sections: ReportSectionView[] = getReportSections(params.id).map((row) => ({
+	const sections: ReportSectionView[] = getReportSections(v, params.id).map((row) => ({
 		id: row.id,
 		heading: row.heading,
 		body_markdown: row.body_markdown,

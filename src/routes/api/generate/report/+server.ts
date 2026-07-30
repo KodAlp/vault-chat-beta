@@ -1,5 +1,6 @@
 import type { RequestHandler } from './$types';
 import { generateReport } from '$lib/server/generate-report';
+import { vaultFromId } from '$lib/server/requestVault';
 import type { ReportGenerationEvent, ReportGenerationRequest } from '$lib/types';
 
 function sseEvent(event: ReportGenerationEvent): string {
@@ -8,6 +9,7 @@ function sseEvent(event: ReportGenerationEvent): string {
 
 export const POST: RequestHandler = async ({ request }) => {
 	const body = (await request.json()) as ReportGenerationRequest;
+	const v = vaultFromId(body.vault);
 
 	const stream = new ReadableStream({
 		async start(controller) {
@@ -17,6 +19,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
 			try {
 				const { reportId } = await generateReport(
+					v,
 					{
 						domains: body.domains,
 						chatId: body.chatId,

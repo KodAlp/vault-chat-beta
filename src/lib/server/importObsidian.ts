@@ -5,6 +5,7 @@ import matter from 'gray-matter';
 import { libraryRoot, importLogPath, appendImportLog } from './library';
 import { indexLibraryFile } from './incrementalIndex';
 import type { ImportResultItem, ImportSummary } from '$lib/types';
+import type { VaultContext } from './vaults';
 
 const EXCLUDED_DIRS = new Set(['.obsidian', 'templates', '.trash', 'node_modules', '.git']);
 const ATTACHMENT_EXT = new Set(['.png', '.jpg', '.jpeg', '.gif', '.svg', '.pdf', '.webp']);
@@ -45,8 +46,8 @@ function loadLastKnownHashes(logPath: string): Map<string, string> {
 	return known;
 }
 
-function appendLog(_logPath: string, entry: LogEntry): void {
-	appendImportLog(entry);
+function appendLog(v: VaultContext, _logPath: string, entry: LogEntry): void {
+	appendImportLog(v, entry);
 }
 
 /** [[Note]] / [[Note|alias]] / [[Note#heading]] -> relative .md link, resolved
@@ -105,6 +106,7 @@ function rewriteEmbeds(
 }
 
 export async function importObsidianVault(
+	v: VaultContext,
 	sourcePath: string,
 	onProgress?: (item: ImportResultItem) => void
 ): Promise<ImportSummary> {
@@ -127,8 +129,8 @@ export async function importObsidianVault(
 		}
 	}
 
-	const root = libraryRoot();
-	const logPath = importLogPath();
+	const root = libraryRoot(v);
+	const logPath = importLogPath(v);
 	const attachmentsDir = path.join(root, '_meta', 'attachments');
 	const lastKnownHashes = loadLastKnownHashes(logPath);
 
@@ -173,10 +175,10 @@ export async function importObsidianVault(
 			fs.mkdirSync(path.dirname(destAbs), { recursive: true });
 			fs.writeFileSync(destAbs, matter.stringify(body, nextFrontmatter), 'utf-8');
 
-			await indexLibraryFile(destAbs, rel);
+			await indexLibraryFile(v, destAbs, rel);
 
 			const status = needsReview ? 'needs_review' : 'converted';
-			appendLog(logPath, { sourcePath: rel, sha256: hash, importedAt: new Date().toISOString(), status });
+			appendLog(v, logPath, { sourcePath: rel, sha256: hash, importedAt: new Date().toISOString(), status });
 			const item: ImportResultItem = { fileName: rel, status, path: rel };
 			items.push(item);
 			onProgress?.(item);

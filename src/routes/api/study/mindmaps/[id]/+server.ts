@@ -1,13 +1,15 @@
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getMindMap, getMindMapNodes } from '$lib/server/study-db';
+import { vaultFromUrl } from '$lib/server/requestVault';
 import type { MindMapNodeView, MindMapView } from '$lib/types';
 
-export const GET: RequestHandler = async ({ params }) => {
-	const mindmap = getMindMap(params.id);
+export const GET: RequestHandler = async ({ params, url }) => {
+	const v = vaultFromUrl(url);
+	const mindmap = getMindMap(v, params.id);
 	if (!mindmap) error(404, 'Zihin haritası bulunamadı');
 
-	const nodes: MindMapNodeView[] = getMindMapNodes(params.id).map((row) => ({
+	const nodes: MindMapNodeView[] = getMindMapNodes(v, params.id).map((row) => ({
 		id: row.id,
 		path: JSON.parse(row.path_json) as string[],
 		source_path: row.source_path,

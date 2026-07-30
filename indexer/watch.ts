@@ -3,7 +3,7 @@ import path from 'node:path';
 import { spawn } from 'node:child_process';
 import chokidar from 'chokidar';
 import { EXCLUDED_DIRS } from './excluded-dirs';
-import { resolveLibraryRoot } from './paths';
+import { resolveIndexerVault } from './paths';
 
 try {
 	process.loadEnvFile();
@@ -11,7 +11,9 @@ try {
 	// .env is optional
 }
 
-const LIBRARY_ROOT = resolveLibraryRoot();
+const args = process.argv.slice(2);
+const vault = resolveIndexerVault(args);
+const LIBRARY_ROOT = vault.libraryRoot;
 const DEBOUNCE_MS = 2000;
 
 let debounceTimer: NodeJS.Timeout | undefined;
@@ -25,7 +27,7 @@ function runIndex() {
 	}
 	running = true;
 	console.log('[watch] değişiklik algılandı, indeksleniyor...');
-	const child = spawn('npx', ['tsx', 'indexer/index-vault.ts'], {
+	const child = spawn('npx', ['tsx', 'indexer/index-vault.ts', '--vault', vault.id], {
 		cwd: process.cwd(),
 		stdio: 'inherit',
 		shell: process.platform === 'win32'
@@ -54,7 +56,7 @@ function onMarkdownEvent(filePath: string) {
 	scheduleIndex();
 }
 
-console.log(`[watch] izleniyor: ${LIBRARY_ROOT}`);
+console.log(`[watch] izleniyor (${vault.name}): ${LIBRARY_ROOT}`);
 console.log('[watch] Ctrl+C ile durdur. Varsayılan iş akışı manueldir — bu opsiyoneldir.');
 
 const watcher = chokidar.watch(LIBRARY_ROOT, {

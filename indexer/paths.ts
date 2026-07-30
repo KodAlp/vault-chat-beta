@@ -1,20 +1,15 @@
-import path from 'node:path';
+import { resolveVault, type VaultContext } from '../src/lib/server/vaults';
 
 /**
- * LIBRARY_PATH is the new, primary root (source-ingest skill's data/library/
- * migration); VAULT_PATH is kept as a deprecated alias so existing .env files
- * (VAULT_PATH=..) keep indexing exactly what they always did, unchanged. Only
- * a fresh install with neither var set gets the new default.
+ * `--vault <id>` on the CLI, falling back to the registry's active vault
+ * when omitted — same resolution vaultFromUrl/vaultFromId use on the
+ * SvelteKit side (src/lib/server/requestVault.ts). See vault-registry skill.
  */
-export function resolveLibraryRoot(): string {
-	const raw = process.env.LIBRARY_PATH;
-	if (raw) return path.resolve(process.cwd(), raw);
+function vaultIdFromArgs(argv: string[]): string | undefined {
+	const i = argv.indexOf('--vault');
+	return i !== -1 ? argv[i + 1] : undefined;
+}
 
-	const legacy = process.env.VAULT_PATH;
-	if (legacy) {
-		console.warn('[uyarı] VAULT_PATH kullanımdan kaldırıldı, bunun yerine LIBRARY_PATH kullan.');
-		return path.resolve(process.cwd(), legacy);
-	}
-
-	return path.resolve(process.cwd(), 'data', 'library');
+export function resolveIndexerVault(argv: string[]): VaultContext {
+	return resolveVault(vaultIdFromArgs(argv));
 }

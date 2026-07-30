@@ -10,5 +10,5 @@
 		"noEmit": true,
 		"types": ["node"]
 	},
-	"include": ["**/*.ts", "../src/lib/server/embed-config.ts"]
+	"include": ["**/*.ts", "../src/lib/server/embed-config.ts", "../src/lib/server/vaults.ts", "../src/lib/server/slug.ts"]
 }

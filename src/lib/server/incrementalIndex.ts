@@ -1,11 +1,10 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
-import path from 'node:path';
-import { env } from '$env/dynamic/private';
 import { openDb, upsertFile, deleteFile, renameFileInIndex, type FileRow } from '../../../indexer/db';
 import { chunkMarkdown } from '../../../indexer/chunk';
 import { embed } from './ollama';
 import { EMBED_MODEL, DOC_PREFIX } from './embed-config';
+import type { VaultContext } from './vaults';
 
 const BATCH_SIZE = 32;
 
@@ -26,10 +25,6 @@ async function embedDocuments(texts: string[]): Promise<number[][]> {
 	return results;
 }
 
-function dbPath(): string {
-	return path.resolve(process.cwd(), env.INDEX_DB_PATH ?? path.join('data', 'vault-index.db'));
-}
-
 function sha256(content: string): string {
 	return crypto.createHash('sha256').update(content).digest('hex');
 }
@@ -39,13 +34,13 @@ function sha256(content: string): string {
  * upload/import flows so a new document is retrievable right away, without
  * waiting for a full `npm run index` pass over the whole library.
  */
-export async function indexLibraryFile(absPath: string, relPath: string): Promise<void> {
+export async function indexLibraryFile(v: VaultContext, absPath: string, relPath: string): Promise<void> {
 	const raw = fs.readFileSync(absPath, 'utf-8');
 	const { frontmatter, chunks } = chunkMarkdown(raw);
 	if (chunks.length === 0) return;
 
 	const embeddings = await embedDocuments(chunks.map((c) => c.embedText));
-	const db = openDb(dbPath());
+	const db = openDb(v.indexDbPath);
 	try {
 		const fileRow: FileRow = {
 			path: relPath,
@@ -70,8 +65,8 @@ export async function indexLibraryFile(absPath: string, relPath: string): Promis
 	}
 }
 
-export function removeLibraryFileFromIndex(relPath: string): void {
-	const db = openDb(dbPath());
+export function removeLibraryFileFromIndex(v: VaultContext, relPath: string): void {
+	const db = openDb(v.indexDbPath);
 	try {
 		deleteFile(db, relPath);
 	} finally {
@@ -79,8 +74,8 @@ export function removeLibraryFileFromIndex(relPath: string): void {
 	}
 }
 
-export function renameLibraryFileInIndex(oldRelPath: string, newRelPath: string): void {
-	const db = openDb(dbPath());
+export function renameLibraryFileInIndex(v: VaultContext, oldRelPath: string, newRelPath: string): void {
+	const db = openDb(v.indexDbPath);
 	try {
 		renameFileInIndex(db, oldRelPath, newRelPath);
 	} finally {

@@ -1,5 +1,6 @@
 import type { RequestHandler } from './$types';
 import { generateMindMap } from '$lib/server/generate-mindmap';
+import { vaultFromId } from '$lib/server/requestVault';
 import type { MindMapGenerationEvent, MindMapGenerationRequest } from '$lib/types';
 
 function sseEvent(event: MindMapGenerationEvent): string {
@@ -8,6 +9,7 @@ function sseEvent(event: MindMapGenerationEvent): string {
 
 export const POST: RequestHandler = async ({ request }) => {
 	const body = (await request.json()) as MindMapGenerationRequest;
+	const v = vaultFromId(body.vault);
 
 	const stream = new ReadableStream({
 		async start(controller) {
@@ -17,6 +19,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
 			try {
 				const { mindmapId } = await generateMindMap(
+					v,
 					{
 						domains: body.domains,
 						chatId: body.chatId,

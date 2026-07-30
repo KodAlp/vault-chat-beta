@@ -6,6 +6,7 @@ import type { RequestHandler } from './$types';
 import { enqueueConversion } from '$lib/server/convertQueue';
 import { stagingDir, resolveLibraryPath, slugify, appendImportLog } from '$lib/server/library';
 import { indexLibraryFile } from '$lib/server/incrementalIndex';
+import { vaultFromId } from '$lib/server/requestVault';
 import type { ImportEvent, ImportResultItem, ImportSummary } from '$lib/types';
 
 function sseEvent(event: ImportEvent): string {
@@ -24,6 +25,7 @@ export const POST: RequestHandler = async ({ request }) => {
 	const formData = await request.formData();
 	const domain = (formData.get('domain') as string | null)?.trim() || 'genel';
 	const files = formData.getAll('files').filter((f): f is File => f instanceof File);
+	const v = vaultFromId(formData.get('vault') as string | null);
 
 	const stream = new ReadableStream({
 		async start(controller) {
@@ -33,7 +35,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
 			for (const file of files) {
 				send({ type: 'progress', stage: 'converting', fileName: file.name });
-				const workDir = path.join(stagingDir(), crypto.randomUUID());
+				const workDir = path.join(stagingDir(v), crypto.randomUUID());
 				fs.mkdirSync(workDir, { recursive: true });
 				const ext = path.extname(file.name) || '.bin';
 				const tempIn = path.join(workDir, `original${ext}`);
@@ -54,15 +56,15 @@ export const POST: RequestHandler = async ({ request }) => {
 						level: 'undergraduate'
 					};
 
-					const filename = `${slugify(title, domain)}.md`;
+					const filename = `${slugify(v, title, domain)}.md`;
 					const relPath = `${domain}/${filename}`;
-					const destAbs = resolveLibraryPath(relPath);
+					const destAbs = resolveLibraryPath(v, relPath);
 					fs.mkdirSync(path.dirname(destAbs), { recursive: true });
 					const finalRaw = matter.stringify(parsed.content, frontmatter);
 					fs.writeFileSync(destAbs, finalRaw, 'utf-8');
-					await indexLibraryFile(destAbs, relPath);
+					await indexLibraryFile(v, destAbs, relPath);
 
-					appendImportLog({
+					appendImportLog(v, {
 						sourcePath: relPath,
 						sha256: crypto.createHash('sha256').update(finalRaw).digest('hex'),
 						importedAt: new Date().toISOString(),

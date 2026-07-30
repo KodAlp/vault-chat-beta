@@ -1,5 +1,6 @@
 import type { RequestHandler } from './$types';
 import { generateCards } from '$lib/server/generate-cards';
+import { vaultFromId } from '$lib/server/requestVault';
 import type { CardGenerationEvent, CardGenerationRequest } from '$lib/types';
 
 function sseEvent(event: CardGenerationEvent): string {
@@ -8,6 +9,7 @@ function sseEvent(event: CardGenerationEvent): string {
 
 export const POST: RequestHandler = async ({ request }) => {
 	const body = (await request.json()) as CardGenerationRequest;
+	const v = vaultFromId(body.vault);
 
 	const stream = new ReadableStream({
 		async start(controller) {
@@ -17,6 +19,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
 			try {
 				const { deckId } = await generateCards(
+					v,
 					{
 						domains: body.domains,
 						chatId: body.chatId,

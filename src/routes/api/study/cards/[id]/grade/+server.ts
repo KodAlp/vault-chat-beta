@@ -2,14 +2,17 @@ import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getCard, updateCardSchedule } from '$lib/server/study-db';
 import { schedule, type Grade } from '$lib/server/schedule';
+import { vaultFromId } from '$lib/server/requestVault';
 
 const VALID_GRADES: Grade[] = ['again', 'hard', 'good', 'easy'];
 
 export const POST: RequestHandler = async ({ params, request }) => {
-	const card = getCard(params.id);
+	const body = (await request.json()) as { grade: Grade; vault?: string };
+	const v = vaultFromId(body.vault);
+
+	const card = getCard(v, params.id);
 	if (!card) error(404, 'Kart bulunamadı');
 
-	const body = (await request.json()) as { grade: Grade };
 	if (!VALID_GRADES.includes(body.grade)) error(400, 'Geçersiz derece');
 
 	const next = schedule(
@@ -22,6 +25,6 @@ export const POST: RequestHandler = async ({ params, request }) => {
 		},
 		body.grade
 	);
-	updateCardSchedule(card.id, next);
+	updateCardSchedule(v, card.id, next);
 	return json({ ok: true });
 };

@@ -155,6 +155,12 @@
 	{/if}
 
 	<section>
+		<h2>Vault'lar</h2>
+		<p class="hint">Birden fazla kütüphane arasında geçiş yap, yeni vault oluştur veya sil.</p>
+		<a class="skills-link" href="/settings/vaults">Vault'ları yönet →</a>
+	</section>
+
+	<section>
 		<h2>Kütüphane</h2>
 		<p class="hint">Obsidian vault'undan içe aktar, belge yükleme ayarları.</p>
 		<a class="skills-link" href="/settings/library">Kütüphaneyi yönet →</a>

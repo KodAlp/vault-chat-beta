@@ -6,6 +6,7 @@ import { startFlight, endFlight } from '$lib/server/providers/inflight';
 import { ProviderError } from '$lib/server/providers/types';
 import { createChat, getChat, insertMessage, touchChat } from '$lib/server/chats-db';
 import { generateTitle } from '$lib/server/title';
+import { vaultFromId } from '$lib/server/requestVault';
 import type { ChatRequestBody, RetrievedChunk, StreamEvent } from '$lib/types';
 
 function sseEvent(event: StreamEvent): string {
@@ -23,6 +24,7 @@ function chatErrorMessage(err: unknown): string {
 
 export const POST: RequestHandler = async ({ request }) => {
 	const body = (await request.json()) as ChatRequestBody;
+	const v = vaultFromId(body.vault);
 	const lastUser = body.messages[body.messages.length - 1];
 
 	const stream = new ReadableStream({
@@ -42,11 +44,12 @@ export const POST: RequestHandler = async ({ request }) => {
 			// the first message is even sent) — this route just upserts it.
 			const chatId = body.chatId ?? crypto.randomUUID();
 			const isNewChat = !getChat(chatId);
-			if (isNewChat) createChat(chatId, body.model);
+			if (isNewChat) createChat(chatId, body.model, v.id);
 			send({ type: 'chatId', chatId });
 			if (lastUser) insertMessage({ chatId, role: 'user', content: lastUser.content });
 
 			let sources: RetrievedChunk[] = [];
+			let narrowScope = false;
 			let finalContent = '';
 			let finalThinking = '';
 
@@ -61,7 +64,14 @@ export const POST: RequestHandler = async ({ request }) => {
 			else request.signal.addEventListener('abort', onClientAbort);
 
 			try {
-				sources = lastUser ? await retrieve(lastUser.content, { domains: body.domains }) : [];
+				if (lastUser) {
+					const result = await retrieve(v, lastUser.content, {
+						domains: body.domains,
+						includedPaths: body.includedPaths
+					});
+					sources = result.chunks;
+					narrowScope = result.narrowScope;
+				}
 				const promptMessages = await buildPromptMessages(body.messages, sources);
 
 				for await (const event of chatWithFallback(
@@ -79,7 +89,7 @@ export const POST: RequestHandler = async ({ request }) => {
 						send({ type: 'notice', message: event.message });
 					}
 				}
-				send({ type: 'done', sources });
+				send({ type: 'done', sources, narrowScope });
 			} catch (err) {
 				// User-initiated stop (interrupt button / navigation) — propagates from
 				// the aborted Ollama fetch. Not a real error; say nothing.

@@ -6,6 +6,7 @@ import { Cards, CARDS_JSON_SCHEMA } from './cards-schema';
 import { createDeck, type NewCard } from './study-db';
 import { renderUserSkillsBlock } from './userSkills';
 import type { RetrievedChunk } from '$lib/types';
+import type { VaultContext } from './vaults';
 
 export interface GenerateCardsInput {
 	domains?: string[];
@@ -137,6 +138,7 @@ bilgi kartı hazırla.
 /** Foreground pipeline — mirrors generate-quiz.ts exactly (see that file's
  * comment on why onProgress drives a visible UI, never a hidden call). */
 export async function generateCards(
+	v: VaultContext,
 	input: GenerateCardsInput,
 	onProgress?: (stage: ProgressStage) => void
 ): Promise<{ deckId: string }> {
@@ -155,7 +157,7 @@ export async function generateCards(
 		}
 	}
 
-	const chunks = await retrieve(query, { domains: input.domains, k: 12 });
+	const { chunks } = await retrieve(v, query, { domains: input.domains, k: 12 });
 	if (chunks.length === 0) {
 		throw new Error('Bu kapsamda kütüphanede yeterli kaynak yok.');
 	}
@@ -196,6 +198,7 @@ export async function generateCards(
 
 	const title = input.prompt.length > 80 ? `${input.prompt.slice(0, 77)}...` : input.prompt;
 	const deckId = createDeck(
+		v,
 		title,
 		{ domains: input.domains ?? null, chatId: input.chatId ?? null, prompt: input.prompt },
 		input.model,

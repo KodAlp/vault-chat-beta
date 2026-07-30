@@ -7,23 +7,21 @@ import { openDb, listKnownFiles, deleteFile, upsertFile, type FileRow } from './
 import { chunkMarkdown } from './chunk';
 import { embedDocuments } from './embed';
 import { EXCLUDED_DIRS } from './excluded-dirs';
-import { resolveLibraryRoot } from './paths';
+import { resolveIndexerVault } from './paths';
 
 try {
 	process.loadEnvFile();
 } catch {
-	// .env is optional; OLLAMA_URL/LIBRARY_PATH/INDEX_DB_PATH fall back to defaults below
+	// .env is optional; OLLAMA_URL/DATA_DIR fall back to defaults below
 }
-
-const LIBRARY_ROOT = resolveLibraryRoot();
-const DB_PATH = path.resolve(
-	process.cwd(),
-	process.env.INDEX_DB_PATH ?? path.join('data', 'vault-index.db')
-);
 
 const args = process.argv.slice(2);
 const isFull = args.includes('--full');
 const isDryRun = args.includes('--dry-run');
+
+const vault = resolveIndexerVault(args);
+const LIBRARY_ROOT = vault.libraryRoot;
+const DB_PATH = vault.indexDbPath;
 
 function walk(dir: string, out: string[] = []): string[] {
 	for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -41,6 +39,7 @@ function sha256(content: string): string {
 
 async function main() {
 	const start = Date.now();
+	console.log(`vault: ${vault.name} (${vault.id})`);
 
 	if (isFull) {
 		for (const suffix of ['', '-wal', '-shm']) {

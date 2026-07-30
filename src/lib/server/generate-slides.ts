@@ -6,6 +6,7 @@ import { getMessages } from './chats-db';
 import { Slides, SLIDES_JSON_SCHEMA } from './slides-schema';
 import { createSlideDeck, type NewSlide } from './study-db';
 import { renderUserSkillsBlock } from './userSkills';
+import type { VaultContext } from './vaults';
 
 export interface GenerateSlidesInput {
 	domains?: string[];
@@ -132,6 +133,7 @@ function buildMarpDeck(slides: NewSlide[]): string {
 }
 
 export async function generateSlides(
+	v: VaultContext,
 	input: GenerateSlidesInput,
 	onProgress?: (stage: ProgressStage) => void
 ): Promise<{ slideDeckId: string }> {
@@ -150,7 +152,7 @@ export async function generateSlides(
 		}
 	}
 
-	const chunks = await retrieve(query, { domains: input.domains, k: 12 });
+	const { chunks } = await retrieve(v, query, { domains: input.domains, k: 12 });
 	if (chunks.length === 0) {
 		throw new Error('Bu kapsamda kütüphanede yeterli kaynak yok.');
 	}
@@ -195,6 +197,7 @@ export async function generateSlides(
 
 	const title = input.prompt.length > 80 ? `${input.prompt.slice(0, 77)}...` : input.prompt;
 	const slideDeckId = createSlideDeck(
+		v,
 		title,
 		{ domains: input.domains ?? null, chatId: input.chatId ?? null, prompt: input.prompt },
 		input.model,

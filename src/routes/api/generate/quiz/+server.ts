@@ -1,5 +1,6 @@
 import type { RequestHandler } from './$types';
 import { generateQuiz } from '$lib/server/generate-quiz';
+import { vaultFromId } from '$lib/server/requestVault';
 import type { QuizGenerationEvent, QuizGenerationRequest } from '$lib/types';
 
 function sseEvent(event: QuizGenerationEvent): string {
@@ -8,6 +9,7 @@ function sseEvent(event: QuizGenerationEvent): string {
 
 export const POST: RequestHandler = async ({ request }) => {
 	const body = (await request.json()) as QuizGenerationRequest;
+	const v = vaultFromId(body.vault);
 
 	const stream = new ReadableStream({
 		async start(controller) {
@@ -17,6 +19,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
 			try {
 				const { quizId } = await generateQuiz(
+					v,
 					{
 						domains: body.domains,
 						chatId: body.chatId,

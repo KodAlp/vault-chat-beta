@@ -1,15 +1,17 @@
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getQuiz, getQuizItems } from '$lib/server/study-db';
+import { vaultFromUrl } from '$lib/server/requestVault';
 import type { QuizItemView, QuizView } from '$lib/types';
 
-export const GET: RequestHandler = async ({ params }) => {
-	const quiz = getQuiz(params.id);
+export const GET: RequestHandler = async ({ params, url }) => {
+	const v = vaultFromUrl(url);
+	const quiz = getQuiz(v, params.id);
 	if (!quiz) error(404, 'Sınav bulunamadı');
 
 	// No answer/explanation here on purpose — the skill's UI spec is "no answer
 	// reveal until submitted". Those come back from the attempt-submit endpoint.
-	const items: QuizItemView[] = getQuizItems(params.id).map((row) => ({
+	const items: QuizItemView[] = getQuizItems(v, params.id).map((row) => ({
 		id: row.id,
 		type: row.type,
 		question: row.question,

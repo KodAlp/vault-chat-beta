@@ -1,8 +1,6 @@
 import Database from 'better-sqlite3';
-import path from 'node:path';
-import fs from 'node:fs';
-import { env } from '$env/dynamic/private';
 import type { CardSchedule } from './schedule';
+import type { VaultContext } from './vaults';
 
 export interface QuizRow {
 	id: string;
@@ -42,16 +40,17 @@ export interface AttemptAnswerRow {
 	model_feedback: string | null;
 }
 
-let db: Database.Database | undefined;
+const dbCache = new Map<string, Database.Database>();
 
-/** Separate from chats.db/vault-index.db — generated study material, its own
+/** Separate from chats.db/index.db — generated study material, its own
  * lifecycle (quizzes/cards get created, retaken, eventually pruned by the
- * user), not part of either conversation history or the regenerable index. */
-function getDb(): Database.Database {
+ * user), not part of either conversation history or the regenerable index.
+ * One connection per vault, cached for the process lifetime (mirrors the
+ * old module-level singleton, keyed by vault id now). */
+function getDb(v: VaultContext): Database.Database {
+	let db = dbCache.get(v.id);
 	if (!db) {
-		const dbPath = env.STUDY_DB_PATH ?? path.join('data', 'study.db');
-		fs.mkdirSync(path.dirname(dbPath), { recursive: true });
-		db = new Database(dbPath);
+		db = new Database(v.studyDbPath);
 		db.pragma('journal_mode = WAL');
 		db.exec(`
 			CREATE TABLE IF NOT EXISTS quizzes (
@@ -164,8 +163,20 @@ function getDb(): Database.Database {
 			);
 			CREATE INDEX IF NOT EXISTS idx_slides_deck_id ON slides(deck_id);
 		`);
+		dbCache.set(v.id, db);
 	}
 	return db;
+}
+
+/** Must be called before deleting a vault's files — Windows refuses to
+ * remove/rename a file with an open handle (EBUSY), and this cache holds
+ * one open connection per vault for the process lifetime. See
+ * vaults.ts's deleteVault. No-op if this vault's study DB was never opened. */
+export function closeVaultStudyDb(vaultId: string): void {
+	const db = dbCache.get(vaultId);
+	if (!db) return;
+	db.close();
+	dbCache.delete(vaultId);
 }
 
 export interface NewQuizItem {
@@ -178,10 +189,10 @@ export interface NewQuizItem {
 	heading_path: string;
 }
 
-export function createQuiz(title: string, scope: unknown, model: string, items: NewQuizItem[]): string {
+export function createQuiz(v: VaultContext, title: string, scope: unknown, model: string, items: NewQuizItem[]): string {
 	const id = crypto.randomUUID();
 	const now = new Date().toISOString();
-	const database = getDb();
+	const database = getDb(v);
 	const tx = database.transaction(() => {
 		database
 			.prepare(`INSERT INTO quizzes (id, title, scope_json, model, created_at) VALUES (?, ?, ?, ?, ?)`)
@@ -210,46 +221,49 @@ export function createQuiz(title: string, scope: unknown, model: string, items: 
 	return id;
 }
 
-export function getQuiz(id: string): QuizRow | undefined {
-	return getDb().prepare('SELECT * FROM quizzes WHERE id = ?').get(id) as QuizRow | undefined;
+export function getQuiz(v: VaultContext, id: string): QuizRow | undefined {
+	return getDb(v).prepare('SELECT * FROM quizzes WHERE id = ?').get(id) as QuizRow | undefined;
 }
 
-export function getQuizItems(quizId: string): QuizItemRow[] {
-	return getDb()
+export function getQuizItems(v: VaultContext, quizId: string): QuizItemRow[] {
+	return getDb(v)
 		.prepare('SELECT * FROM quiz_items WHERE quiz_id = ? ORDER BY position ASC')
 		.all(quizId) as QuizItemRow[];
 }
 
-export function getQuizItem(id: string): QuizItemRow | undefined {
-	return getDb().prepare('SELECT * FROM quiz_items WHERE id = ?').get(id) as QuizItemRow | undefined;
+export function getQuizItem(v: VaultContext, id: string): QuizItemRow | undefined {
+	return getDb(v).prepare('SELECT * FROM quiz_items WHERE id = ?').get(id) as QuizItemRow | undefined;
 }
 
-export function createAttempt(quizId: string): string {
+export function createAttempt(v: VaultContext, quizId: string): string {
 	const id = crypto.randomUUID();
-	getDb()
+	getDb(v)
 		.prepare('INSERT INTO attempts (id, quiz_id, started_at) VALUES (?, ?, ?)')
 		.run(id, quizId, new Date().toISOString());
 	return id;
 }
 
-export function getAttempt(id: string): AttemptRow | undefined {
-	return getDb().prepare('SELECT * FROM attempts WHERE id = ?').get(id) as AttemptRow | undefined;
+export function getAttempt(v: VaultContext, id: string): AttemptRow | undefined {
+	return getDb(v).prepare('SELECT * FROM attempts WHERE id = ?').get(id) as AttemptRow | undefined;
 }
 
-export function finishAttempt(id: string, score: number): void {
-	getDb()
+export function finishAttempt(v: VaultContext, id: string, score: number): void {
+	getDb(v)
 		.prepare('UPDATE attempts SET finished_at = ?, score = ? WHERE id = ?')
 		.run(new Date().toISOString(), score, id);
 }
 
-export function insertAttemptAnswer(input: {
-	attemptId: string;
-	itemId: string;
-	given: string;
-	isCorrect: boolean;
-	modelFeedback?: string | null;
-}): void {
-	getDb()
+export function insertAttemptAnswer(
+	v: VaultContext,
+	input: {
+		attemptId: string;
+		itemId: string;
+		given: string;
+		isCorrect: boolean;
+		modelFeedback?: string | null;
+	}
+): void {
+	getDb(v)
 		.prepare(
 			`INSERT INTO attempt_answers (id, attempt_id, item_id, given, is_correct, model_feedback)
 			 VALUES (?, ?, ?, ?, ?, ?)`
@@ -264,8 +278,8 @@ export function insertAttemptAnswer(input: {
 		);
 }
 
-export function getAttemptAnswers(attemptId: string): AttemptAnswerRow[] {
-	return getDb()
+export function getAttemptAnswers(v: VaultContext, attemptId: string): AttemptAnswerRow[] {
+	return getDb(v)
 		.prepare('SELECT * FROM attempt_answers WHERE attempt_id = ?')
 		.all(attemptId) as AttemptAnswerRow[];
 }
@@ -303,10 +317,10 @@ export interface NewCard {
 	level: string;
 }
 
-export function createDeck(name: string, scope: unknown, model: string, items: NewCard[]): string {
+export function createDeck(v: VaultContext, name: string, scope: unknown, model: string, items: NewCard[]): string {
 	const id = crypto.randomUUID();
 	const now = new Date().toISOString();
-	const database = getDb();
+	const database = getDb(v);
 	const tx = database.transaction(() => {
 		database
 			.prepare(`INSERT INTO decks (id, name, scope_json, model, created_at) VALUES (?, ?, ?, ?, ?)`)
@@ -338,33 +352,33 @@ export function createDeck(name: string, scope: unknown, model: string, items: N
 	return id;
 }
 
-export function getDeck(id: string): DeckRow | undefined {
-	return getDb().prepare('SELECT * FROM decks WHERE id = ?').get(id) as DeckRow | undefined;
+export function getDeck(v: VaultContext, id: string): DeckRow | undefined {
+	return getDb(v).prepare('SELECT * FROM decks WHERE id = ?').get(id) as DeckRow | undefined;
 }
 
-export function getDeckCards(deckId: string): CardRow[] {
-	return getDb().prepare('SELECT * FROM cards WHERE deck_id = ?').all(deckId) as CardRow[];
+export function getDeckCards(v: VaultContext, deckId: string): CardRow[] {
+	return getDb(v).prepare('SELECT * FROM cards WHERE deck_id = ?').all(deckId) as CardRow[];
 }
 
-export function getCard(id: string): CardRow | undefined {
-	return getDb().prepare('SELECT * FROM cards WHERE id = ?').get(id) as CardRow | undefined;
+export function getCard(v: VaultContext, id: string): CardRow | undefined {
+	return getDb(v).prepare('SELECT * FROM cards WHERE id = ?').get(id) as CardRow | undefined;
 }
 
-export function getDueCount(nowIso: string): number {
-	const row = getDb()
+export function getDueCount(v: VaultContext, nowIso: string): number {
+	const row = getDb(v)
 		.prepare('SELECT COUNT(*) AS n FROM cards WHERE due_at <= ?')
 		.get(nowIso) as { n: number };
 	return row.n;
 }
 
-export function getDueCards(nowIso: string, limit: number): CardRow[] {
-	return getDb()
+export function getDueCards(v: VaultContext, nowIso: string, limit: number): CardRow[] {
+	return getDb(v)
 		.prepare('SELECT * FROM cards WHERE due_at <= ? ORDER BY due_at ASC LIMIT ?')
 		.all(nowIso, limit) as CardRow[];
 }
 
-export function updateCardSchedule(id: string, s: CardSchedule): void {
-	getDb()
+export function updateCardSchedule(v: VaultContext, id: string, s: CardSchedule): void {
+	getDb(v)
 		.prepare(
 			'UPDATE cards SET ease = ?, interval_days = ?, due_at = ?, reps = ?, lapses = ? WHERE id = ?'
 		)
@@ -394,10 +408,16 @@ export interface NewReportSection {
 	source_paths: string[];
 }
 
-export function createReport(title: string, scope: unknown, model: string, sections: NewReportSection[]): string {
+export function createReport(
+	v: VaultContext,
+	title: string,
+	scope: unknown,
+	model: string,
+	sections: NewReportSection[]
+): string {
 	const id = crypto.randomUUID();
 	const now = new Date().toISOString();
-	const database = getDb();
+	const database = getDb(v);
 	const tx = database.transaction(() => {
 		database
 			.prepare(`INSERT INTO reports (id, title, scope_json, model, created_at) VALUES (?, ?, ?, ?, ?)`)
@@ -422,12 +442,12 @@ export function createReport(title: string, scope: unknown, model: string, secti
 	return id;
 }
 
-export function getReport(id: string): ReportRow | undefined {
-	return getDb().prepare('SELECT * FROM reports WHERE id = ?').get(id) as ReportRow | undefined;
+export function getReport(v: VaultContext, id: string): ReportRow | undefined {
+	return getDb(v).prepare('SELECT * FROM reports WHERE id = ?').get(id) as ReportRow | undefined;
 }
 
-export function getReportSections(reportId: string): ReportSectionRow[] {
-	return getDb()
+export function getReportSections(v: VaultContext, reportId: string): ReportSectionRow[] {
+	return getDb(v)
 		.prepare('SELECT * FROM report_sections WHERE report_id = ? ORDER BY position ASC')
 		.all(reportId) as ReportSectionRow[];
 }
@@ -455,10 +475,16 @@ export interface NewMindMapNode {
 	heading_path: string;
 }
 
-export function createMindMap(title: string, scope: unknown, model: string, nodes: NewMindMapNode[]): string {
+export function createMindMap(
+	v: VaultContext,
+	title: string,
+	scope: unknown,
+	model: string,
+	nodes: NewMindMapNode[]
+): string {
 	const id = crypto.randomUUID();
 	const now = new Date().toISOString();
-	const database = getDb();
+	const database = getDb(v);
 	const tx = database.transaction(() => {
 		database
 			.prepare(`INSERT INTO mindmaps (id, title, scope_json, model, created_at) VALUES (?, ?, ?, ?, ?)`)
@@ -483,12 +509,12 @@ export function createMindMap(title: string, scope: unknown, model: string, node
 	return id;
 }
 
-export function getMindMap(id: string): MindMapRow | undefined {
-	return getDb().prepare('SELECT * FROM mindmaps WHERE id = ?').get(id) as MindMapRow | undefined;
+export function getMindMap(v: VaultContext, id: string): MindMapRow | undefined {
+	return getDb(v).prepare('SELECT * FROM mindmaps WHERE id = ?').get(id) as MindMapRow | undefined;
 }
 
-export function getMindMapNodes(mindmapId: string): MindMapNodeRow[] {
-	return getDb()
+export function getMindMapNodes(v: VaultContext, mindmapId: string): MindMapNodeRow[] {
+	return getDb(v)
 		.prepare('SELECT * FROM mindmap_nodes WHERE mindmap_id = ? ORDER BY position ASC')
 		.all(mindmapId) as MindMapNodeRow[];
 }
@@ -517,6 +543,7 @@ export interface NewSlide {
 }
 
 export function createSlideDeck(
+	v: VaultContext,
 	title: string,
 	scope: unknown,
 	model: string,
@@ -525,7 +552,7 @@ export function createSlideDeck(
 ): string {
 	const id = crypto.randomUUID();
 	const now = new Date().toISOString();
-	const database = getDb();
+	const database = getDb(v);
 	const tx = database.transaction(() => {
 		database
 			.prepare(
@@ -546,12 +573,12 @@ export function createSlideDeck(
 	return id;
 }
 
-export function getSlideDeck(id: string): SlideDeckRow | undefined {
-	return getDb().prepare('SELECT * FROM slidedecks WHERE id = ?').get(id) as SlideDeckRow | undefined;
+export function getSlideDeck(v: VaultContext, id: string): SlideDeckRow | undefined {
+	return getDb(v).prepare('SELECT * FROM slidedecks WHERE id = ?').get(id) as SlideDeckRow | undefined;
 }
 
-export function getSlides(deckId: string): SlideRow[] {
-	return getDb()
+export function getSlides(v: VaultContext, deckId: string): SlideRow[] {
+	return getDb(v)
 		.prepare('SELECT * FROM slides WHERE deck_id = ? ORDER BY position ASC')
 		.all(deckId) as SlideRow[];
 }

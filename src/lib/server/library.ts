@@ -1,26 +1,23 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import matter from 'gray-matter';
-import { env } from '$env/dynamic/private';
 import { removeLibraryFileFromIndex, renameLibraryFileInIndex } from './incrementalIndex';
+import { foldToSlug } from './slug';
 import type { LibraryNode, LibrarySettings } from '$lib/types';
+import type { VaultContext } from './vaults';
 
 const META_DIR = '_meta';
 const DEFAULT_SETTINGS: LibrarySettings = { keepOriginals: false };
 
 /**
- * Deliberately does NOT fall back to VAULT_PATH, unlike the indexer's
- * resolveLibraryRoot() (indexer/paths.ts) — this module performs writes
- * (rename, delete, new-file creation from uploads/imports), so it must never
- * default to the user's real Obsidian vault just because VAULT_PATH happens
- * to be set for the (read-only) indexer's backward-compat fallback. Always a
- * new, isolated folder: LIBRARY_PATH if set, else ./data/library.
+ * Ensures the vault's library root exists and returns it. The vault is
+ * created with this folder already present (vaults.ts createVault()), but
+ * every write path here re-asserts it defensively — matches the original
+ * single-vault libraryRoot()'s mkdirSync-on-every-call behavior.
  */
-export function libraryRoot(): string {
-	const raw = env.LIBRARY_PATH;
-	const root = raw ? path.resolve(process.cwd(), raw) : path.resolve(process.cwd(), 'data', 'library');
-	fs.mkdirSync(root, { recursive: true });
-	return root;
+export function libraryRoot(v: VaultContext): string {
+	fs.mkdirSync(v.libraryRoot, { recursive: true });
+	return v.libraryRoot;
 }
 
 /**
@@ -28,8 +25,8 @@ export function libraryRoot(): string {
  * on a user-supplied relative path resolves against the library root and
  * verifies the result is still inside it, before touching disk.
  */
-export function resolveLibraryPath(relPath: string): string {
-	const root = libraryRoot();
+export function resolveLibraryPath(v: VaultContext, relPath: string): string {
+	const root = libraryRoot(v);
 	const resolved = path.resolve(root, relPath);
 	const withSep = root.endsWith(path.sep) ? root : root + path.sep;
 	if (resolved !== root && !resolved.startsWith(withSep)) {
@@ -71,8 +68,8 @@ function walkTree(absDir: string, relDir: string): LibraryNode[] {
 	return nodes;
 }
 
-export function getLibraryTree(): LibraryNode[] {
-	return walkTree(libraryRoot(), '');
+export function getLibraryTree(v: VaultContext): LibraryNode[] {
+	return walkTree(libraryRoot(v), '');
 }
 
 /** Files only — renaming a folder would require cascading the index update
@@ -80,15 +77,15 @@ export function getLibraryTree(): LibraryNode[] {
  * Faz 5 plan), not silently unsupported: the API route rejects folder
  * targets with a clear error rather than silently doing the fs rename
  * without fixing up the index. */
-export function renameLibraryEntry(oldRel: string, newRel: string): void {
-	const oldAbs = resolveLibraryPath(oldRel);
-	const newAbs = resolveLibraryPath(newRel);
+export function renameLibraryEntry(v: VaultContext, oldRel: string, newRel: string): void {
+	const oldAbs = resolveLibraryPath(v, oldRel);
+	const newAbs = resolveLibraryPath(v, newRel);
 	if (!fs.statSync(oldAbs).isFile()) {
 		throw new Error('Sadece dosyalar yeniden adlandırılabilir, klasörler değil');
 	}
 	fs.mkdirSync(path.dirname(newAbs), { recursive: true });
 	fs.renameSync(oldAbs, newAbs);
-	renameLibraryFileInIndex(oldRel, newRel);
+	renameLibraryFileInIndex(v, oldRel, newRel);
 }
 
 function listMarkdownFilesRecursive(absDir: string, relDir: string, out: string[]): void {
@@ -101,63 +98,57 @@ function listMarkdownFilesRecursive(absDir: string, relDir: string, out: string[
 	}
 }
 
-export function deleteLibraryEntry(rel: string): void {
-	const abs = resolveLibraryPath(rel);
+export function deleteLibraryEntry(v: VaultContext, rel: string): void {
+	const abs = resolveLibraryPath(v, rel);
 	const stat = fs.statSync(abs);
 	if (stat.isDirectory()) {
 		const contained: string[] = [];
 		listMarkdownFilesRecursive(abs, rel, contained);
 		fs.rmSync(abs, { recursive: true, force: true });
-		for (const p of contained) removeLibraryFileFromIndex(p);
+		for (const p of contained) removeLibraryFileFromIndex(v, p);
 	} else {
 		fs.unlinkSync(abs);
-		removeLibraryFileFromIndex(rel);
+		removeLibraryFileFromIndex(v, rel);
 	}
 }
 
-export function readLibraryFile(rel: string): string {
-	return fs.readFileSync(resolveLibraryPath(rel), 'utf-8');
+export function readLibraryFile(v: VaultContext, rel: string): string {
+	return fs.readFileSync(resolveLibraryPath(v, rel), 'utf-8');
 }
 
-export function importLogPath(): string {
-	return path.join(libraryRoot(), META_DIR, 'import-log.jsonl');
+export function importLogPath(v: VaultContext): string {
+	return path.join(libraryRoot(v), META_DIR, 'import-log.jsonl');
 }
 
-export function stagingDir(): string {
-	return path.join(libraryRoot(), META_DIR, 'staging');
+export function stagingDir(v: VaultContext): string {
+	return path.join(libraryRoot(v), META_DIR, 'staging');
 }
 
-export function originalsDir(): string {
-	return path.join(libraryRoot(), META_DIR, 'originals');
+export function originalsDir(v: VaultContext): string {
+	return path.join(libraryRoot(v), META_DIR, 'originals');
 }
 
-export function appendImportLog(entry: object): void {
-	const p = importLogPath();
+export function appendImportLog(v: VaultContext, entry: object): void {
+	const p = importLogPath(v);
 	fs.mkdirSync(path.dirname(p), { recursive: true });
 	fs.appendFileSync(p, JSON.stringify(entry) + '\n', 'utf-8');
 }
 
 /** kebab-case, ascii-folded, collision-safe (numeric suffix) — used to turn
  * a user-edited title into a library filename. */
-export function slugify(title: string, domain: string): string {
-	const base =
-		title
-			.normalize('NFKD')
-			.replace(/[̀-ͯ]/g, '')
-			.toLowerCase()
-			.replace(/[^a-z0-9]+/g, '-')
-			.replace(/^-+|-+$/g, '') || 'adsiz';
+export function slugify(v: VaultContext, title: string, domain: string): string {
+	const base = foldToSlug(title);
 
 	let candidate = base;
 	let n = 2;
-	while (fs.existsSync(path.join(libraryRoot(), domain, `${candidate}.md`))) {
+	while (fs.existsSync(path.join(libraryRoot(v), domain, `${candidate}.md`))) {
 		candidate = `${base}-${n++}`;
 	}
 	return candidate;
 }
 
-function settingsPath(): string {
-	return path.join(libraryRoot(), META_DIR, 'settings.json');
+function settingsPath(v: VaultContext): string {
+	return path.join(libraryRoot(v), META_DIR, 'settings.json');
 }
 
 /**
@@ -165,17 +156,17 @@ function settingsPath(): string {
  * plain localStorage) — "keep original PDFs" has to be read by the Python
  * sidecar's caller before it runs, not just by the browser.
  */
-export function getLibrarySettings(): LibrarySettings {
+export function getLibrarySettings(v: VaultContext): LibrarySettings {
 	try {
-		const raw = fs.readFileSync(settingsPath(), 'utf-8');
+		const raw = fs.readFileSync(settingsPath(v), 'utf-8');
 		return { ...DEFAULT_SETTINGS, ...(JSON.parse(raw) as Partial<LibrarySettings>) };
 	} catch {
 		return { ...DEFAULT_SETTINGS };
 	}
 }
 
-export function saveLibrarySettings(settings: LibrarySettings): void {
-	const p = settingsPath();
+export function saveLibrarySettings(v: VaultContext, settings: LibrarySettings): void {
+	const p = settingsPath(v);
 	fs.mkdirSync(path.dirname(p), { recursive: true });
 	fs.writeFileSync(p, JSON.stringify(settings, null, 2), 'utf-8');
 }

@@ -13,6 +13,17 @@ export interface RetrievedChunk {
 	distance: number;
 }
 
+/**
+ * narrowScope distinguishes "nothing relevant in the vault" from "relevant
+ * chunks exist but includedPaths filtered them all out" — the two look
+ * identical as a bare empty array, but only the second should trigger a
+ * "kapsamı genişlet?" suggestion in the UI (Faz 9).
+ */
+export interface RetrieveResult {
+	chunks: RetrievedChunk[];
+	narrowScope: boolean;
+}
+
 export type ChatRole = 'user' | 'assistant';
 
 export interface ChatMessage {
@@ -37,6 +48,11 @@ export interface ChatRequestBody {
 	/** Model for background title generation on a new chat — settings.defaultModel
 	 * client-side. Falls back server-side if omitted. */
 	titleModel?: string;
+	/** Vault id — omitted in Faz 8 (single active-vault UI), sent by Faz 9's
+	 * vault-aware chat header. Server falls back to the active vault. */
+	vault?: string;
+	/** Tri-state source-tree selection (Faz 9 UI) — omitted means "all". */
+	includedPaths?: string[];
 }
 
 export interface OllamaModel {
@@ -66,7 +82,7 @@ export type StreamEvent =
 	 * Not yet rendered specially client-side (Faz 6 UI is a later pass);
 	 * today's single-provider chains never actually trigger it. */
 	| { type: 'notice'; message: string }
-	| { type: 'done'; sources: RetrievedChunk[] }
+	| { type: 'done'; sources: RetrievedChunk[]; narrowScope?: boolean }
 	| { type: 'error'; message: string };
 
 export interface QuizGenerationRequest {
@@ -75,6 +91,7 @@ export interface QuizGenerationRequest {
 	prompt: string;
 	composition: { mc: number; tf: number; open: number };
 	model: string;
+	vault?: string;
 }
 
 /** SSE event shapes streamed by POST /api/generate/quiz. */
@@ -104,6 +121,7 @@ export interface SubmitAttemptRequest {
 	answers: { itemId: string; given: string }[];
 	/** For grading open questions — settings.fastModel client-side. */
 	fastModel: string;
+	vault?: string;
 }
 
 export interface AttemptResultItem {
@@ -131,6 +149,7 @@ export interface CardGenerationRequest {
 	prompt: string;
 	count: number;
 	model: string;
+	vault?: string;
 }
 
 /** SSE event shapes streamed by POST /api/generate/cards. */
@@ -154,6 +173,7 @@ export interface ReportGenerationRequest {
 	chatId?: string;
 	prompt: string;
 	model: string;
+	vault?: string;
 }
 
 /** SSE event shapes streamed by POST /api/generate/report. */
@@ -180,6 +200,7 @@ export interface MindMapGenerationRequest {
 	chatId?: string;
 	prompt: string;
 	model: string;
+	vault?: string;
 }
 
 /** SSE event shapes streamed by POST /api/generate/mindmap. */
@@ -206,6 +227,7 @@ export interface SlidesGenerationRequest {
 	chatId?: string;
 	prompt: string;
 	model: string;
+	vault?: string;
 }
 
 /** SSE event shapes streamed by POST /api/generate/slides. Terminal field is
@@ -245,6 +267,16 @@ export interface UserSkillStatus {
 	charCount: number;
 	truncated: boolean;
 	parseError: string | null;
+}
+
+/** Client-safe mirror of vaults.ts's VaultRecord — that module is server-only
+ * ($lib/server/), can't be imported from a component. */
+export interface VaultRecord {
+	id: string;
+	name: string;
+	path: string;
+	createdAt: string;
+	lastOpenedAt: string;
 }
 
 export interface LibraryNode {

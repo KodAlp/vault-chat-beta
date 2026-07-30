@@ -3,6 +3,7 @@ import path from 'node:path';
 import type { RequestHandler } from './$types';
 import { enqueueConversion } from '$lib/server/convertQueue';
 import { stagingDir, originalsDir, getLibrarySettings } from '$lib/server/library';
+import { vaultFromId } from '$lib/server/requestVault';
 import type { ImportEvent } from '$lib/types';
 
 function sseEvent(event: ImportEvent): string {
@@ -19,9 +20,10 @@ export const POST: RequestHandler = async ({ request }) => {
 			headers: { 'content-type': 'text/event-stream' }
 		});
 	}
+	const v = vaultFromId(formData.get('vault') as string | null);
 
 	const importId = crypto.randomUUID();
-	const workDir = path.join(stagingDir(), importId);
+	const workDir = path.join(stagingDir(v), importId);
 	fs.mkdirSync(workDir, { recursive: true });
 	const ext = path.extname(file.name) || '.bin';
 	const tempIn = path.join(workDir, `original${ext}`);
@@ -40,12 +42,12 @@ export const POST: RequestHandler = async ({ request }) => {
 
 				if (!result.outPath) throw new Error('Dönüştürme çıktı üretmedi');
 
-				const stagedMdPath = path.join(stagingDir(), `${importId}.md`);
+				const stagedMdPath = path.join(stagingDir(v), `${importId}.md`);
 				fs.copyFileSync(result.outPath, stagedMdPath);
 
-				if (getLibrarySettings().keepOriginals) {
-					fs.mkdirSync(originalsDir(), { recursive: true });
-					fs.copyFileSync(tempIn, path.join(originalsDir(), `${importId}-${file.name}`));
+				if (getLibrarySettings(v).keepOriginals) {
+					fs.mkdirSync(originalsDir(v), { recursive: true });
+					fs.copyFileSync(tempIn, path.join(originalsDir(v), `${importId}-${file.name}`));
 				}
 				fs.rmSync(workDir, { recursive: true, force: true });
 

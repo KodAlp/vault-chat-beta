@@ -5,6 +5,7 @@ import { getMessages } from './chats-db';
 import { MindMapNodes, MINDMAP_NODES_JSON_SCHEMA } from './mindmap-schema';
 import { createMindMap, type NewMindMapNode } from './study-db';
 import { renderUserSkillsBlock } from './userSkills';
+import type { VaultContext } from './vaults';
 
 export interface GenerateMindMapInput {
 	domains?: string[];
@@ -99,6 +100,7 @@ sen sadece düz bir liste üretiyorsun.`;
 }
 
 export async function generateMindMap(
+	v: VaultContext,
 	input: GenerateMindMapInput,
 	onProgress?: (stage: ProgressStage) => void
 ): Promise<{ mindmapId: string }> {
@@ -117,7 +119,7 @@ export async function generateMindMap(
 		}
 	}
 
-	const chunks = await retrieve(query, { domains: input.domains, k: 12 });
+	const { chunks } = await retrieve(v, query, { domains: input.domains, k: 12 });
 	if (chunks.length === 0) {
 		throw new Error('Bu kapsamda kütüphanede yeterli kaynak yok.');
 	}
@@ -152,6 +154,7 @@ export async function generateMindMap(
 
 	const title = input.prompt.length > 80 ? `${input.prompt.slice(0, 77)}...` : input.prompt;
 	const mindmapId = createMindMap(
+		v,
 		title,
 		{ domains: input.domains ?? null, chatId: input.chatId ?? null, prompt: input.prompt },
 		input.model,

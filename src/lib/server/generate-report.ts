@@ -5,6 +5,7 @@ import { getMessages } from './chats-db';
 import { ReportSections, REPORT_SECTIONS_JSON_SCHEMA } from './report-schema';
 import { createReport, type NewReportSection } from './study-db';
 import { renderUserSkillsBlock } from './userSkills';
+import type { VaultContext } from './vaults';
 
 export interface GenerateReportInput {
 	domains?: string[];
@@ -118,6 +119,7 @@ context'teki her parçayı her bölüme ekleme.`;
 }
 
 export async function generateReport(
+	v: VaultContext,
 	input: GenerateReportInput,
 	onProgress?: (stage: ProgressStage) => void
 ): Promise<{ reportId: string }> {
@@ -136,7 +138,7 @@ export async function generateReport(
 		}
 	}
 
-	const chunks = await retrieve(query, { domains: input.domains, k: 12 });
+	const { chunks } = await retrieve(v, query, { domains: input.domains, k: 12 });
 	if (chunks.length === 0) {
 		throw new Error('Bu kapsamda kütüphanede yeterli kaynak yok.');
 	}
@@ -171,6 +173,7 @@ export async function generateReport(
 
 	const title = input.prompt.length > 80 ? `${input.prompt.slice(0, 77)}...` : input.prompt;
 	const reportId = createReport(
+		v,
 		title,
 		{ domains: input.domains ?? null, chatId: input.chatId ?? null, prompt: input.prompt },
 		input.model,

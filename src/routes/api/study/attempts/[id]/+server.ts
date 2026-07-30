@@ -7,18 +7,21 @@ import {
 	finishAttempt
 } from '$lib/server/study-db';
 import { gradeOpenAnswer } from '$lib/server/grade-open';
+import { vaultFromId } from '$lib/server/requestVault';
 import type { AttemptResultItem, SubmitAttemptRequest, SubmitAttemptResponse } from '$lib/types';
 
 export const PATCH: RequestHandler = async ({ params, request }) => {
-	const attempt = getAttempt(params.id);
+	const body = (await request.json()) as SubmitAttemptRequest;
+	const v = vaultFromId(body.vault);
+
+	const attempt = getAttempt(v, params.id);
 	if (!attempt) error(404, 'Deneme bulunamadı');
 
-	const body = (await request.json()) as SubmitAttemptRequest;
 	const results: AttemptResultItem[] = [];
 	let correctCount = 0;
 
 	for (const answer of body.answers) {
-		const item = getQuizItem(answer.itemId);
+		const item = getQuizItem(v, answer.itemId);
 		if (!item || item.quiz_id !== attempt.quiz_id) continue;
 
 		let isCorrect: boolean;
@@ -37,7 +40,7 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
 
 		if (isCorrect) correctCount++;
 
-		insertAttemptAnswer({
+		insertAttemptAnswer(v, {
 			attemptId: attempt.id,
 			itemId: item.id,
 			given: answer.given,
@@ -61,7 +64,7 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
 	}
 
 	const score = body.answers.length > 0 ? correctCount / body.answers.length : 0;
-	finishAttempt(attempt.id, score);
+	finishAttempt(v, attempt.id, score);
 
 	const response: SubmitAttemptResponse = { score, items: results };
 	return json(response);

@@ -1,5 +1,6 @@
 import type { RequestHandler } from './$types';
 import { generateSlides } from '$lib/server/generate-slides';
+import { vaultFromId } from '$lib/server/requestVault';
 import type { SlidesGenerationEvent, SlidesGenerationRequest } from '$lib/types';
 
 function sseEvent(event: SlidesGenerationEvent): string {
@@ -8,6 +9,7 @@ function sseEvent(event: SlidesGenerationEvent): string {
 
 export const POST: RequestHandler = async ({ request }) => {
 	const body = (await request.json()) as SlidesGenerationRequest;
+	const v = vaultFromId(body.vault);
 
 	const stream = new ReadableStream({
 		async start(controller) {
@@ -17,6 +19,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
 			try {
 				const { slideDeckId } = await generateSlides(
+					v,
 					{
 						domains: body.domains,
 						chatId: body.chatId,

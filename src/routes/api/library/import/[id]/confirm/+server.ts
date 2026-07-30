@@ -6,12 +6,15 @@ import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { stagingDir, resolveLibraryPath, slugify, appendImportLog } from '$lib/server/library';
 import { indexLibraryFile } from '$lib/server/incrementalIndex';
+import { vaultFromId } from '$lib/server/requestVault';
 
 export const POST: RequestHandler = async ({ params, request }) => {
-	const stagedPath = path.join(stagingDir(), `${params.id}.md`);
+	const body = (await request.json()) as { title: string; domain: string; level: string; vault?: string };
+	const v = vaultFromId(body.vault);
+
+	const stagedPath = path.join(stagingDir(v), `${params.id}.md`);
 	if (!fs.existsSync(stagedPath)) error(404, 'Bekleyen içe aktarma bulunamadı (süresi dolmuş olabilir)');
 
-	const body = (await request.json()) as { title: string; domain: string; level: string };
 	if (!body.title?.trim() || !body.domain?.trim()) error(400, 'title ve domain gerekli');
 
 	const raw = fs.readFileSync(stagedPath, 'utf-8');
@@ -23,16 +26,16 @@ export const POST: RequestHandler = async ({ params, request }) => {
 		level: body.level || 'undergraduate'
 	};
 
-	const filename = `${slugify(body.title, body.domain)}.md`;
+	const filename = `${slugify(v, body.title, body.domain)}.md`;
 	const relPath = `${body.domain}/${filename}`;
-	const destAbs = resolveLibraryPath(relPath);
+	const destAbs = resolveLibraryPath(v, relPath);
 	fs.mkdirSync(path.dirname(destAbs), { recursive: true });
 	const finalRaw = matter.stringify(parsed.content, frontmatter);
 	fs.writeFileSync(destAbs, finalRaw, 'utf-8');
 
-	await indexLibraryFile(destAbs, relPath);
+	await indexLibraryFile(v, destAbs, relPath);
 
-	appendImportLog({
+	appendImportLog(v, {
 		sourcePath: relPath,
 		sha256: crypto.createHash('sha256').update(finalRaw).digest('hex'),
 		importedAt: new Date().toISOString(),

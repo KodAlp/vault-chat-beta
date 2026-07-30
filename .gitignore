@@ -8,6 +8,10 @@ data/*.db-shm
 data/skills/
 data/library/
 data/secrets.json
+# Faz 8 — vault registry + per-vault content, same reasons as the entries
+# above (personal library content, regenerable indexes, local-only DBs).
+data/vaults.json
+data/vaults/
 .env
 !.env.example
 

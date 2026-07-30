@@ -216,24 +216,29 @@ async fn spawn_sidecar(app: &AppHandle, cfg: &VaultConfig) -> Result<String, Str
 
     let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
     std::fs::create_dir_all(&app_data_dir).map_err(|e| e.to_string())?;
-    let library_dir = app_data_dir.join("library");
     let skills_dir = app_data_dir.join("skills");
     let port = get_free_port()?;
 
+    // DATA_DIR replaces the old LIBRARY_PATH/INDEX_DB_PATH/STUDY_DB_PATH trio
+    // (Faz 8) — vaults.ts derives every vault's paths from DATA_DIR/vaults/<id>/
+    // itself now, migrating automatically on first launch after the upgrade
+    // (see migrateVaults.ts, run from hooks.server.ts). VAULT_PATH is still
+    // passed through — it's the folder the first-run picker chose — but is
+    // no longer the indexer's root; nothing currently reads it server-side
+    // (the Obsidian import dialog still takes its source path as manual
+    // user input, not a VAULT_PATH default).
     let child = Command::new(&node_bin)
         .arg(&entry)
         .current_dir(&server_dir)
         .env("HOST", "127.0.0.1")
         .env("PORT", port.to_string())
+        .env("DATA_DIR", &app_data_dir)
         .env("VAULT_PATH", &cfg.vault_path)
         .env("PUBLIC_VAULT_NAME", &cfg.vault_name)
         .env("OLLAMA_URL", "http://localhost:11434")
         .env("CHATS_DB_PATH", app_data_dir.join("chats.db"))
-        .env("STUDY_DB_PATH", app_data_dir.join("study.db"))
-        .env("INDEX_DB_PATH", app_data_dir.join("vault-index.db"))
         .env("SECRETS_PATH", app_data_dir.join("secrets.json"))
         .env("PROVIDERS_PATH", server_dir.join("data").join("providers.json"))
-        .env("LIBRARY_PATH", &library_dir)
         .env("SKILLS_DIR", &skills_dir)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
