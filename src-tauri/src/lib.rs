@@ -1,10 +1,14 @@
 use serde::{Deserialize, Serialize};
 use std::net::TcpListener;
+use std::os::windows::io::AsRawHandle;
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
 use std::time::Duration;
+use tauri::menu::{MenuBuilder, MenuItemBuilder};
+use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Manager, RunEvent};
+use win32job::Job;
 
 #[derive(Serialize, Deserialize, Clone)]
 struct VaultConfig {
@@ -19,20 +23,23 @@ struct StartResult {
     url: Option<String>,
 }
 
-/// Holds the spawned Node child so it can be killed on app quit. Windows'
-/// `Child::kill()` maps to TerminateProcess (not a catchable signal), so
-/// the sidecar's own graceful SIGTERM handling (in adapter-node's
-/// build/index.js) is unreachable from here — accepted gap, all three
-/// SQLite DBs are opened in WAL mode (crash-safe) on the Node side.
-///
-/// Known limitation: the kill-on-quit path only runs for a *graceful*
-/// close (`RunEvent::ExitRequested`). If `app.exe` is force-killed or
-/// crashes, `node.exe` is orphaned — confirmed directly (`taskkill /F` on
-/// the parent left the sidecar PID running). The robust fix is a Windows
-/// Job Object with `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`, which needs
-/// `unsafe` Win32 code; deferred as a follow-up rather than done here.
-/// The cost of the gap is a stray process, not data loss (WAL again).
-struct SidecarState(Mutex<Option<Child>>);
+/// Holds the spawned Node child (killed explicitly on a *graceful* quit —
+/// Windows' `Child::kill()` maps to TerminateProcess, not a catchable
+/// signal, so the sidecar's own SIGTERM handling in adapter-node's
+/// build/index.js is unreachable from here) and the Windows Job Object it's
+/// assigned to (handles the *abnormal* exit case: a force-kill or crash of
+/// `app.exe` closes all of its handles, including the job's — and since
+/// `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE` is set on it, Windows itself
+/// terminates every process still assigned to the job as part of that
+/// handle cleanup, entirely below the level `TerminateProcess` bypasses.
+/// No user-space code runs for that path; the job just has to still be
+/// alive, i.e. not dropped early, which is why it's kept here rather than
+/// as a local in `spawn_sidecar`). Confirmed directly before this fix:
+/// `taskkill /F` on the parent left the sidecar's PID running.
+struct SidecarState {
+    child: Mutex<Option<Child>>,
+    job: Mutex<Option<Job>>,
+}
 
 /// Always-on (not debug_assertions-gated) diagnostic log — a packaged
 /// release build has no console attached and this splash→sidecar flow
@@ -256,8 +263,33 @@ async fn spawn_sidecar(app: &AppHandle, cfg: &VaultConfig) -> Result<String, Str
         return Err(format!("Sunucu 15 saniye içinde başlamadı.\n{stderr_text}"));
     }
 
+    // Best-effort: a Job Object failure must not fail the whole spawn — the
+    // sidecar is already up and working, this only affects cleanup on an
+    // abnormal exit, which is a narrower gap than not spawning at all.
+    let job = match Job::create() {
+        Ok(job) => {
+            let assign_result = job.query_extended_limit_info().and_then(|mut info| {
+                info.limit_kill_on_job_close();
+                job.set_extended_limit_info(&info)?;
+                job.assign_process(child.as_raw_handle() as isize)
+            });
+            match assign_result {
+                Ok(()) => Some(job),
+                Err(e) => {
+                    log_line(app, &format!("Job Object assign failed (non-fatal): {e}"));
+                    None
+                }
+            }
+        }
+        Err(e) => {
+            log_line(app, &format!("Job Object create failed (non-fatal): {e}"));
+            None
+        }
+    };
+
     let state = app.state::<SidecarState>();
-    *state.0.lock().unwrap() = Some(child);
+    *state.child.lock().unwrap() = Some(child);
+    *state.job.lock().unwrap() = job;
 
     Ok(format!("http://127.0.0.1:{port}"))
 }
@@ -325,7 +357,10 @@ async fn update_vault_config(
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let app = tauri::Builder::default()
-        .manage(SidecarState(Mutex::new(None)))
+        .manage(SidecarState {
+            child: Mutex::new(None),
+            job: Mutex::new(None),
+        })
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             check_and_start,
@@ -341,6 +376,41 @@ pub fn run() {
                         .build(),
                 )?;
             }
+
+            // System tray: a persistent indicator the sidecar is running,
+            // quick access to bring the window forward, and a fast quit.
+            // Deliberately doesn't change close-button behavior (no
+            // minimize-to-tray) — that's a bigger UX shift than "add a tray
+            // icon," and the graceful-quit path is already verified working.
+            let show_item = MenuItemBuilder::with_id("show", "Göster").build(app)?;
+            let menu = MenuBuilder::new(app).item(&show_item).separator().quit_with_text("Çıkış").build()?;
+            let mut tray_builder = TrayIconBuilder::new().menu(&menu).tooltip("Vault Chat");
+            if let Some(icon) = app.default_window_icon() {
+                tray_builder = tray_builder.icon(icon.clone());
+            }
+            let tray = tray_builder
+                .on_menu_event(|app, event| {
+                    if event.id() == "show" {
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.unminimize();
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                        }
+                    }
+                })
+                .on_tray_icon_event(|tray, event| {
+                    if let TrayIconEvent::Click { button: MouseButton::Left, button_state: MouseButtonState::Up, .. } = event {
+                        let app = tray.app_handle();
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.unminimize();
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                        }
+                    }
+                })
+                .build(app)?;
+            app.manage(tray);
+
             Ok(())
         })
         .build(tauri::generate_context!())
@@ -349,10 +419,14 @@ pub fn run() {
     app.run(|app_handle, event| {
         if let RunEvent::ExitRequested { .. } = event {
             let state = app_handle.state::<SidecarState>();
-            let mut guard = state.0.lock().unwrap();
+            let mut guard = state.child.lock().unwrap();
             if let Some(mut child) = guard.take() {
                 let _ = child.kill();
             }
+            // The Job (if assignment succeeded) is dropped along with
+            // SidecarState when the process exits regardless — explicit
+            // drop here isn't needed since CloseHandle-on-exit is automatic,
+            // but the child.kill() above is faster for the graceful path.
         }
     });
 }
