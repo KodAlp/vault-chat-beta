@@ -96,7 +96,7 @@
 	}
 
 	.bubble.interrupted {
-		color: var(--muted);
+		color: var(--muted-foreground);
 		font-style: italic;
 	}
 
@@ -104,7 +104,7 @@
 	   see the model-provider skill's "styled like system notes" rule. */
 	.notice {
 		font-size: 0.75rem;
-		color: var(--muted);
+		color: var(--muted-foreground);
 		font-style: italic;
 		margin: 0 0 0.3rem;
 	}

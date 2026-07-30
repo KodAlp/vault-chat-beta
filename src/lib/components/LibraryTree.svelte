@@ -44,12 +44,12 @@
 	}
 
 	.error {
-		color: var(--error);
+		color: var(--destructive);
 		font-size: 0.8rem;
 	}
 
 	.empty {
-		color: var(--muted);
+		color: var(--muted-foreground);
 		font-size: 0.78rem;
 		line-height: 1.4;
 	}

@@ -84,7 +84,7 @@
 		align-self: flex-start;
 		background: transparent;
 		border: 1px solid var(--border);
-		color: var(--muted);
+		color: var(--muted-foreground);
 		border-radius: 6px;
 		width: 1.75rem;
 		height: 1.75rem;
@@ -94,7 +94,7 @@
 	}
 
 	.placeholder-text {
-		color: var(--muted);
+		color: var(--muted-foreground);
 		font-size: 0.85rem;
 	}
 
@@ -120,12 +120,12 @@
 
 	.right-top a {
 		text-decoration: none;
-		color: var(--muted);
+		color: var(--muted-foreground);
 		font-size: 0.9rem;
 	}
 
 	.right-top a:hover {
-		color: var(--accent);
+		color: var(--primary);
 	}
 
 	.right-middle {

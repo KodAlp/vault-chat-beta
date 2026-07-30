@@ -331,12 +331,12 @@ Kurallar, tercihler, yasaklar... serbest markdown.
 
 	.hint {
 		font-size: 0.85rem;
-		color: var(--muted);
+		color: var(--muted-foreground);
 		margin-bottom: 1.25rem;
 	}
 
 	.warn {
-		color: var(--error);
+		color: var(--destructive);
 		font-size: 0.85rem;
 	}
 
@@ -386,7 +386,7 @@ Kurallar, tercihler, yasaklar... serbest markdown.
 		border: 1px solid var(--border);
 		border-radius: 999px;
 		padding: 0.1rem 0.5rem;
-		color: var(--muted);
+		color: var(--muted-foreground);
 	}
 
 	.badge {
@@ -396,8 +396,8 @@ Kurallar, tercihler, yasaklar... serbest markdown.
 	}
 
 	.badge.error {
-		background: color-mix(in srgb, var(--error) 15%, transparent);
-		color: var(--error);
+		background: color-mix(in srgb, var(--destructive) 15%, transparent);
+		color: var(--destructive);
 	}
 
 	.badge.warn-badge {
@@ -407,7 +407,7 @@ Kurallar, tercihler, yasaklar... serbest markdown.
 
 	.description {
 		font-size: 0.85rem;
-		color: var(--muted);
+		color: var(--muted-foreground);
 		margin: 0.3rem 0 0.5rem;
 	}
 
@@ -432,12 +432,12 @@ Kurallar, tercihler, yasaklar... serbest markdown.
 	}
 
 	.budget-fill.red {
-		background: var(--error);
+		background: var(--destructive);
 	}
 
 	.char-count {
 		font-size: 0.7rem;
-		color: var(--muted);
+		color: var(--muted-foreground);
 	}
 
 	.controls {
@@ -471,21 +471,21 @@ Kurallar, tercihler, yasaklar... serbest markdown.
 		border-radius: 6px;
 		border: 1px solid var(--border);
 		background: transparent;
-		color: var(--fg);
+		color: var(--foreground);
 		cursor: pointer;
 		font-size: 0.8rem;
 	}
 
 	.controls button.danger {
-		color: var(--error);
-		border-color: var(--error);
+		color: var(--destructive);
+		border-color: var(--destructive);
 	}
 
 	select,
 	input[type='text'],
 	input[type='number'] {
-		background: var(--bg);
-		color: var(--fg);
+		background: var(--background);
+		color: var(--foreground);
 		border: 1px solid var(--border);
 		border-radius: 6px;
 		padding: 0.35rem 0.5rem;
@@ -494,9 +494,9 @@ Kurallar, tercihler, yasaklar... serbest markdown.
 	}
 
 	button.primary {
-		background: var(--accent);
-		color: var(--accent-fg);
-		border-color: var(--accent);
+		background: var(--primary);
+		color: var(--primary-foreground);
+		border-color: var(--primary);
 		font-weight: 600;
 	}
 
@@ -511,8 +511,8 @@ Kurallar, tercihler, yasaklar... serbest markdown.
 	}
 
 	.dialog {
-		background: var(--bg);
-		color: var(--fg);
+		background: var(--background);
+		color: var(--foreground);
 		border: 1px solid var(--border);
 		border-radius: 12px;
 		padding: 1.25rem;
@@ -546,8 +546,8 @@ Kurallar, tercihler, yasaklar... serbest markdown.
 		font-family: ui-monospace, 'SF Mono', Consolas, monospace;
 		font-size: 0.82rem;
 		line-height: 1.5;
-		background: var(--bg);
-		color: var(--fg);
+		background: var(--background);
+		color: var(--foreground);
 		border: 1px solid var(--border);
 		border-radius: 6px;
 		padding: 0.6rem 0.7rem;
@@ -577,7 +577,7 @@ Kurallar, tercihler, yasaklar... serbest markdown.
 		border-radius: 8px;
 		border: 1px solid var(--border);
 		background: transparent;
-		color: var(--fg);
+		color: var(--foreground);
 		cursor: pointer;
 		font-size: 0.9rem;
 	}

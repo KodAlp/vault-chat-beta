@@ -171,15 +171,15 @@
 		border-radius: 6px;
 		border: 1px solid var(--border);
 		background: transparent;
-		color: var(--muted);
+		color: var(--muted-foreground);
 		cursor: pointer;
 		font-size: 0.8rem;
 		margin-bottom: 0.6rem;
 	}
 
 	.trigger:hover {
-		color: var(--accent);
-		border-color: var(--accent);
+		color: var(--primary);
+		border-color: var(--primary);
 	}
 
 	.overlay {
@@ -193,8 +193,8 @@
 	}
 
 	.dialog {
-		background: var(--bg);
-		color: var(--fg);
+		background: var(--background);
+		color: var(--foreground);
 		border: 1px solid var(--border);
 		border-radius: 12px;
 		padding: 1.25rem;
@@ -220,8 +220,8 @@
 	input[type='text'],
 	input[type='file'],
 	select {
-		background: var(--bg);
-		color: var(--fg);
+		background: var(--background);
+		color: var(--foreground);
 		border: 1px solid var(--border);
 		border-radius: 6px;
 		padding: 0.4rem 0.5rem;
@@ -234,11 +234,11 @@
 		align-items: center;
 		gap: 0.5rem;
 		font-size: 0.9rem;
-		color: var(--muted);
+		color: var(--muted-foreground);
 	}
 
 	.warn {
-		color: var(--error);
+		color: var(--destructive);
 		font-size: 0.85rem;
 	}
 
@@ -247,7 +247,7 @@
 		width: 0.9rem;
 		height: 0.9rem;
 		border: 2px solid var(--border);
-		border-top-color: var(--accent);
+		border-top-color: var(--primary);
 		border-radius: 50%;
 		animation: spin 0.7s linear infinite;
 	}
@@ -270,15 +270,15 @@
 		border-radius: 8px;
 		border: 1px solid var(--border);
 		background: transparent;
-		color: var(--fg);
+		color: var(--foreground);
 		cursor: pointer;
 		font-size: 0.9rem;
 	}
 
 	.actions button.primary {
-		background: var(--accent);
-		color: var(--accent-fg);
-		border-color: var(--accent);
+		background: var(--primary);
+		color: var(--primary-foreground);
+		border-color: var(--primary);
 		font-weight: 600;
 	}
 

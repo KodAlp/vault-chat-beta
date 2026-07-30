@@ -99,7 +99,7 @@
 
 	.hint {
 		font-size: 0.85rem;
-		color: var(--muted);
+		color: var(--muted-foreground);
 		margin-bottom: 1rem;
 	}
 
@@ -112,7 +112,7 @@
 	}
 
 	.warn {
-		color: var(--error);
+		color: var(--destructive);
 		font-size: 0.85rem;
 	}
 </style>

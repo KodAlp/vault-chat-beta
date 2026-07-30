@@ -99,7 +99,7 @@
 		right: 1rem;
 		font-size: 1.2rem;
 		text-decoration: none;
-		color: var(--muted);
+		color: var(--muted-foreground);
 	}
 
 	h1 {
@@ -109,7 +109,7 @@
 	}
 
 	.subtitle {
-		color: var(--muted);
+		color: var(--muted-foreground);
 		text-align: center;
 		margin: 0 0 2rem;
 	}
@@ -128,8 +128,8 @@
 		padding: 0.6rem 0.85rem;
 		border-radius: 8px;
 		border: 1px solid var(--border);
-		background: var(--bg);
-		color: var(--fg);
+		background: var(--background);
+		color: var(--foreground);
 		font-family: var(--font-sans);
 		font-size: 0.95rem;
 	}
@@ -138,8 +138,8 @@
 		padding: 0 1.1rem;
 		border-radius: 8px;
 		border: none;
-		background: var(--accent);
-		color: var(--accent-fg);
+		background: var(--primary);
+		color: var(--primary-foreground);
 		font-weight: 600;
 		cursor: pointer;
 	}
@@ -151,7 +151,7 @@
 
 	.recent h2 {
 		font-size: 0.9rem;
-		color: var(--muted);
+		color: var(--muted-foreground);
 		margin: 0 0 0.75rem;
 		font-weight: 600;
 	}
@@ -174,11 +174,11 @@
 		border-radius: 8px;
 		border: 1px solid var(--border);
 		text-decoration: none;
-		color: var(--fg);
+		color: var(--foreground);
 	}
 
 	.recent a:hover {
-		border-color: var(--accent);
+		border-color: var(--primary);
 	}
 
 	.recent .title {
@@ -190,11 +190,11 @@
 	.recent .meta {
 		flex-shrink: 0;
 		font-size: 0.75rem;
-		color: var(--muted);
+		color: var(--muted-foreground);
 	}
 
 	.warn {
-		color: var(--error);
+		color: var(--destructive);
 		font-size: 0.85rem;
 		text-align: center;
 	}

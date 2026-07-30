@@ -40,7 +40,7 @@
 	.export-menu > button {
 		background: transparent;
 		border: none;
-		color: var(--muted);
+		color: var(--muted-foreground);
 		font-size: 0.9rem;
 		cursor: pointer;
 		padding: 0;
@@ -48,7 +48,7 @@
 	}
 
 	.export-menu > button:hover {
-		color: var(--accent);
+		color: var(--primary);
 	}
 
 	.menu {
@@ -56,7 +56,7 @@
 		right: 100%;
 		top: 0;
 		margin-right: 0.5rem;
-		background: var(--bg);
+		background: var(--background);
 		border: 1px solid var(--border);
 		border-radius: 8px;
 		padding: 0.35rem;
@@ -70,14 +70,14 @@
 
 	.menu a {
 		text-decoration: none;
-		color: var(--fg);
+		color: var(--foreground);
 		font-size: 0.8rem;
 		padding: 0.3rem 0.6rem;
 		border-radius: 6px;
 	}
 
 	.menu a:hover {
-		background: var(--code-bg);
-		color: var(--accent);
+		background: var(--muted);
+		color: var(--primary);
 	}
 </style>

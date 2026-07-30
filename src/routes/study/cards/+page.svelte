@@ -137,13 +137,13 @@
 	}
 
 	.status {
-		color: var(--muted);
+		color: var(--muted-foreground);
 		text-align: center;
 		margin-top: 3rem;
 	}
 
 	.status.error {
-		color: var(--error);
+		color: var(--destructive);
 	}
 
 	.progress-bar {
@@ -155,13 +155,13 @@
 
 	.progress-fill {
 		height: 100%;
-		background: var(--accent);
+		background: var(--primary);
 		transition: width 0.2s ease;
 	}
 
 	.progress-label {
 		font-size: 0.75rem;
-		color: var(--muted);
+		color: var(--muted-foreground);
 		margin: 0.4rem 0 1.5rem;
 	}
 
@@ -187,7 +187,7 @@
 		display: inline-block;
 		margin-top: 0.9rem;
 		font-size: 0.75rem;
-		color: var(--muted);
+		color: var(--muted-foreground);
 		text-decoration: none;
 		border: 1px solid var(--border);
 		border-radius: 999px;
@@ -195,8 +195,8 @@
 	}
 
 	.source-link:hover {
-		color: var(--accent);
-		border-color: var(--accent);
+		color: var(--primary);
+		border-color: var(--primary);
 	}
 
 	.reveal {
@@ -206,14 +206,14 @@
 		border-radius: 8px;
 		border: 1px solid var(--border);
 		background: transparent;
-		color: var(--fg);
+		color: var(--foreground);
 		cursor: pointer;
 		font-size: 0.95rem;
 	}
 
 	.reveal:hover {
-		border-color: var(--accent);
-		color: var(--accent);
+		border-color: var(--primary);
+		color: var(--primary);
 	}
 
 	.grades {
@@ -227,7 +227,7 @@
 		border-radius: 8px;
 		border: 1px solid var(--border);
 		background: transparent;
-		color: var(--fg);
+		color: var(--foreground);
 		cursor: pointer;
 		font-size: 0.9rem;
 		font-weight: 600;
@@ -239,12 +239,12 @@
 	}
 
 	.grade.again {
-		border-color: var(--error);
-		color: var(--error);
+		border-color: var(--destructive);
+		color: var(--destructive);
 	}
 
 	.grade.good {
-		border-color: var(--accent);
-		color: var(--accent);
+		border-color: var(--primary);
+		color: var(--primary);
 	}
 </style>

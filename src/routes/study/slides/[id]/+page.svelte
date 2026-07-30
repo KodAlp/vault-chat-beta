@@ -117,13 +117,13 @@
 	}
 
 	.status {
-		color: var(--muted);
+		color: var(--muted-foreground);
 		text-align: center;
 		margin-top: 3rem;
 	}
 
 	.status.error {
-		color: var(--error);
+		color: var(--destructive);
 	}
 
 	h1 {
@@ -133,7 +133,7 @@
 
 	.progress-label {
 		font-size: 0.75rem;
-		color: var(--muted);
+		color: var(--muted-foreground);
 		margin: 0 0 0.5rem;
 	}
 
@@ -162,7 +162,7 @@
 		border-radius: 8px;
 		border: 1px solid var(--border);
 		background: transparent;
-		color: var(--fg);
+		color: var(--foreground);
 		cursor: pointer;
 	}
 
@@ -179,7 +179,7 @@
 
 	.source-link {
 		font-size: 0.75rem;
-		color: var(--muted);
+		color: var(--muted-foreground);
 		text-decoration: none;
 		border: 1px solid var(--border);
 		border-radius: 999px;
@@ -187,7 +187,7 @@
 	}
 
 	.source-link:hover {
-		color: var(--accent);
-		border-color: var(--accent);
+		color: var(--primary);
+		border-color: var(--primary);
 	}
 </style>

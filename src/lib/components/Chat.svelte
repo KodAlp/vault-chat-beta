@@ -280,8 +280,8 @@
 	}
 
 	.model-select {
-		background: var(--bg);
-		color: var(--fg);
+		background: var(--background);
+		color: var(--foreground);
 		border: 1px solid var(--border);
 		border-radius: 6px;
 		padding: 0.3rem 0.5rem;
@@ -294,7 +294,7 @@
 		align-items: center;
 		gap: 0.35rem;
 		font-size: 0.85rem;
-		color: var(--muted);
+		color: var(--muted-foreground);
 		cursor: pointer;
 		user-select: none;
 	}
@@ -319,21 +319,21 @@
 		padding: 0.4rem 0.9rem;
 		border-radius: 999px;
 		border: 1px solid var(--border);
-		background: var(--bg);
-		color: var(--fg);
+		background: var(--background);
+		color: var(--foreground);
 		font-size: 0.8rem;
 		cursor: pointer;
 		box-shadow: 0 2px 8px rgb(0 0 0 / 0.15);
 	}
 
 	.empty {
-		color: var(--muted);
+		color: var(--muted-foreground);
 		text-align: center;
 		margin-top: 2rem;
 	}
 
 	.error {
-		color: var(--error);
+		color: var(--destructive);
 		padding: 0 1rem;
 		font-size: 0.85rem;
 	}
@@ -353,8 +353,8 @@
 		padding: 0.5rem 0.75rem;
 		border-radius: 8px;
 		border: 1px solid var(--border);
-		background: var(--bg);
-		color: var(--fg);
+		background: var(--background);
+		color: var(--foreground);
 		font-family: var(--font-sans);
 		font-size: 0.95rem;
 	}
@@ -363,8 +363,8 @@
 		padding: 0 1.1rem;
 		border-radius: 8px;
 		border: none;
-		background: var(--accent);
-		color: var(--accent-fg);
+		background: var(--primary);
+		color: var(--primary-foreground);
 		font-weight: 600;
 		cursor: pointer;
 	}
@@ -375,7 +375,7 @@
 	}
 
 	button.stop {
-		background: var(--error);
-		color: var(--bg);
+		background: var(--destructive);
+		color: var(--background);
 	}
 </style>

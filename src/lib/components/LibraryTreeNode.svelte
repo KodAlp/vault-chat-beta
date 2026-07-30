@@ -121,7 +121,7 @@
 	.caret {
 		display: inline-block;
 		transition: transform 0.1s ease;
-		color: var(--muted);
+		color: var(--muted-foreground);
 		font-size: 0.7rem;
 		width: 0.8rem;
 	}
@@ -144,9 +144,9 @@
 	.rename-input {
 		flex: 1;
 		font-size: 0.8rem;
-		background: var(--bg);
-		color: var(--fg);
-		border: 1px solid var(--accent);
+		background: var(--background);
+		color: var(--foreground);
+		border: 1px solid var(--primary);
 		border-radius: 4px;
 		padding: 0.1rem 0.3rem;
 	}
@@ -175,14 +175,14 @@
 	.row-actions button {
 		background: transparent;
 		border: none;
-		color: var(--muted);
+		color: var(--muted-foreground);
 		cursor: pointer;
 		font-size: 0.75rem;
 		padding: 0.1rem 0.2rem;
 	}
 
 	.row-actions button:hover {
-		color: var(--accent);
+		color: var(--primary);
 	}
 
 	.children {

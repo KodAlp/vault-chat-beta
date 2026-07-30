@@ -35,25 +35,25 @@
 	.chip {
 		font-size: 0.75rem;
 		text-decoration: none;
-		background: var(--code-bg);
-		color: var(--muted);
+		background: var(--muted);
+		color: var(--muted-foreground);
 		padding: 0.2rem 0.65rem;
 	}
 
 	.chip:hover {
-		color: var(--accent);
+		color: var(--primary);
 	}
 
 	.chip-icon {
 		font-size: 0.7rem;
 		text-decoration: none;
-		background: var(--code-bg);
-		color: var(--muted);
+		background: var(--muted);
+		color: var(--muted-foreground);
 		padding: 0.2rem 0.5rem;
 		border-left: 1px solid var(--border);
 	}
 
 	.chip-icon:hover {
-		color: var(--accent);
+		color: var(--primary);
 	}
 </style>
