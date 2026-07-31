@@ -6,12 +6,47 @@
 	import ReportDialog from '$lib/components/ReportDialog.svelte';
 	import MindMapDialog from '$lib/components/MindMapDialog.svelte';
 	import SlidesDialog from '$lib/components/SlidesDialog.svelte';
-	import LibraryTree from '$lib/components/LibraryTree.svelte';
+	import SourceTree from '$lib/components/SourceTree.svelte';
+	import StudyPanel from '$lib/components/StudyPanel.svelte';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
 
 	let leftCollapsed = $state(false);
+	let includedPaths = $state<string[] | undefined>(undefined);
+	let sourceCounts = $state({ selected: 0, total: 0 });
+	let focusSignal = $state(0);
+	let studyPanelOpen = $state(false);
+	let quizOpen = $state(false);
+	let cardsOpen = $state(false);
+	let reportOpen = $state(false);
+	let mindMapOpen = $state(false);
+	let slidesOpen = $state(false);
+
+	function handleChatLoaded(paths: string[] | undefined) {
+		includedPaths = paths;
+	}
+
+	async function handleScopeChange(paths: string[] | undefined) {
+		includedPaths = paths;
+		try {
+			// 404s harmlessly for a chat row that doesn't exist yet (brand new
+			// chat, first message not sent) — the selection at send time still
+			// reaches the server via /api/chat's own includedPaths field.
+			await fetch(`/api/chats/${data.chatId}`, {
+				method: 'PATCH',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ includedPaths: paths ?? null })
+			});
+		} catch {
+			// best-effort persistence — the in-memory selection still applies to this session
+		}
+	}
+
+	function handleFocusTree() {
+		leftCollapsed = false;
+		focusSignal += 1;
+	}
 </script>
 
 <svelte:head>
@@ -31,12 +66,27 @@
 			<a class="vault-name" href="/vault/{data.vaultId}" title="Sohbet listesine dön">
 				← {data.vaultName}
 			</a>
-			<LibraryTree />
+			<SourceTree
+				vaultId={data.vaultId}
+				{includedPaths}
+				onSelectionChange={handleScopeChange}
+				onCounts={(c) => (sourceCounts = c)}
+				{focusSignal}
+			/>
 		{/if}
 	</aside>
 
 	<main class="panel-center">
-		<Chat chatId={data.chatId} vaultId={data.vaultId} />
+		<Chat
+			chatId={data.chatId}
+			vaultId={data.vaultId}
+			{includedPaths}
+			selectedCount={sourceCounts.selected}
+			totalCount={sourceCounts.total}
+			onChatLoaded={handleChatLoaded}
+			onExpandScope={() => handleScopeChange(undefined)}
+			onFocusTree={handleFocusTree}
+		/>
 	</main>
 
 	<aside class="panel-right">
@@ -46,15 +96,33 @@
 			<a href="/settings" title="Ayarlar">⚙</a>
 		</div>
 		<div class="right-middle">
-			<QuizDialog chatId={data.chatId} vaultId={data.vaultId} />
-			<CardsDialog chatId={data.chatId} vaultId={data.vaultId} />
-			<ReportDialog chatId={data.chatId} vaultId={data.vaultId} />
-			<MindMapDialog chatId={data.chatId} vaultId={data.vaultId} />
-			<SlidesDialog chatId={data.chatId} vaultId={data.vaultId} />
+			<button
+				type="button"
+				class="study-panel-trigger"
+				onclick={() => (studyPanelOpen = true)}
+				title="Çalışma Paneli"
+			>
+				<span>📚</span>
+				<span class="trigger-label">Panel</span>
+			</button>
+			<QuizDialog chatId={data.chatId} vaultId={data.vaultId} bind:open={quizOpen} />
+			<CardsDialog chatId={data.chatId} vaultId={data.vaultId} bind:open={cardsOpen} />
+			<ReportDialog chatId={data.chatId} vaultId={data.vaultId} bind:open={reportOpen} />
+			<MindMapDialog chatId={data.chatId} vaultId={data.vaultId} bind:open={mindMapOpen} />
+			<SlidesDialog chatId={data.chatId} vaultId={data.vaultId} bind:open={slidesOpen} />
 		</div>
 		<div class="right-bottom placeholder-text">Profil (yakında)</div>
 	</aside>
 </div>
+
+<StudyPanel
+	bind:open={studyPanelOpen}
+	onOpenQuiz={() => (quizOpen = true)}
+	onOpenCards={() => (cardsOpen = true)}
+	onOpenReport={() => (reportOpen = true)}
+	onOpenMindMap={() => (mindMapOpen = true)}
+	onOpenSlides={() => (slidesOpen = true)}
+/>
 
 <style>
 	.chat-screen {
@@ -152,6 +220,25 @@
 		flex-direction: column;
 		align-items: center;
 		gap: 1.1rem;
+	}
+
+	.study-panel-trigger {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.25rem;
+		border: none;
+		background: transparent;
+		color: var(--muted-foreground);
+		cursor: pointer;
+	}
+
+	.study-panel-trigger:hover {
+		color: var(--primary);
+	}
+
+	.trigger-label {
+		font-size: 0.65rem;
 	}
 
 	.right-bottom {

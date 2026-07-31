@@ -1,6 +1,6 @@
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getChat, getMessages, updateChatModel } from '$lib/server/chats-db';
+import { getChat, getMessages, updateChatModel, updateChatIncludedPaths } from '$lib/server/chats-db';
 import type { ChatMessage, RetrievedChunk } from '$lib/types';
 
 export const GET: RequestHandler = async ({ params }) => {
@@ -18,12 +18,16 @@ export const GET: RequestHandler = async ({ params }) => {
 	return json({ chat, messages });
 };
 
-/** Chat-header per-chat model/provider override, see Chat.svelte's
- * overrideModel state — persisted so the choice survives a reload. */
+/** Chat-header per-chat model/provider override (Chat.svelte's overrideModel)
+ * and the source-tree scope selection (SourceTree.svelte, Faz 9 Adım 6) —
+ * two independent, optional fields, either or both may be present. */
 export const PATCH: RequestHandler = async ({ params, request }) => {
 	if (!getChat(params.id)) error(404, 'Konuşma bulunamadı');
-	const body = (await request.json()) as { model?: string };
-	if (!body.model) error(400, "'model' gerekli");
-	updateChatModel(params.id, body.model);
-	return json({ id: params.id, model: body.model });
+	const body = (await request.json()) as { model?: string; includedPaths?: string[] | null };
+	if (body.model === undefined && body.includedPaths === undefined) {
+		error(400, "'model' veya 'includedPaths' gerekli");
+	}
+	if (body.model !== undefined) updateChatModel(params.id, body.model);
+	if (body.includedPaths !== undefined) updateChatIncludedPaths(params.id, body.includedPaths);
+	return json({ id: params.id, model: body.model, includedPaths: body.includedPaths });
 };

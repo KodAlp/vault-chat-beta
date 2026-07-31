@@ -4,7 +4,11 @@
 	import type { MindMapGenerationRequest } from '$lib/types';
 	import GenerationDialog from './GenerationDialog.svelte';
 
-	let { chatId, vaultId }: { chatId: string; vaultId: string } = $props();
+	let {
+		chatId,
+		vaultId,
+		open = $bindable(false)
+	}: { chatId: string; vaultId: string; open?: boolean } = $props();
 
 	let alreadyGenerating = $derived(mindmapGeneration.status.phase === 'generating');
 
@@ -17,6 +21,7 @@
 <GenerationDialog
 	{chatId}
 	{vaultId}
+	bind:open
 	icon="🧠"
 	label="Harita"
 	dialogTitle="Zihin Haritası Oluştur"

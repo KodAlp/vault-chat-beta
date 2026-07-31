@@ -39,8 +39,7 @@ export interface ChatMessage {
 	notices?: string[];
 	/** Mirrors RetrieveResult.narrowScope for this message's answer — set
 	 * when retrieve() found relevant chunks but a scope filter excluded all
-	 * of them. Consumed by Faz 9 Adım 6's "kapsamı genişlet?" suggestion;
-	 * unused until then (no scope filter exists client-side yet). */
+	 * of them. Drives Message.svelte's "kapsamı genişlet?" suggestion. */
 	narrowScope?: boolean;
 }
 
@@ -88,8 +87,8 @@ export type StreamEvent =
 	| { type: 'thinking'; content: string }
 	/** Provider fallback notice (e.g. "deepseek unavailable → switched to
 	 * local model") — see the model-provider skill's fallback policy.
-	 * Not yet rendered specially client-side (Faz 6 UI is a later pass);
-	 * today's single-provider chains never actually trigger it. */
+	 * Rendered via FallbackNotice.svelte (Faz 9 Adım 6); today's
+	 * single-provider chains never actually trigger it in practice. */
 	| { type: 'notice'; message: string }
 	| { type: 'done'; sources: RetrievedChunk[]; narrowScope?: boolean }
 	| { type: 'error'; message: string };

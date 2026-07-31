@@ -2,10 +2,29 @@
 	import { onMount } from 'svelte';
 	import type { ChatMessage, ChatRequestBody, ProviderModelOption, StreamEvent } from '$lib/types';
 	import Message from './Message.svelte';
+	import ScopeIndicator from './ScopeIndicator.svelte';
 	import { settings } from '$lib/settings.svelte';
 	import { takePendingMessage } from '$lib/pending-message';
 
-	let { chatId, vaultId }: { chatId: string; vaultId: string } = $props();
+	let {
+		chatId,
+		vaultId,
+		includedPaths,
+		selectedCount = 0,
+		totalCount = 0,
+		onChatLoaded,
+		onExpandScope,
+		onFocusTree
+	}: {
+		chatId: string;
+		vaultId: string;
+		includedPaths?: string[];
+		selectedCount?: number;
+		totalCount?: number;
+		onChatLoaded?: (paths: string[] | undefined) => void;
+		onExpandScope?: () => void;
+		onFocusTree?: () => void;
+	} = $props();
 
 	const FLUSH_INTERVAL_MS = 50;
 	const STICK_THRESHOLD_PX = 80;
@@ -109,7 +128,8 @@
 				think: thinkMode,
 				chatId,
 				titleModel: settings.defaultModel,
-				vault: vaultId
+				vault: vaultId,
+				includedPaths
 			};
 			const res = await fetch('/api/chat', {
 				method: 'POST',
@@ -174,12 +194,18 @@
 		try {
 			const res = await fetch(`/api/chats/${id}`);
 			if (!res.ok) throw new Error();
-			const data = (await res.json()) as { chat: { model: string }; messages: ChatMessage[] };
+			const data = (await res.json()) as {
+				chat: { model: string; included_paths_json: string | null };
+				messages: ChatMessage[];
+			};
 			messages = data.messages;
 			overrideModel = data.chat.model;
 			hasChatRow = true;
 			isAtBottom = true;
 			scrollToBottom(true);
+			onChatLoaded?.(
+				data.chat.included_paths_json ? (JSON.parse(data.chat.included_paths_json) as string[]) : undefined
+			);
 		} catch {
 			errorMessage = 'Konuşma yüklenemedi';
 		}
@@ -194,6 +220,7 @@
 		if (pendingQuestion) {
 			overrideModel = undefined;
 			hasChatRow = false;
+			onChatLoaded?.(undefined);
 			input = pendingQuestion;
 			send();
 		} else {
@@ -211,23 +238,26 @@
 
 <div class="chat">
 	<header>
-		<select
-			class="model-select"
-			title="Bu konuşma için model/sağlayıcı seçimi"
-			value={activeModel}
-			onchange={(e) => onModelChange(e.currentTarget.value)}
-		>
-			{#if !modelOptions.some((m) => m.id === activeModel)}
-				<option value={activeModel}>{activeModel}</option>
-			{/if}
-			{#each modelOptions as m (m.providerId + '/' + m.id)}
-				<option value={m.id}>{m.providerLabel} · {m.id}</option>
-			{/each}
-		</select>
-		<label class="think-toggle" for="think-mode" title="Açıkken muhakeme modeli önce akıl yürütür (yavaş ama daha derin), süreç sohbette görünür. Kapalıyken hızlı model kullanılır.">
-			<input id="think-mode" name="think-mode" type="checkbox" bind:checked={thinkMode} />
-			Derin düşün
-		</label>
+		<ScopeIndicator selected={selectedCount} total={totalCount} onFocusTree={() => onFocusTree?.()} />
+		<div class="header-right">
+			<select
+				class="model-select"
+				title="Bu konuşma için model/sağlayıcı seçimi"
+				value={activeModel}
+				onchange={(e) => onModelChange(e.currentTarget.value)}
+			>
+				{#if !modelOptions.some((m) => m.id === activeModel)}
+					<option value={activeModel}>{activeModel}</option>
+				{/if}
+				{#each modelOptions as m (m.providerId + '/' + m.id)}
+					<option value={m.id}>{m.providerLabel} · {m.id}</option>
+				{/each}
+			</select>
+			<label class="think-toggle" for="think-mode" title="Açıkken muhakeme modeli önce akıl yürütür (yavaş ama daha derin), süreç sohbette görünür. Kapalıyken hızlı model kullanılır.">
+				<input id="think-mode" name="think-mode" type="checkbox" bind:checked={thinkMode} />
+				Derin düşün
+			</label>
+		</div>
 	</header>
 
 	<div class="messages-wrap">
@@ -236,7 +266,7 @@
 				<p class="empty">Kasandaki notlar hakkında bir soru sor.</p>
 			{/if}
 			{#each messages as message, i (message.id)}
-				<Message {message} streaming={isStreaming && i === messages.length - 1} />
+				<Message {message} streaming={isStreaming && i === messages.length - 1} {onExpandScope} />
 			{/each}
 		</div>
 		{#if isStreaming && !isAtBottom}
@@ -277,10 +307,16 @@
 	header {
 		display: flex;
 		align-items: center;
-		justify-content: flex-end;
+		justify-content: space-between;
 		gap: 0.75rem;
 		padding: 0.5rem 1rem;
 		border-bottom: 1px solid var(--border);
+	}
+
+	.header-right {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
 	}
 
 	.model-select {
