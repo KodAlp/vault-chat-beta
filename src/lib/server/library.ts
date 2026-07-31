@@ -40,6 +40,12 @@ export function renameLibraryEntry(v: VaultContext, oldRel: string, newRel: stri
 	if (!fs.statSync(oldAbs).isFile()) {
 		throw new Error('Sadece dosyalar yeniden adlandırılabilir, klasörler değil');
 	}
+	// Windows' renameSync refuses to overwrite an existing target (EPERM/
+	// EEXIST) — check explicitly so the route can return a translated
+	// message instead of a raw fs error string.
+	if (fs.existsSync(newAbs)) {
+		throw new Error('Bu isimde bir dosya zaten var');
+	}
 	fs.mkdirSync(path.dirname(newAbs), { recursive: true });
 	fs.renameSync(oldAbs, newAbs);
 	renameLibraryFileInIndex(v, oldRel, newRel);
