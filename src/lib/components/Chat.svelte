@@ -5,7 +5,7 @@
 	import { settings } from '$lib/settings.svelte';
 	import { takePendingMessage } from '$lib/pending-message';
 
-	let { chatId }: { chatId: string } = $props();
+	let { chatId, vaultId }: { chatId: string; vaultId: string } = $props();
 
 	const FLUSH_INTERVAL_MS = 50;
 	const STICK_THRESHOLD_PX = 80;
@@ -108,7 +108,8 @@
 				model: activeModel,
 				think: thinkMode,
 				chatId,
-				titleModel: settings.defaultModel
+				titleModel: settings.defaultModel,
+				vault: vaultId
 			};
 			const res = await fetch('/api/chat', {
 				method: 'POST',
@@ -133,7 +134,10 @@
 					const event = JSON.parse(line.slice(5)) as StreamEvent;
 					if (event.type === 'delta') rawContent += event.content;
 					else if (event.type === 'thinking') rawThinking += event.content;
-					else if (event.type === 'done') assistantMessage.sources = event.sources;
+					else if (event.type === 'done') {
+						assistantMessage.sources = event.sources;
+						assistantMessage.narrowScope = event.narrowScope;
+					}
 					else if (event.type === 'error') errorMessage = event.message;
 					else if (event.type === 'notice') {
 						(assistantMessage.notices ??= []).push(event.message);

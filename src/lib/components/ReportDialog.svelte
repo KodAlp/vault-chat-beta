@@ -4,11 +4,11 @@
 	import type { ReportGenerationRequest } from '$lib/types';
 	import GenerationDialog from './GenerationDialog.svelte';
 
-	let { chatId }: { chatId: string } = $props();
+	let { chatId, vaultId }: { chatId: string; vaultId: string } = $props();
 
 	let alreadyGenerating = $derived(reportGeneration.status.phase === 'generating');
 
-	function generate(args: { prompt: string; domains?: string[]; chatId?: string }) {
+	function generate(args: { prompt: string; domains?: string[]; chatId?: string; vault: string }) {
 		const body: ReportGenerationRequest = { ...args, model: settings.reasoningModel };
 		void startReportGeneration(body);
 	}
@@ -16,6 +16,7 @@
 
 <GenerationDialog
 	{chatId}
+	{vaultId}
 	icon="📄"
 	label="Rapor"
 	dialogTitle="Rapor Oluştur"

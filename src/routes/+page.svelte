@@ -1,47 +1,40 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import type { ChatSummary } from '$lib/types';
-	import { setPendingMessage } from '$lib/pending-message';
+	import type { VaultRecord } from '$lib/types';
+	import VaultCard from '$lib/components/VaultCard.svelte';
+	import { Button } from '$lib/components/ui/button';
+	import { Input } from '$lib/components/ui/input';
+	import * as Dialog from '$lib/components/ui/dialog';
+	import type { PageProps } from './$types';
 
-	let chats = $state<ChatSummary[]>([]);
-	let loadError = $state('');
-	let question = $state('');
+	let { data }: PageProps = $props();
 
-	onMount(refresh);
+	let vaults = $derived<VaultRecord[]>(data.vaults);
+	let createOpen = $state(false);
+	let newVaultName = $state('');
+	let createError = $state('');
+	let creating = $state(false);
 
-	async function refresh() {
+	async function createVault() {
+		const name = newVaultName.trim();
+		if (!name) return;
+		creating = true;
+		createError = '';
 		try {
-			const res = await fetch('/api/chats');
-			if (!res.ok) throw new Error();
-			chats = (await res.json()) as ChatSummary[];
-		} catch {
-			loadError = 'Geçmiş alınamadı';
+			const res = await fetch('/api/vaults', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ name })
+			});
+			if (!res.ok) throw new Error((await res.json().catch(() => null))?.message ?? 'Oluşturulamadı');
+			const { vault } = (await res.json()) as { vault: VaultRecord };
+			// First-ever vault or not, jump straight in — that's the point of
+			// just having created it.
+			goto(`/vault/${vault.id}`);
+		} catch (err) {
+			createError = err instanceof Error ? err.message : 'Vault oluşturulamadı.';
+			creating = false;
 		}
-	}
-
-	function start() {
-		const trimmed = question.trim();
-		if (!trimmed) return;
-		const chatId = crypto.randomUUID();
-		setPendingMessage({ chatId, question: trimmed });
-		goto(`/chat/${chatId}`);
-	}
-
-	function handleKeydown(e: KeyboardEvent) {
-		if (e.key === 'Enter' && !e.shiftKey) {
-			e.preventDefault();
-			start();
-		}
-	}
-
-	function formatDate(iso: string): string {
-		return new Date(iso).toLocaleString('tr-TR', {
-			day: '2-digit',
-			month: '2-digit',
-			hour: '2-digit',
-			minute: '2-digit'
-		});
 	}
 </script>
 
@@ -49,153 +42,56 @@
 	<title>Vault Chat</title>
 </svelte:head>
 
-<div class="welcome">
-	<a class="settings-link" href="/settings" title="Ayarlar">⚙</a>
-
-	<h1>Vault Chat</h1>
-	<p class="subtitle">Kasandaki notlar hakkında bir soru sor.</p>
-
-	<div class="composer">
-		<textarea
-			id="welcome-input"
-			name="welcome-input"
-			bind:value={question}
-			onkeydown={handleKeydown}
-			placeholder="Bir soru yaz... (Enter: başlat, Shift+Enter: yeni satır)"
-		></textarea>
-		<button onclick={start} disabled={!question.trim()}>Başlat</button>
+<div class="mx-auto max-w-3xl px-4 pt-10 pb-12">
+	<div class="mb-8 flex items-center justify-between">
+		<h1 class="text-xl font-semibold">Vault Chat</h1>
+		<a href="/settings" title="Ayarlar" class="text-lg text-muted-foreground hover:text-primary">⚙</a>
 	</div>
 
-	{#if chats.length > 0}
-		<section class="recent">
-			<h2>Son konuşmalar</h2>
-			<ul>
-				{#each chats as chat (chat.id)}
-					<li>
-						<a href="/chat/{chat.id}">
-							<span class="title">{chat.title ?? '(başlıksız)'}</span>
-							<span class="meta">{chat.model} · {formatDate(chat.updated_at)}</span>
-						</a>
-					</li>
-				{/each}
-			</ul>
-		</section>
-	{:else if loadError}
-		<p class="warn">{loadError}</p>
+	{#if vaults.length === 0}
+		<p class="mb-6 text-sm text-muted-foreground">
+			Henüz hiç vault yok. Kasandaki notlarla sohbet edebilmek için önce bir vault oluştur.
+		</p>
 	{/if}
+
+	<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
+		{#each vaults as vault (vault.id)}
+			<VaultCard {vault} />
+		{/each}
+
+		<button
+			type="button"
+			class="flex min-h-[5.5rem] flex-col items-center justify-center gap-1 rounded-xl border border-dashed text-sm text-muted-foreground hover:border-primary hover:text-primary"
+			onclick={() => (createOpen = true)}
+		>
+			<span class="text-lg leading-none">+</span>
+			Yeni vault
+		</button>
+	</div>
 </div>
 
-<style>
-	.welcome {
-		max-width: 640px;
-		margin: 0 auto;
-		padding: 3rem 1rem;
-		position: relative;
-	}
-
-	.settings-link {
-		position: absolute;
-		top: 1rem;
-		right: 1rem;
-		font-size: 1.2rem;
-		text-decoration: none;
-		color: var(--muted-foreground);
-	}
-
-	h1 {
-		font-size: 1.6rem;
-		margin: 0 0 0.25rem;
-		text-align: center;
-	}
-
-	.subtitle {
-		color: var(--muted-foreground);
-		text-align: center;
-		margin: 0 0 2rem;
-	}
-
-	.composer {
-		display: flex;
-		gap: 0.5rem;
-		margin-bottom: 2.5rem;
-	}
-
-	textarea {
-		flex: 1;
-		resize: none;
-		min-height: 3rem;
-		max-height: 10rem;
-		padding: 0.6rem 0.85rem;
-		border-radius: 8px;
-		border: 1px solid var(--border);
-		background: var(--background);
-		color: var(--foreground);
-		font-family: var(--font-sans);
-		font-size: 0.95rem;
-	}
-
-	button {
-		padding: 0 1.1rem;
-		border-radius: 8px;
-		border: none;
-		background: var(--primary);
-		color: var(--primary-foreground);
-		font-weight: 600;
-		cursor: pointer;
-	}
-
-	button:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
-
-	.recent h2 {
-		font-size: 0.9rem;
-		color: var(--muted-foreground);
-		margin: 0 0 0.75rem;
-		font-weight: 600;
-	}
-
-	.recent ul {
-		list-style: none;
-		margin: 0;
-		padding: 0;
-		display: flex;
-		flex-direction: column;
-		gap: 0.4rem;
-	}
-
-	.recent a {
-		display: flex;
-		justify-content: space-between;
-		align-items: baseline;
-		gap: 1rem;
-		padding: 0.6rem 0.85rem;
-		border-radius: 8px;
-		border: 1px solid var(--border);
-		text-decoration: none;
-		color: var(--foreground);
-	}
-
-	.recent a:hover {
-		border-color: var(--primary);
-	}
-
-	.recent .title {
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-
-	.recent .meta {
-		flex-shrink: 0;
-		font-size: 0.75rem;
-		color: var(--muted-foreground);
-	}
-
-	.warn {
-		color: var(--destructive);
-		font-size: 0.85rem;
-		text-align: center;
-	}
-</style>
+<Dialog.Root bind:open={createOpen}>
+	<Dialog.Content class="sm:max-w-sm">
+		<Dialog.Header>
+			<Dialog.Title>Yeni vault</Dialog.Title>
+		</Dialog.Header>
+		<label class="flex flex-col gap-1 text-sm">
+			Vault adı
+			<Input
+				type="text"
+				bind:value={newVaultName}
+				placeholder="örn. Elektronik"
+				onkeydown={(e) => e.key === 'Enter' && createVault()}
+			/>
+		</label>
+		{#if createError}
+			<p class="text-sm text-destructive">{createError}</p>
+		{/if}
+		<Dialog.Footer>
+			<Button variant="outline" onclick={() => (createOpen = false)}>İptal</Button>
+			<Button onclick={createVault} disabled={!newVaultName.trim() || creating}>
+				{creating ? 'Oluşturuluyor...' : 'Oluştur'}
+			</Button>
+		</Dialog.Footer>
+	</Dialog.Content>
+</Dialog.Root>

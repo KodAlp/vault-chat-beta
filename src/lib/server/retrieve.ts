@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import Database from 'better-sqlite3';
 import * as sqliteVec from 'sqlite-vec';
 import { embed } from './ollama';
@@ -22,13 +23,16 @@ const dbCache = new Map<string, Database.Database>();
  * One connection per vault, cached for the process lifetime — mirrors the
  * old module-level singleton, just keyed by vault id now.
  */
-function getDb(v: VaultContext): Database.Database {
+/** Returns null, not a throw, when the vault has never been indexed
+ * (`npm run index` not yet run) — a routine state now that Faz 9 lets
+ * users create a vault and land straight on its empty chat screen. */
+function getDb(v: VaultContext): Database.Database | null {
 	let db = dbCache.get(v.id);
-	if (!db) {
-		db = new Database(v.indexDbPath, { readonly: true, fileMustExist: true });
-		sqliteVec.load(db);
-		dbCache.set(v.id, db);
-	}
+	if (db) return db;
+	if (!existsSync(v.indexDbPath)) return null;
+	db = new Database(v.indexDbPath, { readonly: true, fileMustExist: true });
+	sqliteVec.load(db);
+	dbCache.set(v.id, db);
 	return db;
 }
 
@@ -65,6 +69,7 @@ export async function retrieve(
 	opts: { domains?: string[]; includedPaths?: string[]; k?: number } = {}
 ): Promise<RetrieveResult> {
 	const database = getDb(v);
+	if (!database) return { chunks: [], narrowScope: false };
 	const k = opts.k ?? DEFAULT_K;
 	const overfetch = opts.includedPaths?.length ? SCOPED_OVERFETCH_FACTOR : OVERFETCH_FACTOR;
 
@@ -106,7 +111,9 @@ export async function retrieve(
 /** Domains actually present in the index, not a hardcoded list — stays
  * accurate as the vault grows without needing to be kept in sync by hand. */
 export function listDomains(v: VaultContext): string[] {
-	const rows = getDb(v)
+	const database = getDb(v);
+	if (!database) return [];
+	const rows = database
 		.prepare(`SELECT DISTINCT d.value AS domain FROM files, json_each(files.domains_json) AS d ORDER BY d.value`)
 		.all() as { domain: string }[];
 	return rows.map((r) => r.domain);

@@ -5,7 +5,7 @@
 	import GenerationDialog from './GenerationDialog.svelte';
 	import { Input } from '$lib/components/ui/input';
 
-	let { chatId }: { chatId: string } = $props();
+	let { chatId, vaultId }: { chatId: string; vaultId: string } = $props();
 
 	let mc = $state(6);
 	let tf = $state(2);
@@ -21,7 +21,7 @@
 	 * regardless of whether this dialog (or even this page) stays open;
 	 * QuizGenerationStatus shows live progress elsewhere.
 	 */
-	function generate(args: { prompt: string; domains?: string[]; chatId?: string }) {
+	function generate(args: { prompt: string; domains?: string[]; chatId?: string; vault: string }) {
 		const body: QuizGenerationRequest = {
 			...args,
 			composition: { mc, tf, open: openCount },
@@ -33,6 +33,7 @@
 
 <GenerationDialog
 	{chatId}
+	{vaultId}
 	icon="📝"
 	label="Test"
 	dialogTitle="Test Oluştur"

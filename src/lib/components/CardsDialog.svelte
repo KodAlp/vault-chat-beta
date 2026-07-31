@@ -8,7 +8,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 
-	let { chatId }: { chatId: string } = $props();
+	let { chatId, vaultId }: { chatId: string; vaultId: string } = $props();
 
 	let count = $state(10);
 	let dueCount = $state(0);
@@ -37,7 +37,7 @@
 	/** Same reasoning as QuizDialog.svelte's generate(): a real generation
 	 * takes 20s-2min, an open dialog for that whole span reads as a frozen
 	 * page. */
-	function generate(args: { prompt: string; domains?: string[]; chatId?: string }) {
+	function generate(args: { prompt: string; domains?: string[]; chatId?: string; vault: string }) {
 		const body: CardGenerationRequest = { ...args, count, model: settings.reasoningModel };
 		void startCardGeneration(body);
 	}
@@ -45,6 +45,7 @@
 
 <GenerationDialog
 	{chatId}
+	{vaultId}
 	bind:open
 	icon="🗂️"
 	label="Kartlar"

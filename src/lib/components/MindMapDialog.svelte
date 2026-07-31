@@ -4,11 +4,11 @@
 	import type { MindMapGenerationRequest } from '$lib/types';
 	import GenerationDialog from './GenerationDialog.svelte';
 
-	let { chatId }: { chatId: string } = $props();
+	let { chatId, vaultId }: { chatId: string; vaultId: string } = $props();
 
 	let alreadyGenerating = $derived(mindmapGeneration.status.phase === 'generating');
 
-	function generate(args: { prompt: string; domains?: string[]; chatId?: string }) {
+	function generate(args: { prompt: string; domains?: string[]; chatId?: string; vault: string }) {
 		const body: MindMapGenerationRequest = { ...args, model: settings.reasoningModel };
 		void startMindMapGeneration(body);
 	}
@@ -16,6 +16,7 @@
 
 <GenerationDialog
 	{chatId}
+	{vaultId}
 	icon="🧠"
 	label="Harita"
 	dialogTitle="Zihin Haritası Oluştur"
