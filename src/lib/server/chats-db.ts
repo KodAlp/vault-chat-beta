@@ -27,6 +27,60 @@ export interface MessageRow {
 
 let db: Database.Database | undefined;
 
+/**
+ * Split out from getDb() so it's testable against a bare Database instance
+ * without going through the module-level singleton — see chats-db.test.ts.
+ *
+ * Ordering matters here: `CREATE INDEX ... ON chats(vault_id)` must run
+ * strictly AFTER the vault_id ALTER-guard below, never bundled into the
+ * same exec() as `CREATE TABLE IF NOT EXISTS chats`. On a DB where `chats`
+ * already exists without `vault_id` (a pre-Faz-8 DB, or one that reached
+ * this function before scripts/migrate-vaults.mjs ran), CREATE TABLE IF
+ * NOT EXISTS no-ops — the column is never added by it — so an index on
+ * that column created in the same breath fails immediately with "no such
+ * column: vault_id", before the guard ever gets a chance to run. This
+ * exact bug shipped in Faz 8 and only surfaced once a real vault_id-less
+ * chats.db reached it. See sqlite-schema.ts's doc comment for the general
+ * rule this is an instance of.
+ */
+export function initChatsSchema(instance: Database.Database): void {
+	instance.pragma('journal_mode = WAL');
+	instance.exec(`
+		CREATE TABLE IF NOT EXISTS chats (
+			id TEXT PRIMARY KEY,
+			title TEXT,
+			model TEXT NOT NULL,
+			vault_id TEXT NOT NULL DEFAULT 'default',
+			included_paths_json TEXT,
+			created_at TEXT NOT NULL,
+			updated_at TEXT NOT NULL
+		);
+		CREATE TABLE IF NOT EXISTS messages (
+			id TEXT PRIMARY KEY,
+			chat_id TEXT NOT NULL REFERENCES chats(id) ON DELETE CASCADE,
+			role TEXT NOT NULL,
+			content TEXT NOT NULL,
+			thinking TEXT,
+			sources_json TEXT,
+			created_at TEXT NOT NULL
+		);
+		CREATE INDEX IF NOT EXISTS idx_messages_chat_id ON messages(chat_id);
+	`);
+	// vault_id/included_paths_json didn't exist before Faz 8 — a DB created
+	// by an older build won't have them yet. scripts/migrate-vaults.mjs
+	// handles the real one-time backfill (vault_id='default' for existing
+	// rows); this ALTER only guards a pre-Faz-8 DB that reaches getDb()
+	// before migration has run, so CREATE TABLE's DEFAULT can't help
+	// (defaults only apply to rows inserted after the column exists).
+	ensureColumns(instance, 'chats', {
+		vault_id: `TEXT NOT NULL DEFAULT 'default'`,
+		included_paths_json: 'TEXT'
+	});
+	// Only safe now that vault_id is guaranteed to exist, regardless of
+	// whether `chats` was just created or already existed.
+	instance.exec(`CREATE INDEX IF NOT EXISTS idx_chats_vault_id ON chats(vault_id);`);
+}
+
 /** Separate from data/vaults/<id>/index.db on purpose — this is user
  * history, the index is regenerable vault content. `npm run index --full`
  * must never touch it. Stays a single global DB (not one per vault) with a
@@ -41,39 +95,7 @@ function getDb(): Database.Database {
 	// nothing would ever close it, and Windows refuses to rename/delete a
 	// file with an open handle (the exact EBUSY class Faz 8 hit).
 	try {
-		instance.pragma('journal_mode = WAL');
-		instance.exec(`
-			CREATE TABLE IF NOT EXISTS chats (
-				id TEXT PRIMARY KEY,
-				title TEXT,
-				model TEXT NOT NULL,
-				vault_id TEXT NOT NULL DEFAULT 'default',
-				included_paths_json TEXT,
-				created_at TEXT NOT NULL,
-				updated_at TEXT NOT NULL
-			);
-			CREATE TABLE IF NOT EXISTS messages (
-				id TEXT PRIMARY KEY,
-				chat_id TEXT NOT NULL REFERENCES chats(id) ON DELETE CASCADE,
-				role TEXT NOT NULL,
-				content TEXT NOT NULL,
-				thinking TEXT,
-				sources_json TEXT,
-				created_at TEXT NOT NULL
-			);
-			CREATE INDEX IF NOT EXISTS idx_messages_chat_id ON messages(chat_id);
-			CREATE INDEX IF NOT EXISTS idx_chats_vault_id ON chats(vault_id);
-		`);
-		// vault_id/included_paths_json didn't exist before Faz 8 — a DB created
-		// by an older build won't have them yet. scripts/migrate-vaults.mjs
-		// handles the real one-time backfill (vault_id='default' for existing
-		// rows); this ALTER only guards a pre-Faz-8 DB that reaches getDb()
-		// before migration has run, so CREATE TABLE's DEFAULT can't help
-		// (defaults only apply to rows inserted after the column exists).
-		ensureColumns(instance, 'chats', {
-			vault_id: `TEXT NOT NULL DEFAULT 'default'`,
-			included_paths_json: 'TEXT'
-		});
+		initChatsSchema(instance);
 	} catch (err) {
 		instance.close();
 		const message = err instanceof Error ? err.message : 'Bilinmeyen hata';

@@ -16,6 +16,9 @@ data/vaults/
 # only, never content — but still local-instance-specific, same
 # treatment as the DB files above).
 data/mcp-log.jsonl*
+# Faz 11 — app-level error log (chat/fallback/title/db errors, metadata
+# only, same treatment as mcp-log.jsonl above).
+data/app-log.jsonl*
 .env
 !.env.example
 
