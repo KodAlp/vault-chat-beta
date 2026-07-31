@@ -1,6 +1,6 @@
 import { OpenAICompatAdapter, type Timeouts } from './openai-compat';
 import type { ChatRequest, Chunk, ModelInfo } from './types';
-import { sharedJobMutex } from '../jobMutex';
+import { ollamaGate } from './ollama-gate';
 
 /** Conservative defaults for unknown models; known families get better
  * numbers so the settings UI (later) can show real context/capability
@@ -26,7 +26,6 @@ function modelInfoFor(name: string): ModelInfo {
  */
 export class OllamaAdapter extends OpenAICompatAdapter {
 	private nativeBaseUrl: string;
-	private currentModel: string | null = null;
 
 	constructor(id: string, nativeBaseUrl: string, timeouts: Timeouts) {
 		super({
@@ -45,11 +44,10 @@ export class OllamaAdapter extends OpenAICompatAdapter {
 		this.nativeBaseUrl = nativeBaseUrl.replace(/\/$/, '');
 	}
 
-	/** Ensures the swap discipline runs before every single chat, not just
-	 * when a caller remembers to call ensureModelLoaded() themselves. */
+	/** The gate's lease spans the whole stream, not just the swap moment
+	 * before it — see ollama-gate.ts's doc comment for why that matters. */
 	override async *chat(req: ChatRequest, signal: AbortSignal): AsyncGenerator<Chunk> {
-		await this.ensureModelLoaded(req.model);
-		yield* super.chat(req, signal);
+		yield* ollamaGate.withModelStream(req.model, () => super.chat(req, signal));
 	}
 
 	protected override extraBody(req: ChatRequest): Record<string, unknown> {
@@ -64,7 +62,11 @@ export class OllamaAdapter extends OpenAICompatAdapter {
 	}
 
 	/** Native /api/tags — richer than the generic /models list (sizes,
-	 * modified dates), mapped through the family table for ctx/caps. */
+	 * modified dates), mapped through the family table for ctx/caps. Timed
+	 * out like every other native call here — Ollama TCP-hung (not just
+	 * connection-refused) otherwise leaves the settings model picker
+	 * waiting forever, since openai-compat.ts's three-tier timeout only
+	 * covers the /v1 chat surface, not these native endpoints. */
 	async listModels(): Promise<ModelInfo[]> {
 		return (await this.listNativeModels()).map((m) => modelInfoFor(m.name));
 	}
@@ -73,7 +75,9 @@ export class OllamaAdapter extends OpenAICompatAdapter {
 	 * picker) that need size/modified_at — info the cross-provider ModelInfo
 	 * shape deliberately doesn't carry. */
 	async listNativeModels(): Promise<{ name: string; size: number; modified_at: string }[]> {
-		const res = await fetch(`${this.nativeBaseUrl}/api/tags`);
+		const res = await fetch(`${this.nativeBaseUrl}/api/tags`, {
+			signal: AbortSignal.timeout(this.config.timeouts.connectMs)
+		});
 		if (!res.ok) throw new Error(`Ollama /api/tags ${res.status}`);
 		const data = (await res.json()) as {
 			models?: { name: string; size: number; modified_at: string }[];
@@ -81,17 +85,11 @@ export class OllamaAdapter extends OpenAICompatAdapter {
 		return data.models ?? [];
 	}
 
-	async unload(model: string): Promise<void> {
-		await fetch(`${this.nativeBaseUrl}/api/chat`, {
-			method: 'POST',
-			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify({ model, messages: [], keep_alive: 0 })
-		}).catch(() => {
-			// best-effort — if Ollama's already down there's nothing to unload
-		});
-	}
-
 	async pull(model: string, onProgress?: (status: string) => void): Promise<void> {
+		// No fixed timeout here, unlike the other native calls below — a
+		// model download can legitimately run for minutes, and a flat
+		// connectMs signal covers the whole fetch lifetime, not just the
+		// initial connect, so it would abort a healthy multi-GB download.
 		const res = await fetch(`${this.nativeBaseUrl}/api/pull`, {
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
@@ -109,24 +107,16 @@ export class OllamaAdapter extends OpenAICompatAdapter {
 			buffer = lines.pop() ?? '';
 			for (const line of lines) {
 				if (!line.trim()) continue;
-				const { status } = JSON.parse(line) as { status?: string };
-				if (status) onProgress?.(status);
+				// One malformed/truncated line (Ollama occasionally interleaves
+				// a partial write) must not kill an otherwise-healthy download —
+				// skip it and keep reading, same as openai-compat.ts's SSE parser.
+				try {
+					const { status } = JSON.parse(line) as { status?: string };
+					if (status) onProgress?.(status);
+				} catch {
+					continue;
+				}
 			}
 		}
-	}
-
-	/**
-	 * 32 GB fits ONE large model — never let e.g. 8B and 30B-A3B coexist in
-	 * RAM. Swapping (and Faz 5's document conversion, via the same shared
-	 * mutex) always waits its turn rather than racing for RAM/CPU.
-	 */
-	async ensureModelLoaded(model: string): Promise<void> {
-		if (this.currentModel === model) return;
-		await sharedJobMutex.run(async () => {
-			if (this.currentModel && this.currentModel !== model) {
-				await this.unload(this.currentModel);
-			}
-			this.currentModel = model;
-		});
 	}
 }

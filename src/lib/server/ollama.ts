@@ -1,4 +1,5 @@
 import { ollamaUrl } from './env';
+import { ollamaGate } from './providers/ollama-gate';
 
 /**
  * Embeddings are explicitly out of scope for the provider layer
@@ -10,14 +11,21 @@ import { ollamaUrl } from './env';
  * Uses env.ts's process.env accessor, not $env/dynamic/private — this is
  * the one module on the MCP server's (mcp/) read path (via retrieve.ts),
  * which runs outside Vite and can't resolve $env. See the mcp-server skill.
+ *
+ * Routed through ollamaGate like every other Ollama RAM access — it used to
+ * bypass the single-large-model discipline entirely (Faz 11 audit finding).
+ * nomic-embed-text is declared resident there, so this never waits on or
+ * triggers a chat-model swap; it only keeps the gate's ledger honest.
  */
 export async function embed(texts: string[], model: string): Promise<number[][]> {
-	const res = await fetch(`${ollamaUrl()}/api/embed`, {
-		method: 'POST',
-		headers: { 'content-type': 'application/json' },
-		body: JSON.stringify({ model, input: texts })
+	return ollamaGate.withModel(model, async () => {
+		const res = await fetch(`${ollamaUrl()}/api/embed`, {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ model, input: texts })
+		});
+		if (!res.ok) throw new Error(`Ollama /api/embed ${res.status}`);
+		const data = (await res.json()) as { embeddings: number[][] };
+		return data.embeddings;
 	});
-	if (!res.ok) throw new Error(`Ollama /api/embed ${res.status}`);
-	const data = (await res.json()) as { embeddings: number[][] };
-	return data.embeddings;
 }
