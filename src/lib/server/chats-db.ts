@@ -1,7 +1,7 @@
 import Database from 'better-sqlite3';
 import path from 'node:path';
 import fs from 'node:fs';
-import { env } from '$env/dynamic/private';
+import { chatsDbPath } from './env';
 import { ensureColumns } from './sqlite-schema';
 import { logAppEvent } from './app-log';
 
@@ -34,7 +34,7 @@ let db: Database.Database | undefined;
  * vault-üstü bir "son konuşmalar" görünümü isteyebilir. */
 function getDb(): Database.Database {
 	if (db) return db;
-	const dbPath = env.CHATS_DB_PATH ?? path.join('data', 'chats.db');
+	const dbPath = chatsDbPath();
 	fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 	const instance = new Database(dbPath);
 	// A pragma/exec failure here must not leave an open handle uncached —

@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { env } from '$env/dynamic/private';
+import { secretsPath } from '../env';
 
 export interface SecretStore {
 	get(providerId: string): Promise<string | null>;
@@ -8,10 +8,6 @@ export interface SecretStore {
 	delete(providerId: string): Promise<void>;
 	/** Provider ids only, never values. */
 	list(): Promise<string[]>;
-}
-
-function secretsPath(): string {
-	return path.resolve(process.cwd(), env.SECRETS_PATH ?? path.join('data', 'secrets.json'));
 }
 
 function readAll(): Record<string, string> {

@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import matter from 'gray-matter';
 import { z } from 'zod';
-import { env } from '$env/dynamic/private';
+import { skillsDir } from './env';
 import type { UserSkillScope, UserSkillStatus } from '$lib/types';
 
 const SCOPES: UserSkillScope[] = ['chat', 'quiz', 'flashcards', 'mindmap', 'report', 'slides'];
@@ -27,10 +27,6 @@ const TRUNCATE_MARKER = '\n\n[kısaltıldı]';
 interface ParsedSkill extends UserSkillStatus {
 	absPath: string;
 	body: string;
-}
-
-function skillsDir(): string {
-	return env.SKILLS_DIR ?? path.join('data', 'skills');
 }
 
 const EXAMPLES: { file: string; description: string; body: string }[] = [
