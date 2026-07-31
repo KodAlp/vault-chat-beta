@@ -2,6 +2,8 @@ import Database from 'better-sqlite3';
 import path from 'node:path';
 import fs from 'node:fs';
 import { env } from '$env/dynamic/private';
+import { ensureColumns } from './sqlite-schema';
+import { logAppEvent } from './app-log';
 
 export interface ChatRow {
 	id: string;
@@ -31,12 +33,16 @@ let db: Database.Database | undefined;
  * vault_id column — see vault-registry skill for why: sohbetler ileride
  * vault-üstü bir "son konuşmalar" görünümü isteyebilir. */
 function getDb(): Database.Database {
-	if (!db) {
-		const dbPath = env.CHATS_DB_PATH ?? path.join('data', 'chats.db');
-		fs.mkdirSync(path.dirname(dbPath), { recursive: true });
-		db = new Database(dbPath);
-		db.pragma('journal_mode = WAL');
-		db.exec(`
+	if (db) return db;
+	const dbPath = env.CHATS_DB_PATH ?? path.join('data', 'chats.db');
+	fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+	const instance = new Database(dbPath);
+	// A pragma/exec failure here must not leave an open handle uncached —
+	// nothing would ever close it, and Windows refuses to rename/delete a
+	// file with an open handle (the exact EBUSY class Faz 8 hit).
+	try {
+		instance.pragma('journal_mode = WAL');
+		instance.exec(`
 			CREATE TABLE IF NOT EXISTS chats (
 				id TEXT PRIMARY KEY,
 				title TEXT,
@@ -64,15 +70,17 @@ function getDb(): Database.Database {
 		// rows); this ALTER only guards a pre-Faz-8 DB that reaches getDb()
 		// before migration has run, so CREATE TABLE's DEFAULT can't help
 		// (defaults only apply to rows inserted after the column exists).
-		const cols = db.prepare('PRAGMA table_info(chats)').all() as { name: string }[];
-		const colNames = new Set(cols.map((c) => c.name));
-		if (!colNames.has('vault_id')) {
-			db.exec(`ALTER TABLE chats ADD COLUMN vault_id TEXT NOT NULL DEFAULT 'default'`);
-		}
-		if (!colNames.has('included_paths_json')) {
-			db.exec(`ALTER TABLE chats ADD COLUMN included_paths_json TEXT`);
-		}
+		ensureColumns(instance, 'chats', {
+			vault_id: `TEXT NOT NULL DEFAULT 'default'`,
+			included_paths_json: 'TEXT'
+		});
+	} catch (err) {
+		instance.close();
+		const message = err instanceof Error ? err.message : 'Bilinmeyen hata';
+		logAppEvent({ kind: 'db_error', message: `chats.db init başarısız: ${message}` });
+		throw err;
 	}
+	db = instance;
 	return db;
 }
 

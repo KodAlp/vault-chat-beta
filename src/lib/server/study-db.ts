@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3';
 import type { CardSchedule } from './schedule';
 import type { VaultContext } from './vaults';
+import { logAppEvent } from './app-log';
 
 export interface QuizRow {
 	id: string;
@@ -47,12 +48,22 @@ const dbCache = new Map<string, Database.Database>();
  * user), not part of either conversation history or the regenerable index.
  * One connection per vault, cached for the process lifetime (mirrors the
  * old module-level singleton, keyed by vault id now). */
+/** No ALTER-guard block here yet, unlike chats-db.ts — because no column has
+ * been added to any of these tables since they first shipped. The moment one
+ * is (e.g. a future `cards.suspended` flag), add it to the `CREATE TABLE`
+ * below AND to an `ensureColumns(instance, table, {...})` call right after
+ * `instance.exec(...)`, same as chats-db.ts's `vault_id`/`included_paths_json`
+ * — otherwise every pre-existing study.db on disk fails with "no such column"
+ * the instant that code path runs. See sqlite-schema.ts's doc comment. */
 function getDb(v: VaultContext): Database.Database {
 	let db = dbCache.get(v.id);
-	if (!db) {
-		db = new Database(v.studyDbPath);
-		db.pragma('journal_mode = WAL');
-		db.exec(`
+	if (db) return db;
+	const instance = new Database(v.studyDbPath);
+	// A pragma/exec failure here must not leave an open handle uncached — see
+	// the identical fix (and its EBUSY rationale) in chats-db.ts's getDb().
+	try {
+		instance.pragma('journal_mode = WAL');
+		instance.exec(`
 			CREATE TABLE IF NOT EXISTS quizzes (
 				id TEXT PRIMARY KEY,
 				title TEXT NOT NULL,
@@ -163,9 +174,14 @@ function getDb(v: VaultContext): Database.Database {
 			);
 			CREATE INDEX IF NOT EXISTS idx_slides_deck_id ON slides(deck_id);
 		`);
-		dbCache.set(v.id, db);
+	} catch (err) {
+		instance.close();
+		const message = err instanceof Error ? err.message : 'Bilinmeyen hata';
+		logAppEvent({ kind: 'db_error', message: `study.db init başarısız (${v.id}): ${message}` });
+		throw err;
 	}
-	return db;
+	dbCache.set(v.id, instance);
+	return instance;
 }
 
 /** Must be called before deleting a vault's files — Windows refuses to

@@ -6,6 +6,7 @@ import { EMBED_MODEL, QUERY_PREFIX } from './embed-config';
 import { selectChunks, type CandidateChunk } from './select-chunks';
 import type { RetrieveResult } from '$lib/types';
 import type { VaultContext } from './vaults';
+import { logAppEvent } from './app-log';
 
 const DEFAULT_K = 8;
 const OVERFETCH_FACTOR = 3;
@@ -30,10 +31,19 @@ function getDb(v: VaultContext): Database.Database | null {
 	let db = dbCache.get(v.id);
 	if (db) return db;
 	if (!existsSync(v.indexDbPath)) return null;
-	db = new Database(v.indexDbPath, { readonly: true, fileMustExist: true });
-	sqliteVec.load(db);
-	dbCache.set(v.id, db);
-	return db;
+	const instance = new Database(v.indexDbPath, { readonly: true, fileMustExist: true });
+	// sqliteVec.load() failing must not leave an open handle uncached — same
+	// EBUSY-class fix as chats-db.ts/study-db.ts's getDb().
+	try {
+		sqliteVec.load(instance);
+	} catch (err) {
+		instance.close();
+		const message = err instanceof Error ? err.message : 'Bilinmeyen hata';
+		logAppEvent({ kind: 'db_error', message: `index.db init başarısız (${v.id}): ${message}` });
+		throw err;
+	}
+	dbCache.set(v.id, instance);
+	return instance;
 }
 
 /** Must be called before deleting a vault's files — Windows refuses to
