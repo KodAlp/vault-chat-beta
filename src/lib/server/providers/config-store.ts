@@ -1,6 +1,5 @@
 import fs from 'node:fs';
-import path from 'node:path';
-import { env } from '$env/dynamic/private';
+import { providersPath } from '../env';
 
 export interface ProviderConfigEntry {
 	id: string;
@@ -17,16 +16,12 @@ export interface ProvidersFile {
 	chains: Record<string, string[]>;
 }
 
-function providersJsonPath(): string {
-	return path.resolve(process.cwd(), env.PROVIDERS_PATH ?? path.join('data', 'providers.json'));
-}
-
 function readFile(): ProvidersFile {
-	return JSON.parse(fs.readFileSync(providersJsonPath(), 'utf-8')) as ProvidersFile;
+	return JSON.parse(fs.readFileSync(providersPath(), 'utf-8')) as ProvidersFile;
 }
 
 function writeFile(data: ProvidersFile): void {
-	fs.writeFileSync(providersJsonPath(), JSON.stringify(data, null, 2) + '\n', 'utf-8');
+	fs.writeFileSync(providersPath(), JSON.stringify(data, null, 2) + '\n', 'utf-8');
 }
 
 /** Settings-UI writers for data/providers.json — separate from registry.ts's

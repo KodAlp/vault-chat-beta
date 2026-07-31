@@ -1,16 +1,12 @@
 import fs from 'node:fs';
-import path from 'node:path';
 import { env } from '$env/dynamic/private';
+import { providersPath } from '../env';
 import { OllamaAdapter } from './ollama';
 import { OpenAICompatAdapter } from './openai-compat';
 import { secretStore } from './secrets';
 import { readProvidersFile, type ProviderConfigEntry, type ProvidersFile } from './config-store';
 import { ProviderError, type ChatRequest, type Chunk, type ProviderAdapter } from './types';
 import { logAppEvent } from '../app-log';
-
-function providersJsonPath(): string {
-	return path.resolve(process.cwd(), env.PROVIDERS_PATH ?? path.join('data', 'providers.json'));
-}
 
 let cachedMtime = -1;
 let cachedConfig: ProvidersFile | null = null;
@@ -21,7 +17,7 @@ let adapters = new Map<string, ProviderAdapter>();
  * changes (e.g. a key was just added via the settings UI, see
  * config-store.ts's writers). */
 function loadConfig(): ProvidersFile {
-	const p = providersJsonPath();
+	const p = providersPath();
 	const stat = fs.statSync(p);
 	if (cachedConfig && stat.mtimeMs === cachedMtime) return cachedConfig;
 	cachedConfig = readProvidersFile();
