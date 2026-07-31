@@ -26,7 +26,7 @@ export const POST: RequestHandler = async ({ request }) => {
 						prompt: body.prompt,
 						model: body.model
 					},
-					(stage) => send({ type: 'progress', stage })
+					(stage, elapsedMs) => send({ type: 'progress', stage, elapsedMs })
 				);
 				send({ type: 'done', mindmapId });
 			} catch (err) {

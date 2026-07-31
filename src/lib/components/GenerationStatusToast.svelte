@@ -17,7 +17,11 @@
 		onView,
 		onDismiss
 	}: {
-		status: { phase: 'idle' } | { phase: 'generating'; stage: string } | { phase: 'done' } | { phase: 'error'; message: string };
+		status:
+			| { phase: 'idle' }
+			| { phase: 'generating'; stage: string; elapsedMs?: number }
+			| { phase: 'done' }
+			| { phase: 'error'; message: string };
 		stageLabels: Record<string, string>;
 		doneMessage: string;
 		errorPrefix: string;
@@ -38,7 +42,7 @@
 			class="inline-block size-3.5 shrink-0 animate-spin rounded-full border-2 border-border border-t-primary"
 			aria-hidden="true"
 		></span>
-		<span>{stageLabels[status.stage] ?? 'İşleniyor...'}</span>
+		<span>{stageLabels[status.stage] ?? 'İşleniyor...'}{status.elapsedMs ? ` · ${Math.round(status.elapsedMs / 1000)}sn` : ''}</span>
 	</div>
 {:else if status.phase === 'done'}
 	<button

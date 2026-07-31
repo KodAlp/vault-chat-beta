@@ -2,7 +2,7 @@ import type { MindMapGenerationEvent, MindMapGenerationRequest } from './types';
 
 export type MindMapGenerationStatus =
 	| { phase: 'idle' }
-	| { phase: 'generating'; stage: string }
+	| { phase: 'generating'; stage: string; elapsedMs?: number }
 	| { phase: 'done'; mindmapId: string }
 	| { phase: 'error'; message: string };
 
@@ -35,7 +35,7 @@ export async function startMindMapGeneration(body: MindMapGenerationRequest): Pr
 				if (!line.startsWith('data:')) continue;
 				const event = JSON.parse(line.slice(5)) as MindMapGenerationEvent;
 				if (event.type === 'progress') {
-					mindmapGeneration.status = { phase: 'generating', stage: event.stage };
+					mindmapGeneration.status = { phase: 'generating', stage: event.stage, elapsedMs: event.elapsedMs };
 				} else if (event.type === 'done') {
 					mindmapGeneration.status = { phase: 'done', mindmapId: event.mindmapId };
 				} else if (event.type === 'error') {

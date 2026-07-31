@@ -211,9 +211,13 @@ export interface MindMapGenerationRequest {
 	vault?: string;
 }
 
-/** SSE event shapes streamed by POST /api/generate/mindmap. */
+/** SSE event shapes streamed by POST /api/generate/mindmap. `elapsedMs` is
+ * a heartbeat — fired every ~10s during the model call so a slow-but-
+ * healthy generation doesn't read as hung on a static "generating" state;
+ * see generate-mindmap.ts's callModel(). Absent on stage transitions that
+ * don't wrap a model call (retrieving/validating). */
 export type MindMapGenerationEvent =
-	| { type: 'progress'; stage: 'retrieving' | 'generating' | 'validating' | 'retrying' }
+	| { type: 'progress'; stage: 'retrieving' | 'generating' | 'validating' | 'retrying'; elapsedMs?: number }
 	| { type: 'done'; mindmapId: string }
 	| { type: 'error'; message: string };
 
