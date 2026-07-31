@@ -119,6 +119,19 @@ export function listDomains(v: VaultContext): string[] {
 	return rows.map((r) => r.domain);
 }
 
+/** Levels actually present in the index — same reasoning as listDomains():
+ * mirrors reality instead of a hardcoded undergrad/grad/phd list, which
+ * would silently misrepresent a vault using different terminology. Used
+ * by Faz 10's list_vaults MCP tool. */
+export function listLevels(v: VaultContext): string[] {
+	const database = getDb(v);
+	if (!database) return [];
+	const rows = database.prepare(`SELECT DISTINCT depth FROM files ORDER BY depth`).all() as {
+		depth: string;
+	}[];
+	return rows.map((r) => r.depth);
+}
+
 export interface SourceSummary {
 	path: string;
 	title: string;

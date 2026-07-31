@@ -12,6 +12,10 @@ data/secrets.json
 # above (personal library content, regenerable indexes, local-only DBs).
 data/vaults.json
 data/vaults/
+# Faz 10 — MCP server call log (tool name + param summary + duration
+# only, never content — but still local-instance-specific, same
+# treatment as the DB files above).
+data/mcp-log.jsonl*
 .env
 !.env.example
 

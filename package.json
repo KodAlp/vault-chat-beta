@@ -15,6 +15,9 @@
 		"vault:migrate": "node scripts/migrate-vaults.mjs",
 		"test": "tsx --test src/lib/server/schedule.test.ts src/lib/server/providers/normalize.test.ts src/lib/mindmap-tree.test.ts src/lib/server/vaults.test.ts src/lib/server/select-chunks.test.ts src/lib/sourceTree.test.ts src/lib/server/library-read.test.ts",
 		"stage:server": "node scripts/stage-server.mjs",
+		"mcp": "tsx mcp/server.ts",
+		"mcp:smoke": "tsx mcp/smoke.ts",
+		"mcp:config": "node mcp/launch.mjs --print-config",
 		"tauri": "tauri",
 		"desktop:dev": "tauri dev",
 		"desktop:build": "tauri build"
@@ -44,6 +47,7 @@
 		"zod": "^4.4.3"
 	},
 	"devDependencies": {
+		"@modelcontextprotocol/sdk": "~1.30.0",
 		"@sveltejs/adapter-node": "^5.2.12",
 		"@sveltejs/kit": "^2.17.2",
 		"@sveltejs/vite-plugin-svelte": "^5.0.3",
