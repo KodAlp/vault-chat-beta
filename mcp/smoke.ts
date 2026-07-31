@@ -11,10 +11,17 @@ import { createServer } from './create-server';
  * Client against a real McpServer, in one process, no stdio involved
  * (InMemoryTransport.createLinkedPair()). Run via `npm run mcp:smoke`.
  *
+ * Deliberately Ollama-independent (like npm test) — search_library's
+ * embed() call is never exercised for real here, only its
+ * VAULT_NOT_FOUND path, which throws before retrieve() ever calls
+ * embed(). Real search_library results against a real indexed vault are
+ * covered by a separate live-Ollama pass, not this fast/repeatable one.
+ *
  * Never touches the real vault — seeds an isolated scratch DATA_DIR with
- * a single hand-written vault entry (no index.db needed: list_vaults'
- * summary queries all degrade to zero/[] for an unindexed vault, per
- * retrieve.ts's getDb() null-return contract).
+ * a hand-written vault entry and one real note (no index.db: list_vaults/
+ * list_sources' summary queries all degrade to zero/[] for an unindexed
+ * vault, per retrieve.ts's getDb() null-return contract — get_note works
+ * regardless of indexing, since it reads the filesystem directly).
  */
 const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'vault-chat-mcp-smoke-'));
 process.env.DATA_DIR = scratch;
@@ -27,6 +34,12 @@ fs.writeFileSync(
 		activeVaultId: 'default'
 	})
 );
+const libraryRoot = path.join(scratch, 'vaults', 'default', 'library');
+fs.mkdirSync(libraryRoot, { recursive: true });
+fs.writeFileSync(
+	path.join(libraryRoot, 'note.md'),
+	'---\ntitle: Test Notu\ndomain: test\nlevel: undergrad\n---\n\n# Test\n\nİçerik.'
+);
 
 try {
 	const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
@@ -37,31 +50,93 @@ try {
 	await client.connect(clientTransport);
 
 	const { tools } = await client.listTools();
-	assert.equal(tools.length, 1, `expected 1 registered tool, got ${tools.length}`);
-	assert.equal(tools[0].name, 'list_vaults');
-	assert.equal(tools[0].annotations?.readOnlyHint, true, 'list_vaults must be marked readOnlyHint');
-	assert.equal(tools[0].annotations?.destructiveHint, false);
-	console.log('ok - tools/list returns list_vaults with readOnlyHint');
+	assert.equal(tools.length, 4, `expected 4 registered tools, got ${tools.length}`);
+	const names = tools.map((t) => t.name).sort();
+	assert.deepEqual(names, ['get_note', 'list_sources', 'list_vaults', 'search_library']);
+	for (const t of tools) {
+		assert.equal(t.annotations?.readOnlyHint, true, `${t.name} must be marked readOnlyHint`);
+		assert.equal(t.annotations?.destructiveHint, false, `${t.name} must be marked destructiveHint:false`);
+	}
+	console.log('ok - tools/list returns all 4 tools, all readOnlyHint');
 
-	const result = await client.callTool({ name: 'list_vaults', arguments: {} });
-	assert.equal(result.isError, undefined, 'list_vaults should not return an error');
-	const content = result.content as { type: string; text: string }[];
-	const parsed = JSON.parse(content[0].text) as {
-		vaults: { id: string; active: boolean; indexed: boolean; noteCount: number }[];
-	};
-	assert.equal(parsed.vaults.length, 1);
-	assert.equal(parsed.vaults[0].id, 'default');
-	assert.equal(parsed.vaults[0].active, true, 'the only vault falls back to active via getActiveVaultId()');
-	assert.equal(parsed.vaults[0].indexed, false, 'never-indexed vault must not throw or report indexed:true');
-	assert.equal(parsed.vaults[0].noteCount, 0);
-	console.log('ok - list_vaults returns the seeded vault, correctly reporting it as unindexed');
+	// list_vaults
+	{
+		const result = await client.callTool({ name: 'list_vaults', arguments: {} });
+		assert.equal(result.isError, undefined, 'list_vaults should not return an error');
+		const content = result.content as { type: string; text: string }[];
+		const parsed = JSON.parse(content[0].text) as {
+			vaults: { id: string; active: boolean; indexed: boolean; noteCount: number }[];
+		};
+		assert.equal(parsed.vaults.length, 1);
+		assert.equal(parsed.vaults[0].active, true, 'the only vault falls back to active via getActiveVaultId()');
+		assert.equal(parsed.vaults[0].indexed, false, 'never-indexed vault must not throw or report indexed:true');
+		console.log('ok - list_vaults returns the seeded vault, correctly reporting it as unindexed');
+	}
+
+	// get_note — happy path
+	{
+		const result = await client.callTool({ name: 'get_note', arguments: { path: 'note.md' } });
+		assert.equal(result.isError, undefined, 'get_note should not error for a real file');
+		const content = result.content as { type: string; text: string }[];
+		const parsed = JSON.parse(content[0].text) as { frontmatter: { title: string }; content: string };
+		assert.equal(parsed.frontmatter.title, 'Test Notu');
+		assert.ok(parsed.content.includes('İçerik'), 'body should contain the note text, frontmatter stripped');
+		console.log('ok - get_note returns parsed frontmatter + body for a real file');
+	}
+
+	// get_note — traversal rejection
+	{
+		const result = await client.callTool({ name: 'get_note', arguments: { path: '../../../../etc/passwd' } });
+		assert.equal(result.isError, true, 'a traversal attempt must return isError, not throw or succeed');
+		const text = (result.content as { type: string; text: string }[])[0].text;
+		assert.ok(text.startsWith('PATH_OUTSIDE_LIBRARY:'), `expected PATH_OUTSIDE_LIBRARY, got: ${text}`);
+		console.log('ok - get_note rejects a traversal attempt with PATH_OUTSIDE_LIBRARY');
+	}
+
+	// get_note — missing file
+	{
+		const result = await client.callTool({ name: 'get_note', arguments: { path: 'does-not-exist.md' } });
+		assert.equal(result.isError, true);
+		const text = (result.content as { type: string; text: string }[])[0].text;
+		assert.ok(text.startsWith('NOTE_NOT_FOUND:'), `expected NOTE_NOT_FOUND, got: ${text}`);
+		console.log('ok - get_note reports NOTE_NOT_FOUND for a missing file, not a raw ENOENT');
+	}
+
+	// list_sources — unindexed vault degrades to empty, not an error
+	{
+		const result = await client.callTool({ name: 'list_sources', arguments: {} });
+		assert.equal(result.isError, undefined);
+		const parsed = JSON.parse((result.content as { type: string; text: string }[])[0].text) as {
+			total: number;
+			sources: unknown[];
+		};
+		assert.equal(parsed.total, 0);
+		assert.deepEqual(parsed.sources, []);
+		console.log('ok - list_sources degrades to empty for an unindexed vault, no error');
+	}
+
+	// unknown vault — every vault-scoped tool must report VAULT_NOT_FOUND, never throw
+	for (const name of ['search_library', 'get_note', 'list_sources']) {
+		const args = name === 'search_library' ? { vault: 'nope', query: 'x' } : name === 'get_note' ? { vault: 'nope', path: 'x.md' } : { vault: 'nope' };
+		const result = await client.callTool({ name, arguments: args });
+		assert.equal(result.isError, true, `${name} with an unknown vault must return isError`);
+		const text = (result.content as { type: string; text: string }[])[0].text;
+		assert.ok(text.startsWith('VAULT_NOT_FOUND:'), `${name}: expected VAULT_NOT_FOUND, got: ${text}`);
+	}
+	console.log('ok - every vault-scoped tool reports VAULT_NOT_FOUND for an unknown vault id (never throws)');
 
 	const logPath = path.join(scratch, 'mcp-log.jsonl');
-	assert.ok(fs.existsSync(logPath), 'mcp-log.jsonl should exist after a tool call');
-	const logLine = JSON.parse(fs.readFileSync(logPath, 'utf-8').trim().split('\n')[0]) as { tool: string; ok: boolean };
-	assert.equal(logLine.tool, 'list_vaults');
-	assert.equal(logLine.ok, true);
-	console.log('ok - mcp-log.jsonl recorded the call');
+	assert.ok(fs.existsSync(logPath), 'mcp-log.jsonl should exist after these calls');
+	const logLines = fs
+		.readFileSync(logPath, 'utf-8')
+		.trim()
+		.split('\n')
+		.map((l) => JSON.parse(l) as { tool: string; params: Record<string, unknown> });
+	assert.ok(logLines.length >= 7, `expected at least 7 log lines, got ${logLines.length}`);
+	const searchLine = logLines.find((l) => l.tool === 'search_library');
+	assert.ok(searchLine, 'search_library call should be logged even though it never reached embed()');
+	assert.ok(!('query' in searchLine.params), 'the raw query string must never be logged, only queryChars');
+	console.log('ok - mcp-log.jsonl recorded every call, and never logs a raw query string');
 
 	console.log('smoke test passed');
 } finally {
