@@ -1,6 +1,4 @@
-import { env } from '$env/dynamic/private';
-
-const OLLAMA_URL = env.OLLAMA_URL ?? 'http://localhost:11434';
+import { ollamaUrl } from './env';
 
 /**
  * Embeddings are explicitly out of scope for the provider layer
@@ -8,9 +6,13 @@ const OLLAMA_URL = env.OLLAMA_URL ?? 'http://localhost:11434';
  * configuration (sqlite-vec metadata), not a chat-completion concern. This
  * is the only thing left in this file; chat/model-listing moved to
  * providers/ollama.ts.
+ *
+ * Uses env.ts's process.env accessor, not $env/dynamic/private — this is
+ * the one module on the MCP server's (mcp/) read path (via retrieve.ts),
+ * which runs outside Vite and can't resolve $env. See the mcp-server skill.
  */
 export async function embed(texts: string[], model: string): Promise<number[][]> {
-	const res = await fetch(`${OLLAMA_URL}/api/embed`, {
+	const res = await fetch(`${ollamaUrl()}/api/embed`, {
 		method: 'POST',
 		headers: { 'content-type': 'application/json' },
 		body: JSON.stringify({ model, input: texts })
