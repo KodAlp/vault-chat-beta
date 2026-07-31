@@ -1,75 +1,32 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import matter from 'gray-matter';
 import { removeLibraryFileFromIndex, renameLibraryFileInIndex } from './incrementalIndex';
 import { foldToSlug } from './slug';
-import type { LibraryNode, LibrarySettings } from '$lib/types';
+import { resolveLibraryPath } from './library-read';
+import type { LibrarySettings } from '$lib/types';
 import type { VaultContext } from './vaults';
 
 const META_DIR = '_meta';
 const DEFAULT_SETTINGS: LibrarySettings = { keepOriginals: false };
+
+// Read-only tree/file-read functions moved to library-read.ts (a leaf
+// module with no incrementalIndex/./ollama dependency — see its own doc
+// comment and the mcp-server skill for why). Re-exported here so every
+// existing call site (`$lib/server/library`) keeps working unchanged.
+export { resolveLibraryPath, getLibraryTree, readLibraryFile } from './library-read';
 
 /**
  * Ensures the vault's library root exists and returns it. The vault is
  * created with this folder already present (vaults.ts createVault()), but
  * every write path here re-asserts it defensively — matches the original
  * single-vault libraryRoot()'s mkdirSync-on-every-call behavior.
+ *
+ * Writer-side only — library-read.ts's resolveLibraryPath() deliberately
+ * does NOT call this (no mkdirSync from a read path).
  */
 export function libraryRoot(v: VaultContext): string {
 	fs.mkdirSync(v.libraryRoot, { recursive: true });
 	return v.libraryRoot;
-}
-
-/**
- * Security requirement from the source-ingest skill doc: every fs operation
- * on a user-supplied relative path resolves against the library root and
- * verifies the result is still inside it, before touching disk.
- */
-export function resolveLibraryPath(v: VaultContext, relPath: string): string {
-	const root = libraryRoot(v);
-	const resolved = path.resolve(root, relPath);
-	const withSep = root.endsWith(path.sep) ? root : root + path.sep;
-	if (resolved !== root && !resolved.startsWith(withSep)) {
-		throw new Error('Geçersiz yol (library dışına çıkıyor)');
-	}
-	return resolved;
-}
-
-function readNeedsReview(absPath: string): boolean {
-	try {
-		const raw = fs.readFileSync(absPath, 'utf-8');
-		return matter(raw).data.needs_review === true;
-	} catch {
-		return false;
-	}
-}
-
-function walkTree(absDir: string, relDir: string): LibraryNode[] {
-	const entries = fs
-		.readdirSync(absDir, { withFileTypes: true })
-		.filter((e) => !e.name.startsWith('.') && e.name !== META_DIR)
-		.sort((a, b) => a.name.localeCompare(b.name));
-
-	const nodes: LibraryNode[] = [];
-	for (const entry of entries) {
-		const rel = relDir ? `${relDir}/${entry.name}` : entry.name;
-		const abs = path.join(absDir, entry.name);
-		if (entry.isDirectory()) {
-			nodes.push({ name: entry.name, path: rel, type: 'folder', children: walkTree(abs, rel) });
-		} else if (entry.isFile() && entry.name.endsWith('.md')) {
-			nodes.push({
-				name: entry.name,
-				path: rel,
-				type: 'file',
-				needsReview: readNeedsReview(abs)
-			});
-		}
-	}
-	return nodes;
-}
-
-export function getLibraryTree(v: VaultContext): LibraryNode[] {
-	return walkTree(libraryRoot(v), '');
 }
 
 /** Files only — renaming a folder would require cascading the index update
@@ -110,10 +67,6 @@ export function deleteLibraryEntry(v: VaultContext, rel: string): void {
 		fs.unlinkSync(abs);
 		removeLibraryFileFromIndex(v, rel);
 	}
-}
-
-export function readLibraryFile(v: VaultContext, rel: string): string {
-	return fs.readFileSync(resolveLibraryPath(v, rel), 'utf-8');
 }
 
 export function importLogPath(v: VaultContext): string {
