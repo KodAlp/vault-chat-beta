@@ -1,3 +1,4 @@
+import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { retrieve } from '$lib/server/retrieve';
 import { buildPromptMessages } from '$lib/server/prompt';
@@ -7,6 +8,7 @@ import { ProviderError } from '$lib/server/providers/types';
 import { createChat, getChat, insertMessage, touchChat } from '$lib/server/chats-db';
 import { generateTitle } from '$lib/server/title';
 import { vaultFromId } from '$lib/server/requestVault';
+import { logAppEvent } from '$lib/server/app-log';
 import type { ChatRequestBody, RetrievedChunk, StreamEvent } from '$lib/types';
 
 function sseEvent(event: StreamEvent): string {
@@ -23,9 +25,21 @@ function chatErrorMessage(err: unknown): string {
 }
 
 export const POST: RequestHandler = async ({ request }) => {
-	const body = (await request.json()) as ChatRequestBody;
+	let body: ChatRequestBody;
+	try {
+		body = (await request.json()) as ChatRequestBody;
+	} catch {
+		error(400, 'Geçersiz istek gövdesi');
+	}
 	const v = vaultFromId(body.vault);
 	const lastUser = body.messages[body.messages.length - 1];
+	// The client sends the whole transcript on every turn — trust the shape,
+	// not who claims to be the last speaker. Anything else is either a client
+	// bug or a forged request, and either way must not silently get logged
+	// under the wrong role.
+	if (lastUser && lastUser.role !== 'user') {
+		error(400, 'Son mesaj kullanıcıdan gelmeli');
+	}
 
 	const stream = new ReadableStream({
 		async start(controller) {
@@ -43,27 +57,37 @@ export const POST: RequestHandler = async ({ request }) => {
 			// Client generates the id (welcome screen navigates to /chat/{id} before
 			// the first message is even sent) — this route just upserts it.
 			const chatId = body.chatId ?? crypto.randomUUID();
-			const isNewChat = !getChat(chatId);
-			if (isNewChat) createChat(chatId, body.model, v.id);
-			send({ type: 'chatId', chatId });
-			if (lastUser) insertMessage({ chatId, role: 'user', content: lastUser.content });
-
+			let isNewChat = false;
 			let sources: RetrievedChunk[] = [];
 			let narrowScope = false;
 			let finalContent = '';
 			let finalThinking = '';
-
-			// Server-side single-flight, independent of this one connection's own
-			// abort — a second message for the same chat (a race, a second tab)
-			// aborts this flight even if the original client connection never
-			// sends its own abort. Merged with the client's own request.signal so
-			// either cause stops generation identically.
-			const flight = startFlight(chatId);
-			const onClientAbort = () => flight.abort();
-			if (request.signal.aborted) flight.abort();
-			else request.signal.addEventListener('abort', onClientAbort);
+			// Only non-null once startFlight() has actually run — endFlight()
+			// in the finally block must not fire for a flight that was never
+			// registered (e.g. the DB calls above it threw first).
+			let flight: AbortController | null = null;
+			let onClientAbort: (() => void) | null = null;
 
 			try {
+				// DB calls live inside this try on purpose — a poisoned chats.db
+				// (the exact failure that motivated this rewrite) must surface as
+				// a `send({type:'error'})` to the client and an app-log record,
+				// not a stream that dies with no explanation.
+				isNewChat = !getChat(chatId);
+				if (isNewChat) createChat(chatId, body.model, v.id);
+				send({ type: 'chatId', chatId });
+				if (lastUser) insertMessage({ chatId, role: 'user', content: lastUser.content });
+
+				// Server-side single-flight, independent of this one connection's own
+				// abort — a second message for the same chat (a race, a second tab)
+				// aborts this flight even if the original client connection never
+				// sends its own abort. Merged with the client's own request.signal so
+				// either cause stops generation identically.
+				flight = startFlight(chatId);
+				onClientAbort = () => flight!.abort();
+				if (request.signal.aborted) flight.abort();
+				else request.signal.addEventListener('abort', onClientAbort);
+
 				if (lastUser) {
 					const result = await retrieve(v, lastUser.content, {
 						domains: body.domains,
@@ -87,6 +111,7 @@ export const POST: RequestHandler = async ({ request }) => {
 						send({ type: 'delta', content: event.text });
 					} else if (event.type === 'notice') {
 						send({ type: 'notice', message: event.message });
+						logAppEvent({ kind: 'fallback', chatId, message: event.message });
 					}
 				}
 				send({ type: 'done', sources, narrowScope });
@@ -94,23 +119,38 @@ export const POST: RequestHandler = async ({ request }) => {
 				// User-initiated stop (interrupt button / navigation) — propagates from
 				// the aborted Ollama fetch. Not a real error; say nothing.
 				if (!(err instanceof DOMException && err.name === 'AbortError')) {
-					send({ type: 'error', message: chatErrorMessage(err) });
+					const message = chatErrorMessage(err);
+					send({ type: 'error', message });
+					logAppEvent({ kind: 'chat_error', chatId, message });
 				}
 			} finally {
-				request.signal.removeEventListener('abort', onClientAbort);
-				endFlight(chatId, flight);
+				if (onClientAbort) request.signal.removeEventListener('abort', onClientAbort);
+				if (flight) endFlight(chatId, flight);
 
-				// Persist whatever the assistant produced, even if stopped partway
-				// through — matches what stays visible on screen (see "Durduruldu").
-				insertMessage({
-					chatId,
-					role: 'assistant',
-					content: finalContent,
-					thinking: finalThinking || null,
-					sourcesJson: sources.length ? JSON.stringify(sources) : null
-				});
-				touchChat(chatId);
-				if (isNewChat && lastUser) void generateTitle(chatId, lastUser.content, body.titleModel);
+				// Own try/catch so a persist failure can't skip controller.close()
+				// below (the bug that left streams hanging open on a DB error).
+				try {
+					// Only persist an assistant row if something was actually
+					// produced — an early retrieval/provider failure must not
+					// leave a permanent empty assistant message in chats.db.
+					if (finalContent || finalThinking) {
+						insertMessage({
+							chatId,
+							role: 'assistant',
+							content: finalContent,
+							thinking: finalThinking || null,
+							sourcesJson: sources.length ? JSON.stringify(sources) : null
+						});
+					}
+					touchChat(chatId);
+					if (isNewChat && lastUser) {
+						void generateTitle(chatId, lastUser.content, body.titleModel ?? body.model);
+					}
+				} catch (err) {
+					const message = err instanceof Error ? err.message : 'Bilinmeyen hata';
+					logAppEvent({ kind: 'db_error', chatId, message });
+					send({ type: 'error', message: `Sohbet kaydedilemedi: ${message}` });
+				}
 
 				closed = true;
 				try {
