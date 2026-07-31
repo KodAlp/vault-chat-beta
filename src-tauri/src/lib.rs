@@ -219,6 +219,25 @@ async fn spawn_sidecar(app: &AppHandle, cfg: &VaultConfig) -> Result<String, Str
     let skills_dir = app_data_dir.join("skills");
     let port = get_free_port()?;
 
+    // providers.json must live in app_data_dir (writable by a standard
+    // user), not the resource dir (server_dir/data) — that one sits under
+    // Program Files on a per-machine install, and config-store.ts's
+    // settings-UI writers (toggling a provider, saving an API key) hit
+    // EPERM there. Seed it from the bundled default on first launch only —
+    // every later launch's edits must survive untouched, not get
+    // overwritten by the bundle's copy.
+    let providers_path = app_data_dir.join("providers.json");
+    if !providers_path.exists() {
+        let bundled_providers = server_dir.join("data").join("providers.json");
+        if let Err(e) = std::fs::copy(&bundled_providers, &providers_path) {
+            // Best-effort: config-store.ts's own readFileSync will surface a
+            // clear error to the settings UI if this seed never lands and
+            // the file genuinely doesn't exist — better than failing the
+            // whole spawn over a missing default.
+            log_line(app, &format!("providers.json seed failed (non-fatal): {e}"));
+        }
+    }
+
     // DATA_DIR replaces the old LIBRARY_PATH/INDEX_DB_PATH/STUDY_DB_PATH trio
     // (Faz 8) — vaults.ts derives every vault's paths from DATA_DIR/vaults/<id>/
     // itself now, migrating automatically on first launch after the upgrade
@@ -238,7 +257,7 @@ async fn spawn_sidecar(app: &AppHandle, cfg: &VaultConfig) -> Result<String, Str
         .env("OLLAMA_URL", "http://localhost:11434")
         .env("CHATS_DB_PATH", app_data_dir.join("chats.db"))
         .env("SECRETS_PATH", app_data_dir.join("secrets.json"))
-        .env("PROVIDERS_PATH", server_dir.join("data").join("providers.json"))
+        .env("PROVIDERS_PATH", &providers_path)
         .env("SKILLS_DIR", &skills_dir)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
