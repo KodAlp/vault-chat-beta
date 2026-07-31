@@ -88,3 +88,29 @@ test('with no includedPaths, out-of-domain results never set narrowScope', () =>
 	assert.deepEqual(result.chunks, []);
 	assert.equal(result.narrowScope, false);
 });
+
+test('filters by level when levels is provided', () => {
+	const undergrad = candidate({ path: 'a.md', depth: 'undergrad' });
+	const grad = candidate({ path: 'b.md', depth: 'grad' });
+	const result = selectChunks([undergrad, grad], { levels: ['grad'] });
+	assert.equal(result.chunks.length, 1);
+	assert.equal(result.chunks[0].path, 'b.md');
+});
+
+test('level filter is case-insensitive (frontmatter is hand-written, not an enum)', () => {
+	const candidates = [candidate({ path: 'a.md', depth: 'Undergrad' })];
+	const result = selectChunks(candidates, { levels: ['UNDERGRAD'] });
+	assert.equal(result.chunks.length, 1);
+});
+
+test('a level with no matches drops every candidate', () => {
+	const candidates = [candidate({ depth: 'undergrad' })];
+	const result = selectChunks(candidates, { levels: ['phd'] });
+	assert.deepEqual(result.chunks, []);
+});
+
+test('levels omitted means every level passes', () => {
+	const candidates = [candidate({ depth: 'undergrad' }), candidate({ path: 'b.md', depth: 'phd' })];
+	const result = selectChunks(candidates);
+	assert.equal(result.chunks.length, 2);
+});

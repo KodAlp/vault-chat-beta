@@ -66,7 +66,7 @@ interface ChunkRow {
 export async function retrieve(
 	v: VaultContext,
 	query: string,
-	opts: { domains?: string[]; includedPaths?: string[]; k?: number } = {}
+	opts: { domains?: string[]; levels?: string[]; includedPaths?: string[]; k?: number } = {}
 ): Promise<RetrieveResult> {
 	const database = getDb(v);
 	if (!database) return { chunks: [], narrowScope: false };
@@ -117,4 +117,78 @@ export function listDomains(v: VaultContext): string[] {
 		.prepare(`SELECT DISTINCT d.value AS domain FROM files, json_each(files.domains_json) AS d ORDER BY d.value`)
 		.all() as { domain: string }[];
 	return rows.map((r) => r.domain);
+}
+
+export interface SourceSummary {
+	path: string;
+	title: string;
+	level: string;
+	domains: string[];
+	chunks: number;
+}
+
+/** Faz 10's list_sources MCP tool — deliberately reads the index DB, not
+ * getLibraryTree()'s fs walk: one query gives title/level/domains/chunk
+ * count for every file with zero per-file readFileSync+gray-matter, and
+ * the semantics are honest about what an agent can actually retrieve
+ * (an unindexed or frontmatter-less file simply won't appear). Lives here,
+ * not in a separate module, so getDb/closeVaultIndexDb stay the single
+ * owner of index.db connections — see the mcp-server skill. */
+export function listSources(
+	v: VaultContext,
+	opts: { domains?: string[]; levels?: string[]; limit?: number; offset?: number } = {}
+): { total: number; sources: SourceSummary[] } {
+	const database = getDb(v);
+	if (!database) return { total: 0, sources: [] };
+
+	const limit = opts.limit ?? 200;
+	const offset = opts.offset ?? 0;
+	const conditions: string[] = [];
+	const params: unknown[] = [];
+
+	if (opts.domains?.length) {
+		conditions.push(
+			`EXISTS (SELECT 1 FROM json_each(f.domains_json) d WHERE ${opts.domains
+				.map(() => 'lower(d.value) = lower(?)')
+				.join(' OR ')})`
+		);
+		params.push(...opts.domains);
+	}
+	if (opts.levels?.length) {
+		conditions.push(`(${opts.levels.map(() => 'lower(f.depth) = lower(?)').join(' OR ')})`);
+		params.push(...opts.levels);
+	}
+	const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+
+	const total = (
+		database.prepare(`SELECT count(*) AS n FROM files f ${where}`).get(...params) as { n: number }
+	).n;
+
+	const rows = database
+		.prepare(
+			`SELECT f.path, f.topic, f.depth, f.domains_json,
+			        (SELECT count(*) FROM chunks c WHERE c.path = f.path) AS chunks
+			 FROM files f
+			 ${where}
+			 ORDER BY f.path
+			 LIMIT ? OFFSET ?`
+		)
+		.all(...params, limit, offset) as {
+		path: string;
+		topic: string;
+		depth: string;
+		domains_json: string;
+		chunks: number;
+	}[];
+
+	return {
+		total,
+		sources: rows.map((r) => ({
+			path: r.path,
+			title: r.topic,
+			level: r.depth,
+			domains: JSON.parse(r.domains_json) as string[],
+			chunks: r.chunks
+		}))
+	};
 }
