@@ -1,4 +1,4 @@
-import { spawn, execFileSync } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -20,30 +20,25 @@ export type ConvertEvent =
  * and reliably crashes with STATUS_DLL_INIT_FAILED (exit 0xC0000142 /
  * 3221225794) when spawned with piped, non-console stdio — exactly what
  * child_process.spawn does. Fix: never trust a bare PATH lookup here;
- * resolve to a real, absolute interpreter path once, at module load.
+ * resolve to a real, absolute interpreter path once, then cache it.
  */
 function resolvePythonBin(): string {
 	if (process.env.PYTHON_BIN) return process.env.PYTHON_BIN;
 	if (process.platform !== 'win32') return 'python3';
 
-	try {
-		// where.exe's redirected stdout is the OS's OEM codepage (e.g. CP857 on
-		// a Turkish locale), not UTF-8 — decoding non-ASCII path segments (a
-		// username with a Turkish İ, say) as utf-8 silently corrupts them into
-		// a string that *looks* right but isn't byte-identical, so spawn()
-		// later fails with ENOENT on a path fs.existsSync would call valid.
-		// Never trust the decoded text without verifying it against the real
-		// filesystem first.
-		const out = execFileSync('where', ['python'], { encoding: 'utf-8' });
-		const real = out
-			.split(/\r?\n/)
-			.map((l) => l.trim())
-			.filter(Boolean)
-			.find((p) => !p.toLowerCase().includes('windowsapps') && fs.existsSync(p));
-		if (real) return real;
-	} catch {
-		// `where` can fail outright (e.g. python not on PATH at all) — fall
-		// through to probing known install locations directly.
+	// Scan PATH entries directly instead of shelling out to `where.exe` —
+	// `where`'s redirected stdout comes back in the OS's OEM codepage (e.g.
+	// CP857 on a Turkish locale), not UTF-8, so a non-ASCII path segment (a
+	// username with a Turkish İ, say — this repo's own path is exactly that
+	// case) decodes into a string that *looks* right but isn't byte-identical
+	// to the real path, and fs.existsSync() on it always comes back false.
+	// process.env.PATH is already a correctly-decoded string from Node
+	// itself, so this sidesteps the codepage layer entirely.
+	const pathDirs = (process.env.PATH ?? '').split(path.delimiter).filter(Boolean);
+	for (const dir of pathDirs) {
+		if (dir.toLowerCase().includes('windowsapps')) continue;
+		const exe = path.join(dir, 'python.exe');
+		if (fs.existsSync(exe)) return exe;
 	}
 
 	const programsDir = path.join(os.homedir(), 'AppData', 'Local', 'Programs', 'Python');
@@ -66,7 +61,17 @@ function resolvePythonBin(): string {
 	return 'python'; // last resort — no worse than the original behavior
 }
 
-const PYTHON_BIN = resolvePythonBin();
+// Lazy + memoized, not resolved at module load — env.ts's own "every
+// accessor is a function" rule (see its doc comment): a caller that sets
+// process.env.PYTHON_BIN before importing this module (a test, a bootstrap
+// script) must not lose to a value this module already captured at import
+// time.
+let cachedPythonBin: string | null = null;
+function pythonBin(): string {
+	if (cachedPythonBin === null) cachedPythonBin = resolvePythonBin();
+	return cachedPythonBin;
+}
+
 const CONVERT_PY = path.resolve(process.cwd(), 'ingest', 'convert.py');
 
 /**
@@ -81,7 +86,8 @@ function runConvert(
 	onEvent?: (event: ConvertEvent) => void
 ): Promise<ConvertEvent & { type: 'done' }> {
 	return new Promise((resolve, reject) => {
-		const child = spawn(PYTHON_BIN, [CONVERT_PY, '--in', inPath, '--out-dir', outDir, '--tool', tool], {
+		const bin = pythonBin();
+		const child = spawn(bin, [CONVERT_PY, '--in', inPath, '--out-dir', outDir, '--tool', tool], {
 			windowsHide: true
 		});
 
@@ -108,7 +114,7 @@ function runConvert(
 		});
 
 		child.on('error', (err) => {
-			reject(new Error(`Python başlatılamadı (${PYTHON_BIN} kurulu mu?): ${err.message}`));
+			reject(new Error(`Python başlatılamadı (${bin} kurulu mu?): ${err.message}`));
 		});
 
 		child.on('exit', (code) => {
