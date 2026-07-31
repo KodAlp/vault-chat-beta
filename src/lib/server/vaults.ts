@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { foldToSlug } from './slug';
+import { dataDir } from './env';
 
 export interface VaultRecord {
 	id: string;
@@ -22,19 +23,6 @@ export interface VaultContext {
 interface RegistryFile {
 	vaults: VaultRecord[];
 	activeVaultId: string | null;
-}
-
-/**
- * Deliberately process.env, not $env/dynamic/private — this module is
- * imported by both the SvelteKit server and the standalone indexer CLI
- * (indexer/*.ts), which never goes through Vite. Same reason indexer/db.ts
- * imports from src/lib/server/* directly instead of $env.
- */
-function dataDir(): string {
-	const raw = process.env.DATA_DIR;
-	const root = raw ? path.resolve(process.cwd(), raw) : path.resolve(process.cwd(), 'data');
-	fs.mkdirSync(root, { recursive: true });
-	return root;
 }
 
 function registryPath(): string {
