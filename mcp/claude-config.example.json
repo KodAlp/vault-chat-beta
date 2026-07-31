@@ -1,0 +1,13 @@
+{
+	"_comment": "Placeholder paths — do not paste this file as-is. Run `npm run mcp:config` from vault-chat/ to print a ready-to-use block with your own absolute paths resolved.",
+	"mcpServers": {
+		"vault-chat": {
+			"command": "node",
+			"args": ["/absolute/path/to/vault-chat/mcp/launch.mjs"],
+			"env": {
+				"DATA_DIR": "/absolute/path/to/vault-chat/data",
+				"OLLAMA_URL": "http://localhost:11434"
+			}
+		}
+	}
+}
