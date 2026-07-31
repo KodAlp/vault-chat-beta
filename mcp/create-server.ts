@@ -1,5 +1,8 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { registerListVaults } from './tools/list-vaults';
+import { registerSearchLibrary } from './tools/search-library';
+import { registerGetNote } from './tools/get-note';
+import { registerListSources } from './tools/list-sources';
 
 /**
  * Builds and registers tools onto a McpServer without connecting a
@@ -7,8 +10,8 @@ import { registerListVaults } from './tools/list-vaults';
  * (in-process InMemoryTransport test), so the tool set can never drift
  * between what's actually served and what's actually tested.
  *
- * v1 read-only surface, per the mcp-server skill: list_vaults today,
- * search_library/get_note/list_sources to follow. No study.db writes, no
+ * v1 read-only surface, per the mcp-server skill: list_vaults,
+ * search_library, get_note, list_sources. No study.db writes, no
  * generator tools (Ollama's single-model-in-RAM discipline is per-process
  * only — see the skill's "Üretici araçların erteleme şartları").
  */
@@ -19,6 +22,9 @@ export function createServer(): McpServer {
 	);
 
 	registerListVaults(server);
+	registerSearchLibrary(server);
+	registerGetNote(server);
+	registerListSources(server);
 
 	return server;
 }
