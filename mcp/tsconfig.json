@@ -1,0 +1,28 @@
+{
+	"compilerOptions": {
+		"target": "esnext",
+		"module": "esnext",
+		"moduleResolution": "bundler",
+		"strict": true,
+		"esModuleInterop": true,
+		"skipLibCheck": true,
+		"resolveJsonModule": true,
+		"noEmit": true,
+		"types": ["node"],
+		"baseUrl": ".",
+		"paths": { "$lib/*": ["../src/lib/*"] }
+	},
+	"include": [
+		"**/*.ts",
+		"../src/lib/types.ts",
+		"../src/lib/server/env.ts",
+		"../src/lib/server/vaults.ts",
+		"../src/lib/server/slug.ts",
+		"../src/lib/server/ollama.ts",
+		"../src/lib/server/embed-config.ts",
+		"../src/lib/server/retrieve.ts",
+		"../src/lib/server/select-chunks.ts",
+		"../src/lib/server/library-read.ts",
+		"../src/lib/server/jobMutex.ts"
+	]
+}
