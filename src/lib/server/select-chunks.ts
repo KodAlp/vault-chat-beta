@@ -31,7 +31,7 @@ function inScope(filePath: string, includedPaths: string[]): boolean {
  */
 export function selectChunks(
 	candidates: CandidateChunk[],
-	opts: { domains?: string[]; includedPaths?: string[]; k?: number } = {}
+	opts: { domains?: string[]; levels?: string[]; includedPaths?: string[]; k?: number } = {}
 ): RetrieveResult {
 	const k = opts.k ?? DEFAULT_K;
 	const perFileCount = new Map<string, number>();
@@ -47,6 +47,12 @@ export function selectChunks(
 		}
 
 		if (opts.domains?.length && !opts.domains.some((d) => c.domains.includes(d))) continue;
+
+		// Faz 10's search_library MCP tool — case-insensitive because
+		// frontmatter's level/depth field is hand-written, not an enum.
+		if (opts.levels?.length && !opts.levels.some((l) => l.toLowerCase() === c.depth.toLowerCase())) {
+			continue;
+		}
 
 		const count = perFileCount.get(c.path) ?? 0;
 		if (count >= MAX_CHUNKS_PER_FILE) continue;
