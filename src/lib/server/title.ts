@@ -1,6 +1,7 @@
 import { chatWithFallback } from './providers/registry';
 import type { ChatMessage } from './providers/types';
 import { setChatTitle } from './chats-db';
+import { logAppEvent } from './app-log';
 
 const DEFAULT_TITLE_MODEL = 'qwen3:8b';
 const SYSTEM_PROMPT =
@@ -31,6 +32,8 @@ export async function generateTitle(chatId: string, question: string, model?: st
 		title = title.trim().replace(/^["']|["']$/g, '');
 		if (title) setChatTitle(chatId, title);
 	} catch (err) {
+		const message = err instanceof Error ? err.message : 'Bilinmeyen hata';
 		console.error('Başlık üretilemedi:', err);
+		logAppEvent({ kind: 'title_error', chatId, model: model || DEFAULT_TITLE_MODEL, message });
 	}
 }

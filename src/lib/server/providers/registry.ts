@@ -6,6 +6,7 @@ import { OpenAICompatAdapter } from './openai-compat';
 import { secretStore } from './secrets';
 import { readProvidersFile, type ProviderConfigEntry, type ProvidersFile } from './config-store';
 import { ProviderError, type ChatRequest, type Chunk, type ProviderAdapter } from './types';
+import { logAppEvent } from '../app-log';
 
 function providersJsonPath(): string {
 	return path.resolve(process.cwd(), env.PROVIDERS_PATH ?? path.join('data', 'providers.json'));
@@ -112,7 +113,9 @@ export async function* chatWithFallback(
 			if (isLast) throw err;
 
 			const reason = err instanceof ProviderError ? err.kind : 'error';
-			yield { type: 'notice', message: `${providerId} kullanılamıyor (${reason}) → sıradaki modele geçiliyor` };
+			const message = `${providerId} kullanılamıyor (${reason}) → sıradaki modele geçiliyor`;
+			logAppEvent({ kind: 'fallback', provider: providerId, message });
+			yield { type: 'notice', message };
 		}
 	}
 }
