@@ -9,8 +9,8 @@
       "enabled": true,
       "timeouts": {
         "connectMs": 30000,
-        "firstTokenMs": 120000,
-        "idleMs": 30000
+        "firstTokenMs": 300000,
+        "idleMs": 60000
       }
     },
     {
