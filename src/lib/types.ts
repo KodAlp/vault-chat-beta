@@ -37,6 +37,11 @@ export interface ChatMessage {
 	 * unavailable → switched to local model") that arrived while this
 	 * message streamed in. Rendered as a system aside, not assistant prose. */
 	notices?: string[];
+	/** Mirrors RetrieveResult.narrowScope for this message's answer — set
+	 * when retrieve() found relevant chunks but a scope filter excluded all
+	 * of them. Consumed by Faz 9 Adım 6's "kapsamı genişlet?" suggestion;
+	 * unused until then (no scope filter exists client-side yet). */
+	narrowScope?: boolean;
 }
 
 export interface ChatRequestBody {
@@ -63,11 +68,15 @@ export interface OllamaModel {
 
 /** Client-safe mirror of chats-db.ts's ChatRow — that module is server-only
  * ($lib/server/), can't be imported from a component. Kept structurally
- * identical to what GET /api/chats actually returns. */
+ * identical to what GET /api/chats actually returns (it sends the full row,
+ * including vault_id/included_paths_json — Faz 8 added those columns
+ * before any client type declared them). */
 export interface ChatSummary {
 	id: string;
 	title: string | null;
 	model: string;
+	vault_id: string;
+	included_paths_json: string | null;
 	created_at: string;
 	updated_at: string;
 }

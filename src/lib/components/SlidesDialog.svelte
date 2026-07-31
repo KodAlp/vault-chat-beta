@@ -4,11 +4,11 @@
 	import type { SlidesGenerationRequest } from '$lib/types';
 	import GenerationDialog from './GenerationDialog.svelte';
 
-	let { chatId }: { chatId: string } = $props();
+	let { chatId, vaultId }: { chatId: string; vaultId: string } = $props();
 
 	let alreadyGenerating = $derived(slidesGeneration.status.phase === 'generating');
 
-	function generate(args: { prompt: string; domains?: string[]; chatId?: string }) {
+	function generate(args: { prompt: string; domains?: string[]; chatId?: string; vault: string }) {
 		const body: SlidesGenerationRequest = { ...args, model: settings.reasoningModel };
 		void startSlidesGeneration(body);
 	}
@@ -16,6 +16,7 @@
 
 <GenerationDialog
 	{chatId}
+	{vaultId}
 	icon="🖼️"
 	label="Slayt"
 	dialogTitle="Slayt Oluştur"

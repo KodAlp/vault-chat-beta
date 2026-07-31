@@ -23,6 +23,7 @@
 	 */
 	let {
 		chatId,
+		vaultId,
 		icon,
 		label,
 		dialogTitle,
@@ -37,6 +38,7 @@
 		extraFields
 	}: {
 		chatId: string;
+		vaultId: string;
 		icon: string;
 		label: string;
 		dialogTitle: string;
@@ -46,7 +48,7 @@
 		canGenerate?: boolean;
 		badge?: number | null;
 		open?: boolean;
-		onGenerate: (args: { prompt: string; domains?: string[]; chatId?: string }) => void;
+		onGenerate: (args: { prompt: string; domains?: string[]; chatId?: string; vault: string }) => void;
 		extraTop?: Snippet;
 		extraFields?: Snippet;
 	} = $props();
@@ -58,7 +60,7 @@
 
 	onMount(async () => {
 		try {
-			const res = await fetch('/api/domains');
+			const res = await fetch(`/api/domains?vault=${encodeURIComponent(vaultId)}`);
 			if (res.ok) domains = (await res.json()) as string[];
 		} catch {
 			// domain list stays empty — dropdown just shows "Tüm domainler"
@@ -76,7 +78,8 @@
 		onGenerate({
 			domains: selectedDomain ? [selectedDomain] : undefined,
 			chatId: useChatContext ? chatId : undefined,
-			prompt: prompt.trim()
+			prompt: prompt.trim(),
+			vault: vaultId
 		});
 	}
 </script>
