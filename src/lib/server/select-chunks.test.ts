@@ -76,6 +76,12 @@ test('narrowScope is false when includedPaths is omitted, even with zero results
 	assert.equal(result.narrowScope, false);
 });
 
+test('an explicitly empty includedPaths scopes to nothing, unlike an omitted one', () => {
+	const result = selectChunks([candidate({ distance: 0.1 })], { includedPaths: [] });
+	assert.deepEqual(result.chunks, []);
+	assert.equal(result.narrowScope, true);
+});
+
 test('with no includedPaths, out-of-domain results never set narrowScope', () => {
 	const candidates = [candidate({ domains: ['electronics'] })];
 	const result = selectChunks(candidates, { domains: ['math'] });

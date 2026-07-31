@@ -5,7 +5,11 @@
 	import GenerationDialog from './GenerationDialog.svelte';
 	import { Input } from '$lib/components/ui/input';
 
-	let { chatId, vaultId }: { chatId: string; vaultId: string } = $props();
+	let {
+		chatId,
+		vaultId,
+		open = $bindable(false)
+	}: { chatId: string; vaultId: string; open?: boolean } = $props();
 
 	let mc = $state(6);
 	let tf = $state(2);
@@ -34,6 +38,7 @@
 <GenerationDialog
 	{chatId}
 	{vaultId}
+	bind:open
 	icon="📝"
 	label="Test"
 	dialogTitle="Test Oluştur"

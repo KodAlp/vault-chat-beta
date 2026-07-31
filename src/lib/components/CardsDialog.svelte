@@ -8,11 +8,14 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 
-	let { chatId, vaultId }: { chatId: string; vaultId: string } = $props();
+	let {
+		chatId,
+		vaultId,
+		open = $bindable(false)
+	}: { chatId: string; vaultId: string; open?: boolean } = $props();
 
 	let count = $state(10);
 	let dueCount = $state(0);
-	let open = $state(false);
 
 	let alreadyGenerating = $derived(cardGeneration.status.phase === 'generating');
 

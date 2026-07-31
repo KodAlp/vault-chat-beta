@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import ImportObsidianDialog from '$lib/components/ImportObsidianDialog.svelte';
+	import LibraryTree from '$lib/components/LibraryTree.svelte';
 	import type { LibrarySettings } from '$lib/types';
 	import { Switch } from '$lib/components/ui/switch';
 	import * as Card from '$lib/components/ui/card';
@@ -59,7 +60,7 @@
 		</Card.Content>
 	</Card.Root>
 
-	<Card.Root>
+	<Card.Root class="mb-6">
 		<Card.Header>
 			<Card.Title>Yükleme Ayarları</Card.Title>
 		</Card.Header>
@@ -70,4 +71,26 @@
 			</label>
 		</Card.Content>
 	</Card.Root>
+
+	<Card.Root>
+		<Card.Header>
+			<Card.Title>Kütüphane Ağacı</Card.Title>
+			<Card.Description>
+				Belge yükle, yeniden adlandır veya sil. Sohbet ekranındaki kaynak ağacı (Faz 9) bunun
+				yerine kapsam seçimi için ayrı, salt-görüntüleme bir kopyasını kullanır.
+			</Card.Description>
+		</Card.Header>
+		<Card.Content>
+			<div class="library-tree-wrap">
+				<LibraryTree />
+			</div>
+		</Card.Content>
+	</Card.Root>
 </div>
+
+<style>
+	.library-tree-wrap {
+		max-height: 24rem;
+		overflow-y: auto;
+	}
+</style>

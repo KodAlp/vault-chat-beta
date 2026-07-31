@@ -41,7 +41,7 @@ export function selectChunks(
 	for (const c of candidates) {
 		if (c.distance > DISTANCE_THRESHOLD) continue;
 
-		if (opts.includedPaths?.length && !inScope(c.path, opts.includedPaths)) {
+		if (opts.includedPaths !== undefined && !inScope(c.path, opts.includedPaths)) {
 			sawInThresholdOutOfScope = true;
 			continue;
 		}

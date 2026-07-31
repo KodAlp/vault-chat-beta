@@ -1,10 +1,17 @@
 <script lang="ts">
 	import { renderMarkdown, stabilizeForStreaming } from '$lib/markdown';
 	import type { ChatMessage } from '$lib/types';
-	import SourceList from './SourceList.svelte';
+	import SourceChip from './SourceChip.svelte';
+	import ChatBubble from './ChatBubble.svelte';
+	import FallbackNotice from './FallbackNotice.svelte';
 	import ThinkingPanel from './ThinkingPanel.svelte';
+	import { Button } from '$lib/components/ui/button';
 
-	let { message, streaming = false }: { message: ChatMessage; streaming?: boolean } = $props();
+	let {
+		message,
+		streaming = false,
+		onExpandScope
+	}: { message: ChatMessage; streaming?: boolean; onExpandScope?: () => void } = $props();
 	let html = $state('');
 
 	// Stopped before any answer content arrived (e.g. during the thinking phase) —
@@ -38,21 +45,23 @@
 <div class="message {message.role}">
 	{#if message.role === 'assistant' && message.notices?.length}
 		{#each message.notices as notice (notice)}
-			<p class="notice">{notice}</p>
+			<FallbackNotice message={notice} />
 		{/each}
 	{/if}
 	{#if message.role === 'assistant' && message.thinking}
 		<ThinkingPanel thinking={message.thinking} {streaming} />
 	{/if}
-	<div class="bubble markdown-body" class:interrupted={isEmptyInterrupted}>
-		{#if isEmptyInterrupted}
-			Durduruldu
-		{:else}
-			{@html html}
-		{/if}
-	</div>
+	<ChatBubble role={message.role} {html} interrupted={isEmptyInterrupted} />
 	{#if message.role === 'assistant' && message.sources?.length}
-		<SourceList sources={message.sources} />
+		<SourceChip sources={message.sources} />
+	{/if}
+	{#if message.role === 'assistant' && message.narrowScope && !streaming}
+		<p class="narrow-scope">
+			Seçili kaynaklarda bulunamadı.
+			{#if onExpandScope}
+				<Button variant="link" class="h-auto p-0 text-xs" onclick={onExpandScope}>Kapsamı genişlet?</Button>
+			{/if}
+		</p>
 	{/if}
 </div>
 
@@ -71,42 +80,9 @@
 		flex-direction: column;
 	}
 
-	.bubble {
-		max-width: 70ch;
-		min-width: 0;
-		padding: 0.6rem 0.9rem;
-		border-radius: 10px;
-		line-height: 1.55;
-		/* KaTeX doesn't line-wrap (long sums, matrices, wide fractions) — contain
-		   it with a horizontal scrollbar instead of letting it break out past
-		   the bubble/chat column. */
-		overflow-x: auto;
-	}
-
-	.bubble :global(.katex-display) {
-		margin: 0.5rem 0;
-	}
-
-	.user .bubble {
-		background: var(--bubble-user);
-	}
-
-	.assistant .bubble {
-		background: var(--bubble-assistant);
-	}
-
-	.bubble.interrupted {
+	.narrow-scope {
+		margin-top: 0.4rem;
+		font-size: 0.78rem;
 		color: var(--muted-foreground);
-		font-style: italic;
 	}
-
-	/* System aside from provider fallback — distinct from assistant prose,
-	   see the model-provider skill's "styled like system notes" rule. */
-	.notice {
-		font-size: 0.75rem;
-		color: var(--muted-foreground);
-		font-style: italic;
-		margin: 0 0 0.3rem;
-	}
-
 </style>
