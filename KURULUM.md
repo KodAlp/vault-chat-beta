@@ -149,6 +149,51 @@ başlatmada etkili olur, çalışan sunucuyu yeniden başlatmaz).
 gerektirdiği her şey (Node 22+, `.env` değil ortam değişkenleri) burada da
 geçerli — bkz. yukarıdaki not.
 
+## MCP Sunucusu (Faz 10)
+
+Kasandaki notları Claude Code/Desktop gibi MCP istemcilerine salt-okunur
+olarak açan yerel bir sunucu — ayrı bir paket veya kurulum gerektirmez,
+`mcp/` bu repo'nun içinde `indexer/` ile aynı desende yaşar.
+
+**v1 kapsamı:** `list_vaults`, `search_library`, `get_note`,
+`list_sources`. Hiçbir aracın DB'ye yazma izni yok; `generate_quiz`/
+`generate_flashcards` gibi üretici araçlar bilinçli olarak ertelendi —
+gerekçe `.claude/skills/mcp-server/SKILL.md`'de.
+
+Claude Code'a eklemek için (en hızlı yol):
+
+```bash
+claude mcp add vault-chat -- node "<bu repo>\vault-chat\mcp\launch.mjs"
+```
+
+Claude Desktop için, `%APPDATA%\Claude\claude_desktop_config.json`'a
+eklenecek hazır bloğu üretmek üzere:
+
+```bash
+npm run mcp:config
+```
+
+Bu komut, çözümlenmiş **mutlak** `DATA_DIR` yolunu içeren bir JSON bloğu
+yazdırır — elle path yazmaya gerek yok. Masaüstü (Tauri) uygulamasını
+kullanıyorsan `DATA_DIR`'ın `%APPDATA%\Roaming\app.vaultchat.desktop\`'ı
+değil, bu repo'nun `data/` klasörünü gösterdiğine dikkat et; ikisi ayrı
+veri kümeleridir (bkz. yukarıdaki "Masaüstü (Tauri)" bölümü) — MCP
+sunucusu şu an yalnızca tarayıcı akışının `data/`'sını okuyabiliyor,
+paketlenmiş uygulamanın verisini okuma Faz 10.5'e bırakıldı.
+
+`claude_desktop_config.json`'da `"command"` her zaman `"node"` olmalı,
+`"npx"`/`"tsx"` değil — Windows'ta ikisi de `.cmd` shim'i ve shell'siz
+spawn eden istemcilerde `ENOENT` verir.
+
+Doğrulama:
+
+```bash
+npm run mcp:smoke   # 4 aracı tek süreçte, gerçek Ollama'ya dokunmadan test eder
+```
+
+Sunucu ayaktayken tanı için tek stderr satırı yeterli: `DATA_DIR=... vaults=N`.
+Claude Desktop'ta bu satır `%APPDATA%\Claude\logs\mcp-server-vault-chat.log`'a düşer.
+
 ## Sorun giderme
 
 - **"Ollama sunucusuna ulaşılamadı"** → `ollama serve` çalışıyor mu, `OLLAMA_URL` doğru mu kontrol et.
@@ -162,3 +207,10 @@ geçerli — bkz. yukarıdaki not.
 - **Matematik render olmuyor / `f(x)` gibi çıplak kod görünüyor** →
   `.claude/skills/svelte-vault-chat/SKILL.md` içindeki acid-test string'leriyle
   `src/lib/markdown.ts` pipeline'ını doğrula.
+- **MCP istemcisi "connected" göstermiyor / hemen kapanıyor** → `"command"`
+  değeri gerçekten `"node"` mu (bkz. yukarıdaki not)? `npm run mcp:smoke`
+  temiz geçiyor mu? Claude Desktop'ta `%APPDATA%\Claude\logs\mcp-server-vault-chat.log`'daki
+  tek stderr satırını kontrol et — `DATA_DIR` beklediğin yeri mi gösteriyor?
+- **MCP `search_library` sonuç döndürmüyor ama uygulamanın kendi sohbeti
+  buluyor** → muhtemelen farklı bir `DATA_DIR`/vault okuyorlar; `list_vaults`
+  aracının döndürdüğü `indexed`/`noteCount` alanlarına bak.
