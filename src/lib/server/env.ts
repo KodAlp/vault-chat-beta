@@ -40,7 +40,7 @@ export function dataDir(): string {
 }
 
 export function ollamaUrl(): string {
-	return nonEmpty(process.env.OLLAMA_URL) ?? 'http://localhost:11434';
+	return nonEmpty(process.env.OLLAMA_URL) ?? 'http://127.0.0.1:11434';
 }
 
 export function chatsDbPath(): string {

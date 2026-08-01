@@ -3,6 +3,7 @@
 	import { mindmapGeneration, startMindMapGeneration } from '$lib/mindmap-generation.svelte';
 	import type { MindMapGenerationRequest } from '$lib/types';
 	import GenerationDialog from './GenerationDialog.svelte';
+	import BrainIcon from '@lucide/svelte/icons/brain';
 
 	let {
 		chatId,
@@ -22,7 +23,7 @@
 	{chatId}
 	{vaultId}
 	bind:open
-	icon="🧠"
+	icon={BrainIcon}
 	label="Harita"
 	dialogTitle="Zihin Haritası Oluştur"
 	promptLabel="Hangi konunun haritası çıkarılsın?"

@@ -5,6 +5,8 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import * as Dialog from '$lib/components/ui/dialog';
+	import SettingsIcon from '@lucide/svelte/icons/settings';
+	import PlusIcon from '@lucide/svelte/icons/plus';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -39,19 +41,25 @@
 </script>
 
 <svelte:head>
-	<title>Vault Chat</title>
+	<title>Vault Agent Toolkit</title>
 </svelte:head>
 
 <div class="mx-auto max-w-3xl px-4 pt-10 pb-12">
 	<div class="mb-8 flex items-center justify-between">
-		<h1 class="text-xl font-semibold">Vault Chat</h1>
-		<a href="/settings" title="Ayarlar" class="text-lg text-muted-foreground hover:text-primary">⚙</a>
+		<h1 class="font-display text-2xl font-medium">Vault Agent Toolkit</h1>
+		<a href="/settings" title="Ayarlar" aria-label="Ayarlar" class="text-muted-foreground hover:text-primary focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-2">
+			<SettingsIcon size={19} aria-hidden="true" />
+		</a>
 	</div>
 
 	{#if vaults.length === 0}
-		<p class="mb-6 text-sm text-muted-foreground">
-			Henüz hiç vault yok. Kasandaki notlarla sohbet edebilmek için önce bir vault oluştur.
-		</p>
+		<div class="mb-8 flex flex-col items-center gap-2 rounded-lg border border-dashed py-12 text-center">
+			<p class="font-display text-lg text-foreground">Henüz bir vault yok</p>
+			<p class="max-w-sm text-sm text-muted-foreground">
+				Kasandaki notlarla sohbet edebilmek için önce bir vault oluştur — Obsidian kasanı bağlayınca
+				içeriği burada aranabilir hale gelir.
+			</p>
+		</div>
 	{/if}
 
 	<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
@@ -61,10 +69,10 @@
 
 		<button
 			type="button"
-			class="flex min-h-[5.5rem] flex-col items-center justify-center gap-1 rounded-xl border border-dashed text-sm text-muted-foreground hover:border-primary hover:text-primary"
+			class="flex min-h-[5.5rem] flex-col items-center justify-center gap-1 rounded-xl border border-dashed text-sm text-muted-foreground hover:border-primary hover:text-primary focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-2"
 			onclick={() => (createOpen = true)}
 		>
-			<span class="text-lg leading-none">+</span>
+			<PlusIcon size={18} aria-hidden="true" />
 			Yeni vault
 		</button>
 	</div>

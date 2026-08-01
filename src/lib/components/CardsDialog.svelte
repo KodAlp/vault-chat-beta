@@ -7,6 +7,7 @@
 	import GenerationDialog from './GenerationDialog.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
+	import LayersIcon from '@lucide/svelte/icons/layers';
 
 	let {
 		chatId,
@@ -18,6 +19,13 @@
 	let dueCount = $state(0);
 
 	let alreadyGenerating = $derived(cardGeneration.status.phase === 'generating');
+
+	// The <input max="30"> only stops the spinner arrows — typing a larger
+	// number goes straight through it. Clamped on blur, not oninput, so
+	// mid-edit keystrokes aren't fought while still typing.
+	function clampCount(n: number) {
+		return Math.max(1, Math.min(30, Math.round(n) || 1));
+	}
 
 	onMount(() => {
 		void refreshDueCount();
@@ -50,7 +58,7 @@
 	{chatId}
 	{vaultId}
 	bind:open
-	icon="🗂️"
+	icon={LayersIcon}
 	label="Kartlar"
 	dialogTitle="Bilgi Kartları"
 	promptLabel="Ne konuda kart istiyorsun?"
@@ -69,7 +77,7 @@
 	{#snippet extraFields()}
 		<label class="flex w-24 flex-col gap-1 text-sm">
 			Kart sayısı
-			<Input type="number" min="1" max="30" bind:value={count} />
+			<Input type="number" min="1" max="30" bind:value={count} onblur={() => (count = clampCount(count))} />
 		</label>
 	{/snippet}
 </GenerationDialog>

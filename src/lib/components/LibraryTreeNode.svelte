@@ -2,17 +2,26 @@
 	import { goto } from '$app/navigation';
 	import type { LibraryNode } from '$lib/types';
 	import LibraryTreeNode from './LibraryTreeNode.svelte';
+	import * as AlertDialog from '$lib/components/ui/alert-dialog';
+	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
+	import FileTextIcon from '@lucide/svelte/icons/file-text';
+	import PencilIcon from '@lucide/svelte/icons/pencil';
+	import Trash2Icon from '@lucide/svelte/icons/trash-2';
 
 	let { node, onchange }: { node: LibraryNode; onchange: () => void } = $props();
 
 	let expanded = $state(false);
 	let renaming = $state(false);
 	let newName = $state('');
+	let confirmingDelete = $state(false);
 
-	async function remove(e: MouseEvent) {
+	function askRemove(e: MouseEvent) {
 		e.stopPropagation();
-		const label = node.type === 'folder' ? `"${node.name}" klasörü ve içindekiler` : `"${node.name}"`;
-		if (!confirm(`${label} silinsin mi?`)) return;
+		confirmingDelete = true;
+	}
+
+	async function confirmRemove() {
+		confirmingDelete = false;
 		const res = await fetch('/api/library/file', {
 			method: 'DELETE',
 			headers: { 'content-type': 'application/json' },
@@ -50,14 +59,26 @@
 		if (node.type === 'file') goto(`/library/view?path=${encodeURIComponent(node.path)}`);
 		else expanded = !expanded;
 	}
+
+	// Space is the standard button-activation key alongside Enter — a
+	// role="button" row that only wires Enter breaks keyboard-only users'
+	// expectation that Space works too (the critique's Sam-persona finding).
+	// preventDefault on Space stops the page from scrolling.
+	function onRowKeydown(e: KeyboardEvent) {
+		if (e.key === 'Enter') openFile();
+		else if (e.key === ' ') {
+			e.preventDefault();
+			openFile();
+		}
+	}
 </script>
 
 <div class="node">
-	<div class="row" onclick={openFile} role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && openFile()}>
+	<div class="row" onclick={openFile} role="button" tabindex="0" onkeydown={onRowKeydown}>
 		{#if node.type === 'folder'}
-			<span class="caret" class:open={expanded}>▸</span>
+			<ChevronRightIcon class="caret {expanded ? 'open' : ''}" size={14} aria-hidden="true" />
 		{:else}
-			<span class="file-icon">📄</span>
+			<FileTextIcon class="file-icon" size={13} aria-hidden="true" />
 		{/if}
 		{#if renaming}
 			<input
@@ -82,9 +103,13 @@
 		{/if}
 		<span class="row-actions">
 			{#if node.type === 'file'}
-				<button onclick={startRename} title="Yeniden adlandır">✎</button>
+				<button onclick={startRename} title="Yeniden adlandır" aria-label="Yeniden adlandır">
+					<PencilIcon size={13} aria-hidden="true" />
+				</button>
 			{/if}
-			<button onclick={remove} title="Sil">🗑</button>
+			<button onclick={askRemove} title="Sil" aria-label="Sil">
+				<Trash2Icon size={13} aria-hidden="true" />
+			</button>
 		</span>
 	</div>
 	{#if node.type === 'folder' && expanded && node.children}
@@ -96,6 +121,35 @@
 	{/if}
 </div>
 
+<AlertDialog.Root bind:open={confirmingDelete}>
+	<AlertDialog.Content>
+		<AlertDialog.Header>
+			<AlertDialog.Title>
+				{node.type === 'folder' ? `"${node.name}" klasörü` : `"${node.name}"`} silinsin mi?
+			</AlertDialog.Title>
+			<AlertDialog.Description>
+				{#if node.type === 'folder'}
+					Bu klasör ve içindeki her şey kalıcı olarak silinecek. Bu işlem geri alınamaz.
+				{:else}
+					Bu dosya kalıcı olarak silinecek. Bu işlem geri alınamaz.
+				{/if}
+			</AlertDialog.Description>
+		</AlertDialog.Header>
+		<AlertDialog.Footer>
+			<AlertDialog.Cancel>Vazgeç</AlertDialog.Cancel>
+			<AlertDialog.Action
+				variant="destructive"
+				onclick={(e) => {
+					e.preventDefault();
+					confirmRemove();
+				}}
+			>
+				Sil
+			</AlertDialog.Action>
+		</AlertDialog.Footer>
+	</AlertDialog.Content>
+</AlertDialog.Root>
+
 <style>
 	.node {
 		font-size: 0.8rem;
@@ -106,7 +160,7 @@
 		align-items: center;
 		gap: 0.35rem;
 		padding: 0.2rem 0.3rem;
-		border-radius: 5px;
+		border-radius: var(--radius-sm);
 		cursor: pointer;
 	}
 
@@ -114,24 +168,28 @@
 		background: var(--bubble-assistant);
 	}
 
+	.row:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: -1px;
+	}
+
 	.row:hover .row-actions {
 		visibility: visible;
 	}
 
-	.caret {
-		display: inline-block;
-		transition: transform 0.1s ease;
-		color: var(--muted-foreground);
-		font-size: 0.7rem;
-		width: 0.8rem;
+	:global(.caret) {
+		flex-shrink: 0;
+		transition: transform var(--motion-fast) var(--motion-easing);
+		color: var(--color-muted-foreground);
 	}
 
-	.caret.open {
+	:global(.caret.open) {
 		transform: rotate(90deg);
 	}
 
-	.file-icon {
-		font-size: 0.75rem;
+	:global(.file-icon) {
+		flex-shrink: 0;
+		color: var(--color-muted-foreground);
 	}
 
 	.name {
@@ -144,22 +202,27 @@
 	.rename-input {
 		flex: 1;
 		font-size: 0.8rem;
-		background: var(--background);
-		color: var(--foreground);
-		border: 1px solid var(--primary);
+		background: var(--color-background);
+		color: var(--color-foreground);
+		border: 1px solid var(--color-primary);
 		border-radius: 4px;
 		padding: 0.1rem 0.3rem;
 	}
 
+	.rename-input:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 1px;
+	}
+
 	.badge {
 		flex-shrink: 0;
-		background: color-mix(in srgb, orange 25%, transparent);
-		color: #b8860b;
-		font-size: 0.65rem;
+		background: color-mix(in srgb, var(--warning) 25%, transparent);
+		color: var(--warning);
+		font-size: 0.6875rem;
 		font-weight: 700;
 		border-radius: 50%;
-		width: 1rem;
-		height: 1rem;
+		width: 1.1rem;
+		height: 1.1rem;
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -173,21 +236,29 @@
 	}
 
 	.row-actions button {
+		display: flex;
+		align-items: center;
 		background: transparent;
 		border: none;
-		color: var(--muted-foreground);
+		color: var(--color-muted-foreground);
 		cursor: pointer;
-		font-size: 0.75rem;
-		padding: 0.1rem 0.2rem;
+		padding: 0.15rem;
+		border-radius: var(--radius-sm);
 	}
 
 	.row-actions button:hover {
-		color: var(--primary);
+		color: var(--color-primary);
+	}
+
+	.row-actions button:focus-visible {
+		visibility: visible;
+		outline: 2px solid var(--accent);
+		outline-offset: 1px;
 	}
 
 	.children {
 		margin-left: 0.9rem;
-		border-left: 1px solid var(--border);
+		border-left: 1px solid var(--color-border);
 		padding-left: 0.4rem;
 	}
 </style>

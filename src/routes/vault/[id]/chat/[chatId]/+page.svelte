@@ -8,11 +8,22 @@
 	import SlidesDialog from '$lib/components/SlidesDialog.svelte';
 	import SourceTree from '$lib/components/SourceTree.svelte';
 	import StudyPanel from '$lib/components/StudyPanel.svelte';
+	import HomeIcon from '@lucide/svelte/icons/house';
+	import SettingsIcon from '@lucide/svelte/icons/settings';
+	import LibraryIcon from '@lucide/svelte/icons/library';
+	import PanelLeftCloseIcon from '@lucide/svelte/icons/panel-left-close';
+	import PanelLeftOpenIcon from '@lucide/svelte/icons/panel-left-open';
+	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
 
 	let leftCollapsed = $state(false);
+	// Set the moment the user manually toggles the panel — once true, the
+	// resize listener below stops auto-managing collapse state, so a
+	// deliberate choice (e.g. pinned open on a narrow window) never gets
+	// silently reverted by a later resize.
+	let userOverrodeCollapse = false;
 	let includedPaths = $state<string[] | undefined>(undefined);
 	let sourceCounts = $state({ selected: 0, total: 0 });
 	let focusSignal = $state(0);
@@ -47,24 +58,52 @@
 		leftCollapsed = false;
 		focusSignal += 1;
 	}
+
+	function toggleCollapse() {
+		leftCollapsed = !leftCollapsed;
+		userOverrodeCollapse = true;
+	}
+
+	// Default-collapsed below ~900px so the fixed-width tree doesn't eat the
+	// transcript column on a laptop-width window — a live matchMedia
+	// listener, not a one-time mount check, so resizing the window (a normal
+	// action in a desktop Tauri window) keeps it correct, not just the
+	// initial load width. Stops applying the moment the user manually
+	// toggles the panel, so it never fights that choice afterward.
+	$effect(() => {
+		const mql = window.matchMedia('(max-width: 899px)');
+		const apply = () => {
+			if (userOverrodeCollapse) return;
+			leftCollapsed = mql.matches;
+		};
+		apply();
+		mql.addEventListener('change', apply);
+		return () => mql.removeEventListener('change', apply);
+	});
 </script>
 
 <svelte:head>
-	<title>{data.vaultName} — Vault Chat</title>
+	<title>{data.vaultName} — Vault Agent Toolkit</title>
 </svelte:head>
 
 <div class="chat-screen">
 	<aside class="panel-left" class:collapsed={leftCollapsed}>
 		<button
 			class="collapse-toggle"
-			onclick={() => (leftCollapsed = !leftCollapsed)}
+			onclick={toggleCollapse}
 			title={leftCollapsed ? 'Paneli genişlet' : 'Paneli daralt'}
+			aria-label={leftCollapsed ? 'Paneli genişlet' : 'Paneli daralt'}
 		>
-			{leftCollapsed ? '»' : '«'}
+			{#if leftCollapsed}
+				<PanelLeftOpenIcon size={16} aria-hidden="true" />
+			{:else}
+				<PanelLeftCloseIcon size={16} aria-hidden="true" />
+			{/if}
 		</button>
 		{#if !leftCollapsed}
 			<a class="vault-name" href="/vault/{data.vaultId}" title="Sohbet listesine dön">
-				← {data.vaultName}
+				<ArrowLeftIcon size={13} aria-hidden="true" />
+				{data.vaultName}
 			</a>
 			<SourceTree
 				vaultId={data.vaultId}
@@ -91,9 +130,9 @@
 
 	<aside class="panel-right">
 		<div class="right-top">
-			<a href="/?picker=1" title="Vault seçici">⌂</a>
+			<a href="/?picker=1" title="Vault seçici" aria-label="Vault seçici"><HomeIcon size={17} aria-hidden="true" /></a>
 			<ExportMenu chatId={data.chatId} />
-			<a href="/settings" title="Ayarlar">⚙</a>
+			<a href="/settings" title="Ayarlar" aria-label="Ayarlar"><SettingsIcon size={17} aria-hidden="true" /></a>
 		</div>
 		<div class="right-middle">
 			<button
@@ -102,7 +141,7 @@
 				onclick={() => (studyPanelOpen = true)}
 				title="Çalışma Paneli"
 			>
-				<span>📚</span>
+				<LibraryIcon size={19} aria-hidden="true" />
 				<span class="trigger-label">Panel</span>
 			</button>
 			<QuizDialog chatId={data.chatId} vaultId={data.vaultId} bind:open={quizOpen} />
@@ -127,7 +166,7 @@
 <style>
 	.chat-screen {
 		display: flex;
-		height: 100dvh;
+		height: 100%;
 	}
 
 	.panel-left,
@@ -135,14 +174,23 @@
 		flex-shrink: 0;
 		display: flex;
 		flex-direction: column;
-		border-color: var(--border);
+		border-color: var(--color-border);
 	}
 
 	.panel-left {
 		width: 220px;
-		border-right: 1px solid var(--border);
+		border-right: 1px solid var(--color-border);
 		padding: 0.75rem;
-		transition: width 0.15s ease;
+		/* Evaluated under /impeccable animate, deliberately kept as a width
+		   transition rather than converted to transform: this collapse
+		   reflows exactly one sibling (.panel-center, a simple flex:1 child)
+		   — the cheap, common case the "don't animate width" rule exists to
+		   distinguish from (a deep or repeatedly-nested layout recalculating
+		   every frame). A transform-based slide would either leave a gap
+		   where .panel-center doesn't reflow, or need the panel pulled out
+		   of flow entirely — real added complexity for a two-child layout
+		   that measures fine as-is. */
+		transition: width var(--motion-fast) var(--motion-easing);
 		min-height: 0;
 	}
 
@@ -153,10 +201,13 @@
 
 	.collapse-toggle {
 		align-self: flex-start;
+		display: flex;
+		align-items: center;
+		justify-content: center;
 		background: transparent;
-		border: 1px solid var(--border);
-		color: var(--muted-foreground);
-		border-radius: 6px;
+		border: 1px solid var(--color-border);
+		color: var(--color-muted-foreground);
+		border-radius: var(--radius-sm);
 		width: 1.75rem;
 		height: 1.75rem;
 		padding: 0;
@@ -164,12 +215,24 @@
 		margin-bottom: 0.75rem;
 	}
 
+	.collapse-toggle:hover {
+		color: var(--color-primary);
+		border-color: var(--color-primary);
+	}
+
+	.collapse-toggle:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 1px;
+	}
+
 	.vault-name {
-		display: block;
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
 		font-size: 0.8rem;
 		font-weight: 600;
 		text-decoration: none;
-		color: var(--foreground);
+		color: var(--color-foreground);
 		margin-bottom: 0.6rem;
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -177,11 +240,16 @@
 	}
 
 	.vault-name:hover {
-		color: var(--primary);
+		color: var(--color-primary);
+	}
+
+	.vault-name:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
 	}
 
 	.placeholder-text {
-		color: var(--muted-foreground);
+		color: var(--color-muted-foreground);
 		font-size: 0.85rem;
 	}
 
@@ -192,7 +260,7 @@
 
 	.panel-right {
 		width: 3.5rem;
-		border-left: 1px solid var(--border);
+		border-left: 1px solid var(--color-border);
 		align-items: center;
 		justify-content: space-between;
 		padding: 0.75rem 0;
@@ -206,13 +274,24 @@
 	}
 
 	.right-top a {
+		display: flex;
+		/* Padding brings the ~17px icon glyph up to the 24px WCAG 2.5.8 (AA)
+		   touch-target floor without changing the icon's visual size. */
+		padding: 0.25rem;
+		margin: -0.25rem;
 		text-decoration: none;
-		color: var(--muted-foreground);
-		font-size: 0.9rem;
+		color: var(--color-muted-foreground);
+		border-radius: var(--radius-sm);
 	}
 
 	.right-top a:hover {
-		color: var(--primary);
+		color: var(--color-primary);
+	}
+
+	.right-top a:focus-visible,
+	.study-panel-trigger:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
 	}
 
 	.right-middle {
@@ -229,16 +308,16 @@
 		gap: 0.25rem;
 		border: none;
 		background: transparent;
-		color: var(--muted-foreground);
+		color: var(--color-muted-foreground);
 		cursor: pointer;
 	}
 
 	.study-panel-trigger:hover {
-		color: var(--primary);
+		color: var(--color-primary);
 	}
 
 	.trigger-label {
-		font-size: 0.65rem;
+		font-size: 0.6875rem;
 	}
 
 	.right-bottom {

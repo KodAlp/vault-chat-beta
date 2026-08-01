@@ -2,6 +2,7 @@
 	import { obsidianUri, libraryViewerUrl } from '$lib/sourceLink';
 	import type { RetrievedChunk } from '$lib/types';
 	import * as HoverCard from '$lib/components/ui/hover-card';
+	import BookOpenIcon from '@lucide/svelte/icons/book-open';
 
 	/** Replaces SourceList.svelte — that component deduped on `path +
 	 * heading_path`, so the same source cited from three chunks rendered as
@@ -40,7 +41,9 @@
 								{g.topic}
 								{#if g.chunks.length > 1}<span class="count">×{g.chunks.length} bölüm</span>{/if}
 							</a>
-							<a class="chip-icon" href={libraryViewerUrl(g.path)} title="Kütüphanede görüntüle">⇱</a>
+							<a class="chip-icon" href={libraryViewerUrl(g.path)} title="Kütüphanede görüntüle" aria-label="Kütüphanede görüntüle">
+									<BookOpenIcon size={12} aria-hidden="true" />
+								</a>
 						</span>
 					{/snippet}
 				</HoverCard.Trigger>
@@ -68,21 +71,27 @@
 	.chip-group {
 		display: inline-flex;
 		align-items: stretch;
-		border: 1px solid var(--border);
-		border-radius: 999px;
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-pill);
 		overflow: hidden;
 	}
 
 	.chip {
 		font-size: 0.75rem;
 		text-decoration: none;
-		background: var(--muted);
-		color: var(--muted-foreground);
+		background: var(--color-muted);
+		color: var(--color-muted-foreground);
 		padding: 0.2rem 0.65rem;
 	}
 
 	.chip:hover {
-		color: var(--primary);
+		color: var(--color-primary);
+	}
+
+	.chip:focus-visible,
+	.chip-icon:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: -2px;
 	}
 
 	.count {
@@ -91,16 +100,17 @@
 	}
 
 	.chip-icon {
-		font-size: 0.7rem;
+		display: inline-flex;
+		align-items: center;
 		text-decoration: none;
-		background: var(--muted);
-		color: var(--muted-foreground);
+		background: var(--color-muted);
+		color: var(--color-muted-foreground);
 		padding: 0.2rem 0.5rem;
-		border-left: 1px solid var(--border);
+		border-left: 1px solid var(--color-border);
 	}
 
 	.chip-icon:hover {
-		color: var(--primary);
+		color: var(--color-primary);
 	}
 
 	.preview-title {
@@ -112,7 +122,7 @@
 	.preview-list {
 		margin: 0;
 		padding-left: 1rem;
-		color: var(--muted-foreground);
+		color: var(--color-muted-foreground);
 	}
 
 	.preview-list li {

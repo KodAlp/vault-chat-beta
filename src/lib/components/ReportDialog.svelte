@@ -3,6 +3,7 @@
 	import { reportGeneration, startReportGeneration } from '$lib/report-generation.svelte';
 	import type { ReportGenerationRequest } from '$lib/types';
 	import GenerationDialog from './GenerationDialog.svelte';
+	import FileTextIcon from '@lucide/svelte/icons/file-text';
 
 	let {
 		chatId,
@@ -22,7 +23,7 @@
 	{chatId}
 	{vaultId}
 	bind:open
-	icon="📄"
+	icon={FileTextIcon}
 	label="Rapor"
 	dialogTitle="Rapor Oluştur"
 	promptLabel="Rapor hangi konuda olsun?"

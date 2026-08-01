@@ -5,6 +5,12 @@
 	import ScopeIndicator from './ScopeIndicator.svelte';
 	import { settings } from '$lib/settings.svelte';
 	import { takePendingMessage } from '$lib/pending-message';
+	import ArrowDownIcon from '@lucide/svelte/icons/arrow-down';
+	import SendIcon from '@lucide/svelte/icons/send';
+	import SquareIcon from '@lucide/svelte/icons/square';
+	import BotIcon from '@lucide/svelte/icons/bot';
+	import BrainIcon from '@lucide/svelte/icons/brain';
+	import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';
 
 	let {
 		chatId,
@@ -176,6 +182,17 @@
 				assistantMessage.interrupted = true;
 			} else {
 				errorMessage = err instanceof Error ? err.message : 'Bilinmeyen hata';
+				if (!assistantMessage.content) {
+					// Nothing ever streamed in (e.g. Ollama unreachable at connect
+					// time) — an empty bubble would just be a second, disconnected
+					// place this same error shows up, and the question is still
+					// visible below in the input rather than lost. Undo the
+					// optimistic push entirely and restore the input so retrying
+					// is hitting Send again, not retyping the question from memory.
+					messages.pop();
+					messages.pop();
+					input = question;
+				}
 			}
 		} finally {
 			clearInterval(timer);
@@ -193,6 +210,17 @@
 		errorMessage = '';
 		try {
 			const res = await fetch(`/api/chats/${id}`);
+			if (res.status === 404) {
+				// A brand-new chat has no row yet — the server only creates one
+				// once the first message is actually sent (see +page.svelte's
+				// own comment on this same 404). Not a failure: just an empty,
+				// unsent chat.
+				messages = [];
+				overrideModel = undefined;
+				hasChatRow = false;
+				onChatLoaded?.(undefined);
+				return;
+			}
 			if (!res.ok) throw new Error();
 			const data = (await res.json()) as {
 				chat: { model: string; included_paths_json: string | null };
@@ -216,6 +244,12 @@
 	// component instance, so onMount alone would miss that.
 	$effect(() => {
 		const id = chatId;
+		// A stream from the previously-viewed chat must not keep running
+		// against this one after navigating away — left alone, isStreaming
+		// stays true and locks the new chat's composer until the old,
+		// now-invisible stream finishes on its own, and its "Durdur" button
+		// would silently stop a chat the user isn't even looking at.
+		abortController?.abort();
 		const pendingQuestion = takePendingMessage(id);
 		if (pendingQuestion) {
 			overrideModel = undefined;
@@ -239,9 +273,58 @@
 <div class="chat">
 	<header>
 		<ScopeIndicator selected={selectedCount} total={totalCount} onFocusTree={() => onFocusTree?.()} />
-		<div class="header-right">
+	</header>
+
+	<div class="messages-wrap">
+		<div class="messages" bind:this={listEl} onscroll={handleScroll}>
+			{#if messages.length === 0}
+				<div class="empty-state">
+					<svg class="empty-art" viewBox="0 0 96 96" aria-hidden="true" focusable="false">
+						<circle cx="48" cy="48" r="44" class="ring ring-outer" />
+						<circle cx="48" cy="48" r="30" class="ring ring-mid" />
+						<circle cx="48" cy="48" r="3" class="core" />
+						<g class="rays">
+							<line x1="48" y1="2" x2="48" y2="14" />
+							<line x1="48" y1="82" x2="48" y2="94" />
+							<line x1="2" y1="48" x2="14" y2="48" />
+							<line x1="82" y1="48" x2="94" y2="48" />
+							<line x1="15.5" y1="15.5" x2="24" y2="24" />
+							<line x1="72" y1="72" x2="80.5" y2="80.5" />
+							<line x1="80.5" y1="15.5" x2="72" y2="24" />
+							<line x1="24" y1="72" x2="15.5" y2="80.5" />
+						</g>
+					</svg>
+					<h2>Kasandaki notlar hakkında bir soru sor</h2>
+					<p>Cevaplar yalnızca seçtiğin kaynaklara dayanır.</p>
+					{#if onFocusTree}
+						<button type="button" class="empty-action" onclick={() => onFocusTree?.()}>
+							Kaynaklara göz at
+							<ArrowRightIcon size={13} aria-hidden="true" />
+						</button>
+					{/if}
+				</div>
+			{/if}
+			{#each messages as message, i (message.id)}
+				<Message {message} streaming={isStreaming && i === messages.length - 1} {onExpandScope} />
+			{/each}
+		</div>
+		{#if isStreaming && !isAtBottom}
+			<button class="scroll-to-bottom" onclick={() => scrollToBottom(true)}>
+				<ArrowDownIcon size={14} aria-hidden="true" /> en sona in
+			</button>
+		{/if}
+	</div>
+
+	{#if errorMessage}
+		<p class="error" role="alert">{errorMessage}</p>
+	{/if}
+
+	<div class="compose-controls">
+		<label class="model-pill" for="model-select">
+			<span class="sr-only">Model</span>
+			<BotIcon size={13} aria-hidden="true" />
 			<select
-				class="model-select"
+				id="model-select"
 				title="Bu konuşma için model/sağlayıcı seçimi"
 				value={activeModel}
 				onchange={(e) => onModelChange(e.currentTarget.value)}
@@ -253,32 +336,18 @@
 					<option value={m.id}>{m.providerLabel} · {m.id}</option>
 				{/each}
 			</select>
-			<label class="think-toggle" for="think-mode" title="Açıkken muhakeme modeli önce akıl yürütür (yavaş ama daha derin), süreç sohbette görünür. Kapalıyken hızlı model kullanılır.">
-				<input id="think-mode" name="think-mode" type="checkbox" bind:checked={thinkMode} />
-				Derin düşün
-			</label>
-		</div>
-	</header>
-
-	<div class="messages-wrap">
-		<div class="messages" bind:this={listEl} onscroll={handleScroll}>
-			{#if messages.length === 0}
-				<p class="empty">Kasandaki notlar hakkında bir soru sor.</p>
-			{/if}
-			{#each messages as message, i (message.id)}
-				<Message {message} streaming={isStreaming && i === messages.length - 1} {onExpandScope} />
-			{/each}
-		</div>
-		{#if isStreaming && !isAtBottom}
-			<button class="scroll-to-bottom" onclick={() => scrollToBottom(true)}>
-				↓ en sona in
-			</button>
-		{/if}
+		</label>
+		<label
+			class="think-pill"
+			class:active={thinkMode}
+			for="think-mode"
+			title="Açıkken muhakeme modeli önce akıl yürütür (yavaş ama daha derin), süreç sohbette görünür. Kapalıyken hızlı model kullanılır."
+		>
+			<input id="think-mode" name="think-mode" type="checkbox" bind:checked={thinkMode} class="sr-only" />
+			<BrainIcon size={13} aria-hidden="true" />
+			Derin düşün
+		</label>
 	</div>
-
-	{#if errorMessage}
-		<p class="error">{errorMessage}</p>
-	{/if}
 
 	<footer>
 		<textarea
@@ -290,9 +359,15 @@
 			disabled={isStreaming}
 		></textarea>
 		{#if isStreaming}
-			<button class="stop" onclick={stop}>Durdur</button>
+			<button class="stop" onclick={stop} aria-label="Durdur">
+				<SquareIcon size={16} aria-hidden="true" />
+				Durdur
+			</button>
 		{:else}
-			<button onclick={send} disabled={!input.trim()}>Gönder</button>
+			<button onclick={send} disabled={!input.trim()} aria-label="Gönder">
+				<SendIcon size={16} aria-hidden="true" />
+				Gönder
+			</button>
 		{/if}
 	</footer>
 </div>
@@ -310,33 +385,91 @@
 		justify-content: space-between;
 		gap: 0.75rem;
 		padding: 0.5rem 1rem;
-		border-bottom: 1px solid var(--border);
+		border-bottom: 1px solid var(--color-border);
 	}
 
-	.header-right {
+	.sr-only {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		padding: 0;
+		margin: -1px;
+		overflow: hidden;
+		clip: rect(0, 0, 0, 0);
+		white-space: nowrap;
+		border: 0;
+	}
+
+	.compose-controls {
 		display: flex;
 		align-items: center;
-		gap: 0.75rem;
+		gap: 0.5rem;
+		padding: 0.6rem 1rem 0;
 	}
 
-	.model-select {
-		background: var(--background);
-		color: var(--foreground);
-		border: 1px solid var(--border);
-		border-radius: 6px;
-		padding: 0.3rem 0.5rem;
-		font-size: 0.8rem;
-		max-width: 220px;
-	}
-
-	.think-toggle {
+	.model-pill,
+	.think-pill {
 		display: flex;
 		align-items: center;
 		gap: 0.35rem;
-		font-size: 0.85rem;
-		color: var(--muted-foreground);
+		background: var(--color-secondary);
+		color: var(--color-secondary-foreground);
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-pill);
+		padding: 0.3rem 0.7rem;
+		font-size: 0.75rem;
+	}
+
+	.model-pill {
+		max-width: 240px;
+	}
+
+	.model-pill select {
+		appearance: none;
+		border: none;
+		background: transparent;
+		color: inherit;
+		font-family: var(--font-sans);
+		font-size: 0.75rem;
+		max-width: 190px;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		cursor: pointer;
+	}
+
+	.model-pill:focus-within {
+		outline: 2px solid var(--accent);
+		outline-offset: 1px;
+	}
+
+	.model-pill :global(svg) {
+		flex-shrink: 0;
+		color: var(--color-muted-foreground);
+	}
+
+	.think-pill {
+		color: var(--color-muted-foreground);
 		cursor: pointer;
 		user-select: none;
+		transition:
+			background-color var(--motion-fast) var(--motion-easing),
+			color var(--motion-fast) var(--motion-easing),
+			border-color var(--motion-fast) var(--motion-easing);
+	}
+
+	.think-pill:hover {
+		color: var(--color-foreground);
+	}
+
+	.think-pill.active {
+		background: var(--accent-soft);
+		color: var(--accent-text);
+		border-color: var(--hairline-accent);
+	}
+
+	.think-pill:has(:focus-visible) {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
 	}
 
 	.messages-wrap {
@@ -352,28 +485,133 @@
 	}
 
 	.scroll-to-bottom {
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
 		position: absolute;
 		bottom: 1rem;
 		left: 50%;
 		transform: translateX(-50%);
 		padding: 0.4rem 0.9rem;
-		border-radius: 999px;
-		border: 1px solid var(--border);
-		background: var(--background);
-		color: var(--foreground);
+		border-radius: var(--radius-pill);
+		border: 1px solid var(--color-border);
+		background: var(--color-background);
+		color: var(--color-foreground);
 		font-size: 0.8rem;
 		cursor: pointer;
-		box-shadow: 0 2px 8px rgb(0 0 0 / 0.15);
+		/* An overlay floating above scrollable content — a different case
+		   from panel separation, where DESIGN.md's hairlines-not-shadows
+		   principle applies. Uses the accent-glow token rather than a raw
+		   rgb() value so it still ties into the system. */
+		box-shadow: 0 2px 8px var(--accent-glow);
 	}
 
-	.empty {
-		color: var(--muted-foreground);
+	.scroll-to-bottom:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
+	}
+
+	/* The one place DESIGN.md's particle-vortex/light-beam art direction is
+	   allowed — an authored SVG, not a stock illustration, built from the
+	   same accent/hairline tokens as everything else so it themes for free. */
+	.empty-state {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
 		text-align: center;
-		margin-top: 2rem;
+		margin-top: 3rem;
+		padding: 0 1.5rem;
+	}
+
+	.empty-art {
+		width: 88px;
+		height: 88px;
+		margin-bottom: 1.25rem;
+		overflow: visible;
+	}
+
+	.empty-art .ring {
+		fill: none;
+		stroke: var(--hairline-accent);
+		stroke-width: 1;
+	}
+
+	.empty-art .ring-mid {
+		stroke: var(--accent-soft);
+	}
+
+	/* The one authored moment DESIGN.md reserves this art for — a slow,
+	   even breathing on the single accent dot, not the rings or rays (one
+	   material idea, not several stacked). Reads as "the vault is
+	   listening" rather than decoration; automatically settles to
+	   near-static under prefers-reduced-motion via app.css's global
+	   animation-duration override, so no separate media query is needed
+	   here. */
+	.empty-art .core {
+		fill: var(--accent);
+		transform-box: fill-box;
+		transform-origin: center;
+		animation: empty-art-pulse 2600ms cubic-bezier(0.4, 0, 0.6, 1) infinite;
+	}
+
+	@keyframes empty-art-pulse {
+		0%,
+		100% {
+			transform: scale(1);
+			opacity: 1;
+		}
+		50% {
+			transform: scale(1.35);
+			opacity: 0.7;
+		}
+	}
+
+	.empty-art .rays line {
+		stroke: var(--accent-soft);
+		stroke-width: 1;
+		stroke-linecap: round;
+	}
+
+	.empty-state h2 {
+		font-family: var(--font-display);
+		font-weight: 480;
+		letter-spacing: -0.015em;
+		font-size: 1.5rem;
+		color: var(--color-foreground);
+		margin: 0 0 0.4rem;
+	}
+
+	.empty-state p {
+		color: var(--color-muted-foreground);
+		font-size: 0.875rem;
+		margin: 0 0 1.25rem;
+	}
+
+	.empty-action {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.35rem;
+		background: transparent;
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-pill);
+		padding: 0.4rem 0.9rem;
+		color: var(--color-foreground);
+		font-size: 0.8rem;
+		cursor: pointer;
+	}
+
+	.empty-action:hover {
+		color: var(--color-primary);
+		border-color: var(--color-primary);
+	}
+
+	.empty-action:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
 	}
 
 	.error {
-		color: var(--destructive);
+		color: var(--color-destructive);
 		padding: 0 1rem;
 		font-size: 0.85rem;
 	}
@@ -382,7 +620,7 @@
 		display: flex;
 		gap: 0.5rem;
 		padding: 0.75rem 1rem;
-		border-top: 1px solid var(--border);
+		border-top: 1px solid var(--color-border);
 	}
 
 	textarea {
@@ -391,31 +629,44 @@
 		min-height: 2.5rem;
 		max-height: 10rem;
 		padding: 0.5rem 0.75rem;
-		border-radius: 8px;
-		border: 1px solid var(--border);
-		background: var(--background);
-		color: var(--foreground);
+		border-radius: var(--radius-md);
+		border: 1px solid var(--color-border);
+		background: var(--color-background);
+		color: var(--color-foreground);
 		font-family: var(--font-sans);
-		font-size: 0.95rem;
+		font-size: 1rem;
 	}
 
-	button {
+	textarea:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 1px;
+	}
+
+	footer button {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
 		padding: 0 1.1rem;
-		border-radius: 8px;
+		border-radius: var(--radius-md);
 		border: none;
-		background: var(--primary);
-		color: var(--primary-foreground);
+		background: var(--color-primary);
+		color: var(--color-primary-foreground);
 		font-weight: 600;
 		cursor: pointer;
 	}
 
-	button:disabled {
+	footer button:disabled {
 		opacity: 0.5;
 		cursor: not-allowed;
 	}
 
-	button.stop {
-		background: var(--destructive);
-		color: var(--background);
+	footer button:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
+	}
+
+	footer button.stop {
+		background: var(--color-destructive);
+		color: var(--color-background);
 	}
 </style>

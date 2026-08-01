@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import type { Snippet } from 'svelte';
+	import type { LucideIcon } from '@lucide/svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Textarea } from '$lib/components/ui/textarea';
 	import { Checkbox } from '$lib/components/ui/checkbox';
@@ -39,7 +40,7 @@
 	}: {
 		chatId: string;
 		vaultId: string;
-		icon: string;
+		icon: LucideIcon;
 		label: string;
 		dialogTitle: string;
 		promptLabel: string;
@@ -52,6 +53,11 @@
 		extraTop?: Snippet;
 		extraFields?: Snippet;
 	} = $props();
+
+	// Capitalized local binding — Svelte only treats a tag as a dynamic
+	// component when its name starts uppercase, so the lowercase `icon`
+	// prop can't be used as `<icon />` directly.
+	let Icon = $derived(icon);
 
 	let domains = $state<string[]>([]);
 	let selectedDomain = $state('');
@@ -86,22 +92,22 @@
 
 <button
 	type="button"
-	class="flex flex-col items-center gap-0.5 border-none bg-transparent p-0 text-muted-foreground hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
+	class="flex flex-col items-center gap-0.5 rounded-sm border-none bg-transparent p-0 text-muted-foreground hover:text-primary disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-2"
 	onclick={openDialog}
 	{disabled}
 	title={dialogTitle}
 >
 	<span class="relative inline-flex">
-		{icon}
+		<Icon size={19} aria-hidden="true" />
 		{#if badge}
 			<span
-				class="absolute -top-1.5 -right-2.5 rounded-full bg-primary px-1 text-[0.6rem] leading-none font-bold text-primary-foreground"
+				class="absolute -top-1.5 -right-2.5 rounded-full bg-primary px-1 text-[0.6875rem] leading-none font-bold text-primary-foreground"
 			>
 				{badge > 99 ? '99+' : badge}
 			</span>
 		{/if}
 	</span>
-	<span class="text-[0.65rem]">{label}</span>
+	<span class="text-[0.6875rem]">{label}</span>
 </button>
 
 <Dialog.Root bind:open>

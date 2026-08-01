@@ -254,7 +254,7 @@ async fn spawn_sidecar(app: &AppHandle, cfg: &VaultConfig) -> Result<String, Str
         .env("DATA_DIR", &app_data_dir)
         .env("VAULT_PATH", &cfg.vault_path)
         .env("PUBLIC_VAULT_NAME", &cfg.vault_name)
-        .env("OLLAMA_URL", "http://localhost:11434")
+        .env("OLLAMA_URL", "http://127.0.0.1:11434")
         .env("CHATS_DB_PATH", app_data_dir.join("chats.db"))
         .env("SECRETS_PATH", app_data_dir.join("secrets.json"))
         .env("PROVIDERS_PATH", &providers_path)

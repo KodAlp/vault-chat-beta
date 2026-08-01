@@ -19,6 +19,13 @@ export interface GenerateCardsInput {
 
 export type ProgressStage = 'retrieving' | 'generating' | 'validating' | 'retrying';
 
+/** Same reasoning as generate-quiz.ts's clampComposition: the client's own
+ * <input max="30"> only stops the spinner arrows, not typed values, and the
+ * server must never trust client-side validation alone. */
+function clampCount(count: number): number {
+	return Math.max(1, Math.min(30, Math.round(count) || 1));
+}
+
 const QUERY_EXTRACT_SYSTEM_PROMPT =
 	'Kullanıcının bilgi kartı isteğinden, sadece KONUYU özetleyen kısa bir arama sorgusu çıkar. "kart oluştur", "flashcard üret" gibi talimat kelimelerini ATLA, sadece konuyu yaz. Tek satır, sadece sorgu metni, başka hiçbir şey yazma.';
 
@@ -143,6 +150,7 @@ export async function generateCards(
 	onProgress?: (stage: ProgressStage) => void
 ): Promise<{ deckId: string }> {
 	onProgress?.('retrieving');
+	input = { ...input, count: clampCount(input.count) };
 
 	const topicalQuery = await extractTopicalQuery(input.prompt, input.model);
 	let query = topicalQuery;

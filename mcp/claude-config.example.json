@@ -6,7 +6,7 @@
 			"args": ["/absolute/path/to/vault-chat/mcp/launch.mjs"],
 			"env": {
 				"DATA_DIR": "/absolute/path/to/vault-chat/data",
-				"OLLAMA_URL": "http://localhost:11434"
+				"OLLAMA_URL": "http://127.0.0.1:11434"
 			}
 		}
 	}

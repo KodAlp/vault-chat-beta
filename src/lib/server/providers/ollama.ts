@@ -1,5 +1,5 @@
 import { OpenAICompatAdapter, type Timeouts } from './openai-compat';
-import type { ChatRequest, Chunk, ModelInfo } from './types';
+import { ProviderError, type ChatRequest, type Chunk, type ModelInfo } from './types';
 import { ollamaGate } from './ollama-gate';
 
 /** Conservative defaults for unknown models; known families get better
@@ -47,7 +47,21 @@ export class OllamaAdapter extends OpenAICompatAdapter {
 	/** The gate's lease spans the whole stream, not just the swap moment
 	 * before it — see ollama-gate.ts's doc comment for why that matters. */
 	override async *chat(req: ChatRequest, signal: AbortSignal): AsyncGenerator<Chunk> {
-		yield* ollamaGate.withModelStream(req.model, () => super.chat(req, signal));
+		try {
+			yield* ollamaGate.withModelStream(req.model, () => super.chat(req, signal));
+		} catch (err) {
+			// The base class's connection-refused/hung-server message
+			// ("ollama: ağ hatası — fetch failed") is technically accurate but
+			// not actionable — settings/+page.svelte already has the right
+			// phrasing for this exact failure mode ("Model listesi alınamadı —
+			// Ollama çalışıyor mu?"); the chat path should read the same way,
+			// since Ollama-not-running is this product's single most likely
+			// failure mode, not an edge case.
+			if (err instanceof ProviderError && (err.kind === 'network' || err.kind === 'timeout_connect')) {
+				throw new ProviderError(err.kind, err.providerId, `${err.providerId}: Ollama'ya ulaşılamıyor — Ollama çalışıyor mu?`);
+			}
+			throw err;
+		}
 	}
 
 	protected override extraBody(req: ChatRequest): Record<string, unknown> {

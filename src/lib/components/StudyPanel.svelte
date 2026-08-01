@@ -4,6 +4,11 @@
 	import * as Sheet from '$lib/components/ui/sheet';
 	import { Button } from '$lib/components/ui/button';
 	import { Badge } from '$lib/components/ui/badge';
+	import FileQuestionIcon from '@lucide/svelte/icons/file-question';
+	import LayersIcon from '@lucide/svelte/icons/layers';
+	import FileTextIcon from '@lucide/svelte/icons/file-text';
+	import BrainIcon from '@lucide/svelte/icons/brain';
+	import PresentationIcon from '@lucide/svelte/icons/presentation';
 
 	/**
 	 * Light-version study panel (Faz 9 Adım 6, user-approved simplification):
@@ -64,12 +69,12 @@
 		</Sheet.Header>
 		<div class="rows">
 			<div class="row">
-				<span class="label">📝 Test</span>
+				<span class="label"><FileQuestionIcon size={16} aria-hidden="true" /> Test</span>
 				<Button variant="outline" size="sm" onclick={() => trigger(onOpenQuiz)}>Yeni</Button>
 			</div>
 			<div class="row">
 				<span class="label">
-					🗂️ Kartlar
+					<LayersIcon size={16} aria-hidden="true" /> Kartlar
 					{#if dueCount > 0}<Badge variant="secondary">{dueCount} bekliyor</Badge>{/if}
 				</span>
 				<div class="row-actions">
@@ -80,15 +85,15 @@
 				</div>
 			</div>
 			<div class="row">
-				<span class="label">📄 Rapor</span>
+				<span class="label"><FileTextIcon size={16} aria-hidden="true" /> Rapor</span>
 				<Button variant="outline" size="sm" onclick={() => trigger(onOpenReport)}>Yeni</Button>
 			</div>
 			<div class="row">
-				<span class="label">🧠 Harita</span>
+				<span class="label"><BrainIcon size={16} aria-hidden="true" /> Harita</span>
 				<Button variant="outline" size="sm" onclick={() => trigger(onOpenMindMap)}>Yeni</Button>
 			</div>
 			<div class="row">
-				<span class="label">🖼️ Slayt</span>
+				<span class="label"><PresentationIcon size={16} aria-hidden="true" /> Slayt</span>
 				<Button variant="outline" size="sm" onclick={() => trigger(onOpenSlides)}>Yeni</Button>
 			</div>
 		</div>
@@ -109,7 +114,7 @@
 		justify-content: space-between;
 		gap: 0.5rem;
 		padding: 0.5rem 0;
-		border-bottom: 1px solid var(--border);
+		border-bottom: 1px solid var(--color-border);
 	}
 
 	.label {

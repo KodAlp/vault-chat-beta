@@ -1,0 +1,142 @@
+/**
+ * Source of truth for the "Vault Agent Toolkit" dark observatory design
+ * system — see DESIGN.md, which mirrors this file's dark-theme values as
+ * its portable frontmatter export for Impeccable commands. If a value
+ * changes here, update DESIGN.md's frontmatter too.
+ *
+ * Two full ramps: dark (DESIGN.md's original, primary identity) and light
+ * (a companion derived from the same hue family — 165 for neutrals, 155 for
+ * the green accent — extended for this build so a "system" theme session
+ * with no stored preference isn't left on an undocumented palette). Every
+ * pairing below was checked against WCAG contrast math (OKLCH -> linear
+ * sRGB -> relative luminance) before being set, not eyeballed:
+ *   dark:  text/ground 16.4:1 · text-muted/ground 5.5:1 · accent-text/ground 12.1:1
+ *   light: text/ground 15.9:1 · text-muted/ground 5.5:1 · accent-text/ground 8.1:1
+ *          accent/ground 4.85:1 (clears the 3:1 non-text floor with room
+ *          for large-text/icon use; accent-text is the separate token for
+ *          small green body text, exactly the split DESIGN.md's own dark
+ *          ramp already makes).
+ *
+ * app.css maps these onto the shadcn-svelte token names every vendored
+ * ui/ primitive already reads (--background, --primary, --border, etc.) —
+ * this file only owns the raw palette, never shadcn's naming.
+ */
+
+:root {
+	/* Light — the companion ramp. Never pure white: every surface carries
+	   the same faint green tint as the dark ramp carries in reverse. */
+	--ground: oklch(97% 0.006 165);
+	--ground-deep: oklch(90% 0.012 165);
+	--surface: oklch(99% 0.004 165);
+	--surface-raised: oklch(99.3% 0.003 165);
+
+	--text: oklch(22% 0.01 165);
+	--text-muted: oklch(50% 0.012 165);
+
+	--accent: oklch(50% 0.17 155);
+	--accent-soft: oklch(50% 0.17 155 / 0.12);
+	--accent-glow: oklch(50% 0.17 155 / 0.2);
+	--accent-text: oklch(38% 0.15 155);
+	/* Primary-button ink: DESIGN.md's dark theme uses dark ink on its bright
+	   (76% L) accent fill. At light theme's necessarily darker accent
+	   (50% L, needed so accent-as-text/icon still clears contrast against a
+	   near-white ground), dark ink only reaches 3.8:1 on that fill — light
+	   ink reaches 4.85:1. Same "high-contrast ink on the fill" principle,
+	   the opposite ink color, because the fill's own lightness inverted. */
+	--ink-on-accent: oklch(97% 0.006 165);
+
+	--hairline: oklch(20% 0 0 / 0.1);
+	--hairline-strong: oklch(20% 0 0 / 0.18);
+	--hairline-accent: oklch(50% 0.17 155 / 0.5);
+
+	--warning: oklch(48% 0.15 70);
+	--danger: oklch(48% 0.19 25);
+	--success: oklch(48% 0.15 150);
+
+	/* User chat-bubble fill — a solid tint, not accent-soft alpha-blended
+	   over ground. Alpha-over-ground made the "same" token render as two
+	   unrelated colors across themes (a khaki wash in dark, a bright mint
+	   highlight in light) because the underlying ground's own lightness
+	   changed what the blend produced. A fixed hue/chroma with lightness
+	   inverted per theme (matching how ground/surface already work) reads
+	   as one recognizable green note in both. */
+	--bubble-user: oklch(93% 0.03 155);
+}
+
+:root[data-theme='dark'] {
+	/* Dark — DESIGN.md's primary, original ramp. Values copied verbatim. */
+	--ground: oklch(13% 0.008 165);
+	--ground-deep: oklch(9% 0.006 165);
+	--surface: oklch(17% 0.01 165);
+	--surface-raised: oklch(21% 0.01 165);
+
+	--text: oklch(93% 0.004 165);
+	--text-muted: oklch(62% 0.008 165);
+
+	--accent: oklch(76% 0.17 155);
+	--accent-soft: oklch(76% 0.17 155 / 0.14);
+	--accent-glow: oklch(76% 0.17 155 / 0.25);
+	--accent-text: oklch(82% 0.13 155);
+	--ink-on-accent: oklch(13% 0.008 165);
+
+	--hairline: oklch(90% 0 0 / 0.08);
+	--hairline-strong: oklch(90% 0 0 / 0.16);
+	--hairline-accent: oklch(76% 0.17 155 / 0.45);
+
+	--warning: oklch(72% 0.15 70);
+	--danger: oklch(62% 0.19 25);
+	--success: oklch(72% 0.15 150);
+
+	/* Same green note as the light ramp's --bubble-user, lightness inverted
+	   — and deliberately a few points lighter than --surface-raised (21%)
+	   so the user bubble doesn't sit too close in value to the assistant
+	   bubble right next to it. */
+	--bubble-user: oklch(28% 0.03 155);
+}
+
+/* Typography — three faces, three jobs (DESIGN.md's own framing). Self-hosted
+   under /fonts (see app.css's @font-face rules) rather than a runtime Google
+   Fonts request: PRODUCT.md's "gizlilik ve yerellik pazarlık konusu değil"
+   (privacy/locality non-negotiable) rules out a CDN font dependency. */
+:root {
+	--font-display: 'Fraunces', Georgia, serif;
+	--font-body: 'Schibsted Grotesk', 'Instrument Sans', sans-serif;
+	--font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+}
+
+/* Long-form text measure — ChatBubble's transcript column. */
+:root {
+	--reading-measure: 68ch;
+}
+
+/* Radius — sm/md/lg/pill are named, fixed values, not a calc() chain off one
+   base (6/10/14/999 doesn't fit a linear formula). */
+:root {
+	--radius-sm: 6px;
+	--radius-md: 10px;
+	--radius-lg: 14px;
+	--radius-pill: 999px;
+}
+
+/* Motion — ease-out family only; never bounce/elastic (DESIGN.md anti-pattern). */
+:root {
+	--motion-fast: 150ms;
+	--motion-base: 200ms;
+	--motion-easing: cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* Collapses every motion token toward-instant under the OS reduced-motion
+   preference, everywhere at once, rather than gating each transition rule
+   individually across the app. Near-zero rather than literally 0ms: some
+   libraries (bits-ui's dialog/dropdown primitives among them) skip their own
+   open/close logic entirely on a 0-duration transition, which would silently
+   break rather than just de-animate them — 1ms transitions instead, which
+   still fire their transitionend/animationend events. The state change
+   itself (panel collapsed, dialog open, chevron rotated) is never hidden,
+   only how it gets there. */
+@media (prefers-reduced-motion: reduce) {
+	:root {
+		--motion-fast: 1ms;
+		--motion-base: 1ms;
+	}
+}

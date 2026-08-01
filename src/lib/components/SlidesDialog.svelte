@@ -3,6 +3,7 @@
 	import { slidesGeneration, startSlidesGeneration } from '$lib/slides-generation.svelte';
 	import type { SlidesGenerationRequest } from '$lib/types';
 	import GenerationDialog from './GenerationDialog.svelte';
+	import PresentationIcon from '@lucide/svelte/icons/presentation';
 
 	let {
 		chatId,
@@ -22,7 +23,7 @@
 	{chatId}
 	{vaultId}
 	bind:open
-	icon="🖼️"
+	icon={PresentationIcon}
 	label="Slayt"
 	dialogTitle="Slayt Oluştur"
 	promptLabel="Sunum hangi konuda olsun?"

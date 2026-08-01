@@ -40,7 +40,7 @@ if (printConfig) {
 			'vault-chat': {
 				command: 'node',
 				args: [fileURLToPath(new URL('./launch.mjs', import.meta.url))],
-				env: { DATA_DIR: process.env.DATA_DIR, OLLAMA_URL: process.env.OLLAMA_URL ?? 'http://localhost:11434' }
+				env: { DATA_DIR: process.env.DATA_DIR, OLLAMA_URL: process.env.OLLAMA_URL ?? 'http://127.0.0.1:11434' }
 			}
 		}
 	};
