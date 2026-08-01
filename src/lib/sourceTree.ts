@@ -12,6 +12,16 @@ export function collectFilePaths(nodes: LibraryNode[]): string[] {
 	return out;
 }
 
+/** A file matches if its name contains the query; a folder matches if any
+ * descendant file does — so a folder stays visible whenever it has to, and
+ * disappears whenever it doesn't. */
+export function nodeMatchesFilter(node: LibraryNode, query: string): boolean {
+	if (!query) return true;
+	const q = query.toLowerCase();
+	if (node.type === 'file') return node.name.toLowerCase().includes(q);
+	return (node.children ?? []).some((c) => nodeMatchesFilter(c, query));
+}
+
 export type TriState = 'checked' | 'unchecked' | 'indeterminate';
 
 /** A file's state is a direct membership check; a folder's is derived from

@@ -51,7 +51,14 @@
 	{#if message.role === 'assistant' && message.thinking}
 		<ThinkingPanel thinking={message.thinking} {streaming} />
 	{/if}
-	<ChatBubble role={message.role} {html} interrupted={isEmptyInterrupted} />
+	<!-- "polite" (not "assertive") so a screen reader announces streamed
+	     content without interrupting whatever the user is already doing —
+	     the 50ms flush loop in Chat.svelte previously updated this region
+	     up to 20x/second with no aria-live at all, so assistive tech never
+	     announced an answer arriving. -->
+	<div aria-live={streaming ? 'polite' : 'off'} aria-atomic="false">
+		<ChatBubble role={message.role} {html} interrupted={isEmptyInterrupted} />
+	</div>
 	{#if message.role === 'assistant' && message.sources?.length}
 		<SourceChip sources={message.sources} />
 	{/if}
@@ -83,6 +90,6 @@
 	.narrow-scope {
 		margin-top: 0.4rem;
 		font-size: 0.78rem;
-		color: var(--muted-foreground);
+		color: var(--color-muted-foreground);
 	}
 </style>

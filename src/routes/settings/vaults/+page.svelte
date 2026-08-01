@@ -6,6 +6,7 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import * as Card from '$lib/components/ui/card';
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
+	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 
 	let vaults = $state<VaultRecord[]>([]);
 	let activeVaultId = $state<string | null>(null);
@@ -107,13 +108,15 @@
 </script>
 
 <svelte:head>
-	<title>Vault'lar — Vault Chat</title>
+	<title>Vault'lar — Vault Agent Toolkit</title>
 </svelte:head>
 
 <div class="mx-auto max-w-2xl px-4 pt-6 pb-12">
 	<div class="mb-4 flex items-baseline gap-4">
-		<a href="/settings" class="text-sm text-muted-foreground hover:text-foreground">← Ayarlar</a>
-		<h1 class="text-xl font-semibold">Vault'lar</h1>
+		<a href="/settings" class="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-2">
+			<ArrowLeftIcon size={14} aria-hidden="true" /> Ayarlar
+		</a>
+		<h1 class="font-display text-xl font-medium">Vault'lar</h1>
 	</div>
 
 	<p class="mb-6 text-sm text-muted-foreground">

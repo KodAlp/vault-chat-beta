@@ -7,6 +7,10 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import * as Card from '$lib/components/ui/card';
 	import * as Select from '$lib/components/ui/select';
+	import * as AlertDialog from '$lib/components/ui/alert-dialog';
+	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
+	import ArrowUpIcon from '@lucide/svelte/icons/arrow-up';
+	import ArrowDownIcon from '@lucide/svelte/icons/arrow-down';
 
 	const TASK_LABELS: Record<string, string> = {
 		chat: 'Sohbet',
@@ -25,6 +29,7 @@
 	let testResults = $state<Record<string, string>>({});
 	let testingId = $state<string | null>(null);
 	let addChainSelection = $state<Record<string, string>>({});
+	let keyDeleteTarget = $state<ProviderStatus | null>(null);
 
 	async function refresh() {
 		try {
@@ -82,8 +87,14 @@
 		}
 	}
 
-	async function removeKey(p: ProviderStatus) {
-		if (!confirm(`"${p.label}" anahtarı silinsin mi?`)) return;
+	function askRemoveKey(p: ProviderStatus) {
+		keyDeleteTarget = p;
+	}
+
+	async function confirmRemoveKey() {
+		const p = keyDeleteTarget;
+		if (!p) return;
+		keyDeleteTarget = null;
 		try {
 			const res = await fetch(`/api/providers/${encodeURIComponent(p.id)}/key`, { method: 'DELETE' });
 			if (!res.ok) throw new Error();
@@ -155,13 +166,15 @@
 </script>
 
 <svelte:head>
-	<title>Model Sağlayıcıları — Vault Chat</title>
+	<title>Model Sağlayıcıları — Vault Agent Toolkit</title>
 </svelte:head>
 
 <div class="mx-auto max-w-3xl px-4 pt-6 pb-12">
 	<div class="mb-3 flex items-baseline gap-4">
-		<a href="/settings" class="text-sm text-muted-foreground hover:text-foreground">← Ayarlar</a>
-		<h1 class="text-xl font-semibold">Model Sağlayıcıları</h1>
+		<a href="/settings" class="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-2">
+			<ArrowLeftIcon size={14} aria-hidden="true" /> Ayarlar
+		</a>
+		<h1 class="font-display text-xl font-medium">Model Sağlayıcıları</h1>
 	</div>
 
 	<p class="mb-5 text-sm text-muted-foreground">
@@ -171,7 +184,7 @@
 	</p>
 
 	{#if loadError}
-		<p class="mb-4 text-sm text-destructive">{loadError}</p>
+		<p class="mb-4 text-sm text-destructive" role="alert">{loadError}</p>
 	{/if}
 
 	<section class="mb-8">
@@ -221,7 +234,7 @@
 									{p.keyStatus === 'connected' ? 'Anahtarı değiştir' : 'Anahtar ekle'}
 								</Button>
 								{#if p.keyStatus === 'connected'}
-									<Button size="sm" variant="destructive" onclick={() => removeKey(p)}>
+									<Button size="sm" variant="destructive" onclick={() => askRemoveKey(p)}>
 										Anahtarı sil
 									</Button>
 								{/if}
@@ -251,17 +264,19 @@
 							{labelFor(providerId)}
 							<button
 								type="button"
-								class="px-0.5 text-muted-foreground disabled:opacity-30"
+								class="flex items-center px-0.5 text-muted-foreground disabled:opacity-30"
 								title="Yukarı taşı"
+								aria-label="Yukarı taşı"
 								disabled={i === 0}
-								onclick={() => moveInChain(taskType, i, -1)}>↑</button
+								onclick={() => moveInChain(taskType, i, -1)}><ArrowUpIcon size={12} aria-hidden="true" /></button
 							>
 							<button
 								type="button"
-								class="px-0.5 text-muted-foreground disabled:opacity-30"
+								class="flex items-center px-0.5 text-muted-foreground disabled:opacity-30"
 								title="Aşağı taşı"
+								aria-label="Aşağı taşı"
 								disabled={i === (chains[taskType]?.length ?? 0) - 1}
-								onclick={() => moveInChain(taskType, i, 1)}>↓</button
+								onclick={() => moveInChain(taskType, i, 1)}><ArrowDownIcon size={12} aria-hidden="true" /></button
 							>
 							<button
 								type="button"
@@ -295,3 +310,28 @@
 		{/each}
 	</section>
 </div>
+
+<AlertDialog.Root open={!!keyDeleteTarget} onOpenChange={(open) => !open && (keyDeleteTarget = null)}>
+	<AlertDialog.Content>
+		{#if keyDeleteTarget}
+			<AlertDialog.Header>
+				<AlertDialog.Title>"{keyDeleteTarget.label}" anahtarı silinsin mi?</AlertDialog.Title>
+				<AlertDialog.Description>
+					Bu sağlayıcı için kayıtlı API anahtarı kalıcı olarak silinecek.
+				</AlertDialog.Description>
+			</AlertDialog.Header>
+			<AlertDialog.Footer>
+				<AlertDialog.Cancel>Vazgeç</AlertDialog.Cancel>
+				<AlertDialog.Action
+					variant="destructive"
+					onclick={(e) => {
+						e.preventDefault();
+						confirmRemoveKey();
+					}}
+				>
+					Sil
+				</AlertDialog.Action>
+			</AlertDialog.Footer>
+		{/if}
+	</AlertDialog.Content>
+</AlertDialog.Root>

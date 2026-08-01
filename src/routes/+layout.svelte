@@ -9,6 +9,7 @@
 	import { mindmapGeneration, dismissMindMapGeneration } from '$lib/mindmap-generation.svelte';
 	import { slidesGeneration, dismissSlidesGeneration } from '$lib/slides-generation.svelte';
 	import GenerationStatusToast from '$lib/components/GenerationStatusToast.svelte';
+	import OllamaStatusBanner from '$lib/components/OllamaStatusBanner.svelte';
 
 	let { children } = $props();
 
@@ -38,7 +39,18 @@
 	});
 </script>
 
-{@render children()}
+<!-- Column shell, not the banner rendered loose: OllamaStatusBanner used to be
+     position:fixed at the viewport top, which looked fine on scrolling pages
+     but permanently covered the chat route's fixed-height header/icon-rail
+     chrome (that route sizes itself to 100% of this wrapper, not the raw
+     viewport, precisely so a banner pushing down from here reserves real
+     space instead of overlapping it). -->
+<div class="app-shell">
+	<OllamaStatusBanner />
+	<div class="app-content">
+		{@render children()}
+	</div>
+</div>
 
 <GenerationStatusToast
 	status={quizGeneration.status}
@@ -113,3 +125,16 @@
 	}}
 	onDismiss={dismissSlidesGeneration}
 />
+
+<style>
+	.app-shell {
+		display: flex;
+		flex-direction: column;
+		height: 100%;
+	}
+
+	.app-content {
+		flex: 1;
+		min-height: 0;
+	}
+</style>

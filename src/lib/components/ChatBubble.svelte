@@ -22,15 +22,25 @@
 
 <style>
 	.bubble {
-		max-width: 70ch;
+		max-width: var(--reading-measure);
 		min-width: 0;
 		padding: 0.6rem 0.9rem;
-		border-radius: 10px;
+		border-radius: var(--radius-lg);
 		line-height: 1.55;
 		/* KaTeX doesn't line-wrap (long sums, matrices, wide fractions) — contain
 		   it with a horizontal scrollbar instead of letting it break out past
 		   the bubble/chat column. */
 		overflow-x: auto;
+	}
+
+	/* app.css's global `pre { overflow-x: auto }` would otherwise nest a
+	   SECOND independent horizontal scrollbar inside this one for code
+	   blocks — two competing scroll boundaries in one bubble, which reads as
+	   "content partially hidden" rather than "scrollable". The bubble is the
+	   single scroll boundary for both KaTeX and code; pre defers to it. */
+	.bubble :global(pre) {
+		overflow-x: visible;
+		max-width: 100%;
 	}
 
 	.bubble :global(.katex-display) {
@@ -46,7 +56,7 @@
 	}
 
 	.bubble.interrupted {
-		color: var(--muted-foreground);
+		color: var(--color-muted-foreground);
 		font-style: italic;
 	}
 </style>

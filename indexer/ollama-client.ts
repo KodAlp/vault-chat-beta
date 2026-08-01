@@ -5,7 +5,7 @@
  * runs as a plain `tsx` script outside that runtime (see vault-rag-index skill:
  * "indexer/ uygulamadan bağımsız"), so it reads process.env directly instead.
  */
-const OLLAMA_URL = process.env.OLLAMA_URL ?? 'http://localhost:11434';
+const OLLAMA_URL = process.env.OLLAMA_URL ?? 'http://127.0.0.1:11434';
 
 export async function embed(texts: string[], model: string): Promise<number[][]> {
 	const res = await fetch(`${OLLAMA_URL}/api/embed`, {

@@ -2,6 +2,8 @@
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
 	import { renderMarkdown } from '$lib/markdown';
+	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
+	import TriangleAlertIcon from '@lucide/svelte/icons/triangle-alert';
 
 	let html = $state('');
 	let error = $state('');
@@ -32,14 +34,17 @@
 </script>
 
 <svelte:head>
-	<title>{filePath || 'Kaynak'} — Vault Chat</title>
+	<title>{filePath || 'Kaynak'} — Vault Agent Toolkit</title>
 </svelte:head>
 
 <div class="viewer">
-	<a class="home-link" href="/">← Ana sayfa</a>
+	<a class="home-link" href="/"><ArrowLeftIcon size={14} aria-hidden="true" /> Ana sayfa</a>
 	<p class="path">{filePath}</p>
 	{#if error}
-		<p class="error">{error}</p>
+		<div class="error">
+			<TriangleAlertIcon size={16} aria-hidden="true" />
+			<p>{error}</p>
+		</div>
 	{:else}
 		<div class="content markdown-body">{@html html}</div>
 	{/if}
@@ -53,21 +58,45 @@
 	}
 
 	.home-link {
-		display: inline-block;
-		font-size: 0.9rem;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.35rem;
+		font-size: 0.875rem;
 		text-decoration: none;
+		color: var(--color-muted-foreground);
 		margin-bottom: 1rem;
+	}
+
+	.home-link:hover {
+		color: var(--color-primary);
+	}
+
+	.home-link:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
 	}
 
 	.path {
 		font-size: 0.75rem;
-		color: var(--muted-foreground);
+		color: var(--color-muted-foreground);
 		margin-bottom: 1.5rem;
-		font-family: ui-monospace, 'SF Mono', Consolas, monospace;
+		font-family: var(--font-mono);
 	}
 
 	.error {
-		color: var(--destructive);
+		display: flex;
+		align-items: flex-start;
+		gap: 0.6rem;
+		padding: 0.9rem 1rem;
+		border: 1px solid var(--hairline);
+		border-radius: var(--radius-lg);
+		background: var(--surface);
+		color: var(--color-destructive);
+	}
+
+	.error p {
+		margin: 0;
+		color: var(--color-foreground);
 	}
 
 	.content {

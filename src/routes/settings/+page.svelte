@@ -8,6 +8,8 @@
 	import { Label } from '$lib/components/ui/label';
 	import * as Select from '$lib/components/ui/select';
 	import * as Card from '$lib/components/ui/card';
+	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
+	import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';
 
 	let models = $state<OllamaModel[]>([]);
 	let loadError = $state('');
@@ -65,13 +67,15 @@
 </script>
 
 <svelte:head>
-	<title>Ayarlar — Vault Chat</title>
+	<title>Ayarlar — Vault Agent Toolkit</title>
 </svelte:head>
 
 <div class="mx-auto max-w-2xl px-4 pt-6 pb-12">
 	<div class="mb-8 flex items-baseline gap-4">
-		<a href="/" class="text-sm text-muted-foreground hover:text-foreground">← Ana sayfa</a>
-		<h1 class="text-xl font-semibold">Ayarlar</h1>
+		<a href="/" class="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-2">
+			<ArrowLeftIcon size={14} aria-hidden="true" /> Ana sayfa
+		</a>
+		<h1 class="font-display text-xl font-medium">Ayarlar</h1>
 	</div>
 
 	<Card.Root class="mb-6">
@@ -101,7 +105,7 @@
 		</Card.Header>
 		<Card.Content class="flex flex-col gap-4">
 			{#if loadError}
-				<p class="text-sm text-destructive">{loadError}</p>
+				<p class="text-sm text-destructive" role="alert">{loadError}</p>
 			{/if}
 
 			<div class="flex flex-col gap-1.5">
@@ -169,11 +173,11 @@
 				<div>
 					<Button type="button" onclick={saveVaultConfig}>Kaydet</Button>
 					{#if vaultSaveStatus === 'saved'}
-						<span class="ml-2 text-sm text-emerald-600 dark:text-emerald-400"
+						<span class="ml-2 text-sm text-[var(--success)]"
 							>Kaydedildi — bir sonraki başlatmada uygulanır.</span
 						>
 					{:else if vaultSaveStatus === 'error'}
-						<span class="ml-2 text-sm text-destructive">Kaydedilemedi.</span>
+						<span class="ml-2 text-sm text-destructive" role="alert">Kaydedilemedi.</span>
 					{/if}
 				</div>
 			</Card.Content>
@@ -186,8 +190,8 @@
 			<Card.Description>Birden fazla kütüphane arasında geçiş yap, yeni vault oluştur veya sil.</Card.Description>
 		</Card.Header>
 		<Card.Content>
-			<a href="/settings/vaults" class="text-sm font-semibold text-primary hover:underline">
-				Vault'ları yönet →
+			<a href="/settings/vaults" class="flex items-center gap-1 text-sm font-semibold text-primary hover:underline">
+				Vault'ları yönet <ArrowRightIcon size={14} aria-hidden="true" />
 			</a>
 		</Card.Content>
 	</Card.Root>
@@ -198,8 +202,8 @@
 			<Card.Description>Obsidian vault'undan içe aktar, belge yükleme ayarları.</Card.Description>
 		</Card.Header>
 		<Card.Content>
-			<a href="/settings/library" class="text-sm font-semibold text-primary hover:underline">
-				Kütüphaneyi yönet →
+			<a href="/settings/library" class="flex items-center gap-1 text-sm font-semibold text-primary hover:underline">
+				Kütüphaneyi yönet <ArrowRightIcon size={14} aria-hidden="true" />
 			</a>
 		</Card.Content>
 	</Card.Root>
@@ -210,8 +214,8 @@
 			<Card.Description>Sohbet, test ve bilgi kartı üretimini kişiselleştir.</Card.Description>
 		</Card.Header>
 		<Card.Content>
-			<a href="/settings/skills" class="text-sm font-semibold text-primary hover:underline">
-				Skill'leri yönet →
+			<a href="/settings/skills" class="flex items-center gap-1 text-sm font-semibold text-primary hover:underline">
+				Skill'leri yönet <ArrowRightIcon size={14} aria-hidden="true" />
 			</a>
 		</Card.Content>
 	</Card.Root>
@@ -222,8 +226,8 @@
 			<Card.Description>Ollama ve bulut sağlayıcıları (DeepSeek, ...), API anahtarları, görev zincirleri.</Card.Description>
 		</Card.Header>
 		<Card.Content>
-			<a href="/settings/providers" class="text-sm font-semibold text-primary hover:underline">
-				Sağlayıcıları yönet →
+			<a href="/settings/providers" class="flex items-center gap-1 text-sm font-semibold text-primary hover:underline">
+				Sağlayıcıları yönet <ArrowRightIcon size={14} aria-hidden="true" />
 			</a>
 		</Card.Content>
 	</Card.Root>

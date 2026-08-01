@@ -8,6 +8,7 @@
 	import * as Card from '$lib/components/ui/card';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import * as Select from '$lib/components/ui/select';
+	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 
 	const SCOPE_LABELS: Record<UserSkillScope, string> = {
 		chat: 'Sohbet',
@@ -173,13 +174,15 @@ Kurallar, tercihler, yasaklar... serbest markdown.
 </script>
 
 <svelte:head>
-	<title>Kullanıcı Skill'leri — Vault Chat</title>
+	<title>Kullanıcı Skill'leri — Vault Agent Toolkit</title>
 </svelte:head>
 
 <div class="mx-auto max-w-3xl px-4 pt-6 pb-12">
 	<div class="mb-3 flex items-baseline gap-4">
-		<a href="/settings" class="text-sm text-muted-foreground hover:text-foreground">← Ayarlar</a>
-		<h1 class="text-xl font-semibold">Kullanıcı Skill'leri</h1>
+		<a href="/settings" class="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-2">
+			<ArrowLeftIcon size={14} aria-hidden="true" /> Ayarlar
+		</a>
+		<h1 class="font-display text-xl font-medium">Kullanıcı Skill'leri</h1>
 	</div>
 
 	<p class="mb-5 text-sm text-muted-foreground">

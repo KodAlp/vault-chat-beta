@@ -28,7 +28,7 @@ npm install
 `.env` dosyası zaten `.env.example`'dan oluşturuldu. Gerekirse aç ve kontrol et:
 
 ```
-OLLAMA_URL=http://localhost:11434
+OLLAMA_URL=http://127.0.0.1:11434
 CHATS_DB_PATH=./data/chats.db
 PUBLIC_VAULT_NAME=First brain(Software based)   # Obsidian'da vault'un görünen adı
 ```

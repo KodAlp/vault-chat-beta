@@ -3,7 +3,7 @@
     {
       "id": "ollama",
       "label": "Ollama (yerel)",
-      "baseUrl": "http://localhost:11434",
+      "baseUrl": "http://127.0.0.1:11434",
       "kind": "ollama",
       "reasoningDialect": "reasoning_content",
       "enabled": true,

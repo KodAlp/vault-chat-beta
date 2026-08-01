@@ -18,6 +18,16 @@ export interface GenerateQuizInput {
 
 export type ProgressStage = 'retrieving' | 'generating' | 'validating' | 'retrying';
 
+/** The client's own <input max="20"> only stops the spinner arrows, not
+ * typed values, and the server must never trust client-side validation
+ * alone — an unclamped count reaches the prompt as "Tam olarak 600 soruluk
+ * bir test hazırla", which is guaranteed to run long or time out with no
+ * explanation to the user. */
+function clampComposition(composition: GenerateQuizInput['composition']) {
+	const clamp = (n: number) => Math.max(0, Math.min(20, Math.round(n) || 0));
+	return { mc: clamp(composition.mc), tf: clamp(composition.tf), open: clamp(composition.open) };
+}
+
 const QUERY_EXTRACT_SYSTEM_PROMPT =
 	'Kullanıcının test/sınav isteğinden, sadece KONUYU özetleyen kısa bir arama sorgusu çıkar. "test hazırla", "soru üret" gibi talimat kelimelerini ATLA, sadece konuyu yaz. Tek satır, sadece sorgu metni, başka hiçbir şey yazma.';
 
@@ -145,6 +155,7 @@ export async function generateQuiz(
 	onProgress?: (stage: ProgressStage) => void
 ): Promise<{ quizId: string }> {
 	onProgress?.('retrieving');
+	input = { ...input, composition: clampComposition(input.composition) };
 
 	const topicalQuery = await extractTopicalQuery(input.prompt, input.model);
 	let query = topicalQuery;

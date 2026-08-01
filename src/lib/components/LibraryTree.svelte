@@ -24,7 +24,7 @@
 	<UploadDialog onImported={refresh} />
 
 	{#if loadError}
-		<p class="error">{loadError}</p>
+		<p class="error" role="alert">{loadError}</p>
 	{:else if tree.length === 0}
 		<p class="empty">Kütüphane boş. Bir belge yükle veya Ayarlar → Kütüphane'den Obsidian vault'unu içe aktar.</p>
 	{:else}
@@ -44,12 +44,12 @@
 	}
 
 	.error {
-		color: var(--destructive);
+		color: var(--color-destructive);
 		font-size: 0.8rem;
 	}
 
 	.empty {
-		color: var(--muted-foreground);
+		color: var(--color-muted-foreground);
 		font-size: 0.78rem;
 		line-height: 1.4;
 	}

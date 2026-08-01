@@ -4,6 +4,7 @@
 	import type { QuizGenerationRequest } from '$lib/types';
 	import GenerationDialog from './GenerationDialog.svelte';
 	import { Input } from '$lib/components/ui/input';
+	import FileQuestionIcon from '@lucide/svelte/icons/file-question';
 
 	let {
 		chatId,
@@ -16,6 +17,13 @@
 	let openCount = $state(2);
 
 	let alreadyGenerating = $derived(quizGeneration.status.phase === 'generating');
+
+	// The <input max="20"> only stops the spinner arrows — typing "600" goes
+	// straight through it. Clamped on blur (not oninput) so mid-edit
+	// keystrokes aren't fought while the user is still typing.
+	function clampCount(n: number) {
+		return Math.max(0, Math.min(20, Math.round(n) || 0));
+	}
 
 	/**
 	 * Fires the generation request into the shared background store — this
@@ -39,7 +47,7 @@
 	{chatId}
 	{vaultId}
 	bind:open
-	icon="📝"
+	icon={FileQuestionIcon}
 	label="Test"
 	dialogTitle="Test Oluştur"
 	promptLabel="Ne tür bir test istiyorsun?"
@@ -52,15 +60,22 @@
 		<div class="flex gap-3">
 			<label class="flex flex-1 flex-col gap-1 text-xs">
 				Çoktan seçmeli
-				<Input type="number" min="0" max="20" bind:value={mc} class="h-8" />
+				<Input type="number" min="0" max="20" bind:value={mc} onblur={() => (mc = clampCount(mc))} class="h-8" />
 			</label>
 			<label class="flex flex-1 flex-col gap-1 text-xs">
 				Doğru/Yanlış
-				<Input type="number" min="0" max="20" bind:value={tf} class="h-8" />
+				<Input type="number" min="0" max="20" bind:value={tf} onblur={() => (tf = clampCount(tf))} class="h-8" />
 			</label>
 			<label class="flex flex-1 flex-col gap-1 text-xs">
 				Açık uçlu
-				<Input type="number" min="0" max="20" bind:value={openCount} class="h-8" />
+				<Input
+					type="number"
+					min="0"
+					max="20"
+					bind:value={openCount}
+					onblur={() => (openCount = clampCount(openCount))}
+					class="h-8"
+				/>
 			</label>
 		</div>
 	{/snippet}

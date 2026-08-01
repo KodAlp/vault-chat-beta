@@ -4,6 +4,10 @@
 	import { settings } from '$lib/settings.svelte';
 	import { obsidianUri, libraryViewerUrl } from '$lib/sourceLink';
 	import type { PageProps } from './$types';
+	import BookOpenIcon from '@lucide/svelte/icons/book-open';
+	import CheckIcon from '@lucide/svelte/icons/check';
+	import XIcon from '@lucide/svelte/icons/x';
+	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 	import type {
 		QuizItemView,
 		QuizView,
@@ -85,6 +89,7 @@
 
 	async function finish() {
 		phase = 'submitting';
+		errorMessage = '';
 		try {
 			const res = await fetch(`/api/study/attempts/${attemptId}`, {
 				method: 'PATCH',
@@ -105,27 +110,31 @@
 			);
 			phase = 'results';
 		} catch {
-			errorMessage = 'Sınav gönderilemedi.';
-			phase = 'error';
+			// Back to 'taking', not the terminal 'error' phase — answers are
+			// still in memory (never cleared) and the PATCH is safe to retry,
+			// so a flaky network blip shouldn't cost the user a completed
+			// attempt they'd otherwise have to redo from scratch.
+			errorMessage = 'Sınav gönderilemedi. Tekrar dene.';
+			phase = 'taking';
 		}
 	}
 </script>
 
 <svelte:head>
-	<title>{quiz?.title ?? 'Test'} — Vault Chat</title>
+	<title>{quiz?.title ?? 'Test'} — Vault Agent Toolkit</title>
 </svelte:head>
 
 <div class="quiz-screen">
-	<a class="home-link" href="/">← Ana sayfa</a>
+	<a class="home-link" href="/"><ArrowLeftIcon size={14} aria-hidden="true" /> Ana sayfa</a>
 
 	{#if phase === 'loading'}
 		<p class="status">Yükleniyor...</p>
 	{:else if phase === 'error'}
-		<p class="status error">{errorMessage}</p>
+		<p class="status error" role="alert">{errorMessage}</p>
 	{:else if phase === 'taking' || phase === 'submitting'}
 		{@const item = items[currentIndex]}
 		<div class="progress-bar">
-			<div class="progress-fill" style="width: {((currentIndex + 1) / items.length) * 100}%"></div>
+			<div class="progress-fill" style="transform: scaleX({(currentIndex + 1) / items.length})"></div>
 		</div>
 		<p class="progress-label">{currentIndex + 1} / {items.length}</p>
 
@@ -163,6 +172,10 @@
 			{/if}
 		</div>
 
+		{#if errorMessage}
+			<p class="status error inline" role="alert">{errorMessage}</p>
+		{/if}
+
 		<div class="nav">
 			<button onclick={prev} disabled={currentIndex === 0 || phase === 'submitting'}>Geri</button>
 			{#if currentIndex < items.length - 1}
@@ -178,7 +191,13 @@
 		<div class="results">
 			{#each renderedResults as r (r.item.itemId)}
 				<div class="result-item" class:correct={r.item.isCorrect} class:incorrect={!r.item.isCorrect}>
-					<div class="result-mark">{r.item.isCorrect ? '✓' : '✗'}</div>
+					<div class="result-mark">
+						{#if r.item.isCorrect}
+							<CheckIcon size={16} aria-hidden="true" />
+						{:else}
+							<XIcon size={16} aria-hidden="true" />
+						{/if}
+					</div>
 					<div class="result-body">
 						<div class="question markdown-body">{@html r.questionHtml}</div>
 						<p class="given">Cevabın: {r.item.given || '(boş)'}</p>
@@ -192,8 +211,8 @@
 						<a class="source-link" href={obsidianUri(r.item.sourcePath)} title={r.item.headingPath}>
 							{r.item.sourcePath}
 						</a>
-						<a class="source-link" href={libraryViewerUrl(r.item.sourcePath)} title="Kütüphanede görüntüle">
-							⇱
+						<a class="source-link" href={libraryViewerUrl(r.item.sourcePath)} title="Kütüphanede görüntüle" aria-label="Kütüphanede görüntüle">
+							<BookOpenIcon size={13} aria-hidden="true" />
 						</a>
 					</div>
 				</div>
@@ -209,39 +228,69 @@
 		padding: 1.5rem 1rem 3rem;
 	}
 
+	.quiz-screen h1 {
+		font-family: var(--font-display);
+		font-weight: 480;
+		letter-spacing: -0.015em;
+		font-size: 1.5rem;
+		margin: 0 0 1.5rem;
+	}
+
 	.home-link {
-		display: inline-block;
-		font-size: 0.9rem;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.35rem;
+		font-size: 0.875rem;
+		color: var(--color-muted-foreground);
 		text-decoration: none;
 		margin-bottom: 1.5rem;
 	}
 
+	.home-link:hover {
+		color: var(--color-primary);
+	}
+
+	.home-link:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
+	}
+
 	.status {
-		color: var(--muted-foreground);
+		color: var(--color-muted-foreground);
 		text-align: center;
 		margin-top: 3rem;
 	}
 
 	.status.error {
-		color: var(--destructive);
+		color: var(--color-destructive);
+	}
+
+	.status.error.inline {
+		text-align: left;
+		margin: 0 0 1rem;
+		font-size: 0.85rem;
 	}
 
 	.progress-bar {
 		height: 6px;
-		background: var(--border);
+		background: var(--color-border);
 		border-radius: 999px;
 		overflow: hidden;
 	}
 
 	.progress-fill {
 		height: 100%;
-		background: var(--primary);
-		transition: width 0.2s ease;
+		width: 100%;
+		background: var(--color-primary);
+		/* scaleX, not width — the fill never triggers layout recalculation
+		   on its own track (its parent .progress-bar's size is fixed). */
+		transform-origin: left;
+		transition: transform var(--motion-base) var(--motion-easing);
 	}
 
 	.progress-label {
 		font-size: 0.75rem;
-		color: var(--muted-foreground);
+		color: var(--color-muted-foreground);
 		margin: 0.4rem 0 1.5rem;
 	}
 
@@ -270,26 +319,31 @@
 		text-align: left;
 		padding: 0.6rem 0.9rem;
 		border-radius: 8px;
-		border: 1px solid var(--border);
-		background: var(--background);
-		color: var(--foreground);
+		border: 1px solid var(--color-border);
+		background: var(--color-background);
+		color: var(--color-foreground);
 		cursor: pointer;
-		font-size: 0.95rem;
+		font-size: 1rem;
 	}
 
 	.option-letter {
 		flex-shrink: 0;
 		font-weight: 600;
-		color: var(--muted-foreground);
+		color: var(--color-muted-foreground);
 	}
 
 	.option.selected .option-letter {
-		color: var(--primary);
+		color: var(--color-primary);
 	}
 
 	.option.selected {
-		border-color: var(--primary);
+		border-color: var(--color-primary);
 		background: var(--bubble-user);
+	}
+
+	.option:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
 	}
 
 	.open-answer {
@@ -298,11 +352,16 @@
 		resize: vertical;
 		padding: 0.6rem 0.75rem;
 		border-radius: 8px;
-		border: 1px solid var(--border);
-		background: var(--background);
-		color: var(--foreground);
+		border: 1px solid var(--color-border);
+		background: var(--color-background);
+		color: var(--color-foreground);
 		font-family: var(--font-sans);
-		font-size: 0.95rem;
+		font-size: 1rem;
+	}
+
+	.open-answer:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 1px;
 	}
 
 	.nav {
@@ -313,22 +372,27 @@
 	.nav button {
 		padding: 0.5rem 1.2rem;
 		border-radius: 8px;
-		border: 1px solid var(--border);
+		border: 1px solid var(--color-border);
 		background: transparent;
-		color: var(--foreground);
+		color: var(--color-foreground);
 		cursor: pointer;
 	}
 
 	.nav button.primary {
-		background: var(--primary);
-		color: var(--primary-foreground);
-		border-color: var(--primary);
+		background: var(--color-primary);
+		color: var(--color-primary-foreground);
+		border-color: var(--color-primary);
 		font-weight: 600;
 	}
 
 	.nav button:disabled {
 		opacity: 0.5;
 		cursor: not-allowed;
+	}
+
+	.nav button:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
 	}
 
 	.results {
@@ -341,29 +405,39 @@
 		display: flex;
 		gap: 0.75rem;
 		padding: 1rem;
-		border-radius: 10px;
-		border: 1px solid var(--border);
+		border-radius: var(--radius-lg);
+		border: 1px solid var(--color-border);
 	}
 
+	/* A thick colored border-left is the detector's own named "most
+	   recognizable AI-slop tell" — kept at 2px (not the original 3px) and
+	   tied to the semantic --success/--destructive tokens rather than the
+	   brand accent, since this is a real correct/incorrect scan cue
+	   (the Duolingo/Anki-review pattern), not decoration standing in for
+	   content. */
 	.result-item.correct {
-		border-left: 3px solid var(--primary);
+		border-left: 2px solid var(--success);
 	}
 
 	.result-item.incorrect {
-		border-left: 3px solid var(--destructive);
+		border-left: 2px solid var(--color-destructive);
 	}
 
 	.result-mark {
-		font-size: 1.1rem;
-		font-weight: 700;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		flex-shrink: 0;
+		width: 1.5rem;
+		height: 1.5rem;
 	}
 
 	.result-item.correct .result-mark {
-		color: var(--primary);
+		color: var(--success);
 	}
 
 	.result-item.incorrect .result-mark {
-		color: var(--destructive);
+		color: var(--color-destructive);
 	}
 
 	.result-body {
@@ -378,12 +452,12 @@
 	}
 
 	.correct-answer {
-		color: var(--destructive);
+		color: var(--color-destructive);
 	}
 
 	.explanation {
 		font-size: 0.9rem;
-		color: var(--muted-foreground);
+		color: var(--color-muted-foreground);
 		margin-top: 0.5rem;
 	}
 
@@ -396,15 +470,20 @@
 		display: inline-block;
 		margin-top: 0.6rem;
 		font-size: 0.75rem;
-		color: var(--muted-foreground);
+		color: var(--color-muted-foreground);
 		text-decoration: none;
-		border: 1px solid var(--border);
+		border: 1px solid var(--color-border);
 		border-radius: 999px;
 		padding: 0.2rem 0.65rem;
 	}
 
 	.source-link:hover {
-		color: var(--primary);
-		border-color: var(--primary);
+		color: var(--color-primary);
+		border-color: var(--color-primary);
+	}
+
+	.source-link:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
 	}
 </style>

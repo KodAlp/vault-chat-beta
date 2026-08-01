@@ -3,6 +3,8 @@
 	import { obsidianUri, libraryViewerUrl } from '$lib/sourceLink';
 	import type { PageProps } from './$types';
 	import type { SlideDeckView, SlideView } from '$lib/types';
+	import BookOpenIcon from '@lucide/svelte/icons/book-open';
+	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 
 	let { data }: PageProps = $props();
 
@@ -62,16 +64,16 @@
 </script>
 
 <svelte:head>
-	<title>{deck?.title ?? 'Sunum'} — Vault Chat</title>
+	<title>{deck?.title ?? 'Sunum'} — Vault Agent Toolkit</title>
 </svelte:head>
 
 <div class="slides-screen">
-	<a class="home-link" href="/">← Ana sayfa</a>
+	<a class="home-link" href="/"><ArrowLeftIcon size={14} aria-hidden="true" /> Ana sayfa</a>
 
 	{#if phase === 'loading'}
 		<p class="status">Yükleniyor...</p>
 	{:else if phase === 'error'}
-		<p class="status error">{errorMessage}</p>
+		<p class="status error" role="alert">{errorMessage}</p>
 	{:else if phase === 'ready' && deck}
 		<h1>{deck.title}</h1>
 
@@ -94,8 +96,9 @@
 					class="source-link"
 					href={libraryViewerUrl(slides[currentIndex].source_path)}
 					title="Kütüphanede görüntüle"
+					aria-label="Kütüphanede görüntüle"
 				>
-					⇱
+					<BookOpenIcon size={13} aria-hidden="true" />
 				</a>
 			</div>
 		{/if}
@@ -110,37 +113,52 @@
 	}
 
 	.home-link {
-		display: inline-block;
-		font-size: 0.9rem;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.35rem;
+		font-size: 0.875rem;
+		color: var(--color-muted-foreground);
 		text-decoration: none;
 		margin-bottom: 1.5rem;
 	}
 
+	.home-link:hover {
+		color: var(--color-primary);
+	}
+
+	.home-link:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
+	}
+
 	.status {
-		color: var(--muted-foreground);
+		color: var(--color-muted-foreground);
 		text-align: center;
 		margin-top: 3rem;
 	}
 
 	.status.error {
-		color: var(--destructive);
+		color: var(--color-destructive);
 	}
 
 	h1 {
-		font-size: 1.4rem;
+		font-family: var(--font-display);
+		font-weight: 480;
+		letter-spacing: -0.015em;
+		font-size: 1.5rem;
 		margin: 0 0 0.75rem;
 	}
 
 	.progress-label {
 		font-size: 0.75rem;
-		color: var(--muted-foreground);
+		color: var(--color-muted-foreground);
 		margin: 0 0 0.5rem;
 	}
 
 	.slide-frame {
 		width: 100%;
 		aspect-ratio: 16 / 9;
-		border: 1px solid var(--border);
+		border: 1px solid var(--color-border);
 		border-radius: 10px;
 		overflow: hidden;
 	}
@@ -160,9 +178,9 @@
 	.nav button {
 		padding: 0.5rem 1.2rem;
 		border-radius: 8px;
-		border: 1px solid var(--border);
+		border: 1px solid var(--color-border);
 		background: transparent;
-		color: var(--foreground);
+		color: var(--color-foreground);
 		cursor: pointer;
 	}
 
@@ -179,15 +197,15 @@
 
 	.source-link {
 		font-size: 0.75rem;
-		color: var(--muted-foreground);
+		color: var(--color-muted-foreground);
 		text-decoration: none;
-		border: 1px solid var(--border);
+		border: 1px solid var(--color-border);
 		border-radius: 999px;
 		padding: 0.2rem 0.65rem;
 	}
 
 	.source-link:hover {
-		color: var(--primary);
-		border-color: var(--primary);
+		color: var(--color-primary);
+		border-color: var(--color-primary);
 	}
 </style>

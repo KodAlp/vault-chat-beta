@@ -3,6 +3,8 @@
 	import { renderMarkdown } from '$lib/markdown';
 	import { obsidianUri, libraryViewerUrl } from '$lib/sourceLink';
 	import type { CardView, Grade } from '$lib/types';
+	import BookOpenIcon from '@lucide/svelte/icons/book-open';
+	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 
 	type Phase = 'loading' | 'reviewing' | 'grading' | 'done' | 'empty' | 'error';
 
@@ -66,16 +68,16 @@
 </script>
 
 <svelte:head>
-	<title>Bilgi Kartları — Vault Chat</title>
+	<title>Bilgi Kartları — Vault Agent Toolkit</title>
 </svelte:head>
 
 <div class="cards-screen">
-	<a class="home-link" href="/">← Ana sayfa</a>
+	<a class="home-link" href="/"><ArrowLeftIcon size={14} aria-hidden="true" /> Ana sayfa</a>
 
 	{#if phase === 'loading'}
 		<p class="status">Yükleniyor...</p>
 	{:else if phase === 'error'}
-		<p class="status error">{errorMessage}</p>
+		<p class="status error" role="alert">{errorMessage}</p>
 	{:else if phase === 'empty'}
 		<p class="status">Bugün tekrarlanacak kart yok.</p>
 	{:else if phase === 'done'}
@@ -83,7 +85,7 @@
 	{:else if phase === 'reviewing' || phase === 'grading'}
 		{@const card = cards[currentIndex]}
 		<div class="progress-bar">
-			<div class="progress-fill" style="width: {((currentIndex + 1) / cards.length) * 100}%"></div>
+			<div class="progress-fill" style="transform: scaleX({(currentIndex + 1) / cards.length})"></div>
 		</div>
 		<p class="progress-label">{currentIndex + 1} / {cards.length}</p>
 
@@ -92,13 +94,15 @@
 			{#if revealed}
 				<hr />
 				<div class="face back markdown-body">{@html backHtml}</div>
-				<a class="source-link" href={obsidianUri(card.source_path)} title={card.heading_path}>
-					{card.source_path}
-				</a>
-				<a class="source-link" href={libraryViewerUrl(card.source_path)} title="Kütüphanede görüntüle">
-					⇱
-				</a>
-			{/if}
+				<span class="chip-group">
+					<a class="chip" href={obsidianUri(card.source_path)} title={card.heading_path}>
+						{card.source_path}
+					</a>
+					<a class="chip-icon" href={libraryViewerUrl(card.source_path)} title="Kütüphanede görüntüle" aria-label="Kütüphanede görüntüle">
+							<BookOpenIcon size={13} aria-hidden="true" />
+						</a>
+					</span>
+				{/if}
 		</div>
 
 		{#if !revealed}
@@ -130,38 +134,54 @@
 	}
 
 	.home-link {
-		display: inline-block;
-		font-size: 0.9rem;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.35rem;
+		font-size: 0.875rem;
+		color: var(--color-muted-foreground);
 		text-decoration: none;
 		margin-bottom: 1.5rem;
 	}
 
+	.home-link:hover {
+		color: var(--color-primary);
+	}
+
+	.home-link:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
+	}
+
 	.status {
-		color: var(--muted-foreground);
+		color: var(--color-muted-foreground);
 		text-align: center;
 		margin-top: 3rem;
 	}
 
 	.status.error {
-		color: var(--destructive);
+		color: var(--color-destructive);
 	}
 
 	.progress-bar {
 		height: 6px;
-		background: var(--border);
+		background: var(--color-border);
 		border-radius: 999px;
 		overflow: hidden;
 	}
 
 	.progress-fill {
 		height: 100%;
-		background: var(--primary);
-		transition: width 0.2s ease;
+		width: 100%;
+		background: var(--color-primary);
+		/* scaleX, not width — the fill never triggers layout recalculation
+		   on its own track (its parent .progress-bar's size is fixed). */
+		transform-origin: left;
+		transition: transform var(--motion-base) var(--motion-easing);
 	}
 
 	.progress-label {
 		font-size: 0.75rem;
-		color: var(--muted-foreground);
+		color: var(--color-muted-foreground);
 		margin: 0.4rem 0 1.5rem;
 	}
 
@@ -179,24 +199,47 @@
 
 	.card-box hr {
 		border: none;
-		border-top: 1px solid var(--border);
+		border-top: 1px solid var(--color-border);
 		margin: 1rem 0;
 	}
 
-	.source-link {
-		display: inline-block;
+	.chip-group {
+		display: inline-flex;
+		align-items: stretch;
 		margin-top: 0.9rem;
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-pill);
+		overflow: hidden;
+	}
+
+	.chip {
 		font-size: 0.75rem;
-		color: var(--muted-foreground);
 		text-decoration: none;
-		border: 1px solid var(--border);
-		border-radius: 999px;
+		color: var(--color-muted-foreground);
 		padding: 0.2rem 0.65rem;
 	}
 
-	.source-link:hover {
-		color: var(--primary);
-		border-color: var(--primary);
+	.chip:hover {
+		color: var(--color-primary);
+	}
+
+	.chip-icon {
+		display: inline-flex;
+		align-items: center;
+		text-decoration: none;
+		color: var(--color-muted-foreground);
+		padding: 0.2rem 0.5rem;
+		border-left: 1px solid var(--color-border);
+	}
+
+	.chip-icon:hover {
+		color: var(--color-primary);
+	}
+
+	.chip:focus-visible,
+	.chip-icon:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: -2px;
 	}
 
 	.reveal {
@@ -204,16 +247,21 @@
 		width: 100%;
 		padding: 0.6rem 1rem;
 		border-radius: 8px;
-		border: 1px solid var(--border);
+		border: 1px solid var(--color-border);
 		background: transparent;
-		color: var(--foreground);
+		color: var(--color-foreground);
 		cursor: pointer;
-		font-size: 0.95rem;
+		font-size: 1rem;
 	}
 
 	.reveal:hover {
-		border-color: var(--primary);
-		color: var(--primary);
+		border-color: var(--color-primary);
+		color: var(--color-primary);
+	}
+
+	.reveal:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
 	}
 
 	.grades {
@@ -225,9 +273,9 @@
 		flex: 1;
 		padding: 0.6rem 0.5rem;
 		border-radius: 8px;
-		border: 1px solid var(--border);
+		border: 1px solid var(--color-border);
 		background: transparent;
-		color: var(--foreground);
+		color: var(--color-foreground);
 		cursor: pointer;
 		font-size: 0.9rem;
 		font-weight: 600;
@@ -238,13 +286,18 @@
 		cursor: not-allowed;
 	}
 
+	.grade:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
+	}
+
 	.grade.again {
-		border-color: var(--destructive);
-		color: var(--destructive);
+		border-color: var(--color-destructive);
+		color: var(--color-destructive);
 	}
 
 	.grade.good {
-		border-color: var(--primary);
-		color: var(--primary);
+		border-color: var(--color-primary);
+		color: var(--color-primary);
 	}
 </style>

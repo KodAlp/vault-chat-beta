@@ -5,6 +5,7 @@
 	import type { LibrarySettings } from '$lib/types';
 	import { Switch } from '$lib/components/ui/switch';
 	import * as Card from '$lib/components/ui/card';
+	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 
 	let settings = $state<LibrarySettings>({ keepOriginals: false });
 	let loadError = $state('');
@@ -33,17 +34,19 @@
 </script>
 
 <svelte:head>
-	<title>Kütüphane — Vault Chat</title>
+	<title>Kütüphane — Vault Agent Toolkit</title>
 </svelte:head>
 
 <div class="mx-auto max-w-2xl px-4 pt-6 pb-12">
 	<div class="mb-6 flex items-baseline gap-4">
-		<a href="/settings" class="text-sm text-muted-foreground hover:text-foreground">← Ayarlar</a>
-		<h1 class="text-xl font-semibold">Kütüphane</h1>
+		<a href="/settings" class="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-2">
+			<ArrowLeftIcon size={14} aria-hidden="true" /> Ayarlar
+		</a>
+		<h1 class="font-display text-xl font-medium">Kütüphane</h1>
 	</div>
 
 	{#if loadError}
-		<p class="mb-4 text-sm text-destructive">{loadError}</p>
+		<p class="mb-4 text-sm text-destructive" role="alert">{loadError}</p>
 	{/if}
 
 	<Card.Root class="mb-6">

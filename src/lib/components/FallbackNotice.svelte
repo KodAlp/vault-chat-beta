@@ -11,7 +11,7 @@
 </script>
 
 <p class="fallback-notice">
-	<Badge variant="outline" class="px-1.5 text-[0.62rem] font-normal">sistem</Badge>
+	<Badge variant="outline" class="px-1.5 text-[0.6875rem] font-normal">sistem</Badge>
 	{message}
 </p>
 
@@ -21,7 +21,7 @@
 		align-items: center;
 		gap: 0.4rem;
 		font-size: 0.75rem;
-		color: var(--muted-foreground);
+		color: var(--color-muted-foreground);
 		margin: 0 0 0.3rem;
 	}
 </style>

@@ -45,6 +45,14 @@ let db: Database.Database | undefined;
  */
 export function initChatsSchema(instance: Database.Database): void {
 	instance.pragma('journal_mode = WAL');
+	// Without this, better-sqlite3/SQLite silently ignores the declared
+	// `ON DELETE CASCADE` on messages.chat_id below — foreign key
+	// enforcement is off by default per-connection, not a database-file
+	// property, so it has to be set here every time. Confirmed this was
+	// missing: deleteChatsForVault()'s own doc comment already claimed the
+	// cascade "handles messages" while this pragma never existed, meaning
+	// vault deletion has been leaving orphaned message rows behind.
+	instance.pragma('foreign_keys = ON');
 	instance.exec(`
 		CREATE TABLE IF NOT EXISTS chats (
 			id TEXT PRIMARY KEY,
@@ -154,6 +162,13 @@ export function countChatsForVault(vaultId: string): number {
  * into it. ON DELETE CASCADE on messages.chat_id handles messages. */
 export function deleteChatsForVault(vaultId: string): void {
 	getDb().prepare('DELETE FROM chats WHERE vault_id = ?').run(vaultId);
+}
+
+/** Single-chat delete for the vault chat-list page's own delete button —
+ * ON DELETE CASCADE on messages.chat_id handles messages, now that
+ * initChatsSchema() actually enables foreign key enforcement. */
+export function deleteChat(id: string): void {
+	getDb().prepare('DELETE FROM chats WHERE id = ?').run(id);
 }
 
 export function touchChat(id: string): void {
