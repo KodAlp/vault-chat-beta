@@ -2,9 +2,9 @@ import type { QuizGenerationEvent, QuizGenerationRequest } from './types';
 import type { DistributiveOmit } from './distributive-omit';
 
 export type QuizGenerationStatus =
-	| { id: string; phase: 'generating'; stage: string }
-	| { id: string; phase: 'done'; quizId: string }
-	| { id: string; phase: 'error'; message: string; narrowScope?: boolean };
+	| { id: string; vaultId?: string; phase: 'generating'; stage: string }
+	| { id: string; vaultId?: string; phase: 'done'; quizId: string }
+	| { id: string; vaultId?: string; phase: 'error'; message: string; narrowScope?: boolean };
 
 /**
  * Module-level $state, not component-local — generation must survive the
@@ -34,8 +34,8 @@ export const quizGeneration = $state<{ items: QuizGenerationStatus[] }>({
 
 export async function startQuizGeneration(body: QuizGenerationRequest): Promise<void> {
 	const id = crypto.randomUUID();
-	function setStatus(status: DistributiveOmit<QuizGenerationStatus, 'id'>) {
-		const next = { id, ...status } as QuizGenerationStatus;
+	function setStatus(status: DistributiveOmit<QuizGenerationStatus, 'id' | 'vaultId'>) {
+		const next = { id, vaultId: body.vault, ...status } as QuizGenerationStatus;
 		const idx = quizGeneration.items.findIndex((s) => s.id === id);
 		if (idx === -1) quizGeneration.items.push(next);
 		else quizGeneration.items[idx] = next;

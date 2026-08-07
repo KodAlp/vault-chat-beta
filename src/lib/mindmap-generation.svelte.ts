@@ -2,9 +2,9 @@ import type { MindMapGenerationEvent, MindMapGenerationRequest } from './types';
 import type { DistributiveOmit } from './distributive-omit';
 
 export type MindMapGenerationStatus =
-	| { id: string; phase: 'generating'; stage: string; elapsedMs?: number }
-	| { id: string; phase: 'done'; mindmapId: string }
-	| { id: string; phase: 'error'; message: string; narrowScope?: boolean };
+	| { id: string; vaultId?: string; phase: 'generating'; stage: string; elapsedMs?: number }
+	| { id: string; vaultId?: string; phase: 'done'; mindmapId: string }
+	| { id: string; vaultId?: string; phase: 'error'; message: string; narrowScope?: boolean };
 
 /** Array of entries, not a single `status` slot (Faz 13) — see
  * quiz-generation.svelte.ts's doc comment for the full rationale. */
@@ -14,8 +14,8 @@ export const mindmapGeneration = $state<{ items: MindMapGenerationStatus[] }>({
 
 export async function startMindMapGeneration(body: MindMapGenerationRequest): Promise<void> {
 	const id = crypto.randomUUID();
-	function setStatus(status: DistributiveOmit<MindMapGenerationStatus, 'id'>) {
-		const next = { id, ...status } as MindMapGenerationStatus;
+	function setStatus(status: DistributiveOmit<MindMapGenerationStatus, 'id' | 'vaultId'>) {
+		const next = { id, vaultId: body.vault, ...status } as MindMapGenerationStatus;
 		const idx = mindmapGeneration.items.findIndex((s) => s.id === id);
 		if (idx === -1) mindmapGeneration.items.push(next);
 		else mindmapGeneration.items[idx] = next;

@@ -4,7 +4,7 @@
 	import { obsidianUri, libraryViewerUrl } from '$lib/sourceLink';
 	import type { PageProps } from './$types';
 	import type { ReportSectionView, ReportView } from '$lib/types';
-	import BookOpenIcon from '@lucide/svelte/icons/book-open';
+	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 
 	let { data }: PageProps = $props();
@@ -16,9 +16,13 @@
 	let renderedSections = $state<{ section: ReportSectionView; html: string }[]>([]);
 	let errorMessage = $state('');
 
+	// See study/quiz/[id]/+page.svelte's comment on quizQuery — an empty
+	// `vault=` param is not the same as an absent one.
+	let reportQuery = $derived(data.vaultId ? `?vault=${encodeURIComponent(data.vaultId)}` : '');
+
 	onMount(async () => {
 		try {
-			const res = await fetch(`/api/study/reports/${data.reportId}`);
+			const res = await fetch(`/api/study/reports/${data.reportId}${reportQuery}`);
 			if (!res.ok) throw new Error();
 			const body = (await res.json()) as { report: ReportView; sections: ReportSectionView[] };
 			report = body.report;
@@ -61,9 +65,9 @@
 					<div class="body markdown-body">{@html r.html}</div>
 					<div class="citations">
 						{#each r.section.source_paths as path (path)}
-							<a class="source-link" href={obsidianUri(path)} title="Obsidian'da aç">{path}</a>
-							<a class="source-link" href={libraryViewerUrl(path)} title="Kütüphanede görüntüle" aria-label="Kütüphanede görüntüle">
-								<BookOpenIcon size={13} aria-hidden="true" />
+							<a class="source-link" href={libraryViewerUrl(path, data.vaultId ?? '')}>{path}</a>
+							<a class="source-link" href={obsidianUri(path)} title="Obsidian'da aç" aria-label="Obsidian'da aç">
+								<ExternalLinkIcon size={13} aria-hidden="true" />
 							</a>
 						{/each}
 					</div>

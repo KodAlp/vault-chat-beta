@@ -3,7 +3,7 @@
 	import { obsidianUri, libraryViewerUrl } from '$lib/sourceLink';
 	import type { PageProps } from './$types';
 	import type { SlideDeckView, SlideView } from '$lib/types';
-	import BookOpenIcon from '@lucide/svelte/icons/book-open';
+	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 
 	let { data }: PageProps = $props();
@@ -23,9 +23,13 @@
 	let currentIndex = $state(0);
 	let errorMessage = $state('');
 
+	// See study/quiz/[id]/+page.svelte's comment on quizQuery — an empty
+	// `vault=` param is not the same as an absent one.
+	let slidesQuery = $derived(data.vaultId ? `?vault=${encodeURIComponent(data.vaultId)}` : '');
+
 	onMount(async () => {
 		try {
-			const res = await fetch(`/api/study/slidedecks/${data.slideDeckId}`);
+			const res = await fetch(`/api/study/slidedecks/${data.slideDeckId}${slidesQuery}`);
 			if (!res.ok) throw new Error();
 			const body = (await res.json()) as { deck: SlideDeckView; slides: SlideView[] };
 			deck = body.deck;
@@ -89,16 +93,19 @@
 
 		{#if slides[currentIndex]}
 			<div class="citation-row">
-				<a class="source-link" href={obsidianUri(slides[currentIndex].source_path)} title="Obsidian'da aç">
+				<a
+					class="source-link"
+					href={libraryViewerUrl(slides[currentIndex].source_path, data.vaultId ?? '')}
+				>
 					{slides[currentIndex].source_path}
 				</a>
 				<a
 					class="source-link"
-					href={libraryViewerUrl(slides[currentIndex].source_path)}
-					title="Kütüphanede görüntüle"
-					aria-label="Kütüphanede görüntüle"
+					href={obsidianUri(slides[currentIndex].source_path)}
+					title="Obsidian'da aç"
+					aria-label="Obsidian'da aç"
 				>
-					<BookOpenIcon size={13} aria-hidden="true" />
+					<ExternalLinkIcon size={13} aria-hidden="true" />
 				</a>
 			</div>
 		{/if}

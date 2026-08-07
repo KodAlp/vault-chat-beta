@@ -43,7 +43,7 @@
 
 	function review() {
 		open = false;
-		goto('/study/cards');
+		goto(`/study/cards?vault=${encodeURIComponent(vaultId)}`);
 	}
 
 	/** Same reasoning as QuizDialog.svelte's generate(): a real generation

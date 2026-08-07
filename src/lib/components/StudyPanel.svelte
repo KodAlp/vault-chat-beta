@@ -96,12 +96,12 @@
 
 	function reviewCards() {
 		open = false;
-		goto('/study/cards');
+		goto(`/study/cards?vault=${encodeURIComponent(vaultId)}`);
 	}
 
 	function openItem(path: string) {
 		open = false;
-		goto(path);
+		goto(`${path}?vault=${encodeURIComponent(vaultId)}`);
 	}
 </script>
 

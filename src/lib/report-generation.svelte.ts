@@ -2,9 +2,9 @@ import type { ReportGenerationEvent, ReportGenerationRequest } from './types';
 import type { DistributiveOmit } from './distributive-omit';
 
 export type ReportGenerationStatus =
-	| { id: string; phase: 'generating'; stage: string }
-	| { id: string; phase: 'done'; reportId: string }
-	| { id: string; phase: 'error'; message: string; narrowScope?: boolean };
+	| { id: string; vaultId?: string; phase: 'generating'; stage: string }
+	| { id: string; vaultId?: string; phase: 'done'; reportId: string }
+	| { id: string; vaultId?: string; phase: 'error'; message: string; narrowScope?: boolean };
 
 /** Module-level $state — see quiz-generation.svelte.ts for the full rationale
  * (generation must survive the dialog closing; an array of entries, not a
@@ -17,8 +17,8 @@ export const reportGeneration = $state<{ items: ReportGenerationStatus[] }>({
 
 export async function startReportGeneration(body: ReportGenerationRequest): Promise<void> {
 	const id = crypto.randomUUID();
-	function setStatus(status: DistributiveOmit<ReportGenerationStatus, 'id'>) {
-		const next = { id, ...status } as ReportGenerationStatus;
+	function setStatus(status: DistributiveOmit<ReportGenerationStatus, 'id' | 'vaultId'>) {
+		const next = { id, vaultId: body.vault, ...status } as ReportGenerationStatus;
 		const idx = reportGeneration.items.findIndex((s) => s.id === id);
 		if (idx === -1) reportGeneration.items.push(next);
 		else reportGeneration.items[idx] = next;

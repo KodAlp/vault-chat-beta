@@ -2,13 +2,13 @@
 	import { obsidianUri, libraryViewerUrl } from '$lib/sourceLink';
 	import type { RetrievedChunk } from '$lib/types';
 	import * as HoverCard from '$lib/components/ui/hover-card';
-	import BookOpenIcon from '@lucide/svelte/icons/book-open';
+	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
 
 	/** Replaces SourceList.svelte — that component deduped on `path +
 	 * heading_path`, so the same source cited from three chunks rendered as
 	 * three separate chips (Faz 9 Adım 6 bug list). This dedupes on `path`
 	 * alone and folds the count into a "×n bölüm" suffix instead. */
-	let { sources }: { sources: RetrievedChunk[] } = $props();
+	let { sources, vaultId }: { sources: RetrievedChunk[]; vaultId: string } = $props();
 
 	interface GroupedSource {
 		path: string;
@@ -37,13 +37,13 @@
 				<HoverCard.Trigger>
 					{#snippet child({ props })}
 						<span {...props} class="chip-group">
-							<a class="chip" href={obsidianUri(g.path)}>
+							<a class="chip" href={libraryViewerUrl(g.path, vaultId)}>
 								{g.topic}
 								{#if g.chunks.length > 1}<span class="count">×{g.chunks.length} bölüm</span>{/if}
 							</a>
-							<a class="chip-icon" href={libraryViewerUrl(g.path)} title="Kütüphanede görüntüle" aria-label="Kütüphanede görüntüle">
-									<BookOpenIcon size={12} aria-hidden="true" />
-								</a>
+							<a class="chip-icon" href={obsidianUri(g.path)} title="Obsidian'da aç" aria-label="Obsidian'da aç">
+								<ExternalLinkIcon size={12} aria-hidden="true" />
+							</a>
 						</span>
 					{/snippet}
 				</HoverCard.Trigger>

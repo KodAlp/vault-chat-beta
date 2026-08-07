@@ -1,5 +1,6 @@
 import type { PageLoad } from './$types';
 
-export const load: PageLoad = ({ params }) => {
-	return { mindmapId: params.id };
+/** vaultId (Faz 14) — see quiz/[id]/+page.ts's doc comment. */
+export const load: PageLoad = ({ params, url }) => {
+	return { mindmapId: params.id, vaultId: url.searchParams.get('vault') ?? undefined };
 };

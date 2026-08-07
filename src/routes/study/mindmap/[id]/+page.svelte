@@ -4,7 +4,7 @@
 	import { obsidianUri, libraryViewerUrl } from '$lib/sourceLink';
 	import type { PageProps } from './$types';
 	import type { MindMapNodeView, MindMapView } from '$lib/types';
-	import BookOpenIcon from '@lucide/svelte/icons/book-open';
+	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 
 	let { data }: PageProps = $props();
@@ -18,9 +18,13 @@
 	let svgEl = $state<SVGSVGElement | undefined>(undefined);
 	let markmapInstance: { destroy(): void } | undefined;
 
+	// See study/quiz/[id]/+page.svelte's comment on quizQuery — an empty
+	// `vault=` param is not the same as an absent one.
+	let mindmapQuery = $derived(data.vaultId ? `?vault=${encodeURIComponent(data.vaultId)}` : '');
+
 	onMount(async () => {
 		try {
-			const res = await fetch(`/api/study/mindmaps/${data.mindmapId}`);
+			const res = await fetch(`/api/study/mindmaps/${data.mindmapId}${mindmapQuery}`);
 			if (!res.ok) throw new Error();
 			const body = (await res.json()) as { mindmap: MindMapView; nodes: MindMapNodeView[] };
 			mindmap = body.mindmap;
@@ -77,11 +81,11 @@
 			{#each nodes as node (node.id)}
 				<div class="citation-row">
 					<span class="node-path">{node.path.join(' › ')}</span>
-					<a class="source-link" href={obsidianUri(node.source_path)} title="Obsidian'da aç">
+					<a class="source-link" href={libraryViewerUrl(node.source_path, data.vaultId ?? '')}>
 						{node.source_path}
 					</a>
-					<a class="source-link" href={libraryViewerUrl(node.source_path)} title="Kütüphanede görüntüle" aria-label="Kütüphanede görüntüle">
-						<BookOpenIcon size={13} aria-hidden="true" />
+					<a class="source-link" href={obsidianUri(node.source_path)} title="Obsidian'da aç" aria-label="Obsidian'da aç">
+						<ExternalLinkIcon size={13} aria-hidden="true" />
 					</a>
 				</div>
 			{/each}

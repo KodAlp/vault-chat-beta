@@ -46,6 +46,16 @@
 	// visible toast, across all five types, at a distinct non-overlapping
 	// position without changing the "quiz lane, then cards lane, then..."
 	// ordering anyone using this app today is already used to.
+	/** Faz 14: every /study/* item route needs to know which vault it
+	 * belongs to (see study-db.ts's per-vault study.db) — status.vaultId
+	 * (captured from the request that started this generation) makes that
+	 * URL correct instead of silently falling back to "whatever vault is
+	 * currently active", which breaks the moment that's not the vault the
+	 * item was actually generated in. */
+	function studyUrl(path: string, vaultId: string | undefined): string {
+		return vaultId ? `${path}?vault=${encodeURIComponent(vaultId)}` : path;
+	}
+
 	let quizBase = $derived(0);
 	let cardBase = $derived(quizBase + quizGeneration.items.length);
 	let reportBase = $derived(cardBase + cardGeneration.items.length);
@@ -76,8 +86,9 @@
 		onView={() => {
 			if (status.phase !== 'done') return;
 			const quizId = status.quizId;
+			const vaultId = status.vaultId;
 			dismissQuizGeneration(status.id);
-			goto(`/study/quiz/${quizId}`);
+			goto(studyUrl(`/study/quiz/${quizId}`, vaultId));
 		}}
 		onDismiss={() => dismissQuizGeneration(status.id)}
 		onExpandScope={requestScopeExpand}
@@ -93,8 +104,9 @@
 		stackIndex={cardBase + i}
 		onView={() => {
 			if (status.phase !== 'done') return;
+			const vaultId = status.vaultId;
 			dismissCardGeneration(status.id);
-			goto('/study/cards');
+			goto(studyUrl('/study/cards', vaultId));
 		}}
 		onDismiss={() => dismissCardGeneration(status.id)}
 		onExpandScope={requestScopeExpand}
@@ -111,8 +123,9 @@
 		onView={() => {
 			if (status.phase !== 'done') return;
 			const reportId = status.reportId;
+			const vaultId = status.vaultId;
 			dismissReportGeneration(status.id);
-			goto(`/study/report/${reportId}`);
+			goto(studyUrl(`/study/report/${reportId}`, vaultId));
 		}}
 		onDismiss={() => dismissReportGeneration(status.id)}
 		onExpandScope={requestScopeExpand}
@@ -129,8 +142,9 @@
 		onView={() => {
 			if (status.phase !== 'done') return;
 			const mindmapId = status.mindmapId;
+			const vaultId = status.vaultId;
 			dismissMindMapGeneration(status.id);
-			goto(`/study/mindmap/${mindmapId}`);
+			goto(studyUrl(`/study/mindmap/${mindmapId}`, vaultId));
 		}}
 		onDismiss={() => dismissMindMapGeneration(status.id)}
 		onExpandScope={requestScopeExpand}
@@ -147,8 +161,9 @@
 		onView={() => {
 			if (status.phase !== 'done') return;
 			const slideDeckId = status.slideDeckId;
+			const vaultId = status.vaultId;
 			dismissSlidesGeneration(status.id);
-			goto(`/study/slides/${slideDeckId}`);
+			goto(studyUrl(`/study/slides/${slideDeckId}`, vaultId));
 		}}
 		onDismiss={() => dismissSlidesGeneration(status.id)}
 		onExpandScope={requestScopeExpand}
