@@ -241,7 +241,10 @@ export class OpenAICompatAdapter implements ProviderAdapter {
 
 	async health(): Promise<ProviderHealth> {
 		try {
-			const res = await fetch(`${this.config.baseUrl}/models`, { headers: this.headers() });
+			const res = await fetch(`${this.config.baseUrl}/models`, {
+				headers: this.headers(),
+				signal: AbortSignal.timeout(this.config.timeouts.connectMs)
+			});
 			if (res.status === 401 || res.status === 403) return 'auth_error';
 			return res.ok ? 'ok' : 'unreachable';
 		} catch {

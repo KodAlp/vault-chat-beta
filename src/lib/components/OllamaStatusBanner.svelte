@@ -18,10 +18,20 @@
 	let status = $state<Status>('checking');
 	let probing = $state(false);
 
+	// mount, visibilitychange, the 15s poll, and the manual retry button all
+	// call check() independently with no cancellation between them — an
+	// older, slower probe (e.g. one that started while Ollama was still
+	// down) can otherwise resolve AFTER a newer successful one and stomp
+	// status back to 'unreachable'. Guard by generation: only the result of
+	// the most recently issued check() is ever allowed to write state.
+	let requestGeneration = 0;
+
 	async function check() {
+		const generation = ++requestGeneration;
 		probing = true;
 		try {
 			const res = await fetch('/api/providers/ollama/test', { method: 'POST' });
+			if (generation !== requestGeneration) return;
 			if (!res.ok) {
 				status = 'unreachable';
 				return;
@@ -29,9 +39,9 @@
 			const data = (await res.json()) as { status: Status };
 			status = data.status;
 		} catch {
-			status = 'unreachable';
+			if (generation === requestGeneration) status = 'unreachable';
 		} finally {
-			probing = false;
+			if (generation === requestGeneration) probing = false;
 		}
 	}
 

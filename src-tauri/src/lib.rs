@@ -1,9 +1,19 @@
 use serde::{Deserialize, Serialize};
 use std::net::TcpListener;
 use std::os::windows::io::AsRawHandle;
-use std::path::PathBuf;
+use std::os::windows::process::CommandExt;
+use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
-use std::sync::Mutex;
+
+/// Passed via `Command::creation_flags` for every child we spawn (node.exe
+/// is a console-subsystem binary) — without it, Windows gives the child its
+/// own visible console window even though app.exe itself is a GUI-subsystem
+/// process (`windows_subsystem = "windows"` in main.rs only hides app.exe's
+/// own console, not a child's). The sidecar is long-lived, so that window
+/// would sit open — visibly, unclosably from the user's side — for the
+/// entire session.
+const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tauri::menu::{MenuBuilder, MenuItemBuilder};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
@@ -151,10 +161,54 @@ fn get_free_port() -> Result<u16, String> {
     Ok(port)
 }
 
+/// Tauri's `resource_dir()`/`app_data_dir()` resolve via `canonicalize()`
+/// internally, which on Windows always returns the extended-length verbatim
+/// form (`\\?\C:\...`). Rust's own file APIs understand that prefix fine,
+/// but handing a `\\?\`-prefixed path to node.exe as a plain argv breaks its
+/// own `resolveMainPath`/`realpathSync`, which mis-splits the root and calls
+/// `lstat('C:')` — crashing with EISDIR before any app code runs. Every path
+/// passed to the Node sidecar (as an argv or via env) must go through this
+/// first.
+fn strip_verbatim_prefix(path: &Path) -> PathBuf {
+    let s = path.to_string_lossy();
+    if let Some(rest) = s.strip_prefix(r"\\?\UNC\") {
+        PathBuf::from(format!(r"\\{rest}"))
+    } else if let Some(rest) = s.strip_prefix(r"\\?\") {
+        PathBuf::from(rest)
+    } else {
+        path.to_path_buf()
+    }
+}
+
+/// A bare TCP connect only proves the OS accepted a handshake — not that the
+/// HTTP server behind it will actually serve the very next request. That gap
+/// was real: the webview's first navigation (splash/index.html's plain
+/// `window.location.href = url`, no retry) occasionally hit
+/// ERR_CONNECTION_REFUSED even though a TCP-only check had already reported
+/// the port open moments earlier. Issue a real HTTP round-trip instead so
+/// "ready" means the server actually answered a request.
+fn http_probe_ok(port: u16) -> bool {
+    use std::io::{Read, Write};
+    let Ok(mut stream) = std::net::TcpStream::connect(("127.0.0.1", port)) else {
+        return false;
+    };
+    if stream.set_read_timeout(Some(Duration::from_millis(500))).is_err() {
+        return false;
+    }
+    if stream
+        .write_all(b"GET / HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n")
+        .is_err()
+    {
+        return false;
+    }
+    let mut buf = [0u8; 16];
+    matches!(stream.read(&mut buf), Ok(n) if n > 0 && buf.starts_with(b"HTTP/"))
+}
+
 async fn wait_for_port(port: u16, timeout: Duration) -> bool {
     let start = std::time::Instant::now();
     while start.elapsed() < timeout {
-        if std::net::TcpStream::connect(("127.0.0.1", port)).is_ok() {
+        if http_probe_ok(port) {
             return true;
         }
         tokio::time::sleep(Duration::from_millis(150)).await;
@@ -174,7 +228,11 @@ async fn spawn_sidecar(app: &AppHandle, cfg: &VaultConfig) -> Result<String, Str
         }
     };
 
-    match Command::new(&node_bin).arg("--version").output() {
+    match Command::new(&node_bin)
+        .arg("--version")
+        .creation_flags(CREATE_NO_WINDOW)
+        .output()
+    {
         Ok(out) if out.status.success() => {}
         Ok(out) => {
             let msg = format!(
@@ -194,7 +252,7 @@ async fn spawn_sidecar(app: &AppHandle, cfg: &VaultConfig) -> Result<String, Str
         }
     }
 
-    let resource_dir = app.path().resource_dir().map_err(|e| e.to_string())?;
+    let resource_dir = strip_verbatim_prefix(&app.path().resource_dir().map_err(|e| e.to_string())?);
     // `bundle.resources` is the ARRAY form (["../dist-server/**/*"]) rather
     // than the map form, because the map form ({"../dist-server/build":
     // "server/build", ...}) deterministically fails to build on this project
@@ -214,7 +272,7 @@ async fn spawn_sidecar(app: &AppHandle, cfg: &VaultConfig) -> Result<String, Str
         return Err(msg);
     }
 
-    let app_data_dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    let app_data_dir = strip_verbatim_prefix(&app.path().app_data_dir().map_err(|e| e.to_string())?);
     std::fs::create_dir_all(&app_data_dir).map_err(|e| e.to_string())?;
     let skills_dir = app_data_dir.join("skills");
     let port = get_free_port()?;
@@ -259,6 +317,7 @@ async fn spawn_sidecar(app: &AppHandle, cfg: &VaultConfig) -> Result<String, Str
         .env("SECRETS_PATH", app_data_dir.join("secrets.json"))
         .env("PROVIDERS_PATH", &providers_path)
         .env("SKILLS_DIR", &skills_dir)
+        .creation_flags(CREATE_NO_WINDOW)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn();
@@ -272,17 +331,44 @@ async fn spawn_sidecar(app: &AppHandle, cfg: &VaultConfig) -> Result<String, Str
         }
     };
 
+    // Continuously drain + log the sidecar's stdout/stderr for its whole
+    // life, not just this startup window — a crash minutes into a session
+    // (native addon abort, uncaught JS exception, anything) used to vanish
+    // into an unread OS pipe with zero trace, since the old code only ever
+    // read these pipes in the timeout branch below. Plain OS threads, not
+    // awaited, so this never blocks spawn_sidecar's own async flow;
+    // AppHandle is Clone+Send+Sync, safe to move in. `stderr_tail` also
+    // keeps the last lines around so the "didn't start in time" error below
+    // can still show something inline, not just "go check the log file".
+    let stderr_tail: Arc<Mutex<String>> = Arc::new(Mutex::new(String::new()));
+    if let Some(stdout) = child.stdout.take() {
+        let app = app.clone();
+        std::thread::spawn(move || {
+            use std::io::{BufRead, BufReader};
+            for line in BufReader::new(stdout).lines().map_while(Result::ok) {
+                log_line(&app, &format!("[sidecar stdout] {line}"));
+            }
+        });
+    }
+    if let Some(stderr) = child.stderr.take() {
+        let app = app.clone();
+        let tail = stderr_tail.clone();
+        std::thread::spawn(move || {
+            use std::io::{BufRead, BufReader};
+            for line in BufReader::new(stderr).lines().map_while(Result::ok) {
+                log_line(&app, &format!("[sidecar stderr] {line}"));
+                if let Ok(mut t) = tail.lock() {
+                    t.push_str(&line);
+                    t.push('\n');
+                }
+            }
+        });
+    }
+
     let ready = wait_for_port(port, Duration::from_secs(15)).await;
     if !ready {
-        // Surface the child's own stderr — this is the single most useful
-        // diagnostic (e.g. a Node ABI mismatch, a missing native module) and
-        // otherwise this failure would be a bare timeout with no cause.
         let _ = child.kill();
-        let mut stderr_text = String::new();
-        if let Some(mut stderr) = child.stderr.take() {
-            use std::io::Read;
-            let _ = stderr.read_to_string(&mut stderr_text);
-        }
+        let stderr_text = stderr_tail.lock().map(|t| t.clone()).unwrap_or_default();
         log_line(app, &format!("port never opened; child stderr: {stderr_text}"));
         return Err(format!("Sunucu 15 saniye içinde başlamadı.\n{stderr_text}"));
     }

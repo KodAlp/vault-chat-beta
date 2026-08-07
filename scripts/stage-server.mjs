@@ -88,6 +88,24 @@ mkdirSync(path.join(stageDir, 'data'), { recursive: true });
 copyFileSync(path.join(root, 'data', 'providers.json'), path.join(stageDir, 'data', 'providers.json'));
 
 console.log('Installing production-only dependencies in dist-server/...');
-execFileSync('npm', ['ci', '--omit=dev'], { cwd: stageDir, stdio: 'inherit', shell: true });
+/**
+ * --ignore-scripts, not a plain `npm ci --omit=dev`: bits-ui -> runed has a
+ * peerOptional on @sveltejs/kit, which pulls vite (and vite's own nested,
+ * older esbuild) into the tree as "devOptional" even under --omit=dev —
+ * `npm ci` still writes and runs its postinstall regardless of the omit
+ * flags. That nested esbuild@0.25.12's install.js does its own binary
+ * version check, and on this machine it reads back the *other*,
+ * unrelated top-level esbuild's 0.28.1 binary instead of its own — the
+ * same class of long/non-ASCII-path Windows bug documented above for
+ * rmSync/cpSync, just hitting a postinstall script's own path resolution
+ * this time. None of vite/esbuild/@sveltejs/kit are ever imported by the
+ * packaged server (SvelteKit's adapter-node output in build/ is
+ * self-contained), so skipping install scripts entirely is safe — except
+ * better-sqlite3, the one production dependency whose postinstall is load-
+ * bearing (compiles/fetches its native .node binary), rebuilt explicitly
+ * right after.
+ */
+execFileSync('npm', ['ci', '--omit=dev', '--ignore-scripts'], { cwd: stageDir, stdio: 'inherit', shell: true });
+execFileSync('npm', ['rebuild', 'better-sqlite3'], { cwd: stageDir, stdio: 'inherit', shell: true });
 
 console.log('dist-server/ staged.');
