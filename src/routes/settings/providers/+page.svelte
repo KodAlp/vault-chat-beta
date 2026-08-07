@@ -11,6 +11,9 @@
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 	import ArrowUpIcon from '@lucide/svelte/icons/arrow-up';
 	import ArrowDownIcon from '@lucide/svelte/icons/arrow-down';
+	import PlusIcon from '@lucide/svelte/icons/plus';
+	import TrashIcon from '@lucide/svelte/icons/trash';
+	import { Label } from '$lib/components/ui/label';
 
 	const TASK_LABELS: Record<string, string> = {
 		chat: 'Sohbet',
@@ -31,6 +34,16 @@
 	let addChainSelection = $state<Record<string, string>>({});
 	let keyDeleteTarget = $state<ProviderStatus | null>(null);
 
+	let addFormOpen = $state(false);
+	let addLabel = $state('');
+	let addBaseUrl = $state('');
+	let addKind = $state<'openai-compat' | 'anthropic'>('openai-compat');
+	let addReasoningDialect = $state<'reasoning_content' | 'think-tags' | 'none'>('reasoning_content');
+	let addError = $state('');
+	let adding = $state(false);
+	let deleteTargetId = $state<string | null>(null);
+	let deleteTargetLabel = $state('');
+
 	async function refresh() {
 		try {
 			const [pRes, cRes] = await Promise.all([
@@ -42,6 +55,51 @@
 			chains = (await cRes.json()) as Record<string, string[]>;
 		} catch {
 			loadError = 'Sağlayıcı listesi alınamadı.';
+		}
+	}
+
+	async function addProvider() {
+		if (!addLabel.trim() || !addBaseUrl.trim() || adding) return;
+		adding = true;
+		addError = '';
+		try {
+			const res = await fetch('/api/providers', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({
+					label: addLabel.trim(),
+					baseUrl: addBaseUrl.trim(),
+					kind: addKind,
+					reasoningDialect: addReasoningDialect
+				})
+			});
+			if (!res.ok) {
+				const data = (await res.json().catch(() => null)) as { error?: string } | null;
+				throw new Error(data?.error ?? 'Sağlayıcı eklenemedi');
+			}
+			addLabel = '';
+			addBaseUrl = '';
+			addFormOpen = false;
+			await refresh();
+		} catch (err) {
+			addError = err instanceof Error ? err.message : 'Sağlayıcı eklenemedi';
+		} finally {
+			adding = false;
+		}
+	}
+
+	async function deleteProvider(id: string) {
+		deleteTargetId = null;
+		try {
+			const res = await fetch('/api/providers', {
+				method: 'DELETE',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ id })
+			});
+			if (!res.ok) throw new Error();
+			await refresh();
+		} catch {
+			loadError = 'Sağlayıcı silinemedi.';
 		}
 	}
 
@@ -188,7 +246,65 @@
 	{/if}
 
 	<section class="mb-8">
-		<h2 class="mb-3 text-base font-semibold">Sağlayıcılar</h2>
+		<div class="mb-3 flex items-baseline justify-between">
+			<h2 class="text-base font-semibold">Sağlayıcılar</h2>
+			<Button variant="outline" size="sm" onclick={() => (addFormOpen = !addFormOpen)}>
+				<PlusIcon size={14} aria-hidden="true" /> Sağlayıcı ekle
+			</Button>
+		</div>
+
+		{#if addFormOpen}
+			<Card.Root class="mb-4">
+				<Card.Content class="flex flex-col gap-3">
+					<h3 class="text-sm font-semibold">Yeni sağlayıcı</h3>
+					<div class="flex flex-col gap-1.5">
+						<Label>İsim</Label>
+						<Input type="text" bind:value={addLabel} placeholder="örn. OpenAI" class="max-w-xs" />
+					</div>
+					<div class="flex flex-col gap-1.5">
+						<Label>API uç noktası (base URL)</Label>
+						<Input type="text" bind:value={addBaseUrl} placeholder="örn. https://api.openai.com/v1" class="max-w-sm" />
+					</div>
+					<div class="flex flex-col gap-1.5">
+						<Label>API türü</Label>
+						<Select.Root type="single" bind:value={addKind}>
+							<Select.Trigger class="w-44">
+								{addKind === 'openai-compat' ? 'OpenAI-uyumlu' : 'Anthropic (Claude)'}
+							</Select.Trigger>
+							<Select.Content>
+								<Select.Item value="openai-compat" label="OpenAI-uyumlu">OpenAI-uyumlu (OpenAI, Groq, OpenRouter, ...)</Select.Item>
+								<Select.Item value="anthropic" label="Anthropic (Claude)">Anthropic (Claude)</Select.Item>
+							</Select.Content>
+						</Select.Root>
+					</div>
+					{#if addKind === 'openai-compat'}
+						<div class="flex flex-col gap-1.5">
+							<Label>Muhakeme formatı</Label>
+							<Select.Root type="single" bind:value={addReasoningDialect}>
+								<Select.Trigger class="w-44">
+									{addReasoningDialect === 'reasoning_content' ? 'reasoning_content (DeepSeek, Ollama)' : addReasoningDialect === 'think-tags' ? 'think-tags (Qwen, Gemma inline)' : 'Yok'}
+								</Select.Trigger>
+								<Select.Content>
+									<Select.Item value="reasoning_content" label="reasoning_content">reasoning_content (DeepSeek, Ollama)</Select.Item>
+									<Select.Item value="think-tags" label="think-tags">think-tags (Qwen, Gemma — inline)</Select.Item>
+									<Select.Item value="none" label="none">Yok</Select.Item>
+								</Select.Content>
+							</Select.Root>
+						</div>
+					{/if}
+					{#if addError}
+						<p class="text-sm text-destructive" role="alert">{addError}</p>
+					{/if}
+					<div class="flex gap-2">
+						<Button onclick={addProvider} disabled={!addLabel.trim() || !addBaseUrl.trim() || adding}>
+							{adding ? 'Ekleniyor...' : 'Ekle'}
+						</Button>
+						<Button variant="ghost" onclick={() => { addFormOpen = false; addError = ''; }}>Vazgeç</Button>
+					</div>
+				</Card.Content>
+			</Card.Root>
+		{/if}
+
 		<div class="flex flex-col gap-3">
 			{#each providers as p (p.id)}
 				<Card.Root>
@@ -242,6 +358,21 @@
 							<Button size="sm" variant="outline" onclick={() => testConnection(p)} disabled={testingId === p.id}>
 								{testingId === p.id ? 'Test ediliyor...' : 'Bağlantıyı test et'}
 							</Button>
+							{#if p.id !== 'ollama'}
+								<Button
+									size="sm"
+									variant="ghost"
+									class="text-destructive hover:text-destructive"
+									title="Sağlayıcıyı kaldır"
+									aria-label={`${p.label} sağlayıcısını kaldır`}
+									onclick={() => {
+										deleteTargetId = p.id;
+										deleteTargetLabel = p.label;
+									}}
+								>
+									<TrashIcon size={14} aria-hidden="true" />
+								</Button>
+							{/if}
 						</div>
 					</Card.Content>
 				</Card.Root>
@@ -311,7 +442,15 @@
 	</section>
 </div>
 
-<AlertDialog.Root open={!!keyDeleteTarget} onOpenChange={(open) => !open && (keyDeleteTarget = null)}>
+<AlertDialog.Root
+	open={!!keyDeleteTarget || !!deleteTargetId}
+	onOpenChange={(open) => {
+		if (!open) {
+			keyDeleteTarget = null;
+			deleteTargetId = null;
+		}
+	}}
+>
 	<AlertDialog.Content>
 		{#if keyDeleteTarget}
 			<AlertDialog.Header>
@@ -330,6 +469,25 @@
 					}}
 				>
 					Sil
+				</AlertDialog.Action>
+			</AlertDialog.Footer>
+		{:else if deleteTargetId}
+			<AlertDialog.Header>
+				<AlertDialog.Title>"{deleteTargetLabel}" sağlayıcısı kaldırılsın mı?</AlertDialog.Title>
+				<AlertDialog.Description>
+					Bu sağlayıcı ve kayıtlı API anahtarı kalıcı olarak silinecek. Görev zincirlerinden de çıkarılır.
+				</AlertDialog.Description>
+			</AlertDialog.Header>
+			<AlertDialog.Footer>
+				<AlertDialog.Cancel>Vazgeç</AlertDialog.Cancel>
+				<AlertDialog.Action
+					variant="destructive"
+					onclick={(e) => {
+						e.preventDefault();
+						if (deleteTargetId) deleteProvider(deleteTargetId);
+					}}
+				>
+					Kaldır
 				</AlertDialog.Action>
 			</AlertDialog.Footer>
 		{/if}

@@ -357,7 +357,7 @@ export type ObsidianImportEvent =
 export interface ProviderStatus {
 	id: string;
 	label: string;
-	kind: 'ollama' | 'openai-compat';
+	kind: 'ollama' | 'openai-compat' | 'anthropic';
 	baseUrl: string;
 	enabled: boolean;
 	needsKey: boolean;
