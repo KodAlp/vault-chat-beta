@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use std::net::TcpListener;
 use std::os::windows::io::AsRawHandle;
 use std::os::windows::process::CommandExt;
 use std::path::{Path, PathBuf};
@@ -49,6 +48,12 @@ struct StartResult {
 struct SidecarState {
     child: Mutex<Option<Child>>,
     job: Mutex<Option<Job>>,
+    /// The URL of the currently-running sidecar, if any — lets
+    /// `spawn_sidecar` recognize "I'm already up" and hand back the same
+    /// URL instead of spawning a second node.exe (see the guard at the top
+    /// of that function for why a second spawn is actively dangerous, not
+    /// just wasteful).
+    url: Mutex<Option<String>>,
 }
 
 /// Always-on (not debug_assertions-gated) diagnostic log — a packaged
@@ -82,8 +87,16 @@ fn chrono_now() -> String {
 }
 
 fn config_path(app: &AppHandle) -> Result<PathBuf, String> {
-    let dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
-    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    let dir = app.path().app_data_dir().map_err(|e| {
+        let msg = format!("app_data_dir() başarısız: {e}");
+        log_line(app, &msg);
+        msg
+    })?;
+    std::fs::create_dir_all(&dir).map_err(|e| {
+        let msg = format!("app_data_dir oluşturulamadı: {e}");
+        log_line(app, &msg);
+        msg
+    })?;
     Ok(dir.join("config.json"))
 }
 
@@ -98,7 +111,11 @@ fn read_config(app: &AppHandle) -> Result<Option<VaultConfig>, String> {
     if !path.exists() {
         return Ok(None);
     }
-    let raw = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
+    let raw = std::fs::read_to_string(&path).map_err(|e| {
+        let msg = format!("config.json okunamadı: {e}");
+        log_line(app, &msg);
+        msg
+    })?;
     match serde_json::from_str(&raw) {
         Ok(cfg) => Ok(Some(cfg)),
         Err(e) => {
@@ -139,7 +156,11 @@ fn resolve_node_binary() -> Option<PathBuf> {
     // candidate is still validated to exist on disk and isn't a Windows
     // Store App Execution Alias redirector stub (mirrors convertQueue.ts's
     // resolvePythonBin() caution about the same redirector).
-    let output = Command::new("where").arg("node").output().ok()?;
+    let output = Command::new("where")
+        .arg("node")
+        .creation_flags(CREATE_NO_WINDOW)
+        .output()
+        .ok()?;
     if !output.status.success() {
         return None;
     }
@@ -149,16 +170,6 @@ fn resolve_node_binary() -> Option<PathBuf> {
         .filter(|l| !l.to_lowercase().contains("windowsapps"))
         .map(PathBuf::from)
         .find(|p| p.exists())
-}
-
-/// Binds to port 0 to ask the OS for a free loopback port, then immediately
-/// releases it — the standard "reserve a free port" technique. Avoids
-/// needing to parse the child's stdout for its actual bound port at all.
-fn get_free_port() -> Result<u16, String> {
-    let listener = TcpListener::bind("127.0.0.1:0").map_err(|e| e.to_string())?;
-    let port = listener.local_addr().map_err(|e| e.to_string())?.port();
-    drop(listener);
-    Ok(port)
 }
 
 /// Tauri's `resource_dir()`/`app_data_dir()` resolve via `canonicalize()`
@@ -205,18 +216,61 @@ fn http_probe_ok(port: u16) -> bool {
     matches!(stream.read(&mut buf), Ok(n) if n > 0 && buf.starts_with(b"HTTP/"))
 }
 
-async fn wait_for_port(port: u16, timeout: Duration) -> bool {
+/// adapter-node's `index.js` prints `Listening on http://127.0.0.1:NNNNN`
+/// the moment `httpServer.listen()`'s callback fires — i.e. only after the
+/// OS has actually bound the port. Parsing that line (sent with `PORT=0`,
+/// letting Node/the OS pick a genuinely free port atomically at bind time)
+/// replaces the old reserve-a-port-then-hope-nothing-steals-it-before-Node-
+/// binds-it race entirely, rather than narrowing it.
+fn parse_listening_port(line: &str) -> Option<u16> {
+    line.rsplit_once(':')?.1.trim().parse().ok()
+}
+
+/// Waits for the sidecar to report its bound port (via `port_rx`, fed by the
+/// stdout drain thread's `parse_listening_port`), then additionally confirms
+/// it with a real HTTP round-trip — belt and suspenders: the "Listening on"
+/// line alone proves the OS-level bind succeeded, `http_probe_ok` catches
+/// the rarer case of a crash in the instant right after.
+async fn wait_for_sidecar_ready(port_rx: std::sync::mpsc::Receiver<u16>, timeout: Duration) -> Option<u16> {
     let start = std::time::Instant::now();
+    let mut port: Option<u16> = None;
     while start.elapsed() < timeout {
-        if http_probe_ok(port) {
-            return true;
+        if port.is_none() {
+            if let Ok(p) = port_rx.try_recv() {
+                port = Some(p);
+            }
         }
-        tokio::time::sleep(Duration::from_millis(150)).await;
+        if let Some(p) = port {
+            if http_probe_ok(p) {
+                return Some(p);
+            }
+        }
+        tokio::time::sleep(Duration::from_millis(50)).await;
     }
-    false
+    None
 }
 
 async fn spawn_sidecar(app: &AppHandle, cfg: &VaultConfig) -> Result<String, String> {
+    let state = app.state::<SidecarState>();
+    {
+        // A second `spawn_sidecar` call (e.g. the splash page's `main()`
+        // re-running after a webview reload) must not spawn a duplicate
+        // node.exe: the state-storage at the end of this function
+        // unconditionally overwrites `state.job`, and the OLD Job has
+        // `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE` set — dropping it there would
+        // make the kernel silently terminate the OLD (still-healthy) child.
+        // If one is already running, hand back its URL instead of spawning
+        // a second one.
+        let mut child_guard = state.child.lock().unwrap();
+        if let Some(child) = child_guard.as_mut() {
+            if matches!(child.try_wait(), Ok(None)) {
+                if let Some(url) = state.url.lock().unwrap().clone() {
+                    return Ok(url);
+                }
+            }
+        }
+    }
+
     let node_bin = match resolve_node_binary() {
         Some(p) => p,
         None => {
@@ -252,7 +306,11 @@ async fn spawn_sidecar(app: &AppHandle, cfg: &VaultConfig) -> Result<String, Str
         }
     }
 
-    let resource_dir = strip_verbatim_prefix(&app.path().resource_dir().map_err(|e| e.to_string())?);
+    let resource_dir = strip_verbatim_prefix(&app.path().resource_dir().map_err(|e| {
+        let msg = format!("resource_dir() başarısız: {e}");
+        log_line(app, &msg);
+        msg
+    })?);
     // `bundle.resources` is the ARRAY form (["../dist-server/**/*"]) rather
     // than the map form, because the map form ({"../dist-server/build":
     // "server/build", ...}) deterministically fails to build on this project
@@ -272,10 +330,17 @@ async fn spawn_sidecar(app: &AppHandle, cfg: &VaultConfig) -> Result<String, Str
         return Err(msg);
     }
 
-    let app_data_dir = strip_verbatim_prefix(&app.path().app_data_dir().map_err(|e| e.to_string())?);
-    std::fs::create_dir_all(&app_data_dir).map_err(|e| e.to_string())?;
+    let app_data_dir = strip_verbatim_prefix(&app.path().app_data_dir().map_err(|e| {
+        let msg = format!("app_data_dir() başarısız: {e}");
+        log_line(app, &msg);
+        msg
+    })?);
+    std::fs::create_dir_all(&app_data_dir).map_err(|e| {
+        let msg = format!("app_data_dir oluşturulamadı: {e}");
+        log_line(app, &msg);
+        msg
+    })?;
     let skills_dir = app_data_dir.join("skills");
-    let port = get_free_port()?;
 
     // providers.json must live in app_data_dir (writable by a standard
     // user), not the resource dir (server_dir/data) — that one sits under
@@ -308,7 +373,10 @@ async fn spawn_sidecar(app: &AppHandle, cfg: &VaultConfig) -> Result<String, Str
         .arg(&entry)
         .current_dir(&server_dir)
         .env("HOST", "127.0.0.1")
-        .env("PORT", port.to_string())
+        // "0" lets the OS assign a genuinely free port atomically at Node's
+        // own bind() call — no separate reserve-then-release step for
+        // something else to steal in between (see parse_listening_port).
+        .env("PORT", "0")
         .env("DATA_DIR", &app_data_dir)
         .env("VAULT_PATH", &cfg.vault_path)
         .env("PUBLIC_VAULT_NAME", &cfg.vault_name)
@@ -341,12 +409,17 @@ async fn spawn_sidecar(app: &AppHandle, cfg: &VaultConfig) -> Result<String, Str
     // keeps the last lines around so the "didn't start in time" error below
     // can still show something inline, not just "go check the log file".
     let stderr_tail: Arc<Mutex<String>> = Arc::new(Mutex::new(String::new()));
+    const STDERR_TAIL_MAX_BYTES: usize = 8192;
+    let (port_tx, port_rx) = std::sync::mpsc::channel::<u16>();
     if let Some(stdout) = child.stdout.take() {
         let app = app.clone();
         std::thread::spawn(move || {
             use std::io::{BufRead, BufReader};
             for line in BufReader::new(stdout).lines().map_while(Result::ok) {
                 log_line(&app, &format!("[sidecar stdout] {line}"));
+                if let Some(port) = parse_listening_port(&line) {
+                    let _ = port_tx.send(port);
+                }
             }
         });
     }
@@ -360,18 +433,27 @@ async fn spawn_sidecar(app: &AppHandle, cfg: &VaultConfig) -> Result<String, Str
                 if let Ok(mut t) = tail.lock() {
                     t.push_str(&line);
                     t.push('\n');
+                    // Only used for the timeout branch's inline error text
+                    // below — bound it so a chatty/looping crash can't grow
+                    // this indefinitely for the rest of the session.
+                    if t.len() > STDERR_TAIL_MAX_BYTES {
+                        let excess = t.len() - STDERR_TAIL_MAX_BYTES;
+                        t.drain(..excess);
+                    }
                 }
             }
         });
     }
 
-    let ready = wait_for_port(port, Duration::from_secs(15)).await;
-    if !ready {
-        let _ = child.kill();
-        let stderr_text = stderr_tail.lock().map(|t| t.clone()).unwrap_or_default();
-        log_line(app, &format!("port never opened; child stderr: {stderr_text}"));
-        return Err(format!("Sunucu 15 saniye içinde başlamadı.\n{stderr_text}"));
-    }
+    let port = match wait_for_sidecar_ready(port_rx, Duration::from_secs(15)).await {
+        Some(p) => p,
+        None => {
+            let _ = child.kill();
+            let stderr_text = stderr_tail.lock().map(|t| t.clone()).unwrap_or_default();
+            log_line(app, &format!("port never opened; child stderr: {stderr_text}"));
+            return Err(format!("Sunucu 15 saniye içinde başlamadı.\n{stderr_text}"));
+        }
+    };
 
     // Best-effort: a Job Object failure must not fail the whole spawn — the
     // sidecar is already up and working, this only affects cleanup on an
@@ -397,11 +479,12 @@ async fn spawn_sidecar(app: &AppHandle, cfg: &VaultConfig) -> Result<String, Str
         }
     };
 
-    let state = app.state::<SidecarState>();
+    let url = format!("http://127.0.0.1:{port}");
     *state.child.lock().unwrap() = Some(child);
     *state.job.lock().unwrap() = job;
+    *state.url.lock().unwrap() = Some(url.clone());
 
-    Ok(format!("http://127.0.0.1:{port}"))
+    Ok(url)
 }
 
 /// Called once by the splash page on load. Returns immediately if no vault
@@ -470,6 +553,7 @@ pub fn run() {
         .manage(SidecarState {
             child: Mutex::new(None),
             job: Mutex::new(None),
+            url: Mutex::new(None),
         })
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
