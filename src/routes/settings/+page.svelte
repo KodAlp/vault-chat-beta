@@ -8,18 +8,24 @@
 	import { Label } from '$lib/components/ui/label';
 	import * as Select from '$lib/components/ui/select';
 	import * as Card from '$lib/components/ui/card';
+	import * as AlertDialog from '$lib/components/ui/alert-dialog';
+	import { Separator } from '$lib/components/ui/separator';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 	import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';
+	import DownloadIcon from '@lucide/svelte/icons/download';
+	import TrashIcon from '@lucide/svelte/icons/trash';
 
 	let models = $state<OllamaModel[]>([]);
 	let loadError = $state('');
+	let pullName = $state('');
+	let pulling = $state(false);
+	let pullStatus = $state('');
+	let pullError = $state('');
+	let deleteTarget = $state<OllamaModel | null>(null);
+	let deleting = $state(false);
+	let deleteError = $state('');
 
-	const runningInTauri = isTauri();
-	let vaultPath = $state('');
-	let vaultName = $state('');
-	let vaultSaveStatus = $state<'idle' | 'saved' | 'error'>('idle');
-
-	onMount(async () => {
+	async function refreshModels() {
 		try {
 			const res = await fetch('/api/models');
 			if (!res.ok) throw new Error();
@@ -27,6 +33,81 @@
 		} catch {
 			loadError = 'Model listesi alınamadı — Ollama çalışıyor mu?';
 		}
+	}
+
+	async function pullModel() {
+		const name = pullName.trim();
+		if (!name || pulling) return;
+		pulling = true;
+		pullStatus = 'Başlatılıyor...';
+		pullError = '';
+		try {
+			const res = await fetch('/api/models', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ model: name })
+			});
+			if (!res.ok || !res.body) throw new Error(`İstek başarısız (${res.status})`);
+			const reader = res.body.getReader();
+			const decoder = new TextDecoder();
+			let buffer = '';
+			while (true) {
+				const { done, value } = await reader.read();
+				if (done) break;
+				buffer += decoder.decode(value, { stream: true });
+				const parts = buffer.split('\n\n');
+				buffer = parts.pop() ?? '';
+				for (const part of parts) {
+					const line = part.trim();
+					if (!line.startsWith('data:')) continue;
+					const event = JSON.parse(line.slice(5)) as { type: string; status?: string; error?: string };
+					if (event.type === 'progress') pullStatus = event.status ?? 'İndiriliyor...';
+					else if (event.type === 'done') {
+						pullStatus = 'Tamamlandı';
+						pullName = '';
+						await refreshModels();
+					} else if (event.type === 'error') {
+						pullError = event.error ?? 'İndirme başarısız';
+						pullStatus = '';
+					}
+				}
+			}
+		} catch (err) {
+			pullError = err instanceof Error ? err.message : 'İndirme başarısız';
+			pullStatus = '';
+		} finally {
+			pulling = false;
+		}
+	}
+
+	async function confirmDelete() {
+		const m = deleteTarget;
+		if (!m || deleting) return;
+		deleteTarget = null;
+		deleting = true;
+		deleteError = '';
+		try {
+			const res = await fetch('/api/models', {
+				method: 'DELETE',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ model: m.name })
+			});
+			if (!res.ok) throw new Error();
+			await refreshModels();
+		} catch {
+			deleteError = `"${m.name}" silinemedi.`;
+		} finally {
+			deleting = false;
+		}
+	}
+
+	const runningInTauri = isTauri();
+	let vaultPath = $state('');
+	let vaultName = $state('');
+	let vaultSaveStatus = $state<'idle' | 'saved' | 'error'>('idle');
+
+	onMount(async () => {
+		await refreshModels();
 
 		if (runningInTauri) {
 			try {
@@ -146,6 +227,63 @@
 					</Select.Content>
 				</Select.Root>
 			</div>
+
+			<Separator class="my-1" />
+
+			<div class="flex flex-col gap-1.5">
+				<Label>Kurulu modeller</Label>
+				<span class="text-xs text-muted-foreground">Ollama'da yüklü modeller. Yeni model indirmek için aşağıdaki alanı kullan.</span>
+				{#if models.length === 0}
+					<p class="text-sm text-muted-foreground">Kurulu model yok.</p>
+				{:else}
+					<ul class="flex flex-col gap-1">
+						{#each models as m (m.name)}
+							<li class="flex items-center justify-between gap-2 rounded-md border px-2.5 py-1.5 text-sm">
+								<span class="min-w-0 flex-1 truncate font-mono text-xs">{m.name}</span>
+								<span class="shrink-0 text-xs text-muted-foreground">{(m.size / 1e9).toFixed(1)} GB</span>
+								<Button
+									type="button"
+									variant="ghost"
+									size="sm"
+									class="h-7 px-2 text-destructive hover:text-destructive"
+									title="Modeli sil"
+									aria-label={`${m.name} modelini sil`}
+									onclick={() => (deleteTarget = m)}
+								>
+									<TrashIcon size={14} aria-hidden="true" />
+								</Button>
+							</li>
+						{/each}
+					</ul>
+				{/if}
+			</div>
+
+			<div class="flex flex-col gap-1.5">
+				<Label>Model indir</Label>
+				<span class="text-xs text-muted-foreground">Ollama kütüphanesinden bir model çek (örn. <code class="rounded bg-muted px-1 text-xs">qwen3:8b</code>, <code class="rounded bg-muted px-1 text-xs">llama3.2</code>).</span>
+				<div class="flex gap-2">
+					<Input
+						type="text"
+						bind:value={pullName}
+						placeholder="model adı (örn. qwen3:8b)"
+						class="max-w-xs"
+						disabled={pulling}
+						onkeydown={(e) => e.key === 'Enter' && pullModel()}
+					/>
+					<Button type="button" onclick={pullModel} disabled={!pullName.trim() || pulling}>
+						<DownloadIcon size={14} aria-hidden="true" /> {pulling ? 'İndiriliyor...' : 'İndir'}
+					</Button>
+				</div>
+				{#if pullStatus}
+					<p class="text-xs text-muted-foreground">{pullStatus}</p>
+				{/if}
+				{#if pullError}
+					<p class="text-xs text-destructive" role="alert">{pullError}</p>
+				{/if}
+				{#if deleteError}
+					<p class="text-xs text-destructive" role="alert">{deleteError}</p>
+				{/if}
+			</div>
 		</Card.Content>
 	</Card.Root>
 
@@ -232,3 +370,28 @@
 		</Card.Content>
 	</Card.Root>
 </div>
+
+<AlertDialog.Root open={!!deleteTarget} onOpenChange={(open) => !open && (deleteTarget = null)}>
+	<AlertDialog.Content>
+		{#if deleteTarget}
+			<AlertDialog.Header>
+				<AlertDialog.Title>"{deleteTarget.name}" silinsin mi?</AlertDialog.Title>
+				<AlertDialog.Description>
+					Bu model Ollama'dan kalıcı olarak kaldırılacak. İndirme dosyaları diskten silinir.
+				</AlertDialog.Description>
+			</AlertDialog.Header>
+			<AlertDialog.Footer>
+				<AlertDialog.Cancel>Vazgeç</AlertDialog.Cancel>
+				<AlertDialog.Action
+					variant="destructive"
+					onclick={(e) => {
+						e.preventDefault();
+						confirmDelete();
+					}}
+				>
+					Sil
+				</AlertDialog.Action>
+			</AlertDialog.Footer>
+		{/if}
+	</AlertDialog.Content>
+</AlertDialog.Root>

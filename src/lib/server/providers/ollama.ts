@@ -99,6 +99,19 @@ export class OllamaAdapter extends OpenAICompatAdapter {
 		return data.models ?? [];
 	}
 
+	async delete(model: string): Promise<void> {
+		const res = await fetch(`${this.nativeBaseUrl}/api/delete`, {
+			method: 'DELETE',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ model }),
+			signal: AbortSignal.timeout(this.config.timeouts.connectMs)
+		});
+		if (!res.ok) {
+			const bodyText = await res.text().catch(() => '');
+			throw new Error(`Ollama /api/delete ${res.status} — ${bodyText.slice(0, 200)}`);
+		}
+	}
+
 	async pull(model: string, onProgress?: (status: string) => void): Promise<void> {
 		// No fixed timeout here, unlike the other native calls below — a
 		// model download can legitimately run for minutes, and a flat

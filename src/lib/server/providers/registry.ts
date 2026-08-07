@@ -3,6 +3,7 @@ import { env } from '$env/dynamic/private';
 import { providersPath } from '../env';
 import { OllamaAdapter } from './ollama';
 import { OpenAICompatAdapter } from './openai-compat';
+import { AnthropicAdapter } from './anthropic';
 import { secretStore } from './secrets';
 import { readProvidersFile, type ProviderConfigEntry, type ProvidersFile } from './config-store';
 import { ProviderError, type ChatRequest, type Chunk, type ProviderAdapter } from './types';
@@ -34,6 +35,13 @@ async function buildAdapter(entry: ProviderConfigEntry): Promise<ProviderAdapter
 		return new OllamaAdapter(entry.id, env.OLLAMA_URL ?? entry.baseUrl, entry.timeouts);
 	}
 	const apiKey = await secretStore.get(entry.id);
+	if (entry.kind === 'anthropic') {
+		return new AnthropicAdapter({
+			id: entry.id,
+			apiKey,
+			timeouts: entry.timeouts
+		});
+	}
 	return new OpenAICompatAdapter({
 		id: entry.id,
 		baseUrl: entry.baseUrl,
