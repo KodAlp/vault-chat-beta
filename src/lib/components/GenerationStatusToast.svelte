@@ -9,9 +9,12 @@
 	 * Adım 4. Each of the five *-generation.svelte.ts stores stays separate
 	 * (state logic, not UI, see GenerationDialog.svelte's comment); this
 	 * component only owns the generic "generating / done / error" toast
-	 * chrome. The caller (+layout.svelte, one block per store) supplies the
-	 * status object plus the two navigation actions, since only it knows
-	 * which store and which /study/* route to go to.
+	 * chrome. The caller (+layout.svelte) renders one of these per *entry*
+	 * in a store's `items` array (Faz 13 — no more single-slot 'idle'
+	 * variant; an idle generation simply isn't in the array, so every
+	 * instance of this component always has something to show), supplying
+	 * the status object plus the two navigation actions since only it
+	 * knows which store and which /study/* route to go to.
 	 */
 	let {
 		status,
@@ -24,7 +27,6 @@
 		onExpandScope
 	}: {
 		status:
-			| { phase: 'idle' }
 			| { phase: 'generating'; stage: string; elapsedMs?: number }
 			| { phase: 'done' }
 			| { phase: 'error'; message: string; narrowScope?: boolean };

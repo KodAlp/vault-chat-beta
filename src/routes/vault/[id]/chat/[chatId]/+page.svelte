@@ -173,6 +173,7 @@
 
 <StudyPanel
 	bind:open={studyPanelOpen}
+	vaultId={data.vaultId}
 	onOpenQuiz={() => (quizOpen = true)}
 	onOpenCards={() => (cardsOpen = true)}
 	onOpenReport={() => (reportOpen = true)}

@@ -9,19 +9,27 @@
 	import FileTextIcon from '@lucide/svelte/icons/file-text';
 	import BrainIcon from '@lucide/svelte/icons/brain';
 	import PresentationIcon from '@lucide/svelte/icons/presentation';
+	import type { StudySummary } from '$lib/types';
 
 	/**
 	 * Light-version study panel (Faz 9 Adım 6, user-approved simplification):
 	 * shows what's already generated/queued, never starts a new generation
 	 * itself — that still goes through the existing floating GenerationDialog
-	 * per type (Adım 4, untouched here). No "recently generated" list: quiz/
-	 * report/mindmap/slides have no list-by-vault endpoint today (only
-	 * get-by-id), and adding one was explicitly out of scope for this pass —
-	 * only cards has a due-queue concept, so it's the only type with real
-	 * status to show.
+	 * per type (Adım 4, untouched here).
+	 *
+	 * "Recently generated" list added in Faz 13 once quiz/report/mindmap/
+	 * slides got list-by-vault endpoints (previously only get-by-id existed,
+	 * so a generated item was reachable only via the moment's own
+	 * GenerationStatusToast — reload the page or miss that toast and it was
+	 * effectively gone even though the row was still sitting in study.db).
+	 * Cards intentionally excluded here: there's no per-deck view route
+	 * today (cards/ reviews the due queue across every deck at once), so a
+	 * clicked deck would have nowhere to navigate to — the due-count badge
+	 * below already is cards' persistent status surface.
 	 */
 	let {
 		open = $bindable(false),
+		vaultId,
 		onOpenQuiz,
 		onOpenCards,
 		onOpenReport,
@@ -29,6 +37,7 @@
 		onOpenSlides
 	}: {
 		open?: boolean;
+		vaultId: string;
 		onOpenQuiz: () => void;
 		onOpenCards: () => void;
 		onOpenReport: () => void;
@@ -36,10 +45,17 @@
 		onOpenSlides: () => void;
 	} = $props();
 
+	const RECENT_LIMIT = 4;
+
 	let dueCount = $state(0);
+	let quizzes = $state<StudySummary[]>([]);
+	let reports = $state<StudySummary[]>([]);
+	let mindmaps = $state<StudySummary[]>([]);
+	let slidedecks = $state<StudySummary[]>([]);
 
 	onMount(() => {
 		void refreshDueCount();
+		void refreshLists();
 	});
 
 	async function refreshDueCount() {
@@ -51,6 +67,28 @@
 		}
 	}
 
+	/** Best-effort, independently per type — one failing endpoint (e.g. a
+	 * vault with a not-yet-created study.db) must not blank out the other
+	 * four lists. */
+	async function fetchList(path: string): Promise<StudySummary[]> {
+		try {
+			const res = await fetch(`${path}?vault=${encodeURIComponent(vaultId)}`);
+			if (!res.ok) return [];
+			return ((await res.json()) as { items: StudySummary[] }).items;
+		} catch {
+			return [];
+		}
+	}
+
+	async function refreshLists() {
+		[quizzes, reports, mindmaps, slidedecks] = await Promise.all([
+			fetchList('/api/study/quizzes'),
+			fetchList('/api/study/reports'),
+			fetchList('/api/study/mindmaps'),
+			fetchList('/api/study/slidedecks')
+		]);
+	}
+
 	function trigger(fn: () => void) {
 		open = false;
 		fn();
@@ -60,6 +98,11 @@
 		open = false;
 		goto('/study/cards');
 	}
+
+	function openItem(path: string) {
+		open = false;
+		goto(path);
+	}
 </script>
 
 <Sheet.Root bind:open>
@@ -68,33 +111,79 @@
 			<Sheet.Title>Çalışma Paneli</Sheet.Title>
 		</Sheet.Header>
 		<div class="rows">
-			<div class="row">
-				<span class="label"><FileQuestionIcon size={16} aria-hidden="true" /> Test</span>
-				<Button variant="outline" size="sm" onclick={() => trigger(onOpenQuiz)}>Yeni</Button>
+			<div class="type-group">
+				<div class="row">
+					<span class="label"><FileQuestionIcon size={16} aria-hidden="true" /> Test</span>
+					<Button variant="outline" size="sm" onclick={() => trigger(onOpenQuiz)}>Yeni</Button>
+				</div>
+				{#if quizzes.length > 0}
+					<ul class="recent-list">
+						{#each quizzes.slice(0, RECENT_LIMIT) as item (item.id)}
+							<li>
+								<button type="button" onclick={() => openItem(`/study/quiz/${item.id}`)}>{item.title}</button>
+							</li>
+						{/each}
+					</ul>
+				{/if}
 			</div>
-			<div class="row">
-				<span class="label">
-					<LayersIcon size={16} aria-hidden="true" /> Kartlar
-					{#if dueCount > 0}<Badge variant="secondary">{dueCount} bekliyor</Badge>{/if}
-				</span>
-				<div class="row-actions">
-					{#if dueCount > 0}
-						<Button variant="outline" size="sm" onclick={reviewCards}>İncele</Button>
-					{/if}
-					<Button variant="outline" size="sm" onclick={() => trigger(onOpenCards)}>Yeni</Button>
+			<div class="type-group">
+				<div class="row">
+					<span class="label">
+						<LayersIcon size={16} aria-hidden="true" /> Kartlar
+						{#if dueCount > 0}<Badge variant="secondary">{dueCount} bekliyor</Badge>{/if}
+					</span>
+					<div class="row-actions">
+						{#if dueCount > 0}
+							<Button variant="outline" size="sm" onclick={reviewCards}>İncele</Button>
+						{/if}
+						<Button variant="outline" size="sm" onclick={() => trigger(onOpenCards)}>Yeni</Button>
+					</div>
 				</div>
 			</div>
-			<div class="row">
-				<span class="label"><FileTextIcon size={16} aria-hidden="true" /> Rapor</span>
-				<Button variant="outline" size="sm" onclick={() => trigger(onOpenReport)}>Yeni</Button>
+			<div class="type-group">
+				<div class="row">
+					<span class="label"><FileTextIcon size={16} aria-hidden="true" /> Rapor</span>
+					<Button variant="outline" size="sm" onclick={() => trigger(onOpenReport)}>Yeni</Button>
+				</div>
+				{#if reports.length > 0}
+					<ul class="recent-list">
+						{#each reports.slice(0, RECENT_LIMIT) as item (item.id)}
+							<li>
+								<button type="button" onclick={() => openItem(`/study/report/${item.id}`)}>{item.title}</button>
+							</li>
+						{/each}
+					</ul>
+				{/if}
 			</div>
-			<div class="row">
-				<span class="label"><BrainIcon size={16} aria-hidden="true" /> Harita</span>
-				<Button variant="outline" size="sm" onclick={() => trigger(onOpenMindMap)}>Yeni</Button>
+			<div class="type-group">
+				<div class="row">
+					<span class="label"><BrainIcon size={16} aria-hidden="true" /> Harita</span>
+					<Button variant="outline" size="sm" onclick={() => trigger(onOpenMindMap)}>Yeni</Button>
+				</div>
+				{#if mindmaps.length > 0}
+					<ul class="recent-list">
+						{#each mindmaps.slice(0, RECENT_LIMIT) as item (item.id)}
+							<li>
+								<button type="button" onclick={() => openItem(`/study/mindmap/${item.id}`)}>{item.title}</button>
+							</li>
+						{/each}
+					</ul>
+				{/if}
 			</div>
-			<div class="row">
-				<span class="label"><PresentationIcon size={16} aria-hidden="true" /> Slayt</span>
-				<Button variant="outline" size="sm" onclick={() => trigger(onOpenSlides)}>Yeni</Button>
+			<div class="type-group">
+				<div class="row">
+					<span class="label"><PresentationIcon size={16} aria-hidden="true" /> Slayt</span>
+					<Button variant="outline" size="sm" onclick={() => trigger(onOpenSlides)}>Yeni</Button>
+				</div>
+				{#if slidedecks.length > 0}
+					<ul class="recent-list">
+						{#each slidedecks.slice(0, RECENT_LIMIT) as item (item.id)}
+							<li>
+								<button type="button" onclick={() => openItem(`/study/slides/${item.id}`)}>{item.title}</button>
+							</li>
+						{/each}
+					</ul>
+				{/if}
 			</div>
 		</div>
 	</Sheet.Content>
@@ -108,13 +197,17 @@
 		padding: 0 1rem 1rem;
 	}
 
+	.type-group {
+		border-bottom: 1px solid var(--color-border);
+		padding-bottom: 0.35rem;
+	}
+
 	.row {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
 		gap: 0.5rem;
 		padding: 0.5rem 0;
-		border-bottom: 1px solid var(--color-border);
 	}
 
 	.label {
@@ -127,5 +220,39 @@
 	.row-actions {
 		display: flex;
 		gap: 0.35rem;
+	}
+
+	.recent-list {
+		display: flex;
+		flex-direction: column;
+		gap: 0.15rem;
+		margin: 0 0 0.35rem;
+		padding: 0;
+		list-style: none;
+	}
+
+	.recent-list button {
+		display: block;
+		width: 100%;
+		border: none;
+		background: transparent;
+		padding: 0.2rem 0.1rem;
+		text-align: left;
+		font-size: 0.78rem;
+		color: var(--color-muted-foreground);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		cursor: pointer;
+		border-radius: var(--radius-sm);
+	}
+
+	.recent-list button:hover {
+		color: var(--color-primary);
+	}
+
+	.recent-list button:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 1px;
 	}
 </style>

@@ -19,7 +19,7 @@
 	let count = $state(10);
 	let dueCount = $state(0);
 
-	let alreadyGenerating = $derived(cardGeneration.status.phase === 'generating');
+	let alreadyGenerating = $derived(cardGeneration.items.some((s) => s.phase === 'generating'));
 
 	// The <input max="30"> only stops the spinner arrows — typing a larger
 	// number goes straight through it. Clamped on blur, not oninput, so

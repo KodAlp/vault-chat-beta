@@ -1,20 +1,30 @@
 import type { ReportGenerationEvent, ReportGenerationRequest } from './types';
+import type { DistributiveOmit } from './distributive-omit';
 
 export type ReportGenerationStatus =
-	| { phase: 'idle' }
-	| { phase: 'generating'; stage: string }
-	| { phase: 'done'; reportId: string }
-	| { phase: 'error'; message: string; narrowScope?: boolean };
+	| { id: string; phase: 'generating'; stage: string }
+	| { id: string; phase: 'done'; reportId: string }
+	| { id: string; phase: 'error'; message: string; narrowScope?: boolean };
 
 /** Module-level $state — see quiz-generation.svelte.ts for the full rationale
- * (generation must survive the dialog closing; boxed in a const object since
- * Svelte 5 forbids exporting a reassigned `let` $state binding). */
-export const reportGeneration = $state<{ status: ReportGenerationStatus }>({
-	status: { phase: 'idle' }
+ * (generation must survive the dialog closing; an array of entries, not a
+ * single `status` slot, so a second generation can't silently overwrite the
+ * first's still-unread result; boxed in a const object since Svelte 5
+ * forbids exporting a reassigned `let` $state binding). */
+export const reportGeneration = $state<{ items: ReportGenerationStatus[] }>({
+	items: []
 });
 
 export async function startReportGeneration(body: ReportGenerationRequest): Promise<void> {
-	reportGeneration.status = { phase: 'generating', stage: 'retrieving' };
+	const id = crypto.randomUUID();
+	function setStatus(status: DistributiveOmit<ReportGenerationStatus, 'id'>) {
+		const next = { id, ...status } as ReportGenerationStatus;
+		const idx = reportGeneration.items.findIndex((s) => s.id === id);
+		if (idx === -1) reportGeneration.items.push(next);
+		else reportGeneration.items[idx] = next;
+	}
+
+	setStatus({ phase: 'generating', stage: 'retrieving' });
 
 	try {
 		const res = await fetch('/api/generate/report', {
@@ -38,26 +48,23 @@ export async function startReportGeneration(body: ReportGenerationRequest): Prom
 				if (!line.startsWith('data:')) continue;
 				const event = JSON.parse(line.slice(5)) as ReportGenerationEvent;
 				if (event.type === 'progress') {
-					reportGeneration.status = { phase: 'generating', stage: event.stage };
+					setStatus({ phase: 'generating', stage: event.stage });
 				} else if (event.type === 'done') {
-					reportGeneration.status = { phase: 'done', reportId: event.reportId };
+					setStatus({ phase: 'done', reportId: event.reportId });
 				} else if (event.type === 'error') {
-					reportGeneration.status = {
-						phase: 'error',
-						message: event.message,
-						narrowScope: event.narrowScope
-					};
+					setStatus({ phase: 'error', message: event.message, narrowScope: event.narrowScope });
 				}
 			}
 		}
 	} catch (err) {
-		reportGeneration.status = {
+		setStatus({
 			phase: 'error',
 			message: err instanceof Error ? err.message : 'Bilinmeyen hata'
-		};
+		});
 	}
 }
 
-export function dismissReportGeneration(): void {
-	reportGeneration.status = { phase: 'idle' };
+export function dismissReportGeneration(id: string): void {
+	const idx = reportGeneration.items.findIndex((s) => s.id === id);
+	if (idx !== -1) reportGeneration.items.splice(idx, 1);
 }
