@@ -14,7 +14,7 @@ const MAX_BYTES = 5 * 1024 * 1024;
  */
 export interface AppLogRecord {
 	ts: string;
-	kind: 'chat_error' | 'fallback' | 'title_error' | 'db_error' | 'provider_error';
+	kind: 'chat_error' | 'fallback' | 'title_error' | 'db_error' | 'provider_error' | 'vault_error' | 'fatal_error';
 	chatId?: string;
 	provider?: string;
 	model?: string;

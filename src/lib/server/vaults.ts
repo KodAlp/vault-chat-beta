@@ -39,13 +39,22 @@ export function vaultsRoot(): string {
  * never permanently lock the app out with no recovery path. Callers that
  * need to distinguish "genuinely empty" from "broken" don't exist yet; if
  * one shows up, log here first.
+ *
+ * `path` is re-derived here rather than trusted from disk: it's a computed
+ * value (vaultsRoot()/id/library), not user input, and vaultsRoot() is
+ * cwd/DATA_DIR-relative — so whatever absolute string got persisted on a
+ * different machine, user account, or checkout location is discarded on
+ * every read in favor of what's correct for *this* run. Without this, a
+ * vaults.json carried between machines (or surviving a Windows account
+ * rename) would keep pointing at a path that no longer resolves anywhere.
  */
 function readRegistry(): RegistryFile {
 	try {
 		const raw = fs.readFileSync(registryPath(), 'utf-8');
 		const parsed = JSON.parse(raw) as Partial<RegistryFile>;
+		const vaults = Array.isArray(parsed.vaults) ? parsed.vaults : [];
 		return {
-			vaults: Array.isArray(parsed.vaults) ? parsed.vaults : [],
+			vaults: vaults.map((v) => ({ ...v, path: contextFor(v).libraryRoot })),
 			activeVaultId: parsed.activeVaultId ?? null
 		};
 	} catch {
