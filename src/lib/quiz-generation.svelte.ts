@@ -4,7 +4,7 @@ export type QuizGenerationStatus =
 	| { phase: 'idle' }
 	| { phase: 'generating'; stage: string }
 	| { phase: 'done'; quizId: string }
-	| { phase: 'error'; message: string };
+	| { phase: 'error'; message: string; narrowScope?: boolean };
 
 /**
  * Module-level $state, not component-local — generation must survive the
@@ -52,7 +52,11 @@ export async function startQuizGeneration(body: QuizGenerationRequest): Promise<
 				} else if (event.type === 'done') {
 					quizGeneration.status = { phase: 'done', quizId: event.quizId };
 				} else if (event.type === 'error') {
-					quizGeneration.status = { phase: 'error', message: event.message };
+					quizGeneration.status = {
+						phase: 'error',
+						message: event.message,
+						narrowScope: event.narrowScope
+					};
 				}
 			}
 		}

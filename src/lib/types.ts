@@ -100,13 +100,19 @@ export interface QuizGenerationRequest {
 	composition: { mc: number; tf: number; open: number };
 	model: string;
 	vault?: string;
+	/** Tri-state source-tree selection (same field/semantics as
+	 * ChatRequestBody.includedPaths) — omitted means "all". */
+	includedPaths?: string[];
 }
 
-/** SSE event shapes streamed by POST /api/generate/quiz. */
+/** SSE event shapes streamed by POST /api/generate/quiz. `narrowScope` on
+ * the error event mirrors RetrieveResult.narrowScope — set when relevant
+ * chunks exist but includedPaths filtered them all out, so the UI can
+ * offer "kapsamı genişlet?" instead of a flat "no sources" message. */
 export type QuizGenerationEvent =
 	| { type: 'progress'; stage: 'retrieving' | 'generating' | 'validating' | 'retrying' }
 	| { type: 'done'; quizId: string }
-	| { type: 'error'; message: string };
+	| { type: 'error'; message: string; narrowScope?: boolean };
 
 export type QuizItemType = 'multiple_choice' | 'true_false' | 'open';
 
@@ -158,13 +164,14 @@ export interface CardGenerationRequest {
 	count: number;
 	model: string;
 	vault?: string;
+	includedPaths?: string[];
 }
 
 /** SSE event shapes streamed by POST /api/generate/cards. */
 export type CardGenerationEvent =
 	| { type: 'progress'; stage: 'retrieving' | 'generating' | 'validating' | 'retrying' }
 	| { type: 'done'; deckId: string }
-	| { type: 'error'; message: string };
+	| { type: 'error'; message: string; narrowScope?: boolean };
 
 export type Grade = 'again' | 'hard' | 'good' | 'easy';
 
@@ -182,13 +189,14 @@ export interface ReportGenerationRequest {
 	prompt: string;
 	model: string;
 	vault?: string;
+	includedPaths?: string[];
 }
 
 /** SSE event shapes streamed by POST /api/generate/report. */
 export type ReportGenerationEvent =
 	| { type: 'progress'; stage: 'retrieving' | 'generating' | 'validating' | 'retrying' }
 	| { type: 'done'; reportId: string }
-	| { type: 'error'; message: string };
+	| { type: 'error'; message: string; narrowScope?: boolean };
 
 export interface ReportView {
 	id: string;
@@ -209,6 +217,7 @@ export interface MindMapGenerationRequest {
 	prompt: string;
 	model: string;
 	vault?: string;
+	includedPaths?: string[];
 }
 
 /** SSE event shapes streamed by POST /api/generate/mindmap. `elapsedMs` is
@@ -219,7 +228,7 @@ export interface MindMapGenerationRequest {
 export type MindMapGenerationEvent =
 	| { type: 'progress'; stage: 'retrieving' | 'generating' | 'validating' | 'retrying'; elapsedMs?: number }
 	| { type: 'done'; mindmapId: string }
-	| { type: 'error'; message: string };
+	| { type: 'error'; message: string; narrowScope?: boolean };
 
 export interface MindMapView {
 	id: string;
@@ -240,6 +249,7 @@ export interface SlidesGenerationRequest {
 	prompt: string;
 	model: string;
 	vault?: string;
+	includedPaths?: string[];
 }
 
 /** SSE event shapes streamed by POST /api/generate/slides. Terminal field is
@@ -249,7 +259,7 @@ export interface SlidesGenerationRequest {
 export type SlidesGenerationEvent =
 	| { type: 'progress'; stage: 'retrieving' | 'generating' | 'validating' | 'retrying' }
 	| { type: 'done'; slideDeckId: string }
-	| { type: 'error'; message: string };
+	| { type: 'error'; message: string; narrowScope?: boolean };
 
 export interface SlideDeckView {
 	id: string;

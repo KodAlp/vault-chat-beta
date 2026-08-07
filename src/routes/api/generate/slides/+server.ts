@@ -1,6 +1,7 @@
 import type { RequestHandler } from './$types';
 import { generateSlides } from '$lib/server/generate-slides';
 import { vaultFromId } from '$lib/server/requestVault';
+import { NoSourcesError } from '$lib/server/generate-errors';
 import type { SlidesGenerationEvent, SlidesGenerationRequest } from '$lib/types';
 
 function sseEvent(event: SlidesGenerationEvent): string {
@@ -24,13 +25,18 @@ export const POST: RequestHandler = async ({ request }) => {
 						domains: body.domains,
 						chatId: body.chatId,
 						prompt: body.prompt,
-						model: body.model
+						model: body.model,
+						includedPaths: body.includedPaths
 					},
 					(stage) => send({ type: 'progress', stage })
 				);
 				send({ type: 'done', slideDeckId });
 			} catch (err) {
-				send({ type: 'error', message: err instanceof Error ? err.message : 'Bilinmeyen hata' });
+				send({
+					type: 'error',
+					message: err instanceof Error ? err.message : 'Bilinmeyen hata',
+					narrowScope: err instanceof NoSourcesError ? err.narrowScope : undefined
+				});
 			} finally {
 				controller.close();
 			}

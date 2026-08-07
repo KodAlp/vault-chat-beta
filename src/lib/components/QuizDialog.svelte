@@ -9,8 +9,9 @@
 	let {
 		chatId,
 		vaultId,
+		includedPaths,
 		open = $bindable(false)
-	}: { chatId: string; vaultId: string; open?: boolean } = $props();
+	}: { chatId: string; vaultId: string; includedPaths?: string[]; open?: boolean } = $props();
 
 	let mc = $state(6);
 	let tf = $state(2);
@@ -33,7 +34,13 @@
 	 * regardless of whether this dialog (or even this page) stays open;
 	 * QuizGenerationStatus shows live progress elsewhere.
 	 */
-	function generate(args: { prompt: string; domains?: string[]; chatId?: string; vault: string }) {
+	function generate(args: {
+		prompt: string;
+		domains?: string[];
+		chatId?: string;
+		vault: string;
+		includedPaths?: string[];
+	}) {
 		const body: QuizGenerationRequest = {
 			...args,
 			composition: { mc, tf, open: openCount },
@@ -46,6 +53,7 @@
 <GenerationDialog
 	{chatId}
 	{vaultId}
+	{includedPaths}
 	bind:open
 	icon={FileQuestionIcon}
 	label="Test"

@@ -4,7 +4,7 @@ export type SlidesGenerationStatus =
 	| { phase: 'idle' }
 	| { phase: 'generating'; stage: string }
 	| { phase: 'done'; slideDeckId: string }
-	| { phase: 'error'; message: string };
+	| { phase: 'error'; message: string; narrowScope?: boolean };
 
 export const slidesGeneration = $state<{ status: SlidesGenerationStatus }>({
 	status: { phase: 'idle' }
@@ -39,7 +39,11 @@ export async function startSlidesGeneration(body: SlidesGenerationRequest): Prom
 				} else if (event.type === 'done') {
 					slidesGeneration.status = { phase: 'done', slideDeckId: event.slideDeckId };
 				} else if (event.type === 'error') {
-					slidesGeneration.status = { phase: 'error', message: event.message };
+					slidesGeneration.status = {
+						phase: 'error',
+						message: event.message,
+						narrowScope: event.narrowScope
+					};
 				}
 			}
 		}

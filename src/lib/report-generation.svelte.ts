@@ -4,7 +4,7 @@ export type ReportGenerationStatus =
 	| { phase: 'idle' }
 	| { phase: 'generating'; stage: string }
 	| { phase: 'done'; reportId: string }
-	| { phase: 'error'; message: string };
+	| { phase: 'error'; message: string; narrowScope?: boolean };
 
 /** Module-level $state — see quiz-generation.svelte.ts for the full rationale
  * (generation must survive the dialog closing; boxed in a const object since
@@ -42,7 +42,11 @@ export async function startReportGeneration(body: ReportGenerationRequest): Prom
 				} else if (event.type === 'done') {
 					reportGeneration.status = { phase: 'done', reportId: event.reportId };
 				} else if (event.type === 'error') {
-					reportGeneration.status = { phase: 'error', message: event.message };
+					reportGeneration.status = {
+						phase: 'error',
+						message: event.message,
+						narrowScope: event.narrowScope
+					};
 				}
 			}
 		}

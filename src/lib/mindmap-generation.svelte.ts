@@ -4,7 +4,7 @@ export type MindMapGenerationStatus =
 	| { phase: 'idle' }
 	| { phase: 'generating'; stage: string; elapsedMs?: number }
 	| { phase: 'done'; mindmapId: string }
-	| { phase: 'error'; message: string };
+	| { phase: 'error'; message: string; narrowScope?: boolean };
 
 export const mindmapGeneration = $state<{ status: MindMapGenerationStatus }>({
 	status: { phase: 'idle' }
@@ -39,7 +39,11 @@ export async function startMindMapGeneration(body: MindMapGenerationRequest): Pr
 				} else if (event.type === 'done') {
 					mindmapGeneration.status = { phase: 'done', mindmapId: event.mindmapId };
 				} else if (event.type === 'error') {
-					mindmapGeneration.status = { phase: 'error', message: event.message };
+					mindmapGeneration.status = {
+						phase: 'error',
+						message: event.message,
+						narrowScope: event.narrowScope
+					};
 				}
 			}
 		}

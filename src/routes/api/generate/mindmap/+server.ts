@@ -1,6 +1,7 @@
 import type { RequestHandler } from './$types';
 import { generateMindMap } from '$lib/server/generate-mindmap';
 import { vaultFromId } from '$lib/server/requestVault';
+import { NoSourcesError } from '$lib/server/generate-errors';
 import type { MindMapGenerationEvent, MindMapGenerationRequest } from '$lib/types';
 
 function sseEvent(event: MindMapGenerationEvent): string {
@@ -24,13 +25,18 @@ export const POST: RequestHandler = async ({ request }) => {
 						domains: body.domains,
 						chatId: body.chatId,
 						prompt: body.prompt,
-						model: body.model
+						model: body.model,
+						includedPaths: body.includedPaths
 					},
 					(stage, elapsedMs) => send({ type: 'progress', stage, elapsedMs })
 				);
 				send({ type: 'done', mindmapId });
 			} catch (err) {
-				send({ type: 'error', message: err instanceof Error ? err.message : 'Bilinmeyen hata' });
+				send({
+					type: 'error',
+					message: err instanceof Error ? err.message : 'Bilinmeyen hata',
+					narrowScope: err instanceof NoSourcesError ? err.narrowScope : undefined
+				});
 			} finally {
 				controller.close();
 			}

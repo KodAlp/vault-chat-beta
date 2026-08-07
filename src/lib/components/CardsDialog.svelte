@@ -12,8 +12,9 @@
 	let {
 		chatId,
 		vaultId,
+		includedPaths,
 		open = $bindable(false)
-	}: { chatId: string; vaultId: string; open?: boolean } = $props();
+	}: { chatId: string; vaultId: string; includedPaths?: string[]; open?: boolean } = $props();
 
 	let count = $state(10);
 	let dueCount = $state(0);
@@ -48,7 +49,13 @@
 	/** Same reasoning as QuizDialog.svelte's generate(): a real generation
 	 * takes 20s-2min, an open dialog for that whole span reads as a frozen
 	 * page. */
-	function generate(args: { prompt: string; domains?: string[]; chatId?: string; vault: string }) {
+	function generate(args: {
+		prompt: string;
+		domains?: string[];
+		chatId?: string;
+		vault: string;
+		includedPaths?: string[];
+	}) {
 		const body: CardGenerationRequest = { ...args, count, model: settings.reasoningModel };
 		void startCardGeneration(body);
 	}
@@ -57,6 +64,7 @@
 <GenerationDialog
 	{chatId}
 	{vaultId}
+	{includedPaths}
 	bind:open
 	icon={LayersIcon}
 	label="Kartlar"
