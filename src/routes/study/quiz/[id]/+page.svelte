@@ -4,7 +4,7 @@
 	import { settings } from '$lib/settings.svelte';
 	import { obsidianUri, libraryViewerUrl } from '$lib/sourceLink';
 	import type { PageProps } from './$types';
-	import BookOpenIcon from '@lucide/svelte/icons/book-open';
+	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
 	import CheckIcon from '@lucide/svelte/icons/check';
 	import XIcon from '@lucide/svelte/icons/x';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
@@ -34,14 +34,21 @@
 	let questionHtml = $state('');
 	let optionsHtml = $state<string[]>([]);
 
+	// `?vault=` (or an absent one) must round-trip exactly: appending an
+	// EMPTY `vault=` param when data.vaultId is undefined would make
+	// vaultFromUrl() try to resolve a vault literally named "" instead of
+	// falling back to the active vault (its `id ?? getActiveVaultId()`
+	// only falls back on null/undefined, not on an empty string).
+	let quizQuery = $derived(data.vaultId ? `?vault=${encodeURIComponent(data.vaultId)}` : '');
+
 	onMount(async () => {
 		try {
 			const [quizRes, attemptRes] = await Promise.all([
-				fetch(`/api/study/quizzes/${data.quizId}`),
+				fetch(`/api/study/quizzes/${data.quizId}${quizQuery}`),
 				fetch('/api/study/attempts', {
 					method: 'POST',
 					headers: { 'content-type': 'application/json' },
-					body: JSON.stringify({ quizId: data.quizId })
+					body: JSON.stringify({ quizId: data.quizId, vault: data.vaultId })
 				})
 			]);
 			if (!quizRes.ok || !attemptRes.ok) throw new Error();
@@ -96,7 +103,8 @@
 				headers: { 'content-type': 'application/json' },
 				body: JSON.stringify({
 					answers: items.map((i) => ({ itemId: i.id, given: answers[i.id] ?? '' })),
-					fastModel: settings.fastModel
+					fastModel: settings.fastModel,
+					vault: data.vaultId
 				})
 			});
 			if (!res.ok) throw new Error();
@@ -208,11 +216,15 @@
 						{#if r.item.modelFeedback}
 							<p class="model-feedback"><strong>Model değerlendirmesi:</strong> {r.item.modelFeedback}</p>
 						{/if}
-						<a class="source-link" href={obsidianUri(r.item.sourcePath)} title={r.item.headingPath}>
+						<a
+							class="source-link"
+							href={libraryViewerUrl(r.item.sourcePath, data.vaultId ?? '')}
+							title={r.item.headingPath}
+						>
 							{r.item.sourcePath}
 						</a>
-						<a class="source-link" href={libraryViewerUrl(r.item.sourcePath)} title="Kütüphanede görüntüle" aria-label="Kütüphanede görüntüle">
-							<BookOpenIcon size={13} aria-hidden="true" />
+						<a class="source-link" href={obsidianUri(r.item.sourcePath)} title="Obsidian'da aç" aria-label="Obsidian'da aç">
+							<ExternalLinkIcon size={13} aria-hidden="true" />
 						</a>
 					</div>
 				</div>

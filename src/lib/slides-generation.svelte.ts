@@ -2,9 +2,9 @@ import type { SlidesGenerationEvent, SlidesGenerationRequest } from './types';
 import type { DistributiveOmit } from './distributive-omit';
 
 export type SlidesGenerationStatus =
-	| { id: string; phase: 'generating'; stage: string }
-	| { id: string; phase: 'done'; slideDeckId: string }
-	| { id: string; phase: 'error'; message: string; narrowScope?: boolean };
+	| { id: string; vaultId?: string; phase: 'generating'; stage: string }
+	| { id: string; vaultId?: string; phase: 'done'; slideDeckId: string }
+	| { id: string; vaultId?: string; phase: 'error'; message: string; narrowScope?: boolean };
 
 /** Array of entries, not a single `status` slot (Faz 13) — see
  * quiz-generation.svelte.ts's doc comment for the full rationale. */
@@ -14,8 +14,8 @@ export const slidesGeneration = $state<{ items: SlidesGenerationStatus[] }>({
 
 export async function startSlidesGeneration(body: SlidesGenerationRequest): Promise<void> {
 	const id = crypto.randomUUID();
-	function setStatus(status: DistributiveOmit<SlidesGenerationStatus, 'id'>) {
-		const next = { id, ...status } as SlidesGenerationStatus;
+	function setStatus(status: DistributiveOmit<SlidesGenerationStatus, 'id' | 'vaultId'>) {
+		const next = { id, vaultId: body.vault, ...status } as SlidesGenerationStatus;
 		const idx = slidesGeneration.items.findIndex((s) => s.id === id);
 		if (idx === -1) slidesGeneration.items.push(next);
 		else slidesGeneration.items[idx] = next;

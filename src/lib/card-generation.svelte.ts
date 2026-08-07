@@ -2,9 +2,9 @@ import type { CardGenerationEvent, CardGenerationRequest } from './types';
 import type { DistributiveOmit } from './distributive-omit';
 
 export type CardGenerationStatus =
-	| { id: string; phase: 'generating'; stage: string }
-	| { id: string; phase: 'done'; deckId: string }
-	| { id: string; phase: 'error'; message: string; narrowScope?: boolean };
+	| { id: string; vaultId?: string; phase: 'generating'; stage: string }
+	| { id: string; vaultId?: string; phase: 'done'; deckId: string }
+	| { id: string; vaultId?: string; phase: 'error'; message: string; narrowScope?: boolean };
 
 /**
  * Module-level $state, not component-local — same reasoning as
@@ -27,8 +27,8 @@ export const cardGeneration = $state<{ items: CardGenerationStatus[] }>({
 
 export async function startCardGeneration(body: CardGenerationRequest): Promise<void> {
 	const id = crypto.randomUUID();
-	function setStatus(status: DistributiveOmit<CardGenerationStatus, 'id'>) {
-		const next = { id, ...status } as CardGenerationStatus;
+	function setStatus(status: DistributiveOmit<CardGenerationStatus, 'id' | 'vaultId'>) {
+		const next = { id, vaultId: body.vault, ...status } as CardGenerationStatus;
 		const idx = cardGeneration.items.findIndex((s) => s.id === id);
 		if (idx === -1) cardGeneration.items.push(next);
 		else cardGeneration.items[idx] = next;

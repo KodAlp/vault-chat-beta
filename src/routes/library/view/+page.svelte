@@ -8,6 +8,7 @@
 	let html = $state('');
 	let error = $state('');
 	let filePath = $derived(page.url.searchParams.get('path') ?? '');
+	let vaultId = $derived(page.url.searchParams.get('vault') ?? '');
 
 	onMount(load);
 
@@ -19,7 +20,9 @@
 			return;
 		}
 		try {
-			const res = await fetch(`/api/library/file?path=${encodeURIComponent(filePath)}`);
+			const params = new URLSearchParams({ path: filePath });
+			if (vaultId) params.set('vault', vaultId);
+			const res = await fetch(`/api/library/file?${params.toString()}`);
 			if (!res.ok) throw new Error();
 			const data = (await res.json()) as { raw: string };
 			// Strip the YAML frontmatter block before rendering — a plain

@@ -2,9 +2,12 @@
 	import { onMount } from 'svelte';
 	import { renderMarkdown } from '$lib/markdown';
 	import { obsidianUri, libraryViewerUrl } from '$lib/sourceLink';
+	import type { PageProps } from './$types';
 	import type { CardView, Grade } from '$lib/types';
-	import BookOpenIcon from '@lucide/svelte/icons/book-open';
+	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
+
+	let { data }: PageProps = $props();
 
 	type Phase = 'loading' | 'reviewing' | 'grading' | 'done' | 'empty' | 'error';
 
@@ -18,12 +21,16 @@
 	let frontHtml = $state('');
 	let backHtml = $state('');
 
+	// See study/quiz/[id]/+page.svelte's comment on quizQuery — an empty
+	// `vault=` param is not the same as an absent one.
+	let cardsQuery = $derived(data.vaultId ? `?vault=${encodeURIComponent(data.vaultId)}` : '');
+
 	onMount(async () => {
 		try {
-			const res = await fetch('/api/study/cards/queue');
+			const res = await fetch(`/api/study/cards/queue${cardsQuery}`);
 			if (!res.ok) throw new Error();
-			const data = (await res.json()) as { cards: CardView[] };
-			cards = data.cards;
+			const body = (await res.json()) as { cards: CardView[] };
+			cards = body.cards;
 			phase = cards.length === 0 ? 'empty' : 'reviewing';
 		} catch {
 			errorMessage = 'Kartlar yüklenemedi.';
@@ -51,7 +58,7 @@
 			await fetch(`/api/study/cards/${card.id}/grade`, {
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ grade: g })
+				body: JSON.stringify({ grade: g, vault: data.vaultId })
 			});
 		} catch {
 			// scheduling update failed silently — worst case this card is re-shown
@@ -95,12 +102,12 @@
 				<hr />
 				<div class="face back markdown-body">{@html backHtml}</div>
 				<span class="chip-group">
-					<a class="chip" href={obsidianUri(card.source_path)} title={card.heading_path}>
+					<a class="chip" href={libraryViewerUrl(card.source_path, data.vaultId ?? '')} title={card.heading_path}>
 						{card.source_path}
 					</a>
-					<a class="chip-icon" href={libraryViewerUrl(card.source_path)} title="Kütüphanede görüntüle" aria-label="Kütüphanede görüntüle">
-							<BookOpenIcon size={13} aria-hidden="true" />
-						</a>
+					<a class="chip-icon" href={obsidianUri(card.source_path)} title="Obsidian'da aç" aria-label="Obsidian'da aç">
+						<ExternalLinkIcon size={13} aria-hidden="true" />
+					</a>
 					</span>
 				{/if}
 		</div>

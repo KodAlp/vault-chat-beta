@@ -305,7 +305,7 @@
 				</div>
 			{/if}
 			{#each messages as message, i (message.id)}
-				<Message {message} streaming={isStreaming && i === messages.length - 1} {onExpandScope} />
+				<Message {message} {vaultId} streaming={isStreaming && i === messages.length - 1} {onExpandScope} />
 			{/each}
 		</div>
 		{#if isStreaming && !isAtBottom}

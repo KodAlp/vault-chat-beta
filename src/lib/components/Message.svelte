@@ -9,9 +9,15 @@
 
 	let {
 		message,
+		vaultId,
 		streaming = false,
 		onExpandScope
-	}: { message: ChatMessage; streaming?: boolean; onExpandScope?: () => void } = $props();
+	}: {
+		message: ChatMessage;
+		vaultId: string;
+		streaming?: boolean;
+		onExpandScope?: () => void;
+	} = $props();
 	let html = $state('');
 
 	// Stopped before any answer content arrived (e.g. during the thinking phase) —
@@ -60,7 +66,7 @@
 		<ChatBubble role={message.role} {html} interrupted={isEmptyInterrupted} />
 	</div>
 	{#if message.role === 'assistant' && message.sources?.length}
-		<SourceChip sources={message.sources} />
+		<SourceChip sources={message.sources} {vaultId} />
 	{/if}
 	{#if message.role === 'assistant' && message.narrowScope && !streaming}
 		<p class="narrow-scope">
