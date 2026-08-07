@@ -8,6 +8,7 @@
 	import SlidesDialog from '$lib/components/SlidesDialog.svelte';
 	import SourceTree from '$lib/components/SourceTree.svelte';
 	import StudyPanel from '$lib/components/StudyPanel.svelte';
+	import { scopeExpandSignal } from '$lib/scope-expand.svelte';
 	import HomeIcon from '@lucide/svelte/icons/house';
 	import SettingsIcon from '@lucide/svelte/icons/settings';
 	import LibraryIcon from '@lucide/svelte/icons/library';
@@ -58,6 +59,22 @@
 		leftCollapsed = false;
 		focusSignal += 1;
 	}
+
+	// The generation-error toast lives in the root layout (routes/+layout.svelte),
+	// which has no access to this page's own includedPaths state — it can only
+	// fire a global "expand scope" signal (lib/scope-expand.svelte.ts), which
+	// this page (the actual owner of the selection) reacts to here. Guarded by
+	// a "last seen" value, not a bare truthy check: module-level $state
+	// survives client-side navigation, so without this guard, navigating to a
+	// brand new chat page after a past toast click (this session or an earlier
+	// one) would immediately and spuriously clear that new chat's own scope.
+	let lastSeenScopeExpand = scopeExpandSignal.value;
+	$effect(() => {
+		if (scopeExpandSignal.value !== lastSeenScopeExpand) {
+			lastSeenScopeExpand = scopeExpandSignal.value;
+			handleScopeChange(undefined);
+		}
+	});
 
 	function toggleCollapse() {
 		leftCollapsed = !leftCollapsed;
@@ -144,11 +161,11 @@
 				<LibraryIcon size={19} aria-hidden="true" />
 				<span class="trigger-label">Panel</span>
 			</button>
-			<QuizDialog chatId={data.chatId} vaultId={data.vaultId} bind:open={quizOpen} />
-			<CardsDialog chatId={data.chatId} vaultId={data.vaultId} bind:open={cardsOpen} />
-			<ReportDialog chatId={data.chatId} vaultId={data.vaultId} bind:open={reportOpen} />
-			<MindMapDialog chatId={data.chatId} vaultId={data.vaultId} bind:open={mindMapOpen} />
-			<SlidesDialog chatId={data.chatId} vaultId={data.vaultId} bind:open={slidesOpen} />
+			<QuizDialog chatId={data.chatId} vaultId={data.vaultId} {includedPaths} bind:open={quizOpen} />
+			<CardsDialog chatId={data.chatId} vaultId={data.vaultId} {includedPaths} bind:open={cardsOpen} />
+			<ReportDialog chatId={data.chatId} vaultId={data.vaultId} {includedPaths} bind:open={reportOpen} />
+			<MindMapDialog chatId={data.chatId} vaultId={data.vaultId} {includedPaths} bind:open={mindMapOpen} />
+			<SlidesDialog chatId={data.chatId} vaultId={data.vaultId} {includedPaths} bind:open={slidesOpen} />
 		</div>
 		<div class="right-bottom placeholder-text">Profil (yakında)</div>
 	</aside>

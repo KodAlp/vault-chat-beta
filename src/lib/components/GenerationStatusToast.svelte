@@ -20,19 +20,24 @@
 		errorPrefix,
 		stackIndex,
 		onView,
-		onDismiss
+		onDismiss,
+		onExpandScope
 	}: {
 		status:
 			| { phase: 'idle' }
 			| { phase: 'generating'; stage: string; elapsedMs?: number }
 			| { phase: 'done' }
-			| { phase: 'error'; message: string };
+			| { phase: 'error'; message: string; narrowScope?: boolean };
 		stageLabels: Record<string, string>;
 		doneMessage: string;
 		errorPrefix: string;
 		stackIndex: number;
 		onView: () => void;
 		onDismiss: () => void;
+		/** Fires scope-expand.svelte.ts's global signal — only rendered when
+		 * status.narrowScope is true, mirroring Message.svelte's own
+		 * "kapsamı genişlet?" CTA for the same underlying distinction. */
+		onExpandScope?: () => void;
 	} = $props();
 
 	const bottom = $derived(`${1.25 + stackIndex * 3}rem`);
@@ -75,6 +80,18 @@
 			transition:fly={{ y: 12, duration: 200, easing: cubicOut }}
 		>
 			<span>{errorPrefix}{status.message}</span>
+			{#if status.narrowScope && onExpandScope}
+				<button
+					type="button"
+					class="shrink-0 whitespace-nowrap border-none bg-transparent p-0 text-inherit underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-2"
+					onclick={() => {
+						onExpandScope?.();
+						onDismiss();
+					}}
+				>
+					Kapsamı genişlet?
+				</button>
+			{/if}
 			<button
 				type="button"
 				class="flex shrink-0 border-none bg-transparent p-0 text-inherit focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-2"

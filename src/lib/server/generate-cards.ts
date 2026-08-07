@@ -7,6 +7,7 @@ import { createDeck, type NewCard } from './study-db';
 import { renderUserSkillsBlock } from './userSkills';
 import type { RetrievedChunk } from '$lib/types';
 import type { VaultContext } from './vaults';
+import { NoSourcesError } from './generate-errors';
 
 export interface GenerateCardsInput {
 	domains?: string[];
@@ -15,6 +16,8 @@ export interface GenerateCardsInput {
 	count: number;
 	/** Skill spec: generation defaults to the user's reasoning model. */
 	model: string;
+	/** Chat's own source-tree scope selection — see ChatRequestBody.includedPaths. */
+	includedPaths?: string[];
 }
 
 export type ProgressStage = 'retrieving' | 'generating' | 'validating' | 'retrying';
@@ -165,9 +168,13 @@ export async function generateCards(
 		}
 	}
 
-	const { chunks } = await retrieve(v, query, { domains: input.domains, k: 12 });
+	const { chunks, narrowScope } = await retrieve(v, query, {
+		domains: input.domains,
+		includedPaths: input.includedPaths,
+		k: 12
+	});
 	if (chunks.length === 0) {
-		throw new Error('Bu kapsamda kütüphanede yeterli kaynak yok.');
+		throw new NoSourcesError(narrowScope);
 	}
 
 	const chunksByPath = new Map(chunks.map((c) => [c.path, c]));

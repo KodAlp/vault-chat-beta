@@ -8,12 +8,19 @@
 	let {
 		chatId,
 		vaultId,
+		includedPaths,
 		open = $bindable(false)
-	}: { chatId: string; vaultId: string; open?: boolean } = $props();
+	}: { chatId: string; vaultId: string; includedPaths?: string[]; open?: boolean } = $props();
 
 	let alreadyGenerating = $derived(mindmapGeneration.status.phase === 'generating');
 
-	function generate(args: { prompt: string; domains?: string[]; chatId?: string; vault: string }) {
+	function generate(args: {
+		prompt: string;
+		domains?: string[];
+		chatId?: string;
+		vault: string;
+		includedPaths?: string[];
+	}) {
 		const body: MindMapGenerationRequest = { ...args, model: settings.reasoningModel };
 		void startMindMapGeneration(body);
 	}
@@ -22,6 +29,7 @@
 <GenerationDialog
 	{chatId}
 	{vaultId}
+	{includedPaths}
 	bind:open
 	icon={BrainIcon}
 	label="Harita"

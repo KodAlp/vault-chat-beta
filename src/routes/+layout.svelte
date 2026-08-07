@@ -10,6 +10,7 @@
 	import { slidesGeneration, dismissSlidesGeneration } from '$lib/slides-generation.svelte';
 	import GenerationStatusToast from '$lib/components/GenerationStatusToast.svelte';
 	import OllamaStatusBanner from '$lib/components/OllamaStatusBanner.svelte';
+	import { requestScopeExpand } from '$lib/scope-expand.svelte';
 
 	let { children } = $props();
 
@@ -65,6 +66,7 @@
 		goto(`/study/quiz/${quizId}`);
 	}}
 	onDismiss={dismissQuizGeneration}
+	onExpandScope={requestScopeExpand}
 />
 
 <GenerationStatusToast
@@ -79,6 +81,7 @@
 		goto('/study/cards');
 	}}
 	onDismiss={dismissCardGeneration}
+	onExpandScope={requestScopeExpand}
 />
 
 <GenerationStatusToast
@@ -94,6 +97,7 @@
 		goto(`/study/report/${reportId}`);
 	}}
 	onDismiss={dismissReportGeneration}
+	onExpandScope={requestScopeExpand}
 />
 
 <GenerationStatusToast
@@ -109,6 +113,7 @@
 		goto(`/study/mindmap/${mindmapId}`);
 	}}
 	onDismiss={dismissMindMapGeneration}
+	onExpandScope={requestScopeExpand}
 />
 
 <GenerationStatusToast
@@ -124,6 +129,7 @@
 		goto(`/study/slides/${slideDeckId}`);
 	}}
 	onDismiss={dismissSlidesGeneration}
+	onExpandScope={requestScopeExpand}
 />
 
 <style>

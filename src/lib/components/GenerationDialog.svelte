@@ -34,6 +34,7 @@
 		canGenerate = true,
 		badge = null,
 		open = $bindable(false),
+		includedPaths,
 		onGenerate,
 		extraTop,
 		extraFields
@@ -49,7 +50,17 @@
 		canGenerate?: boolean;
 		badge?: number | null;
 		open?: boolean;
-		onGenerate: (args: { prompt: string; domains?: string[]; chatId?: string; vault: string }) => void;
+		/** Chat's own source-tree scope selection (Faz 12) — forwarded as-is
+		 * into onGenerate's args so generation uses the same scope the chat
+		 * itself is currently answering from. */
+		includedPaths?: string[];
+		onGenerate: (args: {
+			prompt: string;
+			domains?: string[];
+			chatId?: string;
+			vault: string;
+			includedPaths?: string[];
+		}) => void;
 		extraTop?: Snippet;
 		extraFields?: Snippet;
 	} = $props();
@@ -85,7 +96,8 @@
 			domains: selectedDomain ? [selectedDomain] : undefined,
 			chatId: useChatContext ? chatId : undefined,
 			prompt: prompt.trim(),
-			vault: vaultId
+			vault: vaultId,
+			includedPaths
 		});
 	}
 </script>

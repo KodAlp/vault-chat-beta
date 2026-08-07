@@ -4,7 +4,7 @@ export type CardGenerationStatus =
 	| { phase: 'idle' }
 	| { phase: 'generating'; stage: string }
 	| { phase: 'done'; deckId: string }
-	| { phase: 'error'; message: string };
+	| { phase: 'error'; message: string; narrowScope?: boolean };
 
 /**
  * Module-level $state, not component-local — same reasoning as
@@ -49,7 +49,11 @@ export async function startCardGeneration(body: CardGenerationRequest): Promise<
 				} else if (event.type === 'done') {
 					cardGeneration.status = { phase: 'done', deckId: event.deckId };
 				} else if (event.type === 'error') {
-					cardGeneration.status = { phase: 'error', message: event.message };
+					cardGeneration.status = {
+						phase: 'error',
+						message: event.message,
+						narrowScope: event.narrowScope
+					};
 				}
 			}
 		}
