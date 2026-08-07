@@ -1,17 +1,27 @@
 import type { SlidesGenerationEvent, SlidesGenerationRequest } from './types';
+import type { DistributiveOmit } from './distributive-omit';
 
 export type SlidesGenerationStatus =
-	| { phase: 'idle' }
-	| { phase: 'generating'; stage: string }
-	| { phase: 'done'; slideDeckId: string }
-	| { phase: 'error'; message: string; narrowScope?: boolean };
+	| { id: string; phase: 'generating'; stage: string }
+	| { id: string; phase: 'done'; slideDeckId: string }
+	| { id: string; phase: 'error'; message: string; narrowScope?: boolean };
 
-export const slidesGeneration = $state<{ status: SlidesGenerationStatus }>({
-	status: { phase: 'idle' }
+/** Array of entries, not a single `status` slot (Faz 13) — see
+ * quiz-generation.svelte.ts's doc comment for the full rationale. */
+export const slidesGeneration = $state<{ items: SlidesGenerationStatus[] }>({
+	items: []
 });
 
 export async function startSlidesGeneration(body: SlidesGenerationRequest): Promise<void> {
-	slidesGeneration.status = { phase: 'generating', stage: 'retrieving' };
+	const id = crypto.randomUUID();
+	function setStatus(status: DistributiveOmit<SlidesGenerationStatus, 'id'>) {
+		const next = { id, ...status } as SlidesGenerationStatus;
+		const idx = slidesGeneration.items.findIndex((s) => s.id === id);
+		if (idx === -1) slidesGeneration.items.push(next);
+		else slidesGeneration.items[idx] = next;
+	}
+
+	setStatus({ phase: 'generating', stage: 'retrieving' });
 
 	try {
 		const res = await fetch('/api/generate/slides', {
@@ -35,26 +45,23 @@ export async function startSlidesGeneration(body: SlidesGenerationRequest): Prom
 				if (!line.startsWith('data:')) continue;
 				const event = JSON.parse(line.slice(5)) as SlidesGenerationEvent;
 				if (event.type === 'progress') {
-					slidesGeneration.status = { phase: 'generating', stage: event.stage };
+					setStatus({ phase: 'generating', stage: event.stage });
 				} else if (event.type === 'done') {
-					slidesGeneration.status = { phase: 'done', slideDeckId: event.slideDeckId };
+					setStatus({ phase: 'done', slideDeckId: event.slideDeckId });
 				} else if (event.type === 'error') {
-					slidesGeneration.status = {
-						phase: 'error',
-						message: event.message,
-						narrowScope: event.narrowScope
-					};
+					setStatus({ phase: 'error', message: event.message, narrowScope: event.narrowScope });
 				}
 			}
 		}
 	} catch (err) {
-		slidesGeneration.status = {
+		setStatus({
 			phase: 'error',
 			message: err instanceof Error ? err.message : 'Bilinmeyen hata'
-		};
+		});
 	}
 }
 
-export function dismissSlidesGeneration(): void {
-	slidesGeneration.status = { phase: 'idle' };
+export function dismissSlidesGeneration(id: string): void {
+	const idx = slidesGeneration.items.findIndex((s) => s.id === id);
+	if (idx !== -1) slidesGeneration.items.splice(idx, 1);
 }

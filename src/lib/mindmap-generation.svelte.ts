@@ -1,17 +1,27 @@
 import type { MindMapGenerationEvent, MindMapGenerationRequest } from './types';
+import type { DistributiveOmit } from './distributive-omit';
 
 export type MindMapGenerationStatus =
-	| { phase: 'idle' }
-	| { phase: 'generating'; stage: string; elapsedMs?: number }
-	| { phase: 'done'; mindmapId: string }
-	| { phase: 'error'; message: string; narrowScope?: boolean };
+	| { id: string; phase: 'generating'; stage: string; elapsedMs?: number }
+	| { id: string; phase: 'done'; mindmapId: string }
+	| { id: string; phase: 'error'; message: string; narrowScope?: boolean };
 
-export const mindmapGeneration = $state<{ status: MindMapGenerationStatus }>({
-	status: { phase: 'idle' }
+/** Array of entries, not a single `status` slot (Faz 13) — see
+ * quiz-generation.svelte.ts's doc comment for the full rationale. */
+export const mindmapGeneration = $state<{ items: MindMapGenerationStatus[] }>({
+	items: []
 });
 
 export async function startMindMapGeneration(body: MindMapGenerationRequest): Promise<void> {
-	mindmapGeneration.status = { phase: 'generating', stage: 'retrieving' };
+	const id = crypto.randomUUID();
+	function setStatus(status: DistributiveOmit<MindMapGenerationStatus, 'id'>) {
+		const next = { id, ...status } as MindMapGenerationStatus;
+		const idx = mindmapGeneration.items.findIndex((s) => s.id === id);
+		if (idx === -1) mindmapGeneration.items.push(next);
+		else mindmapGeneration.items[idx] = next;
+	}
+
+	setStatus({ phase: 'generating', stage: 'retrieving' });
 
 	try {
 		const res = await fetch('/api/generate/mindmap', {
@@ -35,26 +45,23 @@ export async function startMindMapGeneration(body: MindMapGenerationRequest): Pr
 				if (!line.startsWith('data:')) continue;
 				const event = JSON.parse(line.slice(5)) as MindMapGenerationEvent;
 				if (event.type === 'progress') {
-					mindmapGeneration.status = { phase: 'generating', stage: event.stage, elapsedMs: event.elapsedMs };
+					setStatus({ phase: 'generating', stage: event.stage, elapsedMs: event.elapsedMs });
 				} else if (event.type === 'done') {
-					mindmapGeneration.status = { phase: 'done', mindmapId: event.mindmapId };
+					setStatus({ phase: 'done', mindmapId: event.mindmapId });
 				} else if (event.type === 'error') {
-					mindmapGeneration.status = {
-						phase: 'error',
-						message: event.message,
-						narrowScope: event.narrowScope
-					};
+					setStatus({ phase: 'error', message: event.message, narrowScope: event.narrowScope });
 				}
 			}
 		}
 	} catch (err) {
-		mindmapGeneration.status = {
+		setStatus({
 			phase: 'error',
 			message: err instanceof Error ? err.message : 'Bilinmeyen hata'
-		};
+		});
 	}
 }
 
-export function dismissMindMapGeneration(): void {
-	mindmapGeneration.status = { phase: 'idle' };
+export function dismissMindMapGeneration(id: string): void {
+	const idx = mindmapGeneration.items.findIndex((s) => s.id === id);
+	if (idx !== -1) mindmapGeneration.items.splice(idx, 1);
 }

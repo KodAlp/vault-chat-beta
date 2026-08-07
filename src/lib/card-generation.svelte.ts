@@ -1,10 +1,10 @@
 import type { CardGenerationEvent, CardGenerationRequest } from './types';
+import type { DistributiveOmit } from './distributive-omit';
 
 export type CardGenerationStatus =
-	| { phase: 'idle' }
-	| { phase: 'generating'; stage: string }
-	| { phase: 'done'; deckId: string }
-	| { phase: 'error'; message: string; narrowScope?: boolean };
+	| { id: string; phase: 'generating'; stage: string }
+	| { id: string; phase: 'done'; deckId: string }
+	| { id: string; phase: 'error'; message: string; narrowScope?: boolean };
 
 /**
  * Module-level $state, not component-local — same reasoning as
@@ -12,16 +12,29 @@ export type CardGenerationStatus =
  * started it closing (and the user navigating away) rather than blocking
  * the screen for the 20s-2min a real generation takes.
  *
+ * An array, not a single `status` slot (Faz 13) — see
+ * quiz-generation.svelte.ts's doc comment for why: a second generation
+ * starting used to silently overwrite the first one's still-unread "done"
+ * status. Each entry carries its own client-generated `id`.
+ *
  * Boxed in a const object on purpose: Svelte 5 forbids exporting a `let`
  * $state binding that gets reassigned. Consumers read
- * `cardGeneration.status`, never reassign `cardGeneration` itself.
+ * `cardGeneration.items`, never reassign `cardGeneration` itself.
  */
-export const cardGeneration = $state<{ status: CardGenerationStatus }>({
-	status: { phase: 'idle' }
+export const cardGeneration = $state<{ items: CardGenerationStatus[] }>({
+	items: []
 });
 
 export async function startCardGeneration(body: CardGenerationRequest): Promise<void> {
-	cardGeneration.status = { phase: 'generating', stage: 'retrieving' };
+	const id = crypto.randomUUID();
+	function setStatus(status: DistributiveOmit<CardGenerationStatus, 'id'>) {
+		const next = { id, ...status } as CardGenerationStatus;
+		const idx = cardGeneration.items.findIndex((s) => s.id === id);
+		if (idx === -1) cardGeneration.items.push(next);
+		else cardGeneration.items[idx] = next;
+	}
+
+	setStatus({ phase: 'generating', stage: 'retrieving' });
 
 	try {
 		const res = await fetch('/api/generate/cards', {
@@ -45,26 +58,23 @@ export async function startCardGeneration(body: CardGenerationRequest): Promise<
 				if (!line.startsWith('data:')) continue;
 				const event = JSON.parse(line.slice(5)) as CardGenerationEvent;
 				if (event.type === 'progress') {
-					cardGeneration.status = { phase: 'generating', stage: event.stage };
+					setStatus({ phase: 'generating', stage: event.stage });
 				} else if (event.type === 'done') {
-					cardGeneration.status = { phase: 'done', deckId: event.deckId };
+					setStatus({ phase: 'done', deckId: event.deckId });
 				} else if (event.type === 'error') {
-					cardGeneration.status = {
-						phase: 'error',
-						message: event.message,
-						narrowScope: event.narrowScope
-					};
+					setStatus({ phase: 'error', message: event.message, narrowScope: event.narrowScope });
 				}
 			}
 		}
 	} catch (err) {
-		cardGeneration.status = {
+		setStatus({
 			phase: 'error',
 			message: err instanceof Error ? err.message : 'Bilinmeyen hata'
-		};
+		});
 	}
 }
 
-export function dismissCardGeneration(): void {
-	cardGeneration.status = { phase: 'idle' };
+export function dismissCardGeneration(id: string): void {
+	const idx = cardGeneration.items.findIndex((s) => s.id === id);
+	if (idx !== -1) cardGeneration.items.splice(idx, 1);
 }

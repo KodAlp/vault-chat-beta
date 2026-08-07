@@ -12,7 +12,7 @@
 		open = $bindable(false)
 	}: { chatId: string; vaultId: string; includedPaths?: string[]; open?: boolean } = $props();
 
-	let alreadyGenerating = $derived(slidesGeneration.status.phase === 'generating');
+	let alreadyGenerating = $derived(slidesGeneration.items.some((s) => s.phase === 'generating'));
 
 	function generate(args: {
 		prompt: string;

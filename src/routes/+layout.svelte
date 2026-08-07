@@ -38,6 +38,19 @@
 		document.documentElement.dataset.theme =
 			settings.theme === 'system' ? (systemPrefersDark ? 'dark' : 'light') : settings.theme;
 	});
+
+	// Faz 13: each store now holds an array of concurrent generations, not
+	// one slot — so the fixed stackIndex={0..4} that used to give each
+	// *type* its own vertical position no longer works (a type can have
+	// 0, 1, or several active toasts at once). Cumulative bases keep every
+	// visible toast, across all five types, at a distinct non-overlapping
+	// position without changing the "quiz lane, then cards lane, then..."
+	// ordering anyone using this app today is already used to.
+	let quizBase = $derived(0);
+	let cardBase = $derived(quizBase + quizGeneration.items.length);
+	let reportBase = $derived(cardBase + cardGeneration.items.length);
+	let mindmapBase = $derived(reportBase + reportGeneration.items.length);
+	let slidesBase = $derived(mindmapBase + mindmapGeneration.items.length);
 </script>
 
 <!-- Column shell, not the banner rendered loose: OllamaStatusBanner used to be
@@ -53,84 +66,94 @@
 	</div>
 </div>
 
-<GenerationStatusToast
-	status={quizGeneration.status}
-	stageLabels={{ ...STAGE_LABELS, generating: 'Sorular üretiliyor...' }}
-	doneMessage="Test hazır — görüntülemek için tıkla"
-	errorPrefix="Test oluşturulamadı: "
-	stackIndex={0}
-	onView={() => {
-		if (quizGeneration.status.phase !== 'done') return;
-		const quizId = quizGeneration.status.quizId;
-		dismissQuizGeneration();
-		goto(`/study/quiz/${quizId}`);
-	}}
-	onDismiss={dismissQuizGeneration}
-	onExpandScope={requestScopeExpand}
-/>
+{#each quizGeneration.items as status, i (status.id)}
+	<GenerationStatusToast
+		{status}
+		stageLabels={{ ...STAGE_LABELS, generating: 'Sorular üretiliyor...' }}
+		doneMessage="Test hazır — görüntülemek için tıkla"
+		errorPrefix="Test oluşturulamadı: "
+		stackIndex={quizBase + i}
+		onView={() => {
+			if (status.phase !== 'done') return;
+			const quizId = status.quizId;
+			dismissQuizGeneration(status.id);
+			goto(`/study/quiz/${quizId}`);
+		}}
+		onDismiss={() => dismissQuizGeneration(status.id)}
+		onExpandScope={requestScopeExpand}
+	/>
+{/each}
 
-<GenerationStatusToast
-	status={cardGeneration.status}
-	stageLabels={{ ...STAGE_LABELS, generating: 'Kartlar üretiliyor...' }}
-	doneMessage="Kartlar hazır — incelemek için tıkla"
-	errorPrefix="Kartlar oluşturulamadı: "
-	stackIndex={1}
-	onView={() => {
-		if (cardGeneration.status.phase !== 'done') return;
-		dismissCardGeneration();
-		goto('/study/cards');
-	}}
-	onDismiss={dismissCardGeneration}
-	onExpandScope={requestScopeExpand}
-/>
+{#each cardGeneration.items as status, i (status.id)}
+	<GenerationStatusToast
+		{status}
+		stageLabels={{ ...STAGE_LABELS, generating: 'Kartlar üretiliyor...' }}
+		doneMessage="Kartlar hazır — incelemek için tıkla"
+		errorPrefix="Kartlar oluşturulamadı: "
+		stackIndex={cardBase + i}
+		onView={() => {
+			if (status.phase !== 'done') return;
+			dismissCardGeneration(status.id);
+			goto('/study/cards');
+		}}
+		onDismiss={() => dismissCardGeneration(status.id)}
+		onExpandScope={requestScopeExpand}
+	/>
+{/each}
 
-<GenerationStatusToast
-	status={reportGeneration.status}
-	stageLabels={{ ...STAGE_LABELS, generating: 'Rapor yazılıyor...' }}
-	doneMessage="Rapor hazır — görüntülemek için tıkla"
-	errorPrefix="Rapor oluşturulamadı: "
-	stackIndex={2}
-	onView={() => {
-		if (reportGeneration.status.phase !== 'done') return;
-		const reportId = reportGeneration.status.reportId;
-		dismissReportGeneration();
-		goto(`/study/report/${reportId}`);
-	}}
-	onDismiss={dismissReportGeneration}
-	onExpandScope={requestScopeExpand}
-/>
+{#each reportGeneration.items as status, i (status.id)}
+	<GenerationStatusToast
+		{status}
+		stageLabels={{ ...STAGE_LABELS, generating: 'Rapor yazılıyor...' }}
+		doneMessage="Rapor hazır — görüntülemek için tıkla"
+		errorPrefix="Rapor oluşturulamadı: "
+		stackIndex={reportBase + i}
+		onView={() => {
+			if (status.phase !== 'done') return;
+			const reportId = status.reportId;
+			dismissReportGeneration(status.id);
+			goto(`/study/report/${reportId}`);
+		}}
+		onDismiss={() => dismissReportGeneration(status.id)}
+		onExpandScope={requestScopeExpand}
+	/>
+{/each}
 
-<GenerationStatusToast
-	status={mindmapGeneration.status}
-	stageLabels={{ ...STAGE_LABELS, generating: 'Harita çıkarılıyor...' }}
-	doneMessage="Harita hazır — görüntülemek için tıkla"
-	errorPrefix="Harita oluşturulamadı: "
-	stackIndex={3}
-	onView={() => {
-		if (mindmapGeneration.status.phase !== 'done') return;
-		const mindmapId = mindmapGeneration.status.mindmapId;
-		dismissMindMapGeneration();
-		goto(`/study/mindmap/${mindmapId}`);
-	}}
-	onDismiss={dismissMindMapGeneration}
-	onExpandScope={requestScopeExpand}
-/>
+{#each mindmapGeneration.items as status, i (status.id)}
+	<GenerationStatusToast
+		{status}
+		stageLabels={{ ...STAGE_LABELS, generating: 'Harita çıkarılıyor...' }}
+		doneMessage="Harita hazır — görüntülemek için tıkla"
+		errorPrefix="Harita oluşturulamadı: "
+		stackIndex={mindmapBase + i}
+		onView={() => {
+			if (status.phase !== 'done') return;
+			const mindmapId = status.mindmapId;
+			dismissMindMapGeneration(status.id);
+			goto(`/study/mindmap/${mindmapId}`);
+		}}
+		onDismiss={() => dismissMindMapGeneration(status.id)}
+		onExpandScope={requestScopeExpand}
+	/>
+{/each}
 
-<GenerationStatusToast
-	status={slidesGeneration.status}
-	stageLabels={{ ...STAGE_LABELS, generating: 'Slaytlar üretiliyor...' }}
-	doneMessage="Sunum hazır — görüntülemek için tıkla"
-	errorPrefix="Sunum oluşturulamadı: "
-	stackIndex={4}
-	onView={() => {
-		if (slidesGeneration.status.phase !== 'done') return;
-		const slideDeckId = slidesGeneration.status.slideDeckId;
-		dismissSlidesGeneration();
-		goto(`/study/slides/${slideDeckId}`);
-	}}
-	onDismiss={dismissSlidesGeneration}
-	onExpandScope={requestScopeExpand}
-/>
+{#each slidesGeneration.items as status, i (status.id)}
+	<GenerationStatusToast
+		{status}
+		stageLabels={{ ...STAGE_LABELS, generating: 'Slaytlar üretiliyor...' }}
+		doneMessage="Sunum hazır — görüntülemek için tıkla"
+		errorPrefix="Sunum oluşturulamadı: "
+		stackIndex={slidesBase + i}
+		onView={() => {
+			if (status.phase !== 'done') return;
+			const slideDeckId = status.slideDeckId;
+			dismissSlidesGeneration(status.id);
+			goto(`/study/slides/${slideDeckId}`);
+		}}
+		onDismiss={() => dismissSlidesGeneration(status.id)}
+		onExpandScope={requestScopeExpand}
+	/>
+{/each}
 
 <style>
 	.app-shell {

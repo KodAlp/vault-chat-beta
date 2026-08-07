@@ -114,6 +114,17 @@ export type QuizGenerationEvent =
 	| { type: 'done'; quizId: string }
 	| { type: 'error'; message: string; narrowScope?: boolean };
 
+/** GET /api/study/{quizzes,decks,reports,mindmaps,slidedecks} response
+ * item shape (Faz 13) — one per generated-material type, all structurally
+ * identical (mirrors study-db.ts's StudyListRow). Lets a single
+ * "recently generated" list component work across all five types. */
+export interface StudySummary {
+	id: string;
+	title: string;
+	model: string;
+	createdAt: string;
+}
+
 export type QuizItemType = 'multiple_choice' | 'true_false' | 'open';
 
 export interface QuizItemView {

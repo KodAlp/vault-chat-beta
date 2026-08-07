@@ -3,6 +3,19 @@ import type { CardSchedule } from './schedule';
 import type { VaultContext } from './vaults';
 import { logAppEvent } from './app-log';
 
+/** Shared shape for every "what's been generated in this vault" list
+ * (Faz 13) — id/title/model/created_at is the one thing all five
+ * generated-material tables have in common. Each list*() below selects
+ * only these columns rather than `SELECT *`, so a large payload (e.g.
+ * slidedecks.rendered_html/rendered_css) never gets dragged along just to
+ * populate a list view. */
+export interface StudyListRow {
+	id: string;
+	title: string;
+	model: string;
+	created_at: string;
+}
+
 export interface QuizRow {
 	id: string;
 	title: string;
@@ -251,6 +264,13 @@ export function getQuizItem(v: VaultContext, id: string): QuizItemRow | undefine
 	return getDb(v).prepare('SELECT * FROM quiz_items WHERE id = ?').get(id) as QuizItemRow | undefined;
 }
 
+/** Most recent first — what a "recently generated" list wants to show. */
+export function listQuizzes(v: VaultContext): StudyListRow[] {
+	return getDb(v)
+		.prepare('SELECT id, title, model, created_at FROM quizzes ORDER BY created_at DESC')
+		.all() as StudyListRow[];
+}
+
 export function createAttempt(v: VaultContext, quizId: string): string {
 	const id = crypto.randomUUID();
 	getDb(v)
@@ -380,6 +400,14 @@ export function getCard(v: VaultContext, id: string): CardRow | undefined {
 	return getDb(v).prepare('SELECT * FROM cards WHERE id = ?').get(id) as CardRow | undefined;
 }
 
+/** decks.name, not decks.title — aliased to `title` so callers can treat
+ * every generated-material list the same way (see StudyListRow). */
+export function listDecks(v: VaultContext): StudyListRow[] {
+	return getDb(v)
+		.prepare('SELECT id, name AS title, model, created_at FROM decks ORDER BY created_at DESC')
+		.all() as StudyListRow[];
+}
+
 export function getDueCount(v: VaultContext, nowIso: string): number {
 	const row = getDb(v)
 		.prepare('SELECT COUNT(*) AS n FROM cards WHERE due_at <= ?')
@@ -468,6 +496,12 @@ export function getReportSections(v: VaultContext, reportId: string): ReportSect
 		.all(reportId) as ReportSectionRow[];
 }
 
+export function listReports(v: VaultContext): StudyListRow[] {
+	return getDb(v)
+		.prepare('SELECT id, title, model, created_at FROM reports ORDER BY created_at DESC')
+		.all() as StudyListRow[];
+}
+
 export interface MindMapRow {
 	id: string;
 	title: string;
@@ -535,6 +569,12 @@ export function getMindMapNodes(v: VaultContext, mindmapId: string): MindMapNode
 		.all(mindmapId) as MindMapNodeRow[];
 }
 
+export function listMindMaps(v: VaultContext): StudyListRow[] {
+	return getDb(v)
+		.prepare('SELECT id, title, model, created_at FROM mindmaps ORDER BY created_at DESC')
+		.all() as StudyListRow[];
+}
+
 export interface SlideDeckRow {
 	id: string;
 	title: string;
@@ -591,6 +631,15 @@ export function createSlideDeck(
 
 export function getSlideDeck(v: VaultContext, id: string): SlideDeckRow | undefined {
 	return getDb(v).prepare('SELECT * FROM slidedecks WHERE id = ?').get(id) as SlideDeckRow | undefined;
+}
+
+/** Selects only the light columns — deliberately not `SELECT *`, since
+ * slidedecks also carries rendered_html/rendered_css (a full rendered
+ * deck's worth of markup) that a list view has no use for. */
+export function listSlideDecks(v: VaultContext): StudyListRow[] {
+	return getDb(v)
+		.prepare('SELECT id, title, model, created_at FROM slidedecks ORDER BY created_at DESC')
+		.all() as StudyListRow[];
 }
 
 export function getSlides(v: VaultContext, deckId: string): SlideRow[] {
