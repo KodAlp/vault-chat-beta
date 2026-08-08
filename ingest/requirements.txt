@@ -4,6 +4,10 @@
 # when it's missing, same as the tools below.
 markitdown[all]
 
+# YouTube transcript ingest (youtube_transcript.py) — subtitle/caption
+# fetching only, never downloads video/audio.
+yt-dlp
+
 # Deferred, optional, heavy (pull PyTorch + multi-GB model weights on first
 # run) — see .claude/skills/source-ingest/SKILL.md. convert.py detects their
 # absence via ImportError and reports a clear "not installed" message rather

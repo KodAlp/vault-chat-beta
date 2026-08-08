@@ -67,7 +67,10 @@ function resolvePythonBin(): string {
 // script) must not lose to a value this module already captured at import
 // time.
 let cachedPythonBin: string | null = null;
-function pythonBin(): string {
+/** Exported so youtubeQueue.ts's yt-dlp sidecar reuses the exact same
+ * Windows path-resolution fixes instead of a second, driftable copy —
+ * see resolvePythonBin()'s doc comment for the bugs this avoids. */
+export function pythonBin(): string {
 	if (cachedPythonBin === null) cachedPythonBin = resolvePythonBin();
 	return cachedPythonBin;
 }
