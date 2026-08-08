@@ -13,7 +13,10 @@
 	let statusLabel = $state('');
 	let errorMessage = $state('');
 
+	type Source = 'file' | 'youtube';
+	let source = $state<Source>('file');
 	let selectedFile = $state<File | null>(null);
+	let youtubeUrl = $state('');
 	let importId = $state('');
 	let title = $state('');
 	let domain = $state('');
@@ -23,13 +26,17 @@
 	const STAGE_LABELS: Record<string, string> = {
 		queued: 'Sırada...',
 		converting: 'Dönüştürülüyor...',
-		postprocessing: 'İşleniyor...'
+		postprocessing: 'İşleniyor...',
+		fetching: 'Altyazı indiriliyor...',
+		parsing: 'İşleniyor...'
 	};
 
 	function openDialog() {
 		open = true;
 		phase = 'idle';
+		source = 'file';
 		selectedFile = null;
+		youtubeUrl = '';
 		errorMessage = '';
 	}
 
@@ -38,16 +45,27 @@
 		selectedFile = input.files?.[0] ?? null;
 	}
 
+	function fileFormData(): FormData {
+		const formData = new FormData();
+		if (selectedFile) formData.append('file', selectedFile);
+		return formData;
+	}
+
 	async function upload() {
-		if (!selectedFile) return;
+		if (source === 'file' && !selectedFile) return;
+		if (source === 'youtube' && !youtubeUrl.trim()) return;
 		phase = 'uploading';
 		statusLabel = 'Yükleniyor...';
 
-		const formData = new FormData();
-		formData.append('file', selectedFile);
-
 		try {
-			const res = await fetch('/api/import', { method: 'POST', body: formData });
+			const res =
+				source === 'file'
+					? await fetch('/api/import', { method: 'POST', body: fileFormData() })
+					: await fetch('/api/import/youtube', {
+							method: 'POST',
+							headers: { 'content-type': 'application/json' },
+							body: JSON.stringify({ url: youtubeUrl.trim() })
+						});
 			if (!res.ok || !res.body) throw new Error(`İstek başarısız (${res.status})`);
 
 			const reader = res.body.getReader();
@@ -133,13 +151,45 @@
 		</Dialog.Header>
 
 		{#if phase === 'idle'}
-			<label class="flex flex-col gap-1 text-sm">
-				Dosya (DOCX / PPTX / XLSX / HTML / EPUB / basit PDF)
-				<Input type="file" onchange={onFileChange} accept=".docx,.pptx,.xlsx,.html,.htm,.epub,.pdf" />
-			</label>
+			<div class="flex gap-1.5">
+				<Button
+					variant={source === 'file' ? 'default' : 'outline'}
+					size="sm"
+					onclick={() => (source = 'file')}
+				>
+					Dosya
+				</Button>
+				<Button
+					variant={source === 'youtube' ? 'default' : 'outline'}
+					size="sm"
+					onclick={() => (source = 'youtube')}
+				>
+					Video (YouTube)
+				</Button>
+			</div>
+			{#if source === 'file'}
+				<label class="flex flex-col gap-1 text-sm">
+					Dosya (DOCX / PPTX / XLSX / HTML / EPUB / basit PDF)
+					<Input type="file" onchange={onFileChange} accept=".docx,.pptx,.xlsx,.html,.htm,.epub,.pdf" />
+				</label>
+			{:else}
+				<label class="flex flex-col gap-1 text-sm">
+					YouTube bağlantısı
+					<Input
+						type="url"
+						bind:value={youtubeUrl}
+						placeholder="https://www.youtube.com/watch?v=..."
+					/>
+				</label>
+			{/if}
 			<Dialog.Footer>
 				<Button variant="outline" onclick={cancelStaged}>İptal</Button>
-				<Button onclick={upload} disabled={!selectedFile}>Yükle</Button>
+				<Button
+					onclick={upload}
+					disabled={source === 'file' ? !selectedFile : !youtubeUrl.trim()}
+				>
+					Yükle
+				</Button>
 			</Dialog.Footer>
 		{:else if phase === 'uploading'}
 			<p class="flex items-center gap-2 text-sm text-muted-foreground">
