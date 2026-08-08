@@ -26,6 +26,15 @@ function sseEvent(event: StreamEvent): string {
  * still be lost in the worst case. */
 const CHECKPOINT_INTERVAL_MS = 2000;
 
+/** qwen3:8b (Ollama, Q4_K_M) occasionally emits an invalid byte sequence
+ * that decodes to U+FFFD mid-stream — confirmed model/quantization-level
+ * (reproduced via a raw curl straight to Ollama, bypassing this app
+ * entirely), not an app encoding bug. A corrupted chunk is never shown to
+ * the user; generation is aborted and restarted from scratch (same prompt
+ * — the model can't "fix" a decode-time artifact, only re-roll it) up to
+ * this many times. Matches generate-quiz.ts's MAX_RETRIES convention. */
+const MAX_CORRUPTION_RETRIES = 2;
+
 /** Auth failures get a clean, actionable message instead of a raw HTTP body
  * — the provider name + "check your key" is what the user can act on. */
 function chatErrorMessage(err: unknown): string {
@@ -144,42 +153,89 @@ export const POST: RequestHandler = async ({ request }) => {
 				}
 				const promptMessages = await buildPromptMessages(body.messages, sources);
 
-				for await (const event of chatWithFallback(
-					'chat',
-					{ model: body.model, messages: promptMessages, think: body.think ?? false },
-					flight.signal
-				)) {
-					if (event.type === 'reasoning') {
-						finalThinking += event.text;
-						send({ type: 'thinking', content: event.text });
-					} else if (event.type === 'text') {
-						finalContent += event.text;
-						send({ type: 'delta', content: event.text });
-					} else if (event.type === 'notice') {
-						send({ type: 'notice', message: event.message });
-						logAppEvent({ kind: 'fallback', chatId, message: event.message });
+				for (let attempt = 0; ; attempt++) {
+					if (attempt > 0) {
+						// A prior attempt hit U+FFFD — throw away whatever it streamed
+						// and tell the client to do the same before new deltas arrive.
+						finalContent = '';
+						finalThinking = '';
+						send({ type: 'regenerate' });
+						send({ type: 'notice', message: 'Yanıtta bozuk karakterler algılandı, yeniden üretiliyor…' });
 					}
 
-					if (!assistantMessageId && (finalContent || finalThinking)) {
-						// First real content — create the row now instead of waiting
-						// for the whole stream to finish, so checkpoint() below (and
-						// the final save in `finally`) has something to write into if
-						// the connection dies partway through.
-						try {
-							assistantMessageId = insertMessage({
-								chatId,
-								role: 'assistant',
-								content: finalContent,
-								thinking: finalThinking || null,
-								sourcesJson: sources.length ? JSON.stringify(sources) : null
-							});
-							lastCheckpointedContent = finalContent;
-							lastCheckpointedThinking = finalThinking;
-							checkpointTimer = setInterval(checkpoint, CHECKPOINT_INTERVAL_MS);
-						} catch {
-							// Best-effort — the finally block's own fallback insert
-							// still gets one more try at the end.
+					// Per-attempt signal, not `flight.signal` directly — abort() is
+					// one-way, so aborting to cancel just this attempt would also
+					// permanently kill `flight` and break the next retry. Still
+					// cancels immediately if `flight` itself is aborted (client
+					// disconnect / superseded by a second message).
+					const attemptController = new AbortController();
+					const onFlightAbort = () => attemptController.abort();
+					if (flight.signal.aborted) attemptController.abort();
+					else flight.signal.addEventListener('abort', onFlightAbort);
+
+					let corrupted = false;
+					try {
+						for await (const event of chatWithFallback(
+							'chat',
+							{ model: body.model, messages: promptMessages, think: body.think ?? false },
+							attemptController.signal
+						)) {
+							if (event.type === 'reasoning') {
+								if (event.text.includes('�')) {
+									corrupted = true;
+									attemptController.abort();
+									break;
+								}
+								finalThinking += event.text;
+								send({ type: 'thinking', content: event.text });
+							} else if (event.type === 'text') {
+								if (event.text.includes('�')) {
+									corrupted = true;
+									attemptController.abort();
+									break;
+								}
+								finalContent += event.text;
+								send({ type: 'delta', content: event.text });
+							} else if (event.type === 'notice') {
+								send({ type: 'notice', message: event.message });
+								logAppEvent({ kind: 'fallback', chatId, message: event.message });
+							}
+
+							if (!assistantMessageId && (finalContent || finalThinking)) {
+								// First real content — create the row now instead of waiting
+								// for the whole stream to finish, so checkpoint() below (and
+								// the final save in `finally`) has something to write into if
+								// the connection dies partway through.
+								try {
+									assistantMessageId = insertMessage({
+										chatId,
+										role: 'assistant',
+										content: finalContent,
+										thinking: finalThinking || null,
+										sourcesJson: sources.length ? JSON.stringify(sources) : null
+									});
+									lastCheckpointedContent = finalContent;
+									lastCheckpointedThinking = finalThinking;
+									checkpointTimer = setInterval(checkpoint, CHECKPOINT_INTERVAL_MS);
+								} catch {
+									// Best-effort — the finally block's own fallback insert
+									// still gets one more try at the end.
+								}
+							}
 						}
+					} finally {
+						flight.signal.removeEventListener('abort', onFlightAbort);
+					}
+
+					if (!corrupted || flight.signal.aborted) break;
+					if (attempt >= MAX_CORRUPTION_RETRIES) {
+						send({
+							type: 'notice',
+							message:
+								'Yanıt bozuk karakterler içerebilir (bilinen bir model sorunu) — birkaç deneme sonrası temiz üretilemedi.'
+						});
+						logAppEvent({ kind: 'chat_error', chatId, message: 'U+FFFD corruption persisted after retries' });
+						break;
 					}
 				}
 				const hedges = computeHedges();

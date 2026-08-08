@@ -160,6 +160,18 @@
 					const event = JSON.parse(line.slice(5)) as StreamEvent;
 					if (event.type === 'delta') rawContent += event.content;
 					else if (event.type === 'thinking') rawThinking += event.content;
+					else if (event.type === 'regenerate') {
+						// Server hit U+FFFD and is restarting generation from scratch —
+						// discard whatever partial (possibly corrupted) content already
+						// rendered. notices deliberately kept: the "regenerating" notice
+						// this pairs with belongs to this message's generation history.
+						rawContent = '';
+						flushedContent = '';
+						rawThinking = '';
+						flushedThinking = '';
+						assistantMessage.content = '';
+						assistantMessage.thinking = '';
+					}
 					else if (event.type === 'done') {
 						assistantMessage.sources = event.sources;
 						assistantMessage.narrowScope = event.narrowScope;
