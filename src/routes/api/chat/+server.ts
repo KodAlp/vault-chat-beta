@@ -9,6 +9,7 @@ import { createChat, getChat, insertMessage, updateMessage, touchChat } from '$l
 import { generateTitle } from '$lib/server/title';
 import { vaultFromId } from '$lib/server/requestVault';
 import { logAppEvent } from '$lib/server/app-log';
+import { detectHallucinationHedges } from '$lib/server/hallucination';
 import type { ChatRequestBody, RetrievedChunk, StreamEvent } from '$lib/types';
 
 function sseEvent(event: StreamEvent): string {
@@ -88,6 +89,12 @@ export const POST: RequestHandler = async ({ request }) => {
 			let lastCheckpointedThinking = '';
 			let checkpointTimer: ReturnType<typeof setInterval> | null = null;
 
+			// Think-mode only — a non-think chat never produces reasoning text to
+			// scan, so this returns [] for it (see hallucination.ts's doc comment).
+			function computeHedges(): string[] {
+				return body.think && finalThinking ? detectHallucinationHedges(finalThinking) : [];
+			}
+
 			function checkpoint() {
 				if (!assistantMessageId) return;
 				if (finalContent === lastCheckpointedContent && finalThinking === lastCheckpointedThinking) return;
@@ -95,7 +102,8 @@ export const POST: RequestHandler = async ({ request }) => {
 					updateMessage(assistantMessageId, {
 						content: finalContent,
 						thinking: finalThinking || null,
-						sourcesJson: sources.length ? JSON.stringify(sources) : null
+						sourcesJson: sources.length ? JSON.stringify(sources) : null,
+						hedgesJson: computeHedges().length ? JSON.stringify(computeHedges()) : null
 					});
 					lastCheckpointedContent = finalContent;
 					lastCheckpointedThinking = finalThinking;
@@ -174,7 +182,8 @@ export const POST: RequestHandler = async ({ request }) => {
 						}
 					}
 				}
-				send({ type: 'done', sources, narrowScope });
+				const hedges = computeHedges();
+				send({ type: 'done', sources, narrowScope, hedges: hedges.length ? hedges : undefined });
 			} catch (err) {
 				// User-initiated stop (interrupt button / navigation) — propagates from
 				// the aborted Ollama fetch. Not a real error; say nothing.
@@ -201,7 +210,8 @@ export const POST: RequestHandler = async ({ request }) => {
 						updateMessage(assistantMessageId, {
 							content: finalContent,
 							thinking: finalThinking || null,
-							sourcesJson: sources.length ? JSON.stringify(sources) : null
+							sourcesJson: sources.length ? JSON.stringify(sources) : null,
+							hedgesJson: computeHedges().length ? JSON.stringify(computeHedges()) : null
 						});
 					} else if (finalContent || finalThinking) {
 						// Fallback: the lazy insert above never ran (or itself
@@ -213,7 +223,8 @@ export const POST: RequestHandler = async ({ request }) => {
 							role: 'assistant',
 							content: finalContent,
 							thinking: finalThinking || null,
-							sourcesJson: sources.length ? JSON.stringify(sources) : null
+							sourcesJson: sources.length ? JSON.stringify(sources) : null,
+							hedgesJson: computeHedges().length ? JSON.stringify(computeHedges()) : null
 						});
 					}
 					touchChat(chatId);

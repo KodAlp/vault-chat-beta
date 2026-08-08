@@ -163,6 +163,7 @@
 					else if (event.type === 'done') {
 						assistantMessage.sources = event.sources;
 						assistantMessage.narrowScope = event.narrowScope;
+						assistantMessage.hedges = event.hedges;
 					}
 					else if (event.type === 'error') errorMessage = event.message;
 					else if (event.type === 'notice') {

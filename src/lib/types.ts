@@ -41,6 +41,12 @@ export interface ChatMessage {
 	 * when retrieve() found relevant chunks but a scope filter excluded all
 	 * of them. Drives Message.svelte's "kapsamı genişlet?" suggestion. */
 	narrowScope?: boolean;
+	/** Hedge/uncertainty phrases detected in this message's `thinking` text
+	 * (see $lib/server/hallucination.ts) — only ever populated when the
+	 * message was generated with think mode on. Empty/absent means no
+	 * signal, not "checked and clean" vs "never checked" — think-mode-off
+	 * messages simply never run detection. */
+	hedges?: string[];
 }
 
 export interface ChatRequestBody {
@@ -90,7 +96,7 @@ export type StreamEvent =
 	 * Rendered via FallbackNotice.svelte (Faz 9 Adım 6); today's
 	 * single-provider chains never actually trigger it in practice. */
 	| { type: 'notice'; message: string }
-	| { type: 'done'; sources: RetrievedChunk[]; narrowScope?: boolean }
+	| { type: 'done'; sources: RetrievedChunk[]; narrowScope?: boolean; hedges?: string[] }
 	| { type: 'error'; message: string };
 
 export interface QuizGenerationRequest {

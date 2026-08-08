@@ -22,6 +22,7 @@ export interface MessageRow {
 	content: string;
 	thinking: string | null;
 	sources_json: string | null;
+	hallucination_hedges_json: string | null;
 	created_at: string;
 }
 
@@ -74,6 +75,11 @@ export function initChatsSchema(instance: Database.Database): void {
 		);
 		CREATE INDEX IF NOT EXISTS idx_messages_chat_id ON messages(chat_id);
 	`);
+	// hallucination_hedges_json didn't exist when messages was first created —
+	// same ALTER-guard rule as vault_id below: a DB that already has this
+	// table needs the column added explicitly, CREATE TABLE IF NOT EXISTS
+	// can't retrofit it.
+	ensureColumns(instance, 'messages', { hallucination_hedges_json: 'TEXT' });
 	// vault_id/included_paths_json didn't exist before Faz 8 — a DB created
 	// by an older build won't have them yet. scripts/migrate-vaults.mjs
 	// handles the real one-time backfill (vault_id='default' for existing
@@ -195,6 +201,7 @@ export interface InsertMessageInput {
 	content: string;
 	thinking?: string | null;
 	sourcesJson?: string | null;
+	hedgesJson?: string | null;
 }
 
 /** Returns the new row's id — callers that persist a streaming assistant
@@ -204,8 +211,8 @@ export function insertMessage(input: InsertMessageInput): string {
 	const id = crypto.randomUUID();
 	getDb()
 		.prepare(
-			`INSERT INTO messages (id, chat_id, role, content, thinking, sources_json, created_at)
-			 VALUES (?, ?, ?, ?, ?, ?, ?)`
+			`INSERT INTO messages (id, chat_id, role, content, thinking, sources_json, hallucination_hedges_json, created_at)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
 		)
 		.run(
 			id,
@@ -214,6 +221,7 @@ export function insertMessage(input: InsertMessageInput): string {
 			input.content,
 			input.thinking ?? null,
 			input.sourcesJson ?? null,
+			input.hedgesJson ?? null,
 			new Date().toISOString()
 		);
 	return id;
@@ -223,6 +231,7 @@ export interface UpdateMessageInput {
 	content: string;
 	thinking?: string | null;
 	sourcesJson?: string | null;
+	hedgesJson?: string | null;
 }
 
 /** Overwrites an existing message row's content/thinking/sources in place —
@@ -232,8 +241,10 @@ export interface UpdateMessageInput {
  * very end, all or nothing. */
 export function updateMessage(id: string, patch: UpdateMessageInput): void {
 	getDb()
-		.prepare(`UPDATE messages SET content = ?, thinking = ?, sources_json = ? WHERE id = ?`)
-		.run(patch.content, patch.thinking ?? null, patch.sourcesJson ?? null, id);
+		.prepare(
+			`UPDATE messages SET content = ?, thinking = ?, sources_json = ?, hallucination_hedges_json = ? WHERE id = ?`
+		)
+		.run(patch.content, patch.thinking ?? null, patch.sourcesJson ?? null, patch.hedgesJson ?? null, id);
 }
 
 export function getMessages(chatId: string): MessageRow[] {
