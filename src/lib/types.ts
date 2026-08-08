@@ -97,7 +97,13 @@ export type StreamEvent =
 	 * single-provider chains never actually trigger it in practice. */
 	| { type: 'notice'; message: string }
 	| { type: 'done'; sources: RetrievedChunk[]; narrowScope?: boolean; hedges?: string[] }
-	| { type: 'error'; message: string };
+	| { type: 'error'; message: string }
+	/** A U+FFFD (corrupted-output) retry is starting — the client must
+	 * discard whatever partial content/thinking it already rendered for
+	 * this message before further `delta`/`thinking` events arrive, since
+	 * the server is regenerating from scratch. See api/chat/+server.ts's
+	 * corruption-retry loop. */
+	| { type: 'regenerate' };
 
 export interface QuizGenerationRequest {
 	domains?: string[];
