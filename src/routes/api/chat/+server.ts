@@ -10,6 +10,7 @@ import { generateTitle } from '$lib/server/title';
 import { vaultFromId } from '$lib/server/requestVault';
 import { logAppEvent } from '$lib/server/app-log';
 import { detectHallucinationHedges } from '$lib/server/hallucination';
+import { getLibrarySettings } from '$lib/server/library';
 import type { ChatRequestBody, RetrievedChunk, StreamEvent } from '$lib/types';
 
 function sseEvent(event: StreamEvent): string {
@@ -35,6 +36,44 @@ const CHECKPOINT_INTERVAL_MS = 2000;
  * this many times. Matches generate-quiz.ts's MAX_RETRIES convention. */
 const MAX_CORRUPTION_RETRIES = 2;
 
+const CJK_RANGE = /[一-鿿]/; // CJK Unified Ideographs — Chinese hanzi
+
+/** Language names that make CJK Unified Ideographs an EXPECTED script
+ * rather than a leak — e.g. a language-learning vault with
+ * allowedLanguages ['Türkçe', 'Korece'] must never have its own Korean
+ * vocabulary flagged as corruption. Substring-matched, case-insensitive,
+ * against LibrarySettings.allowedLanguages — deliberately a plain list,
+ * not a rigid enum, so covering another spelling/language is a one-line
+ * addition. */
+const CJK_LANGUAGE_NAMES = [
+	'çince',
+	'chinese',
+	'mandarin',
+	'中文',
+	'japonca',
+	'japanese',
+	'日本語',
+	'korece',
+	'korean',
+	'한국어'
+];
+
+function isCjkExpected(allowedLanguages: string[]): boolean {
+	return allowedLanguages.some((lang) => {
+		const lower = lang.toLowerCase();
+		return CJK_LANGUAGE_NAMES.some((name) => lower.includes(name));
+	});
+}
+
+/** A chunk is treated as corrupted output — never shown to the user,
+ * triggers the regenerate-from-scratch loop below — for either of two
+ * reasons: a literal U+FFFD (see MAX_CORRUPTION_RETRIES's doc comment), or
+ * a CJK character appearing in a vault whose allowedLanguages doesn't
+ * expect one (see isCjkExpected). */
+function isCorruptedChunk(text: string, allowedLanguages: string[]): boolean {
+	return text.includes('�') || (!isCjkExpected(allowedLanguages) && CJK_RANGE.test(text));
+}
+
 /** Auth failures get a clean, actionable message instead of a raw HTTP body
  * — the provider name + "check your key" is what the user can act on. */
 function chatErrorMessage(err: unknown): string {
@@ -52,6 +91,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		error(400, 'Geçersiz istek gövdesi');
 	}
 	const v = vaultFromId(body.vault);
+	const allowedLanguages = getLibrarySettings(v).allowedLanguages;
 	const lastUser = body.messages[body.messages.length - 1];
 	// The client sends the whole transcript on every turn — trust the shape,
 	// not who claims to be the last speaker. Anything else is either a client
@@ -151,7 +191,7 @@ export const POST: RequestHandler = async ({ request }) => {
 					sources = result.chunks;
 					narrowScope = result.narrowScope;
 				}
-				const promptMessages = await buildPromptMessages(body.messages, sources);
+				const promptMessages = await buildPromptMessages(body.messages, sources, allowedLanguages);
 
 				for (let attempt = 0; ; attempt++) {
 					if (attempt > 0) {
@@ -181,7 +221,7 @@ export const POST: RequestHandler = async ({ request }) => {
 							attemptController.signal
 						)) {
 							if (event.type === 'reasoning') {
-								if (event.text.includes('�')) {
+								if (isCorruptedChunk(event.text, allowedLanguages)) {
 									corrupted = true;
 									attemptController.abort();
 									break;
@@ -189,7 +229,7 @@ export const POST: RequestHandler = async ({ request }) => {
 								finalThinking += event.text;
 								send({ type: 'thinking', content: event.text });
 							} else if (event.type === 'text') {
-								if (event.text.includes('�')) {
+								if (isCorruptedChunk(event.text, allowedLanguages)) {
 									corrupted = true;
 									attemptController.abort();
 									break;

@@ -2,10 +2,25 @@ import type { ChatMessage, RetrievedChunk } from '$lib/types';
 import type { ChatMessage as ProviderChatMessage } from './providers/types';
 import { renderUserSkillsBlock } from './userSkills';
 
+/** Vault-level default when a vault has no LibrarySettings.allowedLanguages
+ * of its own yet (pre-existing settings.json, or /api/skills/preview's
+ * no-real-vault-context preview). */
+export const DEFAULT_ALLOWED_LANGUAGES = ['Türkçe'];
+
 /** Exported for /api/skills/preview alongside the analogous constants in
- * generate-quiz.ts/generate-cards.ts. */
-export const CORE_INTRO = `Sen bu kişisel bilgi kasasının (Obsidian tabanlı ikinci beyin) öğretici asistanısın.
-Her zaman kullanıcının dilinde (Türkçe) cevap ver.`;
+ * generate-quiz.ts/generate-cards.ts. `allowedLanguages` comes from the
+ * requesting vault's LibrarySettings (see api/chat/+server.ts) — the first
+ * entry is the primary response language, any further entries are hinted
+ * as acceptable secondary languages (e.g. a language-learning vault set to
+ * ['Türkçe', 'Korece']) instead of being treated as leaked/corrupted output. */
+export function coreIntro(allowedLanguages: string[]): string {
+	const [primary, ...extra] = allowedLanguages.length ? allowedLanguages : DEFAULT_ALLOWED_LANGUAGES;
+	const extraNote = extra.length
+		? ` Gerektiğinde şu dillerden kelime/örnek de kullanabilirsin: ${extra.join(', ')}.`
+		: '';
+	return `Sen bu kişisel bilgi kasasının (Obsidian tabanlı ikinci beyin) öğretici asistanısın.
+Her zaman ${primary} dilinde cevap ver.${extraNote}`;
+}
 
 /**
  * Non-overridable, appended after any user skills — see userSkills.ts and
@@ -27,7 +42,8 @@ export const CORE_INVARIANTS = `Kurallar:
  */
 export async function buildPromptMessages(
 	history: ChatMessage[],
-	chunks: RetrievedChunk[]
+	chunks: RetrievedChunk[],
+	allowedLanguages: string[]
 ): Promise<ProviderChatMessage[]> {
 	const lastUser = history[history.length - 1];
 	const priorTurns: ProviderChatMessage[] = history
@@ -45,7 +61,7 @@ export async function buildPromptMessages(
 			: '';
 
 	const skillsBlock = await renderUserSkillsBlock('chat');
-	const systemPrompt = [CORE_INTRO, skillsBlock, CORE_INVARIANTS].filter(Boolean).join('\n\n');
+	const systemPrompt = [coreIntro(allowedLanguages), skillsBlock, CORE_INVARIANTS].filter(Boolean).join('\n\n');
 
 	return [
 		{ role: 'system', content: systemPrompt },

@@ -9,8 +9,12 @@ export const GET: RequestHandler = async ({ url }) => {
 };
 
 export const PUT: RequestHandler = async ({ request }) => {
-	const body = (await request.json()) as { keepOriginals: boolean; vault?: string };
+	const body = (await request.json()) as {
+		keepOriginals: boolean;
+		allowedLanguages: string[];
+		vault?: string;
+	};
 	const v = vaultFromId(body.vault);
-	saveLibrarySettings(v, { keepOriginals: body.keepOriginals });
+	saveLibrarySettings(v, { keepOriginals: body.keepOriginals, allowedLanguages: body.allowedLanguages });
 	return json({ ok: true });
 };
