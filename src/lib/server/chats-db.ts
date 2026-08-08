@@ -197,14 +197,18 @@ export interface InsertMessageInput {
 	sourcesJson?: string | null;
 }
 
-export function insertMessage(input: InsertMessageInput): void {
+/** Returns the new row's id — callers that persist a streaming assistant
+ * response incrementally (see api/chat/+server.ts) need it to target later
+ * updateMessage() calls at the same row instead of inserting duplicates. */
+export function insertMessage(input: InsertMessageInput): string {
+	const id = crypto.randomUUID();
 	getDb()
 		.prepare(
 			`INSERT INTO messages (id, chat_id, role, content, thinking, sources_json, created_at)
 			 VALUES (?, ?, ?, ?, ?, ?, ?)`
 		)
 		.run(
-			crypto.randomUUID(),
+			id,
 			input.chatId,
 			input.role,
 			input.content,
@@ -212,6 +216,24 @@ export function insertMessage(input: InsertMessageInput): void {
 			input.sourcesJson ?? null,
 			new Date().toISOString()
 		);
+	return id;
+}
+
+export interface UpdateMessageInput {
+	content: string;
+	thinking?: string | null;
+	sourcesJson?: string | null;
+}
+
+/** Overwrites an existing message row's content/thinking/sources in place —
+ * used to periodically checkpoint a streaming assistant response as it
+ * arrives (api/chat/+server.ts), so whatever has already streamed survives
+ * a connection interruption instead of only ever being saved once, at the
+ * very end, all or nothing. */
+export function updateMessage(id: string, patch: UpdateMessageInput): void {
+	getDb()
+		.prepare(`UPDATE messages SET content = ?, thinking = ?, sources_json = ? WHERE id = ?`)
+		.run(patch.content, patch.thinking ?? null, patch.sourcesJson ?? null, id);
 }
 
 export function getMessages(chatId: string): MessageRow[] {
