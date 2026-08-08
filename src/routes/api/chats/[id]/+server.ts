@@ -19,7 +19,8 @@ export const GET: RequestHandler = async ({ params }) => {
 		role: row.role,
 		content: row.content,
 		thinking: row.thinking ?? undefined,
-		sources: row.sources_json ? (JSON.parse(row.sources_json) as RetrievedChunk[]) : undefined
+		sources: row.sources_json ? (JSON.parse(row.sources_json) as RetrievedChunk[]) : undefined,
+		hedges: row.hallucination_hedges_json ? (JSON.parse(row.hallucination_hedges_json) as string[]) : undefined
 	}));
 
 	return json({ chat, messages });

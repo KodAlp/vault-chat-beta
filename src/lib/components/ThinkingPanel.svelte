@@ -1,5 +1,9 @@
 <script lang="ts">
-	let { thinking, streaming }: { thinking: string; streaming: boolean } = $props();
+	let {
+		thinking,
+		streaming,
+		hedges
+	}: { thinking: string; streaming: boolean; hedges?: string[] } = $props();
 
 	function estimateTokens(text: string): number {
 		return Math.round(text.length / 4);
@@ -18,6 +22,13 @@
 <details class="thinking">
 	<summary>
 		{streaming ? `düşünüyor… ~${tokenLabel} token` : `Düşünme süreci (~${tokenLabel} token)`}
+		{#if !streaming && hedges?.length}
+			<span
+				class="hedge-badge"
+				title={`Belirsizlik ifadeleri: ${hedges.join(', ')}`}
+			>⚠ {hedges.length} belirsizlik ifadesi</span
+			>
+		{/if}
 	</summary>
 	<pre>{thinking}</pre>
 </details>
@@ -41,5 +52,14 @@
 		background: none;
 		padding: 0.4rem 0 0 0.5rem;
 		font-family: var(--font-sans);
+	}
+
+	.hedge-badge {
+		margin-left: 0.5rem;
+		padding: 0.05rem 0.4rem;
+		border-radius: 999px;
+		font-size: 0.72rem;
+		color: var(--warning);
+		background: color-mix(in srgb, var(--warning) 20%, transparent);
 	}
 </style>

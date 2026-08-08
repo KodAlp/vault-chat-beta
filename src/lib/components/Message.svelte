@@ -55,7 +55,7 @@
 		{/each}
 	{/if}
 	{#if message.role === 'assistant' && message.thinking}
-		<ThinkingPanel thinking={message.thinking} {streaming} />
+		<ThinkingPanel thinking={message.thinking} {streaming} hedges={message.hedges} />
 	{/if}
 	<!-- "polite" (not "assertive") so a screen reader announces streamed
 	     content without interrupting whatever the user is already doing —
