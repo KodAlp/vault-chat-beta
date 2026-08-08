@@ -4,10 +4,12 @@
 	import LibraryTree from '$lib/components/LibraryTree.svelte';
 	import type { LibrarySettings } from '$lib/types';
 	import { Switch } from '$lib/components/ui/switch';
+	import { Input } from '$lib/components/ui/input';
 	import * as Card from '$lib/components/ui/card';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 
-	let settings = $state<LibrarySettings>({ keepOriginals: false });
+	let settings = $state<LibrarySettings>({ keepOriginals: false, allowedLanguages: ['Türkçe'] });
+	let allowedLanguagesInput = $state('Türkçe');
 	let loadError = $state('');
 
 	onMount(async () => {
@@ -15,6 +17,7 @@
 			const res = await fetch('/api/library/settings');
 			if (!res.ok) throw new Error();
 			settings = (await res.json()) as LibrarySettings;
+			allowedLanguagesInput = settings.allowedLanguages.join(', ');
 		} catch {
 			loadError = 'Ayarlar alınamadı.';
 		}
@@ -30,6 +33,15 @@
 		} catch {
 			loadError = 'Ayarlar kaydedilemedi.';
 		}
+	}
+
+	function persistAllowedLanguages() {
+		const parsed = allowedLanguagesInput
+			.split(',')
+			.map((s) => s.trim())
+			.filter(Boolean);
+		settings.allowedLanguages = parsed.length ? parsed : ['Türkçe'];
+		void persist();
 	}
 </script>
 
@@ -67,10 +79,23 @@
 		<Card.Header>
 			<Card.Title>Yükleme Ayarları</Card.Title>
 		</Card.Header>
-		<Card.Content>
+		<Card.Content class="flex flex-col gap-4">
 			<label class="flex cursor-pointer items-center gap-2 text-sm">
 				<Switch bind:checked={settings.keepOriginals} onCheckedChange={persist} />
 				Dönüştürülen belgelerin orijinal dosyalarını sakla ({'data/library/_meta/originals/'})
+			</label>
+			<label class="flex flex-col gap-1 text-sm">
+				Sohbette izinli diller
+				<Input
+					type="text"
+					bind:value={allowedLanguagesInput}
+					onchange={persistAllowedLanguages}
+					placeholder="Türkçe, Korece"
+				/>
+				<span class="text-xs text-muted-foreground">
+					İlk dil modelin birincil yanıt dili olur. Ek diller (dil öğrenme vault'ları gibi)
+					yanıt içinde kullanılabilir ve sızıntı algılayıcı tarafından bozukluk sayılmaz.
+				</span>
 			</label>
 		</Card.Content>
 	</Card.Root>

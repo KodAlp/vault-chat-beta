@@ -1,7 +1,7 @@
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { renderUserSkillsBlock, ALL_SCOPES } from '$lib/server/userSkills';
-import { CORE_INTRO, CORE_INVARIANTS } from '$lib/server/prompt';
+import { coreIntro, DEFAULT_ALLOWED_LANGUAGES, CORE_INVARIANTS } from '$lib/server/prompt';
 import { buildSystemPrompt as buildQuizPrompt } from '$lib/server/generate-quiz';
 import { buildSystemPrompt as buildCardsPrompt } from '$lib/server/generate-cards';
 import { buildSystemPrompt as buildReportPrompt } from '$lib/server/generate-report';
@@ -27,7 +27,7 @@ export const GET: RequestHandler = async ({ url }) => {
 
 	let prompt: string;
 	if (scope === 'chat') {
-		prompt = [CORE_INTRO, skillsBlock, CORE_INVARIANTS].filter(Boolean).join('\n\n');
+		prompt = [coreIntro(DEFAULT_ALLOWED_LANGUAGES), skillsBlock, CORE_INVARIANTS].filter(Boolean).join('\n\n');
 	} else if (scope === 'quiz') {
 		prompt = buildQuizPrompt({ mc: 6, tf: 2, open: 2 }, PLACEHOLDER_CONTEXT, skillsBlock);
 	} else if (scope === 'flashcards') {

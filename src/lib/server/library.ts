@@ -7,7 +7,7 @@ import type { LibrarySettings } from '$lib/types';
 import type { VaultContext } from './vaults';
 
 const META_DIR = '_meta';
-const DEFAULT_SETTINGS: LibrarySettings = { keepOriginals: false };
+const DEFAULT_SETTINGS: LibrarySettings = { keepOriginals: false, allowedLanguages: ['Türkçe'] };
 
 // Read-only tree/file-read functions moved to library-read.ts (a leaf
 // module with no incrementalIndex/./ollama dependency — see its own doc

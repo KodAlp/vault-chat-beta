@@ -335,6 +335,11 @@ export interface LibraryNode {
 
 export interface LibrarySettings {
 	keepOriginals: boolean;
+	/** Sohbet sistem promptunun birincil yanıt dili (ilk eleman) + U+FFFD/CJK
+	 * sızıntı algılayıcının CJK muafiyet listesi (tüm elemanlar) — bkz.
+	 * $lib/server/prompt.ts'nin coreIntro()'su. Boş bırakılamaz, her zaman en
+	 * az bir dil içerir. */
+	allowedLanguages: string[];
 }
 
 export type ImportResultStatus = 'converted' | 'skipped' | 'needs_review' | 'failed';
