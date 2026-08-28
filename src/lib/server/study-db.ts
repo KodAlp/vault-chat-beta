@@ -76,6 +76,15 @@ function getDb(v: VaultContext): Database.Database {
 	// the identical fix (and its EBUSY rationale) in chats-db.ts's getDb().
 	try {
 		instance.pragma('journal_mode = WAL');
+		// Without this, better-sqlite3/SQLite silently ignores every declared
+		// `ON DELETE CASCADE` below (quiz_items/attempts/cards/report_sections/
+		// mindmap_nodes/slides all reference their parent this way) — foreign
+		// key enforcement is off by default per-connection, not a database-file
+		// property. Same fix, same rationale, as chats-db.ts's identical pragma
+		// (that one shipped without it first and left orphaned rows behind
+		// until caught). Deleting a quiz/deck/report/mindmap/slidedeck below
+		// depends on this actually being on.
+		instance.pragma('foreign_keys = ON');
 		instance.exec(`
 			CREATE TABLE IF NOT EXISTS quizzes (
 				id TEXT PRIMARY KEY,
@@ -271,6 +280,12 @@ export function listQuizzes(v: VaultContext): StudyListRow[] {
 		.all() as StudyListRow[];
 }
 
+/** ON DELETE CASCADE (quiz_items, attempts -> attempt_answers) handles the
+ * rest — see getDb()'s foreign_keys pragma. */
+export function deleteQuiz(v: VaultContext, id: string): void {
+	getDb(v).prepare('DELETE FROM quizzes WHERE id = ?').run(id);
+}
+
 export function createAttempt(v: VaultContext, quizId: string): string {
 	const id = crypto.randomUUID();
 	getDb(v)
@@ -408,6 +423,14 @@ export function listDecks(v: VaultContext): StudyListRow[] {
 		.all() as StudyListRow[];
 }
 
+/** ON DELETE CASCADE (cards) handles the rest — see getDb()'s foreign_keys
+ * pragma. No UI wires this yet (StudyPanel.svelte deliberately excludes
+ * decks — no per-deck view route exists, see its own doc comment); exists
+ * for parity with the other four types and for one-off cleanup. */
+export function deleteDeck(v: VaultContext, id: string): void {
+	getDb(v).prepare('DELETE FROM decks WHERE id = ?').run(id);
+}
+
 export function getDueCount(v: VaultContext, nowIso: string): number {
 	const row = getDb(v)
 		.prepare('SELECT COUNT(*) AS n FROM cards WHERE due_at <= ?')
@@ -502,6 +525,12 @@ export function listReports(v: VaultContext): StudyListRow[] {
 		.all() as StudyListRow[];
 }
 
+/** ON DELETE CASCADE (report_sections) handles the rest — see getDb()'s
+ * foreign_keys pragma. */
+export function deleteReport(v: VaultContext, id: string): void {
+	getDb(v).prepare('DELETE FROM reports WHERE id = ?').run(id);
+}
+
 export interface MindMapRow {
 	id: string;
 	title: string;
@@ -575,6 +604,12 @@ export function listMindMaps(v: VaultContext): StudyListRow[] {
 		.all() as StudyListRow[];
 }
 
+/** ON DELETE CASCADE (mindmap_nodes) handles the rest — see getDb()'s
+ * foreign_keys pragma. */
+export function deleteMindMap(v: VaultContext, id: string): void {
+	getDb(v).prepare('DELETE FROM mindmaps WHERE id = ?').run(id);
+}
+
 export interface SlideDeckRow {
 	id: string;
 	title: string;
@@ -646,4 +681,10 @@ export function getSlides(v: VaultContext, deckId: string): SlideRow[] {
 	return getDb(v)
 		.prepare('SELECT * FROM slides WHERE deck_id = ? ORDER BY position ASC')
 		.all(deckId) as SlideRow[];
+}
+
+/** ON DELETE CASCADE (slides) handles the rest — see getDb()'s foreign_keys
+ * pragma. */
+export function deleteSlideDeck(v: VaultContext, id: string): void {
+	getDb(v).prepare('DELETE FROM slidedecks WHERE id = ?').run(id);
 }

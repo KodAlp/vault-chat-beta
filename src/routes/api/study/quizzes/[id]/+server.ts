@@ -1,7 +1,7 @@
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getQuiz, getQuizItems } from '$lib/server/study-db';
-import { vaultFromUrl } from '$lib/server/requestVault';
+import { getQuiz, getQuizItems, deleteQuiz } from '$lib/server/study-db';
+import { vaultFromUrl, vaultFromId } from '$lib/server/requestVault';
 import type { QuizItemView, QuizView } from '$lib/types';
 
 export const GET: RequestHandler = async ({ params, url }) => {
@@ -22,4 +22,12 @@ export const GET: RequestHandler = async ({ params, url }) => {
 
 	const view: QuizView = { id: quiz.id, title: quiz.title, model: quiz.model };
 	return json({ quiz: view, items });
+};
+
+export const DELETE: RequestHandler = async ({ params, request }) => {
+	const body = (await request.json().catch(() => ({}))) as { vault?: string };
+	const v = vaultFromId(body.vault);
+	if (!getQuiz(v, params.id)) error(404, 'Sınav bulunamadı');
+	deleteQuiz(v, params.id);
+	return json({ ok: true });
 };

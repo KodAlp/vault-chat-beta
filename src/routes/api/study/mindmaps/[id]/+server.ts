@@ -1,7 +1,7 @@
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getMindMap, getMindMapNodes } from '$lib/server/study-db';
-import { vaultFromUrl } from '$lib/server/requestVault';
+import { getMindMap, getMindMapNodes, deleteMindMap } from '$lib/server/study-db';
+import { vaultFromUrl, vaultFromId } from '$lib/server/requestVault';
 import type { MindMapNodeView, MindMapView } from '$lib/types';
 
 export const GET: RequestHandler = async ({ params, url }) => {
@@ -18,4 +18,12 @@ export const GET: RequestHandler = async ({ params, url }) => {
 
 	const view: MindMapView = { id: mindmap.id, title: mindmap.title, model: mindmap.model };
 	return json({ mindmap: view, nodes });
+};
+
+export const DELETE: RequestHandler = async ({ params, request }) => {
+	const body = (await request.json().catch(() => ({}))) as { vault?: string };
+	const v = vaultFromId(body.vault);
+	if (!getMindMap(v, params.id)) error(404, 'Zihin haritası bulunamadı');
+	deleteMindMap(v, params.id);
+	return json({ ok: true });
 };
