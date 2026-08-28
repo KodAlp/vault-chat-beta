@@ -9,7 +9,8 @@ test('a simple 2-level chain builds a nested tree', () => {
 	assert.equal(tree.label, 'Title');
 	assert.equal(tree.children.length, 1);
 	assert.equal(tree.children[0].label, 'A');
-	assert.equal(tree.children[0].sourcePath, null);
+	// A was synthesized, but inherits B's citation so it is clickable too.
+	assert.equal(tree.children[0].sourcePath, 'a.md');
 	assert.equal(tree.children[0].children.length, 1);
 	assert.equal(tree.children[0].children[0].label, 'B');
 	assert.equal(tree.children[0].children[0].sourcePath, 'a.md');
@@ -36,14 +37,34 @@ test('a node whose ancestors were never separately emitted gets them synthesized
 	assert.equal(tree.children.length, 1);
 	const a = tree.children[0];
 	assert.equal(a.label, 'A');
-	assert.equal(a.sourcePath, null); // synthesized, never cited directly
 	assert.equal(a.children.length, 1);
 	const b = a.children[0];
 	assert.equal(b.label, 'B');
-	assert.equal(b.sourcePath, null); // synthesized
 	assert.equal(b.children.length, 1);
 	assert.equal(b.children[0].label, 'C');
 	assert.equal(b.children[0].sourcePath, 'c.md');
+	// Synthesized ancestors inherit the only citation below them, so no node
+	// in a rendered map is ever left unclickable.
+	assert.equal(a.sourcePath, 'c.md');
+	assert.equal(a.headingPath, 'A > B > C');
+	assert.equal(b.sourcePath, 'c.md');
+});
+
+test('a branch inherits its FIRST cited descendant, not the last', () => {
+	const tree = buildTree('Title', [
+		{ path: ['A', 'B'], source_path: 'b.md', heading_path: 'A > B' },
+		{ path: ['A', 'C'], source_path: 'c.md', heading_path: 'A > C' }
+	]);
+	assert.equal(tree.children[0].sourcePath, 'b.md');
+});
+
+test('a node that cites something itself keeps its own citation', () => {
+	const tree = buildTree('Title', [
+		{ path: ['A'], source_path: 'a.md', heading_path: 'A' },
+		{ path: ['A', 'B'], source_path: 'b.md', heading_path: 'A > B' }
+	]);
+	assert.equal(tree.children[0].sourcePath, 'a.md');
+	assert.equal(tree.children[0].children[0].sourcePath, 'b.md');
 });
 
 test('an empty nodes array yields a childless root', () => {
@@ -71,13 +92,18 @@ test('treeToMarkdownOutline links only nodes linkFor returns a url for', () => {
 	const tree = buildTree('Title', [
 		{ path: ['A', 'B'], source_path: 'b.md', heading_path: 'A > B' }
 	]);
-	// A is a synthesized structural node (sourcePath null) — real usage
-	// (the view route) would return null for it and a url only for cited
-	// nodes like B, mirroring citation-less vs. cited nodes in the SVG.
+	// A is synthesized but now inherits B's citation, so both are linked —
+	// that is the whole point of backfillCitations. linkFor still gets the
+	// final say by returning null, which the extra assertion below covers.
 	const outline = treeToMarkdownOutline(tree, (node) =>
 		node.sourcePath ? `/library/view?path=${node.sourcePath}` : null
 	);
-	assert.equal(outline, '- A\n  - [B](/library/view?path=b.md)');
+	assert.equal(
+		outline,
+		'- [A](/library/view?path=b.md)\n  - [B](/library/view?path=b.md)'
+	);
+	// A linkFor that vetoes everything still yields plain text.
+	assert.equal(treeToMarkdownOutline(tree, () => null), '- A\n  - B');
 });
 
 test('treeToMarkdownOutline escapes literal "[" and "]" in a linked label', () => {
