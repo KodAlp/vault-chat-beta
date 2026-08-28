@@ -69,7 +69,12 @@
 		"json": "JSON (.json)",
 		"chatNotSavedYet": "Konuşma henüz kaydedilmedi.",
 		"downloadFailedWithStatus": "İndirilemedi ({status})",
-		"downloadFailed": "İndirilemedi"
+		"downloadFailed": "İndirilemedi",
+		"saveDialogTitle": "Sohbeti dışa aktar",
+		"savedTo": "Kaydedildi: {path}",
+		"downloaded": "{filename} indirildi",
+		"saveCancelled": "Kaydetme iptal edildi",
+		"saveFailed": "Kaydedilemedi: {reason}"
 	},
 
 	"GenerationDialog": {

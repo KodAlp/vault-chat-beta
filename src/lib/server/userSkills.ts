@@ -4,6 +4,7 @@ import matter from 'gray-matter';
 import { z } from 'zod';
 import { skillsDir } from './env';
 import type { UserSkillScope, UserSkillStatus } from '$lib/types';
+import { MAX_SKILL_FILE_CHARS as MAX_FILE_CHARS, MAX_SKILL_TOTAL_CHARS as MAX_TOTAL_CHARS } from '$lib/skill-limits';
 
 const SCOPES: UserSkillScope[] = ['chat', 'quiz', 'flashcards', 'mindmap', 'report', 'slides'];
 
@@ -20,8 +21,6 @@ const Frontmatter = z.object({
 	priority: z.number().min(0).max(100).default(50)
 });
 
-const MAX_FILE_CHARS = 4000;
-const MAX_TOTAL_CHARS = 16000;
 const TRUNCATE_MARKER = '\n\n[kısaltıldı]';
 
 interface ParsedSkill extends UserSkillStatus {

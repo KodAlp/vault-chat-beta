@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import type { UserSkillStatus, UserSkillScope } from '$lib/types';
+	import { MAX_SKILL_FILE_CHARS } from '$lib/skill-limits';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Textarea } from '$lib/components/ui/textarea';
@@ -62,7 +63,7 @@ Kurallar, tercihler, yasaklar... serbest markdown.
 	}
 
 	function budgetClass(charCount: number): 'green' | 'amber' | 'red' {
-		const pct = charCount / 4000;
+		const pct = charCount / MAX_SKILL_FILE_CHARS;
 		if (pct >= 1) return 'red';
 		if (pct >= 0.7) return 'amber';
 		return 'green';
@@ -236,10 +237,10 @@ Kurallar, tercihler, yasaklar... serbest markdown.
 									budgetClass(skill.charCount) === 'amber' && 'bg-amber-500',
 									budgetClass(skill.charCount) === 'red' && 'bg-destructive'
 								]}
-								style="width: {Math.min(100, (skill.charCount / 4000) * 100)}%"
+								style="width: {Math.min(100, (skill.charCount / MAX_SKILL_FILE_CHARS) * 100)}%"
 							></div>
 						</div>
-						<span class="text-xs text-muted-foreground">{skill.charCount} / 4000</span>
+						<span class="text-xs text-muted-foreground">{skill.charCount} / {MAX_SKILL_FILE_CHARS}</span>
 					</div>
 
 					<div class="flex flex-wrap items-center gap-3">
