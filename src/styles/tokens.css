@@ -23,6 +23,17 @@
  */
 
 :root {
+	/* Native controls follow the theme too. Without this the browser paints
+	   every UA-rendered surface with its light default — most visibly the
+	   popup list of a native <select> (the chat's model picker), which came
+	   out white with the pill's light-on-dark text drawn onto it, i.e.
+	   unreadable. CSS on the control itself cannot reach that popup; only
+	   color-scheme can. It also fixes scrollbars and any future date/number
+	   input for free. Declared here rather than on body because it must be
+	   on the same element data-theme is set on (+layout.svelte writes it to
+	   documentElement), and because the canvas reads it from :root. */
+	color-scheme: light;
+
 	/* Light — the companion ramp. Never pure white: every surface carries
 	   the same faint green tint as the dark ramp carries in reverse. */
 	--ground: oklch(97% 0.006 165);
@@ -64,6 +75,8 @@
 }
 
 :root[data-theme='dark'] {
+	color-scheme: dark;
+
 	/* Dark — DESIGN.md's primary, original ramp. Values copied verbatim. */
 	--ground: oklch(13% 0.008 165);
 	--ground-deep: oklch(9% 0.006 165);
