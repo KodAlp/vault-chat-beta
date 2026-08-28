@@ -66,7 +66,10 @@ test('the root is rendered — it is the topic, not a skipped title', () => {
 	const tree = buildTree(ROOT, []);
 	// Previously the outline started at tree.children, so markmap drew an
 	// empty unlabelled root circle.
-	assert.equal(treeToMarkdownOutline(tree), '- Türev\n  - *Anlık değişim oranı.*');
+	assert.equal(
+		treeToMarkdownOutline(tree),
+		['- Türev', '  - <span class="mm-summary">Anlık değişim oranı.</span>'].join('\n')
+	);
 });
 
 test('outline nests summary under its concept and the link under the summary', () => {
@@ -80,9 +83,9 @@ test('outline nests summary under its concept and the link under the summary', (
 		outline,
 		[
 			'- Türev',
-			'  - *Anlık değişim oranı.*',
+			'  - <span class="mm-summary">Anlık değişim oranı.</span>',
 			'  - Kısmi türevler',
-			'    - *Tek değişkene göre değişim.*',
+			'    - <span class="mm-summary">Tek değişkene göre değişim.</span>',
 			'      - [Kaynağı aç](/library/view?path=p.md)'
 		].join('\n')
 	);
@@ -98,7 +101,12 @@ test('no linkFor means no citation lines at all', () => {
 	const tree = buildTree(ROOT, [row(['A'], 'a.md', 'A', 'Açıklama.')]);
 	assert.equal(
 		treeToMarkdownOutline(tree),
-		['- Türev', '  - *Anlık değişim oranı.*', '  - A', '    - *Açıklama.*'].join('\n')
+		[
+			'- Türev',
+			'  - <span class="mm-summary">Anlık değişim oranı.</span>',
+			'  - A',
+			'    - <span class="mm-summary">Açıklama.</span>'
+		].join('\n')
 	);
 });
 
@@ -108,7 +116,45 @@ test('brackets in a label or summary are escaped', () => {
 	]);
 	const outline = treeToMarkdownOutline(tree, () => '/library/view?path=x.md');
 	assert.match(outline, /- Diziler \\\[Bölüm 3\\\]/);
-	assert.match(outline, /\*Bkz\. \\\[ek\\\]\.\*/);
+	assert.match(outline, /Bkz\. \\\[ek\\\]\./);
+});
+
+test('HTML in a label or summary is escaped, not rendered as markup', () => {
+	// markmap-lib builds markdown-it with html:true, so an unescaped "<" from
+	// model output would become real markup inside the SVG.
+	const tree = buildTree({ label: 'Kök', summary: '' }, [
+		row(['a < b & c'], 'x.md', 'X', '<script>alert(1)</script> & sonra')
+	]);
+	const outline = treeToMarkdownOutline(tree);
+	assert.match(outline, /- a &lt; b &amp; c/);
+	assert.ok(outline.includes('&lt;script&gt;alert(1)&lt;/script&gt; &amp; sonra'));
+	assert.ok(!outline.includes('<script>'));
+});
+
+test('a short summary is a single span with no clamp', () => {
+	const tree = buildTree({ label: 'Kök', summary: '' }, [row(['A'], 'a.md', 'A', 'Kısa.')]);
+	const outline = treeToMarkdownOutline(tree);
+	assert.ok(outline.includes('<span class="mm-summary">Kısa.</span>'));
+	// Nothing to hide means nothing to click.
+	assert.ok(!outline.includes('is-clamped'));
+});
+
+test('a long summary ships a preview and the full text, cut on a word', () => {
+	const long = 'Türev bir fonksiyonun değişim oranını ölçer '.repeat(6).trim();
+	const tree = buildTree({ label: 'Kök', summary: '' }, [row(['A'], 'a.md', 'A', long)]);
+	const outline = treeToMarkdownOutline(tree);
+
+	assert.ok(outline.includes('<span class="mm-summary is-clamped">'));
+	const short = outline.match(/<span class="mm-short">([^<]*)<\/span>/)?.[1] ?? '';
+	const full = outline.match(/<span class="mm-full">([^<]*)<\/span>/)?.[1] ?? '';
+
+	assert.ok(short.endsWith('…'));
+	assert.ok(short.length < full.length);
+	assert.equal(full, long);
+	// Cut on a word boundary, never mid-word.
+	const withoutEllipsis = short.slice(0, -1).trimEnd();
+	assert.ok(long.startsWith(withoutEllipsis));
+	assert.ok(long[withoutEllipsis.length] === ' ' || long[withoutEllipsis.length] === undefined);
 });
 
 test('deeper trees keep indenting by one level per depth', () => {

@@ -6,6 +6,9 @@
 	import type { MindMapNodeView, MindMapView } from '$lib/types';
 	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
+	import ZoomInIcon from '@lucide/svelte/icons/zoom-in';
+	import ZoomOutIcon from '@lucide/svelte/icons/zoom-out';
+	import MaximizeIcon from '@lucide/svelte/icons/maximize';
 
 	let { data }: PageProps = $props();
 
@@ -16,7 +19,24 @@
 	let nodes = $state<MindMapNodeView[]>([]);
 	let errorMessage = $state('');
 	let svgEl = $state<SVGSVGElement | undefined>(undefined);
-	let markmapInstance: { destroy(): void } | undefined;
+	/** Wider than markmap needs for a label, narrow enough that a 450-char
+	 * explanation wraps into a readable block instead of one very long line.
+	 * markmap turns this into `--markmap-max-width`, and because the inner
+	 * content box is inline-block, SHORT labels still shrink to fit — only long
+	 * text actually wraps. Tune here; it is the only place the number lives. */
+	const NODE_MAX_WIDTH = 340;
+	const ZOOM_STEP_IN = 1.25;
+	const ZOOM_STEP_OUT = 0.8;
+
+	interface MarkmapHandle {
+		destroy(): void;
+		rescale(scale: number): Promise<void>;
+		fit(maxScale?: number): Promise<void>;
+		renderData(): Promise<void>;
+	}
+	// $state, not a plain let: the zoom buttons render disabled until the map
+	// actually exists, and that has to be reactive.
+	let markmapInstance = $state<MarkmapHandle | undefined>(undefined);
 
 	// See study/quiz/[id]/+page.svelte's comment on quizQuery — an empty
 	// `vault=` param is not the same as an absent one.
@@ -63,13 +83,34 @@
 				// — the skeleton — and leaves the rest to be revealed by clicking a
 				// node's circle, which is exactly the "tap a node to see what it
 				// means" behaviour, using markmap's own collapse/expand.
-				markmapInstance = Markmap.create(svgEl, { initialExpandLevel: 2 }, root);
+				markmapInstance = Markmap.create(
+					svgEl,
+					{ initialExpandLevel: 2, maxWidth: NODE_MAX_WIDTH },
+					root
+				) as unknown as MarkmapHandle;
 			}
 		} catch {
 			errorMessage = 'Zihin haritası yüklenemedi.';
 			phase = 'error';
 		}
 	});
+
+	/**
+	 * Delegated, because markmap rebuilds node DOM on every render — a handler
+	 * bound to a summary span would not survive the first collapse.
+	 *
+	 * After toggling, renderData() is required, not optional: markmap caches
+	 * each node's measured size, so without a re-render an expanded paragraph
+	 * would overflow its old box and sit on top of its neighbours.
+	 */
+	function handleMapClick(event: MouseEvent) {
+		const target = event.target as HTMLElement | null;
+		const summary = target?.closest?.('.mm-summary.is-clamped, .mm-summary.is-expanded');
+		if (!summary) return;
+		summary.classList.toggle('is-clamped');
+		summary.classList.toggle('is-expanded');
+		void markmapInstance?.renderData();
+	}
 
 	onDestroy(() => {
 		markmapInstance?.destroy();
@@ -94,7 +135,40 @@
 		<p class="status error" role="alert">{errorMessage}</p>
 	{:else if phase === 'ready' && mindmap}
 		<h1>{mindmap.title}</h1>
-		<svg bind:this={svgEl} class="mindmap-svg"></svg>
+		<!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
+		<div class="map-frame" onclick={handleMapClick}>
+			<svg bind:this={svgEl} class="mindmap-svg"></svg>
+			<div class="map-controls">
+				<button
+					type="button"
+					title="Yakınlaştır"
+					aria-label="Yakınlaştır"
+					disabled={!markmapInstance}
+					onclick={() => markmapInstance?.rescale(ZOOM_STEP_IN)}
+				>
+					<ZoomInIcon size={15} aria-hidden="true" />
+				</button>
+				<button
+					type="button"
+					title="Uzaklaştır"
+					aria-label="Uzaklaştır"
+					disabled={!markmapInstance}
+					onclick={() => markmapInstance?.rescale(ZOOM_STEP_OUT)}
+				>
+					<ZoomOutIcon size={15} aria-hidden="true" />
+				</button>
+				<button
+					type="button"
+					title="Ekrana sığdır"
+					aria-label="Ekrana sığdır"
+					disabled={!markmapInstance}
+					onclick={() => markmapInstance?.fit()}
+				>
+					<MaximizeIcon size={15} aria-hidden="true" />
+				</button>
+			</div>
+		</div>
+		<p class="map-hint">Bir düğümün dairesine tıklayarak aç/kapa; kısaltılmış açıklamaya tıklayarak tamamını gör.</p>
 
 		<h2>Kaynaklar</h2>
 		<div class="citations">
@@ -163,12 +237,60 @@
 		margin: 0 0 1rem;
 	}
 
+	.map-frame {
+		position: relative;
+	}
+
 	.mindmap-svg {
 		width: 100%;
 		height: 60vh;
 		border: 1px solid var(--color-border);
 		border-radius: 10px;
 		background: var(--color-background);
+		display: block;
+	}
+
+	.map-controls {
+		position: absolute;
+		top: 0.6rem;
+		right: 0.6rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+	}
+
+	.map-controls button {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 1.85rem;
+		height: 1.85rem;
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-md);
+		background: var(--color-background);
+		color: var(--color-muted-foreground);
+		cursor: pointer;
+	}
+
+	.map-controls button:hover:not(:disabled) {
+		color: var(--color-primary);
+		border-color: var(--color-primary);
+	}
+
+	.map-controls button:disabled {
+		opacity: 0.4;
+		cursor: default;
+	}
+
+	.map-controls button:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 1px;
+	}
+
+	.map-hint {
+		margin: 0.4rem 0 0;
+		font-size: 0.72rem;
+		color: var(--color-muted-foreground);
 	}
 
 	/* markmap-view injects its own `.markmap { --markmap-text-color: #333;
@@ -181,6 +303,37 @@
 	   <html> (+layout.svelte), outside this component's own markup, while
 	   `.mindmap-svg` itself stays scoped since Svelte already recognizes it
 	   from the template above. */
+	/* Bubble styling for the explanation nodes. :global because markmap builds
+	   this DOM itself and it never carries Svelte's scope hash — the same
+	   reason the dark-theme block below is written this way. The markup comes
+	   from mindmap-tree.ts's summaryMarkup(). */
+	.mindmap-svg :global(.mm-summary) {
+		display: block;
+		padding: 0.3rem 0.5rem;
+		border-radius: 8px;
+		background: var(--color-muted);
+		color: var(--color-muted-foreground);
+		line-height: 1.45;
+	}
+
+	/* Exactly one variant is in the layout at a time. display:none is
+	   load-bearing: markmap measures nodes with scrollWidth/scrollHeight, and a
+	   CSS-clipped element still reports its full size — a clamp would make the
+	   node reserve space for text nobody can see. */
+	.mindmap-svg :global(.mm-summary.is-clamped) {
+		cursor: pointer;
+	}
+
+	.mindmap-svg :global(.mm-summary.is-clamped .mm-full),
+	.mindmap-svg :global(.mm-summary.is-expanded .mm-short) {
+		display: none;
+	}
+
+	.mindmap-svg :global(.mm-summary.is-expanded) {
+		cursor: pointer;
+		background: var(--color-secondary);
+	}
+
 	:global([data-theme='dark']) .mindmap-svg {
 		--markmap-text-color: var(--color-foreground);
 		--markmap-code-bg: var(--color-muted);

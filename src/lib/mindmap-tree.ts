@@ -92,6 +92,67 @@ function escapeBrackets(text: string): string {
 }
 
 /**
+ * markmap-lib builds its markdown-it with `html: true`, so anything that looks
+ * like a tag in this outline is rendered as real markup. Model-produced labels
+ * and summaries go straight into it, so they are escaped — this is not
+ * decoration, it closes a hole that was already open before the wrapper spans
+ * below were introduced.
+ */
+function escapeHtml(text: string): string {
+	return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/** Both escapes, in the order that keeps them independent: HTML first (so the
+ * backslashes markdown needs are not themselves escaped), brackets second. */
+function safeText(text: string): string {
+	return escapeBrackets(escapeHtml(text));
+}
+
+/**
+ * How much of a long explanation is shown before it is cut with an ellipsis.
+ * Summaries are capped at 450 characters server-side (mindmap-validate.ts), so
+ * this shows roughly the first third — enough to tell what the node is about,
+ * short enough that a branch of them stays readable.
+ */
+const SUMMARY_PREVIEW_CHARS = 140;
+
+/** Cuts at a word boundary, never mid-word, and only when there is enough left
+ * over to be worth hiding. */
+function previewOf(text: string): string | null {
+	if (text.length <= SUMMARY_PREVIEW_CHARS) return null;
+	const slice = text.slice(0, SUMMARY_PREVIEW_CHARS);
+	const lastSpace = slice.lastIndexOf(' ');
+	const cut = lastSpace > SUMMARY_PREVIEW_CHARS * 0.6 ? slice.slice(0, lastSpace) : slice;
+	return `${cut.trimEnd()}…`;
+}
+
+/**
+ * A summary rendered as markmap node content.
+ *
+ * Short ones are a single span. Long ones ship BOTH the preview and the full
+ * text, with one of them hidden by CSS — deliberately not a CSS clamp
+ * (`-webkit-line-clamp`, `max-height` + `overflow:hidden`). markmap re-measures
+ * every node on each render by reading the content's `scrollWidth`/
+ * `scrollHeight`, and a clipped element still reports its FULL scroll size, so
+ * a clamped node would reserve space for text nobody can see and blow a hole in
+ * the layout. `display: none` contributes nothing to scroll size, so whichever
+ * variant is visible is exactly what gets measured.
+ *
+ * The view route toggles `is-clamped` on click and calls renderData() to
+ * re-measure — see study/mindmap/[id]/+page.svelte.
+ */
+function summaryMarkup(summary: string): string {
+	const preview = previewOf(summary);
+	if (!preview) return `<span class="mm-summary">${safeText(summary)}</span>`;
+	return (
+		'<span class="mm-summary is-clamped">' +
+		`<span class="mm-short">${safeText(preview)}</span>` +
+		`<span class="mm-full">${safeText(summary)}</span>` +
+		'</span>'
+	);
+}
+
+/**
  * Markmap's Transformer consumes a markdown string, not a node object — this
  * is the seam between buildTree()'s output and markmap-lib. Nodes render
  * through markmap-view's foreignObject/HTML path, so a markdown link here
@@ -128,11 +189,11 @@ export function treeToMarkdownOutline(
 	const push = (depth: number, text: string) => lines.push(`${'  '.repeat(depth)}- ${text}`);
 
 	function walk(node: MindMapTreeNode, depth: number) {
-		push(depth, escapeBrackets(node.label));
+		push(depth, safeText(node.label));
 
 		const url = linkFor?.(node) ?? null;
 		if (node.summary) {
-			push(depth + 1, `*${escapeBrackets(node.summary)}*`);
+			push(depth + 1, summaryMarkup(node.summary));
 			if (url) push(depth + 2, `[${linkLabel}](${url})`);
 		} else if (url) {
 			// No explanation to hang it on — the citation still belongs somewhere.
