@@ -167,7 +167,8 @@ function getDb(v: VaultContext): Database.Database {
 				title TEXT NOT NULL,
 				scope_json TEXT NOT NULL,
 				model TEXT NOT NULL,
-				created_at TEXT NOT NULL
+				created_at TEXT NOT NULL,
+				root_summary TEXT NOT NULL DEFAULT ''
 			);
 			CREATE TABLE IF NOT EXISTS mindmap_nodes (
 				id TEXT PRIMARY KEY,
@@ -175,7 +176,8 @@ function getDb(v: VaultContext): Database.Database {
 				position INTEGER NOT NULL,
 				path_json TEXT NOT NULL,
 				source_path TEXT NOT NULL,
-				heading_path TEXT NOT NULL
+				heading_path TEXT NOT NULL,
+				summary TEXT NOT NULL DEFAULT ''
 			);
 			CREATE INDEX IF NOT EXISTS idx_mindmap_nodes_mindmap_id ON mindmap_nodes(mindmap_id);
 			CREATE TABLE IF NOT EXISTS slidedecks (
@@ -196,6 +198,7 @@ function getDb(v: VaultContext): Database.Database {
 			);
 			CREATE INDEX IF NOT EXISTS idx_slides_deck_id ON slides(deck_id);
 		`);
+		addMissingColumns(instance);
 	} catch (err) {
 		instance.close();
 		const message = err instanceof Error ? err.message : 'Bilinmeyen hata';
@@ -204,6 +207,32 @@ function getDb(v: VaultContext): Database.Database {
 	}
 	dbCache.set(v.id, instance);
 	return instance;
+}
+
+/**
+ * Adds columns that were introduced after a study.db was first created.
+ *
+ * CREATE TABLE IF NOT EXISTS above does nothing for an existing database, so
+ * new columns would otherwise only reach fresh vaults. There is no migration
+ * framework in this project (no user_version, no ALTER TABLE anywhere before
+ * this), and the alternative — dropping and recreating — would delete quizzes,
+ * decks and reports the user actually generated. So: check what is there,
+ * add only what is missing, leave the rows alone. Old mind maps keep working
+ * with an empty summary rather than disappearing.
+ *
+ * Every column added here MUST have a default, since existing rows are not
+ * rewritten.
+ */
+function addMissingColumns(db: Database.Database): void {
+	const pending: { table: string; column: string; ddl: string }[] = [
+		{ table: 'mindmaps', column: 'root_summary', ddl: "TEXT NOT NULL DEFAULT ''" },
+		{ table: 'mindmap_nodes', column: 'summary', ddl: "TEXT NOT NULL DEFAULT ''" }
+	];
+	for (const { table, column, ddl } of pending) {
+		const columns = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+		if (columns.some((c) => c.name === column)) continue;
+		db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${ddl}`);
+	}
 }
 
 /** Must be called before deleting a vault's files — Windows refuses to
@@ -537,6 +566,9 @@ export interface MindMapRow {
 	scope_json: string;
 	model: string;
 	created_at: string;
+	/** What the topic MEANS — shown on the map's root node. Empty for maps
+	 * generated before the root gained a definition. */
+	root_summary: string;
 }
 
 export interface MindMapNodeRow {
@@ -546,10 +578,14 @@ export interface MindMapNodeRow {
 	path_json: string;
 	source_path: string;
 	heading_path: string;
+	/** One-sentence explanation of this node, shown as its child in the map.
+	 * Empty for nodes generated before summaries existed. */
+	summary: string;
 }
 
 export interface NewMindMapNode {
 	path: string[];
+	summary: string;
 	source_path: string;
 	heading_path: string;
 }
@@ -559,19 +595,23 @@ export function createMindMap(
 	title: string,
 	scope: unknown,
 	model: string,
-	nodes: NewMindMapNode[]
+	nodes: NewMindMapNode[],
+	rootSummary = ''
 ): string {
 	const id = crypto.randomUUID();
 	const now = new Date().toISOString();
 	const database = getDb(v);
 	const tx = database.transaction(() => {
 		database
-			.prepare(`INSERT INTO mindmaps (id, title, scope_json, model, created_at) VALUES (?, ?, ?, ?, ?)`)
-			.run(id, title, JSON.stringify(scope), model, now);
+			.prepare(
+				`INSERT INTO mindmaps (id, title, scope_json, model, created_at, root_summary)
+				 VALUES (?, ?, ?, ?, ?, ?)`
+			)
+			.run(id, title, JSON.stringify(scope), model, now, rootSummary);
 
 		const insertNode = database.prepare(
-			`INSERT INTO mindmap_nodes (id, mindmap_id, position, path_json, source_path, heading_path)
-			 VALUES (?, ?, ?, ?, ?, ?)`
+			`INSERT INTO mindmap_nodes (id, mindmap_id, position, path_json, source_path, heading_path, summary)
+			 VALUES (?, ?, ?, ?, ?, ?, ?)`
 		);
 		nodes.forEach((node, position) => {
 			insertNode.run(
@@ -580,7 +620,8 @@ export function createMindMap(
 				position,
 				JSON.stringify(node.path),
 				node.source_path,
-				node.heading_path
+				node.heading_path,
+				node.summary
 			);
 		});
 	});

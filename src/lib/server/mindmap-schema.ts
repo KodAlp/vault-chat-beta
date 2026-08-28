@@ -1,58 +1,120 @@
 import { z } from 'zod';
 
 /**
- * The model cites a short id (S1, S2, ...), never a path or a heading —
- * exactly the change report-schema.ts made for the same reason: copying a
- * long `wiki/<domain>/sources/<book>/<topic>.md` verbatim is the single
- * biggest source of "uydurma kaynak" retries on a local model, and it
- * cannot get an id wrong when the JSON Schema pins the allowed values.
+ * The model produces the TREE, not a flat list of paths.
  *
- * heading_path is deliberately NOT asked for any more. It used to be a
- * second string the model had to transcribe correctly, and it always
- * described a chunk the server already had in hand — so the server now
- * resolves it from the cited id instead. One less thing to get wrong, and
- * the stored value is real data rather than a transcription of it.
+ * The previous shape was `{ path: string[], source_id }[]`, and the server
+ * rebuilt the tree from shared path prefixes. That asked a small local model
+ * to hand-encode a tree into a list — and essentially every failure observed
+ * in real generations came from that encoding layer, not from the content:
+ * the citation id leaking into the label array (`path: ["S4", "..."]`),
+ * sibling branches that never shared a prefix, whole maps emitted at a single
+ * level. A nested schema makes all three *unrepresentable* rather than
+ * something validation has to catch afterwards.
+ *
+ * Depth is fixed at three levels by writing the shape out three times instead
+ * of recursing. Ollama constrains decoding by converting this JSON Schema to a
+ * GBNF grammar; a flat, explicit nesting is the form that conversion handles
+ * most predictably, and three levels is exactly what a mind map needs (topic ->
+ * sub-areas -> the keywords/finer splits under them).
+ *
+ * Counts are deliberately small. Generation runs on a local qwen3:8b that only
+ * fits 27 of 37 layers on this GPU, so every extra node is real wall-clock
+ * time and another chance to drift off-schema.
  */
-export const MindMapNode = z.object({
-	path: z.array(z.string().min(1)).min(1).max(4),
+
+/** Leaf level (depth 3): a keyword or a finer split, e.g. "toplamın türevi". */
+export const MindMapLeaf = z.object({
+	label: z.string().min(1),
+	summary: z.string().min(1),
 	source_id: z.string().min(1)
 });
-export type MindMapNodeT = z.infer<typeof MindMapNode>;
 
-export const MindMapNodes = z.object({ nodes: z.array(MindMapNode).min(1).max(40) });
-export type MindMapNodesT = z.infer<typeof MindMapNodes>;
+/** Depth 2: a sub-topic, optionally split further. */
+export const MindMapChild = MindMapLeaf.extend({
+	children: z.array(MindMapLeaf).max(3).optional()
+});
+
+/** Depth 1: one of the main areas the topic breaks into. */
+export const MindMapBranch = MindMapLeaf.extend({
+	children: z.array(MindMapChild).max(4).optional()
+});
 
 /**
- * Built per request rather than a module constant, because `source_id`'s
- * enum is the retrieved chunk ids for THIS generation — Ollama constrains
- * decoding to the schema, so an invalid citation becomes literally
- * unrepresentable instead of something parseAndValidate has to catch after
- * the fact. Same construction as report-schema.ts's
- * buildReportSectionsJsonSchema.
+ * The root carries the topic itself and what it MEANS — the user's first
+ * requirement, and something the old schema had no place for at all (the map
+ * used to render with an empty, unlabelled root circle). It has no source_id:
+ * it is the subject of the map, not a claim quoted from one chunk.
  */
-export function buildMindMapNodesJsonSchema(validIds: string[]) {
+export const MindMapTreeSchema = z.object({
+	root: z.object({
+		label: z.string().min(1),
+		summary: z.string().min(1)
+	}),
+	branches: z.array(MindMapBranch).min(1).max(6)
+});
+export type MindMapTreeT = z.infer<typeof MindMapTreeSchema>;
+
+/**
+ * Built per request rather than kept as a module constant, because
+ * `source_id`'s enum is the retrieved chunk ids for THIS generation — with the
+ * enum in place an invalid citation is literally undecodable, instead of
+ * something the validator has to reject after a full generation was spent on
+ * it. Same construction as report-schema.ts's buildReportSectionsJsonSchema.
+ *
+ * `summary` carries a maxLength as a best-effort brake, and is ALSO trimmed
+ * server-side (mindmap-validate.ts) because llama.cpp's GBNF conversion does not
+ * enforce string length reliably. It matters more than it looks: an unbounded
+ * string is the one place this grammar lets the model emit tokens forever, and
+ * a run was observed doing exactly that for 28 minutes. The real guard is the
+ * generation budget in generate-mindmap.ts; this just makes it less likely to
+ * be needed.
+ */
+export function buildMindMapTreeJsonSchema(validIds: string[]) {
+	const leaf = {
+		type: 'object',
+		properties: {
+			label: { type: 'string', maxLength: 60 },
+			summary: { type: 'string', maxLength: 450 },
+			source_id: { type: 'string', enum: validIds }
+		},
+		required: ['label', 'summary', 'source_id']
+	} as const;
+
 	return {
 		type: 'object',
 		properties: {
-			nodes: {
+			root: {
+				type: 'object',
+				properties: {
+					label: { type: 'string', maxLength: 60 },
+					summary: { type: 'string', maxLength: 450 }
+				},
+				required: ['label', 'summary']
+			},
+			branches: {
 				type: 'array',
 				minItems: 1,
-				maxItems: 40,
+				maxItems: 6,
 				items: {
-					type: 'object',
+					...leaf,
 					properties: {
-						path: {
+						...leaf.properties,
+						children: {
 							type: 'array',
-							items: { type: 'string' },
-							minItems: 1,
-							maxItems: 4
-						},
-						source_id: { type: 'string', enum: validIds }
-					},
-					required: ['path', 'source_id']
+							maxItems: 4,
+							items: {
+								...leaf,
+								properties: {
+									...leaf.properties,
+									children: { type: 'array', maxItems: 3, items: leaf }
+								}
+							}
+						}
+					}
 				}
 			}
 		},
-		required: ['nodes']
+		required: ['root', 'branches']
 	} as const;
 }

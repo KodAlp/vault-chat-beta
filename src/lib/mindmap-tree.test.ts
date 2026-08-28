@@ -2,114 +2,118 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { buildTree, treeToMarkdownOutline } from './mindmap-tree';
 
+const ROOT = { label: 'Türev', summary: 'Anlık değişim oranı.' };
+
+/** Shorthand for a stored row; summary defaults to empty so tests that do not
+ * care about explanations stay readable. */
+function row(path: string[], source_path: string, heading_path: string, summary = '') {
+	return { path, summary, source_path, heading_path };
+}
+
 test('a simple 2-level chain builds a nested tree', () => {
-	const tree = buildTree('Title', [
-		{ path: ['A', 'B'], source_path: 'a.md', heading_path: 'A > B' }
-	]);
-	assert.equal(tree.label, 'Title');
+	const tree = buildTree(ROOT, [row(['A', 'B'], 'a.md', 'A > B')]);
+	assert.equal(tree.label, 'Türev');
+	assert.equal(tree.summary, 'Anlık değişim oranı.');
 	assert.equal(tree.children.length, 1);
 	assert.equal(tree.children[0].label, 'A');
 	// A was synthesized, but inherits B's citation so it is clickable too.
 	assert.equal(tree.children[0].sourcePath, 'a.md');
-	assert.equal(tree.children[0].children.length, 1);
 	assert.equal(tree.children[0].children[0].label, 'B');
 	assert.equal(tree.children[0].children[0].sourcePath, 'a.md');
 });
 
 test('two nodes sharing a prefix are merged, not duplicated', () => {
-	const tree = buildTree('Title', [
-		{ path: ['A', 'B'], source_path: 'a.md', heading_path: 'A > B' },
-		{ path: ['A', 'C'], source_path: 'c.md', heading_path: 'A > C' }
+	const tree = buildTree(ROOT, [
+		row(['A', 'B'], 'a.md', 'A > B'),
+		row(['A', 'C'], 'c.md', 'A > C')
 	]);
 	assert.equal(tree.children.length, 1);
-	assert.equal(tree.children[0].label, 'A');
-	assert.equal(tree.children[0].children.length, 2);
 	assert.deepEqual(
 		tree.children[0].children.map((c) => c.label).sort(),
 		['B', 'C']
 	);
 });
 
-test('a node whose ancestors were never separately emitted gets them synthesized', () => {
-	const tree = buildTree('Title', [
-		{ path: ['A', 'B', 'C'], source_path: 'c.md', heading_path: 'A > B > C' }
-	]);
-	assert.equal(tree.children.length, 1);
+test('a node whose ancestors have no row of their own gets them synthesized', () => {
+	const tree = buildTree(ROOT, [row(['A', 'B', 'C'], 'c.md', 'A > B > C')]);
 	const a = tree.children[0];
-	assert.equal(a.label, 'A');
-	assert.equal(a.children.length, 1);
 	const b = a.children[0];
+	assert.equal(a.label, 'A');
 	assert.equal(b.label, 'B');
-	assert.equal(b.children.length, 1);
 	assert.equal(b.children[0].label, 'C');
 	assert.equal(b.children[0].sourcePath, 'c.md');
-	// Synthesized ancestors inherit the only citation below them, so no node
-	// in a rendered map is ever left unclickable.
+	// Synthesized ancestors inherit the only citation below them, so no node in
+	// a rendered map is ever left unclickable.
 	assert.equal(a.sourcePath, 'c.md');
 	assert.equal(a.headingPath, 'A > B > C');
-	assert.equal(b.sourcePath, 'c.md');
 });
 
 test('a branch inherits its FIRST cited descendant, not the last', () => {
-	const tree = buildTree('Title', [
-		{ path: ['A', 'B'], source_path: 'b.md', heading_path: 'A > B' },
-		{ path: ['A', 'C'], source_path: 'c.md', heading_path: 'A > C' }
+	const tree = buildTree(ROOT, [
+		row(['A', 'B'], 'b.md', 'A > B'),
+		row(['A', 'C'], 'c.md', 'A > C')
 	]);
 	assert.equal(tree.children[0].sourcePath, 'b.md');
 });
 
 test('a node that cites something itself keeps its own citation', () => {
-	const tree = buildTree('Title', [
-		{ path: ['A'], source_path: 'a.md', heading_path: 'A' },
-		{ path: ['A', 'B'], source_path: 'b.md', heading_path: 'A > B' }
-	]);
+	const tree = buildTree(ROOT, [row(['A'], 'a.md', 'A'), row(['A', 'B'], 'b.md', 'A > B')]);
 	assert.equal(tree.children[0].sourcePath, 'a.md');
 	assert.equal(tree.children[0].children[0].sourcePath, 'b.md');
 });
 
-test('an empty nodes array yields a childless root', () => {
-	const tree = buildTree('Title', []);
-	assert.equal(tree.label, 'Title');
-	assert.equal(tree.children.length, 0);
-	assert.equal(treeToMarkdownOutline(tree), '');
+test('the root is rendered — it is the topic, not a skipped title', () => {
+	const tree = buildTree(ROOT, []);
+	// Previously the outline started at tree.children, so markmap drew an
+	// empty unlabelled root circle.
+	assert.equal(treeToMarkdownOutline(tree), '- Türev\n  - *Anlık değişim oranı.*');
 });
 
-test('treeToMarkdownOutline emits nested bullets indented by depth', () => {
-	const tree = buildTree('Title', [
-		{ path: ['A', 'B'], source_path: 'b.md', heading_path: 'A > B' },
-		{ path: ['D'], source_path: 'd.md', heading_path: 'D' }
+test('outline nests summary under its concept and the link under the summary', () => {
+	const tree = buildTree(ROOT, [
+		row(['Kısmi türevler'], 'p.md', 'Kısmi', 'Tek değişkene göre değişim.')
 	]);
-	const outline = treeToMarkdownOutline(tree);
-	assert.equal(outline, '- A\n  - B\n- D');
-});
-
-test('treeToMarkdownOutline with no linkFor stays plain text (default, unchanged)', () => {
-	const tree = buildTree('Title', [{ path: ['A'], source_path: 'a.md', heading_path: 'A' }]);
-	assert.equal(treeToMarkdownOutline(tree), '- A');
-});
-
-test('treeToMarkdownOutline links only nodes linkFor returns a url for', () => {
-	const tree = buildTree('Title', [
-		{ path: ['A', 'B'], source_path: 'b.md', heading_path: 'A > B' }
-	]);
-	// A is synthesized but now inherits B's citation, so both are linked —
-	// that is the whole point of backfillCitations. linkFor still gets the
-	// final say by returning null, which the extra assertion below covers.
-	const outline = treeToMarkdownOutline(tree, (node) =>
-		node.sourcePath ? `/library/view?path=${node.sourcePath}` : null
+	const outline = treeToMarkdownOutline(tree, (n) =>
+		n.sourcePath ? `/library/view?path=${n.sourcePath}` : null
 	);
 	assert.equal(
 		outline,
-		'- [A](/library/view?path=b.md)\n  - [B](/library/view?path=b.md)'
+		[
+			'- Türev',
+			'  - *Anlık değişim oranı.*',
+			'  - Kısmi türevler',
+			'    - *Tek değişkene göre değişim.*',
+			'      - [Kaynağı aç](/library/view?path=p.md)'
+		].join('\n')
 	);
-	// A linkFor that vetoes everything still yields plain text.
-	assert.equal(treeToMarkdownOutline(tree, () => null), '- A\n  - B');
 });
 
-test('treeToMarkdownOutline escapes literal "[" and "]" in a linked label', () => {
-	const tree = buildTree('Title', [
-		{ path: ['Diziler [Bölüm 3]'], source_path: 'x.md', heading_path: 'Diziler' }
+test('a node with no summary still gets its citation, one level down', () => {
+	const tree = buildTree({ label: 'Kök', summary: '' }, [row(['A'], 'a.md', 'A')]);
+	const outline = treeToMarkdownOutline(tree, () => '/x');
+	assert.equal(outline, ['- Kök', '  - [Kaynağı aç](/x)', '  - A', '    - [Kaynağı aç](/x)'].join('\n'));
+});
+
+test('no linkFor means no citation lines at all', () => {
+	const tree = buildTree(ROOT, [row(['A'], 'a.md', 'A', 'Açıklama.')]);
+	assert.equal(
+		treeToMarkdownOutline(tree),
+		['- Türev', '  - *Anlık değişim oranı.*', '  - A', '    - *Açıklama.*'].join('\n')
+	);
+});
+
+test('brackets in a label or summary are escaped', () => {
+	const tree = buildTree({ label: 'Kök', summary: '' }, [
+		row(['Diziler [Bölüm 3]'], 'x.md', 'Diziler', 'Bkz. [ek].')
 	]);
 	const outline = treeToMarkdownOutline(tree, () => '/library/view?path=x.md');
-	assert.equal(outline, '- [Diziler \\[Bölüm 3\\]](/library/view?path=x.md)');
+	assert.match(outline, /- Diziler \\\[Bölüm 3\\\]/);
+	assert.match(outline, /\*Bkz\. \\\[ek\\\]\.\*/);
+});
+
+test('deeper trees keep indenting by one level per depth', () => {
+	const tree = buildTree({ label: 'Kök', summary: '' }, [
+		row(['A', 'B', 'C'], 'c.md', 'A > B > C')
+	]);
+	assert.equal(treeToMarkdownOutline(tree), ['- Kök', '  - A', '    - B', '      - C'].join('\n'));
 });

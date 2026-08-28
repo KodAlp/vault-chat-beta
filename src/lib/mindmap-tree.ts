@@ -1,59 +1,76 @@
 export interface MindMapTreeNode {
 	label: string;
+	/** One sentence saying what this node MEANS. Empty for nodes stored before
+	 * summaries existed, and for structural nodes buildTree had to synthesize. */
+	summary: string;
 	sourcePath: string | null;
 	headingPath: string | null;
 	children: MindMapTreeNode[];
 }
 
+export interface MindMapRootInput {
+	label: string;
+	summary: string;
+}
+
 /**
- * Assembles a nested tree from the model's flat `{path, source_path,
- * heading_path}[]` output (see mindmap-schema.ts — the model is never asked
- * for a recursive/nested shape directly, only a flat array, which is a much
- * safer structured-output target). Handles the two failure modes schema
- * validation alone can't catch:
- * - duplicate paths describing the same branch (merged by label match per
- *   level, last writer wins on the citation)
- * - orphaned deep paths whose ancestors were never separately emitted
- *   (synthesized automatically, then given a citation by backfillCitations)
+ * Assembles the nested tree the view renders from the flattened
+ * `{path, summary, source_path, heading_path}[]` rows in study.db.
+ *
+ * The model itself now emits a nested tree (see mindmap-schema.ts); the
+ * flattening to `path` arrays happens server-side purely so the existing
+ * mindmap_nodes table shape survives. This rebuilds it, and still handles the
+ * two cases the stored rows can present:
+ * - several rows describing the same branch (merged by label per level)
+ * - a deep path whose ancestors have no row of their own (synthesized here,
+ *   then given a citation by backfillCitations)
+ *
+ * The root is a REAL node now, carrying the topic and its definition. It used
+ * to be a bare title that treeToMarkdownOutline skipped entirely, which is why
+ * the rendered map began with an empty, unlabelled circle.
  */
 export function buildTree(
-	title: string,
-	nodes: { path: string[]; source_path: string; heading_path: string }[]
+	root: MindMapRootInput,
+	nodes: { path: string[]; summary: string; source_path: string; heading_path: string }[]
 ): MindMapTreeNode {
-	const root: MindMapTreeNode = { label: title, sourcePath: null, headingPath: null, children: [] };
+	const tree: MindMapTreeNode = {
+		label: root.label,
+		summary: root.summary,
+		sourcePath: null,
+		headingPath: null,
+		children: []
+	};
 	for (const node of nodes) {
-		let cursor = root;
+		let cursor = tree;
 		for (const label of node.path) {
 			let child = cursor.children.find((c) => c.label === label);
 			if (!child) {
-				child = { label, sourcePath: null, headingPath: null, children: [] };
+				child = { label, summary: '', sourcePath: null, headingPath: null, children: [] };
 				cursor.children.push(child);
 			}
 			cursor = child;
 		}
+		cursor.summary = node.summary;
 		cursor.sourcePath = node.source_path;
 		cursor.headingPath = node.heading_path;
 	}
-	for (const child of root.children) backfillCitations(child);
-	return root;
+	for (const child of tree.children) backfillCitations(child);
+	return tree;
 }
 
 /**
  * Gives every node a citation by inheriting from its first cited descendant
  * (depth-first, left to right).
  *
- * The model only ever cites the nodes it actually emitted, which are the
- * leaves of each emitted path. Every ancestor along the way is synthesized
- * by buildTree above and had sourcePath null — so in the rendered map the
- * branch nodes ("Process Scheduling: Policies and Mechanisms", a book title,
- * anything with children) were the ONLY things not clickable, which reads as
- * broken rather than as a deliberate distinction. Inheriting downward is the
- * honest answer: a branch is a grouping OF its descendants, so its first
- * descendant's source is genuinely where that branch came from — never an
- * invented citation.
+ * A node the model never emitted a row for is synthesized above with
+ * sourcePath null, which made branch nodes the only things in the map that did
+ * nothing when clicked — that reads as broken, not as a deliberate
+ * distinction. Inheriting downward is honest: a branch is a grouping OF its
+ * descendants, so its first descendant's source is genuinely where it came
+ * from. Never an invented citation.
  *
- * The root is excluded (callers pass root.children): its label is the map
- * title, not content, and treeToMarkdownOutline never renders it anyway.
+ * The root is excluded (callers pass tree.children): it is the topic itself,
+ * not a claim quoted from one chunk.
  */
 function backfillCitations(node: MindMapTreeNode): MindMapTreeNode | null {
 	let firstCited: MindMapTreeNode | null = node.sourcePath ? node : null;
@@ -68,32 +85,63 @@ function backfillCitations(node: MindMapTreeNode): MindMapTreeNode | null {
 	return node.sourcePath ? node : null;
 }
 
-/** Markmap's Transformer consumes a markdown string, not a hand-built node
- * object — this is the integration seam between buildTree()'s output and
- * markmap-lib's Transformer.transform(). Nodes render through markmap-view's
- * foreignObject/HTML path (see its `.markmap-foreign a` style), so a real
- * markdown link here becomes a real clickable `<a>` in the SVG — no extra
- * wiring needed on the view side beyond passing `linkFor`.
+/** `[` and `]` would prematurely close the `[label](url)` span, and heading
+ * text from a book can plausibly contain either ("Diziler [Bölüm 3]"). */
+function escapeBrackets(text: string): string {
+	return text.replace(/[[\]]/g, '\\$&');
+}
+
+/**
+ * Markmap's Transformer consumes a markdown string, not a node object — this
+ * is the seam between buildTree()'s output and markmap-lib. Nodes render
+ * through markmap-view's foreignObject/HTML path, so a markdown link here
+ * becomes a real `<a>` inside the SVG.
  *
- * `linkFor` is optional and per-node: it's asked for every node (not just
- * leaves), so a caller can choose to link only cited nodes (sourcePath !==
- * null) by returning null for the rest — those stay plain text, exactly as
- * before this was introduced. `]` in a label is escaped since it would
- * otherwise prematurely close the `[label]` span of the markdown link
- * syntax (its unescaped counterpart `[` is escaped too, for the same
- * reason); heading text from a book/course source can plausibly contain
- * either (e.g. "Diziler [Bölüm 3]"). */
+ * Layout per concept, which is the user's requirement expressed in markmap's
+ * own terms rather than with custom click handling:
+ *
+ *     - Türev                          <- the topic
+ *       - anlık değişim oranı          <- what it means
+ *       - Kısmi türevler               <- a sub-area
+ *         - çok değişkenli ...         <- what THAT means
+ *           - [Kaynağı aç](/library/…) <- and under the explanation, its source
+ *         - Zincir kuralı              <- the sub-area's own children
+ *
+ * Putting the summary and the link in the tree means markmap's built-in
+ * collapse/expand (click a node's circle) already does "tap a node to see its
+ * explanation" — no click plumbing of our own, and it keeps working with
+ * markmap's pan/zoom, keyboard and animation behaviour for free.
+ *
+ * The link hangs off the SUMMARY rather than off the concept so that
+ * collapsing a concept hides its explanation and its citation together, and
+ * so the citation reads as belonging to the explanation it backs.
+ *
+ * `linkFor` stays optional and per-node: returning null leaves a node with no
+ * citation line at all.
+ */
 export function treeToMarkdownOutline(
 	tree: MindMapTreeNode,
-	linkFor?: (node: MindMapTreeNode) => string | null
+	linkFor?: (node: MindMapTreeNode) => string | null,
+	linkLabel = 'Kaynağı aç'
 ): string {
 	const lines: string[] = [];
+	const push = (depth: number, text: string) => lines.push(`${'  '.repeat(depth)}- ${text}`);
+
 	function walk(node: MindMapTreeNode, depth: number) {
+		push(depth, escapeBrackets(node.label));
+
 		const url = linkFor?.(node) ?? null;
-		const text = url ? `[${node.label.replace(/[[\]]/g, '\\$&')}](${url})` : node.label;
-		lines.push(`${'  '.repeat(depth)}- ${text}`);
+		if (node.summary) {
+			push(depth + 1, `*${escapeBrackets(node.summary)}*`);
+			if (url) push(depth + 2, `[${linkLabel}](${url})`);
+		} else if (url) {
+			// No explanation to hang it on — the citation still belongs somewhere.
+			push(depth + 1, `[${linkLabel}](${url})`);
+		}
+
 		for (const child of node.children) walk(child, depth + 1);
 	}
-	for (const child of tree.children) walk(child, 0);
+
+	walk(tree, 0);
 	return lines.join('\n');
 }

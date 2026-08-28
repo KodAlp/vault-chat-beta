@@ -22,11 +22,16 @@ export interface AppLogRecord {
 		| 'provider_error'
 		| 'vault_error'
 		| 'fatal_error'
-		| 'generation_error';
+		| 'generation_error'
+		/** Generation SUCCEEDED but something had to be cleaned up on the way —
+		 * e.g. a mind-map node whose label was a source file name was dropped so
+		 * the user would never see it. Separate from generation_error so there is
+		 * a debug trail without pretending the run failed. */
+		| 'generation_warning';
 	chatId?: string;
 	provider?: string;
 	model?: string;
-	/** generation_error only — which of the 5 generators failed (quiz/cards/
+	/** generation_error/generation_warning only — which of the 5 generators (quiz/cards/
 	 * report/mindmap/slides). Lets a silent "nothing got created" pattern
 	 * (e.g. reports failing validation every single attempt) actually show
 	 * up somewhere instead of only ever existing as a dropped SSE stream. */

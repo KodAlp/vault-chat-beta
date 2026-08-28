@@ -272,11 +272,16 @@ export interface MindMapView {
 	id: string;
 	title: string;
 	model: string;
+	/** What the topic MEANS — rendered on the map's root node. Empty for maps
+	 * generated before the root carried a definition. */
+	rootSummary: string;
 }
 
 export interface MindMapNodeView {
 	id: string;
 	path: string[];
+	/** One sentence explaining this node, shown as its child in the map. */
+	summary: string;
 	source_path: string;
 	heading_path: string;
 }
