@@ -87,7 +87,7 @@ export function parseAndValidateMindMap(
 	if (!result.success) {
 		return { ok: false, error: result.error.issues.map((i) => i.message).join('; ') };
 	}
-	const nodes = result.data.nodes;
+	let nodes = result.data.nodes;
 	if (nodes.length === 0) {
 		return { ok: false, error: 'Model hiç düğüm üretmedi.' };
 	}
@@ -100,13 +100,24 @@ export function parseAndValidateMindMap(
 		};
 	}
 
-	const idShapedLabels = nodes.filter((n) => n.path.some((label) => ID_RE.test(label.trim())));
-	if (idShapedLabels.length > 0) {
+	// REPAIRED, not rejected. The model reliably slips the citation id into the
+	// label array as well ("path": ["S4", "Bilet tabanlı pay"]), and rejecting
+	// the whole response for it was the single biggest cause of exhausting the
+	// retry budget — a generation that produced nothing at all, which is worse
+	// than a flawed map. An id label carries no information, so deleting it
+	// loses nothing and leaves the real labels to be judged on their merits.
+	// Only things that cannot be repaired without inventing content (a label
+	// that IS a file name, a map that IS a table of contents) stay rejections.
+	const repaired = nodes
+		.map((n) => ({ ...n, path: n.path.filter((label) => !ID_RE.test(label.trim())) }))
+		.filter((n) => n.path.length > 0);
+	if (repaired.length === 0) {
 		return {
 			ok: false,
-			error: `${idShapedLabels.length} düğümün path'inde S1/S2 gibi bir kaynak kimliği var. Kimlik sadece source_id alanına yazılır; path yalnızca kavram etiketlerinden oluşur.`
+			error: 'Düğümlerin tamamı yalnızca S1/S2 gibi kaynak kimliklerinden oluşuyor. path kavram etiketleri içermeli; kimlik sadece source_id alanına yazılır.'
 		};
 	}
+	nodes = repaired;
 
 	// Blocking heading copies alone just moved the cheat: the model started
 	// labelling every node with the source's FILE NAME instead
