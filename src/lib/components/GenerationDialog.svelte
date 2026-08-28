@@ -7,6 +7,7 @@
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import * as Select from '$lib/components/ui/select';
+	import { t } from '$lib/i18n/index.svelte';
 
 	/**
 	 * Shared shell for the five generation dialogs (quiz/cards/report/
@@ -133,10 +134,10 @@
 		{/if}
 
 		<label class="flex flex-col gap-1 text-sm">
-			Domain (opsiyonel)
+			{t('GenerationDialog.domainLabel')}
 			<Select.Root type="single" bind:value={selectedDomain}>
 				<Select.Trigger class="w-full">
-					{selectedDomain || 'Tüm domainler'}
+					{selectedDomain || t('GenerationDialog.allDomains')}
 				</Select.Trigger>
 				<Select.Content>
 					{#each domains as d (d)}
@@ -148,7 +149,7 @@
 
 		<label class="flex cursor-pointer items-center gap-2 text-sm">
 			<Checkbox bind:checked={useChatContext} />
-			Bu konuşmayı bağlam olarak kullan
+			{t('GenerationDialog.useChatContext')}
 		</label>
 
 		<label class="flex flex-col gap-1 text-sm">
@@ -161,8 +162,8 @@
 		{/if}
 
 		<Dialog.Footer>
-			<Button variant="outline" onclick={() => (open = false)}>İptal</Button>
-			<Button onclick={generate} disabled={!prompt.trim() || !canGenerate}>Oluştur</Button>
+			<Button variant="outline" onclick={() => (open = false)}>{t('Common.iptal')}</Button>
+			<Button onclick={generate} disabled={!prompt.trim() || !canGenerate}>{t('GenerationDialog.generate')}</Button>
 		</Dialog.Footer>
 	</Dialog.Content>
 </Dialog.Root>

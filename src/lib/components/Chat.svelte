@@ -4,6 +4,7 @@
 	import Message from './Message.svelte';
 	import ScopeIndicator from './ScopeIndicator.svelte';
 	import { settings } from '$lib/settings.svelte';
+	import { t } from '$lib/i18n/index.svelte';
 	import { takePendingMessage } from '$lib/pending-message';
 	import ArrowDownIcon from '@lucide/svelte/icons/arrow-down';
 	import SendIcon from '@lucide/svelte/icons/send';
@@ -173,7 +174,7 @@
 				body: JSON.stringify(requestBody),
 				signal: abortController.signal
 			});
-			if (!res.ok || !res.body) throw new Error(`İstek başarısız (${res.status})`);
+			if (!res.ok || !res.body) throw new Error(t('Common.istekBasarisiz', { status: res.status }));
 
 			const reader = res.body.getReader();
 			const decoder = new TextDecoder();
@@ -224,7 +225,7 @@
 			if (err instanceof DOMException && err.name === 'AbortError') {
 				assistantMessage.interrupted = true;
 			} else {
-				errorMessage = err instanceof Error ? err.message : 'Bilinmeyen hata';
+				errorMessage = err instanceof Error ? err.message : t('Common.bilinmeyenHata');
 				if (!assistantMessage.content) {
 					// Nothing ever streamed in (e.g. Ollama unreachable at connect
 					// time) — an empty bubble would just be a second, disconnected
@@ -280,7 +281,7 @@
 				data.chat.included_paths_json ? (JSON.parse(data.chat.included_paths_json) as string[]) : undefined
 			);
 		} catch {
-			errorMessage = 'Konuşma yüklenemedi';
+			errorMessage = t('Chat.chatLoadError');
 		}
 	}
 
@@ -340,11 +341,11 @@
 							<line x1="24" y1="72" x2="15.5" y2="80.5" />
 						</g>
 					</svg>
-					<h2>Kasandaki notlar hakkında bir soru sor</h2>
-					<p>Cevaplar yalnızca seçtiğin kaynaklara dayanır.</p>
+					<h2>{t('Chat.emptyStateTitle')}</h2>
+					<p>{t('Chat.emptyStateSubtitle')}</p>
 					{#if onFocusTree}
 						<button type="button" class="empty-action" onclick={() => onFocusTree?.()}>
-							Kaynaklara göz at
+							{t('Chat.emptyStateBrowseSources')}
 							<ArrowRightIcon size={13} aria-hidden="true" />
 						</button>
 					{/if}
@@ -356,7 +357,7 @@
 		</div>
 		{#if isStreaming && !isAtBottom}
 			<button class="scroll-to-bottom" onclick={() => scrollToBottom(true)}>
-				<ArrowDownIcon size={14} aria-hidden="true" /> en sona in
+				<ArrowDownIcon size={14} aria-hidden="true" /> {t('Chat.scrollToBottom')}
 			</button>
 		{/if}
 	</div>
@@ -367,11 +368,11 @@
 
 	<div class="compose-controls">
 		<label class="model-pill" for="model-select">
-			<span class="sr-only">Model</span>
+			<span class="sr-only">{t('Chat.modelSrLabel')}</span>
 			<BotIcon size={13} aria-hidden="true" />
 			<select
 				id="model-select"
-				title="Bu konuşma için model/sağlayıcı seçimi"
+				title={t('Chat.modelSelectTitle')}
 				value={selectionKey(activeProvider, activeModel)}
 				onchange={(e) => onModelChange(e.currentTarget.value)}
 			>
@@ -387,11 +388,11 @@
 			class="think-pill"
 			class:active={thinkMode}
 			for="think-mode"
-			title="Açıkken muhakeme modeli önce akıl yürütür (yavaş ama daha derin), süreç sohbette görünür. Kapalıyken hızlı model kullanılır."
+			title={t('Chat.thinkModeTitle')}
 		>
 			<input id="think-mode" name="think-mode" type="checkbox" bind:checked={thinkMode} class="sr-only" />
 			<BrainIcon size={13} aria-hidden="true" />
-			Derin düşün
+			{t('Chat.thinkModeLabel')}
 		</label>
 	</div>
 
@@ -401,18 +402,18 @@
 			name="chat-input"
 			bind:value={input}
 			onkeydown={handleKeydown}
-			placeholder="Soru yaz... (Enter: gönder, Shift+Enter: yeni satır)"
+			placeholder={t('Chat.inputPlaceholder')}
 			disabled={isStreaming}
 		></textarea>
 		{#if isStreaming}
-			<button class="stop" onclick={stop} aria-label="Durdur">
+			<button class="stop" onclick={stop} aria-label={t('Chat.stop')}>
 				<SquareIcon size={16} aria-hidden="true" />
-				Durdur
+				{t('Chat.stop')}
 			</button>
 		{:else}
-			<button onclick={send} disabled={!input.trim()} aria-label="Gönder">
+			<button onclick={send} disabled={!input.trim()} aria-label={t('Chat.send')}>
 				<SendIcon size={16} aria-hidden="true" />
-				Gönder
+				{t('Chat.send')}
 			</button>
 		{/if}
 	</footer>

@@ -3,6 +3,7 @@
 	import type { RetrievedChunk } from '$lib/types';
 	import * as HoverCard from '$lib/components/ui/hover-card';
 	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
+	import { t } from '$lib/i18n/index.svelte';
 
 	/** Replaces SourceList.svelte — that component deduped on `path +
 	 * heading_path`, so the same source cited from three chunks rendered as
@@ -39,9 +40,9 @@
 						<span {...props} class="chip-group">
 							<a class="chip" href={libraryViewerUrl(g.path, vaultId)}>
 								{g.topic}
-								{#if g.chunks.length > 1}<span class="count">×{g.chunks.length} bölüm</span>{/if}
+								{#if g.chunks.length > 1}<span class="count">{t('SourceChip.chunkCount', { count: g.chunks.length })}</span>{/if}
 							</a>
-							<a class="chip-icon" href={obsidianUri(g.path)} title="Obsidian'da aç" aria-label="Obsidian'da aç">
+							<a class="chip-icon" href={obsidianUri(g.path)} title={t('Common.obsidiandaAc')} aria-label={t('Common.obsidiandaAc')}>
 								<ExternalLinkIcon size={12} aria-hidden="true" />
 							</a>
 						</span>

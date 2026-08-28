@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { settings, persistSettings } from '$lib/settings.svelte';
+	import { i18n, persistLocale, type Locale } from '$lib/i18n/index.svelte';
 	import type { OllamaModel, ProviderModelOption } from '$lib/types';
 	import { isTauri, invoke } from '@tauri-apps/api/core';
 	import { Button } from '$lib/components/ui/button';
@@ -218,6 +219,16 @@
 		{ value: 'light', label: 'Açık' },
 		{ value: 'dark', label: 'Koyu' }
 	] as const;
+
+	// Faz 19 — i18n scaffolding. en.json is an intentionally incomplete
+	// skeleton right now (see i18n/index.svelte.ts's doc comment); this
+	// selector is real and switches locale immediately, but most of the UI
+	// hasn't been converted to call t() yet, so picking "English" mostly
+	// shows the same Turkish text falling back — that's expected, not a bug.
+	const localeOptions: { value: Locale; label: string }[] = [
+		{ value: 'tr', label: 'Türkçe' },
+		{ value: 'en', label: 'English' }
+	];
 </script>
 
 <svelte:head>
@@ -245,6 +256,27 @@
 						value={opt.value}
 						bind:group={settings.theme}
 						onchange={persistSettings}
+						class="accent-primary"
+					/>
+					{opt.label}
+				</label>
+			{/each}
+		</Card.Content>
+	</Card.Root>
+
+	<Card.Root class="mb-6">
+		<Card.Header>
+			<Card.Title>Dil</Card.Title>
+		</Card.Header>
+		<Card.Content class="flex gap-5">
+			{#each localeOptions as opt (opt.value)}
+				<label class="flex cursor-pointer items-center gap-1.5 text-sm">
+					<input
+						type="radio"
+						name="locale"
+						value={opt.value}
+						bind:group={i18n.locale}
+						onchange={persistLocale}
 						class="accent-primary"
 					/>
 					{opt.label}

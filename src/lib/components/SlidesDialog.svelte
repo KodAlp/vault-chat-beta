@@ -4,6 +4,7 @@
 	import type { SlidesGenerationRequest } from '$lib/types';
 	import GenerationDialog from './GenerationDialog.svelte';
 	import PresentationIcon from '@lucide/svelte/icons/presentation';
+	import { t } from '$lib/i18n/index.svelte';
 
 	let {
 		chatId,
@@ -39,10 +40,10 @@
 	{includedPaths}
 	bind:open
 	icon={PresentationIcon}
-	label="Slayt"
-	dialogTitle="Slayt Oluştur"
-	promptLabel="Sunum hangi konuda olsun?"
-	promptPlaceholder="örn. Kernel mimarileri hakkında kısa bir sunum"
+	label={t('SlidesDialog.label')}
+	dialogTitle={t('SlidesDialog.dialogTitle')}
+	promptLabel={t('SlidesDialog.promptLabel')}
+	promptPlaceholder={t('SlidesDialog.promptPlaceholder')}
 	disabled={alreadyGenerating}
 	onGenerate={generate}
 />

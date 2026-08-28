@@ -12,6 +12,7 @@
 	import PresentationIcon from '@lucide/svelte/icons/presentation';
 	import Trash2Icon from '@lucide/svelte/icons/trash-2';
 	import type { StudySummary } from '$lib/types';
+	import { t } from '$lib/i18n/index.svelte';
 
 	type StudyKind = 'quizzes' | 'reports' | 'mindmaps' | 'slidedecks';
 
@@ -197,20 +198,20 @@
 <Sheet.Root bind:open>
 	<Sheet.Content class="w-80">
 		<Sheet.Header>
-			<Sheet.Title>Çalışma Paneli</Sheet.Title>
+			<Sheet.Title>{t('StudyPanel.title')}</Sheet.Title>
 		</Sheet.Header>
 		<div class="rows">
 			<div class="type-group">
 				<div class="row">
-					<span class="label"><FileQuestionIcon size={16} aria-hidden="true" /> Test</span>
-					<Button variant="outline" size="sm" onclick={() => trigger(onOpenQuiz)}>Yeni</Button>
+					<span class="label"><FileQuestionIcon size={16} aria-hidden="true" /> {t('StudyPanel.quiz')}</span>
+					<Button variant="outline" size="sm" onclick={() => trigger(onOpenQuiz)}>{t('StudyPanel.new')}</Button>
 				</div>
 				{#if quizzes.length > 0}
 					<ul class="recent-list">
 						{#each quizzes.slice(0, RECENT_LIMIT) as item (item.id)}
 							<li>
 								<button type="button" class="item-title" onclick={() => openItem(`/study/quiz/${item.id}`)}>{item.title}</button>
-								<button type="button" class="item-delete" onclick={(e) => askDelete('quizzes', item.id, item.title, e)} title="Sil" aria-label="Sil">
+								<button type="button" class="item-delete" onclick={(e) => askDelete('quizzes', item.id, item.title, e)} title={t('Common.sil')} aria-label={t('Common.sil')}>
 									<Trash2Icon size={12} aria-hidden="true" />
 								</button>
 							</li>
@@ -221,28 +222,28 @@
 			<div class="type-group">
 				<div class="row">
 					<span class="label">
-						<LayersIcon size={16} aria-hidden="true" /> Kartlar
-						{#if dueCount > 0}<Badge variant="secondary">{dueCount} bekliyor</Badge>{/if}
+						<LayersIcon size={16} aria-hidden="true" /> {t('StudyPanel.cards')}
+						{#if dueCount > 0}<Badge variant="secondary">{t('StudyPanel.dueBadge', { count: dueCount })}</Badge>{/if}
 					</span>
 					<div class="row-actions">
 						{#if dueCount > 0}
-							<Button variant="outline" size="sm" onclick={reviewCards}>İncele</Button>
+							<Button variant="outline" size="sm" onclick={reviewCards}>{t('StudyPanel.review')}</Button>
 						{/if}
-						<Button variant="outline" size="sm" onclick={() => trigger(onOpenCards)}>Yeni</Button>
+						<Button variant="outline" size="sm" onclick={() => trigger(onOpenCards)}>{t('StudyPanel.new')}</Button>
 					</div>
 				</div>
 			</div>
 			<div class="type-group">
 				<div class="row">
-					<span class="label"><FileTextIcon size={16} aria-hidden="true" /> Rapor</span>
-					<Button variant="outline" size="sm" onclick={() => trigger(onOpenReport)}>Yeni</Button>
+					<span class="label"><FileTextIcon size={16} aria-hidden="true" /> {t('StudyPanel.report')}</span>
+					<Button variant="outline" size="sm" onclick={() => trigger(onOpenReport)}>{t('StudyPanel.new')}</Button>
 				</div>
 				{#if reports.length > 0}
 					<ul class="recent-list">
 						{#each reports.slice(0, RECENT_LIMIT) as item (item.id)}
 							<li>
 								<button type="button" class="item-title" onclick={() => openItem(`/study/report/${item.id}`)}>{item.title}</button>
-								<button type="button" class="item-delete" onclick={(e) => askDelete('reports', item.id, item.title, e)} title="Sil" aria-label="Sil">
+								<button type="button" class="item-delete" onclick={(e) => askDelete('reports', item.id, item.title, e)} title={t('Common.sil')} aria-label={t('Common.sil')}>
 									<Trash2Icon size={12} aria-hidden="true" />
 								</button>
 							</li>
@@ -252,15 +253,15 @@
 			</div>
 			<div class="type-group">
 				<div class="row">
-					<span class="label"><BrainIcon size={16} aria-hidden="true" /> Harita</span>
-					<Button variant="outline" size="sm" onclick={() => trigger(onOpenMindMap)}>Yeni</Button>
+					<span class="label"><BrainIcon size={16} aria-hidden="true" /> {t('StudyPanel.mindmap')}</span>
+					<Button variant="outline" size="sm" onclick={() => trigger(onOpenMindMap)}>{t('StudyPanel.new')}</Button>
 				</div>
 				{#if mindmaps.length > 0}
 					<ul class="recent-list">
 						{#each mindmaps.slice(0, RECENT_LIMIT) as item (item.id)}
 							<li>
 								<button type="button" class="item-title" onclick={() => openItem(`/study/mindmap/${item.id}`)}>{item.title}</button>
-								<button type="button" class="item-delete" onclick={(e) => askDelete('mindmaps', item.id, item.title, e)} title="Sil" aria-label="Sil">
+								<button type="button" class="item-delete" onclick={(e) => askDelete('mindmaps', item.id, item.title, e)} title={t('Common.sil')} aria-label={t('Common.sil')}>
 									<Trash2Icon size={12} aria-hidden="true" />
 								</button>
 							</li>
@@ -270,15 +271,15 @@
 			</div>
 			<div class="type-group">
 				<div class="row">
-					<span class="label"><PresentationIcon size={16} aria-hidden="true" /> Slayt</span>
-					<Button variant="outline" size="sm" onclick={() => trigger(onOpenSlides)}>Yeni</Button>
+					<span class="label"><PresentationIcon size={16} aria-hidden="true" /> {t('StudyPanel.slides')}</span>
+					<Button variant="outline" size="sm" onclick={() => trigger(onOpenSlides)}>{t('StudyPanel.new')}</Button>
 				</div>
 				{#if slidedecks.length > 0}
 					<ul class="recent-list">
 						{#each slidedecks.slice(0, RECENT_LIMIT) as item (item.id)}
 							<li>
 								<button type="button" class="item-title" onclick={() => openItem(`/study/slides/${item.id}`)}>{item.title}</button>
-								<button type="button" class="item-delete" onclick={(e) => askDelete('slidedecks', item.id, item.title, e)} title="Sil" aria-label="Sil">
+								<button type="button" class="item-delete" onclick={(e) => askDelete('slidedecks', item.id, item.title, e)} title={t('Common.sil')} aria-label={t('Common.sil')}>
 									<Trash2Icon size={12} aria-hidden="true" />
 								</button>
 							</li>
@@ -293,11 +294,11 @@
 <AlertDialog.Root open={confirmingDelete !== null} onOpenChange={(next) => { if (!next) confirmingDelete = null; }}>
 	<AlertDialog.Content>
 		<AlertDialog.Header>
-			<AlertDialog.Title>"{confirmingDelete?.title}" silinsin mi?</AlertDialog.Title>
-			<AlertDialog.Description>Bu işlem geri alınamaz.</AlertDialog.Description>
+			<AlertDialog.Title>{t('StudyPanel.deleteConfirmTitle', { title: confirmingDelete?.title ?? '' })}</AlertDialog.Title>
+			<AlertDialog.Description>{t('Common.buIslemGeriAlinamaz')}</AlertDialog.Description>
 		</AlertDialog.Header>
 		<AlertDialog.Footer>
-			<AlertDialog.Cancel>Vazgeç</AlertDialog.Cancel>
+			<AlertDialog.Cancel>{t('Common.vazgec')}</AlertDialog.Cancel>
 			<AlertDialog.Action
 				variant="destructive"
 				onclick={(e) => {
@@ -305,7 +306,7 @@
 					confirmDelete();
 				}}
 			>
-				Sil
+				{t('Common.sil')}
 			</AlertDialog.Action>
 		</AlertDialog.Footer>
 	</AlertDialog.Content>

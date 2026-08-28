@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { t } from '$lib/i18n/index.svelte';
+
 	/** Extracted from Message.svelte during Faz 9 Adım 6's SourceChip/
 	 * FallbackNotice work — Message.svelte was being edited anyway, so
 	 * splitting out the bubble markup was zero-extra-cost. Needs `role`
@@ -14,7 +16,7 @@
 
 <div class="bubble markdown-body {role}" class:interrupted>
 	{#if interrupted}
-		Durduruldu
+		{t('ChatBubble.interrupted')}
 	{:else}
 		{@html html}
 	{/if}

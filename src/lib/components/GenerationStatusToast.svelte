@@ -3,6 +3,7 @@
 	import { cubicOut } from 'svelte/easing';
 	import CheckIcon from '@lucide/svelte/icons/check';
 	import XIcon from '@lucide/svelte/icons/x';
+	import { t } from '$lib/i18n/index.svelte';
 
 	/**
 	 * Shared toast shell for the five generation status widgets — Faz 9
@@ -62,7 +63,7 @@
 				class="inline-block size-3.5 shrink-0 animate-spin rounded-full border-2 border-border border-t-primary"
 				aria-hidden="true"
 			></span>
-			<span>{stageLabels[status.stage] ?? 'İşleniyor...'}{status.elapsedMs ? ` · ${Math.round(status.elapsedMs / 1000)}sn` : ''}</span>
+			<span>{stageLabels[status.stage] ?? t('GenerationStatusToast.defaultGeneratingLabel')}{status.elapsedMs ? t('GenerationStatusToast.elapsedSuffix', { seconds: Math.round(status.elapsedMs / 1000) }) : ''}</span>
 		</div>
 	{:else if status.phase === 'done'}
 		<button
@@ -91,15 +92,15 @@
 						onDismiss();
 					}}
 				>
-					Kapsamı genişlet?
+					{t('GenerationStatusToast.expandScope')}
 				</button>
 			{/if}
 			<button
 				type="button"
 				class="flex shrink-0 border-none bg-transparent p-0 text-inherit focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-2"
 				onclick={onDismiss}
-				title="Kapat"
-				aria-label="Kapat"
+				title={t('GenerationStatusToast.dismiss')}
+				aria-label={t('GenerationStatusToast.dismiss')}
 			>
 				<XIcon size={15} aria-hidden="true" />
 			</button>

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Badge } from '$lib/components/ui/badge';
+	import { t } from '$lib/i18n/index.svelte';
 
 	/** Faz 9 Adım 6 — lives in Chat.svelte's header so it sits next to the
 	 * transcript it describes; clicking it jumps to SourceTree in the other
@@ -18,15 +19,15 @@
 	let zeroScope = $derived(total > 0 && selected === 0);
 </script>
 
-<button type="button" class="indicator" onclick={onFocusTree} title="Kaynak ağacına git">
+<button type="button" class="indicator" onclick={onFocusTree} title={t('ScopeIndicator.goToSourceTree')}>
 	{#if zeroScope}
 		<Badge variant="outline" class="border-[var(--warning)] text-[var(--warning)]">
-			0/{total} kaynak aktif
+			{t('ScopeIndicator.zeroScope', { total })}
 		</Badge>
 	{:else if scoped}
-		<Badge variant="secondary">{selected}/{total} kaynak aktif</Badge>
+		<Badge variant="secondary">{t('ScopeIndicator.partialScope', { selected, total })}</Badge>
 	{:else}
-		<span class="all">tüm kaynaklar</span>
+		<span class="all">{t('ScopeIndicator.allSources')}</span>
 	{/if}
 </button>
 

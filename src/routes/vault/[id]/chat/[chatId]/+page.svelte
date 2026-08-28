@@ -9,6 +9,7 @@
 	import SourceTree from '$lib/components/SourceTree.svelte';
 	import StudyPanel from '$lib/components/StudyPanel.svelte';
 	import { scopeExpandSignal } from '$lib/scope-expand.svelte';
+	import { t } from '$lib/i18n/index.svelte';
 	import HomeIcon from '@lucide/svelte/icons/house';
 	import SettingsIcon from '@lucide/svelte/icons/settings';
 	import LibraryIcon from '@lucide/svelte/icons/library';
@@ -112,8 +113,8 @@
 		<button
 			class="collapse-toggle"
 			onclick={toggleCollapse}
-			title={leftCollapsed ? 'Paneli genişlet' : 'Paneli daralt'}
-			aria-label={leftCollapsed ? 'Paneli genişlet' : 'Paneli daralt'}
+			title={leftCollapsed ? t('VaultChatPage.expandPanel') : t('VaultChatPage.collapsePanel')}
+			aria-label={leftCollapsed ? t('VaultChatPage.expandPanel') : t('VaultChatPage.collapsePanel')}
 		>
 			{#if leftCollapsed}
 				<PanelLeftOpenIcon size={16} aria-hidden="true" />
@@ -122,7 +123,7 @@
 			{/if}
 		</button>
 		{#if !leftCollapsed}
-			<a class="vault-name" href="/vault/{data.vaultId}" title="Sohbet listesine dön">
+			<a class="vault-name" href="/vault/{data.vaultId}" title={t('VaultChatPage.backToChatList')}>
 				<ArrowLeftIcon size={13} aria-hidden="true" />
 				{data.vaultName}
 			</a>
@@ -151,16 +152,16 @@
 
 	<aside class="panel-right">
 		<div class="right-top">
-			<a href="/?picker=1" title="Vault seçici" aria-label="Vault seçici"><HomeIcon size={17} aria-hidden="true" /></a>
+			<a href="/?picker=1" title={t('VaultChatPage.vaultPicker')} aria-label={t('VaultChatPage.vaultPicker')}><HomeIcon size={17} aria-hidden="true" /></a>
 			<ExportMenu chatId={data.chatId} />
-			<a href="/settings" title="Ayarlar" aria-label="Ayarlar"><SettingsIcon size={17} aria-hidden="true" /></a>
+			<a href="/settings" title={t('Common.ayarlar')} aria-label={t('Common.ayarlar')}><SettingsIcon size={17} aria-hidden="true" /></a>
 		</div>
 		<div class="right-middle">
 			<button
 				type="button"
 				class="study-panel-trigger"
 				onclick={() => (studyPanelOpen = true)}
-				title="Çalışma Paneli"
+				title={t('VaultChatPage.studyPanelTitle')}
 			>
 				<span class="trigger-icon">
 					<LibraryIcon size={19} aria-hidden="true" />
@@ -168,9 +169,9 @@
 						<span class="unseen-dot" aria-hidden="true"></span>
 					{/if}
 				</span>
-				<span class="trigger-label">Panel</span>
+				<span class="trigger-label">{t('VaultChatPage.panelLabel')}</span>
 				{#if hasUnseenStudyItems}
-					<span class="sr-only">Yeni üretilmiş içerik var</span>
+					<span class="sr-only">{t('VaultChatPage.unseenContent')}</span>
 				{/if}
 			</button>
 			<QuizDialog chatId={data.chatId} vaultId={data.vaultId} {includedPaths} bind:open={quizOpen} />
@@ -179,7 +180,7 @@
 			<MindMapDialog chatId={data.chatId} vaultId={data.vaultId} {includedPaths} bind:open={mindMapOpen} />
 			<SlidesDialog chatId={data.chatId} vaultId={data.vaultId} {includedPaths} bind:open={slidesOpen} />
 		</div>
-		<div class="right-bottom placeholder-text">Profil (yakında)</div>
+		<div class="right-bottom placeholder-text">{t('VaultChatPage.profileComingSoon')}</div>
 	</aside>
 </div>
 

@@ -11,14 +11,20 @@
 	import GenerationStatusToast from '$lib/components/GenerationStatusToast.svelte';
 	import OllamaStatusBanner from '$lib/components/OllamaStatusBanner.svelte';
 	import { requestScopeExpand } from '$lib/scope-expand.svelte';
+	import { t } from '$lib/i18n/index.svelte';
 
 	let { children } = $props();
 
-	const STAGE_LABELS: Record<string, string> = {
-		retrieving: 'Kaynaklar aranıyor...',
-		validating: 'Doğrulanıyor...',
-		retrying: 'Doğrulama başarısız, tekrar deneniyor...'
-	};
+	// $derived, not a plain const — a bare object literal would call t() once
+	// at module/component init and freeze at whatever locale was active then,
+	// silently going stale if the user switches language later without a
+	// full reload (see i18n/index.svelte.ts — i18n.locale is itself $state,
+	// meant to be switchable live, same as settings.theme already is).
+	let STAGE_LABELS = $derived<Record<string, string>>({
+		retrieving: t('GenerationLayout.stageRetrieving'),
+		validating: t('GenerationLayout.stageValidating'),
+		retrying: t('GenerationLayout.stageRetrying')
+	});
 
 	// prefers-color-scheme reflects actual OS state and can't be overridden by
 	// a manual in-app choice, so "system" is resolved here (with a live
@@ -79,9 +85,9 @@
 {#each quizGeneration.items as status, i (status.id)}
 	<GenerationStatusToast
 		{status}
-		stageLabels={{ ...STAGE_LABELS, generating: 'Sorular üretiliyor...' }}
-		doneMessage="Test hazır — görüntülemek için tıkla"
-		errorPrefix="Test oluşturulamadı: "
+		stageLabels={{ ...STAGE_LABELS, generating: t('GenerationLayout.quizGenerating') }}
+		doneMessage={t('GenerationLayout.quizDone')}
+		errorPrefix={t('GenerationLayout.quizErrorPrefix')}
 		stackIndex={quizBase + i}
 		onView={() => {
 			if (status.phase !== 'done') return;
@@ -98,9 +104,9 @@
 {#each cardGeneration.items as status, i (status.id)}
 	<GenerationStatusToast
 		{status}
-		stageLabels={{ ...STAGE_LABELS, generating: 'Kartlar üretiliyor...' }}
-		doneMessage="Kartlar hazır — incelemek için tıkla"
-		errorPrefix="Kartlar oluşturulamadı: "
+		stageLabels={{ ...STAGE_LABELS, generating: t('GenerationLayout.cardsGenerating') }}
+		doneMessage={t('GenerationLayout.cardsDone')}
+		errorPrefix={t('GenerationLayout.cardsErrorPrefix')}
 		stackIndex={cardBase + i}
 		onView={() => {
 			if (status.phase !== 'done') return;
@@ -116,9 +122,9 @@
 {#each reportGeneration.items as status, i (status.id)}
 	<GenerationStatusToast
 		{status}
-		stageLabels={{ ...STAGE_LABELS, generating: 'Rapor yazılıyor...' }}
-		doneMessage="Rapor hazır — görüntülemek için tıkla"
-		errorPrefix="Rapor oluşturulamadı: "
+		stageLabels={{ ...STAGE_LABELS, generating: t('GenerationLayout.reportGenerating') }}
+		doneMessage={t('GenerationLayout.reportDone')}
+		errorPrefix={t('GenerationLayout.reportErrorPrefix')}
 		stackIndex={reportBase + i}
 		onView={() => {
 			if (status.phase !== 'done') return;
@@ -135,9 +141,9 @@
 {#each mindmapGeneration.items as status, i (status.id)}
 	<GenerationStatusToast
 		{status}
-		stageLabels={{ ...STAGE_LABELS, generating: 'Harita çıkarılıyor...' }}
-		doneMessage="Harita hazır — görüntülemek için tıkla"
-		errorPrefix="Harita oluşturulamadı: "
+		stageLabels={{ ...STAGE_LABELS, generating: t('GenerationLayout.mindmapGenerating') }}
+		doneMessage={t('GenerationLayout.mindmapDone')}
+		errorPrefix={t('GenerationLayout.mindmapErrorPrefix')}
 		stackIndex={mindmapBase + i}
 		onView={() => {
 			if (status.phase !== 'done') return;
@@ -154,9 +160,9 @@
 {#each slidesGeneration.items as status, i (status.id)}
 	<GenerationStatusToast
 		{status}
-		stageLabels={{ ...STAGE_LABELS, generating: 'Slaytlar üretiliyor...' }}
-		doneMessage="Sunum hazır — görüntülemek için tıkla"
-		errorPrefix="Sunum oluşturulamadı: "
+		stageLabels={{ ...STAGE_LABELS, generating: t('GenerationLayout.slidesGenerating') }}
+		doneMessage={t('GenerationLayout.slidesDone')}
+		errorPrefix={t('GenerationLayout.slidesErrorPrefix')}
 		stackIndex={slidesBase + i}
 		onView={() => {
 			if (status.phase !== 'done') return;

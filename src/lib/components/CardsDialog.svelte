@@ -8,6 +8,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import LayersIcon from '@lucide/svelte/icons/layers';
+	import { t } from '$lib/i18n/index.svelte';
 
 	let {
 		chatId,
@@ -78,10 +79,10 @@
 	{includedPaths}
 	bind:open
 	icon={LayersIcon}
-	label="Kartlar"
-	dialogTitle="Bilgi Kartları"
-	promptLabel="Ne konuda kart istiyorsun?"
-	promptPlaceholder="örn. Türev ve limit kavramları üzerine bilgi kartları"
+	label={t('CardsDialog.label')}
+	dialogTitle={t('CardsDialog.dialogTitle')}
+	promptLabel={t('CardsDialog.promptLabel')}
+	promptPlaceholder={t('CardsDialog.promptPlaceholder')}
 	canGenerate={count > 0 && !alreadyGenerating}
 	badge={dueCount || null}
 	onGenerate={generate}
@@ -89,13 +90,13 @@
 	{#snippet extraTop()}
 		{#if dueCount > 0}
 			<Button variant="outline" class="w-full border-primary text-primary" onclick={review}>
-				İncele ({dueCount} kart bekliyor)
+				{t('CardsDialog.review', { dueCount })}
 			</Button>
 		{/if}
 	{/snippet}
 	{#snippet extraFields()}
 		<label class="flex w-24 flex-col gap-1 text-sm">
-			Kart sayısı
+			{t('CardsDialog.cardCount')}
 			<Input type="number" min="1" max="30" bind:value={count} onblur={() => (count = clampCount(count))} />
 		</label>
 	{/snippet}
