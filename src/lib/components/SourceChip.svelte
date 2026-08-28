@@ -51,7 +51,7 @@
 				<HoverCard.Content class="w-72 text-xs">
 					<p class="preview-title">{g.path}</p>
 					<ul class="preview-list">
-						{#each g.chunks as c (c.heading_path)}
+						{#each g.chunks as c, i (c.heading_path + '#' + i)}
 							<li>{c.heading_path}</li>
 						{/each}
 					</ul>

@@ -51,7 +51,7 @@
 
 <div class="message {message.role}">
 	{#if message.role === 'assistant' && message.notices?.length}
-		{#each message.notices as notice (notice)}
+		{#each message.notices as notice, i (notice + '#' + i)}
 			<FallbackNotice message={notice} />
 		{/each}
 	{/if}
