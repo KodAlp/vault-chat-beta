@@ -14,7 +14,7 @@ export interface MindMapTreeNode {
  * - duplicate paths describing the same branch (merged by label match per
  *   level, last writer wins on the citation)
  * - orphaned deep paths whose ancestors were never separately emitted
- *   (synthesized automatically as citation-less structural nodes)
+ *   (synthesized automatically, then given a citation by backfillCitations)
  */
 export function buildTree(
 	title: string,
@@ -34,7 +34,38 @@ export function buildTree(
 		cursor.sourcePath = node.source_path;
 		cursor.headingPath = node.heading_path;
 	}
+	for (const child of root.children) backfillCitations(child);
 	return root;
+}
+
+/**
+ * Gives every node a citation by inheriting from its first cited descendant
+ * (depth-first, left to right).
+ *
+ * The model only ever cites the nodes it actually emitted, which are the
+ * leaves of each emitted path. Every ancestor along the way is synthesized
+ * by buildTree above and had sourcePath null — so in the rendered map the
+ * branch nodes ("Process Scheduling: Policies and Mechanisms", a book title,
+ * anything with children) were the ONLY things not clickable, which reads as
+ * broken rather than as a deliberate distinction. Inheriting downward is the
+ * honest answer: a branch is a grouping OF its descendants, so its first
+ * descendant's source is genuinely where that branch came from — never an
+ * invented citation.
+ *
+ * The root is excluded (callers pass root.children): its label is the map
+ * title, not content, and treeToMarkdownOutline never renders it anyway.
+ */
+function backfillCitations(node: MindMapTreeNode): MindMapTreeNode | null {
+	let firstCited: MindMapTreeNode | null = node.sourcePath ? node : null;
+	for (const child of node.children) {
+		const cited = backfillCitations(child);
+		if (!firstCited && cited) firstCited = cited;
+	}
+	if (!node.sourcePath && firstCited) {
+		node.sourcePath = firstCited.sourcePath;
+		node.headingPath = firstCited.headingPath;
+	}
+	return node.sourcePath ? node : null;
 }
 
 /** Markmap's Transformer consumes a markdown string, not a hand-built node

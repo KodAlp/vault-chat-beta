@@ -2,8 +2,9 @@ import { chatWithFallback } from './providers/registry';
 import type { ChatMessage } from './providers/types';
 import { retrieve } from './retrieve';
 import { getMessages } from './chats-db';
-import { MindMapNodes, MINDMAP_NODES_JSON_SCHEMA } from './mindmap-schema';
-import { createMindMap, type NewMindMapNode } from './study-db';
+import { buildMindMapNodesJsonSchema } from './mindmap-schema';
+import { parseAndValidateMindMap, type CitedChunk } from './mindmap-validate';
+import { createMindMap } from './study-db';
 import { renderUserSkillsBlock } from './userSkills';
 import type { VaultContext } from './vaults';
 import { NoSourcesError } from './generate-errors';
@@ -56,6 +57,7 @@ async function callModel(
 	model: string,
 	systemPrompt: string,
 	userPrompt: string,
+	format: object,
 	provider: string | undefined,
 	onTick?: (elapsedMs: number) => void
 ): Promise<string> {
@@ -70,7 +72,7 @@ async function callModel(
 	try {
 		for await (const event of chatWithFallback(
 			'mindmap',
-			{ model, messages, think: false, format: MINDMAP_NODES_JSON_SCHEMA, temperature: 0.3 },
+			{ model, messages, think: false, format, temperature: 0.3 },
 			signal,
 			provider
 		)) {
@@ -82,49 +84,29 @@ async function callModel(
 	return text;
 }
 
-type ParseResult = { ok: true; nodes: NewMindMapNode[] } | { ok: false; error: string };
-
-function parseAndValidate(raw: string, validPaths: Set<string>): ParseResult {
-	let json: unknown;
-	try {
-		json = JSON.parse(raw);
-	} catch {
-		return { ok: false, error: 'Model geçerli JSON döndürmedi.' };
-	}
-	const result = MindMapNodes.safeParse(json);
-	if (!result.success) {
-		return { ok: false, error: result.error.issues.map((i) => i.message).join('; ') };
-	}
-	const badNodes = result.data.nodes.filter((n) => !validPaths.has(n.source_path));
-	if (badNodes.length > 0) {
-		return {
-			ok: false,
-			error: `${badNodes.length} düğümün source_path'i sağlanan kaynaklarla eşleşmiyor (uydurma kaynak).`
-		};
-	}
-	if (result.data.nodes.length === 0) {
-		return { ok: false, error: 'Model hiç düğüm üretmedi.' };
-	}
-	return { ok: true, nodes: result.data.nodes };
-}
-
 export function buildSystemPrompt(contextBlock: string, userSkillsBlock: string): string {
-	const taskIntro = `Sen bir zihin haritası (mind map) çıkarma asistanısın. Aşağıdaki <context> bloğu, her biri
-source_path/heading_path/depth etiketleriyle işaretlenmiş kaynak parçalarından oluşuyor. Bu konuyu
-1-40 düğümlük düz bir liste olarak hiyerarşik biçimde çıkar. Her düğüm bir "path" (kök'ten o düğüme
-kadar olan başlık zinciri, örn. ["SvelteKit", "Routing", "Dinamik rotalar"]), ve o düğümün dayandığı
-kaynak parçanın source_path/heading_path etiketleri içermeli. Aynı üst dalı paylaşan düğümler path
-dizisinin başlangıcını paylaşmalı (örn. ["SvelteKit","Routing","Dinamik rotalar"] ve
-["SvelteKit","Routing","Form action'lar"]) — bu şekilde ağaç yapısı path'lerden otomatik kurulur,
-sen sadece düz bir liste üretiyorsun.`;
+	const taskIntro = `Sen bir KAVRAM HARİTASI çıkarma asistanısın. Aşağıdaki <context> bloğu, her biri kısa bir
+kimlikle (id: S1, S2, ...) ve source_path/heading_path/depth etiketleriyle işaretlenmiş kaynak
+parçalarından oluşuyor. Bu kaynaklardaki BİLGİYİ 1-40 düğümlük düz bir liste olarak hiyerarşik
+biçimde çıkar. Her düğüm bir "path" (kök'ten o düğüme kadar olan etiket zinciri, örn.
+["Zamanlama politikaları", "Adalet", "Orantılı pay"]) ve o düğümü hangi parçadan ürettiysen o
+parçanın "source_id" değerini içermeli. Aynı üst dalı paylaşan düğümler path dizisinin başlangıcını
+paylaşmalı — ağaç yapısı path'lerden otomatik kurulur, sen sadece düz bir liste üretiyorsun.`;
 
 	const invariants = `Kurallar:
 - SADECE <context> bloğundaki bilgiye dayanarak düğümler üret. Context dışında hiçbir bilgi kullanma.
-- Türkçe yaz. path içindeki her etiket kısa olmalı (birkaç kelime), tam cümle değil.
-- Her düğümün source_path değeri, o düğümü hangi kaynak parçasından ürettiysen SADECE o parçanın
-  KENDİ source_path etiketinin değeriyle BİREBİR AYNI olmalı.
-- heading_path değeri de aynı şekilde ilgili parçanın KENDİ heading_path etiketinin değeriyle
-  birebir aynı olmalı.
+- EN ÖNEMLİ KURAL: bir düğüm etiketi, kaynağın heading_path'inden KOPYALANAMAZ. Etiket, kaynağın
+  içindekiler tablosundaki bir başlık değil; senin kendi cümlenle yazdığın bir KAVRAM, MEKANİZMA
+  veya İDDİA olmalı. "Key claims" ya da "Bölüm 4" gibi bir başlık kopyası geçersizdir; "Bilet
+  sayısıyla orantılı CPU payı" gibi bir kavram geçerlidir.
+- Verilen kaynakların mümkün olduğunca ÇOĞUNU kullan ve aralarındaki ilişkiyi göster. Tek bir
+  kaynaktan çıkarılmış harita geçersizdir — kavramları farklı kaynaklar arasında ilişkilendir.
+- Türkçe yaz. Her etiket kısa olmalı (birkaç kelime), tam cümle değil.
+- source_id AYRI BİR ALAN. "path" dizisinin içine ASLA S1/S2 gibi bir kimlik yazma; path sadece
+  insan tarafından okunacak kavram etiketlerinden oluşur. Örnek doğru düğüm:
+  {"path": ["Zamanlama politikaları", "Orantılı pay"], "source_id": "S3"}.
+- source_id, o düğümü ürettiğin parçanın id'si olmalı — sadece S1, S2, ... gibi verilen kimlikleri
+  kullan, asla dosya yolu yazma.
 - path dizisi en fazla 4 seviye derinliğinde olmalı — çok derin dallanmadan kaçın.`;
 
 	return [taskIntro, userSkillsBlock, invariants, `<context>\n${contextBlock}\n</context>`]
@@ -152,41 +134,52 @@ export async function generateMindMap(
 		}
 	}
 
+	// k=16, higher than the other generators use: select-chunks.ts already caps
+	// each file at MAX_CHUNKS_PER_FILE (3), so a bigger k buys more DISTINCT
+	// FILES rather than more chunks of the same one. That is exactly what the
+	// "relate at least two sources" rule in parseAndValidate needs in order to
+	// be satisfiable, and why maps used to collapse onto a single note.
 	const { chunks, narrowScope } = await retrieve(v, query, {
 		domains: input.domains,
 		includedPaths: input.includedPaths,
-		k: 12
+		k: 16
 	});
 	if (chunks.length === 0) {
 		throw new NoSourcesError(narrowScope);
 	}
 
-	const validPaths = new Set(chunks.map((c) => c.path));
+	// Short id per chunk (S1, S2, ...) instead of a path for the model to copy
+	// — see mindmap-schema.ts's doc comment. heading_path stays visible in the
+	// context because it is useful grounding, but the model never echoes it.
+	const idToChunk = new Map<string, CitedChunk>(
+		chunks.map((c, i) => [`S${i + 1}`, { path: c.path, heading_path: c.heading_path }])
+	);
 	const contextBlock = chunks
 		.map(
-			(c) =>
-				`source_path: ${c.path}\nheading_path: ${c.heading_path}\ndepth: ${c.depth}\n\n${c.display_text}`
+			(c, i) =>
+				`id: S${i + 1}\nsource_path: ${c.path}\nheading_path: ${c.heading_path}\ndepth: ${c.depth}\n\n${c.display_text}`
 		)
 		.join('\n\n---\n\n');
 	const userSkillsBlock = await renderUserSkillsBlock('mindmap');
 	const systemPrompt = buildSystemPrompt(contextBlock, userSkillsBlock);
+	const format = buildMindMapNodesJsonSchema([...idToChunk.keys()]);
 
 	onProgress?.('generating');
-	let raw = await callModel(input.model, systemPrompt, input.prompt, input.provider, (ms) =>
+	let raw = await callModel(input.model, systemPrompt, input.prompt, format, input.provider, (ms) =>
 		onProgress?.('generating', ms)
 	);
 
 	onProgress?.('validating');
-	let parsed = parseAndValidate(raw, validPaths);
+	let parsed = parseAndValidateMindMap(raw, idToChunk);
 
 	const MAX_RETRIES = 2;
 	for (let attempt = 0; !parsed.ok && attempt < MAX_RETRIES; attempt++) {
 		onProgress?.('retrying');
-		const retryPrompt = `${input.prompt}\n\nÖnceki cevabın geçersizdi: ${parsed.error}\nSADECE geçerli JSON döndür. source_path, kullandığın kaynak parçasının EN ÜSTÜNDEKİ source_path etiketiyle birebir aynı olmalı.`;
-		raw = await callModel(input.model, systemPrompt, retryPrompt, input.provider, (ms) =>
+		const retryPrompt = `${input.prompt}\n\nÖnceki cevabın geçersizdi: ${parsed.error}\nSADECE geçerli JSON döndür.`;
+		raw = await callModel(input.model, systemPrompt, retryPrompt, format, input.provider, (ms) =>
 			onProgress?.('retrying', ms)
 		);
-		parsed = parseAndValidate(raw, validPaths);
+		parsed = parseAndValidateMindMap(raw, idToChunk);
 	}
 
 	if (!parsed.ok) {

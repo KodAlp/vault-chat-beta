@@ -46,9 +46,11 @@
 			]);
 			const tree = buildTree(mindmap.title, nodes);
 			const vaultId = data.vaultId ?? '';
-			// Only cited nodes (sourcePath set) get a link — the synthesized
-			// structural ancestors buildTree() fills in (see its doc comment)
-			// have nothing to navigate to and stay plain text.
+			// Every node gets a link: buildTree() backfills the synthesized
+			// structural ancestors from their first cited descendant (see its
+			// doc comment), so a branch label is no longer the one thing in the
+			// map that silently does nothing when clicked. The null branch is
+			// kept because the type allows it, not because it is expected.
 			const outline = treeToMarkdownOutline(tree, (node) =>
 				node.sourcePath ? libraryViewerUrl(node.sourcePath, vaultId) : null
 			);
