@@ -1,6 +1,30 @@
 import type { RetrievedChunk, RetrieveResult } from '$lib/types';
 
-const DISTANCE_THRESHOLD = 0.55;
+/**
+ * Coarse floor, NOT a relevance filter — measured, not guessed, and the
+ * measurement is the point of this comment.
+ *
+ * Against the real index under bge-m3, cosine distances for genuinely
+ * correct results ran 0.353-0.567 (worst: a thin math query), while results
+ * from the wrong domain for the same queries ran 0.360-0.562. Those ranges
+ * overlap almost completely, so no threshold can tell relevant from
+ * irrelevant here; ranking does that job, not this constant. Deliberately
+ * out-of-scope queries (French cuisine, Ottoman poetry, football) bottomed
+ * out at 0.550-0.620, which is the only thing this value can usefully cut.
+ *
+ * Raised from 0.55, which was calibrated for nomic-embed-text: under bge-m3
+ * that value sat INSIDE the band of correct results and would have returned
+ * "kaynak bulunamadı" for every math question (correct matches at 0.551+).
+ * 0.60 keeps every genuine match observed with headroom and still drops the
+ * clearly-unrelated tail (0.605+). Note what it does not do: a nonsense
+ * query can still come back with something, because its best match (0.550)
+ * is closer than a real math answer. The guarantee that survives is the one
+ * that matters — the model can only cite chunks retrieval actually returned
+ * (see the generators' source_id validation), never invent a path.
+ *
+ * Changing EMBED_MODEL invalidates this number; re-measure before touching it.
+ */
+const DISTANCE_THRESHOLD = 0.6;
 const MAX_CHUNKS_PER_FILE = 3;
 const DEFAULT_K = 8;
 
