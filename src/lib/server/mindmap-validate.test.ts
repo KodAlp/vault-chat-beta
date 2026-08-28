@@ -51,15 +51,46 @@ test('an invented source_id is rejected', () => {
 	assert.match(r.error, /source_id/);
 });
 
-test('a citation id leaking into path is rejected', () => {
-	// The regression that showed up the first time the id-based schema ran:
-	// path: ["S4", "ZooKeeper's Architecture"].
+test('a citation id leaking into path is stripped, not rejected', () => {
+	// Seen in real output twice: path: ["S4", "ZooKeeper's Architecture"].
+	// Rejecting it burned the whole retry budget and produced no map at all,
+	// so the id label — which carries no information — is simply removed.
 	const nodes = goodNodes();
 	nodes[2].path = ['S3', 'Sanal çalışma zamanı'];
 	const r = parseAndValidateMindMap(raw(nodes), chunks);
+	assert.equal(r.ok, true);
+	if (!r.ok) return;
+	assert.deepEqual(r.nodes[2].path, ['Sanal çalışma zamanı']);
+	// Every other node is untouched.
+	assert.deepEqual(r.nodes[0].path, ['Zamanlama politikaları', 'Geri besleme kuyruğu']);
+});
+
+test('a node left with nothing but an id is dropped', () => {
+	// Seven to start with, so losing one still clears the node floor — a drop
+	// that takes the map under it is a legitimate rejection, covered below.
+	const nodes = [...goodNodes(), { path: ['S1'], source_id: 'S1' }];
+	const r = parseAndValidateMindMap(raw(nodes), chunks);
+	assert.equal(r.ok, true);
+	if (!r.ok) return;
+	assert.equal(r.nodes.length, 6);
+	assert.ok(!r.nodes.some((n) => n.path.includes('S1')));
+});
+
+test('dropping id-only nodes can legitimately push a map under the floor', () => {
+	const nodes = goodNodes();
+	nodes[0].path = ['S1'];
+	const r = parseAndValidateMindMap(raw(nodes), chunks);
 	assert.equal(r.ok, false);
 	if (r.ok) return;
-	assert.match(r.error, /kimli/);
+	assert.match(r.error, /düğüm içeriyor/);
+});
+
+test('a response that is nothing but ids is still rejected', () => {
+	const nodes = goodNodes().map((n, i) => ({ ...n, path: [`S${i + 1}`] }));
+	const r = parseAndValidateMindMap(raw(nodes), chunks);
+	assert.equal(r.ok, false);
+	if (r.ok) return;
+	assert.match(r.error, /kimlik/);
 });
 
 test('a map whose labels mostly copy the source headings is rejected', () => {
