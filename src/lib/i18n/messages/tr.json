@@ -1,0 +1,508 @@
+{
+	"Common": {
+		"sil": "Sil",
+		"vazgec": "Vazgeç",
+		"iptal": "İptal",
+		"kapat": "Kapat",
+		"kaydet": "Kaydet",
+		"kaydediliyor": "Kaydediliyor...",
+		"kaydedilemedi": "Kaydedilemedi.",
+		"ayarlar": "Ayarlar",
+		"anaSayfa": "Ana sayfa",
+		"yukleniyor": "Yükleniyor...",
+		"obsidiandaAc": "Obsidian'da aç",
+		"bilinmeyenHata": "Bilinmeyen hata",
+		"buIslemGeriAlinamaz": "Bu işlem geri alınamaz.",
+		"istekBasarisiz": "İstek başarısız ({status})",
+		"kutuphaneYuklenemedi": "Kütüphane yüklenemedi."
+	},
+
+	"Chat": {
+		"modelSelectTitle": "Bu konuşma için model/sağlayıcı seçimi",
+		"modelSrLabel": "Model",
+		"thinkModeTitle": "Açıkken muhakeme modeli önce akıl yürütür (yavaş ama daha derin), süreç sohbette görünür. Kapalıyken hızlı model kullanılır.",
+		"thinkModeLabel": "Derin düşün",
+		"emptyStateTitle": "Kasandaki notlar hakkında bir soru sor",
+		"emptyStateSubtitle": "Cevaplar yalnızca seçtiğin kaynaklara dayanır.",
+		"emptyStateBrowseSources": "Kaynaklara göz at",
+		"scrollToBottom": "en sona in",
+		"inputPlaceholder": "Soru yaz... (Enter: gönder, Shift+Enter: yeni satır)",
+		"stop": "Durdur",
+		"send": "Gönder",
+		"chatLoadError": "Konuşma yüklenemedi"
+	},
+
+	"Message": {
+		"narrowScope": "Seçili kaynaklarda bulunamadı.",
+		"expandScope": "Kapsamı genişlet?"
+	},
+
+	"ChatBubble": {
+		"interrupted": "Durduruldu"
+	},
+
+	"FallbackNotice": {
+		"badge": "sistem"
+	},
+
+	"ThinkingPanel": {
+		"streamingSummary": "düşünüyor… ~{tokens} token",
+		"doneSummary": "Düşünme süreci (~{tokens} token)",
+		"hedgeBadgeTitle": "Belirsizlik ifadeleri: {hedges}",
+		"hedgeBadge": "⚠ {count} belirsizlik ifadesi"
+	},
+
+	"SourceChip": {
+		"chunkCount": "×{count} bölüm"
+	},
+
+	"ScopeIndicator": {
+		"goToSourceTree": "Kaynak ağacına git",
+		"partialScope": "{selected}/{total} kaynak aktif",
+		"zeroScope": "0/{total} kaynak aktif",
+		"allSources": "tüm kaynaklar"
+	},
+
+	"ExportMenu": {
+		"exportTitle": "Dışa aktar",
+		"markdown": "Markdown (.md)",
+		"json": "JSON (.json)",
+		"chatNotSavedYet": "Konuşma henüz kaydedilmedi.",
+		"downloadFailedWithStatus": "İndirilemedi ({status})",
+		"downloadFailed": "İndirilemedi"
+	},
+
+	"GenerationDialog": {
+		"domainLabel": "Domain (opsiyonel)",
+		"allDomains": "Tüm domainler",
+		"useChatContext": "Bu konuşmayı bağlam olarak kullan",
+		"generate": "Oluştur"
+	},
+
+	"GenerationStatusToast": {
+		"defaultGeneratingLabel": "İşleniyor...",
+		"elapsedSuffix": " · {seconds}sn",
+		"expandScope": "Kapsamı genişlet?",
+		"dismiss": "Kapat"
+	},
+
+	"QuizDialog": {
+		"label": "Test",
+		"dialogTitle": "Test Oluştur",
+		"promptLabel": "Ne tür bir test istiyorsun?",
+		"promptPlaceholder": "örn. Türev ve limit kavramları üzerine orta zorlukta bir test",
+		"multipleChoice": "Çoktan seçmeli",
+		"trueFalse": "Doğru/Yanlış",
+		"openEnded": "Açık uçlu"
+	},
+
+	"CardsDialog": {
+		"label": "Kartlar",
+		"dialogTitle": "Bilgi Kartları",
+		"promptLabel": "Ne konuda kart istiyorsun?",
+		"promptPlaceholder": "örn. Türev ve limit kavramları üzerine bilgi kartları",
+		"review": "İncele ({dueCount} kart bekliyor)",
+		"cardCount": "Kart sayısı"
+	},
+
+	"ReportDialog": {
+		"label": "Rapor",
+		"dialogTitle": "Rapor Oluştur",
+		"promptLabel": "Rapor hangi konuda olsun?",
+		"promptPlaceholder": "örn. SvelteKit'te routing ve form action'ların nasıl çalıştığına dair kapsamlı bir rapor"
+	},
+
+	"MindMapDialog": {
+		"label": "Harita",
+		"dialogTitle": "Zihin Haritası Oluştur",
+		"promptLabel": "Hangi konunun haritası çıkarılsın?",
+		"promptPlaceholder": "örn. SvelteKit routing sisteminin zihin haritası"
+	},
+
+	"SlidesDialog": {
+		"label": "Slayt",
+		"dialogTitle": "Slayt Oluştur",
+		"promptLabel": "Sunum hangi konuda olsun?",
+		"promptPlaceholder": "örn. Kernel mimarileri hakkında kısa bir sunum"
+	},
+
+	"StudyPanel": {
+		"title": "Çalışma Paneli",
+		"quiz": "Test",
+		"cards": "Kartlar",
+		"report": "Rapor",
+		"mindmap": "Harita",
+		"slides": "Slayt",
+		"new": "Yeni",
+		"dueBadge": "{count} bekliyor",
+		"review": "İncele",
+		"deleteConfirmTitle": "\"{title}\" silinsin mi?"
+	},
+
+	"GenerationLayout": {
+		"stageRetrieving": "Kaynaklar aranıyor...",
+		"stageValidating": "Doğrulanıyor...",
+		"stageRetrying": "Doğrulama başarısız, tekrar deneniyor...",
+		"quizGenerating": "Sorular üretiliyor...",
+		"quizDone": "Test hazır — görüntülemek için tıkla",
+		"quizErrorPrefix": "Test oluşturulamadı: ",
+		"cardsGenerating": "Kartlar üretiliyor...",
+		"cardsDone": "Kartlar hazır — incelemek için tıkla",
+		"cardsErrorPrefix": "Kartlar oluşturulamadı: ",
+		"reportGenerating": "Rapor yazılıyor...",
+		"reportDone": "Rapor hazır — görüntülemek için tıkla",
+		"reportErrorPrefix": "Rapor oluşturulamadı: ",
+		"mindmapGenerating": "Harita çıkarılıyor...",
+		"mindmapDone": "Harita hazır — görüntülemek için tıkla",
+		"mindmapErrorPrefix": "Harita oluşturulamadı: ",
+		"slidesGenerating": "Slaytlar üretiliyor...",
+		"slidesDone": "Sunum hazır — görüntülemek için tıkla",
+		"slidesErrorPrefix": "Sunum oluşturulamadı: "
+	},
+
+	"OllamaStatusBanner": {
+		"authError": "Ollama kimlik doğrulama hatası verdi.",
+		"unreachable": "Ollama çalışmıyor — sohbet ve çalışma materyali üretimi şu anda kullanılamıyor.",
+		"checking": "Kontrol ediliyor...",
+		"retry": "Yeniden dene"
+	},
+
+	"ImportObsidianDialog": {
+		"trigger": "İçe Aktar",
+		"dialogTitle": "Obsidian Vault'unu İçe Aktar",
+		"dialogDescription": "Tek yönlü kopya — kaynak vault'una asla yazılmaz. Değişmemiş notlar yeniden içe aktarmada atlanır.",
+		"sourcePathLabel": "Kaynak vault yolu",
+		"sourcePathPlaceholder": "örn. C:\\Kullanıcılar\\...\\MyVault",
+		"start": "Başlat",
+		"scanning": "Taranıyor...",
+		"processingFile": "İşleniyor: {fileName}",
+		"filesProcessed": "{count} dosya işlendi...",
+		"statusConverted": "kopyalandı",
+		"statusSkipped": "atlandı",
+		"statusNeedsReview": "gözden geçirilmeli",
+		"statusFailed": "başarısız",
+		"importFailed": "İçe aktarma başarısız"
+	},
+
+	"LibraryTree": {
+		"loadError": "Kütüphane yüklenemedi.",
+		"empty": "Kütüphane boş. Bir belge yükle veya Ayarlar → Kütüphane'den Obsidian vault'unu içe aktar."
+	},
+
+	"LibraryTreeNode": {
+		"needsReview": "Gözden geçirme gerekiyor",
+		"rename": "Yeniden adlandır",
+		"deleteFolderTitle": "\"{name}\" klasörü silinsin mi?",
+		"deleteFileTitle": "\"{name}\" silinsin mi?",
+		"deleteFolderDescription": "Bu klasör ve içindeki her şey kalıcı olarak silinecek. Bu işlem geri alınamaz.",
+		"deleteFileDescription": "Bu dosya kalıcı olarak silinecek. Bu işlem geri alınamaz."
+	},
+
+	"UploadDialog": {
+		"trigger": "+ Yükle",
+		"dialogTitle": "Belge Yükle",
+		"sourceFile": "Dosya",
+		"sourceYoutube": "Video (YouTube)",
+		"fileLabel": "Dosya (DOCX / PPTX / XLSX / HTML / EPUB / basit PDF)",
+		"youtubeLabel": "YouTube bağlantısı",
+		"youtubePlaceholder": "https://www.youtube.com/watch?v=...",
+		"upload": "Yükle",
+		"stageQueued": "Sırada...",
+		"stageConverting": "Dönüştürülüyor...",
+		"stagePostprocessing": "İşleniyor...",
+		"stageFetching": "Altyazı indiriliyor...",
+		"stageParsing": "İşleniyor...",
+		"titleLabel": "Başlık",
+		"domainLabel": "Domain",
+		"domainPlaceholder": "örn. math",
+		"levelLabel": "Seviye",
+		"saveFailed": "Kaydedilemedi",
+		"uploadFailed": "Yükleme başarısız"
+	},
+
+	"SourceTree": {
+		"title": "Kaynaklar",
+		"selectAll": "tümü",
+		"selectNone": "hiçbiri",
+		"loadError": "Kütüphane yüklenemedi.",
+		"empty": "Kütüphane boş.",
+		"searchPlaceholder": "Kaynaklarda ara...",
+		"noMatch": "\"{query}\" ile eşleşen kaynak yok.",
+		"manage": "Kaynakları yönet",
+		"clearAllTitle": "Tüm kaynaklar kaldırılsın mı?",
+		"clearAllDescription": "Hiçbir kaynak seçili olmadan sorulan sorulara model kaynak gösteremeyecek. İstediğin zaman \"tümü\"ne dönebilirsin.",
+		"clearAllConfirm": "Kaldır"
+	},
+
+	"VaultChatPage": {
+		"expandPanel": "Paneli genişlet",
+		"collapsePanel": "Paneli daralt",
+		"backToChatList": "Sohbet listesine dön",
+		"vaultPicker": "Vault seçici",
+		"studyPanelTitle": "Çalışma Paneli",
+		"panelLabel": "Panel",
+		"unseenContent": "Yeni üretilmiş içerik var",
+		"profileComingSoon": "Profil (yakında)"
+	},
+
+	"HomePage": {
+		"title": "Vault Agent Toolkit",
+		"emptyTitle": "Henüz bir vault yok",
+		"emptyDescription": "Kasandaki notlarla sohbet edebilmek için önce bir vault oluştur — Obsidian kasanı bağlayınca içeriği burada aranabilir hale gelir.",
+		"newVault": "Yeni vault",
+		"newVaultDialogTitle": "Yeni vault",
+		"vaultNameLabel": "Vault adı",
+		"vaultNamePlaceholder": "örn. Elektronik",
+		"createFailed": "Vault oluşturulamadı.",
+		"create": "Oluştur",
+		"creating": "Oluşturuluyor..."
+	},
+
+	"VaultChatListPage": {
+		"backToVaults": "Vault'lar",
+		"loadError": "Geçmiş alınamadı",
+		"inputPlaceholder": "Bir soru yaz... (Enter: başlat, Shift+Enter: yeni satır)",
+		"start": "Başlat",
+		"noSourcesTitle": "Henüz kaynak yok",
+		"noSourcesDescription": "Sorularının kaynağa dayalı, gösterilebilir cevaplar alması için önce Obsidian kasandan not içe aktarman gerekiyor — aksi halde her soru \"kapsamda yok\" döner.",
+		"importSources": "Kaynakları içe aktar",
+		"untitled": "(başlıksız)",
+		"sourceCountBadge": "{count} kaynak",
+		"rename": "Yeniden adlandır",
+		"deleteChatTitle": "Sohbet silinsin mi?",
+		"deleteChatDescription": "Bu sohbet ve içindeki tüm mesajlar kalıcı olarak silinecek. Bu işlem geri alınamaz.",
+		"deleting": "Siliniyor..."
+	},
+
+	"LibraryViewPage": {
+		"missingPath": "path parametresi gerekli.",
+		"loadFailed": "Dosya yüklenemedi.",
+		"fallbackTitle": "Kaynak"
+	},
+
+	"SettingsPage": {
+		"themeTitle": "Tema",
+		"themeSystem": "Sistem",
+		"themeLight": "Açık",
+		"themeDark": "Koyu",
+		"modelsTitle": "Modeller",
+		"defaultModel": "Varsayılan model",
+		"defaultModelHint": "Başlık üretimi gibi arka plan işleri için",
+		"fastModel": "Hızlı model",
+		"fastModelHint": "\"Derin düşün\" kapalıyken kullanılır",
+		"reasoningModel": "Muhakeme modeli",
+		"reasoningModelHint": "\"Derin düşün\" açıkken kullanılır",
+		"installedModels": "Kurulu modeller",
+		"installedModelsHint": "Ollama'da yüklü modeller. Yeni model indirmek için aşağıdaki alanı kullan.",
+		"noInstalledModels": "Kurulu model yok.",
+		"modelListError": "Model listesi alınamadı — Ollama çalışıyor mu?",
+		"providerModelsError": "Sağlayıcı modelleri alınamadı.",
+		"deleteModel": "Modeli sil",
+		"deleteModelAria": "{name} modelini sil",
+		"deleteModelFailed": "\"{name}\" silinemedi.",
+		"pullStarting": "Başlatılıyor...",
+		"pullDone": "Tamamlandı",
+		"pullFailed": "İndirme başarısız",
+		"generationTitle": "Üretim",
+		"allowConcurrentGeneration": "Aynı anda birden fazla üretime izin ver",
+		"allowConcurrentGenerationHint": "Varsayılan olarak kapalı — test/kart/rapor/harita/slayt üretimi aynı türden yeni bir üretim başlatılmadan önce mevcut üretimin bitmesini bekler (zayıf donanımda hepsi birbirini yavaşlatmasın diye). Donanımınız yeterliyse açabilirsiniz.",
+		"desktopVaultTitle": "Masaüstü — Kasa Konumu",
+		"desktopVaultDescription": "Değişiklik bir sonraki uygulama başlatmasında etkili olur (sunucu şu an çalışırken kasa yolu değiştirilemez).",
+		"vaultFolder": "Kasa klasörü",
+		"vaultFolderPlaceholder": "Henüz seçilmedi",
+		"choose": "Seç…",
+		"obsidianVaultName": "Obsidian'da görünen vault adı",
+		"vaultSaved": "Kaydedildi — bir sonraki başlatmada uygulanır.",
+		"vaultSaveFailed": "Kaydedilemedi."
+	},
+
+	"LibrarySettingsPage": {
+		"importObsidianTitle": "Obsidian'dan İçe Aktar",
+		"importObsidianDescription": "Bir Obsidian vault'unu tek yönlü kopyalar (kaynağa asla yazılmaz). Wikilink'ler göreli markdown linklerine çevrilir, eklerin kopyaları alınır, eksik frontmatter alanları varsayılan değer + gözden geçirme rozeti alır.",
+		"uploadSettingsTitle": "Yükleme Ayarları",
+		"keepOriginals": "Dönüştürülen belgelerin orijinal dosyalarını sakla ({path})",
+		"allowedLanguages": "Sohbette izinli diller",
+		"allowedLanguagesPlaceholder": "Türkçe, Korece",
+		"allowedLanguagesHint": "İlk dil modelin birincil yanıt dili olur. Ek diller (dil öğrenme vault'ları gibi) yanıt içinde kullanılabilir ve sızıntı algılayıcı tarafından bozukluk sayılmaz.",
+		"hiddenFolders": "Sohbet ekranında gizli klasörler",
+		"hiddenFoldersPlaceholder": "raw, cards, frontier",
+		"hiddenFoldersHint": "Bu kök klasörler sohbetin kaynak ağacında hiç görünmez ve hiçbir üretime (sohbet, test, rapor, ...) kaynak olarak sunulmaz. Kütüphane Ağacı (aşağıda) bundan etkilenmez.",
+		"flattenFolders": "Sohbet ekranında düzleştirilecek klasörler",
+		"flattenFoldersPlaceholder": "wiki",
+		"flattenFoldersHint": "Bu kök klasörlerin kendisi gizlenir, altındaki klasörler doğrudan ağacın kökünde gösterilir. Yollar değişmez, sadece ağacın görünümü sadeleşir.",
+		"libraryTreeTitle": "Kütüphane Ağacı",
+		"libraryTreeDescription": "Belge yükle, yeniden adlandır veya sil. Sohbet ekranındaki kaynak ağacı (Faz 9) bunun yerine kapsam seçimi için ayrı, salt-görüntüleme bir kopyasını kullanır.",
+		"loadError": "Ayarlar alınamadı."
+	},
+
+	"ProvidersSettingsPage": {
+		"title": "Model Sağlayıcıları",
+		"intro": "Yerel Ollama'yı ve isteğe bağlı bulut sağlayıcıları (DeepSeek, OpenAI, ...) yönet. Anahtarlar sunucuda {path} içinde kalır, hiçbir zaman tarayıcıya gönderilmez.",
+		"loadError": "Sağlayıcı listesi alınamadı.",
+		"providersSectionTitle": "Sağlayıcılar",
+		"addProvider": "Sağlayıcı ekle",
+		"newProviderTitle": "Yeni sağlayıcı",
+		"nameLabel": "İsim",
+		"namePlaceholder": "örn. OpenAI",
+		"baseUrlLabel": "API uç noktası (base URL)",
+		"baseUrlPlaceholder": "örn. https://api.openai.com/v1",
+		"kindLabel": "API türü",
+		"kindOpenAICompat": "OpenAI-uyumlu",
+		"kindOpenAICompatFull": "OpenAI-uyumlu (OpenAI, Groq, OpenRouter, ...)",
+		"kindAnthropic": "Anthropic (Claude)",
+		"reasoningDialectLabel": "Muhakeme formatı",
+		"reasoningDialectReasoningContent": "reasoning_content (DeepSeek, Ollama)",
+		"reasoningDialectThinkTags": "think-tags (Qwen, Gemma inline)",
+		"reasoningDialectThinkTagsFull": "think-tags (Qwen, Gemma — inline)",
+		"reasoningDialectNone": "Yok",
+		"addProviderFailed": "Sağlayıcı eklenemedi",
+		"adding": "Ekleniyor...",
+		"add": "Ekle",
+		"local": "yerel",
+		"cloud": "bulut",
+		"keyConnected": "bağlı · {mask}",
+		"keyMissing": "anahtar yok",
+		"apiKeyPlaceholder": "API anahtarı",
+		"changeKey": "Anahtarı değiştir",
+		"addKey": "Anahtar ekle",
+		"removeKey": "Anahtarı sil",
+		"testConnection": "Bağlantıyı test et",
+		"testing": "Test ediliyor...",
+		"enabled": "Etkin",
+		"removeProviderTitle": "Sağlayıcıyı kaldır",
+		"removeProviderAria": "{label} sağlayıcısını kaldır",
+		"updateFailed": "\"{label}\" güncellenemedi.",
+		"keySaveFailed": "\"{label}\" anahtarı kaydedilemedi.",
+		"keyDeleteConfirmTitle": "\"{label}\" anahtarı silinsin mi?",
+		"keyDeleteConfirmDescription": "Bu sağlayıcı için kayıtlı API anahtarı kalıcı olarak silinecek.",
+		"keyDeleteFailed": "\"{label}\" anahtarı silinemedi.",
+		"providerDeleteConfirmTitle": "\"{label}\" sağlayıcısı kaldırılsın mı?",
+		"providerDeleteConfirmDescription": "Bu sağlayıcı ve kayıtlı API anahtarı kalıcı olarak silinecek. Görev zincirlerinden de çıkarılır.",
+		"providerDeleteFailed": "Sağlayıcı silinemedi.",
+		"chainSectionTitle": "Görev başına varsayılan zincir",
+		"chainSectionDescription": "Her görev tipi için sırayla denenecek sağlayıcılar. İlk sağlayıcı yanıt veremezse (ağ hatası, zaman aşımı) bir sonrakine geçilir — yanlış API anahtarı gibi kalıcı hatalarda geçiş yapılmaz.",
+		"chainUpdateFailed": "\"{taskType}\" zinciri güncellenemedi.",
+		"moveUp": "Yukarı taşı",
+		"moveDown": "Aşağı taşı",
+		"removeFromChain": "Kaldır",
+		"chainEmpty": "zincir boş",
+		"addToChainPlaceholder": "sağlayıcı ekle...",
+		"taskChat": "Sohbet",
+		"taskTitle": "Başlık üretimi",
+		"taskGrading": "Notlandırma",
+		"taskQuiz": "Test üretimi",
+		"taskFlashcards": "Bilgi kartı üretimi",
+		"taskReport": "Rapor üretimi",
+		"taskMindmap": "Zihin haritası üretimi",
+		"taskSlides": "Slayt üretimi",
+		"testOk": "Bağlantı OK",
+		"testUnreachable": "Ulaşılamıyor",
+		"testAuthError": "Kimlik doğrulama hatası"
+	},
+
+	"SkillsSettingsPage": {
+		"title": "Kullanıcı Skill'leri",
+		"intro": "{path} içine bıraktığın markdown dosyaları sohbet, test ve bilgi kartı üretimini özelleştirir. Matematik biçimi ve kaynak doğrulama kuralları her zaman en son uygulanır — bir skill bunları geçersiz kılamaz.",
+		"loadError": "Skill listesi alınamadı.",
+		"newSkill": "+ Yeni skill",
+		"preview": "Önizleme",
+		"scopeAll": "Tümü",
+		"scopeChat": "Sohbet",
+		"scopeQuiz": "Test",
+		"scopeFlashcards": "Kartlar",
+		"scopeMindmap": "Zihin haritası",
+		"scopeReport": "Rapor",
+		"scopeSlides": "Slayt",
+		"errorBadge": "hata",
+		"truncatedBadge": "kısaltıldı",
+		"enabledLabel": "Etkin",
+		"priorityLabel": "Öncelik",
+		"edit": "Düzenle",
+		"empty": "Henüz skill yok. \"_examples/\" klasöründeki örnekler devre dışı olarak geldi — düzenleyip etkinleştirebilirsin.",
+		"newSkillDialogTitle": "Yeni skill",
+		"nameLabel": "İsim (kebab-case)",
+		"namePlaceholder": "örn. math-notation",
+		"contentLabel": "İçerik (frontmatter + markdown)",
+		"nameRequired": "İsim gerekli.",
+		"previewDialogTitle": "Önizleme — {scope}",
+		"updateFailed": "\"{name}\" güncellenemedi.",
+		"loadSkillFailed": "\"{name}\" yüklenemedi.",
+		"deleteConfirm": "\"{name}\" silinsin mi?",
+		"deleteFailed": "\"{name}\" silinemedi.",
+		"previewFailed": "Önizleme alınamadı."
+	},
+
+	"VaultsSettingsPage": {
+		"title": "Vault'lar",
+		"intro": "Her vault kendi kaynak kütüphanesini ve arama indeksini tutar — birbirlerine karışmazlar. Sohbet geçmişi vault başına ayrılır, sohbet ekranı her zaman aktif vault üzerinde çalışır.",
+		"loadError": "Vault listesi alınamadı.",
+		"existingVaultsTitle": "Mevcut vault'lar",
+		"active": "aktif",
+		"activate": "Aktif yap",
+		"rename": "Yeniden adlandır",
+		"activateFailed": "Aktif vault değiştirilemedi.",
+		"renameFailed": "Yeniden adlandırılamadı.",
+		"newVaultTitle": "Yeni vault",
+		"vaultNamePlaceholder": "Vault adı",
+		"createFailed": "Vault oluşturulamadı.",
+		"vaultInfoFailed": "Vault bilgisi alınamadı.",
+		"deleteFailed": "Vault silinemedi.",
+		"deleteConfirmTitle": "\"{name}\" silinsin mi?",
+		"deleteConfirmWithChats": "Kütüphanesi, arama indeksi ve {chatCount} sohbet kalıcı olarak silinecek. Bu işlem geri alınamaz.",
+		"deleteConfirmNoChats": "Kütüphanesi, arama indeksi ve sohbet geçmişi (yok) kalıcı olarak silinecek. Bu işlem geri alınamaz.",
+		"remove": "Kaldır"
+	},
+
+	"CardsStudyPage": {
+		"title": "Bilgi Kartları",
+		"loadError": "Kartlar yüklenemedi.",
+		"empty": "Bugün tekrarlanacak kart yok.",
+		"done": "Bugün için bitti — {count} kart tekrar edildi.",
+		"reveal": "Cevabı göster",
+		"gradeAgain": "Tekrar",
+		"gradeHard": "Zor",
+		"gradeGood": "İyi",
+		"gradeEasy": "Kolay"
+	},
+
+	"QuizStudyPage": {
+		"defaultTitle": "Test",
+		"loadError": "Sınav yüklenemedi.",
+		"noQuestions": "Bu sınavda soru yok.",
+		"openAnswerPlaceholder": "Cevabını yaz...",
+		"true": "Doğru",
+		"false": "Yanlış",
+		"back": "Geri",
+		"next": "İleri",
+		"submitting": "Gönderiliyor...",
+		"finish": "Bitir",
+		"submitFailed": "Sınav gönderilemedi. Tekrar dene.",
+		"resultTitle": "Sonuç: {score}%",
+		"yourAnswer": "Cevabın: {answer}",
+		"emptyAnswer": "(boş)",
+		"correctAnswer": "Doğru cevap: {answer}",
+		"modelFeedback": "Model değerlendirmesi:"
+	},
+
+	"ReportStudyPage": {
+		"defaultTitle": "Rapor",
+		"loadError": "Rapor yüklenemedi.",
+		"noSections": "Bu raporda bölüm yok."
+	},
+
+	"SlidesStudyPage": {
+		"defaultTitle": "Sunum",
+		"loadError": "Sunum yüklenemedi.",
+		"noSlides": "Bu sunumda slayt yok.",
+		"renderFailed": "Slaytlar render edilemedi.",
+		"slideAria": "Slayt {index}",
+		"prev": "‹ Geri",
+		"next": "İleri ›"
+	},
+
+	"MindmapStudyPage": {
+		"noNodes": "Bu haritada düğüm yok.",
+		"loadFailed": "Zihin haritası yüklenemedi.",
+		"sourcesTitle": "Kaynaklar"
+	}
+}

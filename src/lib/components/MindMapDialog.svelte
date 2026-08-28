@@ -4,6 +4,7 @@
 	import type { MindMapGenerationRequest } from '$lib/types';
 	import GenerationDialog from './GenerationDialog.svelte';
 	import BrainIcon from '@lucide/svelte/icons/brain';
+	import { t } from '$lib/i18n/index.svelte';
 
 	let {
 		chatId,
@@ -39,10 +40,10 @@
 	{includedPaths}
 	bind:open
 	icon={BrainIcon}
-	label="Harita"
-	dialogTitle="Zihin Haritası Oluştur"
-	promptLabel="Hangi konunun haritası çıkarılsın?"
-	promptPlaceholder="örn. SvelteKit routing sisteminin zihin haritası"
+	label={t('MindMapDialog.label')}
+	dialogTitle={t('MindMapDialog.dialogTitle')}
+	promptLabel={t('MindMapDialog.promptLabel')}
+	promptPlaceholder={t('MindMapDialog.promptPlaceholder')}
 	disabled={alreadyGenerating}
 	onGenerate={generate}
 />

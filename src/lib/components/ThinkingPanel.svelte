@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { t } from '$lib/i18n/index.svelte';
+
 	let {
 		thinking,
 		streaming,
@@ -21,12 +23,14 @@
 	 getting fought by reactivity. Collapsed by default. -->
 <details class="thinking">
 	<summary>
-		{streaming ? `düşünüyor… ~${tokenLabel} token` : `Düşünme süreci (~${tokenLabel} token)`}
+		{streaming
+			? t('ThinkingPanel.streamingSummary', { tokens: tokenLabel })
+			: t('ThinkingPanel.doneSummary', { tokens: tokenLabel })}
 		{#if !streaming && hedges?.length}
 			<span
 				class="hedge-badge"
-				title={`Belirsizlik ifadeleri: ${hedges.join(', ')}`}
-			>⚠ {hedges.length} belirsizlik ifadesi</span
+				title={t('ThinkingPanel.hedgeBadgeTitle', { hedges: hedges.join(', ') })}
+			>{t('ThinkingPanel.hedgeBadge', { count: hedges.length })}</span
 			>
 		{/if}
 	</summary>

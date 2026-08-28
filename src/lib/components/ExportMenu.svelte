@@ -1,6 +1,7 @@
 <script lang="ts">
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import DownloadIcon from '@lucide/svelte/icons/download';
+	import { t } from '$lib/i18n/index.svelte';
 
 	let { chatId }: { chatId: string } = $props();
 	let errorMessage = $state('');
@@ -22,7 +23,11 @@
 		try {
 			const res = await fetch(`/api/chats/${chatId}/export?format=${format}`);
 			if (!res.ok) {
-				throw new Error(res.status === 404 ? 'Konuşma henüz kaydedilmedi.' : `İndirilemedi (${res.status})`);
+				throw new Error(
+					res.status === 404
+						? t('ExportMenu.chatNotSavedYet')
+						: t('ExportMenu.downloadFailedWithStatus', { status: res.status })
+				);
 			}
 			const blob = await res.blob();
 			const cd = res.headers.get('content-disposition') ?? '';
@@ -37,7 +42,7 @@
 			a.remove();
 			URL.revokeObjectURL(url);
 		} catch (err) {
-			errorMessage = err instanceof Error ? err.message : 'İndirilemedi';
+			errorMessage = err instanceof Error ? err.message : t('ExportMenu.downloadFailed');
 		}
 	}
 </script>
@@ -45,14 +50,14 @@
 <DropdownMenu.Root>
 	<DropdownMenu.Trigger
 		class="flex border-none bg-transparent p-1 -m-1 leading-none text-muted-foreground hover:text-primary focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-2"
-		title="Dışa aktar"
-		aria-label="Dışa aktar"
+		title={t('ExportMenu.exportTitle')}
+		aria-label={t('ExportMenu.exportTitle')}
 	>
 		<DownloadIcon size={17} aria-hidden="true" />
 	</DropdownMenu.Trigger>
 	<DropdownMenu.Content align="end">
-		<DropdownMenu.Item onSelect={() => download('md')}>Markdown (.md)</DropdownMenu.Item>
-		<DropdownMenu.Item onSelect={() => download('json')}>JSON (.json)</DropdownMenu.Item>
+		<DropdownMenu.Item onSelect={() => download('md')}>{t('ExportMenu.markdown')}</DropdownMenu.Item>
+		<DropdownMenu.Item onSelect={() => download('json')}>{t('ExportMenu.json')}</DropdownMenu.Item>
 	</DropdownMenu.Content>
 </DropdownMenu.Root>
 {#if errorMessage}

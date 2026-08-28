@@ -4,6 +4,7 @@
 	import type { ReportGenerationRequest } from '$lib/types';
 	import GenerationDialog from './GenerationDialog.svelte';
 	import FileTextIcon from '@lucide/svelte/icons/file-text';
+	import { t } from '$lib/i18n/index.svelte';
 
 	let {
 		chatId,
@@ -39,10 +40,10 @@
 	{includedPaths}
 	bind:open
 	icon={FileTextIcon}
-	label="Rapor"
-	dialogTitle="Rapor Oluştur"
-	promptLabel="Rapor hangi konuda olsun?"
-	promptPlaceholder="örn. SvelteKit'te routing ve form action'ların nasıl çalıştığına dair kapsamlı bir rapor"
+	label={t('ReportDialog.label')}
+	dialogTitle={t('ReportDialog.dialogTitle')}
+	promptLabel={t('ReportDialog.promptLabel')}
+	promptPlaceholder={t('ReportDialog.promptPlaceholder')}
 	disabled={alreadyGenerating}
 	onGenerate={generate}
 />

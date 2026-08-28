@@ -6,6 +6,7 @@
 	import FallbackNotice from './FallbackNotice.svelte';
 	import ThinkingPanel from './ThinkingPanel.svelte';
 	import { Button } from '$lib/components/ui/button';
+	import { t } from '$lib/i18n/index.svelte';
 
 	let {
 		message,
@@ -70,9 +71,9 @@
 	{/if}
 	{#if message.role === 'assistant' && message.narrowScope && !streaming}
 		<p class="narrow-scope">
-			Seçili kaynaklarda bulunamadı.
+			{t('Message.narrowScope')}
 			{#if onExpandScope}
-				<Button variant="link" class="h-auto p-0 text-xs" onclick={onExpandScope}>Kapsamı genişlet?</Button>
+				<Button variant="link" class="h-auto p-0 text-xs" onclick={onExpandScope}>{t('Message.expandScope')}</Button>
 			{/if}
 		</p>
 	{/if}

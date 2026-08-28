@@ -5,6 +5,7 @@
 	import GenerationDialog from './GenerationDialog.svelte';
 	import { Input } from '$lib/components/ui/input';
 	import FileQuestionIcon from '@lucide/svelte/icons/file-question';
+	import { t } from '$lib/i18n/index.svelte';
 
 	let {
 		chatId,
@@ -60,10 +61,10 @@
 	{includedPaths}
 	bind:open
 	icon={FileQuestionIcon}
-	label="Test"
-	dialogTitle="Test Oluştur"
-	promptLabel="Ne tür bir test istiyorsun?"
-	promptPlaceholder="örn. Türev ve limit kavramları üzerine orta zorlukta bir test"
+	label={t('QuizDialog.label')}
+	dialogTitle={t('QuizDialog.dialogTitle')}
+	promptLabel={t('QuizDialog.promptLabel')}
+	promptPlaceholder={t('QuizDialog.promptPlaceholder')}
 	disabled={alreadyGenerating}
 	canGenerate={mc + tf + openCount > 0}
 	onGenerate={generate}
@@ -71,15 +72,15 @@
 	{#snippet extraFields()}
 		<div class="flex gap-3">
 			<label class="flex flex-1 flex-col gap-1 text-xs">
-				Çoktan seçmeli
+				{t('QuizDialog.multipleChoice')}
 				<Input type="number" min="0" max="20" bind:value={mc} onblur={() => (mc = clampCount(mc))} class="h-8" />
 			</label>
 			<label class="flex flex-1 flex-col gap-1 text-xs">
-				Doğru/Yanlış
+				{t('QuizDialog.trueFalse')}
 				<Input type="number" min="0" max="20" bind:value={tf} onblur={() => (tf = clampCount(tf))} class="h-8" />
 			</label>
 			<label class="flex flex-1 flex-col gap-1 text-xs">
-				Açık uçlu
+				{t('QuizDialog.openEnded')}
 				<Input
 					type="number"
 					min="0"

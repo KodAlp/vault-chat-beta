@@ -7,6 +7,7 @@
 	import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';
 	import SearchIcon from '@lucide/svelte/icons/search';
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
+	import { t } from '$lib/i18n/index.svelte';
 
 	/**
 	 * Selection-focused sibling to LibraryTree (which stays the CRUD/navigation
@@ -79,7 +80,7 @@
 			if (!res.ok) throw new Error();
 			tree = ((await res.json()) as { tree: LibraryNode[] }).tree;
 		} catch {
-			loadError = 'Kütüphane yüklenemedi.';
+			loadError = t('SourceTree.loadError');
 		}
 		try {
 			const res = await fetch(`/api/library/settings?vault=${encodeURIComponent(vaultId)}`);
@@ -117,25 +118,25 @@
 
 <div class="source-tree" class:flash={flashing} bind:this={rootEl}>
 	<div class="header">
-		<span class="title">Kaynaklar</span>
+		<span class="title">{t('SourceTree.title')}</span>
 		<div class="quick-actions">
-			<Button variant="ghost" size="sm" class="h-6 px-1.5 text-[0.7rem]" onclick={selectAll}>tümü</Button>
-			<Button variant="ghost" size="sm" class="h-6 px-1.5 text-[0.7rem]" onclick={selectNone}>hiçbiri</Button>
+			<Button variant="ghost" size="sm" class="h-6 px-1.5 text-[0.7rem]" onclick={selectAll}>{t('SourceTree.selectAll')}</Button>
+			<Button variant="ghost" size="sm" class="h-6 px-1.5 text-[0.7rem]" onclick={selectNone}>{t('SourceTree.selectNone')}</Button>
 		</div>
 	</div>
 
 	{#if loadError}
 		<p class="error" role="alert">{loadError}</p>
 	{:else if tree.length === 0}
-		<p class="empty">Kütüphane boş.</p>
+		<p class="empty">{t('SourceTree.empty')}</p>
 	{:else}
 		<label class="filter">
 			<SearchIcon size={13} aria-hidden="true" />
 			<input
 				type="text"
-				placeholder="Kaynaklarda ara..."
+				placeholder={t('SourceTree.searchPlaceholder')}
 				bind:value={filterQuery}
-				aria-label="Kaynaklarda ara"
+				aria-label={t('SourceTree.searchPlaceholder')}
 			/>
 		</label>
 		{#if hasMatch}
@@ -145,25 +146,24 @@
 				{/each}
 			</div>
 		{:else}
-			<p class="empty">"{filterQuery}" ile eşleşen kaynak yok.</p>
+			<p class="empty">{t('SourceTree.noMatch', { query: filterQuery })}</p>
 		{/if}
 	{/if}
 
-	<a class="manage-link" href="/settings/library">Kaynakları yönet <ArrowRightIcon size={13} aria-hidden="true" /></a>
+	<a class="manage-link" href="/settings/library">{t('SourceTree.manage')} <ArrowRightIcon size={13} aria-hidden="true" /></a>
 </div>
 
 <AlertDialog.Root bind:open={confirmingNone}>
 	<AlertDialog.Content>
 		<AlertDialog.Header>
-			<AlertDialog.Title>Tüm kaynaklar kaldırılsın mı?</AlertDialog.Title>
+			<AlertDialog.Title>{t('SourceTree.clearAllTitle')}</AlertDialog.Title>
 			<AlertDialog.Description>
-				Hiçbir kaynak seçili olmadan sorulan sorulara model kaynak gösteremeyecek. İstediğin
-				zaman "tümü"ne dönebilirsin.
+				{t('SourceTree.clearAllDescription')}
 			</AlertDialog.Description>
 		</AlertDialog.Header>
 		<AlertDialog.Footer>
-			<AlertDialog.Cancel>Vazgeç</AlertDialog.Cancel>
-			<AlertDialog.Action onclick={confirmSelectNone}>Kaldır</AlertDialog.Action>
+			<AlertDialog.Cancel>{t('Common.vazgec')}</AlertDialog.Cancel>
+			<AlertDialog.Action onclick={confirmSelectNone}>{t('SourceTree.clearAllConfirm')}</AlertDialog.Action>
 		</AlertDialog.Footer>
 	</AlertDialog.Content>
 </AlertDialog.Root>

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Badge } from '$lib/components/ui/badge';
+	import { t } from '$lib/i18n/index.svelte';
 
 	/** Restyle of Message.svelte's old bare `<p class="notice">` — see the
 	 * model-provider skill's fallback policy for when `type: 'notice'`
@@ -11,7 +12,7 @@
 </script>
 
 <p class="fallback-notice">
-	<Badge variant="outline" class="px-1.5 text-[0.6875rem] font-normal">sistem</Badge>
+	<Badge variant="outline" class="px-1.5 text-[0.6875rem] font-normal">{t('FallbackNotice.badge')}</Badge>
 	{message}
 </p>
 
