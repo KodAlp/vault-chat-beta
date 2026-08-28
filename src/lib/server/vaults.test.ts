@@ -11,7 +11,9 @@ import {
 	getActiveVaultId,
 	resolveVault,
 	hasAnyVault,
-	contextFor
+	contextFor,
+	markVaultUsed,
+	setActiveVault
 } from './vaults';
 
 /**
@@ -101,5 +103,39 @@ test('vault registry', async (t) => {
 		assert.equal(hasAnyVault(), false);
 		createVault('Bir Şey');
 		assert.equal(hasAnyVault(), true);
+	});
+
+	await t.test('markVaultUsed sets active id and lastOpenedAt in one write', () => {
+		useTmpDataDir();
+		const first = createVault('İlk');
+		const second = createVault('İkinci');
+		setActiveVault(first.id);
+
+		const before = listVaults().find((v) => v.id === second.id)!.lastOpenedAt;
+		markVaultUsed(second.id);
+
+		assert.equal(getActiveVaultId(), second.id);
+		const after = listVaults().find((v) => v.id === second.id)!.lastOpenedAt;
+		assert.notEqual(after, before);
+		// The other vault is left alone — this marks one vault as used, it does
+		// not rewrite the rest of the registry.
+		assert.equal(
+			listVaults().find((v) => v.id === first.id)!.name,
+			'İlk'
+		);
+	});
+
+	await t.test('markVaultUsed rejects an unknown vault instead of silently doing nothing', () => {
+		useTmpDataDir();
+		createVault('Var Olan');
+		assert.throws(() => markVaultUsed('yok-boyle-bir-vault'));
+	});
+
+	await t.test('writeRegistry leaves no .tmp file behind on success', () => {
+		useTmpDataDir();
+		const v = createVault('Temiz');
+		markVaultUsed(v.id);
+		const strays = fs.readdirSync(process.env.DATA_DIR!).filter((f) => f.endsWith('.tmp'));
+		assert.deepEqual(strays, []);
 	});
 });
