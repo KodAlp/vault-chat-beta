@@ -9,7 +9,11 @@ const META_DIR = '_meta';
 const DEFAULT_SETTINGS: LibrarySettings = {
 	keepOriginals: false,
 	allowedLanguages: ['Türkçe'],
-	hiddenFolders: ['raw', 'cards', 'frontier', 'notes'],
+	// Path prefixes, not just root names (see sourceTree.ts applyDisplayRules
+	// and select-chunks.ts isExcluded — both use "exact or subpath"). wiki/_index
+	// is the MOC/navigation layer: link lists, not study content, so it belongs
+	// with cards/ and frontier/ rather than in front of the user as a source.
+	hiddenFolders: ['raw', 'cards', 'frontier', 'notes', 'wiki/_index'],
 	flattenFolders: ['wiki']
 };
 

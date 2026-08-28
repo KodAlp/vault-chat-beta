@@ -82,6 +82,7 @@ const displayTree: LibraryNode[] = [
 		path: 'wiki',
 		type: 'folder',
 		children: [
+			{ name: '_index', path: 'wiki/_index', type: 'folder', children: [] },
 			{ name: 'math', path: 'wiki/math', type: 'folder', children: [] },
 			{ name: 'dsa', path: 'wiki/dsa', type: 'folder', children: [] }
 		]
@@ -96,17 +97,50 @@ test('applyDisplayRules drops hidden root folders entirely', () => {
 
 test('applyDisplayRules replaces a flattened root folder with its children, paths untouched', () => {
 	const out = applyDisplayRules(displayTree, { hiddenFolders: [], flattenFolders: ['wiki'] });
-	assert.deepEqual(out.map((n) => n.name), ['cards', 'math', 'dsa', 'notes.md']);
+	assert.deepEqual(out.map((n) => n.name), ['cards', '_index', 'math', 'dsa', 'notes.md']);
 	const math = out.find((n) => n.name === 'math');
 	assert.equal(math?.path, 'wiki/math'); // the child's own path is unchanged — only the tree shape moved
 });
 
 test('applyDisplayRules combines hiding and flattening, leaves files and unlisted folders alone', () => {
 	const out = applyDisplayRules(displayTree, { hiddenFolders: ['cards'], flattenFolders: ['wiki'] });
-	assert.deepEqual(out.map((n) => n.name), ['math', 'dsa', 'notes.md']);
+	assert.deepEqual(out.map((n) => n.name), ['_index', 'math', 'dsa', 'notes.md']);
 });
 
 test('applyDisplayRules is a no-op when both rule lists are empty', () => {
 	const out = applyDisplayRules(displayTree, { hiddenFolders: [], flattenFolders: [] });
 	assert.deepEqual(out.map((n) => n.name), ['cards', 'wiki', 'notes.md']);
+});
+
+// Regression: flattening used to splice a folder's children into the root
+// without ever offering them to the hidden check, so a nested bookkeeping
+// folder (wiki/_index — the MOC layer) was unreachable by hiddenFolders no
+// matter what it contained.
+test('applyDisplayRules hides children of a flattened folder too', () => {
+	const out = applyDisplayRules(displayTree, {
+		hiddenFolders: ['wiki/_index'],
+		flattenFolders: ['wiki']
+	});
+	assert.deepEqual(out.map((n) => n.name), ['cards', 'math', 'dsa', 'notes.md']);
+});
+
+test('applyDisplayRules matches hiddenFolders as path prefixes, not just names', () => {
+	// "wiki" alone hides the whole subtree; a bare root name still works too.
+	assert.deepEqual(
+		applyDisplayRules(displayTree, { hiddenFolders: ['wiki'], flattenFolders: [] }).map((n) => n.name),
+		['cards', 'notes.md']
+	);
+	// A name that is NOT a real path prefix must not match anything.
+	assert.deepEqual(
+		applyDisplayRules(displayTree, { hiddenFolders: ['_index'], flattenFolders: ['wiki'] }).map((n) => n.name),
+		['cards', '_index', 'math', 'dsa', 'notes.md']
+	);
+});
+
+test('applyDisplayRules applies the shipped defaults to a real vault root', () => {
+	const out = applyDisplayRules(displayTree, {
+		hiddenFolders: ['raw', 'cards', 'frontier', 'notes', 'wiki/_index'],
+		flattenFolders: ['wiki']
+	});
+	assert.deepEqual(out.map((n) => n.name), ['math', 'dsa', 'notes.md']);
 });

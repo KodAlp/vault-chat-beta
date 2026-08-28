@@ -104,7 +104,7 @@ test('readLibraryFile rejects a traversal attempt instead of reading the file', 
 test('getLibrarySettings returns defaults (fail-open) when no settings.json exists', () => {
 	const v = tmpVault();
 	const settings = getLibrarySettings(v);
-	assert.deepEqual(settings.hiddenFolders, ['raw', 'cards', 'frontier', 'notes']);
+	assert.deepEqual(settings.hiddenFolders, ['raw', 'cards', 'frontier', 'notes', 'wiki/_index']);
 	assert.deepEqual(settings.flattenFolders, ['wiki']);
 	assert.deepEqual(settings.allowedLanguages, ['Türkçe']);
 });
