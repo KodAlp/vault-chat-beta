@@ -2,21 +2,37 @@ import type { LibraryNode } from './types';
 
 /**
  * Reshapes the root of the tree per the vault's LibrarySettings
- * (hiddenFolders/flattenFolders, see library.ts's DEFAULT_SETTINGS) —
+ * (hiddenFolders/flattenFolders, see library-read.ts's DEFAULT_SETTINGS) —
  * SourceTree.svelte's view-only concern, deliberately NOT applied to
  * LibraryTree.svelte's management view at /settings/library (that one
  * must keep showing everything, including the folders being hidden here).
- * Root-level only, one level deep: a flattened folder's own children are
- * spliced into the root as-is, not recursively re-flattened — matches the
- * shape of the one real case this exists for (wiki/<domain>/... one level
- * under a single bookkeeping wrapper). Paths are untouched either way;
- * this only changes what the tree looks like, never what toggleNode/
- * collectFilePaths/toIncludedPaths operate on. */
+ *
+ * hiddenFolders entries are matched as PATH prefixes ("exact or subpath"),
+ * the same semantics select-chunks.ts's isExcluded() already uses for the
+ * very same setting — so one entry like "wiki/_index" now means the same
+ * thing on both the display side and the retrieval side. Matching on
+ * node.name instead (the original behaviour) could only ever address
+ * root-level folders, which is why a nested one like wiki/_index was
+ * unreachable. Bare names still work: "cards"/"raw"/"frontier" are root
+ * folders whose path equals their name.
+ *
+ * Hiding is applied to a flattened folder's children too. Without that,
+ * flattening was a hole straight through the filter: wiki/_index got
+ * spliced into the root by flattenFolders: ['wiki'] having never been
+ * offered to the hidden check at all.
+ *
+ * Still one level deep by design — a flattened folder's children are
+ * spliced into the root as-is, not recursively re-flattened; that matches
+ * the one real case this exists for (wiki/<domain>/... under a single
+ * bookkeeping wrapper). Paths are untouched either way; this only changes
+ * what the tree looks like, never what toggleNode/collectFilePaths/
+ * toIncludedPaths operate on. */
 export function applyDisplayRules(
 	nodes: LibraryNode[],
 	rules: { hiddenFolders: string[]; flattenFolders: string[] }
 ): LibraryNode[] {
-	const hidden = new Set(rules.hiddenFolders);
+	const isHidden = (node: LibraryNode) =>
+		rules.hiddenFolders.some((h) => node.path === h || node.path.startsWith(`${h}/`));
 	const flatten = new Set(rules.flattenFolders);
 	const out: LibraryNode[] = [];
 	for (const node of nodes) {
@@ -24,9 +40,9 @@ export function applyDisplayRules(
 			out.push(node);
 			continue;
 		}
-		if (hidden.has(node.name)) continue;
-		if (flatten.has(node.name)) {
-			out.push(...(node.children ?? []));
+		if (isHidden(node)) continue;
+		if (flatten.has(node.name) || flatten.has(node.path)) {
+			out.push(...(node.children ?? []).filter((child) => !isHidden(child)));
 			continue;
 		}
 		out.push(node);
