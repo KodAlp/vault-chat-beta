@@ -484,6 +484,18 @@
 		cursor: pointer;
 	}
 
+	/* The option list is drawn by the browser, not by this stylesheet: it does
+	   NOT inherit .model-pill's background, but Chromium DOES pull `color`
+	   down into it. With the select transparent and color:inherit, that meant
+	   the pill's light-on-dark text landed on the popup's own light surface —
+	   the "white combobox, nothing readable" report. color-scheme in
+	   tokens.css makes the UA paint that surface with the right theme; these
+	   two declarations stop the text from being inherited onto it regardless
+	   of what the UA chooses. Both are needed — neither alone is enough. */
+	.model-pill option {
+		background-color: var(--color-popover);
+		color: var(--color-popover-foreground);
+	}
 	.model-pill:focus-within {
 		outline: 2px solid var(--accent);
 		outline-offset: 1px;
