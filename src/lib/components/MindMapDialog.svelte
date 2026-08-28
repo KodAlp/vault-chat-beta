@@ -21,7 +21,11 @@
 		vault: string;
 		includedPaths?: string[];
 	}) {
-		const body: MindMapGenerationRequest = { ...args, model: settings.reasoningModel };
+		const body: MindMapGenerationRequest = {
+			...args,
+			model: settings.reasoningModel,
+			provider: settings.reasoningProvider
+		};
 		void startMindMapGeneration(body);
 	}
 </script>

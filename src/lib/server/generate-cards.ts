@@ -16,6 +16,9 @@ export interface GenerateCardsInput {
 	count: number;
 	/** Skill spec: generation defaults to the user's reasoning model. */
 	model: string;
+	/** See ChatRequestBody.provider's doc comment ($lib/types.ts) — same
+	 * optional pin, threaded into every chatWithFallback call below. */
+	provider?: string;
 	/** Chat's own source-tree scope selection — see ChatRequestBody.includedPaths. */
 	includedPaths?: string[];
 }
@@ -34,7 +37,7 @@ const QUERY_EXTRACT_SYSTEM_PROMPT =
 
 /** Same non-determinism fix as generate-quiz.ts's extractTopicalQuery —
  * temperature:0 is load-bearing, not cosmetic (see that file's comment). */
-async function extractTopicalQuery(prompt: string, model: string): Promise<string> {
+async function extractTopicalQuery(prompt: string, model: string, provider?: string): Promise<string> {
 	const messages: ChatMessage[] = [
 		{ role: 'system', content: QUERY_EXTRACT_SYSTEM_PROMPT },
 		{ role: 'user', content: prompt }
@@ -44,7 +47,8 @@ async function extractTopicalQuery(prompt: string, model: string): Promise<strin
 	for await (const event of chatWithFallback(
 		'flashcards',
 		{ model, messages, think: false, temperature: 0 },
-		signal
+		signal,
+		provider
 	)) {
 		if (event.type === 'text') text += event.text;
 	}
@@ -64,6 +68,7 @@ async function callModel(
 	model: string,
 	systemPrompt: string,
 	userPrompt: string,
+	provider: string | undefined,
 	onTick?: (elapsedMs: number) => void
 ): Promise<string> {
 	const messages: ChatMessage[] = [
@@ -78,7 +83,8 @@ async function callModel(
 		for await (const event of chatWithFallback(
 			'flashcards',
 			{ model, messages, think: false, format: CARDS_JSON_SCHEMA, temperature: 0.3 },
-			signal
+			signal,
+			provider
 		)) {
 			if (event.type === 'text') text += event.text;
 		}
@@ -175,7 +181,7 @@ export async function generateCards(
 	onProgress?.('retrieving');
 	input = { ...input, count: clampCount(input.count) };
 
-	const topicalQuery = await extractTopicalQuery(input.prompt, input.model);
+	const topicalQuery = await extractTopicalQuery(input.prompt, input.model, input.provider);
 	let query = topicalQuery;
 	if (input.chatId) {
 		const recent = getMessages(input.chatId).slice(-6);
@@ -208,7 +214,9 @@ export async function generateCards(
 	const systemPrompt = buildSystemPrompt(input.count, contextBlock, userSkillsBlock);
 
 	onProgress?.('generating');
-	let raw = await callModel(input.model, systemPrompt, input.prompt, (ms) => onProgress?.('generating', ms));
+	let raw = await callModel(input.model, systemPrompt, input.prompt, input.provider, (ms) =>
+		onProgress?.('generating', ms)
+	);
 
 	onProgress?.('validating');
 	let parsed = parseAndValidate(raw, chunksByPath);
@@ -217,7 +225,9 @@ export async function generateCards(
 	for (let attempt = 0; !parsed.ok && attempt < MAX_RETRIES; attempt++) {
 		onProgress?.('retrying');
 		const retryPrompt = `${input.prompt}\n\nÖnceki cevabın geçersizdi: ${parsed.error}\nSADECE geçerli JSON döndür. source_path, kullandığın kaynak parçasının EN ÜSTÜNDEKİ source_path etiketiyle birebir aynı olmalı — parçanın metin içeriğinde adı geçen başka bir dosya değil.`;
-		raw = await callModel(input.model, systemPrompt, retryPrompt, (ms) => onProgress?.('retrying', ms));
+		raw = await callModel(input.model, systemPrompt, retryPrompt, input.provider, (ms) =>
+			onProgress?.('retrying', ms)
+		);
 		parsed = parseAndValidate(raw, chunksByPath);
 	}
 

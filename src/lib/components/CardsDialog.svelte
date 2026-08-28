@@ -56,7 +56,12 @@
 		vault: string;
 		includedPaths?: string[];
 	}) {
-		const body: CardGenerationRequest = { ...args, count, model: settings.reasoningModel };
+		const body: CardGenerationRequest = {
+			...args,
+			count,
+			model: settings.reasoningModel,
+			provider: settings.reasoningProvider
+		};
 		void startCardGeneration(body);
 	}
 </script>

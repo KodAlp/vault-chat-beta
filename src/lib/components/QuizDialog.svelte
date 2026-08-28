@@ -44,7 +44,8 @@
 		const body: QuizGenerationRequest = {
 			...args,
 			composition: { mc, tf, open: openCount },
-			model: settings.reasoningModel
+			model: settings.reasoningModel,
+			provider: settings.reasoningProvider
 		};
 		void startQuizGeneration(body);
 	}

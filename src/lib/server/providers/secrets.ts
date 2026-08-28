@@ -21,7 +21,12 @@ function readAll(): Record<string, string> {
 function writeAll(secrets: Record<string, string>): void {
 	const p = secretsPath();
 	fs.mkdirSync(path.dirname(p), { recursive: true });
-	fs.writeFileSync(p, JSON.stringify(secrets, null, 2), 'utf-8');
+	// mode: 0o600 (owner read/write only) — a no-op on Windows (no POSIX
+	// permission bits), but this file also ships as part of the Tauri
+	// desktop build's data dir on macOS/Linux (Phase 7, per this module's
+	// own doc comment on the eventual OS-keychain migration), where the
+	// default umask would otherwise leave raw API keys group/world-readable.
+	fs.writeFileSync(p, JSON.stringify(secrets, null, 2), { encoding: 'utf-8', mode: 0o600 });
 }
 
 /**

@@ -2,6 +2,7 @@ import type { RequestHandler } from './$types';
 import { generateCards } from '$lib/server/generate-cards';
 import { vaultFromId } from '$lib/server/requestVault';
 import { NoSourcesError } from '$lib/server/generate-errors';
+import { logAppEvent } from '$lib/server/app-log';
 import type { CardGenerationEvent, CardGenerationRequest } from '$lib/types';
 
 function sseEvent(event: CardGenerationEvent): string {
@@ -27,15 +28,20 @@ export const POST: RequestHandler = async ({ request }) => {
 						prompt: body.prompt,
 						count: body.count,
 						model: body.model,
+						provider: body.provider,
 						includedPaths: body.includedPaths
 					},
 					(stage, elapsedMs) => send({ type: 'progress', stage, elapsedMs })
 				);
 				send({ type: 'done', deckId });
 			} catch (err) {
+				const message = err instanceof Error ? err.message : 'Bilinmeyen hata';
+				if (!(err instanceof NoSourcesError)) {
+					logAppEvent({ kind: 'generation_error', generationType: 'cards', model: body.model, message });
+				}
 				send({
 					type: 'error',
-					message: err instanceof Error ? err.message : 'Bilinmeyen hata',
+					message,
 					narrowScope: err instanceof NoSourcesError ? err.narrowScope : undefined
 				});
 			} finally {

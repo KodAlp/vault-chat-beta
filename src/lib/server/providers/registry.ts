@@ -87,13 +87,27 @@ export type FallbackEvent = Chunk | { type: 'notice'; message: string };
  *   user needs to see the real cause immediately, not a masked provider
  *   switch (skill's "no silent switching after first token" rule extends to
  *   "no silent switching on a non-retryable error at all").
+ *
+ * `pinnedProviderId` (Faz 17 — providerId end-to-end) is the explicit
+ * choice a user made (Chat.svelte's header selector, a settings.svelte.ts
+ * default*Provider, or a *GenerationRequest.provider) rather than the
+ * task's default chain. It's moved to the FRONT of the chain — even if it
+ * isn't a member of providers.json's chains[taskType] at all — so picking
+ * a just-added cloud provider works immediately without also having to
+ * edit /settings/providers' chain editor first. The rest of the chain
+ * still runs as a fallback after it: pinning changes preference, not the
+ * existing fallback/no-silent-switch guarantees above.
  */
 export async function* chatWithFallback(
 	taskType: string,
 	req: ChatRequest,
-	signal: AbortSignal
+	signal: AbortSignal,
+	pinnedProviderId?: string
 ): AsyncGenerator<FallbackEvent> {
-	const chain = getChain(taskType);
+	const baseChain = getChain(taskType);
+	const chain = pinnedProviderId
+		? [pinnedProviderId, ...baseChain.filter((id) => id !== pinnedProviderId)]
+		: baseChain;
 	if (chain.length === 0) {
 		throw new Error(`"${taskType}" görev tipi için tanımlı provider zinciri yok`);
 	}

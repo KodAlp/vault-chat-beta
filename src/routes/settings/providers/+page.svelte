@@ -20,7 +20,10 @@
 		title: 'Başlık üretimi',
 		grading: 'Notlandırma',
 		quiz: 'Test üretimi',
-		flashcards: 'Bilgi kartı üretimi'
+		flashcards: 'Bilgi kartı üretimi',
+		report: 'Rapor üretimi',
+		mindmap: 'Zihin haritası üretimi',
+		slides: 'Slayt üretimi'
 	};
 
 	let providers = $state<ProviderStatus[]>([]);

@@ -15,6 +15,9 @@ export interface GenerateQuizInput {
 	composition: { mc: number; tf: number; open: number };
 	/** Skill spec: generation defaults to the user's reasoning model. */
 	model: string;
+	/** See ChatRequestBody.provider's doc comment ($lib/types.ts) — same
+	 * optional pin, threaded into every chatWithFallback call below. */
+	provider?: string;
 	/** Chat's own source-tree scope selection — see ChatRequestBody.includedPaths. */
 	includedPaths?: string[];
 }
@@ -48,14 +51,19 @@ const QUERY_EXTRACT_SYSTEM_PROMPT =
  * inconsistency is what got reported as a suspected race condition; it
  * wasn't concurrency, it was this call being non-deterministic.
  */
-async function extractTopicalQuery(prompt: string, model: string): Promise<string> {
+async function extractTopicalQuery(prompt: string, model: string, provider?: string): Promise<string> {
 	const messages: ChatMessage[] = [
 		{ role: 'system', content: QUERY_EXTRACT_SYSTEM_PROMPT },
 		{ role: 'user', content: prompt }
 	];
 	let text = '';
 	const signal = new AbortController().signal;
-	for await (const event of chatWithFallback('quiz', { model, messages, think: false, temperature: 0 }, signal)) {
+	for await (const event of chatWithFallback(
+		'quiz',
+		{ model, messages, think: false, temperature: 0 },
+		signal,
+		provider
+	)) {
 		if (event.type === 'text') text += event.text;
 	}
 	return text.trim() || prompt;
@@ -74,6 +82,7 @@ async function callModel(
 	model: string,
 	systemPrompt: string,
 	userPrompt: string,
+	provider: string | undefined,
 	onTick?: (elapsedMs: number) => void
 ): Promise<string> {
 	const messages: ChatMessage[] = [
@@ -88,7 +97,8 @@ async function callModel(
 		for await (const event of chatWithFallback(
 			'quiz',
 			{ model, messages, think: false, format: QUIZ_ITEMS_JSON_SCHEMA, temperature: 0.3 },
-			signal
+			signal,
+			provider
 		)) {
 			if (event.type === 'text') text += event.text;
 		}
@@ -180,7 +190,7 @@ export async function generateQuiz(
 	onProgress?.('retrieving');
 	input = { ...input, composition: clampComposition(input.composition) };
 
-	const topicalQuery = await extractTopicalQuery(input.prompt, input.model);
+	const topicalQuery = await extractTopicalQuery(input.prompt, input.model, input.provider);
 	let query = topicalQuery;
 	if (input.chatId) {
 		const recent = getMessages(input.chatId).slice(-6);
@@ -217,7 +227,9 @@ export async function generateQuiz(
 	const systemPrompt = buildSystemPrompt(input.composition, contextBlock, userSkillsBlock);
 
 	onProgress?.('generating');
-	let raw = await callModel(input.model, systemPrompt, input.prompt, (ms) => onProgress?.('generating', ms));
+	let raw = await callModel(input.model, systemPrompt, input.prompt, input.provider, (ms) =>
+		onProgress?.('generating', ms)
+	);
 
 	onProgress?.('validating');
 	let parsed = parseAndValidate(raw, validPaths);
@@ -229,7 +241,9 @@ export async function generateQuiz(
 	for (let attempt = 0; !parsed.ok && attempt < MAX_RETRIES; attempt++) {
 		onProgress?.('retrying');
 		const retryPrompt = `${input.prompt}\n\nÖnceki cevabın geçersizdi: ${parsed.error}\nSADECE geçerli JSON döndür. source_path, kullandığın kaynak parçasının EN ÜSTÜNDEKİ source_path etiketiyle birebir aynı olmalı — parçanın metin içeriğinde adı geçen başka bir dosya değil.`;
-		raw = await callModel(input.model, systemPrompt, retryPrompt, (ms) => onProgress?.('retrying', ms));
+		raw = await callModel(input.model, systemPrompt, retryPrompt, input.provider, (ms) =>
+			onProgress?.('retrying', ms)
+		);
 		parsed = parseAndValidate(raw, validPaths);
 	}
 

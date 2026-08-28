@@ -13,6 +13,9 @@ export interface GenerateMindMapInput {
 	chatId?: string;
 	prompt: string;
 	model: string;
+	/** See ChatRequestBody.provider's doc comment ($lib/types.ts) — same
+	 * optional pin, threaded into every chatWithFallback call below. */
+	provider?: string;
 	/** Chat's own source-tree scope selection — see ChatRequestBody.includedPaths. */
 	includedPaths?: string[];
 }
@@ -22,14 +25,19 @@ export type ProgressStage = 'retrieving' | 'generating' | 'validating' | 'retryi
 const QUERY_EXTRACT_SYSTEM_PROMPT =
 	'Kullanıcının zihin haritası isteğinden, sadece KONUYU özetleyen kısa bir arama sorgusu çıkar. "zihin haritası çıkar", "haritala" gibi talimat kelimelerini ATLA, sadece konuyu yaz. Tek satır, sadece sorgu metni, başka hiçbir şey yazma.';
 
-async function extractTopicalQuery(prompt: string, model: string): Promise<string> {
+async function extractTopicalQuery(prompt: string, model: string, provider?: string): Promise<string> {
 	const messages: ChatMessage[] = [
 		{ role: 'system', content: QUERY_EXTRACT_SYSTEM_PROMPT },
 		{ role: 'user', content: prompt }
 	];
 	let text = '';
 	const signal = new AbortController().signal;
-	for await (const event of chatWithFallback('mindmap', { model, messages, think: false, temperature: 0 }, signal)) {
+	for await (const event of chatWithFallback(
+		'mindmap',
+		{ model, messages, think: false, temperature: 0 },
+		signal,
+		provider
+	)) {
 		if (event.type === 'text') text += event.text;
 	}
 	return text.trim() || prompt;
@@ -48,6 +56,7 @@ async function callModel(
 	model: string,
 	systemPrompt: string,
 	userPrompt: string,
+	provider: string | undefined,
 	onTick?: (elapsedMs: number) => void
 ): Promise<string> {
 	const messages: ChatMessage[] = [
@@ -62,7 +71,8 @@ async function callModel(
 		for await (const event of chatWithFallback(
 			'mindmap',
 			{ model, messages, think: false, format: MINDMAP_NODES_JSON_SCHEMA, temperature: 0.3 },
-			signal
+			signal,
+			provider
 		)) {
 			if (event.type === 'text') text += event.text;
 		}
@@ -129,7 +139,7 @@ export async function generateMindMap(
 ): Promise<{ mindmapId: string }> {
 	onProgress?.('retrieving');
 
-	const topicalQuery = await extractTopicalQuery(input.prompt, input.model);
+	const topicalQuery = await extractTopicalQuery(input.prompt, input.model, input.provider);
 	let query = topicalQuery;
 	if (input.chatId) {
 		const recent = getMessages(input.chatId).slice(-6);
@@ -162,7 +172,9 @@ export async function generateMindMap(
 	const systemPrompt = buildSystemPrompt(contextBlock, userSkillsBlock);
 
 	onProgress?.('generating');
-	let raw = await callModel(input.model, systemPrompt, input.prompt, (ms) => onProgress?.('generating', ms));
+	let raw = await callModel(input.model, systemPrompt, input.prompt, input.provider, (ms) =>
+		onProgress?.('generating', ms)
+	);
 
 	onProgress?.('validating');
 	let parsed = parseAndValidate(raw, validPaths);
@@ -171,7 +183,9 @@ export async function generateMindMap(
 	for (let attempt = 0; !parsed.ok && attempt < MAX_RETRIES; attempt++) {
 		onProgress?.('retrying');
 		const retryPrompt = `${input.prompt}\n\nÖnceki cevabın geçersizdi: ${parsed.error}\nSADECE geçerli JSON döndür. source_path, kullandığın kaynak parçasının EN ÜSTÜNDEKİ source_path etiketiyle birebir aynı olmalı.`;
-		raw = await callModel(input.model, systemPrompt, retryPrompt, (ms) => onProgress?.('retrying', ms));
+		raw = await callModel(input.model, systemPrompt, retryPrompt, input.provider, (ms) =>
+			onProgress?.('retrying', ms)
+		);
 		parsed = parseAndValidate(raw, validPaths);
 	}
 
