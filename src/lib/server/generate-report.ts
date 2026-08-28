@@ -119,9 +119,15 @@ function parseAndValidate(raw: string, idToPath: Map<string, string>): ParseResu
 			error: `${badSections.length} bölümün source_ids'i sağlanan kaynak kimlikleriyle eşleşmiyor (uydurma kaynak). Sadece S1, S2, ... gibi verilen kimlikleri kullan.`
 		};
 	}
+	// Compared over DISTINCT PATHS, not raw id counts: retrieve returns up to
+	// 3 chunks per file (select-chunks.ts MAX_CHUNKS_PER_FILE), so 12 ids can
+	// be only 4 real sources — counting ids made this check nearly unfireable.
+	const distinctPaths = new Set(idToPath.values());
 	if (
-		idToPath.size > 2 &&
-		result.data.sections.every((s) => s.source_ids.length === idToPath.size)
+		distinctPaths.size > 2 &&
+		result.data.sections.every(
+			(s) => new Set(s.source_ids.map((id) => idToPath.get(id)!)).size === distinctPaths.size
+		)
 	) {
 		return {
 			ok: false,
@@ -131,10 +137,16 @@ function parseAndValidate(raw: string, idToPath: Map<string, string>): ParseResu
 	if (result.data.sections.length === 0) {
 		return { ok: false, error: 'Model hiç bölüm üretmedi.' };
 	}
+	// Deduped, not a plain map: two distinct ids legitimately resolve to the
+	// SAME path (again, up to 3 chunks per file). The duplicate used to reach
+	// the view route's `{#each r.section.source_paths as path (path)}`, whose
+	// key is the path itself, and crashed the render with Svelte's
+	// each_key_duplicate — thrown AFTER phase='ready' was assigned, which is
+	// why the report page froze on "Yükleniyor" instead of showing an error.
 	const sections: NewReportSection[] = result.data.sections.map((s) => ({
 		heading: s.heading,
 		body_markdown: s.body_markdown,
-		source_paths: s.source_ids.map((id) => idToPath.get(id)!)
+		source_paths: [...new Set(s.source_ids.map((id) => idToPath.get(id)!))]
 	}));
 	return { ok: true, sections };
 }

@@ -33,7 +33,12 @@
 			}
 			renderedSections = await Promise.all(
 				body.sections.map(async (section) => ({
-					section,
+					// Deduped here too, not only in generate-report.ts: reports
+					// written before that fix are still in study.db with the same
+					// path listed twice, and rendering the identical citation link
+					// twice is just noise. The keyed-each below stays index-based
+					// regardless — that is the crash guard, this is the cosmetics.
+					section: { ...section, source_paths: [...new Set(section.source_paths)] },
 					html: await renderMarkdown(section.body_markdown)
 				}))
 			);
@@ -57,23 +62,41 @@
 	{:else if phase === 'error'}
 		<p class="status error" role="alert">{errorMessage}</p>
 	{:else if phase === 'ready' && report}
-		<h1>{report.title}</h1>
-		<div class="sections">
-			{#each renderedSections as r (r.section.id)}
-				<section class="report-section">
-					<h2>{r.section.heading}</h2>
-					<div class="body markdown-body">{@html r.html}</div>
-					<div class="citations">
-						{#each r.section.source_paths as path (path)}
-							<a class="source-link" href={libraryViewerUrl(path, data.vaultId ?? '')}>{path}</a>
-							<a class="source-link" href={obsidianUri(path)} title="Obsidian'da aç" aria-label="Obsidian'da aç">
-								<ExternalLinkIcon size={13} aria-hidden="true" />
-							</a>
-						{/each}
-					</div>
-				</section>
-			{/each}
-		</div>
+		<!-- Boundary, not bare markup: phase='ready' is assigned before this
+		     subtree has rendered even once, so a render-time throw here used to
+		     abort the update with the DOM still showing "Yükleniyor..." — a
+		     permanent fake loading state with nothing in the UI to explain it.
+		     That is exactly what a duplicate source_paths entry did (Svelte's
+		     each_key_duplicate; fixed at the source in generate-report.ts too).
+		     Keep both: the data fix stops today's cause, this stops the whole
+		     class from ever presenting as a hang again. -->
+		<svelte:boundary>
+			<h1>{report.title}</h1>
+			<div class="sections">
+				{#each renderedSections as r (r.section.id)}
+					<section class="report-section">
+						<h2>{r.section.heading}</h2>
+						<div class="body markdown-body">{@html r.html}</div>
+						<div class="citations">
+							<!-- Keyed by path+index, not path alone: a section can
+							     legitimately cite the same file twice (see
+							     generate-report.ts's dedupe comment). -->
+							{#each r.section.source_paths as path, i (path + '#' + i)}
+								<a class="source-link" href={libraryViewerUrl(path, data.vaultId ?? '')}>{path}</a>
+								<a class="source-link" href={obsidianUri(path)} title="Obsidian'da aç" aria-label="Obsidian'da aç">
+									<ExternalLinkIcon size={13} aria-hidden="true" />
+								</a>
+							{/each}
+						</div>
+					</section>
+				{/each}
+			</div>
+			{#snippet failed(error)}
+				<p class="status error" role="alert">
+					Rapor görüntülenemedi: {error instanceof Error ? error.message : String(error)}
+				</p>
+			{/snippet}
+		</svelte:boundary>
 	{/if}
 </div>
 

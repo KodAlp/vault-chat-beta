@@ -135,6 +135,11 @@
 <div class="quiz-screen">
 	<a class="home-link" href="/"><ArrowLeftIcon size={14} aria-hidden="true" /> Ana sayfa</a>
 
+	<!-- See study/report/[id]/+page.svelte for why every one of these view
+	     routes gets a boundary: the phase is switched off 'loading' before its
+	     subtree has rendered once, so a render-time throw leaves the DOM
+	     frozen on "Yükleniyor..." with nothing explaining it. -->
+	<svelte:boundary>
 	{#if phase === 'loading'}
 		<p class="status">Yükleniyor...</p>
 	{:else if phase === 'error'}
@@ -151,7 +156,7 @@
 
 			{#if item.type === 'multiple_choice' && item.options}
 				<div class="options">
-					{#each item.options as option, i (option)}
+					{#each item.options as option, i (option + '#' + i)}
 						<button
 							class="option"
 							class:selected={answers[item.id] === option}
@@ -231,6 +236,12 @@
 			{/each}
 		</div>
 	{/if}
+	{#snippet failed(error)}
+		<p class="status error" role="alert">
+			Test görüntülenemedi: {error instanceof Error ? error.message : String(error)}
+		</p>
+	{/snippet}
+	</svelte:boundary>
 </div>
 
 <style>
