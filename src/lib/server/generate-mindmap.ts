@@ -95,10 +95,16 @@ paylaşmalı — ağaç yapısı path'lerden otomatik kurulur, sen sadece düz b
 
 	const invariants = `Kurallar:
 - SADECE <context> bloğundaki bilgiye dayanarak düğümler üret. Context dışında hiçbir bilgi kullanma.
-- EN ÖNEMLİ KURAL: bir düğüm etiketi, kaynağın heading_path'inden KOPYALANAMAZ. Etiket, kaynağın
-  içindekiler tablosundaki bir başlık değil; senin kendi cümlenle yazdığın bir KAVRAM, MEKANİZMA
-  veya İDDİA olmalı. "Key claims" ya da "Bölüm 4" gibi bir başlık kopyası geçersizdir; "Bilet
-  sayısıyla orantılı CPU payı" gibi bir kavram geçerlidir.
+- EN ÖNEMLİ KURAL: bir düğüm etiketi KOPYALANAMAZ. Ne kaynağın heading_path'inden, ne de
+  source_path'inden/dosya adından. Etiket, senin kendi cümlenle yazdığın bir KAVRAM, MEKANİZMA
+  veya İDDİA olmalı.
+  GEÇERSİZ: "Key claims", "Bölüm 4" (başlık kopyası) — "corbett-et-al-2012-spanner.md",
+  "sveltekit-architecture-and-internals" (dosya adı kopyası).
+  GEÇERLİ: "Bilet sayısıyla orantılı CPU payı", "Saat belirsizliğini bekleyerek tutarlılık".
+- Harita DÜZ BİR LİSTE olamaz; hiyerarşi haritanın kendisidir. Önce 2-5 üst kavram dalı belirle,
+  sonra her dalın altına o dala ait alt kavramları yerleştir — yani düğümlerin çoğunun path
+  dizisi en az 2 seviyeli olmalı. Örnek: {"path": ["Tutarlılık garantileri", "Doğrusallaştırma"],
+  "source_id": "S3"}.
 - Verilen kaynakların mümkün olduğunca ÇOĞUNU kullan ve aralarındaki ilişkiyi göster. Tek bir
   kaynaktan çıkarılmış harita geçersizdir — kavramları farklı kaynaklar arasında ilişkilendir.
 - Türkçe yaz. Her etiket kısa olmalı (birkaç kelime), tam cümle değil.
