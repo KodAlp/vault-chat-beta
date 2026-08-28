@@ -1,13 +1,13 @@
-import { MindMapNodes } from './mindmap-schema';
+import { MindMapTreeSchema } from './mindmap-schema';
 import type { NewMindMapNode } from './study-db';
 
 /**
- * Pure validation for a mind-map model response, split out of
- * generate-mindmap.ts for exactly the reason select-chunks.ts was split out
- * of retrieve.ts: generate-mindmap.ts pulls in providers/registry ->
+ * Pure validation + flattening for a mind-map response, split out of
+ * generate-mindmap.ts for the same reason select-chunks.ts was split out of
+ * retrieve.ts: generate-mindmap.ts pulls in providers/registry ->
  * $env/dynamic/private, which only resolves inside a SvelteKit/Vite run, so
- * nothing in it can be exercised under plain `tsx --test`. Everything here
- * is dependency-free and is what mindmap-validate.test.ts actually runs.
+ * nothing in it can be exercised under plain `tsx --test`. Everything here is
+ * dependency-free and is what mindmap-validate.test.ts actually runs.
  */
 
 /** Cited chunk, as the server knows it — the model only ever names the id. */
@@ -16,63 +16,88 @@ export interface CitedChunk {
 	heading_path: string;
 }
 
-export type MindMapParseResult =
-	| { ok: true; nodes: NewMindMapNode[] }
-	| { ok: false; error: string };
-
-/** Trailing punctuation/whitespace and case are not a meaningful difference
- * between a label and the heading it was copied from. */
-function normalizeLabel(text: string): string {
-	return text.trim().toLowerCase().replace(/[\s.:;,—–-]+$/u, '');
+export interface MindMapResult {
+	rootLabel: string;
+	rootSummary: string;
+	nodes: NewMindMapNode[];
+	/** Labels dropped for being a source file name — surfaced so the caller can
+	 * write a debug trail. Never shown to the user. */
+	droppedFileNameLabels: string[];
 }
 
-/** Matches the S1/S2 citation-id shape, to keep it out of node labels. */
-const ID_RE = /^S\d+$/;
+export type MindMapParseResult =
+	| { ok: true; result: MindMapResult }
+	| { ok: false; error: string };
 
-/** A label that is really a file name — the second thing the model reached
- * for once copying headings was blocked. */
+/** Long summaries are trimmed rather than rejected: the JSON Schema cannot
+ * enforce string length through llama.cpp's GBNF conversion, and a slightly
+ * long explanation is not a reason to throw away a whole generation. This is
+ * the authoritative limit — mindmap-schema.ts carries the same number as a
+ * best-effort brake inside the grammar, but only this one always applies. */
+const MAX_SUMMARY_CHARS = 450;
+
+/** Below this the map is not worth showing, so dropping file-name nodes can
+ * still turn into a hard failure. */
+const MIN_NODES = 3;
+
 const FILE_EXT_RE = /\.(md|pdf|txt|html?|docx?|pptx?)$/i;
 
-/** Basename of a library path, with and without its extension, so a label can
- * be compared against both "corbett-2012-spanner.md" and
- * "corbett-2012-spanner". */
+/**
+ * A citation id the model tacked onto the label text instead of leaving it
+ * in the source_id field — observed in a real generation as
+ * "Calculus Foundations (S13)".
+ *
+ * Moving to a nested schema killed the old failure where an id became its
+ * own label, but not this one: here the id is INSIDE the string, so the
+ * schema cannot see it. Stripped rather than rejected — the id carries
+ * nothing the label needs, and the concept underneath it is perfectly good.
+ */
+const TRAILING_ID_RE = /[\s([]*\bS\d+\b[)\]]*\s*$/;
+
+function cleanLabel(label: string): string {
+	// Falls back to the original when stripping would empty the label — a
+	// node literally called "S3" is a different problem, and an empty string
+	// would be a worse answer than the useless-but-visible one.
+	return label.replace(TRAILING_ID_RE, '').trim() || label.trim();
+}
+
+/** Basename of a library path, with and without extension, so a label can be
+ * compared against both "corbett-2012-spanner.md" and "corbett-2012-spanner". */
 function baseNames(path: string): string[] {
 	const base = path.split('/').pop() ?? path;
 	return [base, base.replace(FILE_EXT_RE, '')];
 }
 
-/** Floor on map size, clamped to how many chunks were actually retrieved —
- * see the check below for why a floor is needed at all. */
-export const MIN_NODES = 6;
-
-/** Last segment of an "A > B > C" heading chain. */
-function lastHeadingSegment(headingPath: string): string {
-	const parts = headingPath.split('>');
-	return parts[parts.length - 1] ?? headingPath;
+function trimSummary(text: string): string {
+	const clean = text.trim();
+	return clean.length > MAX_SUMMARY_CHARS ? `${clean.slice(0, MAX_SUMMARY_CHARS - 1)}…` : clean;
 }
 
 /**
- * Schema validity is not enough here: a schema-valid map can still be a
- * worthless one, and every rule below corresponds to a failure actually
- * observed in this install's output rather than a hypothetical.
+ * The user's rule is absolute: a source's own name must NEVER appear as a node
+ * label. It is enforced by DELETING the offending node (and its subtree, which
+ * hangs off a label the user was never supposed to see) rather than by failing
+ * the generation.
  *
- * - id-shaped labels: the model confuses "cite this id" with "name the node
- *   after it" and emits path: ["S4", "..."].
- * - copied headings: labels that are verbatim copies of the chunk's own
- *   heading make the map the source's table of contents re-rendered as a
- *   tree, not a concept map — nothing was synthesized. Checked as a MAJORITY,
- *   since one coincidence is plausible and an all-or-nothing rule just burns
- *   retries on otherwise fine output.
- * - single source: a map drawn from one file when retrieval offered several
- *   is the model latching onto the first source instead of relating them,
- *   which is the one thing a mind map is for.
- * - node floor: without it the rules above have a trivial escape hatch —
- *   emit two nodes from two sources and everything passes.
- *
- * Each failure goes through generate-mindmap.ts's MAX_RETRIES loop, whose
- * retry prompt feeds `error` back to the model as a correction hint, so the
- * messages are written to be actionable rather than merely descriptive.
+ * That split is deliberate and was learned the expensive way: an earlier
+ * version made every quality rule a hard rejection, and across three live runs
+ * it burned the whole retry budget and produced NO map at all. Dropping keeps
+ * the guarantee and still hands the user something. Checked against every
+ * retrieved path, not only the one a node cites, because the model will
+ * happily name a node after a file it did not cite.
  */
+function isFileNameLabel(label: string, fileNames: ReadonlySet<string>): boolean {
+	const clean = label.trim();
+	return FILE_EXT_RE.test(clean) || fileNames.has(clean.toLowerCase());
+}
+
+interface RawNode {
+	label: string;
+	summary: string;
+	source_id: string;
+	children?: RawNode[];
+}
+
 export function parseAndValidateMindMap(
 	raw: string,
 	idToChunk: Map<string, CitedChunk>
@@ -83,16 +108,22 @@ export function parseAndValidateMindMap(
 	} catch {
 		return { ok: false, error: 'Model geçerli JSON döndürmedi.' };
 	}
-	const result = MindMapNodes.safeParse(json);
-	if (!result.success) {
-		return { ok: false, error: result.error.issues.map((i) => i.message).join('; ') };
+	const parsed = MindMapTreeSchema.safeParse(json);
+	if (!parsed.success) {
+		return { ok: false, error: parsed.error.issues.map((i) => i.message).join('; ') };
 	}
-	let nodes = result.data.nodes;
-	if (nodes.length === 0) {
-		return { ok: false, error: 'Model hiç düğüm üretmedi.' };
-	}
+	const tree = parsed.data;
 
-	const unknownIds = nodes.filter((n) => !idToChunk.has(n.source_id));
+	// Hard failure: a citation the server never offered means the map is
+	// dishonest, and no amount of cleanup can make it honest.
+	const unknownIds: string[] = [];
+	const collectIds = (raws: RawNode[]) => {
+		for (const n of raws) {
+			if (!idToChunk.has(n.source_id)) unknownIds.push(n.source_id);
+			if (n.children) collectIds(n.children);
+		}
+	};
+	collectIds(tree.branches as RawNode[]);
 	if (unknownIds.length > 0) {
 		return {
 			ok: false,
@@ -100,91 +131,82 @@ export function parseAndValidateMindMap(
 		};
 	}
 
-	// REPAIRED, not rejected. The model reliably slips the citation id into the
-	// label array as well ("path": ["S4", "Bilet tabanlı pay"]), and rejecting
-	// the whole response for it was the single biggest cause of exhausting the
-	// retry budget — a generation that produced nothing at all, which is worse
-	// than a flawed map. An id label carries no information, so deleting it
-	// loses nothing and leaves the real labels to be judged on their merits.
-	// Only things that cannot be repaired without inventing content (a label
-	// that IS a file name, a map that IS a table of contents) stay rejections.
-	const repaired = nodes
-		.map((n) => ({ ...n, path: n.path.filter((label) => !ID_RE.test(label.trim())) }))
-		.filter((n) => n.path.length > 0);
-	if (repaired.length === 0) {
-		return {
-			ok: false,
-			error: 'Düğümlerin tamamı yalnızca S1/S2 gibi kaynak kimliklerinden oluşuyor. path kavram etiketleri içermeli; kimlik sadece source_id alanına yazılır.'
-		};
-	}
-	nodes = repaired;
-
-	// Blocking heading copies alone just moved the cheat: the model started
-	// labelling every node with the source's FILE NAME instead
-	// ("corbett-et-al-2012-spanner.md"), which passes the heading check while
-	// being even less of a concept. Observed in a real generation, hence the
-	// rule. Checked against every provided path, not only the cited one, since
-	// the model happily labels a node after a file it did not cite.
-	const fileNames = new Set([...idToChunk.values()].flatMap((c) => baseNames(c.path).map((b) => b.toLowerCase())));
-	const fileNameLabels = nodes.filter((n) =>
-		n.path.some((label) => {
-			const clean = label.trim();
-			return FILE_EXT_RE.test(clean) || fileNames.has(clean.toLowerCase());
-		})
+	const fileNames = new Set(
+		[...idToChunk.values()].flatMap((c) => baseNames(c.path).map((b) => b.toLowerCase()))
 	);
-	if (fileNameLabels.length > 0) {
-		return {
-			ok: false,
-			error: `${fileNameLabels.length} düğümün etiketi bir dosya adı (ör. "${fileNameLabels[0].path[fileNameLabels[0].path.length - 1]}"). Etiket dosya adı değil, o dosyadaki bilginin kavramı olmalı.`
-		};
-	}
+	const dropped: string[] = [];
+	const nodes: NewMindMapNode[] = [];
 
-	const copiedHeadings = nodes.filter((n) => {
-		const chunk = idToChunk.get(n.source_id)!;
-		const leaf = n.path[n.path.length - 1];
-		return normalizeLabel(leaf) === normalizeLabel(lastHeadingSegment(chunk.heading_path));
-	});
-	if (copiedHeadings.length * 2 >= nodes.length) {
-		const example = copiedHeadings[0].path[copiedHeadings[0].path.length - 1];
-		return {
-			ok: false,
-			error: `${copiedHeadings.length}/${nodes.length} düğümün etiketi kaynağın başlığının kopyası (ör. "${example}"). Etiketler kaynağın içindekiler tablosu değil, kendi cümlenle yazdığın kavram/mekanizma/iddia olmalı.`
-		};
-	}
+	const walk = (raws: RawNode[], parentPath: string[]) => {
+		for (const n of raws) {
+			const label = cleanLabel(n.label);
+			if (isFileNameLabel(label, fileNames)) {
+				dropped.push(label);
+				continue; // subtree goes with it — it hangs off a forbidden label
+			}
+			const path = [...parentPath, label];
+			const chunk = idToChunk.get(n.source_id)!;
+			nodes.push({
+				path,
+				summary: trimSummary(n.summary),
+				source_path: chunk.path,
+				heading_path: chunk.heading_path
+			});
+			if (n.children?.length) walk(n.children, path);
+		}
+	};
+	walk(tree.branches as RawNode[], []);
 
-	const availableSources = new Set([...idToChunk.values()].map((c) => c.path));
-	const usedSources = new Set(nodes.map((n) => idToChunk.get(n.source_id)!.path));
-	if (availableSources.size > 1 && usedSources.size < 2) {
+	if (nodes.length < MIN_NODES) {
 		return {
 			ok: false,
-			error: `Harita tek bir kaynağa dayanıyor ama ${availableSources.size} farklı kaynak verildi. En az iki farklı kaynağı ilişkilendir.`
-		};
-	}
-
-	const minNodes = Math.min(MIN_NODES, idToChunk.size);
-	if (nodes.length < minNodes) {
-		return {
-			ok: false,
-			error: `Harita sadece ${nodes.length} düğüm içeriyor. En az ${minNodes} düğüm üret ve dallara ayır.`
-		};
-	}
-
-	// A flat list of N sibling nodes is a list, not a map — the hierarchy IS
-	// the artifact. Gated on the ABSOLUTE MIN_NODES, not the clamped minNodes:
-	// the latter is whatever the floor check just accepted, so it would demand
-	// nesting even from the single-node map a one-chunk vault can produce.
-	if (nodes.length >= MIN_NODES && !nodes.some((n) => n.path.length >= 2)) {
-		return {
-			ok: false,
-			error: 'Tüm düğümler aynı seviyede — harita düz bir liste. Kavramları üst/alt ilişkisine göre grupla; en az bazı düğümlerin path dizisi 2 veya daha fazla seviyeli olmalı.'
+			error: `Temizlik sonrası sadece ${nodes.length} düğüm kaldı (en az ${MIN_NODES} gerekli). Düğüm etiketleri dosya adı değil, kavram olmalı.`
 		};
 	}
 
 	return {
 		ok: true,
-		nodes: nodes.map((n) => {
-			const chunk = idToChunk.get(n.source_id)!;
-			return { path: n.path, source_path: chunk.path, heading_path: chunk.heading_path };
-		})
+		result: {
+			rootLabel: cleanLabel(tree.root.label),
+			rootSummary: trimSummary(tree.root.summary),
+			nodes,
+			droppedFileNameLabels: dropped
+		}
 	};
+}
+
+/**
+ * SOFT quality assessment: returns a corrective hint, or null when the map
+ * looks like a real concept map.
+ *
+ * These are NOT failures. An earlier version made them hard gates and three
+ * consecutive live runs each exhausted the retry budget on a different rule,
+ * leaving the user with an error instead of a map. Unlike a fabricated
+ * citation, none of these makes the artifact dishonest — so the caller retries
+ * on a hint while attempts remain, then accepts the last hard-valid answer.
+ */
+export function assessMindMapQuality(
+	result: MindMapResult,
+	idToChunk: Map<string, CitedChunk>
+): string | null {
+	const { nodes } = result;
+
+	// A map with no depth is a list, and the hierarchy IS the artifact.
+	if (!nodes.some((n) => n.path.length >= 2)) {
+		return 'Ağaç tek seviyeli — her dalın altına o dalı oluşturan alt kavramları da ekle.';
+	}
+
+	// One branch is an outline of a single idea, not a map of the topic.
+	const branches = new Set(nodes.map((n) => n.path[0]));
+	if (branches.size < 2) {
+		return 'Harita tek bir ana daldan oluşuyor. Konuyu 3-6 farklı ana başlığa ayır.';
+	}
+
+	const availableSources = new Set([...idToChunk.values()].map((c) => c.path));
+	const usedSources = new Set(nodes.map((n) => n.source_path));
+	if (availableSources.size > 1 && usedSources.size < 2) {
+		return `Harita tek bir kaynağa dayanıyor ama ${availableSources.size} farklı kaynak verildi. En az iki farklı kaynağı ilişkilendir.`;
+	}
+
+	return null;
 }

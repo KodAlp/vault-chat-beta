@@ -35,7 +35,10 @@ export const GET: RequestHandler = async ({ url }) => {
 	} else if (scope === 'report') {
 		prompt = buildReportPrompt(PLACEHOLDER_CONTEXT, skillsBlock);
 	} else if (scope === 'mindmap') {
-		prompt = buildMindMapPrompt(PLACEHOLDER_CONTEXT, skillsBlock);
+		// The mind-map prompt states its output language explicitly (a buried
+		// language bullet was being ignored outright). The preview has no vault
+		// in hand, so it shows the same default chat falls back to.
+		prompt = buildMindMapPrompt(PLACEHOLDER_CONTEXT, skillsBlock, DEFAULT_ALLOWED_LANGUAGES[0]);
 	} else {
 		prompt = buildSlidesPrompt(PLACEHOLDER_CONTEXT, skillsBlock);
 	}

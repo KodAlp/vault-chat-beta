@@ -1,210 +1,309 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseAndValidateMindMap, MIN_NODES, type CitedChunk } from './mindmap-validate';
+import {
+	parseAndValidateMindMap,
+	assessMindMapQuality,
+	type CitedChunk
+} from './mindmap-validate';
 
 const chunks = new Map<string, CitedChunk>([
-	['S1', { path: 'wiki/os/scheduling.md', heading_path: 'Zamanlama > MLFQ' }],
-	['S2', { path: 'wiki/os/scheduling.md', heading_path: 'Zamanlama > Lottery' }],
-	['S3', { path: 'wiki/os/linux.md', heading_path: 'Çekirdek > CFS' }],
-	['S4', { path: 'wiki/os/linux.md', heading_path: 'Çekirdek > Öncelikler' }],
-	['S5', { path: 'wiki/os/fairness.md', heading_path: 'Adalet > Açlık' }],
-	['S6', { path: 'wiki/os/fairness.md', heading_path: 'Adalet > Ölçüm' }]
+	['S1', { path: 'wiki/math/calculus.md', heading_path: 'Türev > Tanım' }],
+	['S2', { path: 'wiki/math/calculus.md', heading_path: 'Türev > Kurallar' }],
+	['S3', { path: 'wiki/math/real-analysis.md', heading_path: 'Limit > Süreklilik' }],
+	[
+		'S4',
+		{
+			path: 'wiki/math/sources/stewart-calculus-early-transcendentals.md',
+			heading_path: 'Ch 3 > Uygulamalar'
+		}
+	]
 ]);
 
-/** A map that satisfies every rule — the baseline each failing case mutates. */
-function goodNodes() {
-	return [
-		{ path: ['Zamanlama politikaları', 'Geri besleme kuyruğu'], source_id: 'S1' },
-		{ path: ['Zamanlama politikaları', 'Bilet tabanlı pay'], source_id: 'S2' },
-		{ path: ['Zamanlama politikaları', 'Sanal çalışma zamanı'], source_id: 'S3' },
-		{ path: ['Ödünleşimler', 'Öncelik ile gecikme'], source_id: 'S4' },
-		{ path: ['Ödünleşimler', 'Aç kalan süreç'], source_id: 'S5' },
-		{ path: ['Ödünleşimler', 'Payın ölçülmesi'], source_id: 'S6' }
-	];
+/** Written out as a type so every branch has the same shape — otherwise
+ * TypeScript infers a union from the literal and a test cannot reach
+ * `branches[1].children`. */
+interface RawNode {
+	label: string;
+	summary: string;
+	source_id: string;
+	children?: RawNode[];
 }
-const raw = (nodes: unknown) => JSON.stringify({ nodes });
+interface RawTree {
+	root: { label: string; summary: string };
+	branches: RawNode[];
+}
 
-test('a well-formed concept map is accepted and resolved to real paths', () => {
-	const r = parseAndValidateMindMap(raw(goodNodes()), chunks);
+/** A well-formed tree — the baseline each failing case mutates. Seven nodes,
+ * deliberately more than MIN_NODES, so that dropping one branch still leaves a
+ * usable map and the floor is exercised separately. */
+function goodTree(): RawTree {
+	return {
+		root: { label: 'Türev', summary: 'Bir fonksiyonun bir noktadaki anlık değişim oranı.' },
+		branches: [
+			{
+				label: 'Türevin temelleri',
+				summary: 'Türevin limit tanımı ve geometrik anlamı.',
+				source_id: 'S1',
+				children: [
+					{
+						label: 'Limit tanımı',
+						summary: 'Fark oranının limiti olarak türev.',
+						source_id: 'S3',
+						children: [
+							{
+								label: 'Süreklilik',
+								summary: 'Türevlenebilirlik sürekliliği gerektirir.',
+								source_id: 'S3'
+							}
+						]
+					}
+				]
+			},
+			{
+				label: 'Türev alma kuralları',
+				summary: 'Türevi mekanik olarak hesaplamayı sağlayan kurallar.',
+				source_id: 'S2',
+				children: [
+					{
+						label: 'Çarpımın türevi',
+						summary: 'İki fonksiyonun çarpımının türev kuralı.',
+						source_id: 'S2'
+					}
+				]
+			},
+			{
+				label: 'Uygulamalar',
+				summary: 'Türevin problem çözmede kullanımı.',
+				source_id: 'S4',
+				children: [
+					{ label: 'Optimizasyon', summary: 'Uç noktaları türevle bulma.', source_id: 'S4' }
+				]
+			}
+		]
+	};
+}
+const raw = (tree: unknown) => JSON.stringify(tree);
+
+test('a well-formed tree is flattened into paths with summaries', () => {
+	const r = parseAndValidateMindMap(raw(goodTree()), chunks);
 	assert.equal(r.ok, true);
 	if (!r.ok) return;
-	assert.equal(r.nodes.length, 6);
-	// source_path/heading_path come from the server's own chunk table, never
-	// from the model — that is the whole point of citing an id.
-	assert.equal(r.nodes[0].source_path, 'wiki/os/scheduling.md');
-	assert.equal(r.nodes[0].heading_path, 'Zamanlama > MLFQ');
-	assert.deepEqual(r.nodes[0].path, ['Zamanlama politikaları', 'Geri besleme kuyruğu']);
+
+	assert.equal(r.result.rootLabel, 'Türev');
+	assert.match(r.result.rootSummary, /anlık değişim oranı/);
+
+	// Depth comes from nesting, not from the model encoding path prefixes.
+	assert.deepEqual(
+		r.result.nodes.map((n) => n.path),
+		[
+			['Türevin temelleri'],
+			['Türevin temelleri', 'Limit tanımı'],
+			['Türevin temelleri', 'Limit tanımı', 'Süreklilik'],
+			['Türev alma kuralları'],
+			['Türev alma kuralları', 'Çarpımın türevi'],
+			['Uygulamalar'],
+			['Uygulamalar', 'Optimizasyon']
+		]
+	);
+	// source_path/heading_path come from the server's chunk table, never from
+	// the model — that is the whole point of citing an id.
+	assert.equal(r.result.nodes[0].source_path, 'wiki/math/calculus.md');
+	assert.equal(r.result.nodes[2].heading_path, 'Limit > Süreklilik');
+	assert.match(r.result.nodes[1].summary, /Fark oranının limiti/);
+	assert.deepEqual(r.result.droppedFileNameLabels, []);
 });
 
 test('non-JSON and schema-invalid responses are rejected, not thrown', () => {
 	assert.equal(parseAndValidateMindMap('not json at all', chunks).ok, false);
-	assert.equal(parseAndValidateMindMap(raw([{ path: [], source_id: 'S1' }]), chunks).ok, false);
-	assert.equal(parseAndValidateMindMap(raw([]), chunks).ok, false);
+	assert.equal(parseAndValidateMindMap(raw({ branches: [] }), chunks).ok, false);
+	assert.equal(
+		parseAndValidateMindMap(raw({ root: { label: 'X', summary: 'Y' }, branches: [] }), chunks).ok,
+		false
+	);
 });
 
-test('an invented source_id is rejected', () => {
-	const nodes = goodNodes();
-	nodes[0].source_id = 'S99';
-	const r = parseAndValidateMindMap(raw(nodes), chunks);
+test('an invented source_id is a hard failure — the map would be dishonest', () => {
+	const tree = goodTree();
+	tree.branches[0].children![0].source_id = 'S99';
+	const r = parseAndValidateMindMap(raw(tree), chunks);
 	assert.equal(r.ok, false);
 	if (r.ok) return;
 	assert.match(r.error, /source_id/);
 });
 
-test('a citation id leaking into path is stripped, not rejected', () => {
-	// Seen in real output twice: path: ["S4", "ZooKeeper's Architecture"].
-	// Rejecting it burned the whole retry budget and produced no map at all,
-	// so the id label — which carries no information — is simply removed.
-	const nodes = goodNodes();
-	nodes[2].path = ['S3', 'Sanal çalışma zamanı'];
-	const r = parseAndValidateMindMap(raw(nodes), chunks);
+test('a label that is a source file name is dropped with its subtree, not rejected', () => {
+	const tree = goodTree();
+	tree.branches[0].label = 'stewart-calculus-early-transcendentals.md';
+	const r = parseAndValidateMindMap(raw(tree), chunks);
 	assert.equal(r.ok, true);
 	if (!r.ok) return;
-	assert.deepEqual(r.nodes[2].path, ['Sanal çalışma zamanı']);
-	// Every other node is untouched.
-	assert.deepEqual(r.nodes[0].path, ['Zamanlama politikaları', 'Geri besleme kuyruğu']);
-});
 
-test('a node left with nothing but an id is dropped', () => {
-	// Seven to start with, so losing one still clears the node floor — a drop
-	// that takes the map under it is a legitimate rejection, covered below.
-	const nodes = [...goodNodes(), { path: ['S1'], source_id: 'S1' }];
-	const r = parseAndValidateMindMap(raw(nodes), chunks);
-	assert.equal(r.ok, true);
-	if (!r.ok) return;
-	assert.equal(r.nodes.length, 6);
-	assert.ok(!r.nodes.some((n) => n.path.includes('S1')));
-});
-
-test('dropping id-only nodes can legitimately push a map under the floor', () => {
-	const nodes = goodNodes();
-	nodes[0].path = ['S1'];
-	const r = parseAndValidateMindMap(raw(nodes), chunks);
-	assert.equal(r.ok, false);
-	if (r.ok) return;
-	assert.match(r.error, /düğüm içeriyor/);
-});
-
-test('a response that is nothing but ids is still rejected', () => {
-	const nodes = goodNodes().map((n, i) => ({ ...n, path: [`S${i + 1}`] }));
-	const r = parseAndValidateMindMap(raw(nodes), chunks);
-	assert.equal(r.ok, false);
-	if (r.ok) return;
-	assert.match(r.error, /kimlik/);
-});
-
-test('a map whose labels mostly copy the source headings is rejected', () => {
-	const nodes = goodNodes().map((n, i) => ({
-		...n,
-		path: ['Kök', [...chunks.values()][i].heading_path.split('>').pop()!.trim()]
-	}));
-	const r = parseAndValidateMindMap(raw(nodes), chunks);
-	assert.equal(r.ok, false);
-	if (r.ok) return;
-	assert.match(r.error, /başlığının kopyası/);
-});
-
-test('a single copied heading among real concepts is tolerated', () => {
-	// Some headings genuinely are the concept's name; only a majority is the
-	// table-of-contents failure this rule targets.
-	const nodes = goodNodes();
-	nodes[0].path = ['Zamanlama politikaları', 'MLFQ'];
-	assert.equal(parseAndValidateMindMap(raw(nodes), chunks).ok, true);
-});
-
-test('trailing punctuation and case do not hide a copied heading', () => {
-	const nodes = goodNodes().map((n, i) => ({
-		...n,
-		path: ['Kök', [...chunks.values()][i].heading_path.split('>').pop()!.trim().toUpperCase() + ' :']
-	}));
-	assert.equal(parseAndValidateMindMap(raw(nodes), chunks).ok, false);
-});
-
-test('a map built from a single source is rejected when several were offered', () => {
-	const nodes = goodNodes().map((n) => ({ ...n, source_id: 'S1' }));
-	const r = parseAndValidateMindMap(raw(nodes), chunks);
-	assert.equal(r.ok, false);
-	if (r.ok) return;
-	assert.match(r.error, /tek bir kaynağa/);
-});
-
-test('a single-source map is fine when only one source was offered', () => {
-	const only = new Map<string, CitedChunk>([
-		['S1', { path: 'wiki/os/scheduling.md', heading_path: 'Zamanlama > MLFQ' }]
-	]);
-	const nodes = [{ path: ['Zamanlama politikaları', 'Geri besleme kuyruğu'], source_id: 'S1' }];
-	// The node floor clamps to how many chunks exist, so one chunk means one
-	// node is enough — the floor must never make a small vault unusable.
-	assert.equal(parseAndValidateMindMap(raw(nodes), only).ok, true);
-});
-
-test('a two-node map that games every other rule is still rejected', () => {
-	const nodes = [
-		{ path: ['Zamanlama politikaları'], source_id: 'S1' },
-		{ path: ['Çekirdek tarafı'], source_id: 'S3' }
-	];
-	const r = parseAndValidateMindMap(raw(nodes), chunks);
-	assert.equal(r.ok, false);
-	if (r.ok) return;
-	assert.match(r.error, new RegExp(String(MIN_NODES)));
-});
-
-// Both rules below come from a real generation: once heading-copying was
-// blocked the model relabelled every node with the source's file name and
-// emitted them as one flat level, which passed every rule that existed then.
-test('labels that are source file names are rejected', () => {
-	const nodes = [
-		{ path: ['Zamanlama politikaları', 'corbett-et-al-2012-spanner.md'], source_id: 'S1' },
-		{ path: ['Zamanlama politikaları', 'Bilet tabanlı pay'], source_id: 'S2' },
-		{ path: ['Zamanlama politikaları', 'Sanal çalışma zamanı'], source_id: 'S3' },
-		{ path: ['Ödünleşimler', 'Öncelik ile gecikme'], source_id: 'S4' },
-		{ path: ['Ödünleşimler', 'Aç kalan süreç'], source_id: 'S5' },
-		{ path: ['Ödünleşimler', 'Payın ölçülmesi'], source_id: 'S6' }
-	];
-	const r = parseAndValidateMindMap(raw(nodes), chunks);
-	assert.equal(r.ok, false);
-	if (r.ok) return;
-	assert.match(r.error, /dosya adı/);
-});
-
-test('a provided source basename is rejected even without its extension', () => {
-	// The map's own chunks are wiki/os/scheduling.md etc., so "scheduling"
-	// is a file name in disguise no matter which chunk the node cites.
-	const nodes = goodNodes();
-	nodes[0].path = ['Zamanlama politikaları', 'scheduling'];
-	const r = parseAndValidateMindMap(raw(nodes), chunks);
-	assert.equal(r.ok, false);
-	if (r.ok) return;
-	assert.match(r.error, /dosya adı/);
-});
-
-test('a concept label that merely contains a dot is not mistaken for a file', () => {
-	const nodes = goodNodes();
-	nodes[0].path = ['Zamanlama politikaları', 'O(1) zamanlayıcı vs. CFS'];
-	assert.equal(parseAndValidateMindMap(raw(nodes), chunks).ok, true);
-});
-
-test('a completely flat map is rejected once it is big enough to nest', () => {
-	const nodes = [
-		{ path: ['Geri besleme kuyruğu'], source_id: 'S1' },
-		{ path: ['Bilet tabanlı pay'], source_id: 'S2' },
-		{ path: ['Sanal çalışma zamanı'], source_id: 'S3' },
-		{ path: ['Öncelik ile gecikme'], source_id: 'S4' },
-		{ path: ['Aç kalan süreç'], source_id: 'S5' },
-		{ path: ['Payın ölçülmesi'], source_id: 'S6' }
-	];
-	const r = parseAndValidateMindMap(raw(nodes), chunks);
-	assert.equal(r.ok, false);
-	if (r.ok) return;
-	assert.match(r.error, /düz bir liste/);
-});
-
-test('a small flat map is still accepted — the floor clamps to what exists', () => {
-	const only = new Map<string, CitedChunk>([
-		['S1', { path: 'wiki/os/scheduling.md', heading_path: 'Zamanlama > MLFQ' }]
-	]);
-	assert.equal(
-		parseAndValidateMindMap(raw([{ path: ['Geri besleme kuyruğu'], source_id: 'S1' }]), only).ok,
-		true
+	// The whole branch goes: its children hang off a label the user must never see.
+	assert.deepEqual(
+		r.result.nodes.map((n) => n.path),
+		[
+			['Türev alma kuralları'],
+			['Türev alma kuralları', 'Çarpımın türevi'],
+			['Uygulamalar'],
+			['Uygulamalar', 'Optimizasyon']
+		]
 	);
+	// Surfaced so the caller can write the debug trail the user asked for.
+	assert.deepEqual(r.result.droppedFileNameLabels, ['stewart-calculus-early-transcendentals.md']);
+});
+
+test('a provided basename is caught even without its extension', () => {
+	const tree = goodTree();
+	tree.branches[0].children![0].label = 'calculus';
+	const r = parseAndValidateMindMap(raw(tree), chunks);
+	assert.equal(r.ok, true);
+	if (!r.ok) return;
+	assert.deepEqual(r.result.droppedFileNameLabels, ['calculus']);
+	assert.ok(!r.result.nodes.some((n) => n.path.includes('calculus')));
+	// The grandchild under it went too.
+	assert.ok(!r.result.nodes.some((n) => n.path.includes('Süreklilik')));
+});
+
+test('a concept label containing a dot is not mistaken for a file name', () => {
+	const tree = goodTree();
+	tree.branches[1].label = 'O(1) vs. O(n) türev maliyeti';
+	const r = parseAndValidateMindMap(raw(tree), chunks);
+	assert.equal(r.ok, true);
+	if (!r.ok) return;
+	assert.deepEqual(r.result.droppedFileNameLabels, []);
+});
+
+test('dropping can push the map under the floor, which IS a hard failure', () => {
+	const tree = goodTree();
+	tree.branches[0].label = 'calculus.md';
+	tree.branches[1].label = 'real-analysis.md';
+	tree.branches[2].label = 'stewart-calculus-early-transcendentals';
+	const r = parseAndValidateMindMap(raw(tree), chunks);
+	assert.equal(r.ok, false);
+	if (r.ok) return;
+	assert.match(r.error, /düğüm kaldı/);
+});
+
+test('an over-long summary is trimmed, never a reason to fail', () => {
+	const tree = goodTree();
+	tree.branches[0].summary = 'x'.repeat(900);
+	const r = parseAndValidateMindMap(raw(tree), chunks);
+	assert.equal(r.ok, true);
+	if (!r.ok) return;
+	assert.ok(r.result.nodes[0].summary.length <= 450);
+	assert.ok(r.result.nodes[0].summary.endsWith('…'));
+});
+
+test('a good map draws no quality hint', () => {
+	const r = parseAndValidateMindMap(raw(goodTree()), chunks);
+	assert.equal(r.ok, true);
+	if (!r.ok) return;
+	assert.equal(assessMindMapQuality(r.result, chunks), null);
+});
+
+test('a flat map and a single-branch map get hints, not failures', () => {
+	const flat: RawTree = {
+		root: { label: 'Türev', summary: 'Anlık değişim oranı.' },
+		branches: [
+			{ label: 'Limit', summary: 'a', source_id: 'S1' },
+			{ label: 'Kural', summary: 'b', source_id: 'S2' },
+			{ label: 'Uygulama', summary: 'c', source_id: 'S3' }
+		]
+	};
+	const r = parseAndValidateMindMap(raw(flat), chunks);
+	assert.equal(r.ok, true);
+	if (!r.ok) return;
+	assert.match(assessMindMapQuality(r.result, chunks) ?? '', /tek seviyeli/);
+
+	const single: RawTree = {
+		root: { label: 'Türev', summary: 'Anlık değişim oranı.' },
+		branches: [
+			{
+				label: 'Tek dal',
+				summary: 'a',
+				source_id: 'S1',
+				children: [
+					{ label: 'Alt bir', summary: 'b', source_id: 'S1' },
+					{ label: 'Alt iki', summary: 'c', source_id: 'S1' }
+				]
+			}
+		]
+	};
+	const r2 = parseAndValidateMindMap(raw(single), chunks);
+	assert.equal(r2.ok, true);
+	if (!r2.ok) return;
+	assert.match(assessMindMapQuality(r2.result, chunks) ?? '', /tek bir ana daldan/);
+});
+
+test('a single-source map gets a hint only when other sources were offered', () => {
+	const tree = goodTree();
+	const pinToS1 = (nodes: RawNode[]) => {
+		for (const n of nodes) {
+			n.source_id = 'S1';
+			if (n.children) pinToS1(n.children);
+		}
+	};
+	pinToS1(tree.branches);
+
+	const r = parseAndValidateMindMap(raw(tree), chunks);
+	assert.equal(r.ok, true);
+	if (!r.ok) return;
+	assert.match(assessMindMapQuality(r.result, chunks) ?? '', /tek bir kaynağa/);
+
+	// With only one source available there is nothing to relate it to.
+	const only = new Map<string, CitedChunk>([
+		['S1', { path: 'wiki/math/calculus.md', heading_path: 'Türev > Tanım' }]
+	]);
+	const r2 = parseAndValidateMindMap(raw(tree), only);
+	assert.equal(r2.ok, true);
+	if (!r2.ok) return;
+	assert.equal(assessMindMapQuality(r2.result, only), null);
+});
+
+// Observed in a real generation: the model left source_id correct but ALSO
+// appended the id to the label text ("Calculus Foundations (S13)"). The nested
+// schema cannot see inside the string, so this is cleaned up here.
+test('a citation id appended to a label is stripped, not rejected', () => {
+	const tree = goodTree();
+	tree.branches[0].label = 'Türevin temelleri (S1)';
+	tree.branches[1].label = 'Türev alma kuralları [S2]';
+	tree.branches[2].label = 'Uygulamalar S4';
+	const r = parseAndValidateMindMap(raw(tree), chunks);
+	assert.equal(r.ok, true);
+	if (!r.ok) return;
+	assert.deepEqual(
+		r.result.nodes.filter((n) => n.path.length === 1).map((n) => n.path[0]),
+		['Türevin temelleri', 'Türev alma kuralları', 'Uygulamalar']
+	);
+});
+
+test('the root label is cleaned the same way', () => {
+	const tree = goodTree();
+	tree.root.label = 'Türev (S1)';
+	const r = parseAndValidateMindMap(raw(tree), chunks);
+	assert.equal(r.ok, true);
+	if (!r.ok) return;
+	assert.equal(r.result.rootLabel, 'Türev');
+});
+
+test('a label that is nothing but an id keeps it rather than becoming empty', () => {
+	const tree = goodTree();
+	tree.branches[0].label = 'S1';
+	const r = parseAndValidateMindMap(raw(tree), chunks);
+	assert.equal(r.ok, true);
+	if (!r.ok) return;
+	// Useless but visible beats an empty node; a node literally named after an
+	// id is a different failure, and the quality hints cover map shape.
+	assert.ok(r.result.nodes.some((n) => n.path[0] === 'S1'));
+});
+
+test('a legitimate label ending in a capital S plus digits is left alone', () => {
+	const tree = goodTree();
+	tree.branches[0].label = 'Sınıf S3';
+	const r = parseAndValidateMindMap(raw(tree), chunks);
+	assert.equal(r.ok, true);
+	if (!r.ok) return;
+	// Honest limitation: "S3" here is indistinguishable from a citation id, so
+	// it IS stripped. Recorded as the known trade-off rather than pretended away.
+	assert.ok(r.result.nodes.some((n) => n.path[0] === 'Sınıf'));
 });

@@ -44,7 +44,7 @@
 				import('markmap-lib'),
 				import('markmap-view')
 			]);
-			const tree = buildTree(mindmap.title, nodes);
+			const tree = buildTree({ label: mindmap.title, summary: mindmap.rootSummary }, nodes);
 			const vaultId = data.vaultId ?? '';
 			// Every node gets a link: buildTree() backfills the synthesized
 			// structural ancestors from their first cited descendant (see its
@@ -56,7 +56,14 @@
 			);
 			const { root } = new Transformer().transform(outline);
 			if (svgEl) {
-				markmapInstance = Markmap.create(svgEl, undefined, root);
+				// initialExpandLevel, not markmap's default of -1 ("expand
+				// everything"): every concept now carries its explanation and its
+				// citation as child nodes, so a fully expanded map opens as a wall
+				// of prose. 2 shows the topic, its definition and the main branches
+				// — the skeleton — and leaves the rest to be revealed by clicking a
+				// node's circle, which is exactly the "tap a node to see what it
+				// means" behaviour, using markmap's own collapse/expand.
+				markmapInstance = Markmap.create(svgEl, { initialExpandLevel: 2 }, root);
 			}
 		} catch {
 			errorMessage = 'Zihin haritası yüklenemedi.';

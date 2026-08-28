@@ -12,11 +12,17 @@ export const GET: RequestHandler = async ({ params, url }) => {
 	const nodes: MindMapNodeView[] = getMindMapNodes(v, params.id).map((row) => ({
 		id: row.id,
 		path: JSON.parse(row.path_json) as string[],
+		summary: row.summary,
 		source_path: row.source_path,
 		heading_path: row.heading_path
 	}));
 
-	const view: MindMapView = { id: mindmap.id, title: mindmap.title, model: mindmap.model };
+	const view: MindMapView = {
+		id: mindmap.id,
+		title: mindmap.title,
+		model: mindmap.model,
+		rootSummary: mindmap.root_summary
+	};
 	return json({ mindmap: view, nodes });
 };
 
