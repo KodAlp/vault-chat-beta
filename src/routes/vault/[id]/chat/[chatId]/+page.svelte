@@ -29,6 +29,10 @@
 	let sourceCounts = $state({ selected: 0, total: 0 });
 	let focusSignal = $state(0);
 	let studyPanelOpen = $state(false);
+	// StudyPanel owns the "unseen" computation (it has the data) but not the
+	// trigger button that shows the dot (that lives here) — see
+	// StudyPanel's onUnseenChange doc comment.
+	let hasUnseenStudyItems = $state(false);
 	let quizOpen = $state(false);
 	let cardsOpen = $state(false);
 	let reportOpen = $state(false);
@@ -158,8 +162,16 @@
 				onclick={() => (studyPanelOpen = true)}
 				title="Çalışma Paneli"
 			>
-				<LibraryIcon size={19} aria-hidden="true" />
+				<span class="trigger-icon">
+					<LibraryIcon size={19} aria-hidden="true" />
+					{#if hasUnseenStudyItems}
+						<span class="unseen-dot" aria-hidden="true"></span>
+					{/if}
+				</span>
 				<span class="trigger-label">Panel</span>
+				{#if hasUnseenStudyItems}
+					<span class="sr-only">Yeni üretilmiş içerik var</span>
+				{/if}
 			</button>
 			<QuizDialog chatId={data.chatId} vaultId={data.vaultId} {includedPaths} bind:open={quizOpen} />
 			<CardsDialog chatId={data.chatId} vaultId={data.vaultId} {includedPaths} bind:open={cardsOpen} />
@@ -179,6 +191,7 @@
 	onOpenReport={() => (reportOpen = true)}
 	onOpenMindMap={() => (mindMapOpen = true)}
 	onOpenSlides={() => (slidesOpen = true)}
+	onUnseenChange={(v) => (hasUnseenStudyItems = v)}
 />
 
 <style>
@@ -336,6 +349,24 @@
 
 	.trigger-label {
 		font-size: 0.6875rem;
+	}
+
+	.trigger-icon {
+		position: relative;
+		display: inline-flex;
+	}
+
+	/* Faz 18 — "there's generated material you haven't looked at yet";
+	   disappears the moment the panel is opened (StudyPanel's markSeen()). */
+	.unseen-dot {
+		position: absolute;
+		top: -0.1rem;
+		right: -0.15rem;
+		width: 0.5rem;
+		height: 0.5rem;
+		border-radius: 999px;
+		background: var(--success);
+		border: 1.5px solid var(--color-background);
 	}
 
 	.right-bottom {

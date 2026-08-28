@@ -19,7 +19,13 @@
 	let count = $state(10);
 	let dueCount = $state(0);
 
-	let alreadyGenerating = $derived(cardGeneration.items.some((s) => s.phase === 'generating'));
+	// Settings' allowConcurrentGeneration (default off) lets a user with
+	// stronger hardware queue several generations of the same type at once
+	// — when it's on, this just always reads false, so every disabled/
+	// canGenerate site below needs no separate change.
+	let alreadyGenerating = $derived(
+		!settings.allowConcurrentGeneration && cardGeneration.items.some((s) => s.phase === 'generating')
+	);
 
 	// The <input max="30"> only stops the spinner arrows — typing a larger
 	// number goes straight through it. Clamped on blur, not oninput, so
