@@ -2,7 +2,7 @@ import { chatWithFallback } from './providers/registry';
 import type { ChatMessage } from './providers/types';
 import { retrieve } from './retrieve';
 import { getMessages } from './chats-db';
-import { ReportSections, REPORT_SECTIONS_JSON_SCHEMA } from './report-schema';
+import { ReportSections, buildReportSectionsJsonSchema } from './report-schema';
 import { createReport, type NewReportSection } from './study-db';
 import { renderUserSkillsBlock } from './userSkills';
 import type { VaultContext } from './vaults';
@@ -13,6 +13,9 @@ export interface GenerateReportInput {
 	chatId?: string;
 	prompt: string;
 	model: string;
+	/** See ChatRequestBody.provider's doc comment ($lib/types.ts) — same
+	 * optional pin, threaded into every chatWithFallback call below. */
+	provider?: string;
 	/** Chat's own source-tree scope selection — see ChatRequestBody.includedPaths. */
 	includedPaths?: string[];
 }
@@ -23,14 +26,19 @@ const QUERY_EXTRACT_SYSTEM_PROMPT =
 	'Kullanıcının rapor isteğinden, sadece KONUYU özetleyen kısa bir arama sorgusu çıkar. "rapor hazırla", "özetle" gibi talimat kelimelerini ATLA, sadece konuyu yaz. Tek satır, sadece sorgu metni, başka hiçbir şey yazma.';
 
 /** Same load-bearing determinism note as generate-quiz.ts's extractTopicalQuery. */
-async function extractTopicalQuery(prompt: string, model: string): Promise<string> {
+async function extractTopicalQuery(prompt: string, model: string, provider?: string): Promise<string> {
 	const messages: ChatMessage[] = [
 		{ role: 'system', content: QUERY_EXTRACT_SYSTEM_PROMPT },
 		{ role: 'user', content: prompt }
 	];
 	let text = '';
 	const signal = new AbortController().signal;
-	for await (const event of chatWithFallback('report', { model, messages, think: false, temperature: 0 }, signal)) {
+	for await (const event of chatWithFallback(
+		'report',
+		{ model, messages, think: false, temperature: 0 },
+		signal,
+		provider
+	)) {
 		if (event.type === 'text') text += event.text;
 	}
 	return text.trim() || prompt;
@@ -49,6 +57,8 @@ async function callModel(
 	model: string,
 	systemPrompt: string,
 	userPrompt: string,
+	format: object,
+	provider: string | undefined,
 	onTick?: (elapsedMs: number) => void
 ): Promise<string> {
 	const messages: ChatMessage[] = [
@@ -62,8 +72,9 @@ async function callModel(
 	try {
 		for await (const event of chatWithFallback(
 			'report',
-			{ model, messages, think: false, format: REPORT_SECTIONS_JSON_SCHEMA, temperature: 0.3 },
-			signal
+			{ model, messages, think: false, format, temperature: 0.3 },
+			signal,
+			provider
 		)) {
 			if (event.type === 'text') text += event.text;
 		}
@@ -78,12 +89,17 @@ type ParseResult = { ok: true; sections: NewReportSection[] } | { ok: false; err
 /**
  * Report's anti-hallucination check is looser than quiz/cards' "must equal
  * one retrieved path" — a section synthesizes across multiple chunks, so
- * source_paths is a SUBSET check. But a subset-valid, schema-valid response
- * can still be useless: a model hedging by citing every retrieved path in
- * every section. Reject that degenerate case explicitly — quiz/cards never
- * had to guard against it since they only ever have one path per item.
+ * source_ids is a SUBSET check (against the S1/S2/... ids assigned in
+ * buildSystemPrompt's context block, not raw paths — see report-schema.ts's
+ * doc comment for why). But a subset-valid, schema-valid response can still
+ * be useless: a model hedging by citing every retrieved source in every
+ * section. Reject that degenerate case explicitly — quiz/cards never had to
+ * guard against it since they only ever have one path per item. Threshold
+ * is `> 2` sources, not `> 1`: a genuinely synthesized 2-source report
+ * legitimately cites both in most sections, and was being rejected
+ * unfairly before this.
  */
-function parseAndValidate(raw: string, validPaths: Set<string>): ParseResult {
+function parseAndValidate(raw: string, idToPath: Map<string, string>): ParseResult {
 	let json: unknown;
 	try {
 		json = JSON.parse(raw);
@@ -95,17 +111,17 @@ function parseAndValidate(raw: string, validPaths: Set<string>): ParseResult {
 		return { ok: false, error: result.error.issues.map((i) => i.message).join('; ') };
 	}
 	const badSections = result.data.sections.filter((s) =>
-		s.source_paths.some((p) => !validPaths.has(p))
+		s.source_ids.some((id) => !idToPath.has(id))
 	);
 	if (badSections.length > 0) {
 		return {
 			ok: false,
-			error: `${badSections.length} bölümün source_paths'i sağlanan kaynaklarla eşleşmiyor (uydurma kaynak).`
+			error: `${badSections.length} bölümün source_ids'i sağlanan kaynak kimlikleriyle eşleşmiyor (uydurma kaynak). Sadece S1, S2, ... gibi verilen kimlikleri kullan.`
 		};
 	}
 	if (
-		validPaths.size > 1 &&
-		result.data.sections.every((s) => s.source_paths.length === validPaths.size)
+		idToPath.size > 2 &&
+		result.data.sections.every((s) => s.source_ids.length === idToPath.size)
 	) {
 		return {
 			ok: false,
@@ -115,24 +131,28 @@ function parseAndValidate(raw: string, validPaths: Set<string>): ParseResult {
 	if (result.data.sections.length === 0) {
 		return { ok: false, error: 'Model hiç bölüm üretmedi.' };
 	}
-	return { ok: true, sections: result.data.sections };
+	const sections: NewReportSection[] = result.data.sections.map((s) => ({
+		heading: s.heading,
+		body_markdown: s.body_markdown,
+		source_paths: s.source_ids.map((id) => idToPath.get(id)!)
+	}));
+	return { ok: true, sections };
 }
 
 export function buildSystemPrompt(contextBlock: string, userSkillsBlock: string): string {
-	const taskIntro = `Sen bir rapor yazma asistanısın. Aşağıdaki <context> bloğu, her biri source_path/heading_path/depth
-etiketleriyle işaretlenmiş kaynak parçalarından oluşuyor. Bu kaynaklara dayanarak, konuyu 1-8 bölüm
-halinde ele alan uzun soluklu bir rapor yaz. Her bölüm bir heading (başlık), o başlık altındaki
-düzyazı gövde metni (body_markdown) ve o bölümde gerçekten kullandığın kaynak parçaların
-source_path'lerinin listesi (source_paths) içermeli. Bir bölüm birden fazla kaynak parçasını
-sentezleyebilir, ama SADECE o bölümde gerçekten atıfta bulunduğun parçaları source_paths'e ekle —
-context'teki her parçayı her bölüme ekleme.`;
+	const taskIntro = `Sen bir rapor yazma asistanısın. Aşağıdaki <context> bloğu, her biri kısa bir kimlikle
+(id: S1, S2, ...) ve source_path/heading_path/depth etiketleriyle işaretlenmiş kaynak parçalarından
+oluşuyor. Bu kaynaklara dayanarak, konuyu 1-8 bölüm halinde ele alan uzun soluklu bir rapor yaz. Her
+bölüm bir heading (başlık), o başlık altındaki düzyazı gövde metni (body_markdown) ve o bölümde
+gerçekten kullandığın kaynak parçaların id'lerinin listesi (source_ids, örn. ["S1","S3"]) içermeli.
+Bir bölüm birden fazla kaynak parçasını sentezleyebilir, ama SADECE o bölümde gerçekten atıfta
+bulunduğun parçaların id'sini source_ids'e ekle — context'teki her parçayı her bölüme ekleme.`;
 
 	const invariants = `Kurallar:
 - SADECE <context> bloğundaki bilgiye dayanarak yaz. Context dışında hiçbir bilgi kullanma.
 - Türkçe yaz. Matematik sadece $...$ (satır içi) veya $$...$$ (blok) içinde, asla çıplak LaTeX.
-- Her bölümün source_paths listesindeki her değer, o bölümde gerçekten kullandığın kaynak
-  parçalarının KENDİ source_path etiketinin değeriyle BİREBİR AYNI olmalı — parçaların metin
-  içeriğinde geçen başka dosya adları/[[bağlantılar]] değil.
+- source_ids listesindeki her değer SADECE "S" harfi + sayı formatında olmalı (S1, S2, ...) — asla
+  dosya yolu, başlık veya başka bir metin yazma, sadece id.
 - body_markdown akıcı düzyazı olmalı, madde madde kopyalanmış context parçaları değil — sentezle,
   kendi cümlelerinle açıkla.`;
 
@@ -148,7 +168,7 @@ export async function generateReport(
 ): Promise<{ reportId: string }> {
 	onProgress?.('retrieving');
 
-	const topicalQuery = await extractTopicalQuery(input.prompt, input.model);
+	const topicalQuery = await extractTopicalQuery(input.prompt, input.model, input.provider);
 	let query = topicalQuery;
 	if (input.chatId) {
 		const recent = getMessages(input.chatId).slice(-6);
@@ -170,28 +190,36 @@ export async function generateReport(
 		throw new NoSourcesError(narrowScope);
 	}
 
-	const validPaths = new Set(chunks.map((c) => c.path));
+	// Short id per chunk (S1, S2, ...), not the raw path — see
+	// report-schema.ts's doc comment on why the model cites these instead
+	// of copying full paths verbatim.
+	const idToPath = new Map(chunks.map((c, i) => [`S${i + 1}`, c.path]));
 	const contextBlock = chunks
 		.map(
-			(c) =>
-				`source_path: ${c.path}\nheading_path: ${c.heading_path}\ndepth: ${c.depth}\n\n${c.display_text}`
+			(c, i) =>
+				`id: S${i + 1}\nsource_path: ${c.path}\nheading_path: ${c.heading_path}\ndepth: ${c.depth}\n\n${c.display_text}`
 		)
 		.join('\n\n---\n\n');
 	const userSkillsBlock = await renderUserSkillsBlock('report');
 	const systemPrompt = buildSystemPrompt(contextBlock, userSkillsBlock);
+	const format = buildReportSectionsJsonSchema([...idToPath.keys()]);
 
 	onProgress?.('generating');
-	let raw = await callModel(input.model, systemPrompt, input.prompt, (ms) => onProgress?.('generating', ms));
+	let raw = await callModel(input.model, systemPrompt, input.prompt, format, input.provider, (ms) =>
+		onProgress?.('generating', ms)
+	);
 
 	onProgress?.('validating');
-	let parsed = parseAndValidate(raw, validPaths);
+	let parsed = parseAndValidate(raw, idToPath);
 
 	const MAX_RETRIES = 2;
 	for (let attempt = 0; !parsed.ok && attempt < MAX_RETRIES; attempt++) {
 		onProgress?.('retrying');
 		const retryPrompt = `${input.prompt}\n\nÖnceki cevabın geçersizdi: ${parsed.error}\nSADECE geçerli JSON döndür.`;
-		raw = await callModel(input.model, systemPrompt, retryPrompt, (ms) => onProgress?.('retrying', ms));
-		parsed = parseAndValidate(raw, validPaths);
+		raw = await callModel(input.model, systemPrompt, retryPrompt, format, input.provider, (ms) =>
+			onProgress?.('retrying', ms)
+		);
+		parsed = parseAndValidate(raw, idToPath);
 	}
 
 	if (!parsed.ok) {

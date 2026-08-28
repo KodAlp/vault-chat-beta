@@ -218,7 +218,8 @@ export const POST: RequestHandler = async ({ request }) => {
 						for await (const event of chatWithFallback(
 							'chat',
 							{ model: body.model, messages: promptMessages, think: body.think ?? false },
-							attemptController.signal
+							attemptController.signal,
+							body.provider
 						)) {
 							if (event.type === 'reasoning') {
 								if (isCorruptedChunk(event.text, allowedLanguages)) {

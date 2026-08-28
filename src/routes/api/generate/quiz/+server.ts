@@ -2,6 +2,7 @@ import type { RequestHandler } from './$types';
 import { generateQuiz } from '$lib/server/generate-quiz';
 import { vaultFromId } from '$lib/server/requestVault';
 import { NoSourcesError } from '$lib/server/generate-errors';
+import { logAppEvent } from '$lib/server/app-log';
 import type { QuizGenerationEvent, QuizGenerationRequest } from '$lib/types';
 
 function sseEvent(event: QuizGenerationEvent): string {
@@ -27,15 +28,20 @@ export const POST: RequestHandler = async ({ request }) => {
 						prompt: body.prompt,
 						composition: body.composition,
 						model: body.model,
+						provider: body.provider,
 						includedPaths: body.includedPaths
 					},
 					(stage, elapsedMs) => send({ type: 'progress', stage, elapsedMs })
 				);
 				send({ type: 'done', quizId });
 			} catch (err) {
+				const message = err instanceof Error ? err.message : 'Bilinmeyen hata';
+				if (!(err instanceof NoSourcesError)) {
+					logAppEvent({ kind: 'generation_error', generationType: 'quiz', model: body.model, message });
+				}
 				send({
 					type: 'error',
-					message: err instanceof Error ? err.message : 'Bilinmeyen hata',
+					message,
 					narrowScope: err instanceof NoSourcesError ? err.narrowScope : undefined
 				});
 			} finally {

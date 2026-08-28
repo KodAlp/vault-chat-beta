@@ -52,6 +52,13 @@ export interface ChatMessage {
 export interface ChatRequestBody {
 	messages: ChatMessage[];
 	model: string;
+	/** Which provider `model` belongs to (see ProviderModelOption.providerId)
+	 * — omitted means "let the task's provider chain in providers.json
+	 * decide", the pre-Faz-17 behavior. Set whenever the user picked a
+	 * model from Chat.svelte's header selector (which is already grouped by
+	 * provider) or a settings.svelte.ts default*Provider is in play — see
+	 * registry.ts's chatWithFallback pinnedProviderId param. */
+	provider?: string;
 	domains?: string[];
 	think?: boolean;
 	chatId?: string;
@@ -111,6 +118,8 @@ export interface QuizGenerationRequest {
 	prompt: string;
 	composition: { mc: number; tf: number; open: number };
 	model: string;
+	/** See ChatRequestBody.provider's doc comment — same optional pin. */
+	provider?: string;
 	vault?: string;
 	/** Tri-state source-tree selection (same field/semantics as
 	 * ChatRequestBody.includedPaths) — omitted means "all". */
@@ -186,6 +195,8 @@ export interface CardGenerationRequest {
 	prompt: string;
 	count: number;
 	model: string;
+	/** See ChatRequestBody.provider's doc comment — same optional pin. */
+	provider?: string;
 	vault?: string;
 	includedPaths?: string[];
 }
@@ -211,6 +222,8 @@ export interface ReportGenerationRequest {
 	chatId?: string;
 	prompt: string;
 	model: string;
+	/** See ChatRequestBody.provider's doc comment — same optional pin. */
+	provider?: string;
 	vault?: string;
 	includedPaths?: string[];
 }
@@ -239,6 +252,8 @@ export interface MindMapGenerationRequest {
 	chatId?: string;
 	prompt: string;
 	model: string;
+	/** See ChatRequestBody.provider's doc comment — same optional pin. */
+	provider?: string;
 	vault?: string;
 	includedPaths?: string[];
 }
@@ -271,6 +286,8 @@ export interface SlidesGenerationRequest {
 	chatId?: string;
 	prompt: string;
 	model: string;
+	/** See ChatRequestBody.provider's doc comment — same optional pin. */
+	provider?: string;
 	vault?: string;
 	includedPaths?: string[];
 }
@@ -340,6 +357,17 @@ export interface LibrarySettings {
 	 * $lib/server/prompt.ts'nin coreIntro()'su. Boş bırakılamaz, her zaman en
 	 * az bir dil içerir. */
 	allowedLanguages: string[];
+	/** Kök-seviye klasör adları (library root'a göre) — SourceTree.svelte'de
+	 * hiç gösterilmez VE retrieve.ts'de hiçbir üreticiye/sohbete kaynak
+	 * olarak sunulmaz (bkz. select-chunks.ts'nin excludedPrefixes'i).
+	 * /settings/library'deki yönetim ağacı (LibraryTree.svelte) bundan
+	 * etkilenmez — o her zaman her şeyi gösterir. */
+	hiddenFolders: string[];
+	/** Kök-seviye klasör adları — SourceTree.svelte'de bu klasörün kendisi
+	 * gizlenir ve doğrudan çocukları kökte gösterilir (yollar değişmez,
+	 * sadece ağacın görsel şekli). raw/cards/frontier gibi defter tutma
+	 * klasörleriyle karışmasın diye wiki/ varsayılan olarak burada. */
+	flattenFolders: string[];
 }
 
 export type ImportResultStatus = 'converted' | 'skipped' | 'needs_review' | 'failed';

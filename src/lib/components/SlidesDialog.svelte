@@ -21,7 +21,11 @@
 		vault: string;
 		includedPaths?: string[];
 	}) {
-		const body: SlidesGenerationRequest = { ...args, model: settings.reasoningModel };
+		const body: SlidesGenerationRequest = {
+			...args,
+			model: settings.reasoningModel,
+			provider: settings.reasoningProvider
+		};
 		void startSlidesGeneration(body);
 	}
 </script>

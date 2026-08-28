@@ -49,9 +49,33 @@
 	 * carry the model they were created with) or the user explicitly
 	 * picks one from the header dropdown. */
 	let overrideModel = $state<string | undefined>(undefined);
+	/**
+	 * Faz 17 — providerId end-to-end. Unlike overrideModel, an EXISTING
+	 * chat's row (chats-db's ChatRow) never stored a provider — the concept
+	 * didn't exist before this — so loadChat() below deliberately leaves
+	 * this undefined when restoring a chat, falling back to the current
+	 * task-default provider rather than a value that was never really
+	 * there. Only the header dropdown (a fresh, in-session choice) sets it.
+	 */
+	let overrideProvider = $state<string | undefined>(undefined);
 	let hasChatRow = $state(false);
 
 	let activeModel = $derived(overrideModel ?? (thinkMode ? settings.reasoningModel : settings.fastModel));
+	let activeProvider = $derived(
+		overrideProvider ?? (thinkMode ? settings.reasoningProvider : settings.fastProvider)
+	);
+
+	// A plain model id can't carry which provider it came from on its own
+	// (two providers could serve identically-named models), and the native
+	// <select> below binds a single string value — same U+241F-separator
+	// encoding as /settings/+page.svelte's model selectors, see its comment.
+	function selectionKey(providerId: string, modelId: string): string {
+		return `${providerId}␟${modelId}`;
+	}
+	function parseSelectionKey(key: string): { providerId: string; modelId: string } {
+		const [providerId, modelId] = key.split('␟');
+		return { providerId, modelId };
+	}
 
 	onMount(async () => {
 		try {
@@ -62,14 +86,19 @@
 		}
 	});
 
-	async function onModelChange(id: string) {
-		overrideModel = id;
+	async function onModelChange(key: string) {
+		const { providerId, modelId } = parseSelectionKey(key);
+		overrideModel = modelId;
+		overrideProvider = providerId;
 		if (hasChatRow) {
 			try {
+				// Only `model` persists to chats-db (no provider column exists —
+				// see overrideProvider's doc comment above); the provider choice
+				// stays in-memory for this session only.
 				await fetch(`/api/chats/${chatId}`, {
 					method: 'PATCH',
 					headers: { 'content-type': 'application/json' },
-					body: JSON.stringify({ model: id })
+					body: JSON.stringify({ model: modelId })
 				});
 			} catch {
 				// Best-effort persistence — the in-memory override still applies to this session.
@@ -131,6 +160,7 @@
 			const requestBody: ChatRequestBody = {
 				messages: messages.slice(0, -1),
 				model: activeModel,
+				provider: activeProvider,
 				think: thinkMode,
 				chatId,
 				titleModel: settings.defaultModel,
@@ -230,6 +260,7 @@
 				// unsent chat.
 				messages = [];
 				overrideModel = undefined;
+				overrideProvider = undefined;
 				hasChatRow = false;
 				onChatLoaded?.(undefined);
 				return;
@@ -241,6 +272,7 @@
 			};
 			messages = data.messages;
 			overrideModel = data.chat.model;
+			// overrideProvider intentionally NOT set here — see its doc comment.
 			hasChatRow = true;
 			isAtBottom = true;
 			scrollToBottom(true);
@@ -266,6 +298,7 @@
 		const pendingQuestion = takePendingMessage(id);
 		if (pendingQuestion) {
 			overrideModel = undefined;
+			overrideProvider = undefined;
 			hasChatRow = false;
 			onChatLoaded?.(undefined);
 			input = pendingQuestion;
@@ -339,14 +372,14 @@
 			<select
 				id="model-select"
 				title="Bu konuşma için model/sağlayıcı seçimi"
-				value={activeModel}
+				value={selectionKey(activeProvider, activeModel)}
 				onchange={(e) => onModelChange(e.currentTarget.value)}
 			>
-				{#if !modelOptions.some((m) => m.id === activeModel)}
-					<option value={activeModel}>{activeModel}</option>
+				{#if !modelOptions.some((m) => m.providerId === activeProvider && m.id === activeModel)}
+					<option value={selectionKey(activeProvider, activeModel)}>{activeModel}</option>
 				{/if}
 				{#each modelOptions as m (m.providerId + '/' + m.id)}
-					<option value={m.id}>{m.providerLabel} · {m.id}</option>
+					<option value={selectionKey(m.providerId, m.id)}>{m.providerLabel} · {m.id}</option>
 				{/each}
 			</select>
 		</label>

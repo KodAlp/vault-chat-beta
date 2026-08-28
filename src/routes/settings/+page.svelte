@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { settings, persistSettings } from '$lib/settings.svelte';
-	import type { OllamaModel } from '$lib/types';
+	import type { OllamaModel, ProviderModelOption } from '$lib/types';
 	import { isTauri, invoke } from '@tauri-apps/api/core';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
@@ -33,6 +33,78 @@
 		} catch {
 			loadError = 'Model listesi alınamadı — Ollama çalışıyor mu?';
 		}
+	}
+
+	/**
+	 * Faz 17 — providerId end-to-end. The three model selectors below used
+	 * to read /api/models (Ollama-only), so a model added under a newly
+	 * connected cloud provider (an API key saved on /settings/providers)
+	 * never showed up here at all — there was nowhere to actually pick it.
+	 * /api/providers/models aggregates every ENABLED provider (Ollama
+	 * included) and already tags each option with providerId/providerLabel,
+	 * so this reuses it instead of inventing a second listing endpoint.
+	 */
+	let providerModels = $state<ProviderModelOption[]>([]);
+	let providerModelsError = $state('');
+
+	async function refreshProviderModels() {
+		try {
+			const res = await fetch('/api/providers/models');
+			if (!res.ok) throw new Error();
+			providerModels = (await res.json()) as ProviderModelOption[];
+		} catch {
+			providerModelsError = 'Sağlayıcı modelleri alınamadı.';
+		}
+	}
+
+	interface ProviderModelGroup {
+		providerId: string;
+		providerLabel: string;
+		models: ProviderModelOption[];
+	}
+
+	function groupByProvider(options: ProviderModelOption[]): ProviderModelGroup[] {
+		const groups = new Map<string, ProviderModelGroup>();
+		for (const opt of options) {
+			let group = groups.get(opt.providerId);
+			if (!group) {
+				group = { providerId: opt.providerId, providerLabel: opt.providerLabel, models: [] };
+				groups.set(opt.providerId, group);
+			}
+			group.models.push(opt);
+		}
+		return [...groups.values()];
+	}
+
+	let groupedModels = $derived(groupByProvider(providerModels));
+
+	// U+241F (Unit Separator) — a plain model id could collide across two
+	// providers (nothing stops two OpenAI-compatible endpoints from both
+	// serving a model literally called "gpt-4o"), so Select.Root's single
+	// string `value` has to carry providerId+modelId together, not just the
+	// id. Never appears in a real provider/model id, so plain split() is safe.
+	function selectionKey(providerId: string, modelId: string): string {
+		return `${providerId}␟${modelId}`;
+	}
+
+	function parseSelectionKey(key: string): { providerId: string; modelId: string } {
+		const [providerId, modelId] = key.split('␟');
+		return { providerId, modelId };
+	}
+
+	function setModelSelection(kind: 'default' | 'fast' | 'reasoning', key: string) {
+		const { providerId, modelId } = parseSelectionKey(key);
+		if (kind === 'default') {
+			settings.defaultModel = modelId;
+			settings.defaultProvider = providerId;
+		} else if (kind === 'fast') {
+			settings.fastModel = modelId;
+			settings.fastProvider = providerId;
+		} else {
+			settings.reasoningModel = modelId;
+			settings.reasoningProvider = providerId;
+		}
+		persistSettings();
 	}
 
 	async function pullModel() {
@@ -107,7 +179,7 @@
 	let vaultSaveStatus = $state<'idle' | 'saved' | 'error'>('idle');
 
 	onMount(async () => {
-		await refreshModels();
+		await Promise.all([refreshModels(), refreshProviderModels()]);
 
 		if (runningInTauri) {
 			try {
@@ -188,15 +260,27 @@
 			{#if loadError}
 				<p class="text-sm text-destructive" role="alert">{loadError}</p>
 			{/if}
+			{#if providerModelsError}
+				<p class="text-sm text-destructive" role="alert">{providerModelsError}</p>
+			{/if}
 
 			<div class="flex flex-col gap-1.5">
 				<Label>Varsayılan model</Label>
 				<span class="text-xs text-muted-foreground">Başlık üretimi gibi arka plan işleri için</span>
-				<Select.Root type="single" bind:value={settings.defaultModel} onValueChange={persistSettings}>
+				<Select.Root
+					type="single"
+					value={selectionKey(settings.defaultProvider, settings.defaultModel)}
+					onValueChange={(v) => setModelSelection('default', v)}
+				>
 					<Select.Trigger class="max-w-xs">{settings.defaultModel}</Select.Trigger>
 					<Select.Content>
-						{#each models as m (m.name)}
-							<Select.Item value={m.name} label={m.name}>{m.name}</Select.Item>
+						{#each groupedModels as group (group.providerId)}
+							<Select.Group>
+								<Select.GroupHeading>{group.providerLabel}</Select.GroupHeading>
+								{#each group.models as m (m.id)}
+									<Select.Item value={selectionKey(group.providerId, m.id)} label={m.id}>{m.id}</Select.Item>
+								{/each}
+							</Select.Group>
 						{/each}
 					</Select.Content>
 				</Select.Root>
@@ -205,11 +289,20 @@
 			<div class="flex flex-col gap-1.5">
 				<Label>Hızlı model</Label>
 				<span class="text-xs text-muted-foreground">"Derin düşün" kapalıyken kullanılır</span>
-				<Select.Root type="single" bind:value={settings.fastModel} onValueChange={persistSettings}>
+				<Select.Root
+					type="single"
+					value={selectionKey(settings.fastProvider, settings.fastModel)}
+					onValueChange={(v) => setModelSelection('fast', v)}
+				>
 					<Select.Trigger class="max-w-xs">{settings.fastModel}</Select.Trigger>
 					<Select.Content>
-						{#each models as m (m.name)}
-							<Select.Item value={m.name} label={m.name}>{m.name}</Select.Item>
+						{#each groupedModels as group (group.providerId)}
+							<Select.Group>
+								<Select.GroupHeading>{group.providerLabel}</Select.GroupHeading>
+								{#each group.models as m (m.id)}
+									<Select.Item value={selectionKey(group.providerId, m.id)} label={m.id}>{m.id}</Select.Item>
+								{/each}
+							</Select.Group>
 						{/each}
 					</Select.Content>
 				</Select.Root>
@@ -218,11 +311,20 @@
 			<div class="flex flex-col gap-1.5">
 				<Label>Muhakeme modeli</Label>
 				<span class="text-xs text-muted-foreground">"Derin düşün" açıkken kullanılır</span>
-				<Select.Root type="single" bind:value={settings.reasoningModel} onValueChange={persistSettings}>
+				<Select.Root
+					type="single"
+					value={selectionKey(settings.reasoningProvider, settings.reasoningModel)}
+					onValueChange={(v) => setModelSelection('reasoning', v)}
+				>
 					<Select.Trigger class="max-w-xs">{settings.reasoningModel}</Select.Trigger>
 					<Select.Content>
-						{#each models as m (m.name)}
-							<Select.Item value={m.name} label={m.name}>{m.name}</Select.Item>
+						{#each groupedModels as group (group.providerId)}
+							<Select.Group>
+								<Select.GroupHeading>{group.providerLabel}</Select.GroupHeading>
+								{#each group.models as m (m.id)}
+									<Select.Item value={selectionKey(group.providerId, m.id)} label={m.id}>{m.id}</Select.Item>
+								{/each}
+							</Select.Group>
 						{/each}
 					</Select.Content>
 				</Select.Root>

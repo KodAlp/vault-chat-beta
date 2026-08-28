@@ -21,7 +21,11 @@
 		vault: string;
 		includedPaths?: string[];
 	}) {
-		const body: ReportGenerationRequest = { ...args, model: settings.reasoningModel };
+		const body: ReportGenerationRequest = {
+			...args,
+			model: settings.reasoningModel,
+			provider: settings.reasoningProvider
+		};
 		void startReportGeneration(body);
 	}
 </script>
