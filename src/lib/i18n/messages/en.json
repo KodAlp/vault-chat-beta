@@ -61,7 +61,12 @@
 		"json": "",
 		"chatNotSavedYet": "",
 		"downloadFailedWithStatus": "",
-		"downloadFailed": ""
+		"downloadFailed": "",
+		"saveDialogTitle": "Export chat",
+		"savedTo": "Saved to: {path}",
+		"downloaded": "{filename} downloaded",
+		"saveCancelled": "Save cancelled",
+		"saveFailed": "Could not save: {reason}"
 	},
 	"GenerationDialog": {
 		"domainLabel": "",

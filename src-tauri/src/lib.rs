@@ -547,6 +547,23 @@ async fn update_vault_config(
     )
 }
 
+/// Writes a chat export to a path the user just picked in the dialog plugin's
+/// save() prompt.
+///
+/// A dedicated command rather than tauri-plugin-fs: the app only ever needs to
+/// write one text file to one user-chosen path, and the fs plugin would add a
+/// crate plus a permission scope for a capability far wider than that. This
+/// matches the existing get_vault_config/update_vault_config commands, and
+/// std::fs is already in the dependency graph.
+///
+/// The path is not validated against a scope on purpose — it comes from the
+/// OS save dialog, so it is a location the user explicitly chose in a native
+/// picker, not something the page can decide on its own.
+#[tauri::command]
+async fn write_text_file(path: String, contents: String) -> Result<(), String> {
+    std::fs::write(&path, contents).map_err(|e| format!("{path}: {e}"))
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let app = tauri::Builder::default()
@@ -560,7 +577,8 @@ pub fn run() {
             check_and_start,
             save_vault_config_and_start,
             get_vault_config,
-            update_vault_config
+            update_vault_config,
+            write_text_file
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {
