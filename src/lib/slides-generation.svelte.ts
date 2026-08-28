@@ -2,7 +2,7 @@ import type { SlidesGenerationEvent, SlidesGenerationRequest } from './types';
 import type { DistributiveOmit } from './distributive-omit';
 
 export type SlidesGenerationStatus =
-	| { id: string; vaultId?: string; phase: 'generating'; stage: string }
+	| { id: string; vaultId?: string; phase: 'generating'; stage: string; elapsedMs?: number }
 	| { id: string; vaultId?: string; phase: 'done'; slideDeckId: string }
 	| { id: string; vaultId?: string; phase: 'error'; message: string; narrowScope?: boolean };
 
@@ -45,7 +45,7 @@ export async function startSlidesGeneration(body: SlidesGenerationRequest): Prom
 				if (!line.startsWith('data:')) continue;
 				const event = JSON.parse(line.slice(5)) as SlidesGenerationEvent;
 				if (event.type === 'progress') {
-					setStatus({ phase: 'generating', stage: event.stage });
+					setStatus({ phase: 'generating', stage: event.stage, elapsedMs: event.elapsedMs });
 				} else if (event.type === 'done') {
 					setStatus({ phase: 'done', slideDeckId: event.slideDeckId });
 				} else if (event.type === 'error') {

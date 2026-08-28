@@ -36,19 +36,39 @@ async function extractTopicalQuery(prompt: string, model: string): Promise<strin
 	return text.trim() || prompt;
 }
 
-async function callModel(model: string, systemPrompt: string, userPrompt: string): Promise<string> {
+const HEARTBEAT_INTERVAL_MS = 10_000;
+
+/** Ollama's own firstTokenMs budget covers a cold model load + a large
+ * JSON-schema-constrained decode (up to 300s, see providers.json) — long
+ * enough that a silent "generating" spinner reads as hung even when the
+ * request is healthy. `onTick` fires on a fixed wall-clock interval
+ * (independent of whether any bytes have actually arrived yet) so the
+ * caller can surface a live "still working" signal — mirrors
+ * generate-mindmap.ts's callModel() exactly. */
+async function callModel(
+	model: string,
+	systemPrompt: string,
+	userPrompt: string,
+	onTick?: (elapsedMs: number) => void
+): Promise<string> {
 	const messages: ChatMessage[] = [
 		{ role: 'system', content: systemPrompt },
 		{ role: 'user', content: userPrompt }
 	];
 	let text = '';
 	const signal = new AbortController().signal;
-	for await (const event of chatWithFallback(
-		'slides',
-		{ model, messages, think: false, format: SLIDES_JSON_SCHEMA, temperature: 0.3 },
-		signal
-	)) {
-		if (event.type === 'text') text += event.text;
+	const startedAt = Date.now();
+	const timer = onTick ? setInterval(() => onTick(Date.now() - startedAt), HEARTBEAT_INTERVAL_MS) : undefined;
+	try {
+		for await (const event of chatWithFallback(
+			'slides',
+			{ model, messages, think: false, format: SLIDES_JSON_SCHEMA, temperature: 0.3 },
+			signal
+		)) {
+			if (event.type === 'text') text += event.text;
+		}
+	} finally {
+		if (timer) clearInterval(timer);
 	}
 	return text;
 }
@@ -138,7 +158,7 @@ function buildMarpDeck(slides: NewSlide[]): string {
 export async function generateSlides(
 	v: VaultContext,
 	input: GenerateSlidesInput,
-	onProgress?: (stage: ProgressStage) => void
+	onProgress?: (stage: ProgressStage, elapsedMs?: number) => void
 ): Promise<{ slideDeckId: string }> {
 	onProgress?.('retrieving');
 
@@ -175,7 +195,7 @@ export async function generateSlides(
 	const systemPrompt = buildSystemPrompt(contextBlock, userSkillsBlock);
 
 	onProgress?.('generating');
-	let raw = await callModel(input.model, systemPrompt, input.prompt);
+	let raw = await callModel(input.model, systemPrompt, input.prompt, (ms) => onProgress?.('generating', ms));
 
 	onProgress?.('validating');
 	let parsed = parseAndValidate(raw, validPaths);
@@ -184,7 +204,7 @@ export async function generateSlides(
 	for (let attempt = 0; !parsed.ok && attempt < MAX_RETRIES; attempt++) {
 		onProgress?.('retrying');
 		const retryPrompt = `${input.prompt}\n\nÖnceki cevabın geçersizdi: ${parsed.error}\nSADECE geçerli JSON döndür.`;
-		raw = await callModel(input.model, systemPrompt, retryPrompt);
+		raw = await callModel(input.model, systemPrompt, retryPrompt, (ms) => onProgress?.('retrying', ms));
 		parsed = parseAndValidate(raw, validPaths);
 	}
 
