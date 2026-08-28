@@ -3,22 +3,15 @@ import { generateCards } from '$lib/server/generate-cards';
 import { vaultFromId } from '$lib/server/requestVault';
 import { NoSourcesError } from '$lib/server/generate-errors';
 import { logAppEvent } from '$lib/server/app-log';
+import { sseStream } from '$lib/server/sse';
 import type { CardGenerationEvent, CardGenerationRequest } from '$lib/types';
-
-function sseEvent(event: CardGenerationEvent): string {
-	return `data: ${JSON.stringify(event)}\n\n`;
-}
 
 export const POST: RequestHandler = async ({ request }) => {
 	const body = (await request.json()) as CardGenerationRequest;
 	const v = vaultFromId(body.vault);
 
-	const stream = new ReadableStream({
-		async start(controller) {
-			const encoder = new TextEncoder();
-			const send = (event: CardGenerationEvent) =>
-				controller.enqueue(encoder.encode(sseEvent(event)));
-
+	return sseStream<CardGenerationEvent>(
+		async (send) => {
 			try {
 				const { deckId } = await generateCards(
 					v,
@@ -44,17 +37,9 @@ export const POST: RequestHandler = async ({ request }) => {
 					message,
 					narrowScope: err instanceof NoSourcesError ? err.narrowScope : undefined
 				});
-			} finally {
-				controller.close();
 			}
-		}
-	});
-
-	return new Response(stream, {
-		headers: {
-			'content-type': 'text/event-stream',
-			'cache-control': 'no-cache',
-			connection: 'keep-alive'
-		}
-	});
+		},
+		(message) =>
+			logAppEvent({ kind: 'generation_error', generationType: 'flashcards', model: body.model, message })
+	);
 };

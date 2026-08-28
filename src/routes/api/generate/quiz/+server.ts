@@ -3,22 +3,15 @@ import { generateQuiz } from '$lib/server/generate-quiz';
 import { vaultFromId } from '$lib/server/requestVault';
 import { NoSourcesError } from '$lib/server/generate-errors';
 import { logAppEvent } from '$lib/server/app-log';
+import { sseStream } from '$lib/server/sse';
 import type { QuizGenerationEvent, QuizGenerationRequest } from '$lib/types';
-
-function sseEvent(event: QuizGenerationEvent): string {
-	return `data: ${JSON.stringify(event)}\n\n`;
-}
 
 export const POST: RequestHandler = async ({ request }) => {
 	const body = (await request.json()) as QuizGenerationRequest;
 	const v = vaultFromId(body.vault);
 
-	const stream = new ReadableStream({
-		async start(controller) {
-			const encoder = new TextEncoder();
-			const send = (event: QuizGenerationEvent) =>
-				controller.enqueue(encoder.encode(sseEvent(event)));
-
+	return sseStream<QuizGenerationEvent>(
+		async (send) => {
 			try {
 				const { quizId } = await generateQuiz(
 					v,
@@ -44,17 +37,9 @@ export const POST: RequestHandler = async ({ request }) => {
 					message,
 					narrowScope: err instanceof NoSourcesError ? err.narrowScope : undefined
 				});
-			} finally {
-				controller.close();
 			}
-		}
-	});
-
-	return new Response(stream, {
-		headers: {
-			'content-type': 'text/event-stream',
-			'cache-control': 'no-cache',
-			connection: 'keep-alive'
-		}
-	});
+		},
+		(message) =>
+			logAppEvent({ kind: 'generation_error', generationType: 'quiz', model: body.model, message })
+	);
 };

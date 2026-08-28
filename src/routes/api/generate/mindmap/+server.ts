@@ -3,22 +3,15 @@ import { generateMindMap } from '$lib/server/generate-mindmap';
 import { vaultFromId } from '$lib/server/requestVault';
 import { NoSourcesError } from '$lib/server/generate-errors';
 import { logAppEvent } from '$lib/server/app-log';
+import { sseStream } from '$lib/server/sse';
 import type { MindMapGenerationEvent, MindMapGenerationRequest } from '$lib/types';
-
-function sseEvent(event: MindMapGenerationEvent): string {
-	return `data: ${JSON.stringify(event)}\n\n`;
-}
 
 export const POST: RequestHandler = async ({ request }) => {
 	const body = (await request.json()) as MindMapGenerationRequest;
 	const v = vaultFromId(body.vault);
 
-	const stream = new ReadableStream({
-		async start(controller) {
-			const encoder = new TextEncoder();
-			const send = (event: MindMapGenerationEvent) =>
-				controller.enqueue(encoder.encode(sseEvent(event)));
-
+	return sseStream<MindMapGenerationEvent>(
+		async (send) => {
 			try {
 				const { mindmapId } = await generateMindMap(
 					v,
@@ -43,17 +36,9 @@ export const POST: RequestHandler = async ({ request }) => {
 					message,
 					narrowScope: err instanceof NoSourcesError ? err.narrowScope : undefined
 				});
-			} finally {
-				controller.close();
 			}
-		}
-	});
-
-	return new Response(stream, {
-		headers: {
-			'content-type': 'text/event-stream',
-			'cache-control': 'no-cache',
-			connection: 'keep-alive'
-		}
-	});
+		},
+		(message) =>
+			logAppEvent({ kind: 'generation_error', generationType: 'mindmap', model: body.model, message })
+	);
 };
