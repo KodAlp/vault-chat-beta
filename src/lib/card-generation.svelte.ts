@@ -2,7 +2,7 @@ import type { CardGenerationEvent, CardGenerationRequest } from './types';
 import type { DistributiveOmit } from './distributive-omit';
 
 export type CardGenerationStatus =
-	| { id: string; vaultId?: string; phase: 'generating'; stage: string }
+	| { id: string; vaultId?: string; phase: 'generating'; stage: string; elapsedMs?: number }
 	| { id: string; vaultId?: string; phase: 'done'; deckId: string }
 	| { id: string; vaultId?: string; phase: 'error'; message: string; narrowScope?: boolean };
 
@@ -58,7 +58,7 @@ export async function startCardGeneration(body: CardGenerationRequest): Promise<
 				if (!line.startsWith('data:')) continue;
 				const event = JSON.parse(line.slice(5)) as CardGenerationEvent;
 				if (event.type === 'progress') {
-					setStatus({ phase: 'generating', stage: event.stage });
+					setStatus({ phase: 'generating', stage: event.stage, elapsedMs: event.elapsedMs });
 				} else if (event.type === 'done') {
 					setStatus({ phase: 'done', deckId: event.deckId });
 				} else if (event.type === 'error') {

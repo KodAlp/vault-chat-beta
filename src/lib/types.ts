@@ -122,7 +122,7 @@ export interface QuizGenerationRequest {
  * chunks exist but includedPaths filtered them all out, so the UI can
  * offer "kapsamı genişlet?" instead of a flat "no sources" message. */
 export type QuizGenerationEvent =
-	| { type: 'progress'; stage: 'retrieving' | 'generating' | 'validating' | 'retrying' }
+	| { type: 'progress'; stage: 'retrieving' | 'generating' | 'validating' | 'retrying'; elapsedMs?: number }
 	| { type: 'done'; quizId: string }
 	| { type: 'error'; message: string; narrowScope?: boolean };
 
@@ -192,7 +192,7 @@ export interface CardGenerationRequest {
 
 /** SSE event shapes streamed by POST /api/generate/cards. */
 export type CardGenerationEvent =
-	| { type: 'progress'; stage: 'retrieving' | 'generating' | 'validating' | 'retrying' }
+	| { type: 'progress'; stage: 'retrieving' | 'generating' | 'validating' | 'retrying'; elapsedMs?: number }
 	| { type: 'done'; deckId: string }
 	| { type: 'error'; message: string; narrowScope?: boolean };
 
@@ -217,7 +217,7 @@ export interface ReportGenerationRequest {
 
 /** SSE event shapes streamed by POST /api/generate/report. */
 export type ReportGenerationEvent =
-	| { type: 'progress'; stage: 'retrieving' | 'generating' | 'validating' | 'retrying' }
+	| { type: 'progress'; stage: 'retrieving' | 'generating' | 'validating' | 'retrying'; elapsedMs?: number }
 	| { type: 'done'; reportId: string }
 	| { type: 'error'; message: string; narrowScope?: boolean };
 
@@ -280,7 +280,7 @@ export interface SlidesGenerationRequest {
  * `CardGenerationEvent.deckId`; reusing that name here would silently read
  * as a card-deck reference at every call site. */
 export type SlidesGenerationEvent =
-	| { type: 'progress'; stage: 'retrieving' | 'generating' | 'validating' | 'retrying' }
+	| { type: 'progress'; stage: 'retrieving' | 'generating' | 'validating' | 'retrying'; elapsedMs?: number }
 	| { type: 'done'; slideDeckId: string }
 	| { type: 'error'; message: string; narrowScope?: boolean };
 

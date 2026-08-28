@@ -29,7 +29,7 @@ export const POST: RequestHandler = async ({ request }) => {
 						model: body.model,
 						includedPaths: body.includedPaths
 					},
-					(stage) => send({ type: 'progress', stage })
+					(stage, elapsedMs) => send({ type: 'progress', stage, elapsedMs })
 				);
 				send({ type: 'done', deckId });
 			} catch (err) {

@@ -2,7 +2,7 @@ import type { ReportGenerationEvent, ReportGenerationRequest } from './types';
 import type { DistributiveOmit } from './distributive-omit';
 
 export type ReportGenerationStatus =
-	| { id: string; vaultId?: string; phase: 'generating'; stage: string }
+	| { id: string; vaultId?: string; phase: 'generating'; stage: string; elapsedMs?: number }
 	| { id: string; vaultId?: string; phase: 'done'; reportId: string }
 	| { id: string; vaultId?: string; phase: 'error'; message: string; narrowScope?: boolean };
 
@@ -48,7 +48,7 @@ export async function startReportGeneration(body: ReportGenerationRequest): Prom
 				if (!line.startsWith('data:')) continue;
 				const event = JSON.parse(line.slice(5)) as ReportGenerationEvent;
 				if (event.type === 'progress') {
-					setStatus({ phase: 'generating', stage: event.stage });
+					setStatus({ phase: 'generating', stage: event.stage, elapsedMs: event.elapsedMs });
 				} else if (event.type === 'done') {
 					setStatus({ phase: 'done', reportId: event.reportId });
 				} else if (event.type === 'error') {
