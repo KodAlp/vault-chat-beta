@@ -1,5 +1,39 @@
 import type { LibraryNode } from './types';
 
+/**
+ * Reshapes the root of the tree per the vault's LibrarySettings
+ * (hiddenFolders/flattenFolders, see library.ts's DEFAULT_SETTINGS) —
+ * SourceTree.svelte's view-only concern, deliberately NOT applied to
+ * LibraryTree.svelte's management view at /settings/library (that one
+ * must keep showing everything, including the folders being hidden here).
+ * Root-level only, one level deep: a flattened folder's own children are
+ * spliced into the root as-is, not recursively re-flattened — matches the
+ * shape of the one real case this exists for (wiki/<domain>/... one level
+ * under a single bookkeeping wrapper). Paths are untouched either way;
+ * this only changes what the tree looks like, never what toggleNode/
+ * collectFilePaths/toIncludedPaths operate on. */
+export function applyDisplayRules(
+	nodes: LibraryNode[],
+	rules: { hiddenFolders: string[]; flattenFolders: string[] }
+): LibraryNode[] {
+	const hidden = new Set(rules.hiddenFolders);
+	const flatten = new Set(rules.flattenFolders);
+	const out: LibraryNode[] = [];
+	for (const node of nodes) {
+		if (node.type !== 'folder') {
+			out.push(node);
+			continue;
+		}
+		if (hidden.has(node.name)) continue;
+		if (flatten.has(node.name)) {
+			out.push(...(node.children ?? []));
+			continue;
+		}
+		out.push(node);
+	}
+	return out;
+}
+
 /** Recursively collects every file path under a node list — folders never
  * appear in the result, only their leaf files. Mirrors what select-chunks.ts's
  * inScope() actually matches on. */

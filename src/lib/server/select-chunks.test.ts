@@ -114,3 +114,32 @@ test('levels omitted means every level passes', () => {
 	const result = selectChunks(candidates);
 	assert.equal(result.chunks.length, 2);
 });
+
+test('excludedPrefixes drops exact and subpath matches unconditionally', () => {
+	const candidates = [
+		candidate({ path: 'cards/math.md' }),
+		candidate({ path: 'frontier/algorithms/note.md' }),
+		candidate({ path: 'wiki/math/calculus.md' })
+	];
+	const result = selectChunks(candidates, { excludedPrefixes: ['cards', 'frontier'] });
+	assert.deepEqual(
+		result.chunks.map((c) => c.path),
+		['wiki/math/calculus.md']
+	);
+});
+
+test('excludedPrefixes never sets narrowScope — it is not a "kapsamı genişlet?" case', () => {
+	const candidates = [candidate({ path: 'cards/math.md', distance: 0.1 })];
+	const result = selectChunks(candidates, { excludedPrefixes: ['cards'] });
+	assert.deepEqual(result.chunks, []);
+	assert.equal(result.narrowScope, false);
+});
+
+test('excludedPrefixes applies even when includedPaths would otherwise allow the file', () => {
+	const candidates = [candidate({ path: 'cards/math.md', distance: 0.1 })];
+	const result = selectChunks(candidates, {
+		includedPaths: ['cards'],
+		excludedPrefixes: ['cards']
+	});
+	assert.deepEqual(result.chunks, []);
+});

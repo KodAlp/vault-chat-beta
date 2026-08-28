@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { resolveLibraryPath, getLibraryTree, readLibraryFile } from './library-read';
+import { resolveLibraryPath, getLibraryTree, readLibraryFile, getLibrarySettings } from './library-read';
 import type { VaultContext } from './vaults';
 
 function tmpVault(): VaultContext {
@@ -99,4 +99,24 @@ test('readLibraryFile returns the raw file content including frontmatter', () =>
 test('readLibraryFile rejects a traversal attempt instead of reading the file', () => {
 	const v = tmpVault();
 	assert.throws(() => readLibraryFile(v, '../../../../etc/passwd'));
+});
+
+test('getLibrarySettings returns defaults (fail-open) when no settings.json exists', () => {
+	const v = tmpVault();
+	const settings = getLibrarySettings(v);
+	assert.deepEqual(settings.hiddenFolders, ['raw', 'cards', 'frontier', 'notes']);
+	assert.deepEqual(settings.flattenFolders, ['wiki']);
+	assert.deepEqual(settings.allowedLanguages, ['Türkçe']);
+});
+
+test('getLibrarySettings merges a partial saved file over the defaults', () => {
+	const v = tmpVault();
+	fs.mkdirSync(path.join(v.libraryRoot, '_meta'), { recursive: true });
+	fs.writeFileSync(
+		path.join(v.libraryRoot, '_meta', 'settings.json'),
+		JSON.stringify({ hiddenFolders: ['raw'] })
+	);
+	const settings = getLibrarySettings(v);
+	assert.deepEqual(settings.hiddenFolders, ['raw']); // overridden
+	assert.deepEqual(settings.flattenFolders, ['wiki']); // still the default
 });

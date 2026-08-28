@@ -1,10 +1,17 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import matter from 'gray-matter';
-import type { LibraryNode } from '$lib/types';
+import type { LibraryNode, LibrarySettings } from '$lib/types';
 import type { VaultContext } from './vaults';
 
 const META_DIR = '_meta';
+
+const DEFAULT_SETTINGS: LibrarySettings = {
+	keepOriginals: false,
+	allowedLanguages: ['Türkçe'],
+	hiddenFolders: ['raw', 'cards', 'frontier', 'notes'],
+	flattenFolders: ['wiki']
+};
 
 /**
  * Read-only leaf module: fs + path + gray-matter only, no incrementalIndex
@@ -82,4 +89,29 @@ export function getLibraryTree(v: VaultContext): LibraryNode[] {
 
 export function readLibraryFile(v: VaultContext, rel: string): string {
 	return fs.readFileSync(resolveLibraryPath(v, rel), 'utf-8');
+}
+
+/** Exported (not module-private) so library.ts's writer-side
+ * saveLibrarySettings() can target the same file without a second,
+ * driftable copy of the path. */
+export function settingsPath(v: VaultContext): string {
+	return path.join(v.libraryRoot, META_DIR, 'settings.json');
+}
+
+/**
+ * Moved here from library.ts (Part 3 of the source-tree/retrieval cleanup)
+ * for the same reason getLibraryTree/readLibraryFile already live here:
+ * retrieve.ts needs this to resolve LibrarySettings.hiddenFolders into
+ * select-chunks.ts's excludedPrefixes, and retrieve.ts is imported by the
+ * MCP server (mcp/tools/search-library.ts et al.) — pulling in library.ts
+ * instead would drag incrementalIndex.ts's write path into a process that
+ * must never touch it. See this module's own top-of-file doc comment.
+ */
+export function getLibrarySettings(v: VaultContext): LibrarySettings {
+	try {
+		const raw = fs.readFileSync(settingsPath(v), 'utf-8');
+		return { ...DEFAULT_SETTINGS, ...(JSON.parse(raw) as Partial<LibrarySettings>) };
+	} catch {
+		return { ...DEFAULT_SETTINGS };
+	}
 }

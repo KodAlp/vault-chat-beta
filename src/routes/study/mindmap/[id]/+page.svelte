@@ -45,7 +45,13 @@
 				import('markmap-view')
 			]);
 			const tree = buildTree(mindmap.title, nodes);
-			const outline = treeToMarkdownOutline(tree);
+			const vaultId = data.vaultId ?? '';
+			// Only cited nodes (sourcePath set) get a link — the synthesized
+			// structural ancestors buildTree() fills in (see its doc comment)
+			// have nothing to navigate to and stay plain text.
+			const outline = treeToMarkdownOutline(tree, (node) =>
+				node.sourcePath ? libraryViewerUrl(node.sourcePath, vaultId) : null
+			);
 			const { root } = new Transformer().transform(outline);
 			if (svgEl) {
 				markmapInstance = Markmap.create(svgEl, undefined, root);
@@ -143,6 +149,25 @@
 		border: 1px solid var(--color-border);
 		border-radius: 10px;
 		background: var(--color-background);
+	}
+
+	/* markmap-view injects its own `.markmap { --markmap-text-color: #333;
+	   color: var(--markmap-text-color) }` rule directly onto this <svg>
+	   (see markmap-view's index.js, `svg.attr('class', 'markmap ...')`) and
+	   ships a `.markmap-dark .markmap` override that nothing in this app
+	   ever applies — so node labels stayed dark-gray-on-dark and were
+	   unreadable in dark mode. `:global(...)` is required on the
+	   `[data-theme='dark']` ancestor part only: it's set on
+	   <html> (+layout.svelte), outside this component's own markup, while
+	   `.mindmap-svg` itself stays scoped since Svelte already recognizes it
+	   from the template above. */
+	:global([data-theme='dark']) .mindmap-svg {
+		--markmap-text-color: var(--color-foreground);
+		--markmap-code-bg: var(--color-muted);
+		--markmap-code-color: var(--color-foreground);
+		--markmap-circle-open-bg: var(--color-muted);
+		--markmap-a-color: var(--color-primary);
+		--markmap-a-hover-color: var(--color-primary);
 	}
 
 	h2 {

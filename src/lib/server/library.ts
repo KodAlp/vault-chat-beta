@@ -2,18 +2,17 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { removeLibraryFileFromIndex, renameLibraryFileInIndex } from './incrementalIndex';
 import { foldToSlug } from './slug';
-import { resolveLibraryPath } from './library-read';
+import { resolveLibraryPath, settingsPath } from './library-read';
 import type { LibrarySettings } from '$lib/types';
 import type { VaultContext } from './vaults';
 
 const META_DIR = '_meta';
-const DEFAULT_SETTINGS: LibrarySettings = { keepOriginals: false, allowedLanguages: ['Türkçe'] };
 
-// Read-only tree/file-read functions moved to library-read.ts (a leaf
-// module with no incrementalIndex/./ollama dependency — see its own doc
-// comment and the mcp-server skill for why). Re-exported here so every
+// Read-only tree/file-read/settings-read functions moved to library-read.ts
+// (a leaf module with no incrementalIndex/./ollama dependency — see its own
+// doc comment and the mcp-server skill for why). Re-exported here so every
 // existing call site (`$lib/server/library`) keeps working unchanged.
-export { resolveLibraryPath, getLibraryTree, readLibraryFile } from './library-read';
+export { resolveLibraryPath, getLibraryTree, readLibraryFile, getLibrarySettings } from './library-read';
 
 /**
  * Ensures the vault's library root exists and returns it. The vault is
@@ -104,24 +103,6 @@ export function slugify(v: VaultContext, title: string, domain: string): string 
 		candidate = `${base}-${n++}`;
 	}
 	return candidate;
-}
-
-function settingsPath(v: VaultContext): string {
-	return path.join(libraryRoot(v), META_DIR, 'settings.json');
-}
-
-/**
- * Server-known at conversion time (unlike theme/model settings, which are
- * plain localStorage) — "keep original PDFs" has to be read by the Python
- * sidecar's caller before it runs, not just by the browser.
- */
-export function getLibrarySettings(v: VaultContext): LibrarySettings {
-	try {
-		const raw = fs.readFileSync(settingsPath(v), 'utf-8');
-		return { ...DEFAULT_SETTINGS, ...(JSON.parse(raw) as Partial<LibrarySettings>) };
-	} catch {
-		return { ...DEFAULT_SETTINGS };
-	}
 }
 
 export function saveLibrarySettings(v: VaultContext, settings: LibrarySettings): void {

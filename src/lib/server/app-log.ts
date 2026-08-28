@@ -14,10 +14,23 @@ const MAX_BYTES = 5 * 1024 * 1024;
  */
 export interface AppLogRecord {
 	ts: string;
-	kind: 'chat_error' | 'fallback' | 'title_error' | 'db_error' | 'provider_error' | 'vault_error' | 'fatal_error';
+	kind:
+		| 'chat_error'
+		| 'fallback'
+		| 'title_error'
+		| 'db_error'
+		| 'provider_error'
+		| 'vault_error'
+		| 'fatal_error'
+		| 'generation_error';
 	chatId?: string;
 	provider?: string;
 	model?: string;
+	/** generation_error only — which of the 5 generators failed (quiz/cards/
+	 * report/mindmap/slides). Lets a silent "nothing got created" pattern
+	 * (e.g. reports failing validation every single attempt) actually show
+	 * up somewhere instead of only ever existing as a dropped SSE stream. */
+	generationType?: string;
 	message: string;
 }
 

@@ -12,9 +12,16 @@ export const PUT: RequestHandler = async ({ request }) => {
 	const body = (await request.json()) as {
 		keepOriginals: boolean;
 		allowedLanguages: string[];
+		hiddenFolders: string[];
+		flattenFolders: string[];
 		vault?: string;
 	};
 	const v = vaultFromId(body.vault);
-	saveLibrarySettings(v, { keepOriginals: body.keepOriginals, allowedLanguages: body.allowedLanguages });
+	saveLibrarySettings(v, {
+		keepOriginals: body.keepOriginals,
+		allowedLanguages: body.allowedLanguages,
+		hiddenFolders: body.hiddenFolders,
+		flattenFolders: body.flattenFolders
+	});
 	return json({ ok: true });
 };
