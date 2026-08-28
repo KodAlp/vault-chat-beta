@@ -67,13 +67,52 @@ function readRegistry(): RegistryFile {
 	}
 }
 
-/** Atomic write: temp file + rename, so a crash mid-write never leaves a
- * half-written vaults.json for the next readRegistry() to choke on. */
+/**
+ * Atomic write: temp file + rename, so a crash mid-write never leaves a
+ * half-written vaults.json for the next readRegistry() to choke on.
+ *
+ * The rename is retried because on Windows it is not reliably atomic in
+ * practice: if anything holds the destination open for an instant — an
+ * antivirus scanner or the Search indexer noticing the file we just wrote —
+ * the call fails with EPERM/EBUSY even though nothing is wrong. A real
+ * instance is in app-log.jsonl ("setActiveVault/touchVault failed for
+ * default: EPERM ... rename 'vaults.json.9288.tmp' -> 'vaults.json'"). Those
+ * locks are transient, so a couple of short retries clear them; the same
+ * class of Windows rename failure is already documented in library.ts.
+ *
+ * The temp file is removed when every attempt fails — without that, each
+ * failure left a stray vaults.json.<pid>.tmp in data/.
+ */
+const RENAME_ATTEMPTS = 4;
+const RENAME_BACKOFF_MS = 25;
+
 function writeRegistry(reg: RegistryFile): void {
 	const p = registryPath();
 	const tmp = `${p}.${process.pid}.tmp`;
 	fs.writeFileSync(tmp, JSON.stringify(reg, null, 2), 'utf-8');
-	fs.renameSync(tmp, p);
+
+	for (let attempt = 1; ; attempt++) {
+		try {
+			fs.renameSync(tmp, p);
+			return;
+		} catch (err) {
+			const code = (err as NodeJS.ErrnoException).code;
+			const transient = code === 'EPERM' || code === 'EBUSY' || code === 'EACCES';
+			if (!transient || attempt === RENAME_ATTEMPTS) {
+				// Best-effort cleanup; the original error is what the caller needs.
+				try {
+					fs.rmSync(tmp, { force: true });
+				} catch {
+					// Nothing useful to do — do not mask the real failure below.
+				}
+				throw err;
+			}
+			// Synchronous by design: writeRegistry is called from sync code
+			// paths (page loads, API handlers) that cannot await, and the wait
+			// is tens of milliseconds at most.
+			Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, RENAME_BACKOFF_MS * attempt);
+		}
+	}
 }
 
 function uniqueId(reg: RegistryFile, name: string): string {
@@ -162,6 +201,26 @@ export function touchVault(id: string): void {
 	const reg = readRegistry();
 	const record = reg.vaults.find((v) => v.id === id);
 	if (!record) return;
+	record.lastOpenedAt = new Date().toISOString();
+	writeRegistry(reg);
+}
+
+/**
+ * "This vault is the one being used right now" — sets activeVaultId and
+ * lastOpenedAt in a SINGLE read+write.
+ *
+ * Opening a vault or one of its chats is one logical event, but it used to
+ * call setActiveVault() then touchVault(), each doing its own read, write and
+ * rename. That is two chances per page load to hit the transient Windows
+ * rename lock described on writeRegistry, for no benefit. setActiveVault
+ * stays exported because /api/vaults/[id]/activate genuinely only wants the
+ * active-vault half.
+ */
+export function markVaultUsed(id: string): void {
+	const reg = readRegistry();
+	const record = reg.vaults.find((v) => v.id === id);
+	if (!record) throw new Error(`Bilinmeyen vault: ${id}`);
+	reg.activeVaultId = id;
 	record.lastOpenedAt = new Date().toISOString();
 	writeRegistry(reg);
 }
