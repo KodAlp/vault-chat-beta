@@ -17,6 +17,19 @@ export interface Settings {
 	defaultProvider: string;
 	fastProvider: string;
 	reasoningProvider: string;
+	/**
+	 * Off by default (Faz 18): each of the 5 generation dialogs disables its
+	 * own "Oluştur" button while ANY generation of that same type is still
+	 * running (see *Dialog.svelte's `alreadyGenerating` derived), purely to
+	 * stop the same weak local GPU from being asked to do two heavy
+	 * JSON-schema-constrained decodes at once. The *-generation.svelte.ts
+	 * stores were already array-based (Faz 13) and GenerationStatusToast
+	 * already stacks multiple toasts — concurrent generation is otherwise
+	 * fully supported UI-side, this is the only gate. A user with a
+	 * beefier machine (or a cloud provider pinned via Faz 17's per-task
+	 * provider) can turn it on to queue several at once.
+	 */
+	allowConcurrentGeneration: boolean;
 }
 
 const STORAGE_KEY = 'vault-chat-settings';
@@ -28,7 +41,8 @@ const DEFAULTS: Settings = {
 	reasoningModel: 'qwen3:8b',
 	defaultProvider: 'ollama',
 	fastProvider: 'ollama',
-	reasoningProvider: 'ollama'
+	reasoningProvider: 'ollama',
+	allowConcurrentGeneration: false
 };
 
 function loadInitial(): Settings {

@@ -6,6 +6,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
+	import { Switch } from '$lib/components/ui/switch';
 	import * as Select from '$lib/components/ui/select';
 	import * as Card from '$lib/components/ui/card';
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
@@ -386,6 +387,25 @@
 					<p class="text-xs text-destructive" role="alert">{deleteError}</p>
 				{/if}
 			</div>
+		</Card.Content>
+	</Card.Root>
+
+	<Card.Root class="mb-6">
+		<Card.Header>
+			<Card.Title>Üretim</Card.Title>
+		</Card.Header>
+		<Card.Content>
+			<label class="flex cursor-pointer items-start gap-2.5 text-sm">
+				<Switch bind:checked={settings.allowConcurrentGeneration} onCheckedChange={persistSettings} />
+				<span class="flex flex-col gap-0.5">
+					Aynı anda birden fazla üretime izin ver
+					<span class="text-xs text-muted-foreground">
+						Varsayılan olarak kapalı — test/kart/rapor/harita/slayt üretimi aynı türden yeni bir
+						üretim başlatılmadan önce mevcut üretimin bitmesini bekler (zayıf donanımda hepsi
+						birbirini yavaşlatmasın diye). Donanımınız yeterliyse açabilirsiniz.
+					</span>
+				</span>
+			</label>
 		</Card.Content>
 	</Card.Root>
 

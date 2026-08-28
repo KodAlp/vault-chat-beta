@@ -17,7 +17,10 @@
 	let tf = $state(2);
 	let openCount = $state(2);
 
-	let alreadyGenerating = $derived(quizGeneration.items.some((s) => s.phase === 'generating'));
+	// See CardsDialog.svelte's identical comment on allowConcurrentGeneration.
+	let alreadyGenerating = $derived(
+		!settings.allowConcurrentGeneration && quizGeneration.items.some((s) => s.phase === 'generating')
+	);
 
 	// The <input max="20"> only stops the spinner arrows — typing "600" goes
 	// straight through it. Clamped on blur (not oninput) so mid-edit

@@ -12,7 +12,10 @@
 		open = $bindable(false)
 	}: { chatId: string; vaultId: string; includedPaths?: string[]; open?: boolean } = $props();
 
-	let alreadyGenerating = $derived(slidesGeneration.items.some((s) => s.phase === 'generating'));
+	// See CardsDialog.svelte's identical comment on allowConcurrentGeneration.
+	let alreadyGenerating = $derived(
+		!settings.allowConcurrentGeneration && slidesGeneration.items.some((s) => s.phase === 'generating')
+	);
 
 	function generate(args: {
 		prompt: string;

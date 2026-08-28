@@ -38,7 +38,8 @@
 		onOpenCards,
 		onOpenReport,
 		onOpenMindMap,
-		onOpenSlides
+		onOpenSlides,
+		onUnseenChange
 	}: {
 		open?: boolean;
 		vaultId: string;
@@ -47,6 +48,12 @@
 		onOpenReport: () => void;
 		onOpenMindMap: () => void;
 		onOpenSlides: () => void;
+		/** Fires whenever "is there generated material the user hasn't seen
+		 * yet" changes — the caller (the chat screen) uses it to show/hide a
+		 * dot on ITS OWN "Panel" trigger button, since that button lives
+		 * outside this component (see StudyPanel's doc comment: this is a
+		 * Sheet, not the button that opens it). */
+		onUnseenChange?: (unseen: boolean) => void;
 	} = $props();
 
 	const RECENT_LIMIT = 4;
@@ -56,6 +63,62 @@
 	let reports = $state<StudySummary[]>([]);
 	let mindmaps = $state<StudySummary[]>([]);
 	let slidedecks = $state<StudySummary[]>([]);
+
+	/**
+	 * "Unseen" tracking (Faz 18): a per-vault localStorage timestamp of the
+	 * newest generated item the user has actually looked at (opened the
+	 * panel for). Cards/decks deliberately excluded from this — see the
+	 * class doc comment above on why cards has no per-deck view; its
+	 * due-count badge is already that type's persistent status surface, a
+	 * second "unseen" signal for it would be redundant.
+	 */
+	function unseenStorageKey(): string {
+		return `vault-chat-study-panel-last-seen:${vaultId}`;
+	}
+
+	function loadLastSeenAt(): number {
+		if (typeof localStorage === 'undefined') return 0;
+		return Number(localStorage.getItem(unseenStorageKey())) || 0;
+	}
+
+	let lastSeenAt = $state(loadLastSeenAt());
+
+	function newestCreatedAt(items: StudySummary[]): number {
+		return items.reduce((max, item) => Math.max(max, Date.parse(item.createdAt) || 0), 0);
+	}
+
+	let newestItemAt = $derived(
+		Math.max(
+			newestCreatedAt(quizzes),
+			newestCreatedAt(reports),
+			newestCreatedAt(mindmaps),
+			newestCreatedAt(slidedecks)
+		)
+	);
+	let hasUnseen = $derived(newestItemAt > lastSeenAt);
+
+	$effect(() => {
+		onUnseenChange?.(hasUnseen);
+	});
+
+	// Opening the panel is what "marks as seen" (per the feature spec: the
+	// dot disappears after viewing) — refresh first so a generation that
+	// completed while the panel was closed is actually reflected in
+	// newestItemAt before it gets snapshotted into lastSeenAt, not just
+	// whatever was already loaded at mount time.
+	let wasOpen = false;
+	$effect(() => {
+		if (open && !wasOpen) void markSeen();
+		wasOpen = open;
+	});
+
+	async function markSeen() {
+		await refreshLists();
+		lastSeenAt = newestItemAt;
+		if (typeof localStorage !== 'undefined') {
+			localStorage.setItem(unseenStorageKey(), String(lastSeenAt));
+		}
+	}
 
 	onMount(() => {
 		void refreshDueCount();
