@@ -1,7 +1,7 @@
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getSlideDeck, getSlides } from '$lib/server/study-db';
-import { vaultFromUrl } from '$lib/server/requestVault';
+import { getSlideDeck, getSlides, deleteSlideDeck } from '$lib/server/study-db';
+import { vaultFromUrl, vaultFromId } from '$lib/server/requestVault';
 import type { SlideDeckView, SlideView } from '$lib/types';
 
 export const GET: RequestHandler = async ({ params, url }) => {
@@ -24,4 +24,12 @@ export const GET: RequestHandler = async ({ params, url }) => {
 		rendered_css: deck.rendered_css
 	};
 	return json({ deck: view, slides });
+};
+
+export const DELETE: RequestHandler = async ({ params, request }) => {
+	const body = (await request.json().catch(() => ({}))) as { vault?: string };
+	const v = vaultFromId(body.vault);
+	if (!getSlideDeck(v, params.id)) error(404, 'Sunum bulunamadı');
+	deleteSlideDeck(v, params.id);
+	return json({ ok: true });
 };

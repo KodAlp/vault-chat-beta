@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import * as Sheet from '$lib/components/ui/sheet';
+	import * as AlertDialog from '$lib/components/ui/alert-dialog';
 	import { Button } from '$lib/components/ui/button';
 	import { Badge } from '$lib/components/ui/badge';
 	import FileQuestionIcon from '@lucide/svelte/icons/file-question';
@@ -9,7 +10,10 @@
 	import FileTextIcon from '@lucide/svelte/icons/file-text';
 	import BrainIcon from '@lucide/svelte/icons/brain';
 	import PresentationIcon from '@lucide/svelte/icons/presentation';
+	import Trash2Icon from '@lucide/svelte/icons/trash-2';
 	import type { StudySummary } from '$lib/types';
+
+	type StudyKind = 'quizzes' | 'reports' | 'mindmaps' | 'slidedecks';
 
 	/**
 	 * Light-version study panel (Faz 9 Adım 6, user-approved simplification):
@@ -103,6 +107,28 @@
 		open = false;
 		goto(`${path}?vault=${encodeURIComponent(vaultId)}`);
 	}
+
+	let confirmingDelete = $state<{ kind: StudyKind; id: string; title: string } | null>(null);
+
+	function askDelete(kind: StudyKind, id: string, title: string, e: MouseEvent) {
+		e.stopPropagation();
+		confirmingDelete = { kind, id, title };
+	}
+
+	async function confirmDelete() {
+		if (!confirmingDelete) return;
+		const { kind, id } = confirmingDelete;
+		confirmingDelete = null;
+		try {
+			await fetch(`/api/study/${kind}/${id}`, {
+				method: 'DELETE',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ vault: vaultId })
+			});
+		} finally {
+			void refreshLists();
+		}
+	}
 </script>
 
 <Sheet.Root bind:open>
@@ -120,7 +146,10 @@
 					<ul class="recent-list">
 						{#each quizzes.slice(0, RECENT_LIMIT) as item (item.id)}
 							<li>
-								<button type="button" onclick={() => openItem(`/study/quiz/${item.id}`)}>{item.title}</button>
+								<button type="button" class="item-title" onclick={() => openItem(`/study/quiz/${item.id}`)}>{item.title}</button>
+								<button type="button" class="item-delete" onclick={(e) => askDelete('quizzes', item.id, item.title, e)} title="Sil" aria-label="Sil">
+									<Trash2Icon size={12} aria-hidden="true" />
+								</button>
 							</li>
 						{/each}
 					</ul>
@@ -149,7 +178,10 @@
 					<ul class="recent-list">
 						{#each reports.slice(0, RECENT_LIMIT) as item (item.id)}
 							<li>
-								<button type="button" onclick={() => openItem(`/study/report/${item.id}`)}>{item.title}</button>
+								<button type="button" class="item-title" onclick={() => openItem(`/study/report/${item.id}`)}>{item.title}</button>
+								<button type="button" class="item-delete" onclick={(e) => askDelete('reports', item.id, item.title, e)} title="Sil" aria-label="Sil">
+									<Trash2Icon size={12} aria-hidden="true" />
+								</button>
 							</li>
 						{/each}
 					</ul>
@@ -164,7 +196,10 @@
 					<ul class="recent-list">
 						{#each mindmaps.slice(0, RECENT_LIMIT) as item (item.id)}
 							<li>
-								<button type="button" onclick={() => openItem(`/study/mindmap/${item.id}`)}>{item.title}</button>
+								<button type="button" class="item-title" onclick={() => openItem(`/study/mindmap/${item.id}`)}>{item.title}</button>
+								<button type="button" class="item-delete" onclick={(e) => askDelete('mindmaps', item.id, item.title, e)} title="Sil" aria-label="Sil">
+									<Trash2Icon size={12} aria-hidden="true" />
+								</button>
 							</li>
 						{/each}
 					</ul>
@@ -179,7 +214,10 @@
 					<ul class="recent-list">
 						{#each slidedecks.slice(0, RECENT_LIMIT) as item (item.id)}
 							<li>
-								<button type="button" onclick={() => openItem(`/study/slides/${item.id}`)}>{item.title}</button>
+								<button type="button" class="item-title" onclick={() => openItem(`/study/slides/${item.id}`)}>{item.title}</button>
+								<button type="button" class="item-delete" onclick={(e) => askDelete('slidedecks', item.id, item.title, e)} title="Sil" aria-label="Sil">
+									<Trash2Icon size={12} aria-hidden="true" />
+								</button>
 							</li>
 						{/each}
 					</ul>
@@ -188,6 +226,27 @@
 		</div>
 	</Sheet.Content>
 </Sheet.Root>
+
+<AlertDialog.Root open={confirmingDelete !== null} onOpenChange={(next) => { if (!next) confirmingDelete = null; }}>
+	<AlertDialog.Content>
+		<AlertDialog.Header>
+			<AlertDialog.Title>"{confirmingDelete?.title}" silinsin mi?</AlertDialog.Title>
+			<AlertDialog.Description>Bu işlem geri alınamaz.</AlertDialog.Description>
+		</AlertDialog.Header>
+		<AlertDialog.Footer>
+			<AlertDialog.Cancel>Vazgeç</AlertDialog.Cancel>
+			<AlertDialog.Action
+				variant="destructive"
+				onclick={(e) => {
+					e.preventDefault();
+					confirmDelete();
+				}}
+			>
+				Sil
+			</AlertDialog.Action>
+		</AlertDialog.Footer>
+	</AlertDialog.Content>
+</AlertDialog.Root>
 
 <style>
 	.rows {
@@ -231,11 +290,23 @@
 		list-style: none;
 	}
 
+	.recent-list li {
+		display: flex;
+		align-items: center;
+		gap: 0.15rem;
+	}
+
 	.recent-list button {
-		display: block;
-		width: 100%;
 		border: none;
 		background: transparent;
+		cursor: pointer;
+		border-radius: var(--radius-sm);
+	}
+
+	.item-title {
+		flex: 1;
+		min-width: 0;
+		display: block;
 		padding: 0.2rem 0.1rem;
 		text-align: left;
 		font-size: 0.78rem;
@@ -243,12 +314,23 @@
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
-		cursor: pointer;
-		border-radius: var(--radius-sm);
 	}
 
-	.recent-list button:hover {
+	.item-title:hover {
 		color: var(--color-primary);
+	}
+
+	.item-delete {
+		flex-shrink: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 0.2rem;
+		color: var(--color-muted-foreground);
+	}
+
+	.item-delete:hover {
+		color: var(--color-destructive);
 	}
 
 	.recent-list button:focus-visible {
