@@ -117,3 +117,63 @@ test('a two-node map that games every other rule is still rejected', () => {
 	if (r.ok) return;
 	assert.match(r.error, new RegExp(String(MIN_NODES)));
 });
+
+// Both rules below come from a real generation: once heading-copying was
+// blocked the model relabelled every node with the source's file name and
+// emitted them as one flat level, which passed every rule that existed then.
+test('labels that are source file names are rejected', () => {
+	const nodes = [
+		{ path: ['Zamanlama politikaları', 'corbett-et-al-2012-spanner.md'], source_id: 'S1' },
+		{ path: ['Zamanlama politikaları', 'Bilet tabanlı pay'], source_id: 'S2' },
+		{ path: ['Zamanlama politikaları', 'Sanal çalışma zamanı'], source_id: 'S3' },
+		{ path: ['Ödünleşimler', 'Öncelik ile gecikme'], source_id: 'S4' },
+		{ path: ['Ödünleşimler', 'Aç kalan süreç'], source_id: 'S5' },
+		{ path: ['Ödünleşimler', 'Payın ölçülmesi'], source_id: 'S6' }
+	];
+	const r = parseAndValidateMindMap(raw(nodes), chunks);
+	assert.equal(r.ok, false);
+	if (r.ok) return;
+	assert.match(r.error, /dosya adı/);
+});
+
+test('a provided source basename is rejected even without its extension', () => {
+	// The map's own chunks are wiki/os/scheduling.md etc., so "scheduling"
+	// is a file name in disguise no matter which chunk the node cites.
+	const nodes = goodNodes();
+	nodes[0].path = ['Zamanlama politikaları', 'scheduling'];
+	const r = parseAndValidateMindMap(raw(nodes), chunks);
+	assert.equal(r.ok, false);
+	if (r.ok) return;
+	assert.match(r.error, /dosya adı/);
+});
+
+test('a concept label that merely contains a dot is not mistaken for a file', () => {
+	const nodes = goodNodes();
+	nodes[0].path = ['Zamanlama politikaları', 'O(1) zamanlayıcı vs. CFS'];
+	assert.equal(parseAndValidateMindMap(raw(nodes), chunks).ok, true);
+});
+
+test('a completely flat map is rejected once it is big enough to nest', () => {
+	const nodes = [
+		{ path: ['Geri besleme kuyruğu'], source_id: 'S1' },
+		{ path: ['Bilet tabanlı pay'], source_id: 'S2' },
+		{ path: ['Sanal çalışma zamanı'], source_id: 'S3' },
+		{ path: ['Öncelik ile gecikme'], source_id: 'S4' },
+		{ path: ['Aç kalan süreç'], source_id: 'S5' },
+		{ path: ['Payın ölçülmesi'], source_id: 'S6' }
+	];
+	const r = parseAndValidateMindMap(raw(nodes), chunks);
+	assert.equal(r.ok, false);
+	if (r.ok) return;
+	assert.match(r.error, /düz bir liste/);
+});
+
+test('a small flat map is still accepted — the floor clamps to what exists', () => {
+	const only = new Map<string, CitedChunk>([
+		['S1', { path: 'wiki/os/scheduling.md', heading_path: 'Zamanlama > MLFQ' }]
+	]);
+	assert.equal(
+		parseAndValidateMindMap(raw([{ path: ['Geri besleme kuyruğu'], source_id: 'S1' }]), only).ok,
+		true
+	);
+});

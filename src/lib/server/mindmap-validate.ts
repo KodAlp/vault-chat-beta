@@ -29,6 +29,18 @@ function normalizeLabel(text: string): string {
 /** Matches the S1/S2 citation-id shape, to keep it out of node labels. */
 const ID_RE = /^S\d+$/;
 
+/** A label that is really a file name — the second thing the model reached
+ * for once copying headings was blocked. */
+const FILE_EXT_RE = /\.(md|pdf|txt|html?|docx?|pptx?)$/i;
+
+/** Basename of a library path, with and without its extension, so a label can
+ * be compared against both "corbett-2012-spanner.md" and
+ * "corbett-2012-spanner". */
+function baseNames(path: string): string[] {
+	const base = path.split('/').pop() ?? path;
+	return [base, base.replace(FILE_EXT_RE, '')];
+}
+
 /** Floor on map size, clamped to how many chunks were actually retrieved —
  * see the check below for why a floor is needed at all. */
 export const MIN_NODES = 6;
@@ -96,6 +108,26 @@ export function parseAndValidateMindMap(
 		};
 	}
 
+	// Blocking heading copies alone just moved the cheat: the model started
+	// labelling every node with the source's FILE NAME instead
+	// ("corbett-et-al-2012-spanner.md"), which passes the heading check while
+	// being even less of a concept. Observed in a real generation, hence the
+	// rule. Checked against every provided path, not only the cited one, since
+	// the model happily labels a node after a file it did not cite.
+	const fileNames = new Set([...idToChunk.values()].flatMap((c) => baseNames(c.path).map((b) => b.toLowerCase())));
+	const fileNameLabels = nodes.filter((n) =>
+		n.path.some((label) => {
+			const clean = label.trim();
+			return FILE_EXT_RE.test(clean) || fileNames.has(clean.toLowerCase());
+		})
+	);
+	if (fileNameLabels.length > 0) {
+		return {
+			ok: false,
+			error: `${fileNameLabels.length} düğümün etiketi bir dosya adı (ör. "${fileNameLabels[0].path[fileNameLabels[0].path.length - 1]}"). Etiket dosya adı değil, o dosyadaki bilginin kavramı olmalı.`
+		};
+	}
+
 	const copiedHeadings = nodes.filter((n) => {
 		const chunk = idToChunk.get(n.source_id)!;
 		const leaf = n.path[n.path.length - 1];
@@ -123,6 +155,17 @@ export function parseAndValidateMindMap(
 		return {
 			ok: false,
 			error: `Harita sadece ${nodes.length} düğüm içeriyor. En az ${minNodes} düğüm üret ve dallara ayır.`
+		};
+	}
+
+	// A flat list of N sibling nodes is a list, not a map — the hierarchy IS
+	// the artifact. Gated on the ABSOLUTE MIN_NODES, not the clamped minNodes:
+	// the latter is whatever the floor check just accepted, so it would demand
+	// nesting even from the single-node map a one-chunk vault can produce.
+	if (nodes.length >= MIN_NODES && !nodes.some((n) => n.path.length >= 2)) {
+		return {
+			ok: false,
+			error: 'Tüm düğümler aynı seviyede — harita düz bir liste. Kavramları üst/alt ilişkisine göre grupla; en az bazı düğümlerin path dizisi 2 veya daha fazla seviyeli olmalı.'
 		};
 	}
 
