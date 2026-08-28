@@ -183,8 +183,18 @@
 		height: 100%;
 	}
 
+	/* The app owns its scrolling; body/html must never be the scroll host.
+	   Without this, a tall route (every /settings/* page, /library/view, the
+	   study views) overflowed all the way out to <html> while body stayed
+	   pinned at height:100% — which is the state that made bits-ui's body
+	   scroll-lock visible as a white flash (see the html/body background note
+	   in app.css). With the scroll container here, that lock is a visual
+	   no-op. The chat route never showed the bug because its panels already
+	   scroll themselves; it sizes to 100% of this box, so it does not gain a
+	   second scrollbar from this. */
 	.app-content {
 		flex: 1;
 		min-height: 0;
+		overflow-y: auto;
 	}
 </style>

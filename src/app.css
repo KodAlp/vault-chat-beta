@@ -158,6 +158,18 @@ body {
 	margin: 0;
 }
 
+/* The ground colour is set on BOTH html and body on purpose. bits-ui toggles
+   body.style.overflow/paddingRight/marginRight every time a Select, Dialog or
+   DropdownMenu opens and closes (its internal body-scroll-lock). On a
+   height:100% body that briefly breaks the body->canvas background
+   propagation, and the un-painted canvas shows through as a white flash — the
+   flash users reported when changing a model on /settings. Painting html too
+   means the canvas is never unpainted, whatever bits-ui does to body. Keep
+   both declarations; dropping the html one brings the flash straight back. */
+html {
+	background: var(--ground);
+}
+
 body {
 	background: var(--ground);
 	color: var(--text);
