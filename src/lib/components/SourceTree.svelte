@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import type { LibraryNode } from '$lib/types';
-	import { collectFilePaths, toggleNode, toIncludedPaths, nodeMatchesFilter } from '$lib/sourceTree';
+	import type { LibraryNode, LibrarySettings } from '$lib/types';
+	import { applyDisplayRules, collectFilePaths, toggleNode, toIncludedPaths, nodeMatchesFilter } from '$lib/sourceTree';
 	import SourceTreeNode from './SourceTreeNode.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';
@@ -32,6 +32,18 @@
 	} = $props();
 
 	let tree = $state<LibraryNode[]>([]);
+	// Display-only reshaping (vault-configurable hidden/flattened root
+	// folders, see library.ts's DEFAULT_SETTINGS and applyDisplayRules'
+	// doc comment) — selection/scoping below always operates on the raw
+	// `tree`, never `displayTree`, since paths must stay exactly what
+	// retrieve.ts and the generators expect regardless of how the tree is
+	// drawn. Empty until settings load, same fail-open reasoning as
+	// LibraryTree.svelte: an unreachable settings endpoint must not hide
+	// content the user can otherwise select.
+	let displayRules = $state<{ hiddenFolders: string[]; flattenFolders: string[] }>({
+		hiddenFolders: [],
+		flattenFolders: []
+	});
 	let loadError = $state('');
 	let rootEl: HTMLDivElement | undefined;
 	let flashing = $state(false);
@@ -40,8 +52,9 @@
 
 	let allFiles = $derived(collectFilePaths(tree));
 	let selected = $derived(includedPaths === undefined ? new Set(allFiles) : new Set(includedPaths));
+	let displayTree = $derived(applyDisplayRules(tree, displayRules));
 	let hasMatch = $derived(
-		!filterQuery || tree.some((n) => nodeMatchesFilter(n, filterQuery))
+		!filterQuery || displayTree.some((n) => nodeMatchesFilter(n, filterQuery))
 	);
 
 	$effect(() => {
@@ -67,6 +80,15 @@
 			tree = ((await res.json()) as { tree: LibraryNode[] }).tree;
 		} catch {
 			loadError = 'Kütüphane yüklenemedi.';
+		}
+		try {
+			const res = await fetch(`/api/library/settings?vault=${encodeURIComponent(vaultId)}`);
+			if (res.ok) {
+				const settings = (await res.json()) as LibrarySettings;
+				displayRules = { hiddenFolders: settings.hiddenFolders, flattenFolders: settings.flattenFolders };
+			}
+		} catch {
+			// displayRules just stays at its fail-open default (show everything)
 		}
 	});
 
@@ -118,7 +140,7 @@
 		</label>
 		{#if hasMatch}
 			<div class="nodes">
-				{#each tree as node (node.path)}
+				{#each displayTree as node (node.path)}
 					<SourceTreeNode {node} {selected} ontoggle={handleToggle} {filterQuery} />
 				{/each}
 			</div>

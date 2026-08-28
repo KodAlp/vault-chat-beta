@@ -8,8 +8,15 @@
 	import * as Card from '$lib/components/ui/card';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 
-	let settings = $state<LibrarySettings>({ keepOriginals: false, allowedLanguages: ['Türkçe'] });
+	let settings = $state<LibrarySettings>({
+		keepOriginals: false,
+		allowedLanguages: ['Türkçe'],
+		hiddenFolders: ['raw', 'cards', 'frontier', 'notes'],
+		flattenFolders: ['wiki']
+	});
 	let allowedLanguagesInput = $state('Türkçe');
+	let hiddenFoldersInput = $state('');
+	let flattenFoldersInput = $state('');
 	let loadError = $state('');
 
 	onMount(async () => {
@@ -18,6 +25,8 @@
 			if (!res.ok) throw new Error();
 			settings = (await res.json()) as LibrarySettings;
 			allowedLanguagesInput = settings.allowedLanguages.join(', ');
+			hiddenFoldersInput = settings.hiddenFolders.join(', ');
+			flattenFoldersInput = settings.flattenFolders.join(', ');
 		} catch {
 			loadError = 'Ayarlar alınamadı.';
 		}
@@ -35,12 +44,29 @@
 		}
 	}
 
-	function persistAllowedLanguages() {
-		const parsed = allowedLanguagesInput
+	function parseCsv(input: string): string[] {
+		return input
 			.split(',')
 			.map((s) => s.trim())
 			.filter(Boolean);
+	}
+
+	function persistAllowedLanguages() {
+		const parsed = parseCsv(allowedLanguagesInput);
 		settings.allowedLanguages = parsed.length ? parsed : ['Türkçe'];
+		void persist();
+	}
+
+	// Unlike allowedLanguages, these two CAN be legitimately emptied (a vault
+	// with no bookkeeping folders to hide, or one where flattening wiki/
+	// isn't wanted) — no non-empty fallback.
+	function persistHiddenFolders() {
+		settings.hiddenFolders = parseCsv(hiddenFoldersInput);
+		void persist();
+	}
+
+	function persistFlattenFolders() {
+		settings.flattenFolders = parseCsv(flattenFoldersInput);
 		void persist();
 	}
 </script>
@@ -95,6 +121,32 @@
 				<span class="text-xs text-muted-foreground">
 					İlk dil modelin birincil yanıt dili olur. Ek diller (dil öğrenme vault'ları gibi)
 					yanıt içinde kullanılabilir ve sızıntı algılayıcı tarafından bozukluk sayılmaz.
+				</span>
+			</label>
+			<label class="flex flex-col gap-1 text-sm">
+				Sohbet ekranında gizli klasörler
+				<Input
+					type="text"
+					bind:value={hiddenFoldersInput}
+					onchange={persistHiddenFolders}
+					placeholder="raw, cards, frontier"
+				/>
+				<span class="text-xs text-muted-foreground">
+					Bu kök klasörler sohbetin kaynak ağacında hiç görünmez ve hiçbir üretime (sohbet,
+					test, rapor, ...) kaynak olarak sunulmaz. Kütüphane Ağacı (aşağıda) bundan etkilenmez.
+				</span>
+			</label>
+			<label class="flex flex-col gap-1 text-sm">
+				Sohbet ekranında düzleştirilecek klasörler
+				<Input
+					type="text"
+					bind:value={flattenFoldersInput}
+					onchange={persistFlattenFolders}
+					placeholder="wiki"
+				/>
+				<span class="text-xs text-muted-foreground">
+					Bu kök klasörlerin kendisi gizlenir, altındaki klasörler doğrudan ağacın kökünde
+					gösterilir. Yollar değişmez, sadece ağacın görünümü sadeleşir.
 				</span>
 			</label>
 		</Card.Content>

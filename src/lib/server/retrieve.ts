@@ -4,6 +4,7 @@ import * as sqliteVec from 'sqlite-vec';
 import { embed } from './ollama';
 import { EMBED_MODEL, QUERY_PREFIX } from './embed-config';
 import { selectChunks, type CandidateChunk } from './select-chunks';
+import { getLibrarySettings } from './library-read';
 import type { RetrieveResult } from '$lib/types';
 import type { VaultContext } from './vaults';
 import { logAppEvent } from './app-log';
@@ -115,7 +116,14 @@ export async function retrieve(
 		});
 	}
 
-	return selectChunks(candidates, { ...opts, k });
+	// Always applied, independent of includedPaths/domains — a vault's
+	// bookkeeping folders (LibrarySettings.hiddenFolders, e.g. cards/
+	// frontier/) are never real study content, so they're excluded from
+	// every retrieval the same way they're excluded from SourceTree.svelte,
+	// not just an opt-in narrowing the caller has to remember to ask for.
+	const excludedPrefixes = getLibrarySettings(v).hiddenFolders;
+
+	return selectChunks(candidates, { ...opts, excludedPrefixes, k });
 }
 
 /** Domains actually present in the index, not a hardcoded list — stays

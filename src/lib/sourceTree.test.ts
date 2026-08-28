@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { collectFilePaths, nodeState, toggleNode, toIncludedPaths } from './sourceTree';
+import { applyDisplayRules, collectFilePaths, nodeState, toggleNode, toIncludedPaths } from './sourceTree';
 import type { LibraryNode } from './types';
 
 const tree: LibraryNode[] = [
@@ -73,4 +73,40 @@ test('toIncludedPaths returns the explicit list for a partial selection', () => 
 
 test('toIncludedPaths treats an empty vault (no files) as "all", not a false partial match', () => {
 	assert.equal(toIncludedPaths(new Set(), []), undefined);
+});
+
+const displayTree: LibraryNode[] = [
+	{ name: 'cards', path: 'cards', type: 'folder', children: [{ name: 'math.md', path: 'cards/math.md', type: 'file' }] },
+	{
+		name: 'wiki',
+		path: 'wiki',
+		type: 'folder',
+		children: [
+			{ name: 'math', path: 'wiki/math', type: 'folder', children: [] },
+			{ name: 'dsa', path: 'wiki/dsa', type: 'folder', children: [] }
+		]
+	},
+	{ name: 'notes.md', path: 'notes.md', type: 'file' }
+];
+
+test('applyDisplayRules drops hidden root folders entirely', () => {
+	const out = applyDisplayRules(displayTree, { hiddenFolders: ['cards'], flattenFolders: [] });
+	assert.deepEqual(out.map((n) => n.name), ['wiki', 'notes.md']);
+});
+
+test('applyDisplayRules replaces a flattened root folder with its children, paths untouched', () => {
+	const out = applyDisplayRules(displayTree, { hiddenFolders: [], flattenFolders: ['wiki'] });
+	assert.deepEqual(out.map((n) => n.name), ['cards', 'math', 'dsa', 'notes.md']);
+	const math = out.find((n) => n.name === 'math');
+	assert.equal(math?.path, 'wiki/math'); // the child's own path is unchanged — only the tree shape moved
+});
+
+test('applyDisplayRules combines hiding and flattening, leaves files and unlisted folders alone', () => {
+	const out = applyDisplayRules(displayTree, { hiddenFolders: ['cards'], flattenFolders: ['wiki'] });
+	assert.deepEqual(out.map((n) => n.name), ['math', 'dsa', 'notes.md']);
+});
+
+test('applyDisplayRules is a no-op when both rule lists are empty', () => {
+	const out = applyDisplayRules(displayTree, { hiddenFolders: [], flattenFolders: [] });
+	assert.deepEqual(out.map((n) => n.name), ['cards', 'wiki', 'notes.md']);
 });

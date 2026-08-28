@@ -20,6 +20,18 @@ function inScope(filePath: string, includedPaths: string[]): boolean {
 	return includedPaths.some((p) => filePath === p || filePath.startsWith(`${p}/`));
 }
 
+/** Same exact-or-subpath match as inScope, opposite polarity — a file
+ * matching one of these prefixes is dropped regardless of includedPaths.
+ * Used for LibrarySettings.hiddenFolders (raw/cards/frontier/... — see
+ * library.ts's DEFAULT_SETTINGS): those are the vault's own bookkeeping,
+ * never real study content, and every chunk that slipped through here was
+ * a citation the user couldn't actually learn from — see report/quiz/cards
+ * generators' anti-hallucination checks, which only verify a cited path
+ * came FROM retrieval, not that retrieval itself was sensible. */
+function isExcluded(filePath: string, excludedPrefixes: string[]): boolean {
+	return excludedPrefixes.some((p) => filePath === p || filePath.startsWith(`${p}/`));
+}
+
 /**
  * Pure post-processing over an already-fetched candidate pool: distance
  * threshold, scope filter, domain filter, per-file dedupe, k-limit, and the
@@ -31,7 +43,13 @@ function inScope(filePath: string, includedPaths: string[]): boolean {
  */
 export function selectChunks(
 	candidates: CandidateChunk[],
-	opts: { domains?: string[]; levels?: string[]; includedPaths?: string[]; k?: number } = {}
+	opts: {
+		domains?: string[];
+		levels?: string[];
+		includedPaths?: string[];
+		excludedPrefixes?: string[];
+		k?: number;
+	} = {}
 ): RetrieveResult {
 	const k = opts.k ?? DEFAULT_K;
 	const perFileCount = new Map<string, number>();
@@ -40,6 +58,15 @@ export function selectChunks(
 
 	for (const c of candidates) {
 		if (c.distance > DISTANCE_THRESHOLD) continue;
+
+		// Checked before includedPaths and unconditionally (not gated on
+		// includedPaths being set): a hidden folder must disappear from
+		// retrieval the same way it disappears from SourceTree.svelte,
+		// regardless of whether the user has also scoped the chat further.
+		// Never sets sawInThresholdOutOfScope — "kapsamı genişlet?" wouldn't
+		// help here, the content is administratively excluded, not just
+		// out of the user's chosen scope.
+		if (opts.excludedPrefixes?.length && isExcluded(c.path, opts.excludedPrefixes)) continue;
 
 		if (opts.includedPaths !== undefined && !inScope(c.path, opts.includedPaths)) {
 			sawInThresholdOutOfScope = true;

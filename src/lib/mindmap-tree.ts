@@ -39,12 +39,28 @@ export function buildTree(
 
 /** Markmap's Transformer consumes a markdown string, not a hand-built node
  * object — this is the integration seam between buildTree()'s output and
- * markmap-lib's Transformer.transform(). Node labels stay plain text (no
- * embedded links — see mindmap generator's view route for why). */
-export function treeToMarkdownOutline(tree: MindMapTreeNode): string {
+ * markmap-lib's Transformer.transform(). Nodes render through markmap-view's
+ * foreignObject/HTML path (see its `.markmap-foreign a` style), so a real
+ * markdown link here becomes a real clickable `<a>` in the SVG — no extra
+ * wiring needed on the view side beyond passing `linkFor`.
+ *
+ * `linkFor` is optional and per-node: it's asked for every node (not just
+ * leaves), so a caller can choose to link only cited nodes (sourcePath !==
+ * null) by returning null for the rest — those stay plain text, exactly as
+ * before this was introduced. `]` in a label is escaped since it would
+ * otherwise prematurely close the `[label]` span of the markdown link
+ * syntax (its unescaped counterpart `[` is escaped too, for the same
+ * reason); heading text from a book/course source can plausibly contain
+ * either (e.g. "Diziler [Bölüm 3]"). */
+export function treeToMarkdownOutline(
+	tree: MindMapTreeNode,
+	linkFor?: (node: MindMapTreeNode) => string | null
+): string {
 	const lines: string[] = [];
 	function walk(node: MindMapTreeNode, depth: number) {
-		lines.push(`${'  '.repeat(depth)}- ${node.label}`);
+		const url = linkFor?.(node) ?? null;
+		const text = url ? `[${node.label.replace(/[[\]]/g, '\\$&')}](${url})` : node.label;
+		lines.push(`${'  '.repeat(depth)}- ${text}`);
 		for (const child of node.children) walk(child, depth + 1);
 	}
 	for (const child of tree.children) walk(child, 0);
