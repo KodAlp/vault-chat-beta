@@ -3,7 +3,7 @@ import { chatWithFallback } from './providers/registry';
 import type { ChatMessage } from './providers/types';
 import { retrieve } from './retrieve';
 import { getMessages } from './chats-db';
-import { Slides, SLIDES_JSON_SCHEMA } from './slides-schema';
+import { Slides, buildSlidesJsonSchema } from './slides-schema';
 import { createSlideDeck, type NewSlide } from './study-db';
 import { renderUserSkillsBlock } from './userSkills';
 import type { VaultContext } from './vaults';
@@ -57,6 +57,7 @@ async function callModel(
 	model: string,
 	systemPrompt: string,
 	userPrompt: string,
+	format: object,
 	provider: string | undefined,
 	onTick?: (elapsedMs: number) => void
 ): Promise<string> {
@@ -71,7 +72,7 @@ async function callModel(
 	try {
 		for await (const event of chatWithFallback(
 			'slides',
-			{ model, messages, think: false, format: SLIDES_JSON_SCHEMA, temperature: 0.3 },
+			{ model, messages, think: false, format, temperature: 0.3 },
 			signal,
 			provider
 		)) {
@@ -85,7 +86,7 @@ async function callModel(
 
 type ParseResult = { ok: true; slides: NewSlide[] } | { ok: false; error: string };
 
-function parseAndValidate(raw: string, validPaths: Set<string>): ParseResult {
+function parseAndValidate(raw: string, idToPath: Map<string, string>): ParseResult {
 	let json: unknown;
 	try {
 		json = JSON.parse(raw);
@@ -96,26 +97,29 @@ function parseAndValidate(raw: string, validPaths: Set<string>): ParseResult {
 	if (!result.success) {
 		return { ok: false, error: result.error.issues.map((i) => i.message).join('; ') };
 	}
-	const badSlides = result.data.slides.filter((s) => !validPaths.has(s.source_path));
-	if (badSlides.length > 0) {
+	const badIds = result.data.slides.filter((s) => !idToPath.has(s.source_id));
+	if (badIds.length > 0) {
 		return {
 			ok: false,
-			error: `${badSlides.length} slaytın source_path'i sağlanan kaynaklarla eşleşmiyor (uydurma kaynak).`
+			error: `${badIds.length} slaytın source_id'si sağlanan kaynak kimlikleriyle eşleşmiyor. Sadece S1, S2, ... gibi verilen kimlikleri kullan.`
 		};
 	}
 	if (result.data.slides.length === 0) {
 		return { ok: false, error: 'Model hiç slayt üretmedi.' };
 	}
-	return { ok: true, slides: result.data.slides };
+	const slides: NewSlide[] = result.data.slides.map((s) => ({
+		content_markdown: s.content_markdown,
+		source_path: idToPath.get(s.source_id)!
+	}));
+	return { ok: true, slides };
 }
 
 export function buildSystemPrompt(contextBlock: string, userSkillsBlock: string): string {
-	const taskIntro = `Sen bir sunum (slayt) hazırlama asistanısın. Aşağıdaki <context> bloğu, her biri
-source_path/heading_path/depth etiketleriyle işaretlenmiş kaynak parçalarından oluşuyor. Bu kaynaklara
-dayanarak 3-20 slaytlık bir sunum hazırla. Her slaytın content_markdown alanı KISA madde işaretleri
-(bullet point) içermeli, uzun paragraflar değil — bir slayt ekranda gösterilecek, okunacak bir makale
-değil. Her slaytın kendi source_path'i, o slaytı hangi kaynak parçasından ürettiysen o parçanın
-source_path etiketinin değeri olmalı.`;
+	const taskIntro = `Sen bir sunum (slayt) hazırlama asistanısın. Aşağıdaki <context> bloğu, her biri kısa bir
+kimlikle (id: S1, S2, ...) ve source_path/heading_path/depth etiketleriyle işaretlenmiş kaynak
+parçalarından oluşuyor. Bu kaynaklara dayanarak 3-20 slaytlık bir sunum hazırla. Her slaytın
+content_markdown alanı KISA madde işaretleri (bullet point) içermeli, uzun paragraflar değil — bir
+slayt ekranda gösterilecek, okunacak bir makale değil.`;
 
 	const invariants = `Kurallar:
 - SADECE <context> bloğundaki bilgiye dayanarak slaytlar hazırla. Context dışında hiçbir bilgi kullanma.
@@ -124,8 +128,8 @@ source_path etiketinin değeri olmalı.`;
 - Matematik sadece $...$ (satır içi) veya $$...$$ (blok) içinde, asla çıplak LaTeX.
 - content_markdown içinde yalnız "---" karakterlerinden oluşan bir satır KULLANMA (bu slayt ayracı
   olarak yorumlanır) — yatay çizgi gerekiyorsa bunun yerine düzyazıda belirt.
-- source_path değeri, kullandığın kaynak parçasının KENDİ source_path etiketinin değeriyle BİREBİR
-  AYNI olmalı.`;
+- source_id, o slaytı hangi kaynak parçasından ürettiysen o parçanın id'si olmalı — sadece S1, S2,
+  ... gibi verilen kimlikleri kullan, asla dosya yolu yazma.`;
 
 	return [taskIntro, userSkillsBlock, invariants, `<context>\n${contextBlock}\n</context>`]
 		.filter(Boolean)
@@ -194,32 +198,35 @@ export async function generateSlides(
 		throw new NoSourcesError(narrowScope);
 	}
 
-	const validPaths = new Set(chunks.map((c) => c.path));
+	// Short id per chunk (S1, S2, ...) instead of a path for the model to
+	// copy — see slides-schema.ts's doc comment.
+	const idToPath = new Map(chunks.map((c, i) => [`S${i + 1}`, c.path]));
 	const contextBlock = chunks
 		.map(
-			(c) =>
-				`source_path: ${c.path}\nheading_path: ${c.heading_path}\ndepth: ${c.depth}\n\n${c.display_text}`
+			(c, i) =>
+				`id: S${i + 1}\nsource_path: ${c.path}\nheading_path: ${c.heading_path}\ndepth: ${c.depth}\n\n${c.display_text}`
 		)
 		.join('\n\n---\n\n');
 	const userSkillsBlock = await renderUserSkillsBlock('slides');
 	const systemPrompt = buildSystemPrompt(contextBlock, userSkillsBlock);
+	const format = buildSlidesJsonSchema([...idToPath.keys()]);
 
 	onProgress?.('generating');
-	let raw = await callModel(input.model, systemPrompt, input.prompt, input.provider, (ms) =>
+	let raw = await callModel(input.model, systemPrompt, input.prompt, format, input.provider, (ms) =>
 		onProgress?.('generating', ms)
 	);
 
 	onProgress?.('validating');
-	let parsed = parseAndValidate(raw, validPaths);
+	let parsed = parseAndValidate(raw, idToPath);
 
 	const MAX_RETRIES = 2;
 	for (let attempt = 0; !parsed.ok && attempt < MAX_RETRIES; attempt++) {
 		onProgress?.('retrying');
 		const retryPrompt = `${input.prompt}\n\nÖnceki cevabın geçersizdi: ${parsed.error}\nSADECE geçerli JSON döndür.`;
-		raw = await callModel(input.model, systemPrompt, retryPrompt, input.provider, (ms) =>
+		raw = await callModel(input.model, systemPrompt, retryPrompt, format, input.provider, (ms) =>
 			onProgress?.('retrying', ms)
 		);
-		parsed = parseAndValidate(raw, validPaths);
+		parsed = parseAndValidate(raw, idToPath);
 	}
 
 	if (!parsed.ok) {

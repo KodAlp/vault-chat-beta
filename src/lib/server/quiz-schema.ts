@@ -1,13 +1,24 @@
 import { z } from 'zod';
 
+/**
+ * source_id, not source_path: the model cites a short handle (`S1`, `S2`,
+ * ...) assigned per-chunk in generate-quiz.ts's context block, not the full
+ * vault path (which runs 40-80+ chars, e.g.
+ * `wiki/math/sources/<kitap>/<konu>.md`). Same fix as report-schema.ts and
+ * cards-schema.ts, for the identical failure mode: a model asked to copy a
+ * long path verbatim across up to 20 questions reliably drops/mangles
+ * characters under partial-GPU-offload latency.
+ *
+ * heading_path is no longer asked for either — the server resolves it from
+ * the cited id, the same simplification mindmap-schema.ts made.
+ */
 export const QuizItem = z.object({
 	type: z.enum(['multiple_choice', 'true_false', 'open']),
 	question: z.string().min(1),
 	options: z.array(z.string()).length(5).optional(),
 	answer: z.string().min(1),
 	explanation: z.string().min(1),
-	source_path: z.string().min(1),
-	heading_path: z.string().min(1)
+	source_id: z.string().min(1)
 });
 export type QuizItemT = z.infer<typeof QuizItem>;
 
@@ -15,32 +26,35 @@ export const QuizItems = z.object({ items: z.array(QuizItem) });
 export type QuizItemsT = z.infer<typeof QuizItems>;
 
 /**
- * Hand-written JSON Schema mirror of QuizItems, for Ollama's `format` param
- * (structured output — verified this Ollama install enforces it correctly).
- * Kept separate from the zod schema on purpose: zod validates what comes
- * back in code, this just constrains what the model is allowed to emit —
- * no zod-to-JSON-Schema conversion dependency needed for two schemas this
- * small and this unlikely to drift (both live in this one file).
+ * A FUNCTION, not a static const, because `source_id` is constrained by
+ * `enum: validIds` rather than a free string — Ollama/llama.cpp's
+ * JSON-schema-to-GBNF grammar compiler doesn't reliably translate regex
+ * patterns (see report-schema.ts's doc comment for the exact failure this
+ * caused live), so an enum of the ids actually offered this request is used
+ * instead. As a bonus this is STRICTER than a regex ever was: the model is
+ * sampling-time restricted to ids that actually exist in this request's
+ * context block, not just to the right shape.
  */
-export const QUIZ_ITEMS_JSON_SCHEMA = {
-	type: 'object',
-	properties: {
-		items: {
-			type: 'array',
+export function buildQuizItemsJsonSchema(validIds: string[]) {
+	return {
+		type: 'object',
+		properties: {
 			items: {
-				type: 'object',
-				properties: {
-					type: { type: 'string', enum: ['multiple_choice', 'true_false', 'open'] },
-					question: { type: 'string' },
-					options: { type: 'array', items: { type: 'string' }, minItems: 5, maxItems: 5 },
-					answer: { type: 'string' },
-					explanation: { type: 'string' },
-					source_path: { type: 'string' },
-					heading_path: { type: 'string' }
-				},
-				required: ['type', 'question', 'answer', 'explanation', 'source_path', 'heading_path']
+				type: 'array',
+				items: {
+					type: 'object',
+					properties: {
+						type: { type: 'string', enum: ['multiple_choice', 'true_false', 'open'] },
+						question: { type: 'string' },
+						options: { type: 'array', items: { type: 'string' }, minItems: 5, maxItems: 5 },
+						answer: { type: 'string' },
+						explanation: { type: 'string' },
+						source_id: { type: 'string', enum: validIds }
+					},
+					required: ['type', 'question', 'answer', 'explanation', 'source_id']
+				}
 			}
-		}
-	},
-	required: ['items']
-} as const;
+		},
+		required: ['items']
+	} as const;
+}
