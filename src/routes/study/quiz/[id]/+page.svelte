@@ -28,7 +28,18 @@
 	let errorMessage = $state('');
 	let result = $state<SubmitAttemptResponse | null>(null);
 	let renderedResults = $state<
-		{ item: AttemptResultItem; questionHtml: string; explanationHtml: string }[]
+		{
+			item: AttemptResultItem;
+			questionHtml: string;
+			explanationHtml: string;
+			givenHtml: string;
+			correctAnswerHtml: string;
+			modelFeedbackHtml: string;
+			/** Parallel to item.options — null for true_false/open, where
+			 * AttemptResultItem.options is null too (only multiple_choice
+			 * items carry options_json server-side). */
+			optionsHtml: string[] | null;
+		}[]
 	>([]);
 
 	let questionHtml = $state('');
@@ -109,11 +120,20 @@
 			});
 			if (!res.ok) throw new Error();
 			result = (await res.json()) as SubmitAttemptResponse;
+			// Formulas/variables in the answer/explanation/model-feedback text were
+			// shown as raw "$...$" until this — only the question itself went
+			// through renderMarkdown before. Math-heavy subjects (math, physics,
+			// electronics) made the results screen unreadable for exactly the
+			// items a student most needs to review.
 			renderedResults = await Promise.all(
 				result.items.map(async (item) => ({
 					item,
 					questionHtml: await renderMarkdown(item.question),
-					explanationHtml: await renderMarkdown(item.explanation)
+					explanationHtml: await renderMarkdown(item.explanation),
+					givenHtml: item.given ? await renderMarkdown(item.given) : '',
+					correctAnswerHtml: await renderMarkdown(item.correctAnswer),
+					modelFeedbackHtml: item.modelFeedback ? await renderMarkdown(item.modelFeedback) : '',
+					optionsHtml: item.options ? await Promise.all(item.options.map((o) => renderMarkdown(o))) : null
 				}))
 			);
 			phase = 'results';
@@ -213,13 +233,47 @@
 					</div>
 					<div class="result-body">
 						<div class="question markdown-body">{@html r.questionHtml}</div>
-						<p class="given">Cevabın: {r.item.given || '(boş)'}</p>
-						{#if !r.item.isCorrect}
-							<p class="correct-answer">Doğru cevap: {r.item.correctAnswer}</p>
+
+						{#if r.item.type === 'multiple_choice' && r.item.options}
+							<!-- Options weren't shown at all before — a multiple-choice
+							     result was unreadable without them. given/correct are
+							     marked directly on the option instead of repeating them
+							     as separate text below. -->
+							<div class="options result-options">
+								{#each r.item.options as option, i (option + '#' + i)}
+									<div
+										class="option static"
+										class:given-option={option === r.item.given}
+										class:correct-option={option === r.item.correctAnswer}
+									>
+										<span class="option-letter">{String.fromCharCode(65 + i)})</span>
+										<span class="markdown-body option-md">{@html r.optionsHtml?.[i] ?? option}</span>
+									</div>
+								{/each}
+							</div>
+						{:else}
+							<div class="answer-block">
+								<span class="answer-label">Cevabın:</span>
+								{#if r.item.given}
+									<div class="markdown-body answer-md">{@html r.givenHtml}</div>
+								{:else}
+									<span class="answer-empty">(boş)</span>
+								{/if}
+							</div>
+							{#if !r.item.isCorrect}
+								<div class="answer-block">
+									<span class="answer-label">Doğru cevap:</span>
+									<div class="markdown-body answer-md">{@html r.correctAnswerHtml}</div>
+								</div>
+							{/if}
 						{/if}
+
 						<div class="explanation markdown-body">{@html r.explanationHtml}</div>
 						{#if r.item.modelFeedback}
-							<p class="model-feedback"><strong>Model değerlendirmesi:</strong> {r.item.modelFeedback}</p>
+							<div class="model-feedback">
+								<strong>Model değerlendirmesi:</strong>
+								<div class="markdown-body answer-md">{@html r.modelFeedbackHtml}</div>
+							</div>
 						{/if}
 						<a
 							class="source-link"
@@ -468,14 +522,61 @@
 		min-width: 0;
 	}
 
-	.given,
-	.correct-answer {
+	/* Results-only variant of .options/.option above: static (no hover/click
+	   affordance, no :focus-visible — these are read-only), and the given/
+	   correct markers replace the "Cevabın:"/"Doğru cevap:" text rows that
+	   used to duplicate this same information as plain, unrendered text. */
+	.result-options {
+		display: flex;
+		flex-direction: column;
+		gap: 0.4rem;
+		margin: 0.4rem 0;
+	}
+
+	.option.static {
+		cursor: default;
+		font-size: 0.9rem;
+	}
+
+	.option-md :global(p) {
+		margin: 0;
+		display: inline;
+	}
+
+	.option.given-option {
+		border-color: var(--color-primary);
+		background: var(--bubble-user);
+	}
+
+	.option.correct-option {
+		border-color: var(--color-destructive);
+	}
+
+	.option.given-option.correct-option {
+		border-color: var(--color-primary);
+	}
+
+	.answer-block {
+		display: flex;
+		align-items: baseline;
+		gap: 0.4rem;
 		font-size: 0.9rem;
 		margin: 0.3rem 0;
 	}
 
-	.correct-answer {
-		color: var(--color-destructive);
+	.answer-label {
+		flex-shrink: 0;
+		color: var(--color-muted-foreground);
+	}
+
+	.answer-empty {
+		color: var(--color-muted-foreground);
+		font-style: italic;
+	}
+
+	.answer-md :global(p) {
+		margin: 0;
+		display: inline;
 	}
 
 	.explanation {
@@ -485,6 +586,9 @@
 	}
 
 	.model-feedback {
+		display: flex;
+		align-items: baseline;
+		gap: 0.4rem;
 		font-size: 0.85rem;
 		margin-top: 0.5rem;
 	}
