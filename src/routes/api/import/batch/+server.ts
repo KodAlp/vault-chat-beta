@@ -7,11 +7,9 @@ import { enqueueConversion } from '$lib/server/convertQueue';
 import { stagingDir, resolveLibraryPath, slugify, appendImportLog } from '$lib/server/library';
 import { indexLibraryFile } from '$lib/server/incrementalIndex';
 import { vaultFromId } from '$lib/server/requestVault';
+import { sseStream } from '$lib/server/sse';
+import { logAppEvent } from '$lib/server/app-log';
 import type { ImportEvent, ImportResultItem, ImportSummary } from '$lib/types';
-
-function sseEvent(event: ImportEvent): string {
-	return `data: ${JSON.stringify(event)}\n\n`;
-}
 
 /**
  * Batch upload — no per-file confirm step (would be tedious for N files):
@@ -27,82 +25,74 @@ export const POST: RequestHandler = async ({ request }) => {
 	const files = formData.getAll('files').filter((f): f is File => f instanceof File);
 	const v = vaultFromId(formData.get('vault') as string | null);
 
-	const stream = new ReadableStream({
-		async start(controller) {
-			const encoder = new TextEncoder();
-			const send = (event: ImportEvent) => controller.enqueue(encoder.encode(sseEvent(event)));
-			const items: ImportResultItem[] = [];
+	// sseStream, not a bare ReadableStream — same crash this fixed for the
+	// five /api/generate/* routes and for /api/import: an abandoned batch
+	// upload (a real risk when it's converting several files back to back)
+	// used to throw an unhandled error out of the next send() and take the
+	// whole server down instead of just this one request.
+	return sseStream<ImportEvent>(async (send) => {
+		const items: ImportResultItem[] = [];
 
-			for (const file of files) {
-				send({ type: 'progress', stage: 'converting', fileName: file.name });
-				const workDir = path.join(stagingDir(v), crypto.randomUUID());
-				fs.mkdirSync(workDir, { recursive: true });
-				const ext = path.extname(file.name) || '.bin';
-				const tempIn = path.join(workDir, `original${ext}`);
-				fs.writeFileSync(tempIn, Buffer.from(await file.arrayBuffer()));
+		for (const file of files) {
+			send({ type: 'progress', stage: 'converting', fileName: file.name });
+			const workDir = path.join(stagingDir(v), crypto.randomUUID());
+			fs.mkdirSync(workDir, { recursive: true });
+			const ext = path.extname(file.name) || '.bin';
+			const tempIn = path.join(workDir, `original${ext}`);
+			fs.writeFileSync(tempIn, Buffer.from(await file.arrayBuffer()));
 
-				try {
-					const result = await enqueueConversion(tempIn, workDir, 'auto');
-					if (!result.outPath) throw new Error('Dönüştürme çıktı üretmedi');
+			try {
+				const result = await enqueueConversion(tempIn, workDir, 'auto');
+				if (!result.outPath) throw new Error('Dönüştürme çıktı üretmedi');
 
-					const raw = fs.readFileSync(result.outPath, 'utf-8');
-					const parsed = matter(raw);
-					const title = (parsed.data.title as string) ?? path.parse(file.name).name;
-					const needsReview = parsed.data.needs_review === true;
-					const frontmatter: Record<string, unknown> = {
-						...parsed.data,
-						title,
-						domain,
-						level: 'undergraduate'
-					};
+				const raw = fs.readFileSync(result.outPath, 'utf-8');
+				const parsed = matter(raw);
+				const title = (parsed.data.title as string) ?? path.parse(file.name).name;
+				const needsReview = parsed.data.needs_review === true;
+				const frontmatter: Record<string, unknown> = {
+					...parsed.data,
+					title,
+					domain,
+					level: 'undergraduate'
+				};
 
-					const filename = `${slugify(v, title, domain)}.md`;
-					const relPath = `${domain}/${filename}`;
-					const destAbs = resolveLibraryPath(v, relPath);
-					fs.mkdirSync(path.dirname(destAbs), { recursive: true });
-					const finalRaw = matter.stringify(parsed.content, frontmatter);
-					fs.writeFileSync(destAbs, finalRaw, 'utf-8');
-					await indexLibraryFile(v, destAbs, relPath);
+				const filename = `${slugify(v, title, domain)}.md`;
+				const relPath = `${domain}/${filename}`;
+				const destAbs = resolveLibraryPath(v, relPath);
+				fs.mkdirSync(path.dirname(destAbs), { recursive: true });
+				const finalRaw = matter.stringify(parsed.content, frontmatter);
+				fs.writeFileSync(destAbs, finalRaw, 'utf-8');
+				await indexLibraryFile(v, destAbs, relPath);
 
-					appendImportLog(v, {
-						sourcePath: relPath,
-						sha256: crypto.createHash('sha256').update(finalRaw).digest('hex'),
-						importedAt: new Date().toISOString(),
-						status: needsReview ? 'needs_review' : 'converted',
-						tool: frontmatter.converted_by ?? 'upload-batch'
-					});
+				appendImportLog(v, {
+					sourcePath: relPath,
+					sha256: crypto.createHash('sha256').update(finalRaw).digest('hex'),
+					importedAt: new Date().toISOString(),
+					status: needsReview ? 'needs_review' : 'converted',
+					tool: frontmatter.converted_by ?? 'upload-batch'
+				});
 
-					const item: ImportResultItem = {
-						fileName: file.name,
-						status: needsReview ? 'needs_review' : 'converted',
-						path: relPath
-					};
-					items.push(item);
-					send({ type: 'item', item });
-				} catch (err) {
-					const item: ImportResultItem = {
-						fileName: file.name,
-						status: 'failed',
-						reason: err instanceof Error ? err.message : 'Bilinmeyen hata'
-					};
-					items.push(item);
-					send({ type: 'item', item });
-				} finally {
-					fs.rmSync(workDir, { recursive: true, force: true });
-				}
+				const item: ImportResultItem = {
+					fileName: file.name,
+					status: needsReview ? 'needs_review' : 'converted',
+					path: relPath
+				};
+				items.push(item);
+				send({ type: 'item', item });
+			} catch (err) {
+				const item: ImportResultItem = {
+					fileName: file.name,
+					status: 'failed',
+					reason: err instanceof Error ? err.message : 'Bilinmeyen hata'
+				};
+				items.push(item);
+				send({ type: 'item', item });
+			} finally {
+				fs.rmSync(workDir, { recursive: true, force: true });
 			}
-
-			const summary: ImportSummary = { items };
-			send({ type: 'done', summary });
-			controller.close();
 		}
-	});
 
-	return new Response(stream, {
-		headers: {
-			'content-type': 'text/event-stream',
-			'cache-control': 'no-cache',
-			connection: 'keep-alive'
-		}
-	});
+		const summary: ImportSummary = { items };
+		send({ type: 'done', summary });
+	}, (message) => logAppEvent({ kind: 'fatal_error', message: `batch import stream: ${message}` }));
 };

@@ -4,6 +4,8 @@ import type { RequestHandler } from './$types';
 import { enqueueYoutubeTranscript } from '$lib/server/youtubeQueue';
 import { stagingDir } from '$lib/server/library';
 import { vaultFromId } from '$lib/server/requestVault';
+import { sseStream } from '$lib/server/sse';
+import { logAppEvent } from '$lib/server/app-log';
 import type { ImportEvent } from '$lib/types';
 
 const YOUTUBE_URL = /^https?:\/\/(www\.)?(youtube\.com\/(watch\?|shorts\/)|youtu\.be\/)/i;
@@ -29,43 +31,32 @@ export const POST: RequestHandler = async ({ request }) => {
 	const workDir = path.join(stagingDir(v), importId);
 	fs.mkdirSync(workDir, { recursive: true });
 
-	const stream = new ReadableStream({
-		async start(controller) {
-			const encoder = new TextEncoder();
-			const send = (event: ImportEvent) => controller.enqueue(encoder.encode(sseEvent(event)));
+	// sseStream, not a bare ReadableStream — same crash this fixed for the
+	// five /api/generate/* routes and for /api/import: a transcript fetch can
+	// run long enough for the client to give up before it finishes, and the
+	// next send() after that used to throw uncaught and take the server down.
+	return sseStream<ImportEvent>(async (send) => {
+		try {
+			const result = await enqueueYoutubeTranscript(url, workDir, (event) => {
+				if (event.type === 'progress') send({ type: 'progress', stage: event.stage });
+			});
 
-			try {
-				const result = await enqueueYoutubeTranscript(url, workDir, (event) => {
-					if (event.type === 'progress') send({ type: 'progress', stage: event.stage });
-				});
+			if (!result.outPath) throw new Error('Transkript çıktı üretmedi');
 
-				if (!result.outPath) throw new Error('Transkript çıktı üretmedi');
+			const stagedMdPath = path.join(stagingDir(v), `${importId}.md`);
+			fs.copyFileSync(result.outPath, stagedMdPath);
+			fs.rmSync(workDir, { recursive: true, force: true });
 
-				const stagedMdPath = path.join(stagingDir(v), `${importId}.md`);
-				fs.copyFileSync(result.outPath, stagedMdPath);
-				fs.rmSync(workDir, { recursive: true, force: true });
-
-				const proposedTitle = (result.frontmatter.title as string) ?? 'YouTube video';
-				send({
-					type: 'ready',
-					importId,
-					proposed: { title: proposedTitle, domain: 'genel', level: 'undergraduate' },
-					warnings: result.warnings ?? []
-				});
-			} catch (err) {
-				fs.rmSync(workDir, { recursive: true, force: true });
-				send({ type: 'error', message: err instanceof Error ? err.message : 'Bilinmeyen hata' });
-			} finally {
-				controller.close();
-			}
+			const proposedTitle = (result.frontmatter.title as string) ?? 'YouTube video';
+			send({
+				type: 'ready',
+				importId,
+				proposed: { title: proposedTitle, domain: 'genel', level: 'undergraduate' },
+				warnings: result.warnings ?? []
+			});
+		} catch (err) {
+			fs.rmSync(workDir, { recursive: true, force: true });
+			send({ type: 'error', message: err instanceof Error ? err.message : 'Bilinmeyen hata' });
 		}
-	});
-
-	return new Response(stream, {
-		headers: {
-			'content-type': 'text/event-stream',
-			'cache-control': 'no-cache',
-			connection: 'keep-alive'
-		}
-	});
+	}, (message) => logAppEvent({ kind: 'fatal_error', message: `youtube import stream: ${message}` }));
 };
