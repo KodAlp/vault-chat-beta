@@ -27,7 +27,7 @@ export type ReportSectionsT = z.infer<typeof ReportSections>;
 
 /**
  * Hand-written JSON Schema mirror of ReportSections, for Ollama's `format`
- * param — same rationale as QUIZ_ITEMS_JSON_SCHEMA (quiz-schema.ts): not
+ * param — same rationale as buildQuizItemsJsonSchema (quiz-schema.ts): not
  * auto-derived from zod, kept in this one file so the two can't drift.
  *
  * A FUNCTION, not a static const, because `source_ids` is constrained by

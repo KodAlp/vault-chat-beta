@@ -2,10 +2,10 @@ import { chatWithFallback } from './providers/registry';
 import type { ChatMessage } from './providers/types';
 import { retrieve } from './retrieve';
 import { getMessages } from './chats-db';
-import { Cards, CARDS_JSON_SCHEMA } from './cards-schema';
-import { createDeck, type NewCard } from './study-db';
+import { buildCardsJsonSchema } from './cards-schema';
+import { parseAndValidateCards } from './cards-validate';
+import { createDeck } from './study-db';
 import { renderUserSkillsBlock } from './userSkills';
-import type { RetrievedChunk } from '$lib/types';
 import type { VaultContext } from './vaults';
 import { NoSourcesError } from './generate-errors';
 
@@ -68,6 +68,7 @@ async function callModel(
 	model: string,
 	systemPrompt: string,
 	userPrompt: string,
+	format: object,
 	provider: string | undefined,
 	onTick?: (elapsedMs: number) => void
 ): Promise<string> {
@@ -82,7 +83,7 @@ async function callModel(
 	try {
 		for await (const event of chatWithFallback(
 			'flashcards',
-			{ model, messages, think: false, format: CARDS_JSON_SCHEMA, temperature: 0.3 },
+			{ model, messages, think: false, format, temperature: 0.3 },
 			signal,
 			provider
 		)) {
@@ -94,57 +95,12 @@ async function callModel(
 	return text;
 }
 
-type ParseResult = { ok: true; items: NewCard[] } | { ok: false; error: string };
-
-/**
- * Rejects items whose source_path isn't one of the chunks actually retrieved
- * (the anti-hallucination check the skill requires) and, for the ones that
- * pass, derives domain/level from that chunk's own metadata rather than
- * trusting the model to copy them — see cards-schema.ts's comment. This is a
- * deliberate deviation from the skill's literal Card zod spec (documented in
- * the skill doc).
- */
-function parseAndValidate(raw: string, chunksByPath: Map<string, RetrievedChunk>): ParseResult {
-	let json: unknown;
-	try {
-		json = JSON.parse(raw);
-	} catch {
-		return { ok: false, error: 'Model geçerli JSON döndürmedi.' };
-	}
-	const result = Cards.safeParse(json);
-	if (!result.success) {
-		return { ok: false, error: result.error.issues.map((i) => i.message).join('; ') };
-	}
-	const badPaths = result.data.items.filter((item) => !chunksByPath.has(item.source_path));
-	if (badPaths.length > 0) {
-		return {
-			ok: false,
-			error: `${badPaths.length} kartın source_path'i sağlanan kaynaklarla eşleşmiyor (uydurma kaynak).`
-		};
-	}
-	if (result.data.items.length === 0) {
-		return { ok: false, error: 'Model hiç kart üretmedi.' };
-	}
-	const items: NewCard[] = result.data.items.map((item) => {
-		const chunk = chunksByPath.get(item.source_path)!;
-		return {
-			front: item.front,
-			back: item.back,
-			source_path: item.source_path,
-			heading_path: item.heading_path,
-			domain: chunk.domains[0] ?? 'genel',
-			level: chunk.depth
-		};
-	});
-	return { ok: true, items };
-}
-
 /** Exported for /api/skills/preview — lets the settings page show exactly
  * how a scope's system prompt is assembled without a real generation call. */
 export function buildSystemPrompt(count: number, contextBlock: string, userSkillsBlock: string): string {
-	const taskIntro = `Sen bir bilgi kartı (flashcard) hazırlama asistanısın. Aşağıdaki <context> bloğu, her biri
-source_path/heading_path/depth etiketleriyle işaretlenmiş kaynak parçalarından oluşuyor. Tam olarak ${count} adet
-bilgi kartı hazırla.
+	const taskIntro = `Sen bir bilgi kartı (flashcard) hazırlama asistanısın. Aşağıdaki <context> bloğu, her biri kısa
+bir kimlikle (id: S1, S2, ...) ve source_path/heading_path/depth etiketleriyle işaretlenmiş kaynak
+parçalarından oluşuyor. Tam olarak ${count} adet bilgi kartı hazırla.
 
 - "front" alanı bir HATIRLATMA İPUCU olmalı, trivia değil: "Laplace dönüşümünün yakınsama
   bölgesi neyi belirler?" YAZ, "ROC nedir?" YAZMA. Kartı gören kişi, cevabı hatırlamaya
@@ -158,13 +114,8 @@ bilgi kartı hazırla.
 - SADECE <context> bloğundaki bilgiye dayanarak kart üret. Context dışında hiçbir bilgi
   kullanma — context'te olmayan bir konuda kart üretme.
 - Türkçe yaz. Matematik sadece $...$ (satır içi) veya $$...$$ (blok) içinde, asla çıplak LaTeX.
-- Her kartın source_path alanı, o kartı hangi kaynak parçasından ürettiysen SADECE o parçanın
-  KENDİ source_path etiketinin değeriyle BİREBİR AYNI olmalı (dosya yolu, başka hiçbir şey ekleme
-  veya çıkarma). Kaynak parçalarının METİN İÇERİĞİNDE geçen başka dosya adları/[[bağlantılar]]
-  varsa BUNLARI source_path olarak KULLANMA — sadece o parçanın en üstündeki source_path
-  etiketini kullan.
-- heading_path alanı da aynı şekilde ilgili parçanın KENDİ heading_path etiketinin değeriyle
-  birebir aynı olmalı.`;
+- Her kartın source_id alanı, o kartı hangi kaynak parçasından ürettiysen o parçanın id'si olmalı
+  — sadece S1, S2, ... gibi verilen kimlikleri kullan, asla dosya yolu yazma.`;
 
 	return [taskIntro, userSkillsBlock, invariants, `<context>\n${contextBlock}\n</context>`]
 		.filter(Boolean)
@@ -203,32 +154,36 @@ export async function generateCards(
 		throw new NoSourcesError(narrowScope);
 	}
 
-	const chunksByPath = new Map(chunks.map((c) => [c.path, c]));
+	// Short id per chunk (S1, S2, ...) instead of a path for the model to
+	// copy — see cards-schema.ts's doc comment. This is what fixed report
+	// generation's 0% success rate; cards had the identical failure.
+	const idToChunk = new Map(chunks.map((c, i) => [`S${i + 1}`, c]));
 	const contextBlock = chunks
 		.map(
-			(c) =>
-				`source_path: ${c.path}\nheading_path: ${c.heading_path}\ndepth: ${c.depth}\n\n${c.display_text}`
+			(c, i) =>
+				`id: S${i + 1}\nsource_path: ${c.path}\nheading_path: ${c.heading_path}\ndepth: ${c.depth}\n\n${c.display_text}`
 		)
 		.join('\n\n---\n\n');
 	const userSkillsBlock = await renderUserSkillsBlock('flashcards');
 	const systemPrompt = buildSystemPrompt(input.count, contextBlock, userSkillsBlock);
+	const format = buildCardsJsonSchema([...idToChunk.keys()]);
 
 	onProgress?.('generating');
-	let raw = await callModel(input.model, systemPrompt, input.prompt, input.provider, (ms) =>
+	let raw = await callModel(input.model, systemPrompt, input.prompt, format, input.provider, (ms) =>
 		onProgress?.('generating', ms)
 	);
 
 	onProgress?.('validating');
-	let parsed = parseAndValidate(raw, chunksByPath);
+	let parsed = parseAndValidateCards(raw, idToChunk);
 
 	const MAX_RETRIES = 2;
 	for (let attempt = 0; !parsed.ok && attempt < MAX_RETRIES; attempt++) {
 		onProgress?.('retrying');
-		const retryPrompt = `${input.prompt}\n\nÖnceki cevabın geçersizdi: ${parsed.error}\nSADECE geçerli JSON döndür. source_path, kullandığın kaynak parçasının EN ÜSTÜNDEKİ source_path etiketiyle birebir aynı olmalı — parçanın metin içeriğinde adı geçen başka bir dosya değil.`;
-		raw = await callModel(input.model, systemPrompt, retryPrompt, input.provider, (ms) =>
+		const retryPrompt = `${input.prompt}\n\nÖnceki cevabın geçersizdi: ${parsed.error}\nSADECE geçerli JSON döndür.`;
+		raw = await callModel(input.model, systemPrompt, retryPrompt, format, input.provider, (ms) =>
 			onProgress?.('retrying', ms)
 		);
-		parsed = parseAndValidate(raw, chunksByPath);
+		parsed = parseAndValidateCards(raw, idToChunk);
 	}
 
 	if (!parsed.ok) {

@@ -2,7 +2,7 @@ import { chatWithFallback } from './providers/registry';
 import type { ChatMessage } from './providers/types';
 import { retrieve } from './retrieve';
 import { getMessages } from './chats-db';
-import { QuizItems, QUIZ_ITEMS_JSON_SCHEMA } from './quiz-schema';
+import { QuizItems, buildQuizItemsJsonSchema } from './quiz-schema';
 import { createQuiz, type NewQuizItem } from './study-db';
 import { renderUserSkillsBlock } from './userSkills';
 import type { VaultContext } from './vaults';
@@ -82,6 +82,7 @@ async function callModel(
 	model: string,
 	systemPrompt: string,
 	userPrompt: string,
+	format: object,
 	provider: string | undefined,
 	onTick?: (elapsedMs: number) => void
 ): Promise<string> {
@@ -96,7 +97,7 @@ async function callModel(
 	try {
 		for await (const event of chatWithFallback(
 			'quiz',
-			{ model, messages, think: false, format: QUIZ_ITEMS_JSON_SCHEMA, temperature: 0.3 },
+			{ model, messages, think: false, format, temperature: 0.3 },
 			signal,
 			provider
 		)) {
@@ -110,9 +111,10 @@ async function callModel(
 
 type ParseResult = { ok: true; items: NewQuizItem[] } | { ok: false; error: string };
 
-/** Rejects items whose source_path isn't one of the chunks actually retrieved
- * and handed to the model — the anti-hallucination check the skill requires. */
-function parseAndValidate(raw: string, validPaths: Set<string>): ParseResult {
+/** Rejects items whose source_id isn't one of the ids actually offered — the
+ * anti-hallucination check the skill requires — and resolves the winning
+ * ones to real source_path/heading_path from the server's own chunk table. */
+function parseAndValidate(raw: string, idToChunk: Map<string, { path: string; heading_path: string }>): ParseResult {
 	let json: unknown;
 	try {
 		json = JSON.parse(raw);
@@ -123,17 +125,29 @@ function parseAndValidate(raw: string, validPaths: Set<string>): ParseResult {
 	if (!result.success) {
 		return { ok: false, error: result.error.issues.map((i) => i.message).join('; ') };
 	}
-	const badPaths = result.data.items.filter((item) => !validPaths.has(item.source_path));
-	if (badPaths.length > 0) {
+	const badIds = result.data.items.filter((item) => !idToChunk.has(item.source_id));
+	if (badIds.length > 0) {
 		return {
 			ok: false,
-			error: `${badPaths.length} sorunun source_path'i sağlanan kaynaklarla eşleşmiyor (uydurma kaynak).`
+			error: `${badIds.length} sorunun source_id'si sağlanan kaynak kimlikleriyle eşleşmiyor. Sadece S1, S2, ... gibi verilen kimlikleri kullan.`
 		};
 	}
 	if (result.data.items.length === 0) {
 		return { ok: false, error: 'Model hiç soru üretmedi.' };
 	}
-	return { ok: true, items: result.data.items };
+	const items: NewQuizItem[] = result.data.items.map((item) => {
+		const chunk = idToChunk.get(item.source_id)!;
+		return {
+			type: item.type,
+			question: item.question,
+			options: item.options,
+			answer: item.answer,
+			explanation: item.explanation,
+			source_path: chunk.path,
+			heading_path: chunk.heading_path
+		};
+	});
+	return { ok: true, items };
 }
 
 /** Exported for /api/skills/preview — lets the settings page show exactly
@@ -144,8 +158,8 @@ export function buildSystemPrompt(
 	userSkillsBlock: string
 ): string {
 	const total = composition.mc + composition.tf + composition.open;
-	const taskIntro = `Sen bir sınav hazırlama asistanısın. Aşağıdaki <context> bloğu, her biri source_path/heading_path/depth
-etiketleriyle işaretlenmiş kaynak parçalarından oluşuyor. Tam olarak
+	const taskIntro = `Sen bir sınav hazırlama asistanısın. Aşağıdaki <context> bloğu, her biri kısa bir kimlikle
+(id: S1, S2, ...) ve source_path/heading_path/depth etiketleriyle işaretlenmiş kaynak parçalarından oluşuyor. Tam olarak
 ${total} soruluk bir test hazırla: ${composition.mc} çoktan seçmeli (5 seçenek), ${composition.tf} doğru/yanlış, ${composition.open} açık uçlu.
 Notların seviyesine (depth) uygun zorlukta sorular sor. Açık uçlu sorular SOMUT, kontrol edilebilir bir sonuç
 gerektirmeli — öğrenciyi gerçekten hesaplama/türetme/kanıtlama yapmaya zorla. "X nasıl hesaplanır?", "Y'yi açıkla"
@@ -160,14 +174,8 @@ alanına o sonucu yaz), açıklama değil.`;
 - SADECE <context> bloğundaki bilgiye dayanarak sorular hazırla. Context dışında hiçbir bilgi
   kullanma — context'te olmayan bir konuda soru sorma, kendi bilgin olsa bile.
 - Türkçe yaz. Matematik sadece $...$ (satır içi) veya $$...$$ (blok) içinde, asla çıplak LaTeX.
-- Her sorunun source_path alanı, o soruyu hangi kaynak parçasından ürettiysen SADECE o parçanın
-  KENDİ source_path etiketinin değeriyle BİREBİR AYNI olmalı (dosya yolu, başka hiçbir şey ekleme
-  veya çıkarma). Kaynak parçalarının METİN İÇERİĞİNDE geçen başka dosya adları/[[bağlantılar]]
-  varsa (örn. bir parça başka bir kaynağa atıfta bulunuyor olabilir) BUNLARI source_path olarak
-  KULLANMA — sadece o parçanın en üstündeki source_path etiketini kullan, metnin içinde adı geçen
-  değil.
-- heading_path alanı da aynı şekilde ilgili parçanın KENDİ heading_path etiketinin değeriyle
-  birebir aynı olmalı.
+- Her sorunun source_id alanı, o soruyu hangi kaynak parçasından ürettiysen o parçanın id'si olmalı
+  — sadece S1, S2, ... gibi verilen kimlikleri kullan, asla dosya yolu yazma.
 - Çoktan seçmeli sorularda options tam olarak 5 seçenek içermeli, answer bu 5 seçenekten biriyle birebir aynı metin olmalı.
 - Doğru/yanlış sorularda answer tam olarak "true" veya "false" olmalı.
 - explanation alanı doğru cevabın nedenini 1-3 cümlede açıklamalı.`;
@@ -212,39 +220,36 @@ export async function generateQuiz(
 		throw new NoSourcesError(narrowScope);
 	}
 
-	const validPaths = new Set(chunks.map((c) => c.path));
-	// Labeled fields, not a bracketed "[path | heading] (depth: x)" citation —
-	// the model was copying the whole bracket display format verbatim into
-	// source_path instead of extracting just the path (verified empirically).
-	// Explicit field labels mirroring the JSON schema's field names fix this.
+	// Short id per chunk (S1, S2, ...) instead of a path for the model to
+	// copy — see quiz-schema.ts's doc comment. This is the same fix that took
+	// report generation from a 0% to a working success rate.
+	const idToChunk = new Map(chunks.map((c, i) => [`S${i + 1}`, c]));
 	const contextBlock = chunks
 		.map(
-			(c) =>
-				`source_path: ${c.path}\nheading_path: ${c.heading_path}\ndepth: ${c.depth}\n\n${c.display_text}`
+			(c, i) =>
+				`id: S${i + 1}\nsource_path: ${c.path}\nheading_path: ${c.heading_path}\ndepth: ${c.depth}\n\n${c.display_text}`
 		)
 		.join('\n\n---\n\n');
 	const userSkillsBlock = await renderUserSkillsBlock('quiz');
 	const systemPrompt = buildSystemPrompt(input.composition, contextBlock, userSkillsBlock);
+	const format = buildQuizItemsJsonSchema([...idToChunk.keys()]);
 
 	onProgress?.('generating');
-	let raw = await callModel(input.model, systemPrompt, input.prompt, input.provider, (ms) =>
+	let raw = await callModel(input.model, systemPrompt, input.prompt, format, input.provider, (ms) =>
 		onProgress?.('generating', ms)
 	);
 
 	onProgress?.('validating');
-	let parsed = parseAndValidate(raw, validPaths);
+	let parsed = parseAndValidate(raw, idToChunk);
 
-	// Two retry attempts, not one — the source_path-confused-with-a-name-
-	// mentioned-in-the-text failure mode (a chunk's own text referencing
-	// another file) needs more than one nudge to reliably self-correct.
 	const MAX_RETRIES = 2;
 	for (let attempt = 0; !parsed.ok && attempt < MAX_RETRIES; attempt++) {
 		onProgress?.('retrying');
-		const retryPrompt = `${input.prompt}\n\nÖnceki cevabın geçersizdi: ${parsed.error}\nSADECE geçerli JSON döndür. source_path, kullandığın kaynak parçasının EN ÜSTÜNDEKİ source_path etiketiyle birebir aynı olmalı — parçanın metin içeriğinde adı geçen başka bir dosya değil.`;
-		raw = await callModel(input.model, systemPrompt, retryPrompt, input.provider, (ms) =>
+		const retryPrompt = `${input.prompt}\n\nÖnceki cevabın geçersizdi: ${parsed.error}\nSADECE geçerli JSON döndür.`;
+		raw = await callModel(input.model, systemPrompt, retryPrompt, format, input.provider, (ms) =>
 			onProgress?.('retrying', ms)
 		);
-		parsed = parseAndValidate(raw, validPaths);
+		parsed = parseAndValidate(raw, idToChunk);
 	}
 
 	if (!parsed.ok) {
