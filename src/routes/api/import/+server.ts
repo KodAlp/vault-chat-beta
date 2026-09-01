@@ -10,6 +10,41 @@ function sseEvent(event: ImportEvent): string {
 	return `data: ${JSON.stringify(event)}\n\n`;
 }
 
+/** A browser's <input type=file> always sends a bare filename, but nothing
+ * enforces that at the HTTP layer — a hand-crafted multipart request (curl,
+ * a script) can set filename="..\\..\\evil.md" and reach the originals copy
+ * below (`${importId}-${file.name}`) with a path outside originalsDir(v).
+ * basename() once, use the result everywhere file.name would otherwise
+ * appear, same fix shape as convert.py's own MARKITDOWN_EXTS gate on the
+ * other side of this pipeline. */
+function safeBasename(name: string): string {
+	// path.basename alone doesn't strip a Windows-style "..\\" prefix on
+	// POSIX (no backslash-as-separator there), so both separators are
+	// normalized to "/" first.
+	return path.basename(name.replace(/\\/g, '/'));
+}
+
+/** Same set convert.py actually routes on (MARKITDOWN_EXTS + PDF_EXT +
+ * TEX_EXT) plus .md for a source that's already Markdown — anything else is
+ * something the converter would only ever fail on or mis-handle, so it's
+ * rejected before a subprocess (and its memory/CPU cost) is spent on it. */
+const ALLOWED_EXTENSIONS = new Set([
+	'.pdf',
+	'.docx',
+	'.pptx',
+	'.xlsx',
+	'.html',
+	'.htm',
+	'.epub',
+	'.tex',
+	'.md'
+]);
+
+/** Generous enough for a large scanned PDF, small enough that one request
+ * can't buffer an unbounded upload into memory — see the size check below,
+ * which runs BEFORE arrayBuffer() is called, not after. */
+const MAX_UPLOAD_BYTES = 100 * 1024 * 1024;
+
 /** Single-file upload with a confirm step — see /api/library/import/[id]/confirm.
  * Converts into a staging file, does NOT touch the library tree/index yet. */
 export const POST: RequestHandler = async ({ request }) => {
@@ -20,12 +55,28 @@ export const POST: RequestHandler = async ({ request }) => {
 			headers: { 'content-type': 'text/event-stream' }
 		});
 	}
+
+	const safeName = safeBasename(file.name);
+	const ext = path.extname(safeName).toLowerCase();
+	if (!ALLOWED_EXTENSIONS.has(ext)) {
+		return new Response(sseEvent({ type: 'error', message: `Desteklenmeyen dosya türü: ${ext || '(uzantısız)'}` }), {
+			headers: { 'content-type': 'text/event-stream' }
+		});
+	}
+	// Checked against file.size (from the Web File API, available without
+	// reading the body) before arrayBuffer() ever runs — the whole point is
+	// never buffering an oversized upload into memory in the first place.
+	if (file.size > MAX_UPLOAD_BYTES) {
+		return new Response(sseEvent({ type: 'error', message: 'Dosya çok büyük (100MB sınırı)' }), {
+			headers: { 'content-type': 'text/event-stream' }
+		});
+	}
+
 	const v = vaultFromId(formData.get('vault') as string | null);
 
 	const importId = crypto.randomUUID();
 	const workDir = path.join(stagingDir(v), importId);
 	fs.mkdirSync(workDir, { recursive: true });
-	const ext = path.extname(file.name) || '.bin';
 	const tempIn = path.join(workDir, `original${ext}`);
 	fs.writeFileSync(tempIn, Buffer.from(await file.arrayBuffer()));
 
@@ -37,7 +88,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			try {
 				send({ type: 'progress', stage: 'queued' });
 				const result = await enqueueConversion(tempIn, workDir, 'auto', (event) => {
-					if (event.type === 'progress') send({ type: 'progress', stage: event.stage, fileName: file.name });
+					if (event.type === 'progress') send({ type: 'progress', stage: event.stage, fileName: safeName });
 				});
 
 				if (!result.outPath) throw new Error('Dönüştürme çıktı üretmedi');
@@ -47,11 +98,11 @@ export const POST: RequestHandler = async ({ request }) => {
 
 				if (getLibrarySettings(v).keepOriginals) {
 					fs.mkdirSync(originalsDir(v), { recursive: true });
-					fs.copyFileSync(tempIn, path.join(originalsDir(v), `${importId}-${file.name}`));
+					fs.copyFileSync(tempIn, path.join(originalsDir(v), `${importId}-${safeName}`));
 				}
 				fs.rmSync(workDir, { recursive: true, force: true });
 
-				const proposedTitle = (result.frontmatter.title as string) ?? path.parse(file.name).name;
+				const proposedTitle = (result.frontmatter.title as string) ?? path.parse(safeName).name;
 				send({
 					type: 'ready',
 					importId,

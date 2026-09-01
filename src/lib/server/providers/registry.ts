@@ -19,7 +19,19 @@ let adapters = new Map<string, ProviderAdapter>();
  * config-store.ts's writers). */
 function loadConfig(): ProvidersFile {
 	const p = providersPath();
-	const stat = fs.statSync(p);
+	let stat: fs.Stats;
+	try {
+		stat = fs.statSync(p);
+	} catch (err) {
+		// fs.statSync's raw ENOENT ("ENOENT: no such file or directory,
+		// stat 'C:\...\providers.json'") reached every chat/generation call
+		// as an unexplained 500 if this file was ever missing (a DATA_DIR
+		// override pointing nowhere, the file deleted by hand) — nothing
+		// seeds it at runtime outside the Tauri desktop build. This at
+		// least says which file and why, instead of a bare stat failure.
+		const reason = err instanceof Error ? err.message : String(err);
+		throw new Error(`providers.json okunamadı (${p}): ${reason}`);
+	}
 	if (cachedConfig && stat.mtimeMs === cachedMtime) return cachedConfig;
 	cachedConfig = readProvidersFile();
 	cachedMtime = stat.mtimeMs;

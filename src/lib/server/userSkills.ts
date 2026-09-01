@@ -240,7 +240,33 @@ export function readSkillRaw(name: string): string | undefined {
 /** Re-validates frontmatter before writing — never lets a broken file land
  * silently (skill doc: "malformed frontmatter ... never a crash", extended
  * here to "never a silent write" for the settings-page save path). */
+/**
+ * `name` reaches here straight from the URL path parameter in
+ * PUT /api/skills/[name], with nothing sanitizing it before this. SvelteKit
+ * decodes a %2F in that segment into a literal `/` in params.name rather than
+ * treating it as a route boundary — verified live:
+ * `GET /api/skills/..%2f..%2fpwned` reaches this module's own 404 handler
+ * (application/json body), not SvelteKit's routing-level 404, so
+ * params.name really can contain `../../pwned`. For an EXISTING skill this
+ * is harmless (resolvePath only matches names already found by scanning
+ * skillsDir()), but writeSkill's fallback path for a NEW name —
+ * `path.join(skillsDir(), name + '.md')` — would happily write outside the
+ * skills folder with attacker-controlled content.
+ *
+ * A legitimate skill name is a single filename component, never a path, so
+ * any path separator is rejected outright. The post-write containment check
+ * (same shape as library-read.ts's resolveLibraryPath) is defense in depth
+ * for anything this character check didn't anticipate — a null byte, a
+ * Windows device name, a future Node path-parsing quirk.
+ */
+function assertSafeSkillName(name: string): void {
+	if (!name || /[\\/]/.test(name)) {
+		throw new Error('Geçersiz skill adı');
+	}
+}
+
 export function writeSkill(name: string, raw: string): void {
+	assertSafeSkillName(name);
 	const parsed = matter(raw);
 	const result = Frontmatter.safeParse(parsed.data);
 	if (!result.success) {
@@ -248,6 +274,13 @@ export function writeSkill(name: string, raw: string): void {
 	}
 	const existing = resolvePath(name);
 	const absPath = existing ?? path.join(skillsDir(), `${name}.md`);
+
+	const root = skillsDir();
+	const withSep = root.endsWith(path.sep) ? root : root + path.sep;
+	if (!absPath.startsWith(withSep)) {
+		throw new Error('Geçersiz skill adı (dizin dışına çıkıyor)');
+	}
+
 	fs.mkdirSync(path.dirname(absPath), { recursive: true });
 	fs.writeFileSync(absPath, raw, 'utf-8');
 	cache.delete(absPath);

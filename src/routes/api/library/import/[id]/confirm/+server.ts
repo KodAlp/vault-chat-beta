@@ -8,7 +8,17 @@ import { stagingDir, resolveLibraryPath, slugify, appendImportLog } from '$lib/s
 import { indexLibraryFile } from '$lib/server/incrementalIndex';
 import { vaultFromId } from '$lib/server/requestVault';
 
+/** params.id is never checked against resolveLibraryPath-style containment
+ * before this — it goes straight into path.join(stagingDir(v), \`${id}.md\`)
+ * below. Every real id is a crypto.randomUUID() minted by
+ * POST /api/import (see that route), so requiring the UUID shape rejects a
+ * traversal id (e.g. "../../../../Users/alp/belgeler/gizli") before it ever
+ * reaches the filesystem, without narrowing what a legitimate request can do. */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export const POST: RequestHandler = async ({ params, request }) => {
+	if (!UUID_RE.test(params.id)) error(400, 'Geçersiz içe aktarma kimliği');
+
 	const body = (await request.json()) as { title: string; domain: string; level: string; vault?: string };
 	const v = vaultFromId(body.vault);
 
