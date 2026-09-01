@@ -2,6 +2,10 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getAdapter } from '$lib/server/providers/registry';
 import { OllamaAdapter } from '$lib/server/providers/ollama';
+import { sseStream } from '$lib/server/sse';
+import { logAppEvent } from '$lib/server/app-log';
+
+type PullEvent = { type: string; status?: string; error?: string };
 
 async function getOllamaAdapter(): Promise<OllamaAdapter> {
 	const adapter = await getAdapter('ollama');
@@ -33,30 +37,21 @@ export const POST: RequestHandler = async ({ request }) => {
 	const model = body?.model?.trim();
 	if (!model) return json({ error: 'model gerekli' }, { status: 400 });
 
-	const stream = new ReadableStream({
-		async start(controller) {
-			const encoder = new TextEncoder();
-			const send = (event: { type: string; status?: string; error?: string }) =>
-				controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
-			try {
-				const adapter = await getOllamaAdapter();
-				await adapter.pull(model, (status) => send({ type: 'progress', status }));
-				send({ type: 'done' });
-			} catch (err) {
-				send({ type: 'error', error: err instanceof Error ? err.message : 'Bilinmeyen hata' });
-			} finally {
-				controller.close();
-			}
+	// sseStream, not a bare ReadableStream — same crash this fixed for the
+	// five /api/generate/* routes and for the import routes: a model pull can
+	// take minutes for a multi-GB download, making it the single most likely
+	// stream in this app to be abandoned mid-flight. An abandoned pull used to
+	// throw an unhandled error out of the next progress send() and take the
+	// whole server down instead of just this one request.
+	return sseStream<PullEvent>(async (send) => {
+		try {
+			const adapter = await getOllamaAdapter();
+			await adapter.pull(model, (status) => send({ type: 'progress', status }));
+			send({ type: 'done' });
+		} catch (err) {
+			send({ type: 'error', error: err instanceof Error ? err.message : 'Bilinmeyen hata' });
 		}
-	});
-
-	return new Response(stream, {
-		headers: {
-			'content-type': 'text/event-stream',
-			'cache-control': 'no-cache',
-			connection: 'keep-alive'
-		}
-	});
+	}, (message) => logAppEvent({ kind: 'fatal_error', message: `model pull stream: ${message}` }));
 };
 
 /** Delete an installed model. */
