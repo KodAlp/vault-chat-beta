@@ -4,7 +4,14 @@ import crypto from 'node:crypto';
 import matter from 'gray-matter';
 import type { RequestHandler } from './$types';
 import { enqueueConversion } from '$lib/server/convertQueue';
-import { stagingDir, resolveLibraryPath, slugify, appendImportLog } from '$lib/server/library';
+import {
+	stagingDir,
+	resolveLibraryPath,
+	slugify,
+	appendImportLog,
+	ALLOWED_EXTENSIONS,
+	MAX_UPLOAD_BYTES
+} from '$lib/server/library';
 import { indexLibraryFile } from '$lib/server/incrementalIndex';
 import { vaultFromId } from '$lib/server/requestVault';
 import { sseStream } from '$lib/server/sse';
@@ -35,9 +42,31 @@ export const POST: RequestHandler = async ({ request }) => {
 
 		for (const file of files) {
 			send({ type: 'progress', stage: 'converting', fileName: file.name });
+
+			const ext = path.extname(file.name).toLowerCase() || '.bin';
+			if (!ALLOWED_EXTENSIONS.has(ext)) {
+				const item: ImportResultItem = {
+					fileName: file.name,
+					status: 'failed',
+					reason: `Desteklenmeyen dosya türü: ${ext || '(uzantısız)'}`
+				};
+				items.push(item);
+				send({ type: 'item', item });
+				continue;
+			}
+			if (file.size > MAX_UPLOAD_BYTES) {
+				const item: ImportResultItem = {
+					fileName: file.name,
+					status: 'failed',
+					reason: 'Dosya çok büyük (100MB sınırı)'
+				};
+				items.push(item);
+				send({ type: 'item', item });
+				continue;
+			}
+
 			const workDir = path.join(stagingDir(v), crypto.randomUUID());
 			fs.mkdirSync(workDir, { recursive: true });
-			const ext = path.extname(file.name) || '.bin';
 			const tempIn = path.join(workDir, `original${ext}`);
 			fs.writeFileSync(tempIn, Buffer.from(await file.arrayBuffer()));
 

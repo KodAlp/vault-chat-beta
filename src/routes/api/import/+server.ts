@@ -2,7 +2,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { RequestHandler } from './$types';
 import { enqueueConversion } from '$lib/server/convertQueue';
-import { stagingDir, originalsDir, getLibrarySettings } from '$lib/server/library';
+import {
+	stagingDir,
+	originalsDir,
+	getLibrarySettings,
+	ALLOWED_EXTENSIONS,
+	MAX_UPLOAD_BYTES
+} from '$lib/server/library';
 import { vaultFromId } from '$lib/server/requestVault';
 import { sseStream } from '$lib/server/sse';
 import { logAppEvent } from '$lib/server/app-log';
@@ -25,27 +31,6 @@ function safeBasename(name: string): string {
 	// normalized to "/" first.
 	return path.basename(name.replace(/\\/g, '/'));
 }
-
-/** Same set convert.py actually routes on (MARKITDOWN_EXTS + PDF_EXT +
- * TEX_EXT) plus .md for a source that's already Markdown — anything else is
- * something the converter would only ever fail on or mis-handle, so it's
- * rejected before a subprocess (and its memory/CPU cost) is spent on it. */
-const ALLOWED_EXTENSIONS = new Set([
-	'.pdf',
-	'.docx',
-	'.pptx',
-	'.xlsx',
-	'.html',
-	'.htm',
-	'.epub',
-	'.tex',
-	'.md'
-]);
-
-/** Generous enough for a large scanned PDF, small enough that one request
- * can't buffer an unbounded upload into memory — see the size check below,
- * which runs BEFORE arrayBuffer() is called, not after. */
-const MAX_UPLOAD_BYTES = 100 * 1024 * 1024;
 
 /** Single-file upload with a confirm step — see /api/library/import/[id]/confirm.
  * Converts into a staging file, does NOT touch the library tree/index yet. */
