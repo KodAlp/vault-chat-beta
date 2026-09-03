@@ -17,6 +17,11 @@ function sha256(content: string): string {
 function walkAll(dir: string, out: string[] = [], base = dir): string[] {
 	for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
 		if (EXCLUDED_DIRS.has(entry.name) || entry.name.startsWith('.')) continue;
+		// Never follow a symlink out of the chosen source folder — a link
+		// (file or directory) planted inside it, e.g. from a previously
+		// extracted untrusted zip, would otherwise let content from outside
+		// the folder the user picked get walked/copied into the library.
+		if (entry.isSymbolicLink()) continue;
 		const full = path.join(dir, entry.name);
 		if (entry.isDirectory()) walkAll(full, out, base);
 		else out.push(path.relative(base, full).split(path.sep).join('/'));

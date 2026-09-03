@@ -8,6 +8,29 @@ import type { VaultContext } from './vaults';
 
 const META_DIR = '_meta';
 
+/** Same set convert.py actually routes on (MARKITDOWN_EXTS + PDF_EXT +
+ * TEX_EXT) plus .md for a source that's already Markdown — anything else is
+ * something the converter would only ever fail on or mis-handle, so it's
+ * rejected before a subprocess (and its memory/CPU cost) is spent on it.
+ * Shared by both /api/import and /api/import/batch — a single copy so the
+ * two routes can't drift out of sync with each other again. */
+export const ALLOWED_EXTENSIONS = new Set([
+	'.pdf',
+	'.docx',
+	'.pptx',
+	'.xlsx',
+	'.html',
+	'.htm',
+	'.epub',
+	'.tex',
+	'.md'
+]);
+
+/** Generous enough for a large scanned PDF, small enough that one request
+ * can't buffer an unbounded upload into memory — see the size check at each
+ * call site, which runs BEFORE arrayBuffer() is called, not after. */
+export const MAX_UPLOAD_BYTES = 100 * 1024 * 1024;
+
 // Read-only tree/file-read/settings-read functions moved to library-read.ts
 // (a leaf module with no incrementalIndex/./ollama dependency — see its own
 // doc comment and the mcp-server skill for why). Re-exported here so every
