@@ -26,3 +26,16 @@ tauri-plugin-log = "2"
 tauri-plugin-dialog = "2"
 tokio = { version = "1", features = ["time"] }
 win32job = "2"
+# DPAPI (CryptProtectData/CryptUnprotectData) for at-rest encryption of the
+# sidecar's secrets-key blob — see spawn_sidecar()'s
+# dpapi_get_or_create_secrets_key().
+# Pinned to align with the windows-core version Tauri's own dependency tree
+# already uses (tao/wry pull windows-core 0.61.x) — a mismatched version
+# here creates two incompatible copies of types like HLOCAL, which fails to
+# compile even though both are nominally "the windows crate".
+windows = { version = "0.61", features = ["Win32_Security_Cryptography", "Win32_Foundation"] }
+# CSPRNG for the key's initial 32 bytes — a well-audited, minimal crate
+# beats hand-written FFI to BCryptGenRandom/RtlGenRandom for something this
+# security-sensitive (a subtly wrong ABI call here would be silent, not a
+# compile error).
+getrandom = "0.2"
