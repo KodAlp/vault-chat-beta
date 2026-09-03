@@ -25,6 +25,8 @@ export type ProgressStage = 'retrieving' | 'generating' | 'validating' | 'retryi
 const QUERY_EXTRACT_SYSTEM_PROMPT =
 	'Kullanıcının rapor isteğinden, sadece KONUYU özetleyen kısa bir arama sorgusu çıkar. "rapor hazırla", "özetle" gibi talimat kelimelerini ATLA, sadece konuyu yaz. Tek satır, sadece sorgu metni, başka hiçbir şey yazma.';
 
+const QUERY_EXTRACT_BUDGET_MS = 60_000;
+
 /** Same load-bearing determinism note as generate-quiz.ts's extractTopicalQuery. */
 async function extractTopicalQuery(prompt: string, model: string, provider?: string): Promise<string> {
 	const messages: ChatMessage[] = [
@@ -32,7 +34,9 @@ async function extractTopicalQuery(prompt: string, model: string, provider?: str
 		{ role: 'user', content: prompt }
 	];
 	let text = '';
-	const signal = new AbortController().signal;
+	// Bounded like the main call: this only has to produce a one-line search
+	// query, so anything longer than a minute means it is not going to.
+	const signal = AbortSignal.timeout(QUERY_EXTRACT_BUDGET_MS);
 	for await (const event of chatWithFallback(
 		'report',
 		{ model, messages, think: false, temperature: 0 },
@@ -45,6 +49,19 @@ async function extractTopicalQuery(prompt: string, model: string, provider?: str
 }
 
 const HEARTBEAT_INTERVAL_MS = 10_000;
+
+/**
+ * Hard ceiling on ONE generation, shared across the first attempt and every
+ * retry — not a per-call limit, so the retries cannot multiply it. Same
+ * value and reasoning as generate-mindmap.ts's GENERATION_BUDGET_MS: every
+ * generator used to build `new AbortController().signal` and never abort
+ * it, and a real run was observed spending 28 minutes inside a single call
+ * and holding Ollama hostage the whole time — no other generation, and no
+ * chat, could run. 12 minutes is deliberately generous (healthy runs on
+ * this hardware land between 90s and ~10 minutes); the point is that the
+ * run ends, not that it ends quickly.
+ */
+const GENERATION_BUDGET_MS = 12 * 60_000;
 
 /** Ollama's own firstTokenMs budget covers a cold model load + a large
  * JSON-schema-constrained decode (up to 300s, see providers.json) — long
@@ -59,6 +76,7 @@ async function callModel(
 	userPrompt: string,
 	format: object,
 	provider: string | undefined,
+	signal: AbortSignal,
 	onTick?: (elapsedMs: number) => void
 ): Promise<string> {
 	const messages: ChatMessage[] = [
@@ -66,7 +84,6 @@ async function callModel(
 		{ role: 'user', content: userPrompt }
 	];
 	let text = '';
-	const signal = new AbortController().signal;
 	const startedAt = Date.now();
 	const timer = onTick ? setInterval(() => onTick(Date.now() - startedAt), HEARTBEAT_INTERVAL_MS) : undefined;
 	try {
@@ -216,8 +233,11 @@ export async function generateReport(
 	const systemPrompt = buildSystemPrompt(contextBlock, userSkillsBlock);
 	const format = buildReportSectionsJsonSchema([...idToPath.keys()]);
 
+	// One deadline for the whole generation, retries included.
+	const deadline = AbortSignal.timeout(GENERATION_BUDGET_MS);
+
 	onProgress?.('generating');
-	let raw = await callModel(input.model, systemPrompt, input.prompt, format, input.provider, (ms) =>
+	let raw = await callModel(input.model, systemPrompt, input.prompt, format, input.provider, deadline, (ms) =>
 		onProgress?.('generating', ms)
 	);
 
@@ -228,7 +248,7 @@ export async function generateReport(
 	for (let attempt = 0; !parsed.ok && attempt < MAX_RETRIES; attempt++) {
 		onProgress?.('retrying');
 		const retryPrompt = `${input.prompt}\n\nÖnceki cevabın geçersizdi: ${parsed.error}\nSADECE geçerli JSON döndür.`;
-		raw = await callModel(input.model, systemPrompt, retryPrompt, format, input.provider, (ms) =>
+		raw = await callModel(input.model, systemPrompt, retryPrompt, format, input.provider, deadline, (ms) =>
 			onProgress?.('retrying', ms)
 		);
 		parsed = parseAndValidate(raw, idToPath);
