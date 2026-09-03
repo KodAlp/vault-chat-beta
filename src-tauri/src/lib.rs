@@ -250,6 +250,80 @@ async fn wait_for_sidecar_ready(port_rx: std::sync::mpsc::Receiver<u16>, timeout
     None
 }
 
+/// DPAPI-protected symmetric key for encrypting `secrets.json` at rest —
+/// see providers/secrets.ts's DpapiEncryptedSecretStore, the Node side of
+/// this. Node is a separate sidecar process, not the webview, so it has no
+/// access to Tauri's own IPC — the only channel is the raw key handed
+/// through spawn_sidecar's env, so everything else (generate once, protect,
+/// persist, unwrap on every later launch) has to happen here.
+///
+/// CryptProtectData with no extra entropy ties the blob to the current
+/// Windows user profile — the right scope for a single-user desktop app,
+/// and the same tradeoff every other DPAPI-backed secret store (browser
+/// saved passwords, etc.) already makes: losing the profile means losing
+/// the key, not a bug to work around.
+///
+/// Never a hard failure by design — spawn_sidecar treats any `Err` here as
+/// "skip the env var", which just means Node falls back to the plaintext
+/// store for that launch instead of blocking the whole app from starting.
+fn dpapi_get_or_create_secrets_key(app_data_dir: &Path) -> Result<[u8; 32], String> {
+    use windows::Win32::Foundation::{LocalFree, HLOCAL};
+    use windows::Win32::Security::Cryptography::{
+        CryptProtectData, CryptUnprotectData, CRYPTPROTECT_UI_FORBIDDEN, CRYPT_INTEGER_BLOB,
+    };
+
+    let key_path = app_data_dir.join("secrets.key");
+
+    if let Ok(mut blob) = std::fs::read(&key_path) {
+        let in_blob = CRYPT_INTEGER_BLOB {
+            cbData: blob.len() as u32,
+            pbData: blob.as_mut_ptr(),
+        };
+        let mut out_blob = CRYPT_INTEGER_BLOB::default();
+        let unprotected = unsafe {
+            CryptUnprotectData(&in_blob, None, None, None, None, CRYPTPROTECT_UI_FORBIDDEN, &mut out_blob)
+        };
+        if unprotected.is_ok() {
+            let out = unsafe { std::slice::from_raw_parts(out_blob.pbData, out_blob.cbData as usize) }.to_vec();
+            unsafe {
+                let _ = LocalFree(Some(HLOCAL(out_blob.pbData as *mut core::ffi::c_void)));
+            }
+            if let Ok(key) = <[u8; 32]>::try_from(out.as_slice()) {
+                return Ok(key);
+            }
+        }
+        // Falls through to regenerate on any read/unwrap failure (corrupt
+        // blob, wrong user) — see this function's doc comment on why that's
+        // the right default rather than a hard error.
+    }
+
+    let mut key = [0u8; 32];
+    getrandom::getrandom(&mut key).map_err(|e| format!("anahtar üretilemedi: {e}"))?;
+
+    let in_blob = CRYPT_INTEGER_BLOB {
+        cbData: key.len() as u32,
+        pbData: key.as_mut_ptr(),
+    };
+    let mut out_blob = CRYPT_INTEGER_BLOB::default();
+    let protected = unsafe {
+        CryptProtectData(&in_blob, None, None, None, None, CRYPTPROTECT_UI_FORBIDDEN, &mut out_blob)
+    };
+    if protected.is_err() {
+        return Err("CryptProtectData başarısız".to_string());
+    }
+    let sealed = unsafe { std::slice::from_raw_parts(out_blob.pbData, out_blob.cbData as usize) }.to_vec();
+    unsafe {
+        let _ = LocalFree(Some(HLOCAL(out_blob.pbData as *mut core::ffi::c_void)));
+    }
+    std::fs::write(&key_path, &sealed).map_err(|e| format!("secrets.key yazılamadı: {e}"))?;
+
+    Ok(key)
+}
+
+fn hex_encode(bytes: &[u8]) -> String {
+    bytes.iter().map(|b| format!("{b:02x}")).collect()
+}
+
 async fn spawn_sidecar(app: &AppHandle, cfg: &VaultConfig) -> Result<String, String> {
     let state = app.state::<SidecarState>();
     {
@@ -342,6 +416,18 @@ async fn spawn_sidecar(app: &AppHandle, cfg: &VaultConfig) -> Result<String, Str
     })?;
     let skills_dir = app_data_dir.join("skills");
 
+    // Best-effort, matching the providers.json seed below: a key-file
+    // problem must not block the whole app from starting. On failure Node
+    // just gets no SECRETS_KEY_HEX and falls back to its plaintext store —
+    // same behavior as before this feature existed, not a regression.
+    let secrets_key_hex = match dpapi_get_or_create_secrets_key(&app_data_dir) {
+        Ok(key) => Some(hex_encode(&key)),
+        Err(e) => {
+            log_line(app, &format!("secrets.key DPAPI setup failed (non-fatal, falling back to plaintext secrets): {e}"));
+            None
+        }
+    };
+
     // providers.json must live in app_data_dir (writable by a standard
     // user), not the resource dir (server_dir/data) — that one sits under
     // Program Files on a per-machine install, and config-store.ts's
@@ -369,8 +455,8 @@ async fn spawn_sidecar(app: &AppHandle, cfg: &VaultConfig) -> Result<String, Str
     // no longer the indexer's root; nothing currently reads it server-side
     // (the Obsidian import dialog still takes its source path as manual
     // user input, not a VAULT_PATH default).
-    let child = Command::new(&node_bin)
-        .arg(&entry)
+    let mut cmd = Command::new(&node_bin);
+    cmd.arg(&entry)
         .current_dir(&server_dir)
         .env("HOST", "127.0.0.1")
         // "0" lets the OS assign a genuinely free port atomically at Node's
@@ -384,7 +470,14 @@ async fn spawn_sidecar(app: &AppHandle, cfg: &VaultConfig) -> Result<String, Str
         .env("CHATS_DB_PATH", app_data_dir.join("chats.db"))
         .env("SECRETS_PATH", app_data_dir.join("secrets.json"))
         .env("PROVIDERS_PATH", &providers_path)
-        .env("SKILLS_DIR", &skills_dir)
+        .env("SKILLS_DIR", &skills_dir);
+    // Only set when DPAPI setup above succeeded — see secrets.ts's
+    // secretsKeyHex(): its absence is a normal, handled case (plaintext
+    // fallback), not an error to work around here.
+    if let Some(key_hex) = &secrets_key_hex {
+        cmd.env("SECRETS_KEY_HEX", key_hex);
+    }
+    let child = cmd
         .creation_flags(CREATE_NO_WINDOW)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -641,4 +734,57 @@ pub fn run() {
             // but the child.kill() above is faster for the graceful path.
         }
     });
+}
+
+#[cfg(test)]
+mod dpapi_tests {
+    use super::dpapi_get_or_create_secrets_key;
+    use std::path::PathBuf;
+
+    fn tmp_dir(name: &str) -> PathBuf {
+        let dir = std::env::temp_dir().join(format!("vault-chat-dpapi-test-{name}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    #[test]
+    fn generates_and_persists_a_32_byte_key() {
+        let dir = tmp_dir("persist");
+        let key1 = dpapi_get_or_create_secrets_key(&dir).expect("first call should succeed");
+        assert_eq!(key1.len(), 32);
+        assert!(dir.join("secrets.key").exists());
+
+        // A second call (simulating the next app launch) must unwrap the
+        // SAME key back out, not silently generate a new one — otherwise
+        // every launch would invalidate the previous launch's encrypted
+        // secrets.json.
+        let key2 = dpapi_get_or_create_secrets_key(&dir).expect("second call should succeed");
+        assert_eq!(key1, key2);
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn regenerates_a_usable_key_if_the_blob_is_corrupt() {
+        let dir = tmp_dir("corrupt");
+        std::fs::write(dir.join("secrets.key"), b"not a real DPAPI blob").unwrap();
+        let key = dpapi_get_or_create_secrets_key(&dir).expect("should fall back to regenerating, not error");
+        assert_eq!(key.len(), 32);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// Prints the hex-encoded key for a fresh temp dir so the Node side's
+    /// DpapiEncryptedSecretStore can be exercised against a REAL
+    /// DPAPI-round-tripped key from this same machine/user, not just a
+    /// synthetic test key — run with `cargo test -- --nocapture
+    /// print_key_for_node_interop_check`.
+    #[test]
+    fn print_key_for_node_interop_check() {
+        let dir = tmp_dir("interop");
+        let key = dpapi_get_or_create_secrets_key(&dir).expect("key generation should succeed");
+        let hex: String = key.iter().map(|b| format!("{b:02x}")).collect();
+        println!("SECRETS_KEY_HEX={hex}");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 }

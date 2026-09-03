@@ -58,3 +58,14 @@ export function providersPath(): string {
 export function secretsPath(): string {
 	return nonEmpty(process.env.SECRETS_PATH) ?? path.join(dataDir(), 'secrets.json');
 }
+
+/** Set only when launched via the Tauri desktop build — spawn_sidecar()
+ * (src-tauri/src/lib.rs) generates/DPAPI-unwraps a 32-byte key once per
+ * launch and hands it through here, hex-encoded, since Node has no other
+ * channel to that Rust code (it's a separate sidecar process, not the
+ * webview — Tauri's own IPC bridge doesn't reach it). Absent under plain
+ * `npm run dev` (no Tauri involved at all) or if DPAPI setup failed — both
+ * treated as a normal, handled case by secrets.ts, not an error. */
+export function secretsKeyHex(): string | undefined {
+	return nonEmpty(process.env.SECRETS_KEY_HEX);
+}
