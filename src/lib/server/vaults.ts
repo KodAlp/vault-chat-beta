@@ -9,6 +9,12 @@ export interface VaultRecord {
 	path: string;
 	createdAt: string;
 	lastOpenedAt: string;
+	/** Set by scripts/sync-vault.ts on a successful re-import + re-index —
+	 * absent for a vault that has never been synced that way (imported once
+	 * through the UI, say). Exists so the imported library copy can no
+	 * longer silently go stale with nothing surfacing when it last matched
+	 * the real Obsidian vault; see the vault-registry skill. */
+	lastSyncedAt?: string;
 }
 
 export interface VaultContext {
@@ -202,6 +208,18 @@ export function touchVault(id: string): void {
 	const record = reg.vaults.find((v) => v.id === id);
 	if (!record) return;
 	record.lastOpenedAt = new Date().toISOString();
+	writeRegistry(reg);
+}
+
+/** Called by scripts/sync-vault.ts after a successful re-import + re-index —
+ * same read/write shape as touchVault, distinct field. Throws on an unknown
+ * id (unlike touchVault) since a CLI script should fail loudly on a typoed
+ * --vault, not silently no-op. */
+export function markVaultSynced(id: string): void {
+	const reg = readRegistry();
+	const record = reg.vaults.find((v) => v.id === id);
+	if (!record) throw new Error(`Bilinmeyen vault: ${id}`);
+	record.lastSyncedAt = new Date().toISOString();
 	writeRegistry(reg);
 }
 
