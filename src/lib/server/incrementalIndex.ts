@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import { openDb, upsertFile, deleteFile, renameFileInIndex, type FileRow } from '../../../indexer/db';
-import { chunkMarkdown } from '../../../indexer/chunk';
+import { chunkMarkdown, normalizeLevel } from '../../../indexer/chunk';
 import { embed } from './ollama';
 import { EMBED_MODEL, DOC_PREFIX } from './embed-config';
 import type { VaultContext } from './vaults';
@@ -47,7 +47,7 @@ export async function indexLibraryFile(v: VaultContext, absPath: string, relPath
 			sha256: sha256(raw),
 			mtime: fs.statSync(absPath).mtimeMs,
 			topic: frontmatter.title ?? frontmatter.topic ?? '',
-			depth: frontmatter.level ?? frontmatter.depth ?? '',
+			depth: normalizeLevel(frontmatter.level ?? frontmatter.depth ?? ''),
 			domains_json: JSON.stringify(
 				frontmatter.domains ?? (frontmatter.domain ? [frontmatter.domain] : [])
 			)

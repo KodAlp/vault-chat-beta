@@ -51,15 +51,26 @@
 	let filterQuery = $state('');
 	let confirmingNone = $state(false);
 
-	let allFiles = $derived(collectFilePaths(tree));
-	let selected = $derived(includedPaths === undefined ? new Set(allFiles) : new Set(includedPaths));
 	let displayTree = $derived(applyDisplayRules(tree, displayRules));
+	// displayFiles, not collectFilePaths(tree): the raw tree still includes
+	// hiddenFolders (raw/cards/frontier/wiki/_index) even though no node for
+	// them ever reaches SourceTreeNode, so the user has no control that can
+	// touch them. Deriving "select all" and the total/toggle baseline from
+	// the raw tree meant every hidden file was silently pinned into
+	// `selected` from the moment the tree loaded and could never be toggled
+	// back out — a real scope ended up persisted as 205 paths (137 of them
+	// unindexed raw/ files, 40 more force-excluded at retrieval) when the
+	// user had picked exactly one visible folder. Basing everything here on
+	// displayFiles instead means "selected"/"total" only ever count files
+	// the user can actually see and that retrieval can actually return.
+	let displayFiles = $derived(collectFilePaths(displayTree));
+	let selected = $derived(includedPaths === undefined ? new Set(displayFiles) : new Set(includedPaths));
 	let hasMatch = $derived(
 		!filterQuery || displayTree.some((n) => nodeMatchesFilter(n, filterQuery))
 	);
 
 	$effect(() => {
-		onCounts?.({ selected: selected.size, total: allFiles.length });
+		onCounts?.({ selected: selected.size, total: displayFiles.length });
 	});
 
 	// A ScopeIndicator click in the chat panel bumps this — scroll the tree
@@ -95,7 +106,7 @@
 
 	function handleToggle(node: LibraryNode) {
 		const next = toggleNode(node, selected);
-		onSelectionChange(toIncludedPaths(next, allFiles));
+		onSelectionChange(toIncludedPaths(next, displayFiles));
 	}
 
 	function selectAll() {

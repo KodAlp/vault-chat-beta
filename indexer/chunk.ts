@@ -21,6 +21,30 @@ export interface Frontmatter {
 const TARGET_CHARS = 1400; // ~350 tokens, chars/4 estimate
 const HARD_MAX_CHARS = 2048; // ~512 tokens
 
+/**
+ * CLAUDE.md invariant 2 asks for exactly `undergrad | grad | phd`, but
+ * frontmatter is hand-written and both index-vault.ts and
+ * incrementalIndex.ts independently fell back to `frontmatter.depth` for
+ * content that used that alias instead — the real index ended up holding
+ * "undergrad" (121 chunks) and "undergraduate" (27) as two different level
+ * values. select-chunks.ts's level filter already matches case-insensitively
+ * for exactly this kind of drift; this closes the other half by folding
+ * known synonyms to the canonical spelling before a file row is ever
+ * written, so the two index-writing paths can't drift apart again.
+ */
+const LEVEL_SYNONYMS: Record<string, string> = {
+	undergraduate: 'undergrad',
+	graduate: 'grad',
+	doctorate: 'phd',
+	doctoral: 'phd'
+};
+
+export function normalizeLevel(level: string): string {
+	const trimmed = level.trim();
+	if (!trimmed) return trimmed;
+	return LEVEL_SYNONYMS[trimmed.toLowerCase()] ?? trimmed;
+}
+
 type BlockType = 'code' | 'math' | 'text';
 interface Block {
 	type: BlockType;
@@ -57,6 +81,37 @@ function splitOnParagraphs(text: string): string[] {
 	}
 	if (current) parts.push(current);
 	return parts;
+}
+
+/**
+ * A section that only points at other notes is navigation, not knowledge.
+ *
+ * Every wiki page ends with a `## Sources` (and often `## Related`) section
+ * that is nothing but a list of links. Indexed as ordinary chunks these were
+ * 287 of 2442 chunks in the real index — 11.8% overall, 15.5% of wiki/math —
+ * averaging 126 chars against 1049 for genuine content. Because they are short
+ * and literally contain the word "Sources", any question phrased *about*
+ * sources or access ("matematik kaynağı işaretli, erişemiyor musun?") matched
+ * them ahead of the notes themselves and consumed all k slots, leaving the
+ * model with a context of bare link lists and nothing to explain. It then
+ * correctly reported that the content was not there.
+ *
+ * The link targets are not lost: they live in the page's own frontmatter and
+ * in the MOC layer, neither of which is a retrieval surface.
+ */
+const LINK_ONLY_LINE = /^[-*+]\s*\[\[[^\]]+\]\]\s*$|^[-*+]\s*\[[^\]]*\]\([^)]*\)\s*$/;
+const NAV_LINE_RATIO = 0.7;
+
+function isNavigationOnly(displayText: string): boolean {
+	const body = displayText
+		.split(/\r?\n/)
+		.map((l) => l.trim())
+		.filter(Boolean)
+		.filter((l) => !/^#{1,6}\s/.test(l));
+	// A heading with no body at all is a bare breadcrumb — nothing to retrieve.
+	if (body.length === 0) return true;
+	const linkOnly = body.filter((l) => LINK_ONLY_LINE.test(l)).length;
+	return linkOnly / body.length >= NAV_LINE_RATIO;
 }
 
 interface HeadingMatch {
@@ -115,6 +170,10 @@ export function chunkMarkdown(rawFile: string): { frontmatter: Frontmatter; chun
 		const flush = () => {
 			const displayText = buffer.trim();
 			if (!displayText) return;
+			if (isNavigationOnly(displayText)) {
+				buffer = '';
+				return;
+			}
 			chunks.push({
 				headingPath: section.headingPath,
 				displayText,
