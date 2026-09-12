@@ -16,7 +16,7 @@ export interface OpenAICompatConfig {
 	timeouts: Timeouts;
 }
 
-function classifyHttpStatus(status: number, bodyText: string): ProviderErrorKind {
+export function classifyHttpStatus(status: number, bodyText: string): ProviderErrorKind {
 	if (status === 401 || status === 403) return 'auth';
 	if (status === 429) return 'http_429';
 	if (status >= 500) return 'http_5xx';
@@ -69,7 +69,14 @@ export class OpenAICompatAdapter implements ProviderAdapter {
 	 * the caller distinguish "we timed out" from "the caller aborted us"
 	 * from "genuine network failure" after the fact.
 	 */
-	private makeAbortBridge(externalSignal: AbortSignal) {
+	/** Protected, not private: providers/ollama.ts reuses this for its
+	 * native-endpoint chat() override, which needs the identical
+	 * connect/first-token/idle timeout semantics without duplicating
+	 * them — the /v1 surface silently ignores num_ctx (empirically
+	 * confirmed against a real running instance: options.num_ctx on
+	 * /v1/chat/completions never changes what ollama ps reports), so
+	 * that override talks to /api/chat directly instead of super.chat(). */
+	protected makeAbortBridge(externalSignal: AbortSignal) {
 		const controller = new AbortController();
 		let timeoutKind: ProviderErrorKind | null = null;
 		let timer: ReturnType<typeof setTimeout> | undefined;
@@ -97,7 +104,7 @@ export class OpenAICompatAdapter implements ProviderAdapter {
 		return { signal: controller.signal, armTimer, clearTimer, dispose, getTimeoutKind: () => timeoutKind };
 	}
 
-	private toProviderError(err: unknown, externalSignal: AbortSignal, timeoutKind: ProviderErrorKind | null): unknown {
+	protected toProviderError(err: unknown, externalSignal: AbortSignal, timeoutKind: ProviderErrorKind | null): unknown {
 		// A genuine caller-initiated abort (stop button, inflight supersede) is
 		// not a provider failure — rethrow it as-is so callers keep treating
 		// AbortError as "cancelled", exactly like today's ollama.ts does.

@@ -4,10 +4,16 @@ import crypto from 'node:crypto';
 import matter from 'gray-matter';
 import { libraryRoot, importLogPath, appendImportLog } from './library';
 import { indexLibraryFile } from './incrementalIndex';
+// Was its own separate list here (missing 'raw', among others): a source
+// folder containing raw/ got copied AND incrementally indexed on import,
+// then silently pruned back out by the next `npm run index --full`, which
+// does exclude it (see indexer/excluded-dirs.ts) — two exclusion lists
+// disagreeing about the same directory. One shared list now, same as
+// index-vault.ts and watch.ts already use.
+import { EXCLUDED_DIRS } from '../../../indexer/excluded-dirs';
 import type { ImportResultItem, ImportSummary } from '$lib/types';
 import type { VaultContext } from './vaults';
 
-const EXCLUDED_DIRS = new Set(['.obsidian', 'templates', '.trash', 'node_modules', '.git']);
 const ATTACHMENT_EXT = new Set(['.png', '.jpg', '.jpeg', '.gif', '.svg', '.pdf', '.webp']);
 
 function sha256(content: string): string {

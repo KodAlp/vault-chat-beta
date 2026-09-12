@@ -1,6 +1,7 @@
 import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { retrieve } from '$lib/server/retrieve';
+import { buildRetrievalQuery } from '$lib/server/retrieval-query';
 import { buildPromptMessages } from '$lib/server/prompt';
 import { chatWithFallback } from '$lib/server/providers/registry';
 import { startFlight, endFlight } from '$lib/server/providers/inflight';
@@ -122,6 +123,15 @@ export const POST: RequestHandler = async ({ request }) => {
 			let narrowScope = false;
 			let finalContent = '';
 			let finalThinking = '';
+			// Set at the bottom of the retry loop, read at the top — lets the
+			// attempt>0 reset below pick the right notice wording instead of
+			// always claiming corruption, now that an empty-thinking-only
+			// answer retries through the same loop (see `emptyAnswer` below).
+			let retryReason: 'corrupted' | 'empty' | null = null;
+			// True once an empty-answer retry has been exhausted and an `error`
+			// event already sent — the loop-terminating `done` below is skipped
+			// so the client isn't told this generation succeeded.
+			let exhaustedEmpty = false;
 			// Only non-null once startFlight() has actually run — endFlight()
 			// in the finally block must not fire for a flight that was never
 			// registered (e.g. the DB calls above it threw first).
@@ -184,9 +194,18 @@ export const POST: RequestHandler = async ({ request }) => {
 				else request.signal.addEventListener('abort', onClientAbort);
 
 				if (lastUser) {
-					const result = await retrieve(v, lastUser.content, {
+					// Not lastUser.content: the query carries the tail of the
+					// conversation so a follow-up or an interjection still retrieves
+					// against the subject being discussed. See retrieval-query.ts.
+					const result = await retrieve(v, buildRetrievalQuery(body.messages), {
 						domains: body.domains,
-						includedPaths: body.includedPaths
+						includedPaths: body.includedPaths,
+						// retrieve.ts's own DEFAULT_K (8) is chat's fallback only
+						// because no caller ever overrode it — every generator
+						// already asks for 12-16. Explaining a whole topic in
+						// conversation needs at least as much context as a single
+						// quiz question does.
+						k: 12
 					});
 					sources = result.chunks;
 					narrowScope = result.narrowScope;
@@ -195,12 +214,19 @@ export const POST: RequestHandler = async ({ request }) => {
 
 				for (let attempt = 0; ; attempt++) {
 					if (attempt > 0) {
-						// A prior attempt hit U+FFFD — throw away whatever it streamed
-						// and tell the client to do the same before new deltas arrive.
+						// A prior attempt hit U+FFFD or came back empty — throw away
+						// whatever it streamed and tell the client to do the same
+						// before new deltas arrive.
 						finalContent = '';
 						finalThinking = '';
 						send({ type: 'regenerate' });
-						send({ type: 'notice', message: 'Yanıtta bozuk karakterler algılandı, yeniden üretiliyor…' });
+						send({
+							type: 'notice',
+							message:
+								retryReason === 'empty'
+									? 'Yanıt boş geldi, yeniden üretiliyor…'
+									: 'Yanıtta bozuk karakterler algılandı, yeniden üretiliyor…'
+						});
 					}
 
 					// Per-attempt signal, not `flight.signal` directly — abort() is
@@ -268,19 +294,40 @@ export const POST: RequestHandler = async ({ request }) => {
 						flight.signal.removeEventListener('abort', onFlightAbort);
 					}
 
-					if (!corrupted || flight.signal.aborted) break;
+					// A stream that produced thinking but never any visible text is
+					// as unusable as a corrupted one — a real chat persisted exactly
+					// this (426 chars of thinking, 0 of answer) and it rendered as a
+					// silent blank bubble, indistinguishable from the model having
+					// nothing to say. Route it through the same retry-from-scratch
+					// loop rather than a second mechanism.
+					const emptyAnswer = finalThinking.trim() !== '' && finalContent.trim() === '';
+					retryReason = corrupted ? 'corrupted' : emptyAnswer ? 'empty' : null;
+					if (!retryReason || flight.signal.aborted) break;
 					if (attempt >= MAX_CORRUPTION_RETRIES) {
-						send({
-							type: 'notice',
-							message:
-								'Yanıt bozuk karakterler içerebilir (bilinen bir model sorunu) — birkaç deneme sonrası temiz üretilemedi.'
-						});
-						logAppEvent({ kind: 'chat_error', chatId, message: 'U+FFFD corruption persisted after retries' });
+						if (retryReason === 'corrupted') {
+							send({
+								type: 'notice',
+								message:
+									'Yanıt bozuk karakterler içerebilir (bilinen bir model sorunu) — birkaç deneme sonrası temiz üretilemedi.'
+							});
+							logAppEvent({ kind: 'chat_error', chatId, message: 'U+FFFD corruption persisted after retries' });
+						} else {
+							// Genuinely empty after every retry — an `error` event, not
+							// `done`, and we skip `done` below entirely: sending both
+							// left the empty assistant bubble on screen right next to
+							// the error text, which is what silently saving it as a
+							// blank message looked like from the user's side.
+							send({ type: 'error', message: 'Model bir yanıt üretmedi, lütfen tekrar deneyin.' });
+							logAppEvent({ kind: 'chat_error', chatId, message: 'empty answer persisted after retries' });
+							exhaustedEmpty = true;
+						}
 						break;
 					}
 				}
-				const hedges = computeHedges();
-				send({ type: 'done', sources, narrowScope, hedges: hedges.length ? hedges : undefined });
+				if (!exhaustedEmpty) {
+					const hedges = computeHedges();
+					send({ type: 'done', sources, narrowScope, hedges: hedges.length ? hedges : undefined });
+				}
 			} catch (err) {
 				// User-initiated stop (interrupt button / navigation) — propagates from
 				// the aborted Ollama fetch. Not a real error; say nothing.
@@ -300,12 +347,19 @@ export const POST: RequestHandler = async ({ request }) => {
 				// Own try/catch so a persist failure can't skip controller.close()
 				// below (the bug that left streams hanging open on a DB error).
 				try {
+					// A blank string here is what silently persisted as an empty
+					// bubble before this fix — on exhaustedEmpty, save an honest
+					// placeholder instead, so a reload shows the same explanation
+					// the live `error` event already gave, not an unexplained gap.
+					const persistedContent = exhaustedEmpty
+						? '_Model bir yanıt üretmedi._'
+						: finalContent;
 					if (assistantMessageId) {
 						// The row already exists from the first-chunk checkpoint
 						// above — final write with the complete content, not
 						// another insert (which would duplicate the row).
 						updateMessage(assistantMessageId, {
-							content: finalContent,
+							content: persistedContent,
 							thinking: finalThinking || null,
 							sourcesJson: sources.length ? JSON.stringify(sources) : null,
 							hedgesJson: computeHedges().length ? JSON.stringify(computeHedges()) : null

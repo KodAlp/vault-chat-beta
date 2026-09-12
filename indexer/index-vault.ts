@@ -4,7 +4,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import matter from 'gray-matter';
 import { openDb, listKnownFiles, deleteFile, upsertFile, type FileRow } from './db';
-import { chunkMarkdown } from './chunk';
+import { chunkMarkdown, normalizeLevel } from './chunk';
 import { embedDocuments } from './embed';
 import { EXCLUDED_DIRS } from './excluded-dirs';
 import { resolveIndexerVault } from './paths';
@@ -88,7 +88,7 @@ async function main() {
 				sha256: hash,
 				mtime: fs.statSync(absPath).mtimeMs,
 				topic: frontmatter.title ?? frontmatter.topic ?? '',
-				depth: frontmatter.level ?? frontmatter.depth ?? '',
+				depth: normalizeLevel(frontmatter.level ?? frontmatter.depth ?? ''),
 				domains_json: JSON.stringify(
 					frontmatter.domains ?? (frontmatter.domain ? [frontmatter.domain] : [])
 				)

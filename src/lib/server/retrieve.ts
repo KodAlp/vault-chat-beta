@@ -12,10 +12,15 @@ import { logAppEvent } from './app-log';
 const DEFAULT_K = 8;
 const OVERFETCH_FACTOR = 3;
 /** includedPaths narrows the candidate pool after the KNN search, not
- * before it — a low overfetch factor means every one of the top k*3
+ * before it — a low overfetch factor means every one of the top k*N
  * nearest neighbors could legitimately fall outside the scope and the
- * result silently comes back empty. See vault-registry skill. */
-const SCOPED_OVERFETCH_FACTOR = 10;
+ * result silently comes back empty. Raised from 10: with 2155 chunks
+ * post-boilerplate-filtering (see indexer/chunk.ts's isNavigationOnly), a
+ * single-folder scope at k=12 (chat's own k, see api/chat/+server.ts) only
+ * pulled 120 of 2155 candidates before this — comfortably possible to
+ * exhaust on a scope narrower than one wiki/<domain> folder. See
+ * vault-registry skill. */
+const SCOPED_OVERFETCH_FACTOR = 20;
 
 const dbCache = new Map<string, Database.Database>();
 
@@ -80,7 +85,7 @@ export async function retrieve(
 	opts: { domains?: string[]; levels?: string[]; includedPaths?: string[]; k?: number } = {}
 ): Promise<RetrieveResult> {
 	const database = getDb(v);
-	if (!database) return { chunks: [], narrowScope: false };
+	if (!database) return { chunks: [], narrowScope: false, reason: 'unindexed' };
 	const k = opts.k ?? DEFAULT_K;
 	const overfetch = opts.includedPaths?.length ? SCOPED_OVERFETCH_FACTOR : OVERFETCH_FACTOR;
 
@@ -93,7 +98,7 @@ export async function retrieve(
 		)
 		.all(queryBlob, k * overfetch) as { chunk_id: number; distance: number }[];
 
-	if (matches.length === 0) return { chunks: [], narrowScope: false };
+	if (matches.length === 0) return { chunks: [], narrowScope: false, reason: 'no-embedding-match' };
 
 	const chunkStmt = database.prepare<[number], ChunkRow>(
 		`SELECT c.id, c.heading_path, c.display_text, f.path, f.topic, f.depth, f.domains_json
