@@ -13,6 +13,7 @@ import {
 	hasAnyVault,
 	contextFor,
 	markVaultUsed,
+	markVaultSynced,
 	setActiveVault
 } from './vaults';
 
@@ -129,6 +130,28 @@ test('vault registry', async (t) => {
 		useTmpDataDir();
 		createVault('Var Olan');
 		assert.throws(() => markVaultUsed('yok-boyle-bir-vault'));
+	});
+
+	await t.test('markVaultSynced sets lastSyncedAt without touching lastOpenedAt or the active vault', () => {
+		useTmpDataDir();
+		const first = createVault('Birinci');
+		const second = createVault('İkinci');
+		setActiveVault(first.id);
+		const openedBefore = listVaults().find((v) => v.id === second.id)!.lastOpenedAt;
+
+		assert.equal(listVaults().find((v) => v.id === second.id)!.lastSyncedAt, undefined);
+		markVaultSynced(second.id);
+
+		const record = listVaults().find((v) => v.id === second.id)!;
+		assert.ok(record.lastSyncedAt);
+		assert.equal(record.lastOpenedAt, openedBefore); // sync isn't "opening" the vault
+		assert.equal(getActiveVaultId(), first.id); // sync doesn't switch the active vault either
+	});
+
+	await t.test('markVaultSynced rejects an unknown vault instead of silently doing nothing', () => {
+		useTmpDataDir();
+		createVault('Var Olan');
+		assert.throws(() => markVaultSynced('yok-boyle-bir-vault'));
 	});
 
 	await t.test('writeRegistry leaves no .tmp file behind on success', () => {
