@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { renderMarkdown } from '$lib/markdown';
-	import { obsidianUri, libraryViewerUrl } from '$lib/sourceLink';
+	import { libraryViewerUrl } from '$lib/sourceLink';
 	import type { PageProps } from './$types';
 	import type { ReportSectionView, ReportView } from '$lib/types';
 	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
@@ -83,7 +83,7 @@
 							     generate-report.ts's dedupe comment). -->
 							{#each r.section.source_paths as path, i (path + '#' + i)}
 								<a class="source-link" href={libraryViewerUrl(path, data.vaultId ?? '')}>{path}</a>
-								<a class="source-link" href={obsidianUri(path)} title="Obsidian'da aç" aria-label="Obsidian'da aç">
+								<a class="source-link" href={libraryViewerUrl(path, data.vaultId ?? '')} title="Kaynağı aç" aria-label="Kaynağı aç">
 									<ExternalLinkIcon size={13} aria-hidden="true" />
 								</a>
 							{/each}

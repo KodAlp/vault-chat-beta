@@ -459,7 +459,7 @@
 					</div>
 				</div>
 				<div class="flex flex-col gap-1.5">
-					<Label>Obsidian'da görünen vault adı</Label>
+					<Label>Kasa adı</Label>
 					<Input type="text" bind:value={vaultName} class="max-w-xs" />
 				</div>
 				<div>

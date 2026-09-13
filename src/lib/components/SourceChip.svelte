@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { obsidianUri, libraryViewerUrl } from '$lib/sourceLink';
+	import { libraryViewerUrl } from '$lib/sourceLink';
 	import type { RetrievedChunk } from '$lib/types';
 	import * as HoverCard from '$lib/components/ui/hover-card';
 	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
@@ -42,7 +42,7 @@
 								{g.topic}
 								{#if g.chunks.length > 1}<span class="count">{t('SourceChip.chunkCount', { count: g.chunks.length })}</span>{/if}
 							</a>
-							<a class="chip-icon" href={obsidianUri(g.path)} title={t('Common.obsidiandaAc')} aria-label={t('Common.obsidiandaAc')}>
+							<a class="chip-icon" href={libraryViewerUrl(g.path, vaultId)} title={t('Common.kaynagiAc')} aria-label={t('Common.kaynagiAc')}>
 								<ExternalLinkIcon size={12} aria-hidden="true" />
 							</a>
 						</span>

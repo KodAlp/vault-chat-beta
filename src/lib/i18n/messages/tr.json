@@ -10,7 +10,7 @@
 		"ayarlar": "Ayarlar",
 		"anaSayfa": "Ana sayfa",
 		"yukleniyor": "Yükleniyor...",
-		"obsidiandaAc": "Obsidian'da aç",
+		"kaynagiAc": "Kaynağı aç",
 		"bilinmeyenHata": "Bilinmeyen hata",
 		"buIslemGeriAlinamaz": "Bu işlem geri alınamaz.",
 		"istekBasarisiz": "İstek başarısız ({status})",
@@ -316,7 +316,7 @@
 		"vaultFolder": "Kasa klasörü",
 		"vaultFolderPlaceholder": "Henüz seçilmedi",
 		"choose": "Seç…",
-		"obsidianVaultName": "Obsidian'da görünen vault adı",
+		"obsidianVaultName": "Kasa adı",
 		"vaultSaved": "Kaydedildi — bir sonraki başlatmada uygulanır.",
 		"vaultSaveFailed": "Kaydedilemedi."
 	},

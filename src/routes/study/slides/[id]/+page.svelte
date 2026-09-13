@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { obsidianUri, libraryViewerUrl } from '$lib/sourceLink';
+	import { libraryViewerUrl } from '$lib/sourceLink';
 	import type { PageProps } from './$types';
 	import type { SlideDeckView, SlideView } from '$lib/types';
 	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
@@ -106,9 +106,9 @@
 				</a>
 				<a
 					class="source-link"
-					href={obsidianUri(slides[currentIndex].source_path)}
-					title="Obsidian'da aç"
-					aria-label="Obsidian'da aç"
+					href={libraryViewerUrl(slides[currentIndex].source_path, data.vaultId ?? '')}
+					title="Kaynağı aç"
+					aria-label="Kaynağı aç"
 				>
 					<ExternalLinkIcon size={13} aria-hidden="true" />
 				</a>

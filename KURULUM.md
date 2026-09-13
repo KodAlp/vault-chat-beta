@@ -30,12 +30,14 @@ npm install
 ```
 OLLAMA_URL=http://127.0.0.1:11434
 CHATS_DB_PATH=./data/chats.db
-PUBLIC_VAULT_NAME=First brain(Software based)   # Obsidian'da vault'un görünen adı
+PUBLIC_VAULT_NAME=First brain(Software based)   # "default" vault'un ilk açılıştaki görünen adı
 ```
 
-`PUBLIC_VAULT_NAME` kaynak çiplerindeki `obsidian://open?vault=...` linklerinin
-doğru vault'u açması için gerekli — Obsidian'da **Ayarlar → Hakkında** kısmından
-tam adı doğrula.
+`PUBLIC_VAULT_NAME` yalnızca "default" vault ilk oluşturulurken (bkz.
+`migrateVaults.ts`) varsayılan görünen ad olarak okunur — sonraki
+çalıştırmalarda etkisi yok. Kaynaklar her zaman uygulamanın kendi
+görüntüleyicisinde açılır; Obsidian yalnızca **Ayarlar → Kütüphane →
+Obsidian'dan İçe Aktar** sırasında devreye girer.
 
 ## Vault'lar (Faz 8)
 
