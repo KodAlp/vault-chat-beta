@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onDestroy, onMount } from 'svelte';
 	import { buildTree, treeToMarkdownOutline } from '$lib/mindmap-tree';
-	import { obsidianUri, libraryViewerUrl } from '$lib/sourceLink';
+	import { libraryViewerUrl } from '$lib/sourceLink';
 	import type { PageProps } from './$types';
 	import type { MindMapNodeView, MindMapView } from '$lib/types';
 	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
@@ -178,7 +178,7 @@
 					<a class="source-link" href={libraryViewerUrl(node.source_path, data.vaultId ?? '')}>
 						{node.source_path}
 					</a>
-					<a class="source-link" href={obsidianUri(node.source_path)} title="Obsidian'da aç" aria-label="Obsidian'da aç">
+					<a class="source-link" href={libraryViewerUrl(node.source_path, data.vaultId ?? '')} title="Kaynağı aç" aria-label="Kaynağı aç">
 						<ExternalLinkIcon size={13} aria-hidden="true" />
 					</a>
 				</div>

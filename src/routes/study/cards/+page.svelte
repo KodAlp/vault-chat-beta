@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { renderMarkdown } from '$lib/markdown';
-	import { obsidianUri, libraryViewerUrl } from '$lib/sourceLink';
+	import { libraryViewerUrl } from '$lib/sourceLink';
 	import type { PageProps } from './$types';
 	import type { CardView, Grade } from '$lib/types';
 	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
@@ -105,7 +105,7 @@
 					<a class="chip" href={libraryViewerUrl(card.source_path, data.vaultId ?? '')} title={card.heading_path}>
 						{card.source_path}
 					</a>
-					<a class="chip-icon" href={obsidianUri(card.source_path)} title="Obsidian'da aç" aria-label="Obsidian'da aç">
+					<a class="chip-icon" href={libraryViewerUrl(card.source_path, data.vaultId ?? '')} title="Kaynağı aç" aria-label="Kaynağı aç">
 						<ExternalLinkIcon size={13} aria-hidden="true" />
 					</a>
 					</span>

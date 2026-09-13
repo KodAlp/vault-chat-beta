@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { renderMarkdown } from '$lib/markdown';
 	import { settings } from '$lib/settings.svelte';
-	import { obsidianUri, libraryViewerUrl } from '$lib/sourceLink';
+	import { libraryViewerUrl } from '$lib/sourceLink';
 	import type { PageProps } from './$types';
 	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
 	import CheckIcon from '@lucide/svelte/icons/check';
@@ -282,7 +282,7 @@
 						>
 							{r.item.sourcePath}
 						</a>
-						<a class="source-link" href={obsidianUri(r.item.sourcePath)} title="Obsidian'da aç" aria-label="Obsidian'da aç">
+						<a class="source-link" href={libraryViewerUrl(r.item.sourcePath, data.vaultId ?? '')} title="Kaynağı aç" aria-label="Kaynağı aç">
 							<ExternalLinkIcon size={13} aria-hidden="true" />
 						</a>
 					</div>
