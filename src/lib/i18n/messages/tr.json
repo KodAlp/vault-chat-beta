@@ -8,7 +8,7 @@
 		"kaydediliyor": "Kaydediliyor...",
 		"kaydedilemedi": "Kaydedilemedi.",
 		"ayarlar": "Ayarlar",
-		"anaSayfa": "Ana sayfa",
+		"geriDon": "Geri dön",
 		"yukleniyor": "Yükleniyor...",
 		"kaynagiAc": "Kaynağı aç",
 		"bilinmeyenHata": "Bilinmeyen hata",
@@ -17,11 +17,13 @@
 		"kutuphaneYuklenemedi": "Kütüphane yüklenemedi."
 	},
 
-	"Chat": {
-		"modelSelectTitle": "Bu konuşma için model/sağlayıcı seçimi",
+	"ModelPickerRow": {
+		"modelSelectTitle": "Model/sağlayıcı seçimi",
 		"modelSrLabel": "Model",
 		"thinkModeTitle": "Açıkken muhakeme modeli önce akıl yürütür (yavaş ama daha derin), süreç sohbette görünür. Kapalıyken hızlı model kullanılır.",
-		"thinkModeLabel": "Derin düşün",
+		"thinkModeLabel": "Derin düşün"
+	},
+	"Chat": {
 		"emptyStateTitle": "Kasandaki notlar hakkında bir soru sor",
 		"emptyStateSubtitle": "Cevaplar yalnızca seçtiğin kaynaklara dayanır.",
 		"emptyStateBrowseSources": "Kaynaklara göz at",
@@ -38,7 +40,8 @@
 	},
 
 	"ChatBubble": {
-		"interrupted": "Durduruldu"
+		"interrupted": "Durduruldu",
+		"waitingForResponse": "Yanıt bekleniyor…"
 	},
 
 	"FallbackNotice": {
@@ -78,6 +81,7 @@
 	},
 
 	"GenerationDialog": {
+		"modelLabel": "Model",
 		"domainLabel": "Domain (opsiyonel)",
 		"allDomains": "Tüm domainler",
 		"useChatContext": "Bu konuşmayı bağlam olarak kullan",
@@ -168,8 +172,12 @@
 	"OllamaStatusBanner": {
 		"authError": "Ollama kimlik doğrulama hatası verdi.",
 		"unreachable": "Ollama çalışmıyor — sohbet ve çalışma materyali üretimi şu anda kullanılamıyor.",
+		"installHint": "Kurulu değilse:",
 		"checking": "Kontrol ediliyor...",
-		"retry": "Yeniden dene"
+		"retry": "Yeniden dene",
+		"missingModels": "Gerekli model(ler) çekili değil: {models}.",
+		"pullFromSettings": "Ayarlar'dan indirin",
+		"orRunPull": "veya terminalde çalıştırın:"
 	},
 
 	"ImportObsidianDialog": {
@@ -206,6 +214,7 @@
 	"UploadDialog": {
 		"trigger": "+ Yükle",
 		"dialogTitle": "Belge Yükle",
+		"uploading": "Yükleniyor...",
 		"sourceFile": "Dosya",
 		"sourceYoutube": "Video (YouTube)",
 		"fileLabel": "Dosya (DOCX / PPTX / XLSX / HTML / EPUB / basit PDF)",
@@ -308,20 +317,41 @@
 		"pullStarting": "Başlatılıyor...",
 		"pullDone": "Tamamlandı",
 		"pullFailed": "İndirme başarısız",
+		"requestFailed": "İstek başarısız ({status})",
+		"downloading": "İndiriliyor...",
+		"downloadModel": "İndir",
+		"pullModelLabel": "Model indir",
+		"pullModelHint": "Ollama kütüphanesinden bir model çek (örn. qwen3:8b, llama3.2).",
+		"modelNamePlaceholder": "model adı (örn. qwen3:8b)",
 		"generationTitle": "Üretim",
 		"allowConcurrentGeneration": "Aynı anda birden fazla üretime izin ver",
 		"allowConcurrentGenerationHint": "Varsayılan olarak kapalı — test/kart/rapor/harita/slayt üretimi aynı türden yeni bir üretim başlatılmadan önce mevcut üretimin bitmesini bekler (zayıf donanımda hepsi birbirini yavaşlatmasın diye). Donanımınız yeterliyse açabilirsiniz.",
-		"desktopVaultTitle": "Masaüstü — Kasa Konumu",
-		"desktopVaultDescription": "Değişiklik bir sonraki uygulama başlatmasında etkili olur (sunucu şu an çalışırken kasa yolu değiştirilemez).",
+		"desktopVaultTitle": "Masaüstü — Varsayılan Kasa (sonraki başlatma)",
+		"desktopVaultDescription": "Bu, uygulamanın bir sonraki açılışta gireceği kasadır — şu an aktif olan kasa değil (o, aşağıdaki \"Vault'lar\" kartında görünür). Değişiklik bir sonraki uygulama başlatmasında etkili olur (sunucu şu an çalışırken kasa yolu değiştirilemez).",
 		"vaultFolder": "Kasa klasörü",
 		"vaultFolderPlaceholder": "Henüz seçilmedi",
 		"choose": "Seç…",
 		"obsidianVaultName": "Kasa adı",
 		"vaultSaved": "Kaydedildi — bir sonraki başlatmada uygulanır.",
-		"vaultSaveFailed": "Kaydedilemedi."
+		"vaultSaveFailed": "Kaydedilemedi.",
+		"home": "Ana sayfa",
+		"languageTitle": "Dil",
+		"vaultsCardDescription": "Birden fazla kütüphane arasında geçiş yap, yeni vault oluştur veya sil.",
+		"activeVaultLabel": "Şu an aktif",
+		"manageVaults": "Vault'ları yönet",
+		"libraryCardDescription": "Obsidian vault'undan içe aktar, belge yükleme ayarları.",
+		"manageLibrary": "Kütüphaneyi yönet",
+		"skillsCardDescription": "Sohbet, test ve bilgi kartı üretimini kişiselleştir.",
+		"manageSkills": "Skill'leri yönet",
+		"providersCardDescription": "Ollama ve bulut sağlayıcıları (DeepSeek, ...), API anahtarları, görev zincirleri.",
+		"manageProviders": "Sağlayıcıları yönet",
+		"deleteModelConfirmTitle": "\"{name}\" silinsin mi?",
+		"deleteModelConfirmDescription": "Bu model Ollama'dan kalıcı olarak kaldırılacak. İndirme dosyaları diskten silinir."
 	},
 
 	"LibrarySettingsPage": {
+		"title": "Kütüphane",
+		"saveError": "Ayarlar kaydedilemedi.",
 		"importObsidianTitle": "Obsidian'dan İçe Aktar",
 		"importObsidianDescription": "Bir Obsidian vault'unu tek yönlü kopyalar (kaynağa asla yazılmaz). Wikilink'ler göreli markdown linklerine çevrilir, eklerin kopyaları alınır, eksik frontmatter alanları varsayılan değer + gözden geçirme rozeti alır.",
 		"uploadSettingsTitle": "Yükleme Ayarları",
@@ -373,6 +403,9 @@
 		"removeKey": "Anahtarı sil",
 		"testConnection": "Bağlantıyı test et",
 		"testing": "Test ediliyor...",
+		"rateLimitRequests": "İstek kotası: {used}/{limit} · sıfırlanma: {resetTime}",
+		"rateLimitTokens": "Token kotası: {used}/{limit} · sıfırlanma: {resetTime}",
+		"rateLimitRecent": "Hız sınırına takıldı · {time}",
 		"enabled": "Etkin",
 		"removeProviderTitle": "Sağlayıcıyı kaldır",
 		"removeProviderAria": "{label} sağlayıcısını kaldır",
@@ -402,13 +435,20 @@
 		"taskSlides": "Slayt üretimi",
 		"testOk": "Bağlantı OK",
 		"testUnreachable": "Ulaşılamıyor",
-		"testAuthError": "Kimlik doğrulama hatası"
+		"testAuthError": "Kimlik doğrulama hatası",
+		"defaultModelLabel": "Varsayılan model",
+		"defaultModelUpdateFailed": "\"{label}\" varsayılan modeli güncellenemedi.",
+		"notSelected": "seçilmedi",
+		"noModelList": "model listesi yok — bağlantıyı test et",
+		"removeProvider": "Kaldır"
 	},
 
 	"SkillsSettingsPage": {
 		"title": "Kullanıcı Skill'leri",
-		"intro": "{path} içine bıraktığın markdown dosyaları sohbet, test ve bilgi kartı üretimini özelleştirir. Matematik biçimi ve kaynak doğrulama kuralları her zaman en son uygulanır — bir skill bunları geçersiz kılamaz.",
+		"intro": "içine bıraktığın markdown dosyaları sohbet, test ve bilgi kartı üretimini özelleştirir. Matematik biçimi ve kaynak doğrulama kuralları her zaman en son uygulanır — bir skill bunları geçersiz kılamaz.",
 		"loadError": "Skill listesi alınamadı.",
+		"templateDescription": "Bu skill ne yapar? (zorunlu)",
+		"templateBody": "Kurallar, tercihler, yasaklar... serbest markdown.",
 		"newSkill": "+ Yeni skill",
 		"preview": "Önizleme",
 		"scopeAll": "Tümü",
@@ -448,6 +488,7 @@
 		"activateFailed": "Aktif vault değiştirilemedi.",
 		"renameFailed": "Yeniden adlandırılamadı.",
 		"newVaultTitle": "Yeni vault",
+		"create": "Oluştur",
 		"vaultNamePlaceholder": "Vault adı",
 		"createFailed": "Vault oluşturulamadı.",
 		"vaultInfoFailed": "Vault bilgisi alınamadı.",
@@ -462,6 +503,7 @@
 		"title": "Bilgi Kartları",
 		"loadError": "Kartlar yüklenemedi.",
 		"empty": "Bugün tekrarlanacak kart yok.",
+		"deckEmpty": "Bu destede kart yok.",
 		"done": "Bugün için bitti — {count} kart tekrar edildi.",
 		"reveal": "Cevabı göster",
 		"gradeAgain": "Tekrar",
@@ -483,16 +525,18 @@
 		"finish": "Bitir",
 		"submitFailed": "Sınav gönderilemedi. Tekrar dene.",
 		"resultTitle": "Sonuç: {score}%",
-		"yourAnswer": "Cevabın: {answer}",
+		"yourAnswer": "Cevabın:",
 		"emptyAnswer": "(boş)",
-		"correctAnswer": "Doğru cevap: {answer}",
-		"modelFeedback": "Model değerlendirmesi:"
+		"correctAnswer": "Doğru cevap:",
+		"modelFeedback": "Model değerlendirmesi:",
+		"viewFailed": "Test görüntülenemedi: {error}"
 	},
 
 	"ReportStudyPage": {
 		"defaultTitle": "Rapor",
 		"loadError": "Rapor yüklenemedi.",
-		"noSections": "Bu raporda bölüm yok."
+		"noSections": "Bu raporda bölüm yok.",
+		"viewFailed": "Rapor görüntülenemedi: {error}"
 	},
 
 	"SlidesStudyPage": {
@@ -502,12 +546,19 @@
 		"renderFailed": "Slaytlar render edilemedi.",
 		"slideAria": "Slayt {index}",
 		"prev": "‹ Geri",
-		"next": "İleri ›"
+		"next": "İleri ›",
+		"viewFailed": "Sunum görüntülenemedi: {error}"
 	},
 
 	"MindmapStudyPage": {
+		"defaultTitle": "Zihin haritası",
 		"noNodes": "Bu haritada düğüm yok.",
 		"loadFailed": "Zihin haritası yüklenemedi.",
-		"sourcesTitle": "Kaynaklar"
+		"sourcesTitle": "Kaynaklar",
+		"zoomIn": "Yakınlaştır",
+		"zoomOut": "Uzaklaştır",
+		"fitToScreen": "Ekrana sığdır",
+		"mapHint": "Bir düğümün dairesine tıklayarak aç/kapa; kısaltılmış açıklamaya tıklayarak tamamını gör.",
+		"viewFailed": "Zihin haritası görüntülenemedi: {error}"
 	}
 }
