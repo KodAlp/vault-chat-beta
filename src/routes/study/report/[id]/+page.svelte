@@ -1,13 +1,23 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { page } from '$app/state';
 	import { renderMarkdown } from '$lib/markdown';
 	import { libraryViewerUrl } from '$lib/sourceLink';
+	import { resolveBackHref } from '$lib/back-link';
+	import { t } from '$lib/i18n/index.svelte';
 	import type { PageProps } from './$types';
 	import type { ReportSectionView, ReportView } from '$lib/types';
 	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 
 	let { data }: PageProps = $props();
+
+	// See back-link.ts — falls back to the vault's chat list, not "/", when
+	// this page was opened directly (no `from`, e.g. a bookmark).
+	let backHref = $derived(
+		resolveBackHref(page.url.searchParams.get('from'), data.vaultId ? `/vault/${data.vaultId}` : '/')
+	);
+	let here = $derived(page.url.pathname + page.url.search);
 
 	type Phase = 'loading' | 'ready' | 'error';
 
@@ -27,7 +37,7 @@
 			const body = (await res.json()) as { report: ReportView; sections: ReportSectionView[] };
 			report = body.report;
 			if (body.sections.length === 0) {
-				errorMessage = 'Bu raporda bölüm yok.';
+				errorMessage = t('ReportStudyPage.noSections');
 				phase = 'error';
 				return;
 			}
@@ -44,21 +54,21 @@
 			);
 			phase = 'ready';
 		} catch {
-			errorMessage = 'Rapor yüklenemedi.';
+			errorMessage = t('ReportStudyPage.loadError');
 			phase = 'error';
 		}
 	});
 </script>
 
 <svelte:head>
-	<title>{report?.title ?? 'Rapor'} — Vault Agent Toolkit</title>
+	<title>{report?.title ?? t('ReportStudyPage.defaultTitle')} — Vault Agent Toolkit</title>
 </svelte:head>
 
 <div class="report-screen">
-	<a class="home-link" href="/"><ArrowLeftIcon size={14} aria-hidden="true" /> Ana sayfa</a>
+	<a class="home-link" href={backHref}><ArrowLeftIcon size={14} aria-hidden="true" /> {t('Common.geriDon')}</a>
 
 	{#if phase === 'loading'}
-		<p class="status">Yükleniyor...</p>
+		<p class="status">{t('Common.yukleniyor')}</p>
 	{:else if phase === 'error'}
 		<p class="status error" role="alert">{errorMessage}</p>
 	{:else if phase === 'ready' && report}
@@ -82,8 +92,8 @@
 							     legitimately cite the same file twice (see
 							     generate-report.ts's dedupe comment). -->
 							{#each r.section.source_paths as path, i (path + '#' + i)}
-								<a class="source-link" href={libraryViewerUrl(path, data.vaultId ?? '')}>{path}</a>
-								<a class="source-link" href={libraryViewerUrl(path, data.vaultId ?? '')} title="Kaynağı aç" aria-label="Kaynağı aç">
+								<a class="source-link" href={libraryViewerUrl(path, data.vaultId ?? '', here)}>{path}</a>
+								<a class="source-link" href={libraryViewerUrl(path, data.vaultId ?? '', here)} title={t('Common.kaynagiAc')} aria-label={t('Common.kaynagiAc')}>
 									<ExternalLinkIcon size={13} aria-hidden="true" />
 								</a>
 							{/each}
@@ -93,7 +103,7 @@
 			</div>
 			{#snippet failed(error)}
 				<p class="status error" role="alert">
-					Rapor görüntülenemedi: {error instanceof Error ? error.message : String(error)}
+					{t('ReportStudyPage.viewFailed', { error: error instanceof Error ? error.message : String(error) })}
 				</p>
 			{/snippet}
 		</svelte:boundary>

@@ -1,12 +1,22 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { page } from '$app/state';
 	import { libraryViewerUrl } from '$lib/sourceLink';
+	import { resolveBackHref } from '$lib/back-link';
+	import { t } from '$lib/i18n/index.svelte';
 	import type { PageProps } from './$types';
 	import type { SlideDeckView, SlideView } from '$lib/types';
 	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 
 	let { data }: PageProps = $props();
+
+	// See back-link.ts — falls back to the vault's chat list, not "/", when
+	// this page was opened directly (no `from`, e.g. a bookmark).
+	let backHref = $derived(
+		resolveBackHref(page.url.searchParams.get('from'), data.vaultId ? `/vault/${data.vaultId}` : '/')
+	);
+	let here = $derived(page.url.pathname + page.url.search);
 
 	type Phase = 'loading' | 'ready' | 'error';
 
@@ -35,7 +45,7 @@
 			deck = body.deck;
 			slides = body.slides;
 			if (slides.length === 0) {
-				errorMessage = 'Bu sunumda slayt yok.';
+				errorMessage = t('SlidesStudyPage.noSlides');
 				phase = 'error';
 				return;
 			}
@@ -47,13 +57,13 @@
 				(svg) => `<style>${body.deck.rendered_css}</style><div class="marpit">${svg.outerHTML}</div>`
 			);
 			if (slideDocs.length === 0) {
-				errorMessage = 'Slaytlar render edilemedi.';
+				errorMessage = t('SlidesStudyPage.renderFailed');
 				phase = 'error';
 				return;
 			}
 			phase = 'ready';
 		} catch {
-			errorMessage = 'Sunum yüklenemedi.';
+			errorMessage = t('SlidesStudyPage.loadError');
 			phase = 'error';
 		}
 	});
@@ -68,11 +78,11 @@
 </script>
 
 <svelte:head>
-	<title>{deck?.title ?? 'Sunum'} — Vault Agent Toolkit</title>
+	<title>{deck?.title ?? t('SlidesStudyPage.defaultTitle')} — Vault Agent Toolkit</title>
 </svelte:head>
 
 <div class="slides-screen">
-	<a class="home-link" href="/"><ArrowLeftIcon size={14} aria-hidden="true" /> Ana sayfa</a>
+	<a class="home-link" href={backHref}><ArrowLeftIcon size={14} aria-hidden="true" /> {t('Common.geriDon')}</a>
 
 	<!-- See study/report/[id]/+page.svelte for why every one of these view
 	     routes gets a boundary: phase='ready' is assigned before its subtree
@@ -80,7 +90,7 @@
 	     "Yükleniyor..." with nothing explaining it. -->
 	<svelte:boundary>
 	{#if phase === 'loading'}
-		<p class="status">Yükleniyor...</p>
+		<p class="status">{t('Common.yukleniyor')}</p>
 	{:else if phase === 'error'}
 		<p class="status error" role="alert">{errorMessage}</p>
 	{:else if phase === 'ready' && deck}
@@ -88,27 +98,27 @@
 
 		<p class="progress-label">{currentIndex + 1} / {slideDocs.length}</p>
 		<div class="slide-frame">
-			<iframe title="Slayt {currentIndex + 1}" sandbox="" srcdoc={slideDocs[currentIndex]}></iframe>
+			<iframe title={t('SlidesStudyPage.slideAria', { index: currentIndex + 1 })} sandbox="" srcdoc={slideDocs[currentIndex]}></iframe>
 		</div>
 
 		<div class="nav">
-			<button onclick={prev} disabled={currentIndex === 0}>‹ Geri</button>
-			<button onclick={next} disabled={currentIndex === slideDocs.length - 1}>İleri ›</button>
+			<button onclick={prev} disabled={currentIndex === 0}>{t('SlidesStudyPage.prev')}</button>
+			<button onclick={next} disabled={currentIndex === slideDocs.length - 1}>{t('SlidesStudyPage.next')}</button>
 		</div>
 
 		{#if slides[currentIndex]}
 			<div class="citation-row">
 				<a
 					class="source-link"
-					href={libraryViewerUrl(slides[currentIndex].source_path, data.vaultId ?? '')}
+					href={libraryViewerUrl(slides[currentIndex].source_path, data.vaultId ?? '', here)}
 				>
 					{slides[currentIndex].source_path}
 				</a>
 				<a
 					class="source-link"
-					href={libraryViewerUrl(slides[currentIndex].source_path, data.vaultId ?? '')}
-					title="Kaynağı aç"
-					aria-label="Kaynağı aç"
+					href={libraryViewerUrl(slides[currentIndex].source_path, data.vaultId ?? '', here)}
+					title={t('Common.kaynagiAc')}
+					aria-label={t('Common.kaynagiAc')}
 				>
 					<ExternalLinkIcon size={13} aria-hidden="true" />
 				</a>
@@ -117,7 +127,7 @@
 	{/if}
 	{#snippet failed(error)}
 		<p class="status error" role="alert">
-			Sunum görüntülenemedi: {error instanceof Error ? error.message : String(error)}
+			{t('SlidesStudyPage.viewFailed', { error: error instanceof Error ? error.message : String(error) })}
 		</p>
 	{/snippet}
 	</svelte:boundary>

@@ -24,6 +24,12 @@ log = "0.4"
 tauri = { version = "2.11.3", features = ["tray-icon"] }
 tauri-plugin-log = "2"
 tauri-plugin-dialog = "2"
+# Opens model-produced links in the OS's default browser instead of Tauri's
+# own webview navigating away from the app with no way back (İdeas.txt bug:
+# "the model redirects you inside the app, not the browser, and you can't
+# get back without relaunching"). See src/lib/openExternalLink.ts and
+# markdown.ts's link_open override for the frontend half.
+tauri-plugin-opener = "2"
 tokio = { version = "1", features = ["time"] }
 win32job = "2"
 # DPAPI (CryptProtectData/CryptUnprotectData) for at-rest encryption of the

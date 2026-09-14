@@ -2,6 +2,8 @@
 	import { page } from '$app/state';
 	import { onMount } from 'svelte';
 	import { renderMarkdown } from '$lib/markdown';
+	import { resolveBackHref } from '$lib/back-link';
+	import { t } from '$lib/i18n/index.svelte';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 	import TriangleAlertIcon from '@lucide/svelte/icons/triangle-alert';
 
@@ -9,6 +11,11 @@
 	let error = $state('');
 	let filePath = $derived(page.url.searchParams.get('path') ?? '');
 	let vaultId = $derived(page.url.searchParams.get('vault') ?? '');
+	// See back-link.ts — sourceLink.ts's libraryViewerUrl attaches `from`
+	// whenever a study page or SourceChip links here, so this returns to
+	// the exact artifact the citation was clicked from, not a hardcoded
+	// home link.
+	let backHref = $derived(resolveBackHref(page.url.searchParams.get('from'), vaultId ? `/vault/${vaultId}` : '/'));
 
 	onMount(load);
 
@@ -16,7 +23,7 @@
 		error = '';
 		html = '';
 		if (!filePath) {
-			error = 'path parametresi gerekli.';
+			error = t('LibraryViewPage.missingPath');
 			return;
 		}
 		try {
@@ -31,17 +38,17 @@
 			const body = data.raw.replace(/^---\n[\s\S]*?\n---\n/, '');
 			html = await renderMarkdown(body);
 		} catch {
-			error = 'Dosya yüklenemedi.';
+			error = t('LibraryViewPage.loadFailed');
 		}
 	}
 </script>
 
 <svelte:head>
-	<title>{filePath || 'Kaynak'} — Vault Agent Toolkit</title>
+	<title>{filePath || t('LibraryViewPage.fallbackTitle')} — Vault Agent Toolkit</title>
 </svelte:head>
 
 <div class="viewer">
-	<a class="home-link" href="/"><ArrowLeftIcon size={14} aria-hidden="true" /> Ana sayfa</a>
+	<a class="home-link" href={backHref}><ArrowLeftIcon size={14} aria-hidden="true" /> {t('Common.geriDon')}</a>
 	<p class="path">{filePath}</p>
 	{#if error}
 		<div class="error">
