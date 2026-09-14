@@ -5,7 +5,7 @@ bilgisayarına** kurmak isteyenler için yazıldı. Teknik bilgi gerektirmez —
 her adımı sırayla uygulaman yeterli.
 
 > Zaten geliştirici olarak kaynak koddan çalıştıracaksan (`npm run dev`
-> vb.), bunun yerine repo kökündeki **KURULUM.md** dosyasına bak — bu rehber
+> vb.), bunun yerine repo kökündeki **README.md** dosyasına bak — bu rehber
 > sadece paketlenmiş `.exe` kurulumunu anlatıyor.
 
 ## 1. Neye ihtiyacın var?
