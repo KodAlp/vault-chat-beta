@@ -70,6 +70,11 @@
 							headers: { 'content-type': 'application/json' },
 							body: JSON.stringify({ url: youtubeUrl.trim() })
 						});
+			// 413 is adapter-node's BODY_SIZE_LIMIT rejecting the body before
+			// the route ever runs, so there is no SSE error event to read —
+			// the status code is all the client gets. Name it instead of
+			// showing a bare "İstek başarısız (413)".
+			if (res.status === 413) throw new Error(t('UploadDialog.tooLarge'));
 			if (!res.ok || !res.body) throw new Error(t('Common.istekBasarisiz', { status: res.status }));
 
 			const reader = res.body.getReader();
