@@ -30,7 +30,41 @@ process.on('unhandledRejection', (reason) => {
 });
 
 const STATE_CHANGING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
-const LOOPBACK_HOSTNAMES = new Set(['127.0.0.1', 'localhost', '::1']);
+// '[::1]' (bracketed), not '::1' — confirmed against Node's own URL parser:
+// the WHATWG URL spec's .hostname keeps the brackets on an IPv6 literal, so
+// a bare '::1' here never matched a real request/Origin using that address.
+// Latent since this constant's introduction, surfaced while fixing the
+// localhost/127.0.0.1 mismatch below — same class of bug, same fix.
+const LOOPBACK_HOSTNAMES = new Set(['127.0.0.1', 'localhost', '[::1]']);
+
+/**
+ * Same-origin check that treats 127.0.0.1/localhost/::1 as interchangeable —
+ * same leniency the hostname allowlist below already applies. A byte-exact
+ * compare against event.url.origin false-positives whenever the Origin
+ * header uses a different loopback spelling than the address the page was
+ * actually navigated to: confirmed in the field on a packaged Windows build
+ * where WebView2 sent `Origin: http://localhost:PORT` for a page loaded via
+ * `http://127.0.0.1:PORT` (the app always navigates via 127.0.0.1 — nothing
+ * in this codebase ever constructs a "localhost" URL — so this is WebView2's
+ * own doing, not app-controlled, and only reproduced on some Windows
+ * machines). That 403'd every POST (file import first reported, but it hits
+ * every state-changing route) despite being a genuine same-machine request.
+ * A real cross-site attacker's Origin (http://evil.example) is still
+ * rejected — its hostname is never in LOOPBACK_HOSTNAMES.
+ */
+function isSameLoopbackOrigin(origin: string, url: URL): boolean {
+	let originUrl: URL;
+	try {
+		originUrl = new URL(origin);
+	} catch {
+		return false;
+	}
+	return (
+		originUrl.protocol === url.protocol &&
+		originUrl.port === url.port &&
+		LOOPBACK_HOSTNAMES.has(originUrl.hostname)
+	);
+}
 
 /**
  * This app has no auth layer at all — every /api/** route trusts whoever can
@@ -67,7 +101,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	if (STATE_CHANGING_METHODS.has(event.request.method)) {
 		const origin = event.request.headers.get('origin');
-		if (origin && origin !== event.url.origin) {
+		if (origin && !isSameLoopbackOrigin(origin, event.url)) {
 			error(403, 'Cross-site istekler engellenir.');
 		}
 	}
