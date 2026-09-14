@@ -27,15 +27,33 @@ export interface AppLogRecord {
 		 * e.g. a mind-map node whose label was a source file name was dropped so
 		 * the user would never see it. Separate from generation_error so there is
 		 * a debug trail without pretending the run failed. */
-		| 'generation_warning';
+		| 'generation_warning'
+		/** retrieve() came back with zero chunks (NoSourcesError) — a routine
+		 * user-facing state (not a bug), so kept out of generation_error's
+		 * error-monitoring bucket, but logged anyway with `reason` so a
+		 * recurring "kaynak bulunamadı" report is actually diagnosable instead
+		 * of invisible in app-log.jsonl. */
+		| 'no_sources';
 	chatId?: string;
 	provider?: string;
 	model?: string;
-	/** generation_error/generation_warning only — which of the 5 generators (quiz/cards/
-	 * report/mindmap/slides). Lets a silent "nothing got created" pattern
-	 * (e.g. reports failing validation every single attempt) actually show
-	 * up somewhere instead of only ever existing as a dropped SSE stream. */
+	/** generation_error/generation_warning/no_sources only — which of the 5
+	 * generators (quiz/cards/report/mindmap/slides). Lets a silent "nothing
+	 * got created" pattern (e.g. reports failing validation every single
+	 * attempt) actually show up somewhere instead of only ever existing as a
+	 * dropped SSE stream. */
 	generationType?: string;
+	/** fallback only — the ProviderErrorKind (e.g. 'http_429', 'timeout_idle')
+	 * that caused this hop to be skipped, so a reader can tell a rate-limit
+	 * skip apart from an outage/timeout skip without re-parsing `message`
+	 * text. Kept as a loose string (not ProviderErrorKind) to avoid this
+	 * module importing from providers/, which is not otherwise a dependency
+	 * of app-log.ts. */
+	errorKind?: string;
+	/** no_sources only — see RetrieveResult.reason ($lib/types.ts): which of
+	 * retrieve()'s empty-return paths caused it (unindexed vault, empty KNN
+	 * result, domain/distance filtering, or scope narrowing). */
+	reason?: string;
 	message: string;
 }
 
@@ -61,4 +79,35 @@ export function logAppEvent(record: Omit<AppLogRecord, 'ts'>): void {
 	} catch {
 		// swallowed — see doc comment above
 	}
+}
+
+/**
+ * The most recent 'fallback' event per provider that actually carried an
+ * errorKind — the Ayarlar > Sağlayıcılar page's fallback for cloud providers
+ * (Gemini, OpenRouter) whose success responses never carry live rate-limit
+ * headers, unlike Groq/Mistral (see registry.ts's getRateLimitInfo). The
+ * file is append-only and chronological, so a single forward pass keeping
+ * "last seen per provider" is enough — no sort needed. Never throws; an
+ * unreadable or missing log file is just "no data yet".
+ */
+export function getLastProviderErrors(): Record<string, { ts: string; kind: string }> {
+	const result: Record<string, { ts: string; kind: string }> = {};
+	let raw: string;
+	try {
+		raw = fs.readFileSync(logPath(), 'utf-8');
+	} catch {
+		return result;
+	}
+	for (const line of raw.split('\n')) {
+		if (!line.trim()) continue;
+		let rec: AppLogRecord;
+		try {
+			rec = JSON.parse(line);
+		} catch {
+			continue;
+		}
+		if (rec.kind !== 'fallback' || !rec.provider || !rec.errorKind) continue;
+		result[rec.provider] = { ts: rec.ts, kind: rec.errorKind };
+	}
+	return result;
 }

@@ -22,6 +22,10 @@ export interface RetrievedChunk {
 export interface RetrieveResult {
 	chunks: RetrievedChunk[];
 	narrowScope: boolean;
+	/** Set only when chunks is empty — which of retrieve()'s empty-return
+	 * paths produced it, for app-log.ts's no_sources record. 'scope' is the
+	 * log-side counterpart of narrowScope=true. */
+	reason?: 'unindexed' | 'no-embedding-match' | 'filtered' | 'scope';
 }
 
 export type ChatRole = 'user' | 'assistant';
@@ -65,6 +69,12 @@ export interface ChatRequestBody {
 	/** Model for background title generation on a new chat — settings.defaultModel
 	 * client-side. Falls back server-side if omitted. */
 	titleModel?: string;
+	/** Which provider titleModel belongs to — settings.defaultProvider
+	 * client-side. Without this, title.ts's chatWithFallback call had no
+	 * provider to pin titleModel to, so a non-Ollama titleModel (e.g.
+	 * "deepseek-chat") could be requested from whatever the `title` chain's
+	 * own default provider happened to be. See registry.ts's resolveHopModel. */
+	titleProvider?: string;
 	/** Vault id — omitted in Faz 8 (single active-vault UI), sent by Faz 9's
 	 * vault-aware chat header. Server falls back to the active vault. */
 	vault?: string;
@@ -167,6 +177,10 @@ export interface SubmitAttemptRequest {
 	answers: { itemId: string; given: string }[];
 	/** For grading open questions — settings.fastModel client-side. */
 	fastModel: string;
+	/** Which provider fastModel belongs to — settings.fastProvider
+	 * client-side. Without this, grade-open.ts's chatWithFallback call had no
+	 * provider to pin fastModel to. See registry.ts's resolveHopModel. */
+	fastProvider?: string;
 	vault?: string;
 }
 
@@ -413,6 +427,36 @@ export interface ProviderStatus {
 	needsKey: boolean;
 	keyStatus: 'connected' | 'none';
 	mask: string | null;
+	/** Model this provider is asked for when the fallback chain reaches it
+	 * without an explicit pin — see registry.ts's resolveHopModel. null means
+	 * unset, so this provider gets skipped rather than asked for a wrong
+	 * model on that path. */
+	defaultModel: string | null;
+	/** Only set on the 'ollama' entry — embedding always runs through Ollama
+	 * regardless of which provider handles chat, so this isn't a per-
+	 * provider concept. Sourced from embed-config.ts's EMBED_MODEL so a
+	 * client-side "is the required model pulled?" check never hardcodes a
+	 * model name that could drift from the real one (see KURULUM.md's
+	 * nomic-embed-text/bge-m3 mixup this is meant to prevent from
+	 * recurring). */
+	embedModel: string | null;
+	/** 'live' = read straight off this provider's own rate-limit response
+	 * headers (Groq/Mistral send these on every response — see
+	 * registry.ts's getRateLimitInfo). 'log' = no such headers exist for
+	 * this provider (Gemini/OpenRouter only send them on a 429 itself), so
+	 * this is a fallback event recorded in app-log.jsonl instead — weaker
+	 * signal, just "when was this last rate-limited", not "how close is it
+	 * now". null = neither exists yet for this provider. */
+	rateLimit: {
+		source: 'live' | 'log';
+		remainingRequests?: number;
+		limitRequests?: number;
+		resetRequestsAt?: string;
+		remainingTokens?: number;
+		limitTokens?: number;
+		resetTokensAt?: string;
+		lastHitAt?: string;
+	} | null;
 }
 
 /** GET /api/providers/models response shape — chat header's per-chat

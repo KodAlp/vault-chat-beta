@@ -1,5 +1,5 @@
 import { ProviderError, type ProviderErrorKind } from './types';
-import type { ProviderAdapter, ChatRequest, Chunk, ModelInfo, ProviderHealth } from './types';
+import type { ProviderAdapter, ChatRequest, Chunk, ModelInfo, ProviderHealth, RateLimitSnapshot } from './types';
 import { createThinkTagNormalizer, reasoningContentChunk, textChunk } from './normalize';
 
 export interface Timeouts {
@@ -29,6 +29,36 @@ export function classifyHttpStatus(status: number, bodyText: string): ProviderEr
 }
 
 /**
+ * Parses either a plain seconds count ("30") or a Go/OpenAI-style duration
+ * string ("2m59.56s", "1h2m3s", "500ms") into total seconds. Unit-tagged
+ * loop (not an anchored slot regex) so "ms" is never swallowed by a greedy
+ * "m" match, and units may appear in any subset/order. Returns null when
+ * nothing recognizable is found.
+ */
+function parseDurationSeconds(value: string): number | null {
+	const trimmed = value.trim();
+	if (/^\d+(\.\d+)?$/.test(trimmed)) return Number(trimmed);
+	const unitSeconds: Record<string, number> = { ms: 0.001, h: 3600, m: 60, s: 1 };
+	const re = /(\d+(?:\.\d+)?)(ms|h|m|s)/g;
+	let total = 0;
+	let matched = false;
+	let m: RegExpExecArray | null;
+	while ((m = re.exec(trimmed))) {
+		matched = true;
+		total += Number(m[1]) * unitSeconds[m[2]];
+	}
+	return matched ? total : null;
+}
+
+/** Duration string, or an HTTP-date (retry-after's other legal form per RFC 9110) → absolute ISO instant. */
+function resolveFutureInstant(value: string): string | null {
+	const seconds = parseDurationSeconds(value);
+	if (seconds !== null) return new Date(Date.now() + seconds * 1000).toISOString();
+	const asDate = new Date(value);
+	return Number.isNaN(asDate.getTime()) ? null : asDate.toISOString();
+}
+
+/**
  * Generic adapter for any OpenAI-compatible /chat/completions endpoint —
  * covers every cloud provider plus Ollama (via its own /v1 surface, see
  * providers/ollama.ts). One implementation, one set of timeout/error/
@@ -38,10 +68,64 @@ export function classifyHttpStatus(status: number, bodyText: string): ProviderEr
 export class OpenAICompatAdapter implements ProviderAdapter {
 	readonly id: string;
 	protected config: OpenAICompatConfig;
+	/** Rate-limit headers seen on the last response that carried any —
+	 * see RateLimitSnapshot's doc comment for why coverage is uneven
+	 * across providers. */
+	private rateLimitSnapshot: RateLimitSnapshot | null = null;
 
 	constructor(config: OpenAICompatConfig) {
 		this.id = config.id;
 		this.config = config;
+	}
+
+	/** Merges any rate-limit headers present on `res` into the snapshot;
+	 * fields the response doesn't carry keep their last known value. Only
+	 * creates a snapshot at all once at least one such header has actually
+	 * been seen — a provider that never sends them (Gemini/OpenRouter on a
+	 * successful response) stays null rather than looking "live" with a
+	 * fresh timestamp and no data. */
+	private captureRateLimitHeaders(res: Response): void {
+		const h = res.headers;
+		const remainingRequests = h.get('x-ratelimit-remaining-requests');
+		const limitRequests = h.get('x-ratelimit-limit-requests');
+		const resetRequests = h.get('x-ratelimit-reset-requests');
+		const remainingTokens = h.get('x-ratelimit-remaining-tokens');
+		const limitTokens = h.get('x-ratelimit-limit-tokens');
+		const resetTokens = h.get('x-ratelimit-reset-tokens');
+		const retryAfter = h.get('retry-after');
+
+		const hasAnyData =
+			remainingRequests !== null ||
+			limitRequests !== null ||
+			resetRequests !== null ||
+			remainingTokens !== null ||
+			limitTokens !== null ||
+			resetTokens !== null ||
+			retryAfter !== null;
+		if (!hasAnyData) return;
+
+		const snapshot: RateLimitSnapshot = { ...(this.rateLimitSnapshot ?? {}), capturedAt: new Date().toISOString() };
+		if (remainingRequests !== null) snapshot.remainingRequests = Number(remainingRequests);
+		if (limitRequests !== null) snapshot.limitRequests = Number(limitRequests);
+		if (resetRequests !== null) {
+			const at = resolveFutureInstant(resetRequests);
+			if (at) snapshot.resetRequestsAt = at;
+		}
+		if (remainingTokens !== null) snapshot.remainingTokens = Number(remainingTokens);
+		if (limitTokens !== null) snapshot.limitTokens = Number(limitTokens);
+		if (resetTokens !== null) {
+			const at = resolveFutureInstant(resetTokens);
+			if (at) snapshot.resetTokensAt = at;
+		}
+		if (retryAfter !== null) {
+			const at = resolveFutureInstant(retryAfter);
+			if (at) snapshot.retryAfterAt = at;
+		}
+		this.rateLimitSnapshot = snapshot;
+	}
+
+	getRateLimitInfo(): RateLimitSnapshot | null {
+		return this.rateLimitSnapshot;
 	}
 
 	protected chatUrl(): string {
@@ -130,6 +214,7 @@ export class OpenAICompatAdapter implements ProviderAdapter {
 					messages: req.messages,
 					stream: true,
 					...(req.temperature !== undefined ? { temperature: req.temperature } : {}),
+					...(req.maxOutputTokens !== undefined ? { max_tokens: req.maxOutputTokens } : {}),
 					// Standard OpenAI structured-output shape — confirmed against a
 					// real running Ollama instance that its /v1 surface honors THIS
 					// nested {type, json_schema:{name, schema}} form correctly, but
@@ -149,6 +234,7 @@ export class OpenAICompatAdapter implements ProviderAdapter {
 			throw providerErr;
 		}
 		bridge.clearTimer();
+		this.captureRateLimitHeaders(res);
 
 		if (!res.ok || !res.body) {
 			const bodyText = await res.text().catch(() => '');
