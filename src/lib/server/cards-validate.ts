@@ -28,7 +28,8 @@ export type CardsParseResult = { ok: true; items: NewCard[] } | { ok: false; err
  */
 export function parseAndValidateCards(
 	raw: string,
-	idToChunk: Map<string, CitedChunk>
+	idToChunk: Map<string, CitedChunk>,
+	expectedCount: number
 ): CardsParseResult {
 	let json: unknown;
 	try {
@@ -47,8 +48,11 @@ export function parseAndValidateCards(
 			error: `${badIds.length} kartın source_id'si sağlanan kaynak kimlikleriyle eşleşmiyor. Sadece S1, S2, ... gibi verilen kimlikleri kullan.`
 		};
 	}
-	if (result.data.items.length === 0) {
-		return { ok: false, error: 'Model hiç kart üretmedi.' };
+	if (result.data.items.length !== expectedCount) {
+		return {
+			ok: false,
+			error: `Model ${expectedCount} kart istenirken ${result.data.items.length} kart üretti. Tam olarak ${expectedCount} kart üret.`
+		};
 	}
 	const items: NewCard[] = result.data.items.map((item) => {
 		const chunk = idToChunk.get(item.source_id)!;

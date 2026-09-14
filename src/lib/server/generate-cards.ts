@@ -4,7 +4,7 @@ import { retrieve } from './retrieve';
 import { getMessages } from './chats-db';
 import { buildCardsJsonSchema } from './cards-schema';
 import { parseAndValidateCards } from './cards-validate';
-import { createDeck } from './study-db';
+import { createDeck, type NewCard } from './study-db';
 import { renderUserSkillsBlock } from './userSkills';
 import type { VaultContext } from './vaults';
 import { NoSourcesError } from './generate-errors';
@@ -30,6 +30,35 @@ export type ProgressStage = 'retrieving' | 'generating' | 'validating' | 'retryi
  * server must never trust client-side validation alone. */
 function clampCount(count: number): number {
 	return Math.max(1, Math.min(30, Math.round(count) || 1));
+}
+
+/**
+ * Batching (fixes the local-model quality-collapse bug): a single call used
+ * to ask for up to 30 cards via a grammar that FORBIDS returning fewer
+ * (cards-schema.ts's minItems === maxItems), so the model had to keep
+ * producing structured JSON with no room to stop even as quality degraded
+ * near the end of its context window. Splitting into small batches means no
+ * single decode is ever asked for more than CARDS_PER_BATCH cards — the
+ * grammar's "must keep going" pressure now caps out at a size a local model
+ * can actually sustain quality across, and a batch that goes bad only costs
+ * that batch (see the partial-accept loop in generateCards below), not the
+ * whole deck.
+ */
+const CARDS_PER_BATCH = 5;
+
+/**
+ * A generous ceiling against a runaway decode (see GENERATION_BUDGET_MS's
+ * doc comment for what that guards against at the whole-request level; this
+ * is the same idea per-call), not a tuned per-item allowance. ~350
+ * tokens/card (front + back + source_id + JSON structure) is an
+ * ENGINEERING ESTIMATE, not a measured number — deliberately rounded up.
+ * At CARDS_PER_BATCH's size this stays far below the num_ctx headroom left
+ * over from the prompt's own context block (~7-9k tokens at k=12, see
+ * select-chunks.ts), so it should only ever bind on a genuinely runaway
+ * response, not a normal one.
+ */
+function cardsOutputBudget(batchSize: number): number {
+	return 400 + batchSize * 350;
 }
 
 const QUERY_EXTRACT_SYSTEM_PROMPT =
@@ -88,7 +117,8 @@ async function callModel(
 	format: object,
 	provider: string | undefined,
 	signal: AbortSignal,
-	onTick?: (elapsedMs: number) => void
+	onTick?: (elapsedMs: number) => void,
+	maxOutputTokens?: number
 ): Promise<string> {
 	const messages: ChatMessage[] = [
 		{ role: 'system', content: systemPrompt },
@@ -100,7 +130,7 @@ async function callModel(
 	try {
 		for await (const event of chatWithFallback(
 			'flashcards',
-			{ model, messages, think: false, format, temperature: 0.3 },
+			{ model, messages, think: false, format, temperature: 0.3, maxOutputTokens },
 			signal,
 			provider
 		)) {
@@ -162,13 +192,13 @@ export async function generateCards(
 		}
 	}
 
-	const { chunks, narrowScope } = await retrieve(v, query, {
+	const { chunks, narrowScope, reason } = await retrieve(v, query, {
 		domains: input.domains,
 		includedPaths: input.includedPaths,
 		k: 12
 	});
 	if (chunks.length === 0) {
-		throw new NoSourcesError(narrowScope);
+		throw new NoSourcesError(narrowScope, reason);
 	}
 
 	// Short id per chunk (S1, S2, ...) instead of a path for the model to
@@ -182,39 +212,78 @@ export async function generateCards(
 		)
 		.join('\n\n---\n\n');
 	const userSkillsBlock = await renderUserSkillsBlock('flashcards');
-	const systemPrompt = buildSystemPrompt(input.count, contextBlock, userSkillsBlock);
-	const format = buildCardsJsonSchema([...idToChunk.keys()]);
 
-	// One deadline for the whole generation, retries included.
+	// One deadline for the whole generation, every batch and every retry
+	// included — unchanged from before batching.
 	const deadline = AbortSignal.timeout(GENERATION_BUDGET_MS);
 
+	const items: NewCard[] = [];
+	let remaining = input.count;
 	onProgress?.('generating');
-	let raw = await callModel(input.model, systemPrompt, input.prompt, format, input.provider, deadline, (ms) =>
-		onProgress?.('generating', ms)
-	);
+	while (remaining > 0) {
+		const batchSize = Math.min(CARDS_PER_BATCH, remaining);
+		const batchSystemPrompt = buildSystemPrompt(batchSize, contextBlock, userSkillsBlock);
+		const format = buildCardsJsonSchema([...idToChunk.keys()], batchSize);
+		// Batches after the first get a short "don't repeat these" nudge —
+		// the same full <context> stays available every batch (all k=12
+		// chunks), just steered away from re-covering ground already
+		// generated. A soft mitigation, not a guarantee: with a small
+		// source pool (select-chunks.ts's MAX_CHUNKS_PER_FILE can leave as
+		// few as 4 distinct files across 12 chunks) some topical overlap
+		// across batches is still possible.
+		const avoidNote =
+			items.length > 0
+				? `\n\nBu kartlar zaten üretildi, AYNI KARTI TEKRAR ÜRETME:\n${items.map((c) => `- ${c.front}`).join('\n')}`
+				: '';
+		const batchPrompt = `${input.prompt}${avoidNote}`;
+		const outputBudget = cardsOutputBudget(batchSize);
 
-	onProgress?.('validating');
-	let parsed = parseAndValidateCards(raw, idToChunk);
-
-	const MAX_RETRIES = 2;
-	for (let attempt = 0; !parsed.ok && attempt < MAX_RETRIES; attempt++) {
-		onProgress?.('retrying');
-		const retryPrompt = `${input.prompt}\n\nÖnceki cevabın geçersizdi: ${parsed.error}\nSADECE geçerli JSON döndür.`;
-		raw = await callModel(input.model, systemPrompt, retryPrompt, format, input.provider, deadline, (ms) =>
-			onProgress?.('retrying', ms)
+		onProgress?.('generating');
+		let raw = await callModel(
+			input.model,
+			batchSystemPrompt,
+			batchPrompt,
+			format,
+			input.provider,
+			deadline,
+			(ms) => onProgress?.('generating', ms),
+			outputBudget
 		);
-		parsed = parseAndValidateCards(raw, idToChunk);
+		let parsed = parseAndValidateCards(raw, idToChunk, batchSize);
+
+		const MAX_RETRIES = 2;
+		for (let attempt = 0; !parsed.ok && attempt < MAX_RETRIES; attempt++) {
+			onProgress?.('retrying');
+			const retryPrompt = `${batchPrompt}\n\nÖnceki cevabın geçersizdi: ${parsed.error}\nSADECE geçerli JSON döndür.`;
+			raw = await callModel(
+				input.model,
+				batchSystemPrompt,
+				retryPrompt,
+				format,
+				input.provider,
+				deadline,
+				(ms) => onProgress?.('retrying', ms),
+				outputBudget
+			);
+			parsed = parseAndValidateCards(raw, idToChunk, batchSize);
+		}
+
+		// A batch that never produced a valid response even after retries
+		// moves on to the next batch rather than discarding everything
+		// accumulated so far — the fix for "1 bad item out of 30 discards
+		// the whole deck". Only a total loss (zero cards across every
+		// batch) below is a hard failure. This does NOT apply to a thrown
+		// exception (network/timeout/abort) from callModel itself — that
+		// still propagates immediately and ends the generation with
+		// nothing persisted, same as before batching (see commit 612d3cd:
+		// the deadline must actually end the run, not be swallowed here).
+		if (parsed.ok) items.push(...parsed.items);
+		remaining -= batchSize;
 	}
 
-	if (!parsed.ok) {
-		throw new Error(`Kartlar üretilemedi: ${parsed.error}`);
+	if (items.length === 0) {
+		throw new Error('Kartlar üretilemedi: hiçbir batch geçerli kart üretemedi.');
 	}
-
-	// The model doesn't reliably respect the requested count (same class of
-	// prompt-adherence issue as generate-quiz.ts's MC/TF/open composition) —
-	// but unlike quiz composition, a flat card count truncates safely with no
-	// semantic loss, so enforce it here rather than leaving it as a loose end.
-	const items = parsed.items.slice(0, input.count);
 
 	const title = input.prompt.length > 80 ? `${input.prompt.slice(0, 77)}...` : input.prompt;
 	const deckId = createDeck(
