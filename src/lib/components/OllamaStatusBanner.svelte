@@ -3,6 +3,8 @@
 	import { cubicOut } from 'svelte/easing';
 	import TriangleAlertIcon from '@lucide/svelte/icons/triangle-alert';
 	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
+	import { t } from '$lib/i18n/index.svelte';
+	import type { ProviderStatus } from '$lib/types';
 
 	/**
 	 * App-wide, not per-page: Ollama being down blocks every feature (chat,
@@ -17,6 +19,12 @@
 
 	let status = $state<Status>('checking');
 	let probing = $state(false);
+	/** Populated only once Ollama itself answers 'ok' — required model names
+	 * come from the server (providers.json's ollama.defaultModel + embed-
+	 * config.ts's EMBED_MODEL via /api/providers), never hardcoded here, so
+	 * this can't drift the way KURULUM.md once did (nomic-embed-text vs the
+	 * real bge-m3). */
+	let missingModels = $state<string[]>([]);
 
 	// mount, visibilitychange, the 15s poll, and the manual retry button all
 	// call check() independently with no cancellation between them — an
@@ -25,6 +33,39 @@
 	// status back to 'unreachable'. Guard by generation: only the result of
 	// the most recently issued check() is ever allowed to write state.
 	let requestGeneration = 0;
+
+	/** Base+tag match, same rule as scripts/doctor.mjs's modelInstalled():
+	 * "bge-m3" (no tag) matches an installed "bge-m3:latest"; "qwen3:8b"
+	 * only matches that exact tag. */
+	function modelInstalled(installed: string[], wanted: string): boolean {
+		const [wantedBase, wantedTag] = wanted.split(':');
+		return installed.some((name) => {
+			const [base, tag] = name.split(':');
+			if (base !== wantedBase) return false;
+			return wantedTag === undefined || tag === wantedTag;
+		});
+	}
+
+	async function checkModels() {
+		try {
+			const [providersRes, modelsRes] = await Promise.all([
+				fetch('/api/providers'),
+				fetch('/api/models')
+			]);
+			if (!providersRes.ok || !modelsRes.ok) return;
+			const providers = (await providersRes.json()) as ProviderStatus[];
+			const installed = (await modelsRes.json()) as { name: string }[];
+			const installedNames = installed.map((m) => m.name);
+			const ollama = providers.find((p) => p.id === 'ollama');
+			const required = [ollama?.defaultModel, ollama?.embedModel].filter(
+				(m): m is string => !!m
+			);
+			missingModels = required.filter((m) => !modelInstalled(installedNames, m));
+		} catch {
+			// Best-effort — a failed check here must never block the app,
+			// it only powers an optional warning banner.
+		}
+	}
 
 	async function check() {
 		const generation = ++requestGeneration;
@@ -38,6 +79,7 @@
 			}
 			const data = (await res.json()) as { status: Status };
 			status = data.status;
+			if (status === 'ok') void checkModels();
 		} catch {
 			if (generation === requestGeneration) status = 'unreachable';
 		} finally {
@@ -72,13 +114,30 @@
 		<TriangleAlertIcon size={16} aria-hidden="true" />
 		<span>
 			{status === 'auth_error'
-				? 'Ollama kimlik doğrulama hatası verdi.'
-				: 'Ollama çalışmıyor — sohbet ve çalışma materyali üretimi şu anda kullanılamıyor.'}
+				? t('OllamaStatusBanner.authError')
+				: t('OllamaStatusBanner.unreachable')}
+			{#if status === 'unreachable'}
+				{t('OllamaStatusBanner.installHint')}
+				<a href="https://ollama.com" target="_blank" rel="noopener">ollama.com</a>
+				· <code>ollama serve</code>
+			{/if}
 		</span>
 		<button type="button" onclick={check} disabled={probing}>
 			<RefreshCwIcon size={13} aria-hidden="true" class={probing ? 'animate-spin' : ''} />
-			{probing ? 'Kontrol ediliyor...' : 'Yeniden dene'}
+			{probing ? t('OllamaStatusBanner.checking') : t('OllamaStatusBanner.retry')}
 		</button>
+	</div>
+{:else if status === 'ok' && missingModels.length > 0}
+	<div class="ollama-banner ollama-banner--warning" role="status" transition:fly={{ y: -16, duration: 220, easing: cubicOut }}>
+		<TriangleAlertIcon size={16} aria-hidden="true" />
+		<span>
+			{t('OllamaStatusBanner.missingModels', { models: missingModels.join(', ') })}
+			<a href="/settings">{t('OllamaStatusBanner.pullFromSettings')}</a>
+			{t('OllamaStatusBanner.orRunPull')}
+			{#each missingModels as model, i (model)}
+				<code>ollama pull {model}</code>{i < missingModels.length - 1 ? ',' : ''}
+			{/each}
+		</span>
 	</div>
 {/if}
 
@@ -131,5 +190,24 @@
 	.ollama-banner button:focus-visible {
 		outline: 2px solid var(--accent);
 		outline-offset: 2px;
+	}
+
+	/* Ollama itself is up here — a missing model is not the same severity
+	   as "chat is entirely unavailable", so this gets its own softer color
+	   rather than reusing --color-destructive. */
+	.ollama-banner--warning {
+		border-bottom-color: #d97706;
+		color: #d97706;
+	}
+
+	.ollama-banner code {
+		background: color-mix(in srgb, currentColor 12%, transparent);
+		border-radius: var(--radius-sm, 4px);
+		padding: 0.05rem 0.35rem;
+	}
+
+	.ollama-banner a {
+		color: inherit;
+		text-decoration: underline;
 	}
 </style>
