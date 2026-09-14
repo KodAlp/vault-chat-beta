@@ -1,8 +1,11 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { page } from '$app/state';
 	import { renderMarkdown } from '$lib/markdown';
 	import { settings } from '$lib/settings.svelte';
 	import { libraryViewerUrl } from '$lib/sourceLink';
+	import { resolveBackHref } from '$lib/back-link';
+	import { t } from '$lib/i18n/index.svelte';
 	import type { PageProps } from './$types';
 	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
 	import CheckIcon from '@lucide/svelte/icons/check';
@@ -51,6 +54,12 @@
 	// falling back to the active vault (its `id ?? getActiveVaultId()`
 	// only falls back on null/undefined, not on an empty string).
 	let quizQuery = $derived(data.vaultId ? `?vault=${encodeURIComponent(data.vaultId)}` : '');
+	// See back-link.ts — falls back to the vault's chat list, not "/", when
+	// this page was opened directly (no `from`, e.g. a bookmark).
+	let backHref = $derived(
+		resolveBackHref(page.url.searchParams.get('from'), data.vaultId ? `/vault/${data.vaultId}` : '/')
+	);
+	let here = $derived(page.url.pathname + page.url.search);
 
 	onMount(async () => {
 		try {
@@ -69,13 +78,13 @@
 			items = quizData.items;
 			attemptId = attemptData.attemptId;
 			if (items.length === 0) {
-				errorMessage = 'Bu sınavda soru yok.';
+				errorMessage = t('QuizStudyPage.noQuestions');
 				phase = 'error';
 			} else {
 				phase = 'taking';
 			}
 		} catch {
-			errorMessage = 'Sınav yüklenemedi.';
+			errorMessage = t('QuizStudyPage.loadError');
 			phase = 'error';
 		}
 	});
@@ -115,6 +124,7 @@
 				body: JSON.stringify({
 					answers: items.map((i) => ({ itemId: i.id, given: answers[i.id] ?? '' })),
 					fastModel: settings.fastModel,
+					fastProvider: settings.fastProvider,
 					vault: data.vaultId
 				})
 			});
@@ -142,18 +152,18 @@
 			// still in memory (never cleared) and the PATCH is safe to retry,
 			// so a flaky network blip shouldn't cost the user a completed
 			// attempt they'd otherwise have to redo from scratch.
-			errorMessage = 'Sınav gönderilemedi. Tekrar dene.';
+			errorMessage = t('QuizStudyPage.submitFailed');
 			phase = 'taking';
 		}
 	}
 </script>
 
 <svelte:head>
-	<title>{quiz?.title ?? 'Test'} — Vault Agent Toolkit</title>
+	<title>{quiz?.title ?? t('QuizStudyPage.defaultTitle')} — Vault Agent Toolkit</title>
 </svelte:head>
 
 <div class="quiz-screen">
-	<a class="home-link" href="/"><ArrowLeftIcon size={14} aria-hidden="true" /> Ana sayfa</a>
+	<a class="home-link" href={backHref}><ArrowLeftIcon size={14} aria-hidden="true" /> {t('Common.geriDon')}</a>
 
 	<!-- See study/report/[id]/+page.svelte for why every one of these view
 	     routes gets a boundary: the phase is switched off 'loading' before its
@@ -161,7 +171,7 @@
 	     frozen on "Yükleniyor..." with nothing explaining it. -->
 	<svelte:boundary>
 	{#if phase === 'loading'}
-		<p class="status">Yükleniyor...</p>
+		<p class="status">{t('Common.yukleniyor')}</p>
 	{:else if phase === 'error'}
 		<p class="status error" role="alert">{errorMessage}</p>
 	{:else if phase === 'taking' || phase === 'submitting'}
@@ -190,17 +200,17 @@
 			{:else if item.type === 'true_false'}
 				<div class="options">
 					<button class="option" class:selected={answers[item.id] === 'true'} onclick={() => selectAnswer('true')}>
-						Doğru
+						{t('QuizStudyPage.true')}
 					</button>
 					<button class="option" class:selected={answers[item.id] === 'false'} onclick={() => selectAnswer('false')}>
-						Yanlış
+						{t('QuizStudyPage.false')}
 					</button>
 				</div>
 			{:else}
 				<textarea
 					class="open-answer"
 					bind:value={answers[item.id]}
-					placeholder="Cevabını yaz..."
+					placeholder={t('QuizStudyPage.openAnswerPlaceholder')}
 				></textarea>
 			{/if}
 		</div>
@@ -210,17 +220,17 @@
 		{/if}
 
 		<div class="nav">
-			<button onclick={prev} disabled={currentIndex === 0 || phase === 'submitting'}>Geri</button>
+			<button onclick={prev} disabled={currentIndex === 0 || phase === 'submitting'}>{t('QuizStudyPage.back')}</button>
 			{#if currentIndex < items.length - 1}
-				<button onclick={next} disabled={phase === 'submitting'}>İleri</button>
+				<button onclick={next} disabled={phase === 'submitting'}>{t('QuizStudyPage.next')}</button>
 			{:else}
 				<button class="primary" onclick={finish} disabled={phase === 'submitting'}>
-					{phase === 'submitting' ? 'Gönderiliyor...' : 'Bitir'}
+					{phase === 'submitting' ? t('QuizStudyPage.submitting') : t('QuizStudyPage.finish')}
 				</button>
 			{/if}
 		</div>
 	{:else if phase === 'results' && result}
-		<h1>Sonuç: {Math.round(result.score * 100)}%</h1>
+		<h1>{t('QuizStudyPage.resultTitle', { score: Math.round(result.score * 100) })}</h1>
 		<div class="results">
 			{#each renderedResults as r (r.item.itemId)}
 				<div class="result-item" class:correct={r.item.isCorrect} class:incorrect={!r.item.isCorrect}>
@@ -253,16 +263,16 @@
 							</div>
 						{:else}
 							<div class="answer-block">
-								<span class="answer-label">Cevabın:</span>
+								<span class="answer-label">{t('QuizStudyPage.yourAnswer')}</span>
 								{#if r.item.given}
 									<div class="markdown-body answer-md">{@html r.givenHtml}</div>
 								{:else}
-									<span class="answer-empty">(boş)</span>
+									<span class="answer-empty">{t('QuizStudyPage.emptyAnswer')}</span>
 								{/if}
 							</div>
 							{#if !r.item.isCorrect}
 								<div class="answer-block">
-									<span class="answer-label">Doğru cevap:</span>
+									<span class="answer-label">{t('QuizStudyPage.correctAnswer')}</span>
 									<div class="markdown-body answer-md">{@html r.correctAnswerHtml}</div>
 								</div>
 							{/if}
@@ -271,18 +281,18 @@
 						<div class="explanation markdown-body">{@html r.explanationHtml}</div>
 						{#if r.item.modelFeedback}
 							<div class="model-feedback">
-								<strong>Model değerlendirmesi:</strong>
+								<strong>{t('QuizStudyPage.modelFeedback')}</strong>
 								<div class="markdown-body answer-md">{@html r.modelFeedbackHtml}</div>
 							</div>
 						{/if}
 						<a
 							class="source-link"
-							href={libraryViewerUrl(r.item.sourcePath, data.vaultId ?? '')}
+							href={libraryViewerUrl(r.item.sourcePath, data.vaultId ?? '', here)}
 							title={r.item.headingPath}
 						>
 							{r.item.sourcePath}
 						</a>
-						<a class="source-link" href={libraryViewerUrl(r.item.sourcePath, data.vaultId ?? '')} title="Kaynağı aç" aria-label="Kaynağı aç">
+						<a class="source-link" href={libraryViewerUrl(r.item.sourcePath, data.vaultId ?? '', here)} title={t('Common.kaynagiAc')} aria-label={t('Common.kaynagiAc')}>
 							<ExternalLinkIcon size={13} aria-hidden="true" />
 						</a>
 					</div>
@@ -292,7 +302,7 @@
 	{/if}
 	{#snippet failed(error)}
 		<p class="status error" role="alert">
-			Test görüntülenemedi: {error instanceof Error ? error.message : String(error)}
+			{t('QuizStudyPage.viewFailed', { error: error instanceof Error ? error.message : String(error) })}
 		</p>
 	{/snippet}
 	</svelte:boundary>

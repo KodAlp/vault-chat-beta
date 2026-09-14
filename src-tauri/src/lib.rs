@@ -666,6 +666,7 @@ pub fn run() {
             url: Mutex::new(None),
         })
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             check_and_start,
             save_vault_config_and_start,

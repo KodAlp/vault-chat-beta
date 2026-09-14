@@ -1,7 +1,10 @@
 <script lang="ts">
 	import { onDestroy, onMount } from 'svelte';
+	import { page } from '$app/state';
 	import { buildTree, treeToMarkdownOutline } from '$lib/mindmap-tree';
 	import { libraryViewerUrl } from '$lib/sourceLink';
+	import { resolveBackHref } from '$lib/back-link';
+	import { t } from '$lib/i18n/index.svelte';
 	import type { PageProps } from './$types';
 	import type { MindMapNodeView, MindMapView } from '$lib/types';
 	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
@@ -11,6 +14,13 @@
 	import MaximizeIcon from '@lucide/svelte/icons/maximize';
 
 	let { data }: PageProps = $props();
+
+	// See back-link.ts — falls back to the vault's chat list, not "/", when
+	// this page was opened directly (no `from`, e.g. a bookmark).
+	let backHref = $derived(
+		resolveBackHref(page.url.searchParams.get('from'), data.vaultId ? `/vault/${data.vaultId}` : '/')
+	);
+	let here = $derived(page.url.pathname + page.url.search);
 
 	type Phase = 'loading' | 'ready' | 'error';
 
@@ -50,7 +60,7 @@
 			mindmap = body.mindmap;
 			nodes = body.nodes;
 			if (nodes.length === 0) {
-				errorMessage = 'Bu haritada düğüm yok.';
+				errorMessage = t('MindmapStudyPage.noNodes');
 				phase = 'error';
 				return;
 			}
@@ -72,7 +82,7 @@
 			// map that silently does nothing when clicked. The null branch is
 			// kept because the type allows it, not because it is expected.
 			const outline = treeToMarkdownOutline(tree, (node) =>
-				node.sourcePath ? libraryViewerUrl(node.sourcePath, vaultId) : null
+				node.sourcePath ? libraryViewerUrl(node.sourcePath, vaultId, here) : null
 			);
 			const { root } = new Transformer().transform(outline);
 			if (svgEl) {
@@ -90,7 +100,7 @@
 				) as unknown as MarkmapHandle;
 			}
 		} catch {
-			errorMessage = 'Zihin haritası yüklenemedi.';
+			errorMessage = t('MindmapStudyPage.loadFailed');
 			phase = 'error';
 		}
 	});
@@ -118,11 +128,11 @@
 </script>
 
 <svelte:head>
-	<title>{mindmap?.title ?? 'Zihin haritası'} — Vault Agent Toolkit</title>
+	<title>{mindmap?.title ?? t('MindmapStudyPage.defaultTitle')} — Vault Agent Toolkit</title>
 </svelte:head>
 
 <div class="mindmap-screen">
-	<a class="home-link" href="/"><ArrowLeftIcon size={14} aria-hidden="true" /> Ana sayfa</a>
+	<a class="home-link" href={backHref}><ArrowLeftIcon size={14} aria-hidden="true" /> {t('Common.geriDon')}</a>
 
 	<!-- See study/report/[id]/+page.svelte for why every one of these view
 	     routes gets a boundary: phase='ready' is assigned before its subtree
@@ -130,7 +140,7 @@
 	     "Yükleniyor..." with nothing explaining it. -->
 	<svelte:boundary>
 	{#if phase === 'loading'}
-		<p class="status">Yükleniyor...</p>
+		<p class="status">{t('Common.yukleniyor')}</p>
 	{:else if phase === 'error'}
 		<p class="status error" role="alert">{errorMessage}</p>
 	{:else if phase === 'ready' && mindmap}
@@ -141,8 +151,8 @@
 			<div class="map-controls">
 				<button
 					type="button"
-					title="Yakınlaştır"
-					aria-label="Yakınlaştır"
+					title={t('MindmapStudyPage.zoomIn')}
+					aria-label={t('MindmapStudyPage.zoomIn')}
 					disabled={!markmapInstance}
 					onclick={() => markmapInstance?.rescale(ZOOM_STEP_IN)}
 				>
@@ -150,8 +160,8 @@
 				</button>
 				<button
 					type="button"
-					title="Uzaklaştır"
-					aria-label="Uzaklaştır"
+					title={t('MindmapStudyPage.zoomOut')}
+					aria-label={t('MindmapStudyPage.zoomOut')}
 					disabled={!markmapInstance}
 					onclick={() => markmapInstance?.rescale(ZOOM_STEP_OUT)}
 				>
@@ -159,8 +169,8 @@
 				</button>
 				<button
 					type="button"
-					title="Ekrana sığdır"
-					aria-label="Ekrana sığdır"
+					title={t('MindmapStudyPage.fitToScreen')}
+					aria-label={t('MindmapStudyPage.fitToScreen')}
 					disabled={!markmapInstance}
 					onclick={() => markmapInstance?.fit()}
 				>
@@ -168,17 +178,17 @@
 				</button>
 			</div>
 		</div>
-		<p class="map-hint">Bir düğümün dairesine tıklayarak aç/kapa; kısaltılmış açıklamaya tıklayarak tamamını gör.</p>
+		<p class="map-hint">{t('MindmapStudyPage.mapHint')}</p>
 
-		<h2>Kaynaklar</h2>
+		<h2>{t('MindmapStudyPage.sourcesTitle')}</h2>
 		<div class="citations">
 			{#each nodes as node (node.id)}
 				<div class="citation-row">
 					<span class="node-path">{node.path.join(' › ')}</span>
-					<a class="source-link" href={libraryViewerUrl(node.source_path, data.vaultId ?? '')}>
+					<a class="source-link" href={libraryViewerUrl(node.source_path, data.vaultId ?? '', here)}>
 						{node.source_path}
 					</a>
-					<a class="source-link" href={libraryViewerUrl(node.source_path, data.vaultId ?? '')} title="Kaynağı aç" aria-label="Kaynağı aç">
+					<a class="source-link" href={libraryViewerUrl(node.source_path, data.vaultId ?? '', here)} title={t('Common.kaynagiAc')} aria-label={t('Common.kaynagiAc')}>
 						<ExternalLinkIcon size={13} aria-hidden="true" />
 					</a>
 				</div>
@@ -187,7 +197,7 @@
 	{/if}
 	{#snippet failed(error)}
 		<p class="status error" role="alert">
-			Zihin haritası görüntülenemedi: {error instanceof Error ? error.message : String(error)}
+			{t('MindmapStudyPage.viewFailed', { error: error instanceof Error ? error.message : String(error) })}
 		</p>
 	{/snippet}
 	</svelte:boundary>

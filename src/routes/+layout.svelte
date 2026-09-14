@@ -2,6 +2,7 @@
 	import '../app.css';
 	import 'katex/dist/katex.min.css';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
 	import { settings } from '$lib/settings.svelte';
 	import { quizGeneration, dismissQuizGeneration } from '$lib/quiz-generation.svelte';
 	import { cardGeneration, dismissCardGeneration } from '$lib/card-generation.svelte';
@@ -11,6 +12,7 @@
 	import GenerationStatusToast from '$lib/components/GenerationStatusToast.svelte';
 	import OllamaStatusBanner from '$lib/components/OllamaStatusBanner.svelte';
 	import { requestScopeExpand } from '$lib/scope-expand.svelte';
+	import { handleExternalLinkClick } from '$lib/openExternalLink';
 	import { t } from '$lib/i18n/index.svelte';
 
 	let { children } = $props();
@@ -58,8 +60,14 @@
 	 * URL correct instead of silently falling back to "whatever vault is
 	 * currently active", which breaks the moment that's not the vault the
 	 * item was actually generated in. */
+	/** from: wherever the user was when they clicked "view" on this toast
+	 * (any page — a generation can finish while browsing elsewhere) — see
+	 * back-link.ts. Without it, the study page's own back link had nothing
+	 * to return to but a hardcoded home link. */
 	function studyUrl(path: string, vaultId: string | undefined): string {
-		return vaultId ? `${path}?vault=${encodeURIComponent(vaultId)}` : path;
+		const params = new URLSearchParams({ from: page.url.pathname + page.url.search });
+		if (vaultId) params.set('vault', vaultId);
+		return `${path}?${params.toString()}`;
 	}
 
 	let quizBase = $derived(0);
@@ -68,6 +76,12 @@
 	let mindmapBase = $derived(reportBase + reportGeneration.items.length);
 	let slidesBase = $derived(mindmapBase + mindmapGeneration.items.length);
 </script>
+
+<!-- Delegated app-wide, not per-page: renderMarkdown() output (chat bubbles,
+     card/quiz/report/mindmap views) lands in several independent
+     components, and this catches every external link click across all of
+     them from one place — see openExternalLink.ts's own doc comment. -->
+<svelte:document onclick={handleExternalLinkClick} />
 
 <!-- Column shell, not the banner rendered loose: OllamaStatusBanner used to be
      position:fixed at the viewport top, which looked fine on scrolling pages
