@@ -19,7 +19,9 @@ export interface Frontmatter {
 }
 
 const TARGET_CHARS = 1400; // ~350 tokens, chars/4 estimate
-const HARD_MAX_CHARS = 2048; // ~512 tokens
+/** Exported so chunk.test.ts asserts against the real budget instead of a
+ * copy that could drift from it — same reasoning as skill-limits.ts. */
+export const HARD_MAX_CHARS = 2048; // ~512 tokens
 
 /**
  * CLAUDE.md invariant 2 asks for exactly `undergrad | grad | phd`, but
@@ -66,6 +68,38 @@ function splitAtomicBlocks(body: string): Block[] {
 	return blocks;
 }
 
+/**
+ * Last-resort splitter: HARD_MAX_CHARS was an intention, not a guarantee.
+ * Paragraph splitting needs blank lines, and a PDF→markdown conversion is
+ * routinely one unbroken run of text with none — so a single source file
+ * produced a single 1.449.838-char chunk, which then went to the model as
+ * ~362k tokens and blew every cloud provider's context window (observed:
+ * OpenRouter "you requested about 385182 tokens", Groq "please reduce the
+ * length of the messages"). Only became reachable once large PDFs could
+ * actually be imported, i.e. after the BODY_SIZE_LIMIT fix.
+ *
+ * Breaks on a newline if there is one late in the window, then on a space,
+ * and only cuts mid-token when the text offers nothing else (minified JSON,
+ * a base64 blob). The 0.75 floor keeps a split from leaving a uselessly
+ * short fragment behind.
+ */
+function hardSplit(text: string): string[] {
+	if (text.length <= HARD_MAX_CHARS) return [text];
+	const minCut = Math.floor(HARD_MAX_CHARS * 0.75);
+	const parts: string[] = [];
+	let rest = text;
+	while (rest.length > HARD_MAX_CHARS) {
+		const window = rest.slice(0, HARD_MAX_CHARS);
+		let cut = window.lastIndexOf('\n');
+		if (cut < minCut) cut = window.lastIndexOf(' ');
+		if (cut < minCut) cut = HARD_MAX_CHARS;
+		parts.push(rest.slice(0, cut));
+		rest = rest.slice(cut).replace(/^\s+/, '');
+	}
+	if (rest) parts.push(rest);
+	return parts;
+}
+
 function splitOnParagraphs(text: string): string[] {
 	if (text.length <= HARD_MAX_CHARS) return [text];
 	const paragraphs = text.split(/\n{2,}/);
@@ -80,7 +114,9 @@ function splitOnParagraphs(text: string): string[] {
 		}
 	}
 	if (current) parts.push(current);
-	return parts;
+	// A single paragraph can still exceed HARD_MAX_CHARS on its own — that is
+	// exactly the case this whole function used to miss.
+	return parts.flatMap(hardSplit);
 }
 
 /**
@@ -184,8 +220,14 @@ export function chunkMarkdown(rawFile: string): { frontmatter: Frontmatter; chun
 
 		for (const block of blocks) {
 			if (block.type !== 'text') {
-				if (buffer.length + block.raw.length > HARD_MAX_CHARS) flush();
-				buffer += block.raw;
+				// hardSplit, not a bare `buffer += block.raw`: a fenced code or
+				// math block was appended whole regardless of size, so one huge
+				// block became one huge chunk — the same failure splitOnParagraphs
+				// had, by a different route.
+				for (const piece of hardSplit(block.raw)) {
+					if (buffer.length + piece.length > HARD_MAX_CHARS) flush();
+					buffer += piece;
+				}
 				continue;
 			}
 			for (const piece of splitOnParagraphs(block.raw)) {
