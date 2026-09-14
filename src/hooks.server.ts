@@ -38,19 +38,30 @@ const STATE_CHANGING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 const LOOPBACK_HOSTNAMES = new Set(['127.0.0.1', 'localhost', '[::1]']);
 
 /**
- * Same-origin check that treats 127.0.0.1/localhost/::1 as interchangeable —
- * same leniency the hostname allowlist below already applies. A byte-exact
- * compare against event.url.origin false-positives whenever the Origin
- * header uses a different loopback spelling than the address the page was
- * actually navigated to: confirmed in the field on a packaged Windows build
- * where WebView2 sent `Origin: http://localhost:PORT` for a page loaded via
- * `http://127.0.0.1:PORT` (the app always navigates via 127.0.0.1 — nothing
- * in this codebase ever constructs a "localhost" URL — so this is WebView2's
- * own doing, not app-controlled, and only reproduced on some Windows
- * machines). That 403'd every POST (file import first reported, but it hits
- * every state-changing route) despite being a genuine same-machine request.
- * A real cross-site attacker's Origin (http://evil.example) is still
- * rejected — its hostname is never in LOOPBACK_HOSTNAMES.
+ * Same-origin check for a loopback-only server, deliberately NOT a byte-exact
+ * compare against event.url.origin. Two separate things make the exact
+ * compare wrong here:
+ *
+ * 1. Protocol. adapter-node synthesizes the request URL's protocol as
+ *    'https' whenever neither ORIGIN nor PROTOCOL_HEADER is set — its
+ *    files/handler.js get_origin() ends in `|| 'https'` — and the Tauri
+ *    sidecar sets neither (src-tauri/src/lib.rs spawns node with HOST, PORT,
+ *    DATA_DIR, … only). So in any production build event.url.origin is
+ *    `https://127.0.0.1:PORT` while the webview correctly sends
+ *    `Origin: http://127.0.0.1:PORT`: every browser POST mismatches, on every
+ *    machine. Verified against a real `node build` run — an `https://` Origin
+ *    passed where the correct `http://` one was rejected. This is why file
+ *    import 403'd in the installed app but never under `npm run dev`, where
+ *    vite computes the origin correctly.
+ * 2. Hostname spelling. 127.0.0.1 / localhost / [::1] all name this machine,
+ *    and the hostname allowlist above already treats them as equivalent.
+ *
+ * Hence: port must match, hostname must be in the loopback allowlist,
+ * protocol is ignored. Ignoring the protocol costs nothing in this threat
+ * model — an `https://127.0.0.1:<same port>` origin would require a TLS
+ * server on the very port this plain-HTTP server already occupies. A real
+ * cross-site Origin (http://evil.example) is still rejected: its hostname is
+ * never in LOOPBACK_HOSTNAMES.
  */
 function isSameLoopbackOrigin(origin: string, url: URL): boolean {
 	let originUrl: URL;
@@ -59,11 +70,7 @@ function isSameLoopbackOrigin(origin: string, url: URL): boolean {
 	} catch {
 		return false;
 	}
-	return (
-		originUrl.protocol === url.protocol &&
-		originUrl.port === url.port &&
-		LOOPBACK_HOSTNAMES.has(originUrl.hostname)
-	);
+	return originUrl.port === url.port && LOOPBACK_HOSTNAMES.has(originUrl.hostname);
 }
 
 /**
