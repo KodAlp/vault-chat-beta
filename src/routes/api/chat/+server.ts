@@ -28,6 +28,15 @@ function sseEvent(event: StreamEvent): string {
  * still be lost in the worst case. */
 const CHECKPOINT_INTERVAL_MS = 2000;
 
+/** Chat never sent a completion cap, so each provider fell back to its own
+ * model default — OpenRouter quoted 64000 tokens and refused the request
+ * outright on a low-credit account ("you requested up to 64000 tokens, but
+ * can only afford 2666"). This is far above any answer this app actually
+ * produces while keeping the request affordable and bounding a runaway
+ * generation. The five generators already size their own budgets per request
+ * (their *OutputBudget() helpers); this is chat's equivalent. */
+const CHAT_MAX_OUTPUT_TOKENS = 4096;
+
 /** qwen3:8b (Ollama, Q4_K_M) occasionally emits an invalid byte sequence
  * that decodes to U+FFFD mid-stream — confirmed model/quantization-level
  * (reproduced via a raw curl straight to Ollama, bypassing this app
@@ -243,7 +252,12 @@ export const POST: RequestHandler = async ({ request }) => {
 					try {
 						for await (const event of chatWithFallback(
 							'chat',
-							{ model: body.model, messages: promptMessages, think: body.think ?? false },
+							{
+								model: body.model,
+								messages: promptMessages,
+								think: body.think ?? false,
+								maxOutputTokens: CHAT_MAX_OUTPUT_TOKENS
+							},
 							attemptController.signal,
 							body.provider
 						)) {

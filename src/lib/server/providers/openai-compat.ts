@@ -59,6 +59,27 @@ function resolveFutureInstant(value: string): string | null {
 }
 
 /**
+ * Node's fetch collapses every transport failure into the message "fetch
+ * failed"; the part that actually says what happened
+ * (SELF_SIGNED_CERT_IN_CHAIN, ECONNRESET, ENOTFOUND, ECONNREFUSED) sits on
+ * `err.cause`, occasionally one level deeper still. That detail used to be
+ * dropped, which made a real TLS-interception failure in the field
+ * indistinguishable from "the internet is down" — diagnosing one needed a
+ * separate Node probe, which a user cannot write. Flattened into the message
+ * so app-log.jsonl alone is enough.
+ */
+export function describeNetworkError(err: unknown): string {
+	const base = err instanceof Error ? err.message : String(err);
+	let cause: unknown = err instanceof Error ? err.cause : undefined;
+	for (let depth = 0; depth < 2 && cause; depth++) {
+		const detail = (cause as { code?: string }).code ?? (cause instanceof Error ? cause.message : undefined);
+		if (detail && detail !== base) return `${base} (${detail})`;
+		cause = cause instanceof Error ? cause.cause : undefined;
+	}
+	return base;
+}
+
+/**
  * Generic adapter for any OpenAI-compatible /chat/completions endpoint —
  * covers every cloud provider plus Ollama (via its own /v1 surface, see
  * providers/ollama.ts). One implementation, one set of timeout/error/
@@ -196,7 +217,7 @@ export class OpenAICompatAdapter implements ProviderAdapter {
 		if (timeoutKind) {
 			return new ProviderError(timeoutKind, this.id, `${this.id}: zaman aşımı (${timeoutKind})`);
 		}
-		return new ProviderError('network', this.id, `${this.id}: ağ hatası — ${err instanceof Error ? err.message : String(err)}`);
+		return new ProviderError('network', this.id, `${this.id}: ağ hatası — ${describeNetworkError(err)}`);
 	}
 
 	async *chat(req: ChatRequest, signal: AbortSignal): AsyncGenerator<Chunk> {

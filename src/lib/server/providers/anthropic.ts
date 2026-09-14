@@ -1,5 +1,6 @@
 import { ProviderError, type ProviderErrorKind } from './types';
 import type { ProviderAdapter, ChatRequest, Chunk, ModelInfo, ProviderHealth } from './types';
+import { describeNetworkError } from './openai-compat';
 
 export interface Timeouts {
 	connectMs: number;
@@ -91,7 +92,7 @@ export class AnthropicAdapter implements ProviderAdapter {
 		if (timeoutKind) {
 			return new ProviderError(timeoutKind, this.id, `${this.id}: zaman aşımı (${timeoutKind})`);
 		}
-		return new ProviderError('network', this.id, `${this.id}: ağ hatası — ${err instanceof Error ? err.message : String(err)}`);
+		return new ProviderError('network', this.id, `${this.id}: ağ hatası — ${describeNetworkError(err)}`);
 	}
 
 	private buildBody(req: ChatRequest): Record<string, unknown> {
