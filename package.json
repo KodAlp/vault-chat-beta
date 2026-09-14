@@ -7,13 +7,14 @@
     "node": ">=22 <23"
   },
   "scripts": {
+    "doctor": "node scripts/doctor.mjs",
     "dev": "vite dev",
     "build": "vite build",
     "index": "tsx indexer/index-vault.ts",
     "index:watch": "tsx indexer/watch.ts",
     "vault:migrate": "node scripts/migrate-vaults.mjs",
     "sync-vault": "tsx scripts/sync-vault.ts",
-    "test": "tsx --test src/lib/server/schedule.test.ts src/lib/server/providers/normalize.test.ts src/lib/mindmap-tree.test.ts src/lib/server/cards-validate.test.ts src/lib/server/mindmap-validate.test.ts src/lib/server/vaults.test.ts src/lib/server/select-chunks.test.ts src/lib/sourceTree.test.ts src/lib/server/library-read.test.ts src/lib/server/library.test.ts src/lib/server/sqlite-schema.test.ts src/lib/server/providers/ollama-gate.test.ts src/lib/server/providers/secrets.test.ts src/lib/server/chats-db.test.ts src/lib/server/hallucination.test.ts src/lib/server/userSkills.test.ts indexer/chunk.test.ts src/lib/server/retrieval-query.test.ts",
+    "test": "tsx --test src/lib/server/schedule.test.ts src/lib/server/providers/normalize.test.ts src/lib/mindmap-tree.test.ts src/lib/server/cards-validate.test.ts src/lib/server/quiz-batch.test.ts src/lib/server/mindmap-validate.test.ts src/lib/server/vaults.test.ts src/lib/server/select-chunks.test.ts src/lib/sourceTree.test.ts src/lib/server/library-read.test.ts src/lib/server/library.test.ts src/lib/server/sqlite-schema.test.ts src/lib/server/providers/ollama-gate.test.ts src/lib/server/providers/secrets.test.ts src/lib/server/providers/resolve-hop-model.test.ts src/lib/server/providers/chat-fallback.test.ts src/lib/server/chats-db.test.ts src/lib/server/hallucination.test.ts src/lib/server/userSkills.test.ts indexer/chunk.test.ts src/lib/server/retrieval-query.test.ts",
     "stage:server": "node scripts/stage-server.mjs",
     "mcp": "tsx mcp/server.ts",
     "mcp:smoke": "tsx mcp/smoke.ts",
@@ -28,6 +29,7 @@
     "@marp-team/marp-core": "^4.4.0",
     "@tauri-apps/api": "^2.11.1",
     "@tauri-apps/plugin-dialog": "^2.7.2",
+    "@tauri-apps/plugin-opener": "^2.5.5",
     "@vscode/markdown-it-katex": "^1.1.1",
     "better-sqlite3": "^11.9.1",
     "bits-ui": "^2.18.1",
