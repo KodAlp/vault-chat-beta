@@ -66,15 +66,18 @@ function removeStageDirOrThrow() {
 removeStageDirOrThrow();
 mkdirSync(stageDir, { recursive: true });
 
-function copyDirWindows(src, dest) {
+function copyDirWindows(src, dest, excludeDirs = []) {
 	mkdirSync(dest, { recursive: true });
 	// robocopy's exit codes 0-7 are all "success" (bit flags for what
 	// changed); only >=8 is a real failure, hence the manual check instead
 	// of relying on execFileSync's default zero-exit-code assumption.
+	const xd = excludeDirs.length > 0 ? ['/XD', ...excludeDirs] : [];
 	try {
-		execFileSync('robocopy', [src, dest, '/E', '/NFL', '/NDL', '/NJH', '/NJS', '/NC', '/NS'], {
-			stdio: 'inherit'
-		});
+		execFileSync(
+			'robocopy',
+			[src, dest, '/E', '/NFL', '/NDL', '/NJH', '/NJS', '/NC', '/NS', ...xd],
+			{ stdio: 'inherit' }
+		);
 	} catch (err) {
 		const code = err.status ?? 0;
 		if (code >= 8) throw err;
@@ -82,6 +85,12 @@ function copyDirWindows(src, dest) {
 }
 
 copyDirWindows(path.join(root, 'build'), path.join(stageDir, 'build'));
+// ingest/ (convert.py, youtube_transcript.py, postprocess.py, requirements.txt)
+// was never staged here — convertQueue.ts/youtubeQueue.ts resolve their
+// scripts as path.resolve(process.cwd(), 'ingest', ...), and the packaged
+// sidecar's cwd IS server_dir (dist-server), so document/YouTube import
+// silently failed in the installed desktop app even with Python installed.
+copyDirWindows(path.join(root, 'ingest'), path.join(stageDir, 'ingest'), ['__pycache__', '.venv']);
 copyFileSync(path.join(root, 'package.json'), path.join(stageDir, 'package.json'));
 copyFileSync(path.join(root, 'package-lock.json'), path.join(stageDir, 'package-lock.json'));
 mkdirSync(path.join(stageDir, 'data'), { recursive: true });

@@ -13,10 +13,19 @@ RAG yapar, Ollama'daki modellerle konuşur. Tek Node süreci, `localhost`'a bağ
 3. Gerekli modelleri çek:
    ```bash
    ollama pull qwen3:8b
-   ollama pull nomic-embed-text
+   ollama pull bge-m3
    # isteğe bağlı, derin oturumlar için:
    ollama pull qwen3:30b-a3b
    ```
+   `bge-m3` embedding modeli — `nomic-embed-text` DEĞİL (`src/lib/server/embed-config.ts`'teki
+   `EMBED_MODEL`). Türkçe sorgularda bge-m3 ölçülebilir şekilde daha iyi sonuç veriyor
+   (gerekçe embed-config.ts'in kendi yorumunda). Yanlış modeli çekersen `npm run index`
+   "model not found" ile patlar ve hiçbir kaynak bulunamaz.
+
+Bu üç maddeyi elle kontrol etmek yerine tek komutla doğrulamak için:
+```bash
+npm run doctor
+```
 
 ## Kurulum
 
@@ -77,7 +86,7 @@ npm run index
 
 Bu, aktif vault'un kütüphanesindeki tüm `.md` dosyalarını tarar,
 frontmatter'ı olmayanları uyarı ile atlar, geri kalanını parçalayıp
-`nomic-embed-text` ile gömer ve o vault'un `index.db`'sine yazar. sha256
+`bge-m3` ile gömer ve o vault'un `index.db`'sine yazar. sha256
 tabanlı artımlı çalışır — değişmeyen dosyaları atlar, `pdf2md.py` ile aynı mantık.
 
 Bayraklar:
@@ -108,14 +117,6 @@ npm run index:watch
 npm run build
 node build
 ```
-
-`npm run build`'dan sonra otomatik çalışan bir `postbuild` adımı
-(`scripts/fix-adapter-node-tokens.mjs`) `build/`'daki birkaç dosyayı yamalar —
-bu repo'nun klasör adındaki parantezler (`First brain(Software based)`)
-adapter-node'un kendi token-replace adımının glob eşleşmesini bozuyor,
-yama olmadan `node build` ilk satırda çöküyordu. Bu, bu proje köküne özel bir
-düzeltme; taşınırsa/yeniden adlandırılırsa hâlâ gerekli olup olmadığını
-kontrol et.
 
 ## Masaüstü (Tauri)
 
@@ -150,6 +151,46 @@ başlatmada etkili olur, çalışan sunucuyu yeniden başlatmaz).
 `node build/index.js`'i doğrudan çağırdığından, kalıcı kullanım akışının
 gerektirdiği her şey (Node 22+, `.env` değil ortam değişkenleri) burada da
 geçerli — bkz. yukarıdaki not.
+
+## Başka bir Windows makinesinde çalıştırma
+
+Ne installer ne de geliştirici kurulumu Node'u veya Ollama'yı pakete gömüyor —
+her ikisi de hedef makinede **elle** kurulu ve çalışır olmalı. Hedef makinede
+kurulduktan sonra `npm run doctor` (geliştirici akışı) ya da uygulamanın
+kendi "Ollama çalışmıyor" banner'ı (masaüstü paketi) eksik olanı söyler.
+
+| Bileşen | Zorunlu mu | Kim kuruyor |
+|---|---|---|
+| Node.js 22.x (`>=22 <23`) | Evet, masaüstü paketinde de | Elle — https://nodejs.org |
+| Ollama + `qwen3:8b` + `bge-m3` | Evet | Elle — https://ollama.com |
+| WebView2 Runtime | Evet (yalnızca masaüstü paketi) | Otomatik — NSIS installer yoksa internetten indirip kurar |
+| Visual C++ Redistributable | Teknik olarak evet | Genelde Windows 10/11'de zaten var; eksikse elle |
+| Python 3 + `pip install -r ingest/requirements.txt` | Hayır — yalnızca PDF/doküman/YouTube içe aktarma için | Elle |
+| pandoc | Hayır — yalnızca `.tex` dönüştürme için | Elle |
+
+Dikkat edilecek noktalar:
+- **ARM64 Windows desteklenmiyor.** `sqlite-vec`'in Windows için yalnızca
+  `win32-x64` prebuilt paketi var — ARM tabanlı bir Windows makinesinde
+  (Snapdragon vb.) `npm install` sqlite-vec için başarısız olur.
+- **Yanlış Node sürümü sessizce kurulur, çalışma anında patlar.** `engine-strict`
+  kapalı olduğu için `npm install` Node 20/24 ile de tamamlanır, ama
+  `better-sqlite3`'ün native binary'si Node 22'nin ABI'sine derli — hata ancak
+  ilk veritabanı erişiminde çıkar. `npm run doctor` bunu kurulumdan hemen
+  sonra yakalar.
+- **`data/secrets.json` taşınmaz.** Masaüstü paketinde Windows DPAPI ile
+  şifrelenir, DPAPI anahtarı kullanıcı/makine profiline bağlıdır — başka bir
+  makineye/kullanıcıya kopyalanan bir `secrets.json` sessizce "anahtar yok"
+  gibi davranır. Bulut sağlayıcı (DeepSeek/Gemini/Groq/...) API anahtarlarını
+  hedef makinede Ayarlar → Sağlayıcılar'dan yeniden gir.
+- **Vault içerikleri elle taşınır.** `data/vaults.json` kendi yollarını her
+  okumada yeniden türettiği için taşınabilir, ama her vault'un asıl içeriği
+  (`data/vaults/<id>/library/`, `index.db`, `study.db`) ayrıca kopyalanmalı —
+  ya da hedef makinede "Obsidian'dan İçe Aktar" + `npm run index` ile
+  yeniden oluşturulmalı.
+- **Masaüstü paketinde PDF/doküman/YouTube içe aktarma çalışmaz** — `ingest/`
+  klasörü kurulum paketine dahil değil (bkz. `scripts/stage-server.mjs`).
+  Bu özellikler yalnızca `npm run dev` / `node build` akışında, Python
+  kuruluysa çalışır.
 
 ## MCP Sunucusu (Faz 10)
 
