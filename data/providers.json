@@ -11,14 +11,68 @@
         "connectMs": 30000,
         "firstTokenMs": 300000,
         "idleMs": 60000
-      }
+      },
+      "defaultModel": "qwen3:8b"
     },
     {
-      "id": "deepseek",
-      "label": "DeepSeek",
+      "id": "deepseek-api",
+      "label": "Deepseek_Api",
       "baseUrl": "https://api.deepseek.com/v1",
       "kind": "openai-compat",
       "reasoningDialect": "reasoning_content",
+      "enabled": true,
+      "timeouts": {
+        "connectMs": 5000,
+        "firstTokenMs": 30000,
+        "idleMs": 30000
+      },
+      "defaultModel": "deepseek-chat"
+    },
+    {
+      "id": "google-ai-studio",
+      "label": "Google AI Studio (Gemini)",
+      "baseUrl": "https://generativelanguage.googleapis.com/v1beta/openai",
+      "kind": "openai-compat",
+      "reasoningDialect": "none",
+      "enabled": true,
+      "timeouts": {
+        "connectMs": 15000,
+        "firstTokenMs": 60000,
+        "idleMs": 45000
+      }
+    },
+    {
+      "id": "groq",
+      "label": "Groq",
+      "baseUrl": "https://api.groq.com/openai/v1",
+      "kind": "openai-compat",
+      "reasoningDialect": "none",
+      "enabled": false,
+      "timeouts": {
+        "connectMs": 5000,
+        "firstTokenMs": 30000,
+        "idleMs": 30000
+      }
+    },
+    {
+      "id": "openrouter",
+      "label": "OpenRouter",
+      "baseUrl": "https://openrouter.ai/api/v1",
+      "kind": "openai-compat",
+      "reasoningDialect": "none",
+      "enabled": false,
+      "timeouts": {
+        "connectMs": 5000,
+        "firstTokenMs": 30000,
+        "idleMs": 30000
+      }
+    },
+    {
+      "id": "mistral",
+      "label": "Mistral",
+      "baseUrl": "https://api.mistral.ai/v1",
+      "kind": "openai-compat",
+      "reasoningDialect": "none",
       "enabled": false,
       "timeouts": {
         "connectMs": 5000,

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import type { ProviderStatus } from '$lib/types';
+	import type { ProviderStatus, ProviderModelOption } from '$lib/types';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Switch } from '$lib/components/ui/switch';
@@ -14,21 +14,34 @@
 	import PlusIcon from '@lucide/svelte/icons/plus';
 	import TrashIcon from '@lucide/svelte/icons/trash';
 	import { Label } from '$lib/components/ui/label';
+	import { t, i18n } from '$lib/i18n/index.svelte';
+	import { relativeTime } from '$lib/relative-time';
 
-	const TASK_LABELS: Record<string, string> = {
-		chat: 'Sohbet',
-		title: 'Başlık üretimi',
-		grading: 'Notlandırma',
-		quiz: 'Test üretimi',
-		flashcards: 'Bilgi kartı üretimi',
-		report: 'Rapor üretimi',
-		mindmap: 'Zihin haritası üretimi',
-		slides: 'Slayt üretimi'
-	};
+	let TASK_LABELS = $derived<Record<string, string>>({
+		chat: t('ProvidersSettingsPage.taskChat'),
+		title: t('ProvidersSettingsPage.taskTitle'),
+		grading: t('ProvidersSettingsPage.taskGrading'),
+		quiz: t('ProvidersSettingsPage.taskQuiz'),
+		flashcards: t('ProvidersSettingsPage.taskFlashcards'),
+		report: t('ProvidersSettingsPage.taskReport'),
+		mindmap: t('ProvidersSettingsPage.taskMindmap'),
+		slides: t('ProvidersSettingsPage.taskSlides')
+	});
 
 	let providers = $state<ProviderStatus[]>([]);
 	let chains = $state<Record<string, string[]>>({});
 	let loadError = $state('');
+
+	// Per-provider "which model to use when the fallback chain reaches this
+	// provider without an explicit pin" — see registry.ts's resolveHopModel.
+	// /api/providers/models already tags each option with providerId (Chat.svelte's
+	// header selector reuses the same endpoint), so no new endpoint is needed —
+	// just filter client-side per provider card.
+	let providerModels = $state<ProviderModelOption[]>([]);
+
+	function modelsFor(providerId: string): ProviderModelOption[] {
+		return providerModels.filter((m) => m.providerId === providerId);
+	}
 
 	let keyDrafts = $state<Record<string, string>>({});
 	let keyEditingId = $state<string | null>(null);
@@ -57,7 +70,27 @@
 			providers = (await pRes.json()) as ProviderStatus[];
 			chains = (await cRes.json()) as Record<string, string[]>;
 		} catch {
-			loadError = 'Sağlayıcı listesi alınamadı.';
+			loadError = t('ProvidersSettingsPage.loadError');
+		}
+		try {
+			const res = await fetch('/api/providers/models');
+			if (res.ok) providerModels = (await res.json()) as ProviderModelOption[];
+		} catch {
+			// Varsayılan model seçicisi boş kalır — sayfanın geri kalanı çalışır.
+		}
+	}
+
+	async function setDefaultModel(p: ProviderStatus, modelId: string) {
+		try {
+			const res = await fetch(`/api/providers/${encodeURIComponent(p.id)}`, {
+				method: 'PATCH',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ defaultModel: modelId || null })
+			});
+			if (!res.ok) throw new Error();
+			await refresh();
+		} catch {
+			loadError = t('ProvidersSettingsPage.defaultModelUpdateFailed', { label: p.label });
 		}
 	}
 
@@ -78,14 +111,14 @@
 			});
 			if (!res.ok) {
 				const data = (await res.json().catch(() => null)) as { error?: string } | null;
-				throw new Error(data?.error ?? 'Sağlayıcı eklenemedi');
+				throw new Error(data?.error ?? t('ProvidersSettingsPage.addProviderFailed'));
 			}
 			addLabel = '';
 			addBaseUrl = '';
 			addFormOpen = false;
 			await refresh();
 		} catch (err) {
-			addError = err instanceof Error ? err.message : 'Sağlayıcı eklenemedi';
+			addError = err instanceof Error ? err.message : t('ProvidersSettingsPage.addProviderFailed');
 		} finally {
 			adding = false;
 		}
@@ -102,7 +135,7 @@
 			if (!res.ok) throw new Error();
 			await refresh();
 		} catch {
-			loadError = 'Sağlayıcı silinemedi.';
+			loadError = t('ProvidersSettingsPage.providerDeleteFailed');
 		}
 	}
 
@@ -112,6 +145,36 @@
 		return providers.find((p) => p.id === id)?.label ?? id;
 	}
 
+	/** Coverage is inherently uneven across providers (see registry.ts's
+	 * getRateLimitInfo / RateLimitSnapshot doc comments): Groq/Mistral send
+	 * remaining/limit/reset headers on every response ('live'), Gemini/
+	 * OpenRouter only ever surface anything via a past 429 recorded in
+	 * app-log.jsonl ('log') — and even that is only shown for 24h so a
+	 * month-old rate limit doesn't look like it just happened. */
+	function rateLimitLabel(p: ProviderStatus): string | null {
+		const rl = p.rateLimit;
+		if (!rl) return null;
+		if (rl.source === 'live') {
+			if (rl.remainingRequests !== undefined && rl.limitRequests !== undefined) {
+				return t('ProvidersSettingsPage.rateLimitRequests', {
+					used: String(rl.limitRequests - rl.remainingRequests),
+					limit: String(rl.limitRequests),
+					resetTime: rl.resetRequestsAt ? relativeTime(rl.resetRequestsAt, i18n.locale) : '—'
+				});
+			}
+			if (rl.remainingTokens !== undefined && rl.limitTokens !== undefined) {
+				return t('ProvidersSettingsPage.rateLimitTokens', {
+					used: String(rl.limitTokens - rl.remainingTokens),
+					limit: String(rl.limitTokens),
+					resetTime: rl.resetTokensAt ? relativeTime(rl.resetTokensAt, i18n.locale) : '—'
+				});
+			}
+			return null;
+		}
+		if (!rl.lastHitAt || Date.now() - new Date(rl.lastHitAt).getTime() > 24 * 3600 * 1000) return null;
+		return t('ProvidersSettingsPage.rateLimitRecent', { time: relativeTime(rl.lastHitAt, i18n.locale) });
+	}
+
 	async function toggleEnabled(p: ProviderStatus) {
 		try {
 			const res = await fetch(`/api/providers/${encodeURIComponent(p.id)}`, {
@@ -119,10 +182,16 @@
 				headers: { 'content-type': 'application/json' },
 				body: JSON.stringify({ enabled: !p.enabled })
 			});
-			if (!res.ok) throw new Error();
+			if (!res.ok) {
+				// The endpoint now rejects disabling Ollama (its own chain
+				// guard) — surface that reason instead of a generic failure,
+				// or a Switch flip that silently reverts would look broken.
+				const data = (await res.json().catch(() => null)) as { message?: string } | null;
+				throw new Error(data?.message);
+			}
 			await refresh();
-		} catch {
-			loadError = `"${p.label}" güncellenemedi.`;
+		} catch (err) {
+			loadError = err instanceof Error && err.message ? err.message : t('ProvidersSettingsPage.updateFailed', { label: p.label });
 		}
 	}
 
@@ -144,7 +213,7 @@
 			keyEditingId = null;
 			await refresh();
 		} catch {
-			loadError = `"${p.label}" anahtarı kaydedilemedi.`;
+			loadError = t('ProvidersSettingsPage.keySaveFailed', { label: p.label });
 		}
 	}
 
@@ -161,7 +230,7 @@
 			if (!res.ok) throw new Error();
 			await refresh();
 		} catch {
-			loadError = `"${p.label}" anahtarı silinemedi.`;
+			loadError = t('ProvidersSettingsPage.keyDeleteFailed', { label: p.label });
 		}
 	}
 
@@ -188,7 +257,7 @@
 			if (!res.ok) throw new Error();
 			chains[taskType] = providerIds;
 		} catch {
-			loadError = `"${TASK_LABELS[taskType] ?? taskType}" zinciri güncellenemedi.`;
+			loadError = t('ProvidersSettingsPage.chainUpdateFailed', { taskType: TASK_LABELS[taskType] ?? taskType });
 		}
 	}
 
@@ -219,29 +288,27 @@
 		return providers.filter((p) => p.enabled && !current.has(p.id));
 	}
 
-	const TEST_LABELS: Record<string, string> = {
-		ok: 'Bağlantı OK',
-		unreachable: 'Ulaşılamıyor',
-		auth_error: 'Kimlik doğrulama hatası'
-	};
+	let TEST_LABELS = $derived<Record<string, string>>({
+		ok: t('ProvidersSettingsPage.testOk'),
+		unreachable: t('ProvidersSettingsPage.testUnreachable'),
+		auth_error: t('ProvidersSettingsPage.testAuthError')
+	});
 </script>
 
 <svelte:head>
-	<title>Model Sağlayıcıları — Vault Agent Toolkit</title>
+	<title>{t('ProvidersSettingsPage.title')} — Vault Agent Toolkit</title>
 </svelte:head>
 
 <div class="mx-auto max-w-3xl px-4 pt-6 pb-12">
 	<div class="mb-3 flex items-baseline gap-4">
 		<a href="/settings" class="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-2">
-			<ArrowLeftIcon size={14} aria-hidden="true" /> Ayarlar
+			<ArrowLeftIcon size={14} aria-hidden="true" /> {t('Common.ayarlar')}
 		</a>
-		<h1 class="font-display text-xl font-medium">Model Sağlayıcıları</h1>
+		<h1 class="font-display text-xl font-medium">{t('ProvidersSettingsPage.title')}</h1>
 	</div>
 
 	<p class="mb-5 text-sm text-muted-foreground">
-		Yerel Ollama'yı ve isteğe bağlı bulut sağlayıcıları (DeepSeek, OpenAI, ...) yönet. Anahtarlar
-		sunucuda <code class="rounded bg-muted px-1 py-0.5 text-xs">data/secrets.json</code> içinde kalır,
-		hiçbir zaman tarayıcıya gönderilmez.
+		{t('ProvidersSettingsPage.intro', { path: 'data/secrets.json' })}
 	</p>
 
 	{#if loadError}
@@ -250,47 +317,47 @@
 
 	<section class="mb-8">
 		<div class="mb-3 flex items-baseline justify-between">
-			<h2 class="text-base font-semibold">Sağlayıcılar</h2>
+			<h2 class="text-base font-semibold">{t('ProvidersSettingsPage.providersSectionTitle')}</h2>
 			<Button variant="outline" size="sm" onclick={() => (addFormOpen = !addFormOpen)}>
-				<PlusIcon size={14} aria-hidden="true" /> Sağlayıcı ekle
+				<PlusIcon size={14} aria-hidden="true" /> {t('ProvidersSettingsPage.addProvider')}
 			</Button>
 		</div>
 
 		{#if addFormOpen}
 			<Card.Root class="mb-4">
 				<Card.Content class="flex flex-col gap-3">
-					<h3 class="text-sm font-semibold">Yeni sağlayıcı</h3>
+					<h3 class="text-sm font-semibold">{t('ProvidersSettingsPage.newProviderTitle')}</h3>
 					<div class="flex flex-col gap-1.5">
-						<Label>İsim</Label>
-						<Input type="text" bind:value={addLabel} placeholder="örn. OpenAI" class="max-w-xs" />
+						<Label>{t('ProvidersSettingsPage.nameLabel')}</Label>
+						<Input type="text" bind:value={addLabel} placeholder={t('ProvidersSettingsPage.namePlaceholder')} class="max-w-xs" />
 					</div>
 					<div class="flex flex-col gap-1.5">
-						<Label>API uç noktası (base URL)</Label>
-						<Input type="text" bind:value={addBaseUrl} placeholder="örn. https://api.openai.com/v1" class="max-w-sm" />
+						<Label>{t('ProvidersSettingsPage.baseUrlLabel')}</Label>
+						<Input type="text" bind:value={addBaseUrl} placeholder={t('ProvidersSettingsPage.baseUrlPlaceholder')} class="max-w-sm" />
 					</div>
 					<div class="flex flex-col gap-1.5">
-						<Label>API türü</Label>
+						<Label>{t('ProvidersSettingsPage.kindLabel')}</Label>
 						<Select.Root type="single" bind:value={addKind}>
 							<Select.Trigger class="w-44">
-								{addKind === 'openai-compat' ? 'OpenAI-uyumlu' : 'Anthropic (Claude)'}
+								{addKind === 'openai-compat' ? t('ProvidersSettingsPage.kindOpenAICompat') : t('ProvidersSettingsPage.kindAnthropic')}
 							</Select.Trigger>
 							<Select.Content>
-								<Select.Item value="openai-compat" label="OpenAI-uyumlu">OpenAI-uyumlu (OpenAI, Groq, OpenRouter, ...)</Select.Item>
-								<Select.Item value="anthropic" label="Anthropic (Claude)">Anthropic (Claude)</Select.Item>
+								<Select.Item value="openai-compat" label={t('ProvidersSettingsPage.kindOpenAICompat')}>{t('ProvidersSettingsPage.kindOpenAICompatFull')}</Select.Item>
+								<Select.Item value="anthropic" label={t('ProvidersSettingsPage.kindAnthropic')}>{t('ProvidersSettingsPage.kindAnthropic')}</Select.Item>
 							</Select.Content>
 						</Select.Root>
 					</div>
 					{#if addKind === 'openai-compat'}
 						<div class="flex flex-col gap-1.5">
-							<Label>Muhakeme formatı</Label>
+							<Label>{t('ProvidersSettingsPage.reasoningDialectLabel')}</Label>
 							<Select.Root type="single" bind:value={addReasoningDialect}>
 								<Select.Trigger class="w-44">
-									{addReasoningDialect === 'reasoning_content' ? 'reasoning_content (DeepSeek, Ollama)' : addReasoningDialect === 'think-tags' ? 'think-tags (Qwen, Gemma inline)' : 'Yok'}
+									{addReasoningDialect === 'reasoning_content' ? t('ProvidersSettingsPage.reasoningDialectReasoningContent') : addReasoningDialect === 'think-tags' ? t('ProvidersSettingsPage.reasoningDialectThinkTags') : t('ProvidersSettingsPage.reasoningDialectNone')}
 								</Select.Trigger>
 								<Select.Content>
-									<Select.Item value="reasoning_content" label="reasoning_content">reasoning_content (DeepSeek, Ollama)</Select.Item>
-									<Select.Item value="think-tags" label="think-tags">think-tags (Qwen, Gemma — inline)</Select.Item>
-									<Select.Item value="none" label="none">Yok</Select.Item>
+									<Select.Item value="reasoning_content" label="reasoning_content">{t('ProvidersSettingsPage.reasoningDialectReasoningContent')}</Select.Item>
+									<Select.Item value="think-tags" label="think-tags">{t('ProvidersSettingsPage.reasoningDialectThinkTagsFull')}</Select.Item>
+									<Select.Item value="none" label="none">{t('ProvidersSettingsPage.reasoningDialectNone')}</Select.Item>
 								</Select.Content>
 							</Select.Root>
 						</div>
@@ -300,9 +367,9 @@
 					{/if}
 					<div class="flex gap-2">
 						<Button onclick={addProvider} disabled={!addLabel.trim() || !addBaseUrl.trim() || adding}>
-							{adding ? 'Ekleniyor...' : 'Ekle'}
+							{adding ? t('ProvidersSettingsPage.adding') : t('ProvidersSettingsPage.add')}
 						</Button>
-						<Button variant="ghost" onclick={() => { addFormOpen = false; addError = ''; }}>Vazgeç</Button>
+						<Button variant="ghost" onclick={() => { addFormOpen = false; addError = ''; }}>{t('Common.vazgec')}</Button>
 					</div>
 				</Card.Content>
 			</Card.Root>
@@ -315,26 +382,59 @@
 						<div class="min-w-[220px] flex-1">
 							<div class="flex flex-wrap items-center gap-1.5">
 								<strong class="text-sm">{p.label}</strong>
-								<Badge variant="outline">{p.kind === 'ollama' ? 'yerel' : 'bulut'}</Badge>
+								<Badge variant="outline">{p.kind === 'ollama' ? t('ProvidersSettingsPage.local') : t('ProvidersSettingsPage.cloud')}</Badge>
 								{#if p.needsKey}
 									<Badge variant={p.keyStatus === 'connected' ? 'default' : 'outline'}>
-										{p.keyStatus === 'connected' ? `bağlı · ${p.mask}` : 'anahtar yok'}
+										{p.keyStatus === 'connected' ? t('ProvidersSettingsPage.keyConnected', { mask: p.mask ?? '' }) : t('ProvidersSettingsPage.keyMissing')}
 									</Badge>
 								{/if}
 							</div>
 							<p class="mt-1 text-xs text-muted-foreground">{p.baseUrl}</p>
+							{#if rateLimitLabel(p)}
+								<p class="mt-1 text-xs text-amber-600 dark:text-amber-500">{rateLimitLabel(p)}</p>
+							{/if}
+
+							<div class="mt-2 flex flex-col gap-1">
+								<Label class="text-xs text-muted-foreground">{t('ProvidersSettingsPage.defaultModelLabel')}</Label>
+								<!-- Sadece bu sağlayıcı başarısız olan BİR ÖNCEKİ sağlayıcının
+								     yerine zincirde denendiğinde kullanılır — açıkça seçilen bir
+								     model asla değiştirilmez. Boş bırakılırsa (model listesi
+								     boşsa da) bu sağlayıcı, düşüş (fallback) yolunda atlanır;
+								     görev-Modeli hatası yerine ait olduğu sağlayıcının kendi
+								     hatası görünür. Bkz. registry.ts'nin resolveHopModel'i. -->
+								{#if modelsFor(p.id).length > 0}
+									<Select.Root
+										type="single"
+										value={p.defaultModel ?? ''}
+										onValueChange={(v) => setDefaultModel(p, v)}
+									>
+										<Select.Trigger size="sm" class="w-52">
+											{p.defaultModel ?? t('ProvidersSettingsPage.notSelected')}
+										</Select.Trigger>
+										<Select.Content>
+											{#each modelsFor(p.id) as m (m.id)}
+												<Select.Item value={m.id} label={m.id}>{m.id}</Select.Item>
+											{/each}
+										</Select.Content>
+									</Select.Root>
+								{:else}
+									<span class="text-xs text-muted-foreground">
+										{p.defaultModel ?? t('ProvidersSettingsPage.noModelList')}
+									</span>
+								{/if}
+							</div>
 
 							{#if keyEditingId === p.id}
 								<div class="mt-2 flex gap-1.5">
 									<Input
 										type="password"
-										placeholder="API anahtarı"
+										placeholder={t('ProvidersSettingsPage.apiKeyPlaceholder')}
 										bind:value={keyDrafts[p.id]}
 										class="h-8 max-w-xs"
 										onkeydown={(e) => e.key === 'Enter' && saveKey(p)}
 									/>
-									<Button size="sm" onclick={() => saveKey(p)}>Kaydet</Button>
-									<Button size="sm" variant="ghost" onclick={() => (keyEditingId = null)}>İptal</Button>
+									<Button size="sm" onclick={() => saveKey(p)}>{t('Common.kaydet')}</Button>
+									<Button size="sm" variant="ghost" onclick={() => (keyEditingId = null)}>{t('Common.iptal')}</Button>
 								</div>
 							{/if}
 
@@ -346,28 +446,28 @@
 						<div class="flex flex-wrap items-center gap-2">
 							<label class="flex cursor-pointer items-center gap-1.5 text-xs">
 								<Switch checked={p.enabled} onCheckedChange={() => toggleEnabled(p)} />
-								Etkin
+								{t('ProvidersSettingsPage.enabled')}
 							</label>
 							{#if p.needsKey}
 								<Button size="sm" variant="outline" onclick={() => openKeyEditor(p)}>
-									{p.keyStatus === 'connected' ? 'Anahtarı değiştir' : 'Anahtar ekle'}
+									{p.keyStatus === 'connected' ? t('ProvidersSettingsPage.changeKey') : t('ProvidersSettingsPage.addKey')}
 								</Button>
 								{#if p.keyStatus === 'connected'}
 									<Button size="sm" variant="destructive" onclick={() => askRemoveKey(p)}>
-										Anahtarı sil
+										{t('ProvidersSettingsPage.removeKey')}
 									</Button>
 								{/if}
 							{/if}
 							<Button size="sm" variant="outline" onclick={() => testConnection(p)} disabled={testingId === p.id}>
-								{testingId === p.id ? 'Test ediliyor...' : 'Bağlantıyı test et'}
+								{testingId === p.id ? t('ProvidersSettingsPage.testing') : t('ProvidersSettingsPage.testConnection')}
 							</Button>
 							{#if p.id !== 'ollama'}
 								<Button
 									size="sm"
 									variant="ghost"
 									class="text-destructive hover:text-destructive"
-									title="Sağlayıcıyı kaldır"
-									aria-label={`${p.label} sağlayıcısını kaldır`}
+									title={t('ProvidersSettingsPage.removeProviderTitle')}
+									aria-label={t('ProvidersSettingsPage.removeProviderAria', { label: p.label })}
 									onclick={() => {
 										deleteTargetId = p.id;
 										deleteTargetLabel = p.label;
@@ -384,10 +484,9 @@
 	</section>
 
 	<section>
-		<h2 class="mb-1 text-base font-semibold">Görev başına varsayılan zincir</h2>
+		<h2 class="mb-1 text-base font-semibold">{t('ProvidersSettingsPage.chainSectionTitle')}</h2>
 		<p class="mb-4 text-sm text-muted-foreground">
-			Her görev tipi için sırayla denenecek sağlayıcılar. İlk sağlayıcı yanıt veremezse (ağ hatası,
-			zaman aşımı) bir sonrakine geçilir — yanlış API anahtarı gibi kalıcı hatalarda geçiş yapılmaz.
+			{t('ProvidersSettingsPage.chainSectionDescription')}
 		</p>
 		{#each Object.keys(TASK_LABELS) as taskType (taskType)}
 			<div class="flex flex-wrap items-center gap-3 border-b py-2.5">
@@ -399,28 +498,28 @@
 							<button
 								type="button"
 								class="flex items-center px-0.5 text-muted-foreground disabled:opacity-30"
-								title="Yukarı taşı"
-								aria-label="Yukarı taşı"
+								title={t('ProvidersSettingsPage.moveUp')}
+								aria-label={t('ProvidersSettingsPage.moveUp')}
 								disabled={i === 0}
 								onclick={() => moveInChain(taskType, i, -1)}><ArrowUpIcon size={12} aria-hidden="true" /></button
 							>
 							<button
 								type="button"
 								class="flex items-center px-0.5 text-muted-foreground disabled:opacity-30"
-								title="Aşağı taşı"
-								aria-label="Aşağı taşı"
+								title={t('ProvidersSettingsPage.moveDown')}
+								aria-label={t('ProvidersSettingsPage.moveDown')}
 								disabled={i === (chains[taskType]?.length ?? 0) - 1}
 								onclick={() => moveInChain(taskType, i, 1)}><ArrowDownIcon size={12} aria-hidden="true" /></button
 							>
 							<button
 								type="button"
 								class="px-0.5 text-muted-foreground"
-								title="Kaldır"
+								title={t('ProvidersSettingsPage.removeFromChain')}
 								onclick={() => removeFromChain(taskType, i)}>×</button
 							>
 						</span>
 					{:else}
-						<span class="text-sm text-muted-foreground">zincir boş</span>
+						<span class="text-sm text-muted-foreground">{t('ProvidersSettingsPage.chainEmpty')}</span>
 					{/each}
 				</div>
 				{#if availableToAdd(taskType).length > 0}
@@ -429,7 +528,7 @@
 							<Select.Trigger size="sm" class="w-44">
 								{addChainSelection[taskType]
 									? labelFor(addChainSelection[taskType])
-									: 'sağlayıcı ekle...'}
+									: t('ProvidersSettingsPage.addToChainPlaceholder')}
 							</Select.Trigger>
 							<Select.Content>
 								{#each availableToAdd(taskType) as p (p.id)}
@@ -437,7 +536,7 @@
 								{/each}
 							</Select.Content>
 						</Select.Root>
-						<Button size="sm" variant="outline" onclick={() => addToChain(taskType)}>Ekle</Button>
+						<Button size="sm" variant="outline" onclick={() => addToChain(taskType)}>{t('ProvidersSettingsPage.add')}</Button>
 					</div>
 				{/if}
 			</div>
@@ -457,13 +556,13 @@
 	<AlertDialog.Content>
 		{#if keyDeleteTarget}
 			<AlertDialog.Header>
-				<AlertDialog.Title>"{keyDeleteTarget.label}" anahtarı silinsin mi?</AlertDialog.Title>
+				<AlertDialog.Title>{t('ProvidersSettingsPage.keyDeleteConfirmTitle', { label: keyDeleteTarget.label })}</AlertDialog.Title>
 				<AlertDialog.Description>
-					Bu sağlayıcı için kayıtlı API anahtarı kalıcı olarak silinecek.
+					{t('ProvidersSettingsPage.keyDeleteConfirmDescription')}
 				</AlertDialog.Description>
 			</AlertDialog.Header>
 			<AlertDialog.Footer>
-				<AlertDialog.Cancel>Vazgeç</AlertDialog.Cancel>
+				<AlertDialog.Cancel>{t('Common.vazgec')}</AlertDialog.Cancel>
 				<AlertDialog.Action
 					variant="destructive"
 					onclick={(e) => {
@@ -471,18 +570,18 @@
 						confirmRemoveKey();
 					}}
 				>
-					Sil
+					{t('Common.sil')}
 				</AlertDialog.Action>
 			</AlertDialog.Footer>
 		{:else if deleteTargetId}
 			<AlertDialog.Header>
-				<AlertDialog.Title>"{deleteTargetLabel}" sağlayıcısı kaldırılsın mı?</AlertDialog.Title>
+				<AlertDialog.Title>{t('ProvidersSettingsPage.providerDeleteConfirmTitle', { label: deleteTargetLabel })}</AlertDialog.Title>
 				<AlertDialog.Description>
-					Bu sağlayıcı ve kayıtlı API anahtarı kalıcı olarak silinecek. Görev zincirlerinden de çıkarılır.
+					{t('ProvidersSettingsPage.providerDeleteConfirmDescription')}
 				</AlertDialog.Description>
 			</AlertDialog.Header>
 			<AlertDialog.Footer>
-				<AlertDialog.Cancel>Vazgeç</AlertDialog.Cancel>
+				<AlertDialog.Cancel>{t('Common.vazgec')}</AlertDialog.Cancel>
 				<AlertDialog.Action
 					variant="destructive"
 					onclick={(e) => {
@@ -490,7 +589,7 @@
 						if (deleteTargetId) deleteProvider(deleteTargetId);
 					}}
 				>
-					Kaldır
+					{t('ProvidersSettingsPage.removeProvider')}
 				</AlertDialog.Action>
 			</AlertDialog.Footer>
 		{/if}
