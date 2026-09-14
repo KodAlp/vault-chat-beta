@@ -231,7 +231,8 @@
 		"domainPlaceholder": "örn. math",
 		"levelLabel": "Seviye",
 		"saveFailed": "Kaydedilemedi",
-		"uploadFailed": "Yükleme başarısız"
+		"uploadFailed": "Yükleme başarısız",
+		"tooLarge": "Dosya çok büyük — sunucu bu boyuttaki bir yüklemeyi kabul etmedi."
 	},
 
 	"SourceTree": {

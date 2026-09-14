@@ -231,7 +231,8 @@
 		"domainPlaceholder": "e.g. math",
 		"levelLabel": "Level",
 		"saveFailed": "Couldn't save",
-		"uploadFailed": "Upload failed"
+		"uploadFailed": "Upload failed",
+		"tooLarge": "File too large — the server refused an upload of this size."
 	},
 
 	"SourceTree": {

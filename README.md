@@ -115,8 +115,16 @@ npm run index:watch
 
 ```bash
 npm run build
-node build
+BODY_SIZE_LIMIT=1G node build
 ```
+
+`BODY_SIZE_LIMIT` olmadan adapter-node istek gövdesini **512 KB** ile
+sınırlar (kendi varsayılanı) ve bu boyutu aşan her kaynak yüklemesi, route'a
+hiç ulaşmadan 413 ile reddedilir — küçük bir `.docx` geçer ama gerçek bir
+`.pdf`/`.pptx`/`.xlsx` geçmez. Masaüstü paketinde bu değişken sidecar'a
+otomatik veriliyor (`src-tauri/src/lib.rs`); `node build`'i elle
+çalıştırırken sen vermelisin. Bu akış `.env` okumaz, ortam değişkeni olarak
+geçmen gerekir.
 
 ## Masaüstü (Tauri)
 

@@ -470,7 +470,16 @@ async fn spawn_sidecar(app: &AppHandle, cfg: &VaultConfig) -> Result<String, Str
         .env("CHATS_DB_PATH", app_data_dir.join("chats.db"))
         .env("SECRETS_PATH", app_data_dir.join("secrets.json"))
         .env("PROVIDERS_PATH", &providers_path)
-        .env("SKILLS_DIR", &skills_dir);
+        .env("SKILLS_DIR", &skills_dir)
+        // adapter-node caps request bodies at 512 KB unless told otherwise
+        // (its files/handler.js: `parse_as_bytes(env('BODY_SIZE_LIMIT',
+        // '512K'))`), so every source upload over that size came back 413
+        // before ever reaching the route — a small .docx slipped through
+        // while any real .pdf/.pptx/.xlsx did not. The app does its own
+        // per-file check at 100 MB (library.ts's MAX_UPLOAD_BYTES); this is
+        // the outer backstop, set high enough that a multi-file batch still
+        // fits but an absurd body is still refused.
+        .env("BODY_SIZE_LIMIT", "1G");
     // Only set when DPAPI setup above succeeded — see secrets.ts's
     // secretsKeyHex(): its absence is a normal, handled case (plaintext
     // fallback), not an error to work around here.
