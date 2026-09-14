@@ -436,6 +436,12 @@ export function getDeck(v: VaultContext, id: string): DeckRow | undefined {
 	return getDb(v).prepare('SELECT * FROM decks WHERE id = ?').get(id) as DeckRow | undefined;
 }
 
+/** Every card in one deck, unfiltered by due date — the per-deck study page
+ * (/study/cards/[id]) uses this, not getDueCards: opening a deck you
+ * explicitly picked should show that deck's material now, not gate on
+ * today's spaced-repetition schedule the way the flat cross-deck queue
+ * does. Grading still updates real scheduling either way (same
+ * updateCardSchedule call as the flat queue). */
 export function getDeckCards(v: VaultContext, deckId: string): CardRow[] {
 	return getDb(v).prepare('SELECT * FROM cards WHERE deck_id = ?').all(deckId) as CardRow[];
 }
@@ -453,21 +459,30 @@ export function listDecks(v: VaultContext): StudyListRow[] {
 }
 
 /** ON DELETE CASCADE (cards) handles the rest — see getDb()'s foreign_keys
- * pragma. No UI wires this yet (StudyPanel.svelte deliberately excludes
- * decks — no per-deck view route exists, see its own doc comment); exists
- * for parity with the other four types and for one-off cleanup. */
+ * pragma. */
 export function deleteDeck(v: VaultContext, id: string): void {
 	getDb(v).prepare('DELETE FROM decks WHERE id = ?').run(id);
 }
 
-export function getDueCount(v: VaultContext, nowIso: string): number {
-	const row = getDb(v)
-		.prepare('SELECT COUNT(*) AS n FROM cards WHERE due_at <= ?')
-		.get(nowIso) as { n: number };
+/** `deckId` optional (Faz — per-deck review): without it, counts due cards
+ * across every deck, same as before — the flat /study/cards queue's global
+ * badge. With it, scopes to one deck, e.g. StudyPanel's per-deck due badge. */
+export function getDueCount(v: VaultContext, nowIso: string, deckId?: string): number {
+	const row = deckId
+		? (getDb(v)
+				.prepare('SELECT COUNT(*) AS n FROM cards WHERE deck_id = ? AND due_at <= ?')
+				.get(deckId, nowIso) as { n: number })
+		: (getDb(v).prepare('SELECT COUNT(*) AS n FROM cards WHERE due_at <= ?').get(nowIso) as { n: number });
 	return row.n;
 }
 
-export function getDueCards(v: VaultContext, nowIso: string, limit: number): CardRow[] {
+/** `deckId` optional, same as getDueCount above. */
+export function getDueCards(v: VaultContext, nowIso: string, limit: number, deckId?: string): CardRow[] {
+	if (deckId) {
+		return getDb(v)
+			.prepare('SELECT * FROM cards WHERE deck_id = ? AND due_at <= ? ORDER BY due_at ASC LIMIT ?')
+			.all(deckId, nowIso, limit) as CardRow[];
+	}
 	return getDb(v)
 		.prepare('SELECT * FROM cards WHERE due_at <= ? ORDER BY due_at ASC LIMIT ?')
 		.all(nowIso, limit) as CardRow[];

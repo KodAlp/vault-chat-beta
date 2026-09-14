@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
 	import * as Sheet from '$lib/components/ui/sheet';
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
 	import { Button } from '$lib/components/ui/button';
@@ -14,7 +15,7 @@
 	import type { StudySummary } from '$lib/types';
 	import { t } from '$lib/i18n/index.svelte';
 
-	type StudyKind = 'quizzes' | 'reports' | 'mindmaps' | 'slidedecks';
+	type StudyKind = 'quizzes' | 'reports' | 'mindmaps' | 'slidedecks' | 'decks';
 
 	/**
 	 * Light-version study panel (Faz 9 Adım 6, user-approved simplification):
@@ -27,10 +28,10 @@
 	 * so a generated item was reachable only via the moment's own
 	 * GenerationStatusToast — reload the page or miss that toast and it was
 	 * effectively gone even though the row was still sitting in study.db).
-	 * Cards intentionally excluded here: there's no per-deck view route
-	 * today (cards/ reviews the due queue across every deck at once), so a
-	 * clicked deck would have nowhere to navigate to — the due-count badge
-	 * below already is cards' persistent status surface.
+	 * Decks joined this list once /study/cards/[id] existed to navigate a
+	 * clicked deck to (previously excluded — see study-db.ts's getDeckCards
+	 * doc comment for the fix) — the due-count badge stays as cards'
+	 * additional cross-deck status surface, it doesn't replace the list.
 	 */
 	let {
 		open = $bindable(false),
@@ -57,10 +58,9 @@
 		onUnseenChange?: (unseen: boolean) => void;
 	} = $props();
 
-	const RECENT_LIMIT = 4;
-
 	let dueCount = $state(0);
 	let quizzes = $state<StudySummary[]>([]);
+	let decks = $state<StudySummary[]>([]);
 	let reports = $state<StudySummary[]>([]);
 	let mindmaps = $state<StudySummary[]>([]);
 	let slidedecks = $state<StudySummary[]>([]);
@@ -68,10 +68,7 @@
 	/**
 	 * "Unseen" tracking (Faz 18): a per-vault localStorage timestamp of the
 	 * newest generated item the user has actually looked at (opened the
-	 * panel for). Cards/decks deliberately excluded from this — see the
-	 * class doc comment above on why cards has no per-deck view; its
-	 * due-count badge is already that type's persistent status surface, a
-	 * second "unseen" signal for it would be redundant.
+	 * panel for). Decks count toward this now, same as the other four types.
 	 */
 	function unseenStorageKey(): string {
 		return `vault-chat-study-panel-last-seen:${vaultId}`;
@@ -91,6 +88,7 @@
 	let newestItemAt = $derived(
 		Math.max(
 			newestCreatedAt(quizzes),
+			newestCreatedAt(decks),
 			newestCreatedAt(reports),
 			newestCreatedAt(mindmaps),
 			newestCreatedAt(slidedecks)
@@ -149,8 +147,9 @@
 	}
 
 	async function refreshLists() {
-		[quizzes, reports, mindmaps, slidedecks] = await Promise.all([
+		[quizzes, decks, reports, mindmaps, slidedecks] = await Promise.all([
 			fetchList('/api/study/quizzes'),
+			fetchList('/api/study/decks'),
 			fetchList('/api/study/reports'),
 			fetchList('/api/study/mindmaps'),
 			fetchList('/api/study/slidedecks')
@@ -164,12 +163,19 @@
 
 	function reviewCards() {
 		open = false;
-		goto(`/study/cards?vault=${encodeURIComponent(vaultId)}`);
+		// Same `from` treatment as openItem below — this button used to skip
+		// it since it isn't built from openItem's shared path.
+		const params = new URLSearchParams({ vault: vaultId, from: page.url.pathname + page.url.search });
+		goto(`/study/cards?${params.toString()}`);
 	}
 
 	function openItem(path: string) {
 		open = false;
-		goto(`${path}?vault=${encodeURIComponent(vaultId)}`);
+		// from: the chat screen this panel is opened from — see
+		// back-link.ts. Without it, the study page's own back link had
+		// nothing to return to but a hardcoded home link.
+		const params = new URLSearchParams({ vault: vaultId, from: page.url.pathname + page.url.search });
+		goto(`${path}?${params.toString()}`);
 	}
 
 	let confirmingDelete = $state<{ kind: StudyKind; id: string; title: string } | null>(null);
@@ -208,7 +214,7 @@
 				</div>
 				{#if quizzes.length > 0}
 					<ul class="recent-list">
-						{#each quizzes.slice(0, RECENT_LIMIT) as item (item.id)}
+						{#each quizzes as item (item.id)}
 							<li>
 								<button type="button" class="item-title" onclick={() => openItem(`/study/quiz/${item.id}`)}>{item.title}</button>
 								<button type="button" class="item-delete" onclick={(e) => askDelete('quizzes', item.id, item.title, e)} title={t('Common.sil')} aria-label={t('Common.sil')}>
@@ -232,6 +238,18 @@
 						<Button variant="outline" size="sm" onclick={() => trigger(onOpenCards)}>{t('StudyPanel.new')}</Button>
 					</div>
 				</div>
+				{#if decks.length > 0}
+					<ul class="recent-list">
+						{#each decks as item (item.id)}
+							<li>
+								<button type="button" class="item-title" onclick={() => openItem(`/study/cards/${item.id}`)}>{item.title}</button>
+								<button type="button" class="item-delete" onclick={(e) => askDelete('decks', item.id, item.title, e)} title={t('Common.sil')} aria-label={t('Common.sil')}>
+									<Trash2Icon size={12} aria-hidden="true" />
+								</button>
+							</li>
+						{/each}
+					</ul>
+				{/if}
 			</div>
 			<div class="type-group">
 				<div class="row">
@@ -240,7 +258,7 @@
 				</div>
 				{#if reports.length > 0}
 					<ul class="recent-list">
-						{#each reports.slice(0, RECENT_LIMIT) as item (item.id)}
+						{#each reports as item (item.id)}
 							<li>
 								<button type="button" class="item-title" onclick={() => openItem(`/study/report/${item.id}`)}>{item.title}</button>
 								<button type="button" class="item-delete" onclick={(e) => askDelete('reports', item.id, item.title, e)} title={t('Common.sil')} aria-label={t('Common.sil')}>
@@ -258,7 +276,7 @@
 				</div>
 				{#if mindmaps.length > 0}
 					<ul class="recent-list">
-						{#each mindmaps.slice(0, RECENT_LIMIT) as item (item.id)}
+						{#each mindmaps as item (item.id)}
 							<li>
 								<button type="button" class="item-title" onclick={() => openItem(`/study/mindmap/${item.id}`)}>{item.title}</button>
 								<button type="button" class="item-delete" onclick={(e) => askDelete('mindmaps', item.id, item.title, e)} title={t('Common.sil')} aria-label={t('Common.sil')}>
@@ -276,7 +294,7 @@
 				</div>
 				{#if slidedecks.length > 0}
 					<ul class="recent-list">
-						{#each slidedecks.slice(0, RECENT_LIMIT) as item (item.id)}
+						{#each slidedecks as item (item.id)}
 							<li>
 								<button type="button" class="item-title" onclick={() => openItem(`/study/slides/${item.id}`)}>{item.title}</button>
 								<button type="button" class="item-delete" onclick={(e) => askDelete('slidedecks', item.id, item.title, e)} title={t('Common.sil')} aria-label={t('Common.sil')}>
@@ -318,6 +336,17 @@
 		flex-direction: column;
 		gap: 0.5rem;
 		padding: 0 1rem 1rem;
+		/* Sheet.Content is a fixed-height flex column (Sheet.Header above
+		 * this); without flex:1 + min-height:0 this div sizes to its own
+		 * content and pushes past the sheet's bottom edge instead of
+		 * scrolling within it — same pattern as Chat.svelte's
+		 * .messages-wrap/.messages. Every list below used to hard-cut at 4
+		 * items (RECENT_LIMIT) specifically because nothing here could
+		 * scroll; now the lists show everything and this is what makes
+		 * "everything" reachable instead of just taller than the sheet. */
+		flex: 1;
+		min-height: 0;
+		overflow-y: auto;
 	}
 
 	.type-group {
