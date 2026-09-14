@@ -17,6 +17,8 @@ interface FamilyInfo {
 	 * comment. Defaults to `ctx` when omitted (a model with no reason to
 	 * cap below its real max). */
 	serveCtx?: number;
+	/** See ModelInfo.embeddingOnly — marks a family as unusable for chat. */
+	embeddingOnly?: boolean;
 }
 const MODEL_FAMILY_TABLE: Record<string, FamilyInfo> = {
 	// 40960 is qwen3:8b's real max, but serving at its full max costs VRAM
@@ -25,7 +27,12 @@ const MODEL_FAMILY_TABLE: Record<string, FamilyInfo> = {
 	// including retrieved context and thinking. 16384 clears that with room
 	// to spare without paying for context the model will not use.
 	qwen3: { ctx: 40960, serveCtx: 16384, caps: { tools: true, reasoning: true } },
-	'nomic-embed-text': { ctx: 2048, caps: { tools: false, reasoning: false } }
+	'nomic-embed-text': { ctx: 2048, caps: { tools: false, reasoning: false }, embeddingOnly: true },
+	// EMBED_MODEL (embed-config.ts) — Ollama's /api/tags lists it right next
+	// to chat models with no way to tell them apart otherwise, and picking
+	// it in a chat/generation model selector silently fails (no chat
+	// template). See the bge-m3 bug report this table entry fixes.
+	'bge-m3': { ctx: 8192, caps: { tools: false, reasoning: false }, embeddingOnly: true }
 };
 const DEFAULT_MODEL_INFO = { ctx: 8192, caps: { tools: false, reasoning: false } };
 const DEFAULT_SERVE_CTX = 8192;
@@ -125,7 +132,8 @@ export class OllamaAdapter extends OpenAICompatAdapter {
 					...(req.think !== undefined ? { think: req.think } : {}),
 					options: {
 						num_ctx: serveCtxFor(req.model),
-						...(req.temperature !== undefined ? { temperature: req.temperature } : {})
+						...(req.temperature !== undefined ? { temperature: req.temperature } : {}),
+						...(req.maxOutputTokens !== undefined ? { num_predict: req.maxOutputTokens } : {})
 					}
 				}),
 				signal: bridge.signal

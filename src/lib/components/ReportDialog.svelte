@@ -24,12 +24,10 @@
 		chatId?: string;
 		vault: string;
 		includedPaths?: string[];
+		provider: string;
+		model: string;
 	}) {
-		const body: ReportGenerationRequest = {
-			...args,
-			model: settings.reasoningModel,
-			provider: settings.reasoningProvider
-		};
+		const body: ReportGenerationRequest = { ...args };
 		void startReportGeneration(body);
 	}
 </script>
@@ -45,5 +43,7 @@
 	promptLabel={t('ReportDialog.promptLabel')}
 	promptPlaceholder={t('ReportDialog.promptPlaceholder')}
 	disabled={alreadyGenerating}
+	defaultProvider={settings.reasoningProvider}
+	defaultModel={settings.reasoningModel}
 	onGenerate={generate}
 />

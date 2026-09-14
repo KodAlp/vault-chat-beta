@@ -24,12 +24,10 @@
 		chatId?: string;
 		vault: string;
 		includedPaths?: string[];
+		provider: string;
+		model: string;
 	}) {
-		const body: SlidesGenerationRequest = {
-			...args,
-			model: settings.reasoningModel,
-			provider: settings.reasoningProvider
-		};
+		const body: SlidesGenerationRequest = { ...args };
 		void startSlidesGeneration(body);
 	}
 </script>
@@ -45,5 +43,7 @@
 	promptLabel={t('SlidesDialog.promptLabel')}
 	promptPlaceholder={t('SlidesDialog.promptPlaceholder')}
 	disabled={alreadyGenerating}
+	defaultProvider={settings.reasoningProvider}
+	defaultModel={settings.reasoningModel}
 	onGenerate={generate}
 />

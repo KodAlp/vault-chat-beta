@@ -27,6 +27,16 @@
 		message.role === 'assistant' && message.interrupted && !message.content
 	);
 
+	// Nothing has arrived yet at all — not even reasoning text. An empty bubble
+	// here previously gave zero feedback between hitting send and the first
+	// token (retrieval + first-token latency can be several seconds), which
+	// read as the page having frozen. Once `thinking` starts streaming,
+	// ThinkingPanel below already shows real activity, so this only covers the
+	// gap before either shows up — the two indicators never stack.
+	let isWaitingForFirstToken = $derived(
+		message.role === 'assistant' && streaming && !message.content && !message.thinking
+	);
+
 	// Streaming fires this effect many times per second; renderMarkdown() is async
 	// (waits on shiki's one-time highlighter load), so calls can resolve out of
 	// order. Only ever apply the result of the most recently *started* call.
@@ -64,7 +74,7 @@
 	     up to 20x/second with no aria-live at all, so assistive tech never
 	     announced an answer arriving. -->
 	<div aria-live={streaming ? 'polite' : 'off'} aria-atomic="false">
-		<ChatBubble role={message.role} {html} interrupted={isEmptyInterrupted} />
+		<ChatBubble role={message.role} {html} interrupted={isEmptyInterrupted} loading={isWaitingForFirstToken} />
 	</div>
 	{#if message.role === 'assistant' && message.sources?.length}
 		<SourceChip sources={message.sources} {vaultId} />

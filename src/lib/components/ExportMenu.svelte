@@ -1,4 +1,7 @@
 <script lang="ts">
+	import { onDestroy } from 'svelte';
+	import { fly } from 'svelte/transition';
+	import { cubicOut } from 'svelte/easing';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import DownloadIcon from '@lucide/svelte/icons/download';
 	import CheckIcon from '@lucide/svelte/icons/check';
@@ -8,6 +11,28 @@
 	let { chatId }: { chatId: string } = $props();
 	let errorMessage = $state('');
 	let successMessage = $state('');
+
+	/**
+	 * Auto-dismiss for the success toast below (İdeas.txt: the saved path
+	 * used to sit as permanent static text under the download button until
+	 * the NEXT export overwrote it — no confirmation that it was ever read,
+	 * no way to make it go away). 4s is long enough to read a filename or a
+	 * short path, short enough not to linger. errorMessage is deliberately
+	 * NOT put through this — a failure staying visible until the user acts
+	 * again is the point; only the success confirmation is transient.
+	 */
+	const SUCCESS_TOAST_MS = 4000;
+	let dismissTimer: ReturnType<typeof setTimeout> | undefined;
+
+	function showSuccess(message: string) {
+		successMessage = message;
+		clearTimeout(dismissTimer);
+		dismissTimer = setTimeout(() => {
+			successMessage = '';
+		}, SUCCESS_TOAST_MS);
+	}
+
+	onDestroy(() => clearTimeout(dismissTimer));
 
 	/**
 	 * Export used to be silent on success: the file left through the browser's
@@ -72,17 +97,17 @@
 				// null means the user dismissed the picker — an ordinary outcome,
 				// so it gets a neutral notice rather than an error.
 				if (path === null) {
-					successMessage = t('ExportMenu.saveCancelled');
+					showSuccess(t('ExportMenu.saveCancelled'));
 					return;
 				}
 				// write_text_file, not tauri-plugin-fs: see src-tauri/src/lib.rs.
 				await invoke('write_text_file', { path, contents: text });
-				successMessage = t('ExportMenu.savedTo', { path });
+				showSuccess(t('ExportMenu.savedTo', { path }));
 				return;
 			}
 
 			browserDownload(text, filename);
-			successMessage = t('ExportMenu.downloaded', { filename });
+			showSuccess(t('ExportMenu.downloaded', { filename }));
 		} catch (err) {
 			const reason = err instanceof Error ? err.message : t('ExportMenu.downloadFailed');
 			// A failure inside the desktop save path is about writing the file,
@@ -105,17 +130,31 @@
 		<DropdownMenu.Item onSelect={() => download('json')}>{t('ExportMenu.json')}</DropdownMenu.Item>
 	</DropdownMenu.Content>
 </DropdownMenu.Root>
-<!-- One live region wrapping both outcomes, so a screen reader announces the
-     swap between them instead of only whichever node happened to exist when
-     the region was registered. -->
+<!-- errorMessage stays inline (visible until the user acts again — see the
+     comment on SUCCESS_TOAST_MS for why success and error are handled
+     differently). -->
 <div aria-live="polite">
-	{#if successMessage}
-		<p class="flex items-start gap-1 text-xs break-all text-muted-foreground">
-			<CheckIcon size={12} class="mt-0.5 shrink-0 text-emerald-600" aria-hidden="true" />
-			{successMessage}
-		</p>
-	{/if}
 	{#if errorMessage}
 		<p class="text-xs break-all text-destructive">{errorMessage}</p>
+	{/if}
+</div>
+
+<!-- Floating, auto-dismissing confirmation — same visual language as
+     GenerationStatusToast (rounded pill, fly transition) but deliberately
+     anchored bottom-LEFT rather than that component's bottom-right: up to
+     5 generation toasts can already be stacked there (+layout.svelte), and
+     exporting a chat while one is generating is a completely ordinary
+     thing to do at the same time. A separate corner needs no coordination
+     with that stack's bottom-offset arithmetic. -->
+<div aria-live="polite" aria-atomic="true">
+	{#if successMessage}
+		<div
+			class="fixed bottom-5 left-5 z-[200] flex max-w-[min(360px,80vw)] items-center gap-2.5 rounded-full border bg-background px-4 py-2.5 text-sm break-all"
+			style="box-shadow: 0 2px 8px var(--accent-glow)"
+			transition:fly={{ y: 12, duration: 200, easing: cubicOut }}
+		>
+			<CheckIcon size={14} class="shrink-0 text-emerald-600" aria-hidden="true" />
+			{successMessage}
+		</div>
 	{/if}
 </div>

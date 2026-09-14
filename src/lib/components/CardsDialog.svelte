@@ -62,12 +62,12 @@
 		chatId?: string;
 		vault: string;
 		includedPaths?: string[];
+		provider: string;
+		model: string;
 	}) {
 		const body: CardGenerationRequest = {
 			...args,
-			count,
-			model: settings.reasoningModel,
-			provider: settings.reasoningProvider
+			count
 		};
 		void startCardGeneration(body);
 	}
@@ -85,6 +85,8 @@
 	promptPlaceholder={t('CardsDialog.promptPlaceholder')}
 	canGenerate={count > 0 && !alreadyGenerating}
 	badge={dueCount || null}
+	defaultProvider={settings.reasoningProvider}
+	defaultModel={settings.reasoningModel}
 	onGenerate={generate}
 >
 	{#snippet extraTop()}

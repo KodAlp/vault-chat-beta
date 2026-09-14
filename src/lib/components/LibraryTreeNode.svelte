@@ -7,6 +7,7 @@
 	import FileTextIcon from '@lucide/svelte/icons/file-text';
 	import PencilIcon from '@lucide/svelte/icons/pencil';
 	import Trash2Icon from '@lucide/svelte/icons/trash-2';
+	import { t } from '$lib/i18n/index.svelte';
 
 	let { node, onchange }: { node: LibraryNode; onchange: () => void } = $props();
 
@@ -99,15 +100,15 @@
 			<span class="name">{node.name}</span>
 		{/if}
 		{#if node.needsReview}
-			<span class="badge" title="Gözden geçirme gerekiyor">!</span>
+			<span class="badge" title={t('LibraryTreeNode.needsReview')}>!</span>
 		{/if}
 		<span class="row-actions">
 			{#if node.type === 'file'}
-				<button onclick={startRename} title="Yeniden adlandır" aria-label="Yeniden adlandır">
+				<button onclick={startRename} title={t('LibraryTreeNode.rename')} aria-label={t('LibraryTreeNode.rename')}>
 					<PencilIcon size={13} aria-hidden="true" />
 				</button>
 			{/if}
-			<button onclick={askRemove} title="Sil" aria-label="Sil">
+			<button onclick={askRemove} title={t('Common.sil')} aria-label={t('Common.sil')}>
 				<Trash2Icon size={13} aria-hidden="true" />
 			</button>
 		</span>
@@ -125,18 +126,20 @@
 	<AlertDialog.Content>
 		<AlertDialog.Header>
 			<AlertDialog.Title>
-				{node.type === 'folder' ? `"${node.name}" klasörü` : `"${node.name}"`} silinsin mi?
+				{node.type === 'folder'
+					? t('LibraryTreeNode.deleteFolderTitle', { name: node.name })
+					: t('LibraryTreeNode.deleteFileTitle', { name: node.name })}
 			</AlertDialog.Title>
 			<AlertDialog.Description>
 				{#if node.type === 'folder'}
-					Bu klasör ve içindeki her şey kalıcı olarak silinecek. Bu işlem geri alınamaz.
+					{t('LibraryTreeNode.deleteFolderDescription')}
 				{:else}
-					Bu dosya kalıcı olarak silinecek. Bu işlem geri alınamaz.
+					{t('LibraryTreeNode.deleteFileDescription')}
 				{/if}
 			</AlertDialog.Description>
 		</AlertDialog.Header>
 		<AlertDialog.Footer>
-			<AlertDialog.Cancel>Vazgeç</AlertDialog.Cancel>
+			<AlertDialog.Cancel>{t('Common.vazgec')}</AlertDialog.Cancel>
 			<AlertDialog.Action
 				variant="destructive"
 				onclick={(e) => {
@@ -144,7 +147,7 @@
 					confirmRemove();
 				}}
 			>
-				Sil
+				{t('Common.sil')}
 			</AlertDialog.Action>
 		</AlertDialog.Footer>
 	</AlertDialog.Content>

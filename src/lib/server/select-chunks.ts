@@ -121,8 +121,10 @@ export function selectChunks(
 		if (results.length >= k) break;
 	}
 
+	const narrowScope = results.length === 0 && sawInThresholdOutOfScope;
 	return {
 		chunks: results,
-		narrowScope: results.length === 0 && sawInThresholdOutOfScope
+		narrowScope,
+		reason: results.length === 0 ? (narrowScope ? 'scope' : 'filtered') : undefined
 	};
 }

@@ -9,6 +9,20 @@ export interface ProviderConfigEntry {
 	reasoningDialect: 'think-tags' | 'reasoning_content' | 'none';
 	enabled: boolean;
 	timeouts: { connectMs: number; firstTokenMs: number; idleMs: number };
+	/**
+	 * Which model THIS provider should be asked for when the fallback chain
+	 * reaches it without an explicit choice — a model id is provider-scoped
+	 * data, not a universal name. Without it, registry.ts reused the model id
+	 * of the provider that just failed for the next one in the chain, which is
+	 * how a DeepSeek model id ended up being requested from Ollama
+	 * ("model 'deepseek-flash' not found").
+	 *
+	 * Optional on purpose: the Tauri build copies providers.json into app-data
+	 * on FIRST LAUNCH ONLY (src-tauri/src/lib.rs), so an existing install never
+	 * receives newly added fields. A provider without it is skipped in the
+	 * chain rather than asked for a model known to be wrong.
+	 */
+	defaultModel?: string;
 }
 
 /** Cloud providers are OpenAI-compatible except Anthropic — this drives the
@@ -41,9 +55,25 @@ export function updateProviderEnabled(id: string, enabled: boolean): ProviderCon
 	const data = readFile();
 	const entry = data.providers.find((p) => p.id === id);
 	if (!entry) throw new Error(`Bilinmeyen provider: ${id}`);
+	// registry.ts's chatWithFallback now actually honors this flag (routing
+	// used to ignore it entirely) — disabling Ollama would leave every task
+	// with an empty chain the instant no other provider happens to be
+	// enabled, breaking the "Ollama always works, even offline" guarantee
+	// this app is built around. Mirrors deleteProvider()'s existing
+	// "Ollama kaldırılamaz" guard below.
+	if (id === 'ollama' && !enabled) throw new Error('Ollama devre dışı bırakılamaz');
 	entry.enabled = enabled;
 	writeFile(data);
 	return entry;
+}
+
+export function updateProviderDefaultModel(id: string, defaultModel: string | null): void {
+	const data = readFile();
+	const entry = data.providers.find((p) => p.id === id);
+	if (!entry) throw new Error(`Bilinmeyen provider: ${id}`);
+	if (defaultModel) entry.defaultModel = defaultModel;
+	else delete entry.defaultModel;
+	writeFile(data);
 }
 
 export function updateChain(taskType: string, providerIds: string[]): void {

@@ -198,13 +198,13 @@ export async function generateMindMap(
 	// FILES rather than more chunks of the same one. That is exactly what the
 	// "relate at least two sources" rule in parseAndValidate needs in order to
 	// be satisfiable, and why maps used to collapse onto a single note.
-	const { chunks, narrowScope } = await retrieve(v, query, {
+	const { chunks, narrowScope, reason } = await retrieve(v, query, {
 		domains: input.domains,
 		includedPaths: input.includedPaths,
 		k: 16
 	});
 	if (chunks.length === 0) {
-		throw new NoSourcesError(narrowScope);
+		throw new NoSourcesError(narrowScope, reason);
 	}
 
 	// Short id per chunk (S1, S2, ...) instead of a path for the model to copy

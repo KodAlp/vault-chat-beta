@@ -24,12 +24,10 @@
 		chatId?: string;
 		vault: string;
 		includedPaths?: string[];
+		provider: string;
+		model: string;
 	}) {
-		const body: MindMapGenerationRequest = {
-			...args,
-			model: settings.reasoningModel,
-			provider: settings.reasoningProvider
-		};
+		const body: MindMapGenerationRequest = { ...args };
 		void startMindMapGeneration(body);
 	}
 </script>
@@ -45,5 +43,7 @@
 	promptLabel={t('MindMapDialog.promptLabel')}
 	promptPlaceholder={t('MindMapDialog.promptPlaceholder')}
 	disabled={alreadyGenerating}
+	defaultProvider={settings.reasoningProvider}
+	defaultModel={settings.reasoningModel}
 	onGenerate={generate}
 />

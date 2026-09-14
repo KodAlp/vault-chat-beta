@@ -4,6 +4,7 @@ import {
 	getChat,
 	getMessages,
 	updateChatModel,
+	updateChatProvider,
 	updateChatIncludedPaths,
 	setChatTitle,
 	deleteChat
@@ -26,24 +27,37 @@ export const GET: RequestHandler = async ({ params }) => {
 	return json({ chat, messages });
 };
 
-/** Chat-header per-chat model/provider override (Chat.svelte's overrideModel),
- * the source-tree scope selection (SourceTree.svelte, Faz 9 Adım 6), and the
- * chat-list rename button's title edit — three independent, optional fields,
- * any subset may be present. */
+/** Chat-header per-chat model/provider override (Chat.svelte's overrideModel/
+ * overrideProvider), the source-tree scope selection (SourceTree.svelte, Faz 9
+ * Adım 6), and the chat-list rename button's title edit — four independent,
+ * optional fields, any subset may be present. */
 export const PATCH: RequestHandler = async ({ params, request }) => {
 	if (!getChat(params.id)) error(404, 'Konuşma bulunamadı');
 	const body = (await request.json()) as {
 		model?: string;
+		provider?: string | null;
 		includedPaths?: string[] | null;
 		title?: string;
 	};
-	if (body.model === undefined && body.includedPaths === undefined && body.title === undefined) {
-		error(400, "'model', 'includedPaths' veya 'title' gerekli");
+	if (
+		body.model === undefined &&
+		body.provider === undefined &&
+		body.includedPaths === undefined &&
+		body.title === undefined
+	) {
+		error(400, "'model', 'provider', 'includedPaths' veya 'title' gerekli");
 	}
 	if (body.model !== undefined) updateChatModel(params.id, body.model);
+	if (body.provider !== undefined) updateChatProvider(params.id, body.provider);
 	if (body.includedPaths !== undefined) updateChatIncludedPaths(params.id, body.includedPaths);
 	if (body.title !== undefined) setChatTitle(params.id, body.title);
-	return json({ id: params.id, model: body.model, includedPaths: body.includedPaths, title: body.title });
+	return json({
+		id: params.id,
+		model: body.model,
+		provider: body.provider,
+		includedPaths: body.includedPaths,
+		title: body.title
+	});
 };
 
 export const DELETE: RequestHandler = async ({ params }) => {

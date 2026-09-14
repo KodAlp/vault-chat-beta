@@ -4,6 +4,7 @@
 	import { Input } from '$lib/components/ui/input';
 	import * as Select from '$lib/components/ui/select';
 	import * as Dialog from '$lib/components/ui/dialog';
+	import { t } from '$lib/i18n/index.svelte';
 
 	let { onImported }: { onImported: () => void } = $props();
 
@@ -23,13 +24,16 @@
 	let level = $state('undergraduate');
 	let warnings = $state<string[]>([]);
 
-	const STAGE_LABELS: Record<string, string> = {
-		queued: 'Sırada...',
-		converting: 'Dönüştürülüyor...',
-		postprocessing: 'İşleniyor...',
-		fetching: 'Altyazı indiriliyor...',
-		parsing: 'İşleniyor...'
-	};
+	// $derived, not a plain const — see +layout.svelte's identical STAGE_LABELS
+	// comment: a bare object literal would call t() once at component init and
+	// freeze at whatever locale was active then.
+	let STAGE_LABELS = $derived<Record<string, string>>({
+		queued: t('UploadDialog.stageQueued'),
+		converting: t('UploadDialog.stageConverting'),
+		postprocessing: t('UploadDialog.stagePostprocessing'),
+		fetching: t('UploadDialog.stageFetching'),
+		parsing: t('UploadDialog.stageParsing')
+	});
 
 	function openDialog() {
 		open = true;
@@ -55,7 +59,7 @@
 		if (source === 'file' && !selectedFile) return;
 		if (source === 'youtube' && !youtubeUrl.trim()) return;
 		phase = 'uploading';
-		statusLabel = 'Yükleniyor...';
+		statusLabel = t('UploadDialog.uploading');
 
 		try {
 			const res =
@@ -66,7 +70,7 @@
 							headers: { 'content-type': 'application/json' },
 							body: JSON.stringify({ url: youtubeUrl.trim() })
 						});
-			if (!res.ok || !res.body) throw new Error(`İstek başarısız (${res.status})`);
+			if (!res.ok || !res.body) throw new Error(t('Common.istekBasarisiz', { status: res.status }));
 
 			const reader = res.body.getReader();
 			const decoder = new TextDecoder();
@@ -97,7 +101,7 @@
 				}
 			}
 		} catch (err) {
-			errorMessage = err instanceof Error ? err.message : 'Yükleme başarısız';
+			errorMessage = err instanceof Error ? err.message : t('UploadDialog.uploadFailed');
 			phase = 'error';
 		}
 	}
@@ -111,11 +115,11 @@
 				headers: { 'content-type': 'application/json' },
 				body: JSON.stringify({ title: title.trim(), domain: domain.trim(), level })
 			});
-			if (!res.ok) throw new Error('Kaydedilemedi');
+			if (!res.ok) throw new Error(t('UploadDialog.saveFailed'));
 			open = false;
 			onImported();
 		} catch (err) {
-			errorMessage = err instanceof Error ? err.message : 'Kaydedilemedi';
+			errorMessage = err instanceof Error ? err.message : t('UploadDialog.saveFailed');
 			phase = 'error';
 		}
 	}
@@ -128,7 +132,7 @@
 	}
 </script>
 
-<Button variant="outline" class="mb-1.5 w-full" onclick={openDialog}>+ Yükle</Button>
+<Button variant="outline" class="mb-1.5 w-full" onclick={openDialog}>{t('UploadDialog.trigger')}</Button>
 
 <Dialog.Root
 	{open}
@@ -147,7 +151,7 @@
 >
 	<Dialog.Content class="sm:max-w-md">
 		<Dialog.Header>
-			<Dialog.Title>Belge Yükle</Dialog.Title>
+			<Dialog.Title>{t('UploadDialog.dialogTitle')}</Dialog.Title>
 		</Dialog.Header>
 
 		{#if phase === 'idle'}
@@ -157,38 +161,38 @@
 					size="sm"
 					onclick={() => (source = 'file')}
 				>
-					Dosya
+					{t('UploadDialog.sourceFile')}
 				</Button>
 				<Button
 					variant={source === 'youtube' ? 'default' : 'outline'}
 					size="sm"
 					onclick={() => (source = 'youtube')}
 				>
-					Video (YouTube)
+					{t('UploadDialog.sourceYoutube')}
 				</Button>
 			</div>
 			{#if source === 'file'}
 				<label class="flex flex-col gap-1 text-sm">
-					Dosya (DOCX / PPTX / XLSX / HTML / EPUB / basit PDF)
+					{t('UploadDialog.fileLabel')}
 					<Input type="file" onchange={onFileChange} accept=".docx,.pptx,.xlsx,.html,.htm,.epub,.pdf" />
 				</label>
 			{:else}
 				<label class="flex flex-col gap-1 text-sm">
-					YouTube bağlantısı
+					{t('UploadDialog.youtubeLabel')}
 					<Input
 						type="url"
 						bind:value={youtubeUrl}
-						placeholder="https://www.youtube.com/watch?v=..."
+						placeholder={t('UploadDialog.youtubePlaceholder')}
 					/>
 				</label>
 			{/if}
 			<Dialog.Footer>
-				<Button variant="outline" onclick={cancelStaged}>İptal</Button>
+				<Button variant="outline" onclick={cancelStaged}>{t('Common.iptal')}</Button>
 				<Button
 					onclick={upload}
 					disabled={source === 'file' ? !selectedFile : !youtubeUrl.trim()}
 				>
-					Yükle
+					{t('UploadDialog.upload')}
 				</Button>
 			</Dialog.Footer>
 		{:else if phase === 'uploading'}
@@ -201,15 +205,15 @@
 				<p class="text-sm text-destructive">{warnings.join(' ')}</p>
 			{/if}
 			<label class="flex flex-col gap-1 text-sm">
-				Başlık
+				{t('UploadDialog.titleLabel')}
 				<Input type="text" bind:value={title} />
 			</label>
 			<label class="flex flex-col gap-1 text-sm">
-				Domain
-				<Input type="text" bind:value={domain} placeholder="örn. math" />
+				{t('UploadDialog.domainLabel')}
+				<Input type="text" bind:value={domain} placeholder={t('UploadDialog.domainPlaceholder')} />
 			</label>
 			<label class="flex flex-col gap-1 text-sm">
-				Seviye
+				{t('UploadDialog.levelLabel')}
 				<Select.Root type="single" bind:value={level}>
 					<Select.Trigger class="w-full">{level}</Select.Trigger>
 					<Select.Content>
@@ -220,15 +224,15 @@
 				</Select.Root>
 			</label>
 			<Dialog.Footer>
-				<Button variant="outline" onclick={cancelStaged} disabled={phase === 'saving'}>İptal</Button>
+				<Button variant="outline" onclick={cancelStaged} disabled={phase === 'saving'}>{t('Common.iptal')}</Button>
 				<Button onclick={confirm} disabled={phase === 'saving' || !title.trim() || !domain.trim()}>
-					{phase === 'saving' ? 'Kaydediliyor...' : 'Kaydet'}
+					{phase === 'saving' ? t('Common.kaydediliyor') : t('Common.kaydet')}
 				</Button>
 			</Dialog.Footer>
 		{:else if phase === 'error'}
 			<p class="text-sm text-destructive">{errorMessage}</p>
 			<Dialog.Footer>
-				<Button variant="outline" onclick={cancelStaged}>Kapat</Button>
+				<Button variant="outline" onclick={cancelStaged}>{t('Common.kapat')}</Button>
 			</Dialog.Footer>
 		{/if}
 	</Dialog.Content>

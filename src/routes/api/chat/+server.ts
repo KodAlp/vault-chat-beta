@@ -179,7 +179,7 @@ export const POST: RequestHandler = async ({ request }) => {
 				// a `send({type:'error'})` to the client and an app-log record,
 				// not a stream that dies with no explanation.
 				isNewChat = !getChat(chatId);
-				if (isNewChat) createChat(chatId, body.model, v.id);
+				if (isNewChat) createChat(chatId, body.model, v.id, body.provider);
 				send({ type: 'chatId', chatId });
 				if (lastUser) insertMessage({ chatId, role: 'user', content: lastUser.content });
 
@@ -380,7 +380,12 @@ export const POST: RequestHandler = async ({ request }) => {
 					}
 					touchChat(chatId);
 					if (isNewChat && lastUser) {
-						void generateTitle(chatId, lastUser.content, body.titleModel ?? body.model);
+						void generateTitle(
+							chatId,
+							lastUser.content,
+							body.titleModel ?? body.model,
+							body.titleProvider ?? body.provider
+						);
 					}
 				} catch (err) {
 					const message = err instanceof Error ? err.message : 'Bilinmeyen hata';

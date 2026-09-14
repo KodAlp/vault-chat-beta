@@ -29,7 +29,15 @@ export const POST: RequestHandler = async ({ request }) => {
 				send({ type: 'done', deckId });
 			} catch (err) {
 				const message = err instanceof Error ? err.message : 'Bilinmeyen hata';
-				if (!(err instanceof NoSourcesError)) {
+				if (err instanceof NoSourcesError) {
+					logAppEvent({
+						kind: 'no_sources',
+						generationType: 'cards',
+						model: body.model,
+						message,
+						reason: err.reason
+					});
+				} else {
 					logAppEvent({ kind: 'generation_error', generationType: 'cards', model: body.model, message });
 				}
 				send({

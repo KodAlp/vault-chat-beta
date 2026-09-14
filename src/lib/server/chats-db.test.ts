@@ -20,16 +20,18 @@ test('initChatsSchema creates a fresh DB with vault_id and its index', () => {
 	initChatsSchema(db);
 
 	assert.ok(columnNames(db, 'chats').includes('vault_id'));
+	assert.ok(columnNames(db, 'chats').includes('provider'));
 	const indexes = (db.prepare(`PRAGMA index_list(chats)`).all() as { name: string }[]).map((i) => i.name);
 	assert.ok(indexes.includes('idx_chats_vault_id'));
 	db.close();
 });
 
-test('initChatsSchema backfills vault_id on a pre-existing chats table that lacks it', () => {
+test('initChatsSchema backfills vault_id and provider on a pre-existing chats table that lacks them', () => {
 	// Simulates a pre-Faz-8 (or otherwise unmigrated) chats.db: the table
 	// already exists, but without vault_id — the exact shape that made
 	// `CREATE INDEX ... ON chats(vault_id)` blow up when it ran before the
-	// ALTER guard instead of after.
+	// ALTER guard instead of after. Also predates the `provider` column
+	// (added for per-chat provider persistence), same ALTER-guard rule.
 	const db = tmpDb();
 	db.exec(`
 		CREATE TABLE chats (
@@ -48,9 +50,14 @@ test('initChatsSchema backfills vault_id on a pre-existing chats table that lack
 	const cols = columnNames(db, 'chats');
 	assert.ok(cols.includes('vault_id'));
 	assert.ok(cols.includes('included_paths_json'));
+	assert.ok(cols.includes('provider'));
 
-	const row = db.prepare('SELECT vault_id FROM chats WHERE id = ?').get('legacy-1') as { vault_id: string };
+	const row = db.prepare('SELECT vault_id, provider FROM chats WHERE id = ?').get('legacy-1') as {
+		vault_id: string;
+		provider: string | null;
+	};
 	assert.equal(row.vault_id, 'default');
+	assert.equal(row.provider, null);
 
 	const indexes = (db.prepare(`PRAGMA index_list(chats)`).all() as { name: string }[]).map((i) => i.name);
 	assert.ok(indexes.includes('idx_chats_vault_id'));

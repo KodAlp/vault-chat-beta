@@ -5,6 +5,8 @@ import { vaultFromUrl } from '$lib/server/requestVault';
 
 export const GET: RequestHandler = async ({ url }) => {
 	const v = vaultFromUrl(url);
-	const count = getDueCount(v, new Date().toISOString());
+	// Optional per-deck scoping — StudyPanel's per-deck due badge.
+	const deckId = url.searchParams.get('deck') ?? undefined;
+	const count = getDueCount(v, new Date().toISOString(), deckId);
 	return json({ count });
 };

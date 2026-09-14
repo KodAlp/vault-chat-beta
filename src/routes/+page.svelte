@@ -5,6 +5,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import * as Dialog from '$lib/components/ui/dialog';
+	import { t } from '$lib/i18n/index.svelte';
 	import SettingsIcon from '@lucide/svelte/icons/settings';
 	import PlusIcon from '@lucide/svelte/icons/plus';
 	import type { PageProps } from './$types';
@@ -28,36 +29,35 @@
 				headers: { 'content-type': 'application/json' },
 				body: JSON.stringify({ name })
 			});
-			if (!res.ok) throw new Error((await res.json().catch(() => null))?.message ?? 'Oluşturulamadı');
+			if (!res.ok) throw new Error((await res.json().catch(() => null))?.message ?? t('HomePage.createFailed'));
 			const { vault } = (await res.json()) as { vault: VaultRecord };
 			// First-ever vault or not, jump straight in — that's the point of
 			// just having created it.
 			goto(`/vault/${vault.id}`);
 		} catch (err) {
-			createError = err instanceof Error ? err.message : 'Vault oluşturulamadı.';
+			createError = err instanceof Error ? err.message : t('HomePage.createFailed');
 			creating = false;
 		}
 	}
 </script>
 
 <svelte:head>
-	<title>Vault Agent Toolkit</title>
+	<title>{t('HomePage.title')}</title>
 </svelte:head>
 
 <div class="mx-auto max-w-3xl px-4 pt-10 pb-12">
 	<div class="mb-8 flex items-center justify-between">
-		<h1 class="font-display text-2xl font-medium">Vault Agent Toolkit</h1>
-		<a href="/settings" title="Ayarlar" aria-label="Ayarlar" class="text-muted-foreground hover:text-primary focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-2">
+		<h1 class="font-display text-2xl font-medium">{t('HomePage.title')}</h1>
+		<a href="/settings" title={t('Common.ayarlar')} aria-label={t('Common.ayarlar')} class="text-muted-foreground hover:text-primary focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-2">
 			<SettingsIcon size={19} aria-hidden="true" />
 		</a>
 	</div>
 
 	{#if vaults.length === 0}
 		<div class="mb-8 flex flex-col items-center gap-2 rounded-lg border border-dashed py-12 text-center">
-			<p class="font-display text-lg text-foreground">Henüz bir vault yok</p>
+			<p class="font-display text-lg text-foreground">{t('HomePage.emptyTitle')}</p>
 			<p class="max-w-sm text-sm text-muted-foreground">
-				Kasandaki notlarla sohbet edebilmek için önce bir vault oluştur — Obsidian kasanı bağlayınca
-				içeriği burada aranabilir hale gelir.
+				{t('HomePage.emptyDescription')}
 			</p>
 		</div>
 	{/if}
@@ -73,7 +73,7 @@
 			onclick={() => (createOpen = true)}
 		>
 			<PlusIcon size={18} aria-hidden="true" />
-			Yeni vault
+			{t('HomePage.newVault')}
 		</button>
 	</div>
 </div>
@@ -81,14 +81,14 @@
 <Dialog.Root bind:open={createOpen}>
 	<Dialog.Content class="sm:max-w-sm">
 		<Dialog.Header>
-			<Dialog.Title>Yeni vault</Dialog.Title>
+			<Dialog.Title>{t('HomePage.newVaultDialogTitle')}</Dialog.Title>
 		</Dialog.Header>
 		<label class="flex flex-col gap-1 text-sm">
-			Vault adı
+			{t('HomePage.vaultNameLabel')}
 			<Input
 				type="text"
 				bind:value={newVaultName}
-				placeholder="örn. Elektronik"
+				placeholder={t('HomePage.vaultNamePlaceholder')}
 				onkeydown={(e) => e.key === 'Enter' && createVault()}
 			/>
 		</label>
@@ -96,9 +96,9 @@
 			<p class="text-sm text-destructive">{createError}</p>
 		{/if}
 		<Dialog.Footer>
-			<Button variant="outline" onclick={() => (createOpen = false)}>İptal</Button>
+			<Button variant="outline" onclick={() => (createOpen = false)}>{t('Common.iptal')}</Button>
 			<Button onclick={createVault} disabled={!newVaultName.trim() || creating}>
-				{creating ? 'Oluşturuluyor...' : 'Oluştur'}
+				{creating ? t('HomePage.creating') : t('HomePage.create')}
 			</Button>
 		</Dialog.Footer>
 	</Dialog.Content>
