@@ -23,7 +23,8 @@ export async function gradeOpenAnswer(
 	question: string,
 	referenceAnswer: string,
 	studentAnswer: string,
-	model: string
+	model: string,
+	provider?: string
 ): Promise<GradeResultT> {
 	const messages: ChatMessage[] = [
 		{ role: 'system', content: SYSTEM_PROMPT },
@@ -37,7 +38,8 @@ export async function gradeOpenAnswer(
 	for await (const event of chatWithFallback(
 		'grading',
 		{ model, messages, think: false, format: GRADE_JSON_SCHEMA, temperature: 0.2 },
-		signal
+		signal,
+		provider
 	)) {
 		if (event.type === 'text') text += event.text;
 	}

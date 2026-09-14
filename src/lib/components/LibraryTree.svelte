@@ -3,6 +3,7 @@
 	import type { LibraryNode } from '$lib/types';
 	import UploadDialog from './UploadDialog.svelte';
 	import LibraryTreeNode from './LibraryTreeNode.svelte';
+	import { t } from '$lib/i18n/index.svelte';
 
 	let tree = $state<LibraryNode[]>([]);
 	let loadError = $state('');
@@ -13,7 +14,7 @@
 			if (!res.ok) throw new Error();
 			tree = ((await res.json()) as { tree: LibraryNode[] }).tree;
 		} catch {
-			loadError = 'Kütüphane yüklenemedi.';
+			loadError = t('LibraryTree.loadError');
 		}
 	}
 
@@ -26,7 +27,7 @@
 	{#if loadError}
 		<p class="error" role="alert">{loadError}</p>
 	{:else if tree.length === 0}
-		<p class="empty">Kütüphane boş. Bir belge yükle veya Ayarlar → Kütüphane'den Obsidian vault'unu içe aktar.</p>
+		<p class="empty">{t('LibraryTree.empty')}</p>
 	{:else}
 		{#each tree as node (node.path)}
 			<LibraryTreeNode {node} onchange={refresh} />

@@ -1,9 +1,12 @@
 <script lang="ts">
+	import { page } from '$app/state';
 	import { libraryViewerUrl } from '$lib/sourceLink';
 	import type { RetrievedChunk } from '$lib/types';
 	import * as HoverCard from '$lib/components/ui/hover-card';
 	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
 	import { t } from '$lib/i18n/index.svelte';
+
+	let here = $derived(page.url.pathname + page.url.search);
 
 	/** Replaces SourceList.svelte — that component deduped on `path +
 	 * heading_path`, so the same source cited from three chunks rendered as
@@ -38,11 +41,11 @@
 				<HoverCard.Trigger>
 					{#snippet child({ props })}
 						<span {...props} class="chip-group">
-							<a class="chip" href={libraryViewerUrl(g.path, vaultId)}>
+							<a class="chip" href={libraryViewerUrl(g.path, vaultId, here)}>
 								{g.topic}
 								{#if g.chunks.length > 1}<span class="count">{t('SourceChip.chunkCount', { count: g.chunks.length })}</span>{/if}
 							</a>
-							<a class="chip-icon" href={libraryViewerUrl(g.path, vaultId)} title={t('Common.kaynagiAc')} aria-label={t('Common.kaynagiAc')}>
+							<a class="chip-icon" href={libraryViewerUrl(g.path, vaultId, here)} title={t('Common.kaynagiAc')} aria-label={t('Common.kaynagiAc')}>
 								<ExternalLinkIcon size={12} aria-hidden="true" />
 							</a>
 						</span>

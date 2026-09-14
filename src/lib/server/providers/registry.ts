@@ -6,8 +6,9 @@ import { OpenAICompatAdapter } from './openai-compat';
 import { AnthropicAdapter } from './anthropic';
 import { secretStore } from './secrets';
 import { readProvidersFile, type ProviderConfigEntry, type ProvidersFile } from './config-store';
-import { ProviderError, type ChatRequest, type Chunk, type ProviderAdapter } from './types';
+import type { ChatRequest, ProviderAdapter, RateLimitSnapshot } from './types';
 import { logAppEvent } from '../app-log';
+import { chatWithFallbackCore, type FallbackEvent } from './chat-fallback';
 
 let cachedMtime = -1;
 let cachedConfig: ProvidersFile | null = null;
@@ -75,77 +76,83 @@ export async function getAdapter(providerId: string): Promise<ProviderAdapter> {
 	return adapter;
 }
 
+/** Called by the settings UI's key save/delete endpoint. secrets.json is a
+ * separate file from providers.json, so loadConfig()'s providers.json-mtime
+ * cache never notices a key change — without this, a freshly saved (or
+ * removed) API key kept being served by an adapter instance built from the
+ * OLD key until providers.json happened to change for an unrelated reason,
+ * or the process restarted. */
+export function invalidateAdapter(providerId: string): void {
+	adapters.delete(providerId);
+}
+
+/** Live rate-limit snapshot from the provider's own headers — only available
+ * once an adapter for this id has actually been built (i.e. at least one
+ * request was made since the process started or the key last changed).
+ * Never builds an adapter just to check this — a provider nobody has
+ * talked to yet has no live data, and that's a fine, expected null rather
+ * than something worth constructing an adapter over. */
+export function getRateLimitInfo(providerId: string): RateLimitSnapshot | null {
+	loadConfig();
+	return adapters.get(providerId)?.getRateLimitInfo?.() ?? null;
+}
+
 export function getChain(taskType: string): string[] {
 	return loadConfig().chains[taskType] ?? [];
+}
+
+/** providers.json's per-provider "Etkin" toggle. Previously read by nothing
+ * in this file at all — only listEnabledProviders() below consulted it, and
+ * that function's one caller populates model PICKERS, not routing. So
+ * disabling a provider hid it from dropdowns while leaving it fully live in
+ * every chain; deleteProvider() was the only action that actually removed a
+ * provider from routing, which is why "delete the API provider" was the
+ * only reliable way to force generation back onto Ollama. chatWithFallback
+ * below now filters both the task chain and a pin through this. */
+function isProviderEnabled(providerId: string): boolean {
+	return getProviderEntry(providerId)?.enabled === true;
 }
 
 export function listEnabledProviders(): ProviderConfigEntry[] {
 	return loadConfig().providers.filter((p) => p.enabled);
 }
 
-export type FallbackEvent = Chunk | { type: 'notice'; message: string };
+function getProviderEntry(providerId: string): ProviderConfigEntry | undefined {
+	return loadConfig().providers.find((p) => p.id === providerId);
+}
+
+export type { FallbackEvent };
 
 /**
- * Walks a task's provider chain per the skill's fallback policy:
- * - Failure BEFORE the first `text` chunk → abort, try the next provider,
- *   surface a `notice` the caller can render inline.
- * - Failure AFTER the first `text` chunk → stop. Never splice a partial
- *   answer from one provider onto another's continuation.
- * - A genuine caller-initiated abort (signal.aborted) is never treated as
- *   a failure to fall back from — it propagates as-is.
- * - A NON-retryable failure (auth, bad_request, context_length) never falls
- *   back either, regardless of chain position: a wrong API key or an
- *   oversized prompt will fail identically on the next provider, and the
- *   user needs to see the real cause immediately, not a masked provider
- *   switch (skill's "no silent switching after first token" rule extends to
- *   "no silent switching on a non-retryable error at all").
- *
- * `pinnedProviderId` (Faz 17 — providerId end-to-end) is the explicit
- * choice a user made (Chat.svelte's header selector, a settings.svelte.ts
- * default*Provider, or a *GenerationRequest.provider) rather than the
- * task's default chain. It's moved to the FRONT of the chain — even if it
- * isn't a member of providers.json's chains[taskType] at all — so picking
- * a just-added cloud provider works immediately without also having to
- * edit /settings/providers' chain editor first. The rest of the chain
- * still runs as a fallback after it: pinning changes preference, not the
- * existing fallback/no-silent-switch guarantees above.
+ * Thin wrapper: supplies chatWithFallbackCore (chat-fallback.ts) with this
+ * module's real, side-effecting implementations — disk-backed config
+ * (getChain/isProviderEnabled/getProviderEntry), real adapter construction
+ * (getAdapter), and the real app-log write (logFallback). The entire
+ * routing policy (pin semantics, "enabled" filtering, no-splice, non-
+ * retryable-never-falls-back, skipped-hop handling) lives in that file's
+ * doc comment and is exercised by chat-fallback.test.ts against fakes —
+ * nothing here needs its own tests beyond "does it wire the real things
+ * through", since none of this module is importable under plain
+ * `tsx --test` (see chat-fallback.ts's own doc comment for why).
  */
-export async function* chatWithFallback(
+export function chatWithFallback(
 	taskType: string,
 	req: ChatRequest,
 	signal: AbortSignal,
 	pinnedProviderId?: string
 ): AsyncGenerator<FallbackEvent> {
-	const baseChain = getChain(taskType);
-	const chain = pinnedProviderId
-		? [pinnedProviderId, ...baseChain.filter((id) => id !== pinnedProviderId)]
-		: baseChain;
-	if (chain.length === 0) {
-		throw new Error(`"${taskType}" görev tipi için tanımlı provider zinciri yok`);
-	}
-
-	for (let i = 0; i < chain.length; i++) {
-		const providerId = chain[i];
-		const adapter = await getAdapter(providerId);
-		let sawText = false;
-		try {
-			for await (const chunk of adapter.chat(req, signal)) {
-				if (chunk.type === 'text') sawText = true;
-				yield chunk;
-			}
-			return;
-		} catch (err) {
-			if (signal.aborted) throw err;
-			if (sawText) throw err;
-			if (err instanceof ProviderError && !err.retryable) throw err;
-
-			const isLast = i === chain.length - 1;
-			if (isLast) throw err;
-
-			const reason = err instanceof ProviderError ? err.kind : 'error';
-			const message = `${providerId} kullanılamıyor (${reason}) → sıradaki modele geçiliyor`;
-			logAppEvent({ kind: 'fallback', provider: providerId, message });
-			yield { type: 'notice', message };
-		}
-	}
+	return chatWithFallbackCore(
+		{
+			getChain,
+			isProviderEnabled,
+			getProviderEntry,
+			getAdapter,
+			logFallback: (message, providerId, errorKind) =>
+				logAppEvent({ kind: 'fallback', provider: providerId, message, errorKind })
+		},
+		taskType,
+		req,
+		signal,
+		pinnedProviderId
+	);
 }

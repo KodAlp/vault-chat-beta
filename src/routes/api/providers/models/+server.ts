@@ -16,13 +16,20 @@ export const GET: RequestHandler = async () => {
 			try {
 				const adapter = await getAdapter(p.id);
 				const models = await adapter.listModels();
-				return models.map<ProviderModelOption>((m) => ({
-					providerId: p.id,
-					providerLabel: p.label,
-					id: m.id,
-					ctx: m.ctx,
-					caps: m.caps
-				}));
+				// Embedding-only models (bge-m3, nomic-embed-text) have no chat
+				// template — Ollama's /api/tags lists them next to real chat
+				// models with no other way to tell them apart, so every picker
+				// that reads this endpoint would otherwise offer a model that
+				// silently fails when used for chat/generation.
+				return models
+					.filter((m) => !m.embeddingOnly)
+					.map<ProviderModelOption>((m) => ({
+						providerId: p.id,
+						providerLabel: p.label,
+						id: m.id,
+						ctx: m.ctx,
+						caps: m.caps
+					}));
 			} catch {
 				return [];
 			}

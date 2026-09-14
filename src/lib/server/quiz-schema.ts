@@ -35,12 +35,14 @@ export type QuizItemsT = z.infer<typeof QuizItems>;
  * sampling-time restricted to ids that actually exist in this request's
  * context block, not just to the right shape.
  */
-export function buildQuizItemsJsonSchema(validIds: string[]) {
+export function buildQuizItemsJsonSchema(validIds: string[], total: number) {
 	return {
 		type: 'object',
 		properties: {
 			items: {
 				type: 'array',
+				minItems: total,
+				maxItems: total,
 				items: {
 					type: 'object',
 					properties: {

@@ -4,6 +4,7 @@
 	import { Input } from '$lib/components/ui/input';
 	import { Badge } from '$lib/components/ui/badge';
 	import * as Dialog from '$lib/components/ui/dialog';
+	import { t } from '$lib/i18n/index.svelte';
 
 	let open = $state(false);
 	let sourcePath = $state('');
@@ -23,7 +24,7 @@
 	async function run() {
 		if (!sourcePath.trim()) return;
 		phase = 'running';
-		statusLabel = 'Taranıyor...';
+		statusLabel = t('ImportObsidianDialog.scanning');
 		items = [];
 
 		try {
@@ -32,7 +33,7 @@
 				headers: { 'content-type': 'application/json' },
 				body: JSON.stringify({ sourcePath: sourcePath.trim() })
 			});
-			if (!res.ok || !res.body) throw new Error(`İstek başarısız (${res.status})`);
+			if (!res.ok || !res.body) throw new Error(t('Common.istekBasarisiz', { status: res.status }));
 
 			const reader = res.body.getReader();
 			const decoder = new TextDecoder();
@@ -48,7 +49,9 @@
 					if (!line.startsWith('data:')) continue;
 					const event = JSON.parse(line.slice(5)) as ObsidianImportEvent;
 					if (event.type === 'progress') {
-						statusLabel = event.fileName ? `İşleniyor: ${event.fileName}` : 'Taranıyor...';
+						statusLabel = event.fileName
+							? t('ImportObsidianDialog.processingFile', { fileName: event.fileName })
+							: t('ImportObsidianDialog.scanning');
 					} else if (event.type === 'item') {
 						items = [...items, event.item];
 					} else if (event.type === 'done') {
@@ -61,17 +64,20 @@
 				}
 			}
 		} catch (err) {
-			errorMessage = err instanceof Error ? err.message : 'İçe aktarma başarısız';
+			errorMessage = err instanceof Error ? err.message : t('ImportObsidianDialog.importFailed');
 			phase = 'error';
 		}
 	}
 
-	const STATUS_LABELS: Record<string, string> = {
-		converted: 'kopyalandı',
-		skipped: 'atlandı',
-		needs_review: 'gözden geçirilmeli',
-		failed: 'başarısız'
-	};
+	// $derived, not a plain const — see +layout.svelte's identical STAGE_LABELS
+	// comment: a bare object literal would call t() once at component init and
+	// freeze at whatever locale was active then.
+	let STATUS_LABELS = $derived<Record<string, string>>({
+		converted: t('ImportObsidianDialog.statusConverted'),
+		skipped: t('ImportObsidianDialog.statusSkipped'),
+		needs_review: t('ImportObsidianDialog.statusNeedsReview'),
+		failed: t('ImportObsidianDialog.statusFailed')
+	});
 
 	const STATUS_BADGE_CLASS: Record<string, string> = {
 		converted: 'bg-primary/15 text-primary',
@@ -90,33 +96,32 @@
 	);
 </script>
 
-<Button variant="outline" class="border-primary text-primary" onclick={openDialog}>İçe Aktar</Button>
+<Button variant="outline" class="border-primary text-primary" onclick={openDialog}>{t('ImportObsidianDialog.trigger')}</Button>
 
 <Dialog.Root bind:open>
 	<Dialog.Content class="sm:max-w-lg">
 		<Dialog.Header>
-			<Dialog.Title>Obsidian Vault'unu İçe Aktar</Dialog.Title>
+			<Dialog.Title>{t('ImportObsidianDialog.dialogTitle')}</Dialog.Title>
 			<Dialog.Description>
-				Tek yönlü kopya — kaynak vault'una asla yazılmaz. Değişmemiş notlar yeniden içe aktarmada
-				atlanır.
+				{t('ImportObsidianDialog.dialogDescription')}
 			</Dialog.Description>
 		</Dialog.Header>
 
 		{#if phase === 'idle'}
 			<label class="flex flex-col gap-1 text-sm">
-				Kaynak vault yolu
-				<Input type="text" bind:value={sourcePath} placeholder="örn. C:\Kullanıcılar\...\MyVault" />
+				{t('ImportObsidianDialog.sourcePathLabel')}
+				<Input type="text" bind:value={sourcePath} placeholder={t('ImportObsidianDialog.sourcePathPlaceholder')} />
 			</label>
 			<Dialog.Footer>
-				<Button variant="outline" onclick={() => (open = false)}>İptal</Button>
-				<Button onclick={run} disabled={!sourcePath.trim()}>Başlat</Button>
+				<Button variant="outline" onclick={() => (open = false)}>{t('Common.iptal')}</Button>
+				<Button onclick={run} disabled={!sourcePath.trim()}>{t('ImportObsidianDialog.start')}</Button>
 			</Dialog.Footer>
 		{:else if phase === 'running'}
 			<p class="flex items-center gap-2 text-sm">
 				<span class="inline-block size-3.5 animate-spin rounded-full border-2 border-border border-t-primary" aria-hidden="true"></span>
 				{statusLabel}
 			</p>
-			<p class="text-xs text-muted-foreground">{items.length} dosya işlendi...</p>
+			<p class="text-xs text-muted-foreground">{t('ImportObsidianDialog.filesProcessed', { count: items.length })}</p>
 		{:else if phase === 'done'}
 			<div class="mb-1 flex flex-wrap gap-1.5">
 				{#each Object.entries(counts) as [status, n] (status)}
@@ -135,12 +140,12 @@
 				{/each}
 			</div>
 			<Dialog.Footer>
-				<Button onclick={() => (open = false)}>Kapat</Button>
+				<Button onclick={() => (open = false)}>{t('Common.kapat')}</Button>
 			</Dialog.Footer>
 		{:else if phase === 'error'}
 			<p class="text-sm text-destructive">{errorMessage}</p>
 			<Dialog.Footer>
-				<Button variant="outline" onclick={() => (open = false)}>Kapat</Button>
+				<Button variant="outline" onclick={() => (open = false)}>{t('Common.kapat')}</Button>
 			</Dialog.Footer>
 		{/if}
 	</Dialog.Content>

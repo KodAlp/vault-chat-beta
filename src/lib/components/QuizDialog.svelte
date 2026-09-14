@@ -44,12 +44,12 @@
 		chatId?: string;
 		vault: string;
 		includedPaths?: string[];
+		provider: string;
+		model: string;
 	}) {
 		const body: QuizGenerationRequest = {
 			...args,
-			composition: { mc, tf, open: openCount },
-			model: settings.reasoningModel,
-			provider: settings.reasoningProvider
+			composition: { mc, tf, open: openCount }
 		};
 		void startQuizGeneration(body);
 	}
@@ -67,6 +67,8 @@
 	promptPlaceholder={t('QuizDialog.promptPlaceholder')}
 	disabled={alreadyGenerating}
 	canGenerate={mc + tf + openCount > 0}
+	defaultProvider={settings.reasoningProvider}
+	defaultModel={settings.reasoningModel}
 	onGenerate={generate}
 >
 	{#snippet extraFields()}

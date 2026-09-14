@@ -20,7 +20,12 @@ const SYSTEM_PROMPT =
  * was never pulled. The caller passes body.titleModel ?? body.model so
  * title generation reuses whatever's already loaded by default.
  */
-export async function generateTitle(chatId: string, question: string, model: string): Promise<void> {
+export async function generateTitle(
+	chatId: string,
+	question: string,
+	model: string,
+	provider?: string
+): Promise<void> {
 	try {
 		const messages: ChatMessage[] = [
 			{ role: 'system', content: SYSTEM_PROMPT },
@@ -28,7 +33,12 @@ export async function generateTitle(chatId: string, question: string, model: str
 		];
 		let title = '';
 		const signal = new AbortController().signal;
-		for await (const event of chatWithFallback('title', { model, messages, think: false }, signal)) {
+		for await (const event of chatWithFallback(
+			'title',
+			{ model, messages, think: false },
+			signal,
+			provider
+		)) {
 			if (event.type === 'text') title += event.text;
 		}
 		title = title.trim().replace(/^["']|["']$/g, '');

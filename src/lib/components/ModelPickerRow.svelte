@@ -1,0 +1,170 @@
+<script lang="ts">
+	import type { ProviderModelOption } from '$lib/types';
+	import { selectionKey } from '$lib/model-selection';
+	import { t } from '$lib/i18n/index.svelte';
+	import BotIcon from '@lucide/svelte/icons/bot';
+	import BrainIcon from '@lucide/svelte/icons/brain';
+
+	/**
+	 * The model/provider pill + "Derin düşün" pill row — extracted from
+	 * Chat.svelte's header, which vault/[id]/+page.svelte's new-chat
+	 * composer had copied verbatim (markup and CSS both) rather than
+	 * sharing, per that page's own "Mirrors Chat.svelte's own..." comment.
+	 * Two copies of scoped Svelte CSS can't be deduped by extracting a
+	 * shared stylesheet (scoping is per-component-template, not per-class
+	 * name) — a shared component is what actually collapses both the
+	 * markup and the styles into one place.
+	 *
+	 * Deliberately presentational: `onModelChange` is a callback, not an
+	 * event this component reacts to itself, because the two callers do
+	 * different things with a model change (Chat.svelte PATCHes the chat
+	 * row; the vault page just updates local pre-chat-creation state) —
+	 * this component has no opinion on that. `thinkMode` is `bind:`-able
+	 * since neither caller needs to intercept that specific change.
+	 */
+	let {
+		idPrefix,
+		modelOptions,
+		activeProvider,
+		activeModel,
+		thinkMode = $bindable(),
+		onModelChange,
+		class: className = ''
+	}: {
+		/** Both callers can be mounted on their own separate route at once
+		 * (never simultaneously in this app, but ids should still not
+		 * collide) — prefixes every id/name/for pair below. */
+		idPrefix: string;
+		modelOptions: ProviderModelOption[];
+		activeProvider: string;
+		activeModel: string;
+		thinkMode: boolean;
+		onModelChange: (key: string) => void;
+		/** Forwarded onto the root element — e.g. Chat.svelte adds its own
+		 * top padding via a :global() rule keyed to a class passed here,
+		 * since Svelte's scoped styles can't reach into a child's markup
+		 * any other way. */
+		class?: string;
+	} = $props();
+</script>
+
+<div class="compose-controls {className}">
+	<label class="model-pill" for="{idPrefix}-model-select">
+		<span class="sr-only">{t('ModelPickerRow.modelSrLabel')}</span>
+		<BotIcon size={13} aria-hidden="true" />
+		<select
+			id="{idPrefix}-model-select"
+			title={t('ModelPickerRow.modelSelectTitle')}
+			value={selectionKey(activeProvider, activeModel)}
+			onchange={(e) => onModelChange(e.currentTarget.value)}
+		>
+			{#if !modelOptions.some((m) => m.providerId === activeProvider && m.id === activeModel)}
+				<option value={selectionKey(activeProvider, activeModel)}>{activeModel}</option>
+			{/if}
+			{#each modelOptions as m (m.providerId + '/' + m.id)}
+				<option value={selectionKey(m.providerId, m.id)}>{m.providerLabel} · {m.id}</option>
+			{/each}
+		</select>
+	</label>
+	<label
+		class="think-pill"
+		class:active={thinkMode}
+		for="{idPrefix}-think-mode"
+		title={t('ModelPickerRow.thinkModeTitle')}
+	>
+		<input
+			id="{idPrefix}-think-mode"
+			name="{idPrefix}-think-mode"
+			type="checkbox"
+			bind:checked={thinkMode}
+			class="sr-only"
+		/>
+		<BrainIcon size={13} aria-hidden="true" />
+		{t('ModelPickerRow.thinkModeLabel')}
+	</label>
+</div>
+
+<style>
+	.compose-controls {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.model-pill,
+	.think-pill {
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
+		background: var(--color-secondary);
+		color: var(--color-secondary-foreground);
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-pill);
+		padding: 0.3rem 0.7rem;
+		font-size: 0.75rem;
+	}
+
+	.model-pill {
+		max-width: 240px;
+	}
+
+	.model-pill select {
+		appearance: none;
+		border: none;
+		background: transparent;
+		color: inherit;
+		font-family: var(--font-sans);
+		font-size: 0.75rem;
+		max-width: 190px;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		cursor: pointer;
+	}
+
+	/* The option list is drawn by the browser, not by this stylesheet: it does
+	   NOT inherit .model-pill's background, but Chromium DOES pull `color`
+	   down into it. With the select transparent and color:inherit, that meant
+	   the pill's light-on-dark text landed on the popup's own light surface —
+	   the "white combobox, nothing readable" report. color-scheme in
+	   tokens.css makes the UA paint that surface with the right theme; these
+	   two declarations stop the text from being inherited onto it regardless
+	   of what the UA chooses. Both are needed — neither alone is enough. */
+	.model-pill option {
+		background-color: var(--color-popover);
+		color: var(--color-popover-foreground);
+	}
+	.model-pill:focus-within {
+		outline: 2px solid var(--accent);
+		outline-offset: 1px;
+	}
+
+	.model-pill :global(svg) {
+		flex-shrink: 0;
+		color: var(--color-muted-foreground);
+	}
+
+	.think-pill {
+		color: var(--color-muted-foreground);
+		cursor: pointer;
+		user-select: none;
+		transition:
+			background-color var(--motion-fast) var(--motion-easing),
+			color var(--motion-fast) var(--motion-easing),
+			border-color var(--motion-fast) var(--motion-easing);
+	}
+
+	.think-pill:hover {
+		color: var(--color-foreground);
+	}
+
+	.think-pill.active {
+		background: var(--accent-soft);
+		color: var(--accent-text);
+		border-color: var(--hairline-accent);
+	}
+
+	.think-pill:has(:focus-visible) {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
+	}
+</style>

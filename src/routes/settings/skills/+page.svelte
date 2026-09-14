@@ -9,27 +9,28 @@
 	import * as Card from '$lib/components/ui/card';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import * as Select from '$lib/components/ui/select';
+	import { t } from '$lib/i18n/index.svelte';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 
-	const SCOPE_LABELS: Record<UserSkillScope, string> = {
-		chat: 'Sohbet',
-		quiz: 'Test',
-		flashcards: 'Kartlar',
-		mindmap: 'Zihin haritası',
-		report: 'Rapor',
-		slides: 'Slayt'
-	};
+	let SCOPE_LABELS = $derived<Record<UserSkillScope, string>>({
+		chat: t('SkillsSettingsPage.scopeChat'),
+		quiz: t('SkillsSettingsPage.scopeQuiz'),
+		flashcards: t('SkillsSettingsPage.scopeFlashcards'),
+		mindmap: t('SkillsSettingsPage.scopeMindmap'),
+		report: t('SkillsSettingsPage.scopeReport'),
+		slides: t('SkillsSettingsPage.scopeSlides')
+	});
 
 	const PREVIEW_SCOPES: UserSkillScope[] = ['chat', 'quiz', 'flashcards', 'report', 'mindmap', 'slides'];
 
-	const TEMPLATE = `---
-description: Bu skill ne yapar? (zorunlu)
+	let TEMPLATE = $derived(`---
+description: ${t('SkillsSettingsPage.templateDescription')}
 scope: all
 enabled: true
 priority: 50
 ---
-Kurallar, tercihler, yasaklar... serbest markdown.
-`;
+${t('SkillsSettingsPage.templateBody')}
+`);
 
 	let skills = $state<UserSkillStatus[]>([]);
 	let loadError = $state('');
@@ -52,14 +53,14 @@ Kurallar, tercihler, yasaklar... serbest markdown.
 			if (!res.ok) throw new Error();
 			skills = ((await res.json()) as { skills: UserSkillStatus[] }).skills;
 		} catch {
-			loadError = 'Skill listesi alınamadı.';
+			loadError = t('SkillsSettingsPage.loadError');
 		}
 	}
 
 	onMount(refresh);
 
 	function scopeChips(scope: UserSkillStatus['scope']): string[] {
-		return scope === 'all' ? ['Tümü'] : scope.map((s) => SCOPE_LABELS[s]);
+		return scope === 'all' ? [t('SkillsSettingsPage.scopeAll')] : scope.map((s) => SCOPE_LABELS[s]);
 	}
 
 	function budgetClass(charCount: number): 'green' | 'amber' | 'red' {
@@ -79,7 +80,7 @@ Kurallar, tercihler, yasaklar... serbest markdown.
 			if (!res.ok) throw new Error();
 			await refresh();
 		} catch {
-			loadError = `"${skill.name}" güncellenemedi.`;
+			loadError = t('SkillsSettingsPage.updateFailed', { name: skill.name });
 		}
 	}
 
@@ -93,7 +94,7 @@ Kurallar, tercihler, yasaklar... serbest markdown.
 			if (!res.ok) throw new Error();
 			await refresh();
 		} catch {
-			loadError = `"${skill.name}" güncellenemedi.`;
+			loadError = t('SkillsSettingsPage.updateFailed', { name: skill.name });
 		}
 	}
 
@@ -108,7 +109,7 @@ Kurallar, tercihler, yasaklar... serbest markdown.
 			editorIsNew = false;
 			editorOpen = true;
 		} catch {
-			loadError = `"${skill.name}" yüklenemedi.`;
+			loadError = t('SkillsSettingsPage.loadSkillFailed', { name: skill.name });
 		}
 	}
 
@@ -123,7 +124,7 @@ Kurallar, tercihler, yasaklar... serbest markdown.
 	async function saveEditor() {
 		const name = editorName.trim();
 		if (!name) {
-			editorError = 'İsim gerekli.';
+			editorError = t('SkillsSettingsPage.nameRequired');
 			return;
 		}
 		editorSaving = true;
@@ -136,26 +137,26 @@ Kurallar, tercihler, yasaklar... serbest markdown.
 			});
 			if (!res.ok) {
 				const body = (await res.json().catch(() => null)) as { message?: string } | null;
-				editorError = body?.message ?? 'Kaydedilemedi.';
+				editorError = body?.message ?? t('Common.kaydedilemedi');
 				return;
 			}
 			editorOpen = false;
 			await refresh();
 		} catch {
-			editorError = 'Kaydedilemedi.';
+			editorError = t('Common.kaydedilemedi');
 		} finally {
 			editorSaving = false;
 		}
 	}
 
 	async function removeSkill(skill: UserSkillStatus) {
-		if (!confirm(`"${skill.name}" silinsin mi?`)) return;
+		if (!confirm(t('SkillsSettingsPage.deleteConfirm', { name: skill.name }))) return;
 		try {
 			const res = await fetch(`/api/skills/${encodeURIComponent(skill.name)}`, { method: 'DELETE' });
 			if (!res.ok) throw new Error();
 			await refresh();
 		} catch {
-			loadError = `"${skill.name}" silinemedi.`;
+			loadError = t('SkillsSettingsPage.deleteFailed', { name: skill.name });
 		}
 	}
 
@@ -167,7 +168,7 @@ Kurallar, tercihler, yasaklar... serbest markdown.
 			if (!res.ok) throw new Error();
 			previewText = ((await res.json()) as { prompt: string }).prompt;
 		} catch {
-			previewText = 'Önizleme alınamadı.';
+			previewText = t('SkillsSettingsPage.previewFailed');
 		} finally {
 			previewLoading = false;
 		}
@@ -175,21 +176,20 @@ Kurallar, tercihler, yasaklar... serbest markdown.
 </script>
 
 <svelte:head>
-	<title>Kullanıcı Skill'leri — Vault Agent Toolkit</title>
+	<title>{t('SkillsSettingsPage.title')} — Vault Agent Toolkit</title>
 </svelte:head>
 
 <div class="mx-auto max-w-3xl px-4 pt-6 pb-12">
 	<div class="mb-3 flex items-baseline gap-4">
 		<a href="/settings" class="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-2">
-			<ArrowLeftIcon size={14} aria-hidden="true" /> Ayarlar
+			<ArrowLeftIcon size={14} aria-hidden="true" /> {t('Common.ayarlar')}
 		</a>
-		<h1 class="font-display text-xl font-medium">Kullanıcı Skill'leri</h1>
+		<h1 class="font-display text-xl font-medium">{t('SkillsSettingsPage.title')}</h1>
 	</div>
 
 	<p class="mb-5 text-sm text-muted-foreground">
-		<code class="rounded bg-muted px-1 py-0.5 text-xs">data/skills/</code> içine bıraktığın markdown
-		dosyaları sohbet, test ve bilgi kartı üretimini özelleştirir. Matematik biçimi ve kaynak
-		doğrulama kuralları her zaman en son uygulanır — bir skill bunları geçersiz kılamaz.
+		<code class="rounded bg-muted px-1 py-0.5 text-xs">data/skills/</code>
+		{t('SkillsSettingsPage.intro')}
 	</p>
 
 	{#if loadError}
@@ -197,7 +197,7 @@ Kurallar, tercihler, yasaklar... serbest markdown.
 	{/if}
 
 	<div class="mb-5 flex flex-wrap items-center justify-between gap-3">
-		<Button onclick={openNewEditor}>+ Yeni skill</Button>
+		<Button onclick={openNewEditor}>{t('SkillsSettingsPage.newSkill')}</Button>
 		<div class="flex gap-1.5">
 			<Select.Root type="single" bind:value={previewScope}>
 				<Select.Trigger class="w-44">{SCOPE_LABELS[previewScope]}</Select.Trigger>
@@ -207,7 +207,7 @@ Kurallar, tercihler, yasaklar... serbest markdown.
 					{/each}
 				</Select.Content>
 			</Select.Root>
-			<Button variant="outline" onclick={runPreview}>Önizleme</Button>
+			<Button variant="outline" onclick={runPreview}>{t('SkillsSettingsPage.preview')}</Button>
 		</div>
 	</div>
 
@@ -222,10 +222,10 @@ Kurallar, tercihler, yasaklar... serbest markdown.
 								<Badge variant="outline">{chip}</Badge>
 							{/each}
 							{#if skill.parseError}
-								<Badge variant="destructive" title={skill.parseError}>hata</Badge>
+								<Badge variant="destructive" title={skill.parseError}>{t('SkillsSettingsPage.errorBadge')}</Badge>
 							{/if}
 							{#if skill.truncated}
-								<Badge class="bg-amber-500/20 text-amber-700 dark:text-amber-400">kısaltıldı</Badge>
+								<Badge class="bg-amber-500/20 text-amber-700 dark:text-amber-400">{t('SkillsSettingsPage.truncatedBadge')}</Badge>
 							{/if}
 						</div>
 						<p class="mt-1 mb-2 text-sm text-muted-foreground">{skill.description ?? skill.relPath}</p>
@@ -246,10 +246,10 @@ Kurallar, tercihler, yasaklar... serbest markdown.
 					<div class="flex flex-wrap items-center gap-3">
 						<label class="flex cursor-pointer items-center gap-1.5 text-xs">
 							<input type="checkbox" checked={skill.enabled} onchange={() => toggleEnabled(skill)} class="accent-primary" />
-							Etkin
+							{t('SkillsSettingsPage.enabledLabel')}
 						</label>
 						<label class="flex items-center gap-1.5 text-xs">
-							Öncelik
+							{t('SkillsSettingsPage.priorityLabel')}
 							<Input
 								type="number"
 								min="0"
@@ -259,15 +259,14 @@ Kurallar, tercihler, yasaklar... serbest markdown.
 								class="h-7 w-16"
 							/>
 						</label>
-						<Button size="sm" variant="outline" onclick={() => openEditor(skill)}>Düzenle</Button>
-						<Button size="sm" variant="destructive" onclick={() => removeSkill(skill)}>Sil</Button>
+						<Button size="sm" variant="outline" onclick={() => openEditor(skill)}>{t('SkillsSettingsPage.edit')}</Button>
+						<Button size="sm" variant="destructive" onclick={() => removeSkill(skill)}>{t('Common.sil')}</Button>
 					</div>
 				</Card.Content>
 			</Card.Root>
 		{:else}
 			<p class="text-sm text-muted-foreground">
-				Henüz skill yok. "_examples/" klasöründeki örnekler devre dışı olarak geldi — düzenleyip
-				etkinleştirebilirsin.
+				{t('SkillsSettingsPage.empty')}
 			</p>
 		{/each}
 	</div>
@@ -276,18 +275,18 @@ Kurallar, tercihler, yasaklar... serbest markdown.
 <Dialog.Root bind:open={editorOpen}>
 	<Dialog.Content class="sm:max-w-lg">
 		<Dialog.Header>
-			<Dialog.Title>{editorIsNew ? 'Yeni skill' : editorName}</Dialog.Title>
+			<Dialog.Title>{editorIsNew ? t('SkillsSettingsPage.newSkillDialogTitle') : editorName}</Dialog.Title>
 		</Dialog.Header>
 
 		{#if editorIsNew}
 			<label class="flex flex-col gap-1 text-sm">
-				İsim (kebab-case)
-				<Input type="text" bind:value={editorName} placeholder="örn. math-notation" />
+				{t('SkillsSettingsPage.nameLabel')}
+				<Input type="text" bind:value={editorName} placeholder={t('SkillsSettingsPage.namePlaceholder')} />
 			</label>
 		{/if}
 
 		<label class="flex flex-col gap-1 text-sm">
-			İçerik (frontmatter + markdown)
+			{t('SkillsSettingsPage.contentLabel')}
 			<Textarea bind:value={editorRaw} spellcheck="false" class="min-h-64 font-mono text-[0.82rem]" />
 		</label>
 
@@ -296,9 +295,9 @@ Kurallar, tercihler, yasaklar... serbest markdown.
 		{/if}
 
 		<Dialog.Footer>
-			<Button variant="outline" onclick={() => (editorOpen = false)}>İptal</Button>
+			<Button variant="outline" onclick={() => (editorOpen = false)}>{t('Common.iptal')}</Button>
 			<Button onclick={saveEditor} disabled={editorSaving}>
-				{editorSaving ? 'Kaydediliyor...' : 'Kaydet'}
+				{editorSaving ? t('Common.kaydediliyor') : t('Common.kaydet')}
 			</Button>
 		</Dialog.Footer>
 	</Dialog.Content>
@@ -307,15 +306,15 @@ Kurallar, tercihler, yasaklar... serbest markdown.
 <Dialog.Root bind:open={previewOpen}>
 	<Dialog.Content class="sm:max-w-2xl">
 		<Dialog.Header>
-			<Dialog.Title>Önizleme — {SCOPE_LABELS[previewScope]}</Dialog.Title>
+			<Dialog.Title>{t('SkillsSettingsPage.previewDialogTitle', { scope: SCOPE_LABELS[previewScope] })}</Dialog.Title>
 		</Dialog.Header>
 		{#if previewLoading}
-			<p class="text-sm text-muted-foreground">Yükleniyor...</p>
+			<p class="text-sm text-muted-foreground">{t('Common.yukleniyor')}</p>
 		{:else}
 			<pre class="max-h-[60vh] overflow-y-auto rounded-lg bg-muted p-3.5 font-mono text-xs whitespace-pre-wrap">{previewText}</pre>
 		{/if}
 		<Dialog.Footer>
-			<Button variant="outline" onclick={() => (previewOpen = false)}>Kapat</Button>
+			<Button variant="outline" onclick={() => (previewOpen = false)}>{t('Common.kapat')}</Button>
 		</Dialog.Footer>
 	</Dialog.Content>
 </Dialog.Root>

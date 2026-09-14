@@ -1,5 +1,6 @@
 import { ollamaUrl } from '../env';
 import { sharedJobMutex, type JobMutex } from '../jobMutex';
+import { EMBED_MODEL } from '../embed-config';
 
 export interface OllamaGate {
 	/** Runs `fn` while holding a lease on `model` — for one-shot calls
@@ -176,5 +177,10 @@ export function createOllamaGate(
 	};
 }
 
-/** The one shared instance — mirrors jobMutex.ts's sharedJobMutex singleton. */
-export const ollamaGate: OllamaGate = createOllamaGate();
+/** The one shared instance — mirrors jobMutex.ts's sharedJobMutex singleton.
+ * residentModels is passed explicitly (rather than relying on
+ * createOllamaGate()'s own default) so it tracks EMBED_MODEL — left as the
+ * stale 'nomic-embed-text' default here after commit b9d1be7 switched
+ * embeddings to bge-m3, which meant embed() lost its "resident, never
+ * swaps" exception and started competing for the model-swap lock. */
+export const ollamaGate: OllamaGate = createOllamaGate(undefined, { residentModels: [EMBED_MODEL] });

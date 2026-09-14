@@ -210,13 +210,13 @@ export async function generateReport(
 		}
 	}
 
-	const { chunks, narrowScope } = await retrieve(v, query, {
+	const { chunks, narrowScope, reason } = await retrieve(v, query, {
 		domains: input.domains,
 		includedPaths: input.includedPaths,
 		k: 12
 	});
 	if (chunks.length === 0) {
-		throw new NoSourcesError(narrowScope);
+		throw new NoSourcesError(narrowScope, reason);
 	}
 
 	// Short id per chunk (S1, S2, ...), not the raw path — see

@@ -7,10 +7,16 @@
  * "kapsamı genişlet?" suggestion, same distinction chat's own narrowScope
  * handling already makes (see Message.svelte).
  */
+import type { RetrieveResult } from '$lib/types';
+
 export class NoSourcesError extends Error {
 	narrowScope: boolean;
+	/** Which of retrieve()'s empty-return paths produced this — see
+	 * RetrieveResult.reason. Carried through purely for app-log.ts's
+	 * no_sources record; the user-facing message above never changes. */
+	reason?: RetrieveResult['reason'];
 
-	constructor(narrowScope: boolean) {
+	constructor(narrowScope: boolean, reason?: RetrieveResult['reason']) {
 		super(
 			narrowScope
 				? 'Seçili kapsamda kaynak bulunamadı — kapsamı genişletmeyi deneyin.'
@@ -18,5 +24,6 @@ export class NoSourcesError extends Error {
 		);
 		this.name = 'NoSourcesError';
 		this.narrowScope = narrowScope;
+		this.reason = reason;
 	}
 }

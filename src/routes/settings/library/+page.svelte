@@ -6,6 +6,7 @@
 	import { Switch } from '$lib/components/ui/switch';
 	import { Input } from '$lib/components/ui/input';
 	import * as Card from '$lib/components/ui/card';
+	import { t } from '$lib/i18n/index.svelte';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 
 	let settings = $state<LibrarySettings>({
@@ -28,7 +29,7 @@
 			hiddenFoldersInput = settings.hiddenFolders.join(', ');
 			flattenFoldersInput = settings.flattenFolders.join(', ');
 		} catch {
-			loadError = 'Ayarlar alınamadı.';
+			loadError = t('LibrarySettingsPage.loadError');
 		}
 	});
 
@@ -40,7 +41,7 @@
 				body: JSON.stringify(settings)
 			});
 		} catch {
-			loadError = 'Ayarlar kaydedilemedi.';
+			loadError = t('LibrarySettingsPage.saveError');
 		}
 	}
 
@@ -72,15 +73,15 @@
 </script>
 
 <svelte:head>
-	<title>Kütüphane — Vault Agent Toolkit</title>
+	<title>{t('LibrarySettingsPage.title')} — Vault Agent Toolkit</title>
 </svelte:head>
 
 <div class="mx-auto max-w-2xl px-4 pt-6 pb-12">
 	<div class="mb-6 flex items-baseline gap-4">
 		<a href="/settings" class="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-2">
-			<ArrowLeftIcon size={14} aria-hidden="true" /> Ayarlar
+			<ArrowLeftIcon size={14} aria-hidden="true" /> {t('Common.ayarlar')}
 		</a>
-		<h1 class="font-display text-xl font-medium">Kütüphane</h1>
+		<h1 class="font-display text-xl font-medium">{t('LibrarySettingsPage.title')}</h1>
 	</div>
 
 	{#if loadError}
@@ -89,11 +90,9 @@
 
 	<Card.Root class="mb-6">
 		<Card.Header>
-			<Card.Title>Obsidian'dan İçe Aktar</Card.Title>
+			<Card.Title>{t('LibrarySettingsPage.importObsidianTitle')}</Card.Title>
 			<Card.Description>
-				Bir Obsidian vault'unu tek yönlü kopyalar (kaynağa asla yazılmaz). Wikilink'ler göreli
-				markdown linklerine çevrilir, eklerin kopyaları alınır, eksik frontmatter alanları
-				varsayılan değer + gözden geçirme rozeti alır.
+				{t('LibrarySettingsPage.importObsidianDescription')}
 			</Card.Description>
 		</Card.Header>
 		<Card.Content>
@@ -103,50 +102,47 @@
 
 	<Card.Root class="mb-6">
 		<Card.Header>
-			<Card.Title>Yükleme Ayarları</Card.Title>
+			<Card.Title>{t('LibrarySettingsPage.uploadSettingsTitle')}</Card.Title>
 		</Card.Header>
 		<Card.Content class="flex flex-col gap-4">
 			<label class="flex cursor-pointer items-center gap-2 text-sm">
 				<Switch bind:checked={settings.keepOriginals} onCheckedChange={persist} />
-				Dönüştürülen belgelerin orijinal dosyalarını sakla ({'data/library/_meta/originals/'})
+				{t('LibrarySettingsPage.keepOriginals', { path: 'data/library/_meta/originals/' })}
 			</label>
 			<label class="flex flex-col gap-1 text-sm">
-				Sohbette izinli diller
+				{t('LibrarySettingsPage.allowedLanguages')}
 				<Input
 					type="text"
 					bind:value={allowedLanguagesInput}
 					onchange={persistAllowedLanguages}
-					placeholder="Türkçe, Korece"
+					placeholder={t('LibrarySettingsPage.allowedLanguagesPlaceholder')}
 				/>
 				<span class="text-xs text-muted-foreground">
-					İlk dil modelin birincil yanıt dili olur. Ek diller (dil öğrenme vault'ları gibi)
-					yanıt içinde kullanılabilir ve sızıntı algılayıcı tarafından bozukluk sayılmaz.
+					{t('LibrarySettingsPage.allowedLanguagesHint')}
 				</span>
 			</label>
 			<label class="flex flex-col gap-1 text-sm">
-				Sohbet ekranında gizli klasörler
+				{t('LibrarySettingsPage.hiddenFolders')}
 				<Input
 					type="text"
 					bind:value={hiddenFoldersInput}
 					onchange={persistHiddenFolders}
-					placeholder="raw, cards, frontier"
+					placeholder={t('LibrarySettingsPage.hiddenFoldersPlaceholder')}
 				/>
 				<span class="text-xs text-muted-foreground">
-					Bu kök klasörler sohbetin kaynak ağacında hiç görünmez ve hiçbir üretime (sohbet,
-					test, rapor, ...) kaynak olarak sunulmaz. Kütüphane Ağacı (aşağıda) bundan etkilenmez.
+					{t('LibrarySettingsPage.hiddenFoldersHint')}
 				</span>
 			</label>
 			<label class="flex flex-col gap-1 text-sm">
-				Sohbet ekranında düzleştirilecek klasörler
+				{t('LibrarySettingsPage.flattenFolders')}
 				<Input
 					type="text"
 					bind:value={flattenFoldersInput}
 					onchange={persistFlattenFolders}
-					placeholder="wiki"
+					placeholder={t('LibrarySettingsPage.flattenFoldersPlaceholder')}
 				/>
 				<span class="text-xs text-muted-foreground">
-					Bu kök klasörlerin kendisi gizlenir, altındaki klasörler doğrudan ağacın kökünde
-					gösterilir. Yollar değişmez, sadece ağacın görünümü sadeleşir.
+					{t('LibrarySettingsPage.flattenFoldersHint')}
 				</span>
 			</label>
 		</Card.Content>
@@ -154,10 +150,9 @@
 
 	<Card.Root>
 		<Card.Header>
-			<Card.Title>Kütüphane Ağacı</Card.Title>
+			<Card.Title>{t('LibrarySettingsPage.libraryTreeTitle')}</Card.Title>
 			<Card.Description>
-				Belge yükle, yeniden adlandır veya sil. Sohbet ekranındaki kaynak ağacı (Faz 9) bunun
-				yerine kapsam seçimi için ayrı, salt-görüntüleme bir kopyasını kullanır.
+				{t('LibrarySettingsPage.libraryTreeDescription')}
 			</Card.Description>
 		</Card.Header>
 		<Card.Content>

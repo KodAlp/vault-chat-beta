@@ -6,6 +6,7 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import * as Card from '$lib/components/ui/card';
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
+	import { t } from '$lib/i18n/index.svelte';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 
 	let vaults = $state<VaultRecord[]>([]);
@@ -26,7 +27,7 @@
 			vaults = data.vaults;
 			activeVaultId = data.activeVaultId;
 		} catch {
-			loadError = 'Vault listesi alınamadı.';
+			loadError = t('VaultsSettingsPage.loadError');
 		}
 	}
 
@@ -42,11 +43,11 @@
 				headers: { 'content-type': 'application/json' },
 				body: JSON.stringify({ name })
 			});
-			if (!res.ok) throw new Error((await res.json().catch(() => null))?.message ?? 'Oluşturulamadı');
+			if (!res.ok) throw new Error((await res.json().catch(() => null))?.message ?? t('VaultsSettingsPage.createFailed'));
 			newVaultName = '';
 			await loadVaults();
 		} catch (err) {
-			createError = err instanceof Error ? err.message : 'Vault oluşturulamadı.';
+			createError = err instanceof Error ? err.message : t('VaultsSettingsPage.createFailed');
 		}
 	}
 
@@ -55,7 +56,7 @@
 			await fetch(`/api/vaults/${id}/activate`, { method: 'POST' });
 			await loadVaults();
 		} catch {
-			loadError = 'Aktif vault değiştirilemedi.';
+			loadError = t('VaultsSettingsPage.activateFailed');
 		}
 	}
 
@@ -76,7 +77,7 @@
 			renamingId = null;
 			await loadVaults();
 		} catch {
-			loadError = 'Yeniden adlandırılamadı.';
+			loadError = t('VaultsSettingsPage.renameFailed');
 		}
 	}
 
@@ -88,7 +89,7 @@
 			const info = (await res.json()) as { vault: VaultRecord; chatCount: number };
 			deleteTarget = info;
 		} catch {
-			deleteError = 'Vault bilgisi alınamadı.';
+			deleteError = t('VaultsSettingsPage.vaultInfoFailed');
 		}
 	}
 
@@ -98,30 +99,29 @@
 			const res = await fetch(`/api/vaults/${deleteTarget.vault.id}?confirm=true`, {
 				method: 'DELETE'
 			});
-			if (!res.ok) throw new Error((await res.json().catch(() => null))?.message ?? 'Silinemedi');
+			if (!res.ok) throw new Error((await res.json().catch(() => null))?.message ?? t('VaultsSettingsPage.deleteFailed'));
 			deleteTarget = null;
 			await loadVaults();
 		} catch (err) {
-			deleteError = err instanceof Error ? err.message : 'Vault silinemedi.';
+			deleteError = err instanceof Error ? err.message : t('VaultsSettingsPage.deleteFailed');
 		}
 	}
 </script>
 
 <svelte:head>
-	<title>Vault'lar — Vault Agent Toolkit</title>
+	<title>{t('VaultsSettingsPage.title')} — Vault Agent Toolkit</title>
 </svelte:head>
 
 <div class="mx-auto max-w-2xl px-4 pt-6 pb-12">
 	<div class="mb-4 flex items-baseline gap-4">
 		<a href="/settings" class="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-2">
-			<ArrowLeftIcon size={14} aria-hidden="true" /> Ayarlar
+			<ArrowLeftIcon size={14} aria-hidden="true" /> {t('Common.ayarlar')}
 		</a>
-		<h1 class="font-display text-xl font-medium">Vault'lar</h1>
+		<h1 class="font-display text-xl font-medium">{t('VaultsSettingsPage.title')}</h1>
 	</div>
 
 	<p class="mb-6 text-sm text-muted-foreground">
-		Her vault kendi kaynak kütüphanesini ve arama indeksini tutar — birbirlerine karışmazlar.
-		Sohbet geçmişi vault başına ayrılır, sohbet ekranı her zaman aktif vault üzerinde çalışır.
+		{t('VaultsSettingsPage.intro')}
 	</p>
 
 	{#if loadError}
@@ -130,7 +130,7 @@
 
 	<Card.Root class="mb-6">
 		<Card.Header>
-			<Card.Title>Mevcut vault'lar</Card.Title>
+			<Card.Title>{t('VaultsSettingsPage.existingVaultsTitle')}</Card.Title>
 		</Card.Header>
 		<Card.Content class="flex flex-col gap-2">
 			{#each vaults as vault (vault.id)}
@@ -146,27 +146,27 @@
 							onkeydown={(e) => e.key === 'Enter' && submitRename(vault.id)}
 						/>
 						<div class="flex shrink-0 gap-1.5">
-							<Button size="sm" onclick={() => submitRename(vault.id)}>Kaydet</Button>
-							<Button size="sm" variant="ghost" onclick={() => (renamingId = null)}>Vazgeç</Button>
+							<Button size="sm" onclick={() => submitRename(vault.id)}>{t('Common.kaydet')}</Button>
+							<Button size="sm" variant="ghost" onclick={() => (renamingId = null)}>{t('Common.vazgec')}</Button>
 						</div>
 					{:else}
 						<span class="flex items-center gap-2">
 							{vault.name}
 							{#if vault.id === activeVaultId}
-								<Badge variant="secondary">aktif</Badge>
+								<Badge variant="secondary">{t('VaultsSettingsPage.active')}</Badge>
 							{/if}
 						</span>
 						<div class="flex shrink-0 gap-1.5">
 							{#if vault.id !== activeVaultId}
 								<Button size="sm" variant="outline" onclick={() => activate(vault.id)}>
-									Aktif yap
+									{t('VaultsSettingsPage.activate')}
 								</Button>
 							{/if}
 							<Button size="sm" variant="ghost" onclick={() => startRename(vault)}>
-								Yeniden adlandır
+								{t('VaultsSettingsPage.rename')}
 							</Button>
 							<Button size="sm" variant="destructive" onclick={() => requestDelete(vault)}>
-								Sil
+								{t('Common.sil')}
 							</Button>
 						</div>
 					{/if}
@@ -177,18 +177,18 @@
 
 	<Card.Root>
 		<Card.Header>
-			<Card.Title>Yeni vault</Card.Title>
+			<Card.Title>{t('VaultsSettingsPage.newVaultTitle')}</Card.Title>
 		</Card.Header>
 		<Card.Content>
 			<div class="flex gap-2">
 				<Input
 					type="text"
-					placeholder="Vault adı"
+					placeholder={t('VaultsSettingsPage.vaultNamePlaceholder')}
 					bind:value={newVaultName}
 					class="max-w-xs"
 					onkeydown={(e) => e.key === 'Enter' && createVault()}
 				/>
-				<Button onclick={createVault}>Oluştur</Button>
+				<Button onclick={createVault}>{t('VaultsSettingsPage.create')}</Button>
 			</div>
 			{#if createError}
 				<p class="mt-2 text-sm text-destructive">{createError}</p>
@@ -201,22 +201,18 @@
 	<AlertDialog.Content>
 		{#if deleteTarget}
 			<AlertDialog.Header>
-				<AlertDialog.Title>"{deleteTarget.vault.name}" silinsin mi?</AlertDialog.Title>
+				<AlertDialog.Title>{t('VaultsSettingsPage.deleteConfirmTitle', { name: deleteTarget.vault.name })}</AlertDialog.Title>
 				<AlertDialog.Description>
-					Kütüphanesi, arama indeksi ve
-					{#if deleteTarget.chatCount > 0}
-						<strong>{deleteTarget.chatCount} sohbet</strong>
-					{:else}
-						sohbet geçmişi (yok)
-					{/if}
-					kalıcı olarak silinecek. Bu işlem geri alınamaz.
+					{deleteTarget.chatCount > 0
+						? t('VaultsSettingsPage.deleteConfirmWithChats', { chatCount: deleteTarget.chatCount })
+						: t('VaultsSettingsPage.deleteConfirmNoChats')}
 				</AlertDialog.Description>
 			</AlertDialog.Header>
 			{#if deleteError}
 				<p class="text-sm text-destructive">{deleteError}</p>
 			{/if}
 			<AlertDialog.Footer>
-				<AlertDialog.Cancel>Vazgeç</AlertDialog.Cancel>
+				<AlertDialog.Cancel>{t('Common.vazgec')}</AlertDialog.Cancel>
 				<AlertDialog.Action
 					variant="destructive"
 					onclick={(e) => {
@@ -224,7 +220,7 @@
 						confirmDelete();
 					}}
 				>
-					Sil
+					{t('Common.sil')}
 				</AlertDialog.Action>
 			</AlertDialog.Footer>
 		{/if}

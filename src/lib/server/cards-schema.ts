@@ -46,12 +46,14 @@ export type CardsT = z.infer<typeof Cards>;
  * generate-cards.ts) — they're derived server-side from the retrieved
  * chunk's own metadata once source_id resolves, same as heading_path.
  */
-export function buildCardsJsonSchema(validIds: string[]) {
+export function buildCardsJsonSchema(validIds: string[], count: number) {
 	return {
 		type: 'object',
 		properties: {
 			items: {
 				type: 'array',
+				minItems: count,
+				maxItems: count,
 				items: {
 					type: 'object',
 					properties: {

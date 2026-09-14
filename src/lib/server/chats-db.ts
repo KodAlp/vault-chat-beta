@@ -9,6 +9,11 @@ export interface ChatRow {
 	id: string;
 	title: string | null;
 	model: string;
+	/** Which provider `model` was generated with — null for chats created
+	 * before this column existed (they keep falling back to whatever the
+	 * current default provider is, exactly like before) or when no explicit
+	 * provider was chosen. See Chat.svelte's overrideProvider doc comment. */
+	provider: string | null;
 	vault_id: string;
 	included_paths_json: string | null;
 	created_at: string;
@@ -88,7 +93,8 @@ export function initChatsSchema(instance: Database.Database): void {
 	// (defaults only apply to rows inserted after the column exists).
 	ensureColumns(instance, 'chats', {
 		vault_id: `TEXT NOT NULL DEFAULT 'default'`,
-		included_paths_json: 'TEXT'
+		included_paths_json: 'TEXT',
+		provider: 'TEXT'
 	});
 	// Only safe now that vault_id is guaranteed to exist, regardless of
 	// whether `chats` was just created or already existed.
@@ -125,12 +131,13 @@ function getDb(): Database.Database {
  * (crypto.randomUUID(), same convention as ChatMessage.id) so the welcome
  * screen can navigate to /chat/{id} before the first message is even sent.
  */
-export function createChat(id: string, model: string, vaultId: string): ChatRow {
+export function createChat(id: string, model: string, vaultId: string, provider?: string | null): ChatRow {
 	const now = new Date().toISOString();
 	const chat: ChatRow = {
 		id,
 		title: null,
 		model,
+		provider: provider ?? null,
 		vault_id: vaultId,
 		included_paths_json: null,
 		created_at: now,
@@ -138,9 +145,9 @@ export function createChat(id: string, model: string, vaultId: string): ChatRow 
 	};
 	getDb()
 		.prepare(
-			`INSERT INTO chats (id, title, model, vault_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)`
+			`INSERT INTO chats (id, title, model, provider, vault_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`
 		)
-		.run(chat.id, chat.title, chat.model, chat.vault_id, chat.created_at, chat.updated_at);
+		.run(chat.id, chat.title, chat.model, chat.provider, chat.vault_id, chat.created_at, chat.updated_at);
 	return chat;
 }
 
@@ -187,6 +194,10 @@ export function setChatTitle(id: string, title: string): void {
 
 export function updateChatModel(id: string, model: string): void {
 	getDb().prepare('UPDATE chats SET model = ? WHERE id = ?').run(model, id);
+}
+
+export function updateChatProvider(id: string, provider: string | null): void {
+	getDb().prepare('UPDATE chats SET provider = ? WHERE id = ?').run(provider, id);
 }
 
 export function updateChatIncludedPaths(id: string, includedPaths: string[] | null): void {

@@ -30,7 +30,13 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
 		if (item.type === 'open') {
 			// Never graded by code — the skill requires the model here, clearly
 			// labeled in the UI as "model değerlendirmesi".
-			const grade = await gradeOpenAnswer(item.question, item.answer, answer.given, body.fastModel);
+			const grade = await gradeOpenAnswer(
+				item.question,
+				item.answer,
+				answer.given,
+				body.fastModel,
+				body.fastProvider
+			);
 			isCorrect = grade.correct;
 			modelFeedback = grade.feedback;
 		} else {

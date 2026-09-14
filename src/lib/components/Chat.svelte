@@ -1,16 +1,16 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import type { ChatMessage, ChatRequestBody, ProviderModelOption, StreamEvent } from '$lib/types';
 	import Message from './Message.svelte';
 	import ScopeIndicator from './ScopeIndicator.svelte';
+	import ModelPickerRow from './ModelPickerRow.svelte';
 	import { settings } from '$lib/settings.svelte';
+	import { parseSelectionKey } from '$lib/model-selection';
 	import { t } from '$lib/i18n/index.svelte';
 	import { takePendingMessage } from '$lib/pending-message';
 	import ArrowDownIcon from '@lucide/svelte/icons/arrow-down';
 	import SendIcon from '@lucide/svelte/icons/send';
 	import SquareIcon from '@lucide/svelte/icons/square';
-	import BotIcon from '@lucide/svelte/icons/bot';
-	import BrainIcon from '@lucide/svelte/icons/brain';
 	import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';
 
 	let {
@@ -51,12 +51,15 @@
 	 * picks one from the header dropdown. */
 	let overrideModel = $state<string | undefined>(undefined);
 	/**
-	 * Faz 17 — providerId end-to-end. Unlike overrideModel, an EXISTING
-	 * chat's row (chats-db's ChatRow) never stored a provider — the concept
-	 * didn't exist before this — so loadChat() below deliberately leaves
-	 * this undefined when restoring a chat, falling back to the current
-	 * task-default provider rather than a value that was never really
-	 * there. Only the header dropdown (a fresh, in-session choice) sets it.
+	 * Faz 17 — providerId end-to-end. ChatRow.provider is null for chats
+	 * created before this column existed (or where no explicit provider was
+	 * ever chosen); loadChat() below falls back to undefined for those,
+	 * i.e. the current task-default provider — same as always. A chat
+	 * created with an explicit provider (welcome-screen picker or header
+	 * dropdown) reopens pinned to that provider, so its stored `model`
+	 * never gets paired with whatever provider happens to be the default
+	 * *now* (the mismatch that used to surface as a confusing "model not
+	 * found" from a provider whose own connection test passed fine).
 	 */
 	let overrideProvider = $state<string | undefined>(undefined);
 	let hasChatRow = $state(false);
@@ -65,18 +68,6 @@
 	let activeProvider = $derived(
 		overrideProvider ?? (thinkMode ? settings.reasoningProvider : settings.fastProvider)
 	);
-
-	// A plain model id can't carry which provider it came from on its own
-	// (two providers could serve identically-named models), and the native
-	// <select> below binds a single string value — same U+241F-separator
-	// encoding as /settings/+page.svelte's model selectors, see its comment.
-	function selectionKey(providerId: string, modelId: string): string {
-		return `${providerId}␟${modelId}`;
-	}
-	function parseSelectionKey(key: string): { providerId: string; modelId: string } {
-		const [providerId, modelId] = key.split('␟');
-		return { providerId, modelId };
-	}
 
 	onMount(async () => {
 		try {
@@ -93,13 +84,10 @@
 		overrideProvider = providerId;
 		if (hasChatRow) {
 			try {
-				// Only `model` persists to chats-db (no provider column exists —
-				// see overrideProvider's doc comment above); the provider choice
-				// stays in-memory for this session only.
 				await fetch(`/api/chats/${chatId}`, {
 					method: 'PATCH',
 					headers: { 'content-type': 'application/json' },
-					body: JSON.stringify({ model: modelId })
+					body: JSON.stringify({ model: modelId, provider: providerId })
 				});
 			} catch {
 				// Best-effort persistence — the in-memory override still applies to this session.
@@ -165,6 +153,7 @@
 				think: thinkMode,
 				chatId,
 				titleModel: settings.defaultModel,
+				titleProvider: settings.defaultProvider,
 				vault: vaultId,
 				includedPaths
 			};
@@ -268,12 +257,14 @@
 			}
 			if (!res.ok) throw new Error();
 			const data = (await res.json()) as {
-				chat: { model: string; included_paths_json: string | null };
+				chat: { model: string; provider: string | null; included_paths_json: string | null };
 				messages: ChatMessage[];
 			};
 			messages = data.messages;
 			overrideModel = data.chat.model;
-			// overrideProvider intentionally NOT set here — see its doc comment.
+			// null (pre-migration chats, or none ever chosen) → undefined, same
+			// fallback-to-current-default as before — see its doc comment.
+			overrideProvider = data.chat.provider ?? undefined;
 			hasChatRow = true;
 			isAtBottom = true;
 			scrollToBottom(true);
@@ -296,14 +287,34 @@
 		// now-invisible stream finishes on its own, and its "Durdur" button
 		// would silently stop a chat the user isn't even looking at.
 		abortController?.abort();
-		const pendingQuestion = takePendingMessage(id);
-		if (pendingQuestion) {
-			overrideModel = undefined;
-			overrideProvider = undefined;
+		const pending = takePendingMessage(id);
+		if (pending) {
+			// A choice made on the welcome screen's own model/provider/think
+			// picker (see pending-message.ts) applies to this one new chat —
+			// undefined for any of these just falls through to today's
+			// default (activeModel/activeProvider's own ?? fallback below).
+			overrideModel = pending.modelId;
+			overrideProvider = pending.providerId;
+			if (pending.think !== undefined) thinkMode = pending.think;
 			hasChatRow = false;
 			onChatLoaded?.(undefined);
-			input = pendingQuestion;
-			send();
+			input = pending.question;
+			// untrack is load-bearing, not defensive: send() is async but runs
+			// synchronously up to its first `await`, and that synchronous prefix
+			// reads `isStreaming` (its early-return guard). Svelte 5 tracks any
+			// reactive read that happens synchronously inside an effect's call
+			// graph — including inside a function the effect merely calls — so
+			// without untrack this effect silently subscribes to isStreaming too.
+			// When send()'s `finally` later flips isStreaming back to false at
+			// stream end, that re-triggers this whole effect; takePendingMessage
+			// is already spent by then, so it falls into the `else` branch and
+			// fires an unsolicited loadChat() right as the server may still be
+			// persisting the assistant's row — replacing the live, correctly
+			// streamed messages with an incomplete DB snapshot. That was the
+			// "reply never appears until I reload" bug, and it only ever hit a
+			// brand-new chat's first message because only this path calls send()
+			// from inside an effect at all.
+			untrack(() => send());
 		} else {
 			loadChat(id);
 		}
@@ -366,35 +377,15 @@
 		<p class="error" role="alert">{errorMessage}</p>
 	{/if}
 
-	<div class="compose-controls">
-		<label class="model-pill" for="model-select">
-			<span class="sr-only">{t('Chat.modelSrLabel')}</span>
-			<BotIcon size={13} aria-hidden="true" />
-			<select
-				id="model-select"
-				title={t('Chat.modelSelectTitle')}
-				value={selectionKey(activeProvider, activeModel)}
-				onchange={(e) => onModelChange(e.currentTarget.value)}
-			>
-				{#if !modelOptions.some((m) => m.providerId === activeProvider && m.id === activeModel)}
-					<option value={selectionKey(activeProvider, activeModel)}>{activeModel}</option>
-				{/if}
-				{#each modelOptions as m (m.providerId + '/' + m.id)}
-					<option value={selectionKey(m.providerId, m.id)}>{m.providerLabel} · {m.id}</option>
-				{/each}
-			</select>
-		</label>
-		<label
-			class="think-pill"
-			class:active={thinkMode}
-			for="think-mode"
-			title={t('Chat.thinkModeTitle')}
-		>
-			<input id="think-mode" name="think-mode" type="checkbox" bind:checked={thinkMode} class="sr-only" />
-			<BrainIcon size={13} aria-hidden="true" />
-			{t('Chat.thinkModeLabel')}
-		</label>
-	</div>
+	<ModelPickerRow
+		idPrefix="model"
+		{modelOptions}
+		{activeProvider}
+		{activeModel}
+		bind:thinkMode
+		{onModelChange}
+		class="chat-compose-row"
+	/>
 
 	<footer>
 		<textarea
@@ -435,100 +426,15 @@
 		border-bottom: 1px solid var(--color-border);
 	}
 
-	.sr-only {
-		position: absolute;
-		width: 1px;
-		height: 1px;
-		padding: 0;
-		margin: -1px;
-		overflow: hidden;
-		clip: rect(0, 0, 0, 0);
-		white-space: nowrap;
-		border: 0;
-	}
-
-	.compose-controls {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
+	/* .compose-controls/.model-pill/.think-pill now live in
+	   ModelPickerRow.svelte (used here and by vault/[id]/+page.svelte's
+	   new-chat composer, which used to duplicate this whole block) —
+	   Svelte's style scoping is per-component-template, so reaching the
+	   child's root element for this one extra bit of layout (this page's
+	   own top padding, not something the shared row should own) needs
+	   :global() rather than a plain class rule. */
+	:global(.chat-compose-row) {
 		padding: 0.6rem 1rem 0;
-	}
-
-	.model-pill,
-	.think-pill {
-		display: flex;
-		align-items: center;
-		gap: 0.35rem;
-		background: var(--color-secondary);
-		color: var(--color-secondary-foreground);
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-pill);
-		padding: 0.3rem 0.7rem;
-		font-size: 0.75rem;
-	}
-
-	.model-pill {
-		max-width: 240px;
-	}
-
-	.model-pill select {
-		appearance: none;
-		border: none;
-		background: transparent;
-		color: inherit;
-		font-family: var(--font-sans);
-		font-size: 0.75rem;
-		max-width: 190px;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		cursor: pointer;
-	}
-
-	/* The option list is drawn by the browser, not by this stylesheet: it does
-	   NOT inherit .model-pill's background, but Chromium DOES pull `color`
-	   down into it. With the select transparent and color:inherit, that meant
-	   the pill's light-on-dark text landed on the popup's own light surface —
-	   the "white combobox, nothing readable" report. color-scheme in
-	   tokens.css makes the UA paint that surface with the right theme; these
-	   two declarations stop the text from being inherited onto it regardless
-	   of what the UA chooses. Both are needed — neither alone is enough. */
-	.model-pill option {
-		background-color: var(--color-popover);
-		color: var(--color-popover-foreground);
-	}
-	.model-pill:focus-within {
-		outline: 2px solid var(--accent);
-		outline-offset: 1px;
-	}
-
-	.model-pill :global(svg) {
-		flex-shrink: 0;
-		color: var(--color-muted-foreground);
-	}
-
-	.think-pill {
-		color: var(--color-muted-foreground);
-		cursor: pointer;
-		user-select: none;
-		transition:
-			background-color var(--motion-fast) var(--motion-easing),
-			color var(--motion-fast) var(--motion-easing),
-			border-color var(--motion-fast) var(--motion-easing);
-	}
-
-	.think-pill:hover {
-		color: var(--color-foreground);
-	}
-
-	.think-pill.active {
-		background: var(--accent-soft);
-		color: var(--accent-text);
-		border-color: var(--hairline-accent);
-	}
-
-	.think-pill:has(:focus-visible) {
-		outline: 2px solid var(--accent);
-		outline-offset: 2px;
 	}
 
 	.messages-wrap {
@@ -687,8 +593,14 @@
 		resize: none;
 		min-height: 2.5rem;
 		max-height: 10rem;
-		padding: 0.5rem 0.75rem;
-		border-radius: var(--radius-md);
+		/* Pill radius (İdeas.txt: the composer read as "too rectangular")
+		   on a box this short renders as fully rounded ends at min-height
+		   and gracefully becomes a rounded rectangle as it grows with
+		   multi-line input — no separate handling needed for either
+		   state. Horizontal padding bumped up from the rounded-rect value
+		   so text doesn't crowd the now-much-tighter curve. */
+		padding: 0.6rem 1.1rem;
+		border-radius: var(--radius-pill);
 		border: 1px solid var(--color-border);
 		background: var(--color-background);
 		color: var(--color-foreground);
@@ -705,8 +617,8 @@
 		display: flex;
 		align-items: center;
 		gap: 0.4rem;
-		padding: 0 1.1rem;
-		border-radius: var(--radius-md);
+		padding: 0 1.4rem;
+		border-radius: var(--radius-pill);
 		border: none;
 		background: var(--color-primary);
 		color: var(--color-primary-foreground);

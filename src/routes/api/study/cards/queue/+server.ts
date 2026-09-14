@@ -10,8 +10,11 @@ export const GET: RequestHandler = async ({ url }) => {
 	const v = vaultFromUrl(url);
 	const limitParam = Number(url.searchParams.get('limit'));
 	const limit = Number.isFinite(limitParam) && limitParam > 0 ? limitParam : DEFAULT_LIMIT;
+	// Optional per-deck scoping (Faz — per-deck review) — omitted keeps the
+	// existing cross-deck behavior exactly as before.
+	const deckId = url.searchParams.get('deck') ?? undefined;
 
-	const rows = getDueCards(v, new Date().toISOString(), limit);
+	const rows = getDueCards(v, new Date().toISOString(), limit, deckId);
 	const cards: CardView[] = rows.map((row) => ({
 		id: row.id,
 		front: row.front,

@@ -2,7 +2,8 @@
 	import { onMount } from 'svelte';
 	import { settings, persistSettings } from '$lib/settings.svelte';
 	import { i18n, persistLocale, type Locale } from '$lib/i18n/index.svelte';
-	import type { OllamaModel, ProviderModelOption } from '$lib/types';
+	import type { OllamaModel, ProviderModelOption, VaultRecord } from '$lib/types';
+	import { selectionKey, parseSelectionKey } from '$lib/model-selection';
 	import { isTauri, invoke } from '@tauri-apps/api/core';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
@@ -12,6 +13,7 @@
 	import * as Card from '$lib/components/ui/card';
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
 	import { Separator } from '$lib/components/ui/separator';
+	import { t } from '$lib/i18n/index.svelte';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 	import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';
 	import DownloadIcon from '@lucide/svelte/icons/download';
@@ -33,7 +35,7 @@
 			if (!res.ok) throw new Error();
 			models = (await res.json()) as OllamaModel[];
 		} catch {
-			loadError = 'Model listesi alınamadı — Ollama çalışıyor mu?';
+			loadError = t('SettingsPage.modelListError');
 		}
 	}
 
@@ -55,7 +57,7 @@
 			if (!res.ok) throw new Error();
 			providerModels = (await res.json()) as ProviderModelOption[];
 		} catch {
-			providerModelsError = 'Sağlayıcı modelleri alınamadı.';
+			providerModelsError = t('SettingsPage.providerModelsError');
 		}
 	}
 
@@ -80,20 +82,6 @@
 
 	let groupedModels = $derived(groupByProvider(providerModels));
 
-	// U+241F (Unit Separator) — a plain model id could collide across two
-	// providers (nothing stops two OpenAI-compatible endpoints from both
-	// serving a model literally called "gpt-4o"), so Select.Root's single
-	// string `value` has to carry providerId+modelId together, not just the
-	// id. Never appears in a real provider/model id, so plain split() is safe.
-	function selectionKey(providerId: string, modelId: string): string {
-		return `${providerId}␟${modelId}`;
-	}
-
-	function parseSelectionKey(key: string): { providerId: string; modelId: string } {
-		const [providerId, modelId] = key.split('␟');
-		return { providerId, modelId };
-	}
-
 	function setModelSelection(kind: 'default' | 'fast' | 'reasoning', key: string) {
 		const { providerId, modelId } = parseSelectionKey(key);
 		if (kind === 'default') {
@@ -113,7 +101,7 @@
 		const name = pullName.trim();
 		if (!name || pulling) return;
 		pulling = true;
-		pullStatus = 'Başlatılıyor...';
+		pullStatus = t('SettingsPage.pullStarting');
 		pullError = '';
 		try {
 			const res = await fetch('/api/models', {
@@ -121,7 +109,7 @@
 				headers: { 'content-type': 'application/json' },
 				body: JSON.stringify({ model: name })
 			});
-			if (!res.ok || !res.body) throw new Error(`İstek başarısız (${res.status})`);
+			if (!res.ok || !res.body) throw new Error(t('SettingsPage.requestFailed', { status: res.status }));
 			const reader = res.body.getReader();
 			const decoder = new TextDecoder();
 			let buffer = '';
@@ -135,19 +123,19 @@
 					const line = part.trim();
 					if (!line.startsWith('data:')) continue;
 					const event = JSON.parse(line.slice(5)) as { type: string; status?: string; error?: string };
-					if (event.type === 'progress') pullStatus = event.status ?? 'İndiriliyor...';
+					if (event.type === 'progress') pullStatus = event.status ?? t('SettingsPage.downloading');
 					else if (event.type === 'done') {
-						pullStatus = 'Tamamlandı';
+						pullStatus = t('SettingsPage.pullDone');
 						pullName = '';
 						await refreshModels();
 					} else if (event.type === 'error') {
-						pullError = event.error ?? 'İndirme başarısız';
+						pullError = event.error ?? t('SettingsPage.pullFailed');
 						pullStatus = '';
 					}
 				}
 			}
 		} catch (err) {
-			pullError = err instanceof Error ? err.message : 'İndirme başarısız';
+			pullError = err instanceof Error ? err.message : t('SettingsPage.pullFailed');
 			pullStatus = '';
 		} finally {
 			pulling = false;
@@ -169,7 +157,7 @@
 			if (!res.ok) throw new Error();
 			await refreshModels();
 		} catch {
-			deleteError = `"${m.name}" silinemedi.`;
+			deleteError = t('SettingsPage.deleteModelFailed', { name: m.name });
 		} finally {
 			deleting = false;
 		}
@@ -180,8 +168,34 @@
 	let vaultName = $state('');
 	let vaultSaveStatus = $state<'idle' | 'saved' | 'error'>('idle');
 
+	/**
+	 * The vault actually being browsed right now (data/vaults.json's
+	 * registry, via markVaultUsed() — see vaults.ts — called whenever
+	 * /vault/[id] or one of its chats is opened), as opposed to
+	 * vaultPath/vaultName above, which are the Tauri desktop build's
+	 * separate first-run config.json (what the app launches into NEXT
+	 * time, not what it's showing now — see that card's own "bir sonraki
+	 * uygulama başlatmasında etkili olur" copy). Those two can point at
+	 * completely different vaults once more than one exists — this is
+	 * what fixes settings always appearing to show one fixed vault's
+	 * location regardless of which vault is actually open.
+	 */
+	let activeVault = $state<VaultRecord | null>(null);
+
+	async function refreshActiveVault() {
+		try {
+			const res = await fetch('/api/vaults');
+			if (!res.ok) throw new Error();
+			const data = (await res.json()) as { vaults: VaultRecord[]; activeVaultId: string | null };
+			activeVault = data.vaults.find((v) => v.id === data.activeVaultId) ?? null;
+		} catch {
+			// The "Vault'ları yönet" link still works without this — the card
+			// just shows no active-vault line.
+		}
+	}
+
 	onMount(async () => {
-		await Promise.all([refreshModels(), refreshProviderModels()]);
+		await Promise.all([refreshModels(), refreshProviderModels(), refreshActiveVault()]);
 
 		if (runningInTauri) {
 			try {
@@ -214,17 +228,15 @@
 		}
 	}
 
-	const themeOptions = [
-		{ value: 'system', label: 'Sistem' },
-		{ value: 'light', label: 'Açık' },
-		{ value: 'dark', label: 'Koyu' }
-	] as const;
+	let themeOptions = $derived([
+		{ value: 'system', label: t('SettingsPage.themeSystem') },
+		{ value: 'light', label: t('SettingsPage.themeLight') },
+		{ value: 'dark', label: t('SettingsPage.themeDark') }
+	] as const);
 
-	// Faz 19 — i18n scaffolding. en.json is an intentionally incomplete
-	// skeleton right now (see i18n/index.svelte.ts's doc comment); this
-	// selector is real and switches locale immediately, but most of the UI
-	// hasn't been converted to call t() yet, so picking "English" mostly
-	// shows the same Turkish text falling back — that's expected, not a bug.
+	// Locale names are endonyms (a language's own name for itself) — these
+	// stay as-is regardless of UI locale, same as "Français" doesn't become
+	// "French" in an English menu.
 	const localeOptions: { value: Locale; label: string }[] = [
 		{ value: 'tr', label: 'Türkçe' },
 		{ value: 'en', label: 'English' }
@@ -232,20 +244,20 @@
 </script>
 
 <svelte:head>
-	<title>Ayarlar — Vault Agent Toolkit</title>
+	<title>{t('Common.ayarlar')} — Vault Agent Toolkit</title>
 </svelte:head>
 
 <div class="mx-auto max-w-2xl px-4 pt-6 pb-12">
 	<div class="mb-8 flex items-baseline gap-4">
 		<a href="/" class="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-2">
-			<ArrowLeftIcon size={14} aria-hidden="true" /> Ana sayfa
+			<ArrowLeftIcon size={14} aria-hidden="true" /> {t('SettingsPage.home')}
 		</a>
-		<h1 class="font-display text-xl font-medium">Ayarlar</h1>
+		<h1 class="font-display text-xl font-medium">{t('Common.ayarlar')}</h1>
 	</div>
 
 	<Card.Root class="mb-6">
 		<Card.Header>
-			<Card.Title>Tema</Card.Title>
+			<Card.Title>{t('SettingsPage.themeTitle')}</Card.Title>
 		</Card.Header>
 		<Card.Content class="flex gap-5">
 			{#each themeOptions as opt (opt.value)}
@@ -266,7 +278,7 @@
 
 	<Card.Root class="mb-6">
 		<Card.Header>
-			<Card.Title>Dil</Card.Title>
+			<Card.Title>{t('SettingsPage.languageTitle')}</Card.Title>
 		</Card.Header>
 		<Card.Content class="flex gap-5">
 			{#each localeOptions as opt (opt.value)}
@@ -287,7 +299,7 @@
 
 	<Card.Root class="mb-6">
 		<Card.Header>
-			<Card.Title>Modeller</Card.Title>
+			<Card.Title>{t('SettingsPage.modelsTitle')}</Card.Title>
 		</Card.Header>
 		<Card.Content class="flex flex-col gap-4">
 			{#if loadError}
@@ -298,8 +310,8 @@
 			{/if}
 
 			<div class="flex flex-col gap-1.5">
-				<Label>Varsayılan model</Label>
-				<span class="text-xs text-muted-foreground">Başlık üretimi gibi arka plan işleri için</span>
+				<Label>{t('SettingsPage.defaultModel')}</Label>
+				<span class="text-xs text-muted-foreground">{t('SettingsPage.defaultModelHint')}</span>
 				<Select.Root
 					type="single"
 					value={selectionKey(settings.defaultProvider, settings.defaultModel)}
@@ -320,8 +332,8 @@
 			</div>
 
 			<div class="flex flex-col gap-1.5">
-				<Label>Hızlı model</Label>
-				<span class="text-xs text-muted-foreground">"Derin düşün" kapalıyken kullanılır</span>
+				<Label>{t('SettingsPage.fastModel')}</Label>
+				<span class="text-xs text-muted-foreground">{t('SettingsPage.fastModelHint')}</span>
 				<Select.Root
 					type="single"
 					value={selectionKey(settings.fastProvider, settings.fastModel)}
@@ -342,8 +354,8 @@
 			</div>
 
 			<div class="flex flex-col gap-1.5">
-				<Label>Muhakeme modeli</Label>
-				<span class="text-xs text-muted-foreground">"Derin düşün" açıkken kullanılır</span>
+				<Label>{t('SettingsPage.reasoningModel')}</Label>
+				<span class="text-xs text-muted-foreground">{t('SettingsPage.reasoningModelHint')}</span>
 				<Select.Root
 					type="single"
 					value={selectionKey(settings.reasoningProvider, settings.reasoningModel)}
@@ -366,10 +378,10 @@
 			<Separator class="my-1" />
 
 			<div class="flex flex-col gap-1.5">
-				<Label>Kurulu modeller</Label>
-				<span class="text-xs text-muted-foreground">Ollama'da yüklü modeller. Yeni model indirmek için aşağıdaki alanı kullan.</span>
+				<Label>{t('SettingsPage.installedModels')}</Label>
+				<span class="text-xs text-muted-foreground">{t('SettingsPage.installedModelsHint')}</span>
 				{#if models.length === 0}
-					<p class="text-sm text-muted-foreground">Kurulu model yok.</p>
+					<p class="text-sm text-muted-foreground">{t('SettingsPage.noInstalledModels')}</p>
 				{:else}
 					<ul class="flex flex-col gap-1">
 						{#each models as m (m.name)}
@@ -381,8 +393,8 @@
 									variant="ghost"
 									size="sm"
 									class="h-7 px-2 text-destructive hover:text-destructive"
-									title="Modeli sil"
-									aria-label={`${m.name} modelini sil`}
+									title={t('SettingsPage.deleteModel')}
+									aria-label={t('SettingsPage.deleteModelAria', { name: m.name })}
 									onclick={() => (deleteTarget = m)}
 								>
 									<TrashIcon size={14} aria-hidden="true" />
@@ -394,19 +406,19 @@
 			</div>
 
 			<div class="flex flex-col gap-1.5">
-				<Label>Model indir</Label>
-				<span class="text-xs text-muted-foreground">Ollama kütüphanesinden bir model çek (örn. <code class="rounded bg-muted px-1 text-xs">qwen3:8b</code>, <code class="rounded bg-muted px-1 text-xs">llama3.2</code>).</span>
+				<Label>{t('SettingsPage.pullModelLabel')}</Label>
+				<span class="text-xs text-muted-foreground">{t('SettingsPage.pullModelHint')}</span>
 				<div class="flex gap-2">
 					<Input
 						type="text"
 						bind:value={pullName}
-						placeholder="model adı (örn. qwen3:8b)"
+						placeholder={t('SettingsPage.modelNamePlaceholder')}
 						class="max-w-xs"
 						disabled={pulling}
 						onkeydown={(e) => e.key === 'Enter' && pullModel()}
 					/>
 					<Button type="button" onclick={pullModel} disabled={!pullName.trim() || pulling}>
-						<DownloadIcon size={14} aria-hidden="true" /> {pulling ? 'İndiriliyor...' : 'İndir'}
+						<DownloadIcon size={14} aria-hidden="true" /> {pulling ? t('SettingsPage.downloading') : t('SettingsPage.downloadModel')}
 					</Button>
 				</div>
 				{#if pullStatus}
@@ -424,17 +436,15 @@
 
 	<Card.Root class="mb-6">
 		<Card.Header>
-			<Card.Title>Üretim</Card.Title>
+			<Card.Title>{t('SettingsPage.generationTitle')}</Card.Title>
 		</Card.Header>
 		<Card.Content>
 			<label class="flex cursor-pointer items-start gap-2.5 text-sm">
 				<Switch bind:checked={settings.allowConcurrentGeneration} onCheckedChange={persistSettings} />
 				<span class="flex flex-col gap-0.5">
-					Aynı anda birden fazla üretime izin ver
+					{t('SettingsPage.allowConcurrentGeneration')}
 					<span class="text-xs text-muted-foreground">
-						Varsayılan olarak kapalı — test/kart/rapor/harita/slayt üretimi aynı türden yeni bir
-						üretim başlatılmadan önce mevcut üretimin bitmesini bekler (zayıf donanımda hepsi
-						birbirini yavaşlatmasın diye). Donanımınız yeterliyse açabilirsiniz.
+						{t('SettingsPage.allowConcurrentGenerationHint')}
 					</span>
 				</span>
 			</label>
@@ -444,32 +454,29 @@
 	{#if runningInTauri}
 		<Card.Root class="mb-6">
 			<Card.Header>
-				<Card.Title>Masaüstü — Kasa Konumu</Card.Title>
+				<Card.Title>{t('SettingsPage.desktopVaultTitle')}</Card.Title>
 				<Card.Description>
-					Değişiklik bir sonraki uygulama başlatmasında etkili olur (sunucu şu an çalışırken kasa
-					yolu değiştirilemez).
+					{t('SettingsPage.desktopVaultDescription')}
 				</Card.Description>
 			</Card.Header>
 			<Card.Content class="flex flex-col gap-4">
 				<div class="flex flex-col gap-1.5">
-					<Label>Kasa klasörü</Label>
+					<Label>{t('SettingsPage.vaultFolder')}</Label>
 					<div class="flex gap-2">
-						<Input type="text" readonly value={vaultPath} placeholder="Henüz seçilmedi" class="flex-1" />
-						<Button type="button" variant="outline" onclick={pickVaultFolder}>Seç…</Button>
+						<Input type="text" readonly value={vaultPath} placeholder={t('SettingsPage.vaultFolderPlaceholder')} class="flex-1" />
+						<Button type="button" variant="outline" onclick={pickVaultFolder}>{t('SettingsPage.choose')}</Button>
 					</div>
 				</div>
 				<div class="flex flex-col gap-1.5">
-					<Label>Kasa adı</Label>
+					<Label>{t('SettingsPage.obsidianVaultName')}</Label>
 					<Input type="text" bind:value={vaultName} class="max-w-xs" />
 				</div>
 				<div>
-					<Button type="button" onclick={saveVaultConfig}>Kaydet</Button>
+					<Button type="button" onclick={saveVaultConfig}>{t('Common.kaydet')}</Button>
 					{#if vaultSaveStatus === 'saved'}
-						<span class="ml-2 text-sm text-[var(--success)]"
-							>Kaydedildi — bir sonraki başlatmada uygulanır.</span
-						>
+						<span class="ml-2 text-sm text-[var(--success)]">{t('SettingsPage.vaultSaved')}</span>
 					{:else if vaultSaveStatus === 'error'}
-						<span class="ml-2 text-sm text-destructive" role="alert">Kaydedilemedi.</span>
+						<span class="ml-2 text-sm text-destructive" role="alert">{t('SettingsPage.vaultSaveFailed')}</span>
 					{/if}
 				</div>
 			</Card.Content>
@@ -478,48 +485,55 @@
 
 	<Card.Root class="mb-6">
 		<Card.Header>
-			<Card.Title>Vault'lar</Card.Title>
-			<Card.Description>Birden fazla kütüphane arasında geçiş yap, yeni vault oluştur veya sil.</Card.Description>
+			<Card.Title>{t('VaultsSettingsPage.title')}</Card.Title>
+			<Card.Description>{t('SettingsPage.vaultsCardDescription')}</Card.Description>
 		</Card.Header>
-		<Card.Content>
+		<Card.Content class="flex flex-col gap-3">
+			{#if activeVault}
+				<div class="flex flex-col gap-1 text-sm">
+					<span class="text-muted-foreground">{t('SettingsPage.activeVaultLabel')}</span>
+					<span class="font-semibold">{activeVault.name}</span>
+					<span class="font-mono text-xs break-all text-muted-foreground">{activeVault.path}</span>
+				</div>
+			{/if}
 			<a href="/settings/vaults" class="flex items-center gap-1 text-sm font-semibold text-primary hover:underline">
-				Vault'ları yönet <ArrowRightIcon size={14} aria-hidden="true" />
+				{t('SettingsPage.manageVaults')} <ArrowRightIcon size={14} aria-hidden="true" />
 			</a>
 		</Card.Content>
 	</Card.Root>
 
 	<Card.Root class="mb-6">
 		<Card.Header>
-			<Card.Title>Kütüphane</Card.Title>
-			<Card.Description>Obsidian vault'undan içe aktar, belge yükleme ayarları.</Card.Description>
+			<Card.Title>{t('LibrarySettingsPage.title')}</Card.Title>
+			<Card.Description>{t('SettingsPage.libraryCardDescription')}</Card.Description>
 		</Card.Header>
 		<Card.Content>
 			<a href="/settings/library" class="flex items-center gap-1 text-sm font-semibold text-primary hover:underline">
-				Kütüphaneyi yönet <ArrowRightIcon size={14} aria-hidden="true" />
+				{t('SettingsPage.manageLibrary')} <ArrowRightIcon size={14} aria-hidden="true" />
 			</a>
 		</Card.Content>
 	</Card.Root>
 
 	<Card.Root class="mb-6">
 		<Card.Header>
-			<Card.Title>Kullanıcı Skill'leri</Card.Title>
-			<Card.Description>Sohbet, test ve bilgi kartı üretimini kişiselleştir.</Card.Description>
+			<Card.Title>{t('SkillsSettingsPage.title')}</Card.Title>
+			<Card.Description>{t('SettingsPage.skillsCardDescription')}</Card.Description>
 		</Card.Header>
 		<Card.Content>
 			<a href="/settings/skills" class="flex items-center gap-1 text-sm font-semibold text-primary hover:underline">
-				Skill'leri yönet <ArrowRightIcon size={14} aria-hidden="true" />
+				{t('SettingsPage.manageSkills')} <ArrowRightIcon size={14} aria-hidden="true" />
 			</a>
 		</Card.Content>
 	</Card.Root>
 
 	<Card.Root>
 		<Card.Header>
-			<Card.Title>Model Sağlayıcıları</Card.Title>
-			<Card.Description>Ollama ve bulut sağlayıcıları (DeepSeek, ...), API anahtarları, görev zincirleri.</Card.Description>
+			<Card.Title>{t('ProvidersSettingsPage.title')}</Card.Title>
+			<Card.Description>{t('SettingsPage.providersCardDescription')}</Card.Description>
 		</Card.Header>
 		<Card.Content>
 			<a href="/settings/providers" class="flex items-center gap-1 text-sm font-semibold text-primary hover:underline">
-				Sağlayıcıları yönet <ArrowRightIcon size={14} aria-hidden="true" />
+				{t('SettingsPage.manageProviders')} <ArrowRightIcon size={14} aria-hidden="true" />
 			</a>
 		</Card.Content>
 	</Card.Root>
@@ -529,13 +543,13 @@
 	<AlertDialog.Content>
 		{#if deleteTarget}
 			<AlertDialog.Header>
-				<AlertDialog.Title>"{deleteTarget.name}" silinsin mi?</AlertDialog.Title>
+				<AlertDialog.Title>{t('SettingsPage.deleteModelConfirmTitle', { name: deleteTarget.name })}</AlertDialog.Title>
 				<AlertDialog.Description>
-					Bu model Ollama'dan kalıcı olarak kaldırılacak. İndirme dosyaları diskten silinir.
+					{t('SettingsPage.deleteModelConfirmDescription')}
 				</AlertDialog.Description>
 			</AlertDialog.Header>
 			<AlertDialog.Footer>
-				<AlertDialog.Cancel>Vazgeç</AlertDialog.Cancel>
+				<AlertDialog.Cancel>{t('Common.vazgec')}</AlertDialog.Cancel>
 				<AlertDialog.Action
 					variant="destructive"
 					onclick={(e) => {
@@ -543,7 +557,7 @@
 						confirmDelete();
 					}}
 				>
-					Sil
+					{t('Common.sil')}
 				</AlertDialog.Action>
 			</AlertDialog.Footer>
 		{/if}
