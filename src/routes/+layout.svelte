@@ -11,6 +11,7 @@
 	import { slidesGeneration, dismissSlidesGeneration } from '$lib/slides-generation.svelte';
 	import GenerationStatusToast from '$lib/components/GenerationStatusToast.svelte';
 	import OllamaStatusBanner from '$lib/components/OllamaStatusBanner.svelte';
+	import PythonStatusBanner from '$lib/components/PythonStatusBanner.svelte';
 	import { requestScopeExpand } from '$lib/scope-expand.svelte';
 	import { handleExternalLinkClick } from '$lib/openExternalLink';
 	import { t } from '$lib/i18n/index.svelte';
@@ -91,6 +92,7 @@
      space instead of overlapping it). -->
 <div class="app-shell">
 	<OllamaStatusBanner />
+	<PythonStatusBanner />
 	<div class="app-content">
 		{@render children()}
 	</div>

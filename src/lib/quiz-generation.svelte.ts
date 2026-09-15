@@ -34,6 +34,15 @@ export const quizGeneration = $state<{ items: QuizGenerationStatus[] }>({
 
 export async function startQuizGeneration(body: QuizGenerationRequest): Promise<void> {
 	const id = crypto.randomUUID();
+
+	// A stale error/done entry for this same vault must not stick around
+	// once a new generation starts — retrying after a failure used to leave
+	// the old error toast and the new "generating" toast stacked on top of
+	// each other. An active 'generating' entry is left alone.
+	quizGeneration.items = quizGeneration.items.filter(
+		(s) => s.phase === 'generating' || s.vaultId !== body.vault
+	);
+
 	function setStatus(status: DistributiveOmit<QuizGenerationStatus, 'id' | 'vaultId'>) {
 		const next = { id, vaultId: body.vault, ...status } as QuizGenerationStatus;
 		const idx = quizGeneration.items.findIndex((s) => s.id === id);

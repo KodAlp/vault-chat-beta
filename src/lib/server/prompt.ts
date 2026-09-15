@@ -43,7 +43,8 @@ export const CORE_INVARIANTS = `Kurallar:
 export async function buildPromptMessages(
 	history: ChatMessage[],
 	chunks: RetrievedChunk[],
-	allowedLanguages: string[]
+	allowedLanguages: string[],
+	opts?: { toolsEnabled?: boolean }
 ): Promise<ProviderChatMessage[]> {
 	const lastUser = history[history.length - 1];
 	const priorTurns: ProviderChatMessage[] = history
@@ -60,7 +61,7 @@ export async function buildPromptMessages(
 					.join('\n\n---\n\n')}\n</context>\n\n`
 			: '';
 
-	const skillsBlock = await renderUserSkillsBlock('chat');
+	const skillsBlock = await renderUserSkillsBlock('chat', { includeFileNotes: opts?.toolsEnabled });
 	const systemPrompt = [coreIntro(allowedLanguages), skillsBlock, CORE_INVARIANTS].filter(Boolean).join('\n\n');
 
 	return [

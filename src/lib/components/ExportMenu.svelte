@@ -5,6 +5,7 @@
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import DownloadIcon from '@lucide/svelte/icons/download';
 	import CheckIcon from '@lucide/svelte/icons/check';
+	import XIcon from '@lucide/svelte/icons/x';
 	import { isTauri, invoke } from '@tauri-apps/api/core';
 	import { t } from '$lib/i18n/index.svelte';
 
@@ -109,7 +110,16 @@
 			browserDownload(text, filename);
 			showSuccess(t('ExportMenu.downloaded', { filename }));
 		} catch (err) {
-			const reason = err instanceof Error ? err.message : t('ExportMenu.downloadFailed');
+			// write_text_file (src-tauri/src/lib.rs) rejects with a plain
+			// String, not a JS Error, so the real OS-level reason must be
+			// read as a string too — otherwise it's silently discarded and
+			// every desktop failure shows the same generic message.
+			const reason =
+				err instanceof Error
+					? err.message
+					: typeof err === 'string'
+						? err
+						: t('ExportMenu.downloadFailed');
 			// A failure inside the desktop save path is about writing the file,
 			// not about downloading it, so it says so.
 			errorMessage = isTauri() ? t('ExportMenu.saveFailed', { reason }) : reason;
@@ -130,12 +140,32 @@
 		<DropdownMenu.Item onSelect={() => download('json')}>{t('ExportMenu.json')}</DropdownMenu.Item>
 	</DropdownMenu.Content>
 </DropdownMenu.Root>
-<!-- errorMessage stays inline (visible until the user acts again — see the
-     comment on SUCCESS_TOAST_MS for why success and error are handled
-     differently). -->
-<div aria-live="polite">
+<!-- Floating, staying-until-dismissed error toast (see the comment on
+     SUCCESS_TOAST_MS for why success and error are handled differently —
+     errorMessage is never auto-cleared, only by the next download() call or
+     the button below). This used to render in-flow inside .panel-right, a
+     56px-wide icon rail, where any real message wrapped character-by-
+     character down the screen edge; it now shares successMessage's fixed
+     bottom-left placement instead. -->
+<div aria-live="polite" aria-atomic="true">
 	{#if errorMessage}
-		<p class="text-xs break-all text-destructive">{errorMessage}</p>
+		<div
+			class="fixed bottom-5 left-5 z-[200] flex max-w-[min(360px,80vw)] items-center gap-2.5 rounded-full border border-destructive bg-background px-4 py-2.5 text-sm text-destructive break-all"
+			style="box-shadow: 0 2px 8px var(--accent-glow)"
+			role="alert"
+			transition:fly={{ y: 12, duration: 200, easing: cubicOut }}
+		>
+			{errorMessage}
+			<button
+				type="button"
+				class="flex shrink-0 border-none bg-transparent p-0 text-inherit"
+				onclick={() => (errorMessage = '')}
+				title={t('Common.kapat')}
+				aria-label={t('Common.kapat')}
+			>
+				<XIcon size={14} aria-hidden="true" />
+			</button>
+		</div>
 	{/if}
 </div>
 

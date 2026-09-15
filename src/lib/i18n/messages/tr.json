@@ -180,6 +180,13 @@
 		"orRunPull": "veya terminalde çalıştırın:"
 	},
 
+	"PythonStatusBanner": {
+		"missingMarkitdown": "PDF/doküman içe aktarma için gereken bir Python paketi henüz kurulu değil.",
+		"noPython": "PDF/doküman içe aktarma için Python gerekiyor, ama kurulu değil. Şuradan indir:",
+		"installNow": "Şimdi kur",
+		"installing": "Kuruluyor..."
+	},
+
 	"ImportObsidianDialog": {
 		"trigger": "İçe Aktar",
 		"dialogTitle": "Obsidian Vault'unu İçe Aktar",
@@ -469,6 +476,10 @@
 		"nameLabel": "İsim (kebab-case)",
 		"namePlaceholder": "örn. math-notation",
 		"contentLabel": "İçerik (frontmatter + markdown)",
+		"uploadFile": "Dosyadan yükle (.md)",
+		"uploadFileFailed": "Dosya okunamadı.",
+		"uploadZip": "Zip yükle (klasör skill)",
+		"folderBadge": "{count} ek dosya",
 		"nameRequired": "İsim gerekli.",
 		"previewDialogTitle": "Önizleme — {scope}",
 		"updateFailed": "\"{name}\" güncellenemedi.",

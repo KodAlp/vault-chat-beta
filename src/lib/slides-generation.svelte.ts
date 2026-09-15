@@ -14,6 +14,14 @@ export const slidesGeneration = $state<{ items: SlidesGenerationStatus[] }>({
 
 export async function startSlidesGeneration(body: SlidesGenerationRequest): Promise<void> {
 	const id = crypto.randomUUID();
+
+	// See quiz-generation.svelte.ts's identical comment — drops a stale
+	// error/done entry for this vault so a retry doesn't stack a new
+	// "generating" toast on top of the old error toast.
+	slidesGeneration.items = slidesGeneration.items.filter(
+		(s) => s.phase === 'generating' || s.vaultId !== body.vault
+	);
+
 	function setStatus(status: DistributiveOmit<SlidesGenerationStatus, 'id' | 'vaultId'>) {
 		const next = { id, vaultId: body.vault, ...status } as SlidesGenerationStatus;
 		const idx = slidesGeneration.items.findIndex((s) => s.id === id);

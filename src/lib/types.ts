@@ -51,6 +51,13 @@ export interface ChatMessage {
 	 * signal, not "checked and clean" vs "never checked" — think-mode-off
 	 * messages simply never run detection. */
 	hedges?: string[];
+	/** Client-only, never persisted — same footing as `notices` above: a
+	 * folder-skill's supporting file the model fetched mid-turn via the
+	 * read_skill_file tool. A page reload loses this "📄 read" chip, but the
+	 * answer text (already built from the fetched content) survives, since
+	 * the tool round-trip only ever lives in that one request's local prompt
+	 * — see /api/chat/+server.ts's tool hop-loop. */
+	toolCalls?: { skill: string; path: string; status: 'reading' | 'done' | 'error'; error?: string }[];
 }
 
 export interface ChatRequestBody {
@@ -113,6 +120,10 @@ export type StreamEvent =
 	 * Rendered via FallbackNotice.svelte (Faz 9 Adım 6); today's
 	 * single-provider chains never actually trigger it in practice. */
 	| { type: 'notice'; message: string }
+	/** A folder-skill's supporting file is about to be read via the
+	 * read_skill_file tool — see /api/chat/+server.ts's tool hop-loop. */
+	| { type: 'toolCall'; skill: string; path: string }
+	| { type: 'toolResult'; skill: string; path: string; ok: boolean; error?: string }
 	| { type: 'done'; sources: RetrievedChunk[]; narrowScope?: boolean; hedges?: string[] }
 	| { type: 'error'; message: string }
 	/** A U+FFFD (corrupted-output) retry is starting — the client must
@@ -339,7 +350,8 @@ export type UserSkillScope = 'chat' | 'quiz' | 'flashcards' | 'mindmap' | 'repor
 
 export interface UserSkillStatus {
 	name: string;
-	/** Path relative to data/skills/, e.g. "_examples/notation-preference.md". */
+	/** Path relative to data/skills/, e.g. "_examples/notation-preference.md"
+	 * — for a folder-skill, this points at its SKILL.md. */
 	relPath: string;
 	description: string | null;
 	scope: 'all' | UserSkillScope[];
@@ -348,6 +360,13 @@ export interface UserSkillStatus {
 	charCount: number;
 	truncated: boolean;
 	parseError: string | null;
+	/** True when this skill came from a data/skills/<name>/SKILL.md folder
+	 * (zip-uploaded) rather than a flat data/skills/<name>.md file. */
+	isFolder?: boolean;
+	/** Supporting files inside the folder (relative to it, SKILL.md excluded)
+	 * — only set when isFolder is true. What the read_skill_file tool can
+	 * fetch mid-chat when the active model supports tool-calling. */
+	files?: string[];
 }
 
 /** Client-safe mirror of vaults.ts's VaultRecord — that module is server-only
@@ -415,6 +434,12 @@ export type ObsidianImportEvent =
 	| { type: 'progress'; stage: string; fileName?: string }
 	| { type: 'item'; item: ImportResultItem }
 	| { type: 'done'; summary: ImportSummary }
+	| { type: 'error'; message: string };
+
+/** SSE event shapes streamed by POST /api/system/python (pip install run). */
+export type PythonSetupEvent =
+	| { type: 'log'; line: string }
+	| { type: 'done'; ok: boolean }
 	| { type: 'error'; message: string };
 
 /** GET /api/providers response shape — settings/providers page's model. */

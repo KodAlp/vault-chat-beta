@@ -17,6 +17,14 @@ export const reportGeneration = $state<{ items: ReportGenerationStatus[] }>({
 
 export async function startReportGeneration(body: ReportGenerationRequest): Promise<void> {
 	const id = crypto.randomUUID();
+
+	// See quiz-generation.svelte.ts's identical comment — drops a stale
+	// error/done entry for this vault so a retry doesn't stack a new
+	// "generating" toast on top of the old error toast.
+	reportGeneration.items = reportGeneration.items.filter(
+		(s) => s.phase === 'generating' || s.vaultId !== body.vault
+	);
+
 	function setStatus(status: DistributiveOmit<ReportGenerationStatus, 'id' | 'vaultId'>) {
 		const next = { id, vaultId: body.vault, ...status } as ReportGenerationStatus;
 		const idx = reportGeneration.items.findIndex((s) => s.id === id);

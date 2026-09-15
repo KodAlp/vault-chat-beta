@@ -34,6 +34,8 @@ ${t('SkillsSettingsPage.templateBody')}
 
 	let skills = $state<UserSkillStatus[]>([]);
 	let loadError = $state('');
+	let zipUploading = $state(false);
+	let zipUploadError = $state('');
 
 	let editorOpen = $state(false);
 	let editorName = $state('');
@@ -121,6 +123,54 @@ ${t('SkillsSettingsPage.templateBody')}
 		editorOpen = true;
 	}
 
+	// Lets a skill be authored elsewhere and dropped in as a .md file instead
+	// of pasted by hand — reads straight into editorRaw, same as typing.
+	function handleFileUpload(e: Event) {
+		const input = e.currentTarget as HTMLInputElement;
+		const file = input.files?.[0];
+		if (!file) return;
+		const reader = new FileReader();
+		reader.onload = () => {
+			editorRaw = String(reader.result ?? '');
+			if (editorIsNew && !editorName.trim()) {
+				editorName = file.name.replace(/\.(md|markdown)$/i, '');
+			}
+		};
+		reader.onerror = () => {
+			editorError = t('SkillsSettingsPage.uploadFileFailed');
+		};
+		reader.readAsText(file);
+		input.value = '';
+	}
+
+	// Folder-structured skill upload (SKILL.md + references/scripts/...) —
+	// a separate endpoint from the plain-.md handleFileUpload above, since a
+	// zip produces a whole skill (parsed/validated/extracted server-side),
+	// not just text dropped into the open editor.
+	async function handleZipUpload(e: Event) {
+		const input = e.currentTarget as HTMLInputElement;
+		const file = input.files?.[0];
+		if (!file) return;
+		zipUploading = true;
+		zipUploadError = '';
+		try {
+			const formData = new FormData();
+			formData.append('file', file);
+			const res = await fetch('/api/skills/upload-zip', { method: 'POST', body: formData });
+			if (!res.ok) {
+				const body = (await res.json().catch(() => null)) as { message?: string } | null;
+				zipUploadError = body?.message ?? t('Common.kaydedilemedi');
+				return;
+			}
+			await refresh();
+		} catch {
+			zipUploadError = t('Common.kaydedilemedi');
+		} finally {
+			zipUploading = false;
+			input.value = '';
+		}
+	}
+
 	async function saveEditor() {
 		const name = editorName.trim();
 		if (!name) {
@@ -195,9 +245,24 @@ ${t('SkillsSettingsPage.templateBody')}
 	{#if loadError}
 		<p class="mb-4 text-sm text-destructive">{loadError}</p>
 	{/if}
+	{#if zipUploadError}
+		<p class="mb-4 text-sm text-destructive">{zipUploadError}</p>
+	{/if}
 
 	<div class="mb-5 flex flex-wrap items-center justify-between gap-3">
-		<Button onclick={openNewEditor}>{t('SkillsSettingsPage.newSkill')}</Button>
+		<div class="flex flex-wrap items-center gap-1.5">
+			<Button onclick={openNewEditor}>{t('SkillsSettingsPage.newSkill')}</Button>
+			<Button variant="outline" disabled={zipUploading} class="relative overflow-hidden">
+				{zipUploading ? t('Common.yukleniyor') : t('SkillsSettingsPage.uploadZip')}
+				<input
+					type="file"
+					accept=".zip,application/zip"
+					disabled={zipUploading}
+					onchange={handleZipUpload}
+					class="absolute inset-0 cursor-pointer opacity-0 disabled:cursor-not-allowed"
+				/>
+			</Button>
+		</div>
 		<div class="flex gap-1.5">
 			<Select.Root type="single" bind:value={previewScope}>
 				<Select.Trigger class="w-44">{SCOPE_LABELS[previewScope]}</Select.Trigger>
@@ -218,6 +283,11 @@ ${t('SkillsSettingsPage.templateBody')}
 					<div class="min-w-[220px] flex-1">
 						<div class="flex flex-wrap items-center gap-1.5">
 							<strong class="text-sm">{skill.name}</strong>
+							{#if skill.isFolder}
+								<Badge variant="outline" title={skill.files?.join(', ')}>
+									📁 {t('SkillsSettingsPage.folderBadge', { count: skill.files?.length ?? 0 })}
+								</Badge>
+							{/if}
 							{#each scopeChips(skill.scope) as chip (chip)}
 								<Badge variant="outline">{chip}</Badge>
 							{/each}
@@ -273,7 +343,7 @@ ${t('SkillsSettingsPage.templateBody')}
 </div>
 
 <Dialog.Root bind:open={editorOpen}>
-	<Dialog.Content class="sm:max-w-lg">
+	<Dialog.Content class="sm:max-w-lg max-h-[85vh] overflow-y-auto">
 		<Dialog.Header>
 			<Dialog.Title>{editorIsNew ? t('SkillsSettingsPage.newSkillDialogTitle') : editorName}</Dialog.Title>
 		</Dialog.Header>
@@ -285,10 +355,21 @@ ${t('SkillsSettingsPage.templateBody')}
 			</label>
 		{/if}
 
-		<label class="flex flex-col gap-1 text-sm">
-			{t('SkillsSettingsPage.contentLabel')}
-			<Textarea bind:value={editorRaw} spellcheck="false" class="min-h-64 font-mono text-[0.82rem]" />
-		</label>
+		<div class="flex flex-col gap-1 text-sm">
+			<div class="flex items-center justify-between gap-2">
+				<label for="skill-editor-content">{t('SkillsSettingsPage.contentLabel')}</label>
+				<label class="cursor-pointer text-xs text-muted-foreground underline underline-offset-2">
+					{t('SkillsSettingsPage.uploadFile')}
+					<input type="file" accept=".md,.markdown,text/markdown" class="sr-only" onchange={handleFileUpload} />
+				</label>
+			</div>
+			<Textarea
+				id="skill-editor-content"
+				bind:value={editorRaw}
+				spellcheck="false"
+				class="min-h-64 max-h-[55vh] overflow-y-auto font-mono text-[0.82rem]"
+			/>
+		</div>
 
 		{#if editorError}
 			<p class="text-sm text-destructive">{editorError}</p>

@@ -191,6 +191,11 @@
 						flushedThinking = '';
 						assistantMessage.content = '';
 						assistantMessage.thinking = '';
+						// Unlike notices, these describe files fetched FOR the discarded
+						// attempt's context — keeping them would misrepresent what
+						// actually informed the final answer once regeneration redoes
+						// (or skips) those reads.
+						assistantMessage.toolCalls = [];
 					}
 					else if (event.type === 'done') {
 						assistantMessage.sources = event.sources;
@@ -200,6 +205,22 @@
 					else if (event.type === 'error') errorMessage = event.message;
 					else if (event.type === 'notice') {
 						(assistantMessage.notices ??= []).push(event.message);
+					}
+					else if (event.type === 'toolCall') {
+						(assistantMessage.toolCalls ??= []).push({
+							skill: event.skill,
+							path: event.path,
+							status: 'reading'
+						});
+					}
+					else if (event.type === 'toolResult') {
+						const tc = assistantMessage.toolCalls?.findLast(
+							(c) => c.skill === event.skill && c.path === event.path && c.status === 'reading'
+						);
+						if (tc) {
+							tc.status = event.ok ? 'done' : 'error';
+							tc.error = event.error;
+						}
 					}
 					// Server creates the chat row before emitting this — its arrival
 					// is proof a later model-override PATCH now has a row to hit.

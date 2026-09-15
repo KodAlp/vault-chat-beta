@@ -1,5 +1,5 @@
 import { OpenAICompatAdapter, type Timeouts, classifyHttpStatus } from './openai-compat';
-import { ProviderError, type ChatRequest, type Chunk, type ModelInfo } from './types';
+import { ProviderError, type ChatRequest, type ChatMessage, type Chunk, type ModelInfo, type ToolDefinition } from './types';
 import { ollamaGate } from './ollama-gate';
 
 /** /api/chat's NDJSON stream is newline-delimited, same as the base class's
@@ -49,6 +49,37 @@ function serveCtxFor(name: string): number {
 	return info?.serveCtx ?? info?.ctx ?? DEFAULT_SERVE_CTX;
 }
 
+/** Ollama's native /api/chat wire format, confirmed against the upstream
+ * docs — deliberately NOT the same shape as our internal ChatMessage:
+ * assistant tool_calls carry no `id` (Ollama has none — call identity is
+ * purely positional/by-name), and a tool-result message is matched back by
+ * `tool_name`, not an OpenAI-style `tool_call_id`. Our internal ChatMessage
+ * type is OpenAI-shaped (id + tool_call_id) because openai-compat.ts's wire
+ * format needs that; this function is the one place that downgrades it to
+ * what Ollama actually understands. */
+function toOllamaWireMessages(messages: ChatMessage[]): unknown[] {
+	return messages.map((m) => {
+		if (m.role === 'assistant' && m.tool_calls?.length) {
+			return {
+				role: 'assistant',
+				content: m.content,
+				tool_calls: m.tool_calls.map((tc) => ({ function: { name: tc.name, arguments: tc.arguments } }))
+			};
+		}
+		if (m.role === 'tool') {
+			return { role: 'tool', content: m.content, tool_name: m.name };
+		}
+		return { role: m.role, content: m.content };
+	});
+}
+
+function toOllamaWireTools(tools: ToolDefinition[]): unknown[] {
+	return tools.map((t) => ({
+		type: 'function',
+		function: { name: t.name, description: t.description, parameters: t.parameters }
+	}));
+}
+
 /**
  * Extends the generic OpenAI-compat adapter (chat() routes through Ollama's
  * /v1 surface, sharing all the timeout/error/reasoning-normalization
@@ -74,6 +105,13 @@ export class OllamaAdapter extends OpenAICompatAdapter {
 			timeouts
 		});
 		this.nativeBaseUrl = nativeBaseUrl.replace(/\/$/, '');
+	}
+
+	/** Synchronous, no network call — modelInfoFor() is a pure lookup against
+	 * MODEL_FAMILY_TABLE. Lets the chat route decide whether to attach tools
+	 * to a request without an extra /api/tags round trip per message. */
+	capsFor(model: string): { tools: boolean; reasoning: boolean } {
+		return modelInfoFor(model).caps;
 	}
 
 	/** The gate's lease spans the whole stream, not just the swap moment
@@ -124,12 +162,13 @@ export class OllamaAdapter extends OpenAICompatAdapter {
 				headers: { 'content-type': 'application/json' },
 				body: JSON.stringify({
 					model: req.model,
-					messages: req.messages,
+					messages: toOllamaWireMessages(req.messages),
 					stream: true,
 					// Native shape: a raw JSON Schema object, not /v1's wrapped
 					// {type, json_schema:{name, schema}}.
 					...(req.format ? { format: req.format } : {}),
 					...(req.think !== undefined ? { think: req.think } : {}),
+					...(req.tools?.length ? { tools: toOllamaWireTools(req.tools) } : {}),
 					options: {
 						num_ctx: serveCtxFor(req.model),
 						...(req.temperature !== undefined ? { temperature: req.temperature } : {}),
@@ -180,7 +219,14 @@ export class OllamaAdapter extends OpenAICompatAdapter {
 					const trimmed = line.trim();
 					if (!trimmed) continue;
 
-					let json: { message?: { content?: string; thinking?: string }; done?: boolean };
+					let json: {
+						message?: {
+							content?: string;
+							thinking?: string;
+							tool_calls?: { function: { name: string; arguments: Record<string, unknown> } }[];
+						};
+						done?: boolean;
+					};
 					try {
 						json = JSON.parse(trimmed);
 					} catch {
@@ -190,6 +236,17 @@ export class OllamaAdapter extends OpenAICompatAdapter {
 					if (!message) continue;
 					if (message.thinking) yield { type: 'reasoning', text: message.thinking };
 					if (message.content) yield { type: 'text', text: message.content };
+					// Ollama sends the whole tool_calls array in one line, not
+					// fragmented across chunks like OpenAI's delta.tool_calls —
+					// no accumulation needed, just synthesize a call id (Ollama's
+					// own wire format has none; toOllamaWireMessages drops it
+					// again when this round-trips back as a tool-result message).
+					if (message.tool_calls) {
+						for (let i = 0; i < message.tool_calls.length; i++) {
+							const tc = message.tool_calls[i];
+							yield { type: 'tool_call', id: `call_${i}`, name: tc.function.name, arguments: tc.function.arguments ?? {} };
+						}
+					}
 				}
 			}
 			yield { type: 'done' };

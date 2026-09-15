@@ -173,7 +173,8 @@ kendi "Ollama çalışmıyor" banner'ı (masaüstü paketi) eksik olanı söyler
 | Ollama + `qwen3:8b` + `bge-m3` | Evet | Elle — https://ollama.com |
 | WebView2 Runtime | Evet (yalnızca masaüstü paketi) | Otomatik — NSIS installer yoksa internetten indirip kurar |
 | Visual C++ Redistributable | Teknik olarak evet | Genelde Windows 10/11'de zaten var; eksikse elle |
-| Python 3 + `pip install -r ingest/requirements.txt` | Hayır — yalnızca PDF/doküman/YouTube içe aktarma için | Elle |
+| Python 3 | Hayır — yalnızca PDF/doküman/YouTube içe aktarma için | Elle — https://python.org |
+| `markitdown` paketi (`pip install -r ingest/requirements.txt`) | Hayır — yalnızca PDF/doküman/YouTube içe aktarma için | Elle, veya masaüstü paketinde uygulamanın kendi "Şimdi kur" banner'ı |
 | pandoc | Hayır — yalnızca `.tex` dönüştürme için | Elle |
 
 Dikkat edilecek noktalar:
@@ -195,10 +196,13 @@ Dikkat edilecek noktalar:
   (`data/vaults/<id>/library/`, `index.db`, `study.db`) ayrıca kopyalanmalı —
   ya da hedef makinede "Obsidian'dan İçe Aktar" + `npm run index` ile
   yeniden oluşturulmalı.
-- **Masaüstü paketinde PDF/doküman/YouTube içe aktarma çalışmaz** — `ingest/`
-  klasörü kurulum paketine dahil değil (bkz. `scripts/stage-server.mjs`).
-  Bu özellikler yalnızca `npm run dev` / `node build` akışında, Python
-  kuruluysa çalışır.
+- **Masaüstü paketinde PDF/doküman/YouTube içe aktarma, Python + markitdown
+  hedef makinede kuruluysa çalışır.** `ingest/` klasörü kurulum paketine
+  dahil (bkz. `scripts/stage-server.mjs`), ama Python'un kendisi ve
+  `markitdown` paketi hâlâ elle kurulmalı (installer bunları gömmez — bkz.
+  yukarıdaki tablo). Eksikse uygulama artık `/api/system/python` üzerinden
+  bunu algılayıp turuncu bir banner'da "Şimdi kur" butonuyla
+  `pip install -r ingest/requirements.txt`'i senin yerine çalıştırır.
 
 ## MCP Sunucusu (Faz 10)
 

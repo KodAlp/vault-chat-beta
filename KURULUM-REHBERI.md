@@ -58,6 +58,30 @@ Aşağıdaki adımları sırayla takip et.
 **Bu adımı nasıl anlarım doğru gitti mi?** Aynı pencerede `ollama list`
 yazıp Enter'a bas — listede hem `qwen3:8b` hem `bge-m3` görünmeli.
 
+## 3b. PDF/doküman içe aktarma için Python (isteğe bağlı)
+
+Bu adım **yalnızca** notlarına PDF, Word veya YouTube transkripti içe
+aktarmak istiyorsan gerekli — sohbet ve normal not aramanın çalışması için
+gerekli değil, atlayıp devam edebilirsin.
+
+1. https://python.org adresine git, **Download Python** butonuna bas
+   (herhangi bir güncel Python 3 sürümü olur).
+2. İndirilen kurulum dosyasını çalıştır. Sihirbazın ilk ekranında **"Add
+   python.exe to PATH"** kutucuğunu işaretlemeyi unutma — işaretlemezsen
+   Vault Chat Python'u bulamaz.
+3. Vault Chat'i kurduktan sonra (bkz. Adım 4), ilk PDF/doküman içe aktarma
+   denemende uygulama ekranın üstünde turuncu bir uyarı gösterir ve
+   **"Şimdi kur"** butonuyla gereken Python paketini senin yerine kurar —
+   elle bir komut çalıştırman gerekmez.
+
+**Elle kurmak istersen** (uygulama içindeki "Şimdi kur" butonu yerine):
+Vault Chat'in kurulu olduğu klasörde `ingest\requirements.txt` dosyasını
+bul (genelde `%LOCALAPPDATA%\vault-chat` altında), o dosyanın bulunduğu
+`ingest` klasöründe bir komut istemi açıp şunu çalıştır:
+```
+python -m pip install -r requirements.txt
+```
+
 ## 4. Vault Chat'i kur
 
 1. Sana verilen `vault-chat_0.1.0_x64-setup.exe` dosyasını çalıştır.
@@ -104,6 +128,10 @@ Bu seçim sadece ilk açılışta sorulur, sonra bir daha sorulmaz.
   modelin eksik olduğu ve tam komutu zaten yazılı.
 - **Kurulum sonrası hiçbir kaynak bulunamıyor** → 6. adımdaki indeksleme
   henüz yapılmamış olabilir.
+- **PDF/doküman içe aktarma çalışmıyor, turuncu uyarı çıkıyor** → bkz. "3b.
+  PDF/doküman içe aktarma için Python" — Python kurulu değil ya da gereken
+  paket henüz kurulmamış; uyarıdaki "Şimdi kur" butonu bunu senin yerine
+  halleder.
 
 Bu rehberde olmayan bir sorunla karşılaşırsan, uygulamanın kendi log dosyası
 `%APPDATA%\Roaming\app.vaultchat.desktop\launch.log`'da neyin yanlış

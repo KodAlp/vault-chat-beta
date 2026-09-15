@@ -1,6 +1,51 @@
 import { ProviderError, type ProviderErrorKind } from './types';
-import type { ProviderAdapter, ChatRequest, Chunk, ModelInfo, ProviderHealth, RateLimitSnapshot } from './types';
+import type {
+	ProviderAdapter,
+	ChatRequest,
+	ChatMessage,
+	Chunk,
+	ModelInfo,
+	ProviderHealth,
+	RateLimitSnapshot,
+	ToolDefinition
+} from './types';
 import { createThinkTagNormalizer, reasoningContentChunk, textChunk } from './normalize';
+
+/**
+ * Standard OpenAI wire format — used by every cloud provider plus Ollama's
+ * own /v1 surface. Assistant tool_calls carry an `id` and JSON-*stringified*
+ * arguments (unlike our internal ChatMessage, which keeps arguments as a
+ * parsed object); tool-result messages match back via `tool_call_id`, not
+ * Ollama-native's `tool_name` (see ollama.ts's toOllamaWireMessages for that
+ * dialect). This is the one place that downgrades our internal shape to
+ * what an OpenAI-compatible endpoint actually understands.
+ */
+function toOpenAIWireMessages(messages: ChatMessage[]): unknown[] {
+	return messages.map((m) => {
+		if (m.role === 'assistant' && m.tool_calls?.length) {
+			return {
+				role: 'assistant',
+				content: m.content,
+				tool_calls: m.tool_calls.map((tc) => ({
+					id: tc.id,
+					type: 'function',
+					function: { name: tc.name, arguments: JSON.stringify(tc.arguments) }
+				}))
+			};
+		}
+		if (m.role === 'tool') {
+			return { role: 'tool', tool_call_id: m.tool_call_id, content: m.content };
+		}
+		return { role: m.role, content: m.content };
+	});
+}
+
+function toOpenAIWireTools(tools: ToolDefinition[]): unknown[] {
+	return tools.map((t) => ({
+		type: 'function',
+		function: { name: t.name, description: t.description, parameters: t.parameters }
+	}));
+}
 
 export interface Timeouts {
 	connectMs: number;
@@ -232,10 +277,11 @@ export class OpenAICompatAdapter implements ProviderAdapter {
 				headers: this.headers(),
 				body: JSON.stringify({
 					model: req.model,
-					messages: req.messages,
+					messages: toOpenAIWireMessages(req.messages),
 					stream: true,
 					...(req.temperature !== undefined ? { temperature: req.temperature } : {}),
 					...(req.maxOutputTokens !== undefined ? { max_tokens: req.maxOutputTokens } : {}),
+					...(req.tools?.length ? { tools: toOpenAIWireTools(req.tools) } : {}),
 					// Standard OpenAI structured-output shape — confirmed against a
 					// real running Ollama instance that its /v1 surface honors THIS
 					// nested {type, json_schema:{name, schema}} form correctly, but
@@ -274,6 +320,13 @@ export class OpenAICompatAdapter implements ProviderAdapter {
 		let buffer = '';
 		const thinkNormalizer =
 			this.config.reasoningDialect === 'think-tags' ? createThinkTagNormalizer() : null;
+		// OpenAI streams tool calls incrementally: only `index` is guaranteed on
+		// every fragment, `id`/`function.name` typically arrive once on the
+		// first fragment for that index, and `function.arguments` accumulates
+		// as JSON-string fragments across many chunks — nothing is a complete
+		// tool_call until the stream itself ends (unlike Ollama, which sends
+		// the whole array in one line; see ollama.ts's parser for that path).
+		const toolCallAcc = new Map<number, { id?: string; name?: string; argsText: string }>();
 
 		try {
 			while (true) {
@@ -298,7 +351,18 @@ export class OpenAICompatAdapter implements ProviderAdapter {
 
 					let json: {
 						choices?: [
-							{ delta?: { content?: string; reasoning_content?: string; reasoning?: string } }
+							{
+								delta?: {
+									content?: string;
+									reasoning_content?: string;
+									reasoning?: string;
+									tool_calls?: {
+										index: number;
+										id?: string;
+										function?: { name?: string; arguments?: string };
+									}[];
+								};
+							}
 						];
 					};
 					try {
@@ -325,10 +389,29 @@ export class OpenAICompatAdapter implements ProviderAdapter {
 							yield textChunk(delta.content);
 						}
 					}
+					if (delta.tool_calls) {
+						for (const tc of delta.tool_calls) {
+							const entry = toolCallAcc.get(tc.index) ?? { argsText: '' };
+							if (tc.id) entry.id = tc.id;
+							if (tc.function?.name) entry.name = tc.function.name;
+							if (tc.function?.arguments) entry.argsText += tc.function.arguments;
+							toolCallAcc.set(tc.index, entry);
+						}
+					}
 				}
 			}
 			if (thinkNormalizer) {
 				for (const chunk of thinkNormalizer.flush()) yield chunk;
+			}
+			for (const [index, entry] of [...toolCallAcc.entries()].sort((a, b) => a[0] - b[0])) {
+				if (!entry.name) continue; // never got a name fragment — nothing usable to call
+				let args: Record<string, unknown>;
+				try {
+					args = entry.argsText ? JSON.parse(entry.argsText) : {};
+				} catch {
+					continue; // malformed arguments JSON — skip this one call, not fatal
+				}
+				yield { type: 'tool_call', id: entry.id ?? `call_${index}`, name: entry.name, arguments: args };
 			}
 			yield { type: 'done' };
 		} finally {

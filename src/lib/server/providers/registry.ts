@@ -124,6 +124,32 @@ function getProviderEntry(providerId: string): ProviderConfigEntry | undefined {
 export type { FallbackEvent };
 
 /**
+ * The chat route's single gating check for whether it's safe to attach
+ * tools to a request: only OllamaAdapter actually implements tool-calling
+ * today (see ollama.ts's capsFor — a pure, synchronous lookup, no network
+ * call). Every other adapter (cloud OpenAI-compat, Anthropic) has no
+ * tool_calls wiring exercised in its wire-format mapping yet, so this
+ * fails closed to {tools:false} for them rather than risk a false
+ * positive — see the folder-skill plan's "v1 is effectively Ollama-only"
+ * scoping note. Never throws; any resolution failure (unknown provider,
+ * disk read error) is just "no tools available", same as a real false.
+ */
+export async function modelCaps(
+	pinnedProviderId: string | undefined,
+	model: string
+): Promise<{ tools: boolean; reasoning: boolean }> {
+	try {
+		const providerId = pinnedProviderId ?? getChain('chat').find(isProviderEnabled) ?? getChain('chat')[0];
+		if (!providerId) return { tools: false, reasoning: false };
+		const adapter = await getAdapter(providerId);
+		if (adapter instanceof OllamaAdapter) return adapter.capsFor(model);
+		return { tools: false, reasoning: false };
+	} catch {
+		return { tools: false, reasoning: false };
+	}
+}
+
+/**
  * Thin wrapper: supplies chatWithFallbackCore (chat-fallback.ts) with this
  * module's real, side-effecting implementations — disk-backed config
  * (getChain/isProviderEnabled/getProviderEntry), real adapter construction
