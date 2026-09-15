@@ -27,6 +27,14 @@ export const cardGeneration = $state<{ items: CardGenerationStatus[] }>({
 
 export async function startCardGeneration(body: CardGenerationRequest): Promise<void> {
 	const id = crypto.randomUUID();
+
+	// See quiz-generation.svelte.ts's identical comment — drops a stale
+	// error/done entry for this vault so a retry doesn't stack a new
+	// "generating" toast on top of the old error toast.
+	cardGeneration.items = cardGeneration.items.filter(
+		(s) => s.phase === 'generating' || s.vaultId !== body.vault
+	);
+
 	function setStatus(status: DistributiveOmit<CardGenerationStatus, 'id' | 'vaultId'>) {
 		const next = { id, vaultId: body.vault, ...status } as CardGenerationStatus;
 		const idx = cardGeneration.items.findIndex((s) => s.id === id);

@@ -65,6 +65,16 @@
 			<FallbackNotice message={notice} />
 		{/each}
 	{/if}
+	{#if message.role === 'assistant' && message.toolCalls?.length}
+		<div class="tool-calls">
+			{#each message.toolCalls as tc, i (tc.skill + '#' + tc.path + '#' + i)}
+				<span class="tool-call-chip" class:error={tc.status === 'error'} title={tc.error}>
+					📄 {tc.path}
+					{tc.status === 'reading' ? '…' : tc.status === 'error' ? '✕' : '✓'}
+				</span>
+			{/each}
+		</div>
+	{/if}
 	{#if message.role === 'assistant' && message.thinking}
 		<ThinkingPanel thinking={message.thinking} {streaming} hedges={message.hedges} />
 	{/if}
@@ -108,5 +118,26 @@
 		margin-top: 0.4rem;
 		font-size: 0.78rem;
 		color: var(--color-muted-foreground);
+	}
+
+	.tool-calls {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.35rem;
+		margin-bottom: 0.4rem;
+	}
+
+	.tool-call-chip {
+		border: 1px solid var(--color-border);
+		border-radius: 999px;
+		padding: 0.15rem 0.6rem;
+		font-size: 0.72rem;
+		color: var(--color-muted-foreground);
+		background: var(--color-muted);
+	}
+
+	.tool-call-chip.error {
+		color: var(--color-destructive);
+		border-color: var(--color-destructive);
 	}
 </style>

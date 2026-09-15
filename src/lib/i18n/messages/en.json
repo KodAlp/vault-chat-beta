@@ -180,6 +180,13 @@
 		"orRunPull": "or run:"
 	},
 
+	"PythonStatusBanner": {
+		"missingMarkitdown": "PDF/document import needs a Python package that isn't installed yet.",
+		"noPython": "PDF/document import needs Python, which isn't installed. Get it from",
+		"installNow": "Install now",
+		"installing": "Installing..."
+	},
+
 	"ImportObsidianDialog": {
 		"trigger": "Import",
 		"dialogTitle": "Import Obsidian Vault",
@@ -469,6 +476,10 @@
 		"nameLabel": "Name (kebab-case)",
 		"namePlaceholder": "e.g. math-notation",
 		"contentLabel": "Content (frontmatter + markdown)",
+		"uploadFile": "Upload from file (.md)",
+		"uploadFileFailed": "Couldn't read the file.",
+		"uploadZip": "Upload zip (folder skill)",
+		"folderBadge": "{count} extra files",
 		"nameRequired": "Name required.",
 		"previewDialogTitle": "Preview — {scope}",
 		"updateFailed": "Couldn't update \"{name}\".",

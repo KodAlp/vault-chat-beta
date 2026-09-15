@@ -3,7 +3,7 @@ import type { RequestHandler } from './$types';
 import { retrieve } from '$lib/server/retrieve';
 import { buildRetrievalQuery } from '$lib/server/retrieval-query';
 import { buildPromptMessages } from '$lib/server/prompt';
-import { chatWithFallback } from '$lib/server/providers/registry';
+import { chatWithFallback, modelCaps } from '$lib/server/providers/registry';
 import { startFlight, endFlight } from '$lib/server/providers/inflight';
 import { ProviderError } from '$lib/server/providers/types';
 import { createChat, getChat, insertMessage, updateMessage, touchChat } from '$lib/server/chats-db';
@@ -12,6 +12,8 @@ import { vaultFromId } from '$lib/server/requestVault';
 import { logAppEvent } from '$lib/server/app-log';
 import { detectHallucinationHedges } from '$lib/server/hallucination';
 import { getLibrarySettings } from '$lib/server/library';
+import { hasFetchableFolderSkills } from '$lib/server/userSkills';
+import { READ_SKILL_FILE_TOOL, executeReadSkillFile } from '$lib/server/skillTool';
 import type { ChatRequestBody, RetrievedChunk, StreamEvent } from '$lib/types';
 
 function sseEvent(event: StreamEvent): string {
@@ -45,6 +47,14 @@ const CHAT_MAX_OUTPUT_TOKENS = 4096;
  * — the model can't "fix" a decode-time artifact, only re-roll it) up to
  * this many times. Matches generate-quiz.ts's MAX_RETRIES convention. */
 const MAX_CORRUPTION_RETRIES = 2;
+
+/** Caps how many times, within one attempt, the model can call
+ * read_skill_file before being forced to answer in plain text (the final
+ * hop simply omits `tools` from the request once this is hit) — a
+ * hallucinating or looping model must not turn one chat turn into an
+ * unbounded chain of server round-trips. See userSkills.ts/skillTool.ts for
+ * what the tool actually does; this route only orchestrates the hops. */
+const MAX_TOOL_ROUNDTRIPS = 4;
 
 const CJK_RANGE = /[一-鿿]/; // CJK Unified Ideographs — Chinese hanzi
 
@@ -219,9 +229,21 @@ export const POST: RequestHandler = async ({ request }) => {
 					sources = result.chunks;
 					narrowScope = result.narrowScope;
 				}
-				const promptMessages = await buildPromptMessages(body.messages, sources, allowedLanguages);
+				const caps = await modelCaps(body.provider, body.model);
+				const toolsEnabled = caps.tools && hasFetchableFolderSkills('chat');
+				const basePromptMessages = await buildPromptMessages(body.messages, sources, allowedLanguages, {
+					toolsEnabled
+				});
 
 				for (let attempt = 0; ; attempt++) {
+					// Reset fresh every attempt, not just attempt 0 — a
+					// corruption/empty-answer retry throws away whatever the prior
+					// attempt streamed (see the `send({type:'regenerate'})` below),
+					// and that must include any tool round-trips it accumulated too,
+					// not just the visible text.
+					let promptMessages = [...basePromptMessages];
+					let toolRoundTrips = 0;
+
 					if (attempt > 0) {
 						// A prior attempt hit U+FFFD or came back empty — throw away
 						// whatever it streamed and tell the client to do the same
@@ -250,59 +272,109 @@ export const POST: RequestHandler = async ({ request }) => {
 
 					let corrupted = false;
 					try {
-						for await (const event of chatWithFallback(
-							'chat',
-							{
-								model: body.model,
-								messages: promptMessages,
-								think: body.think ?? false,
-								maxOutputTokens: CHAT_MAX_OUTPUT_TOKENS
-							},
-							attemptController.signal,
-							body.provider
-						)) {
-							if (event.type === 'reasoning') {
-								if (isCorruptedChunk(event.text, allowedLanguages)) {
-									corrupted = true;
-									attemptController.abort();
-									break;
+						// Normally runs once. Loops again only when the model asks to
+						// read a skill's supporting file (hopToolCalls non-empty) — the
+						// server executes the read(s), appends the result(s) as 'tool'
+						// messages, and calls the model again with the extended
+						// promptMessages, up to MAX_TOOL_ROUNDTRIPS times per attempt.
+						// See skillTool.ts for what a tool call actually does.
+						while (true) {
+							let hopContent = '';
+							const hopToolCalls: { id: string; name: string; arguments: Record<string, unknown> }[] = [];
+							const attachTools = toolsEnabled && toolRoundTrips < MAX_TOOL_ROUNDTRIPS;
+
+							for await (const event of chatWithFallback(
+								'chat',
+								{
+									model: body.model,
+									messages: promptMessages,
+									think: body.think ?? false,
+									maxOutputTokens: CHAT_MAX_OUTPUT_TOKENS,
+									...(attachTools ? { tools: [READ_SKILL_FILE_TOOL] } : {})
+								},
+								attemptController.signal,
+								body.provider
+							)) {
+								if (event.type === 'reasoning') {
+									if (isCorruptedChunk(event.text, allowedLanguages)) {
+										corrupted = true;
+										attemptController.abort();
+										break;
+									}
+									finalThinking += event.text;
+									send({ type: 'thinking', content: event.text });
+								} else if (event.type === 'text') {
+									if (isCorruptedChunk(event.text, allowedLanguages)) {
+										corrupted = true;
+										attemptController.abort();
+										break;
+									}
+									finalContent += event.text;
+									hopContent += event.text;
+									send({ type: 'delta', content: event.text });
+								} else if (event.type === 'tool_call') {
+									hopToolCalls.push({ id: event.id, name: event.name, arguments: event.arguments });
+								} else if (event.type === 'notice') {
+									send({ type: 'notice', message: event.message });
+									logAppEvent({ kind: 'fallback', chatId, message: event.message });
 								}
-								finalThinking += event.text;
-								send({ type: 'thinking', content: event.text });
-							} else if (event.type === 'text') {
-								if (isCorruptedChunk(event.text, allowedLanguages)) {
-									corrupted = true;
-									attemptController.abort();
-									break;
+
+								if (!assistantMessageId && (finalContent || finalThinking)) {
+									// First real content — create the row now instead of waiting
+									// for the whole stream to finish, so checkpoint() below (and
+									// the final save in `finally`) has something to write into if
+									// the connection dies partway through.
+									try {
+										assistantMessageId = insertMessage({
+											chatId,
+											role: 'assistant',
+											content: finalContent,
+											thinking: finalThinking || null,
+											sourcesJson: sources.length ? JSON.stringify(sources) : null
+										});
+										lastCheckpointedContent = finalContent;
+										lastCheckpointedThinking = finalThinking;
+										checkpointTimer = setInterval(checkpoint, CHECKPOINT_INTERVAL_MS);
+									} catch {
+										// Best-effort — the finally block's own fallback insert
+										// still gets one more try at the end.
+									}
 								}
-								finalContent += event.text;
-								send({ type: 'delta', content: event.text });
-							} else if (event.type === 'notice') {
-								send({ type: 'notice', message: event.message });
-								logAppEvent({ kind: 'fallback', chatId, message: event.message });
 							}
 
-							if (!assistantMessageId && (finalContent || finalThinking)) {
-								// First real content — create the row now instead of waiting
-								// for the whole stream to finish, so checkpoint() below (and
-								// the final save in `finally`) has something to write into if
-								// the connection dies partway through.
-								try {
-									assistantMessageId = insertMessage({
-										chatId,
-										role: 'assistant',
-										content: finalContent,
-										thinking: finalThinking || null,
-										sourcesJson: sources.length ? JSON.stringify(sources) : null
-									});
-									lastCheckpointedContent = finalContent;
-									lastCheckpointedThinking = finalThinking;
-									checkpointTimer = setInterval(checkpoint, CHECKPOINT_INTERVAL_MS);
-								} catch {
-									// Best-effort — the finally block's own fallback insert
-									// still gets one more try at the end.
-								}
+							if (corrupted || hopToolCalls.length === 0) break;
+
+							// The model asked for one or more files — collect them into ONE
+							// assistant message (matches how Ollama/OpenAI expect a single
+							// assistant turn to carry every tool_call it made), then one
+							// 'tool' message per result, then hop again.
+							promptMessages = [
+								...promptMessages,
+								{ role: 'assistant', content: hopContent, tool_calls: hopToolCalls }
+							];
+							for (const call of hopToolCalls) {
+								const skill = typeof call.arguments.skill === 'string' ? call.arguments.skill : '';
+								const path = typeof call.arguments.path === 'string' ? call.arguments.path : '';
+								send({ type: 'toolCall', skill, path });
+								const result = executeReadSkillFile(call.arguments);
+								send({
+									type: 'toolResult',
+									skill,
+									path,
+									ok: result.ok,
+									error: result.ok ? undefined : result.error
+								});
+								promptMessages = [
+									...promptMessages,
+									{
+										role: 'tool',
+										tool_call_id: call.id,
+										name: call.name,
+										content: result.ok ? result.content : `HATA: ${result.error}`
+									}
+								];
 							}
+							toolRoundTrips++;
 						}
 					} finally {
 						flight.signal.removeEventListener('abort', onFlightAbort);

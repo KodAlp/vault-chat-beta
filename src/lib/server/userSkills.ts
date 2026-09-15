@@ -8,7 +8,7 @@ import { MAX_SKILL_FILE_CHARS as MAX_FILE_CHARS, MAX_SKILL_TOTAL_CHARS as MAX_TO
 
 const SCOPES: UserSkillScope[] = ['chat', 'quiz', 'flashcards', 'mindmap', 'report', 'slides'];
 
-const Frontmatter = z.object({
+export const Frontmatter = z.object({
 	name: z.string().min(1).optional(),
 	description: z.string().min(1),
 	scope: z
@@ -78,6 +78,71 @@ function walk(dir: string, out: string[] = []): string[] {
 		if (entry.isDirectory()) walk(full, out);
 		else if (entry.isFile() && entry.name.endsWith('.md')) out.push(full);
 	}
+	return out;
+}
+
+type SkillEntry = { kind: 'file'; absPath: string } | { kind: 'folder'; dir: string; skillMdPath: string };
+
+/**
+ * Only looks at skillsDir()'s IMMEDIATE children, unlike walk() (which still
+ * exists and is reused below for the two back-compat cases). A folder-skill
+ * (zip-uploaded, data/skills/<name>/SKILL.md) is ONE skill entry — its
+ * supporting files must never be picked up by walk() as independent skills,
+ * which is exactly what unconditional recursion did before this existed.
+ */
+function collectSkillEntries(): SkillEntry[] {
+	const root = skillsDir();
+	const out: SkillEntry[] = [];
+	if (!fs.existsSync(root)) return out;
+	for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
+		if (entry.name.startsWith('.')) continue;
+		const full = path.join(root, entry.name);
+		if (entry.isFile() && entry.name.endsWith('.md')) {
+			out.push({ kind: 'file', absPath: full });
+			continue;
+		}
+		if (!entry.isDirectory()) continue;
+		if (entry.name === '_examples') {
+			// Unchanged back-compat: every .md under _examples is its own flat
+			// skill, exactly as before this feature existed.
+			for (const absPath of walk(full)) out.push({ kind: 'file', absPath });
+			continue;
+		}
+		const skillMdPath = path.join(full, 'SKILL.md');
+		if (fs.existsSync(skillMdPath) && fs.statSync(skillMdPath).isFile()) {
+			out.push({ kind: 'folder', dir: full, skillMdPath });
+		} else {
+			// A hand-made subfolder with no SKILL.md — not the new folder-skill
+			// mechanism, preserve the old "every .md anywhere is its own skill"
+			// behavior for it (back-compat, low-priority edge case).
+			for (const absPath of walk(full)) out.push({ kind: 'file', absPath });
+		}
+	}
+	return out;
+}
+
+/** Recursively lists every file under a folder-skill's directory (relative,
+ * "/"-separated, SKILL.md itself excluded) — always recomputed fresh, never
+ * mtime-cached like the parsed SKILL.md body is (see parseAll()'s doc
+ * comment on why: a nested file changing doesn't reliably bump the top
+ * folder's own mtime on every filesystem, so caching this would risk a
+ * stale file list). Cheap enough (a skill folder is a handful of files) that
+ * this is a non-issue in practice. */
+function listSupportingFiles(dir: string): string[] {
+	const out: string[] = [];
+	function rec(d: string) {
+		for (const entry of fs.readdirSync(d, { withFileTypes: true })) {
+			if (entry.name.startsWith('.')) continue;
+			const full = path.join(d, entry.name);
+			if (entry.isDirectory()) {
+				rec(full);
+				continue;
+			}
+			const rel = path.relative(dir, full).split(path.sep).join('/');
+			if (rel !== 'SKILL.md') out.push(rel);
+		}
+	}
+	if (fs.existsSync(dir)) rec(dir);
 	return out;
 }
 
@@ -172,15 +237,124 @@ function parseFile(absPath: string): ParsedSkill {
 	};
 }
 
+/** Same shape as parseFile, sourced from a folder-skill's SKILL.md instead
+ * of a flat file — name defaults to the FOLDER's name (not "SKILL", which
+ * parseFile's stem-based fallback would otherwise produce), and absPath
+ * points at SKILL.md itself so resolvePath/readSkillRaw/writeSkill/the
+ * settings-page editor all keep working unmodified. `files` is always an
+ * empty placeholder here — parseAll() overwrites it fresh on every call,
+ * see listSupportingFiles()'s doc comment. */
+function parseFolderSkill(dir: string, skillMdPath: string): ParsedSkill {
+	const root = skillsDir();
+	const relPath = path.relative(root, skillMdPath).split(path.sep).join('/');
+	const folderName = path.basename(dir);
+
+	let raw: string;
+	try {
+		raw = fs.readFileSync(skillMdPath, 'utf-8');
+	} catch (err) {
+		return {
+			name: folderName,
+			relPath,
+			absPath: skillMdPath,
+			description: null,
+			scope: 'all',
+			enabled: false,
+			priority: 50,
+			charCount: 0,
+			truncated: false,
+			parseError: err instanceof Error ? err.message : 'Dosya okunamadı',
+			body: '',
+			isFolder: true,
+			files: []
+		};
+	}
+
+	let data: unknown;
+	let content: string;
+	try {
+		const parsed = matter(raw);
+		data = parsed.data;
+		content = parsed.content.trim();
+	} catch (err) {
+		return {
+			name: folderName,
+			relPath,
+			absPath: skillMdPath,
+			description: null,
+			scope: 'all',
+			enabled: false,
+			priority: 50,
+			charCount: 0,
+			truncated: false,
+			parseError: err instanceof Error ? err.message : 'Frontmatter ayrıştırılamadı',
+			body: '',
+			isFolder: true,
+			files: []
+		};
+	}
+
+	const result = Frontmatter.safeParse(data);
+	if (!result.success) {
+		return {
+			name: folderName,
+			relPath,
+			absPath: skillMdPath,
+			description: null,
+			scope: 'all',
+			enabled: false,
+			priority: 50,
+			charCount: content.length,
+			truncated: false,
+			parseError: result.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; '),
+			body: '',
+			isFolder: true,
+			files: []
+		};
+	}
+
+	const fm = result.data;
+	const truncated = content.length > MAX_FILE_CHARS;
+	const body = truncated ? content.slice(0, MAX_FILE_CHARS) + TRUNCATE_MARKER : content;
+
+	return {
+		name: fm.name ?? folderName,
+		relPath,
+		absPath: skillMdPath,
+		description: fm.description,
+		scope: fm.scope,
+		enabled: fm.enabled,
+		priority: fm.priority,
+		charCount: content.length,
+		truncated,
+		parseError: null,
+		body,
+		isFolder: true,
+		files: []
+	};
+}
+
 function parseAll(): ParsedSkill[] {
 	ensureExampleSkills();
-	return walk(skillsDir()).map((absPath) => {
-		const stat = fs.statSync(absPath);
-		const cached = cache.get(absPath);
-		if (cached && cached.mtimeMs === stat.mtimeMs) return cached.parsed;
-		const parsed = parseFile(absPath);
-		cache.set(absPath, { mtimeMs: stat.mtimeMs, parsed });
-		return parsed;
+	return collectSkillEntries().map((entry) => {
+		if (entry.kind === 'file') {
+			const stat = fs.statSync(entry.absPath);
+			const cached = cache.get(entry.absPath);
+			if (cached && cached.mtimeMs === stat.mtimeMs) return cached.parsed;
+			const parsed = parseFile(entry.absPath);
+			cache.set(entry.absPath, { mtimeMs: stat.mtimeMs, parsed });
+			return parsed;
+		}
+		const stat = fs.statSync(entry.skillMdPath);
+		const cached = cache.get(entry.skillMdPath);
+		const base =
+			cached && cached.mtimeMs === stat.mtimeMs ? cached.parsed : parseFolderSkill(entry.dir, entry.skillMdPath);
+		if (!cached || cached.mtimeMs !== stat.mtimeMs) {
+			cache.set(entry.skillMdPath, { mtimeMs: stat.mtimeMs, parsed: base });
+		}
+		// files always recomputed fresh, never taken from the cached parse —
+		// see listSupportingFiles()'s doc comment.
+		return { ...base, files: listSupportingFiles(entry.dir) };
 	});
 }
 
@@ -201,7 +375,9 @@ export function listAllUserSkillFiles(): UserSkillStatus[] {
  * later instructions more heavily, so "higher priority = stronger" only
  * holds if it's also "later".
  */
-export function loadUserSkills(scope: UserSkillScope): { name: string; body: string }[] {
+export function loadUserSkills(
+	scope: UserSkillScope
+): { name: string; body: string; isFolder: boolean; files: string[] }[] {
 	const candidates = parseAll()
 		.filter((s) => !s.parseError && s.enabled && matchesScope(s.scope, scope))
 		.sort((a, b) => a.priority - b.priority);
@@ -217,18 +393,108 @@ export function loadUserSkills(scope: UserSkillScope): { name: string; body: str
 		kept.push(s);
 	}
 	kept.sort((a, b) => a.priority - b.priority);
-	return kept.map(({ name, body }) => ({ name, body }));
+	return kept.map(({ name, body, isFolder, files }) => ({
+		name,
+		body,
+		isFolder: !!isFolder,
+		files: files ?? []
+	}));
 }
 
-export async function renderUserSkillsBlock(scope: UserSkillScope): Promise<string> {
+/** True when at least one enabled, in-scope skill is a folder-skill with
+ * supporting files — the chat route's gate for whether it's worth attaching
+ * the read_skill_file tool to a request at all (on top of the model itself
+ * needing tool-calling support, see registry.ts's modelCaps). */
+export function hasFetchableFolderSkills(scope: UserSkillScope): boolean {
+	return loadUserSkills(scope).some((s) => s.isFolder && s.files.length > 0);
+}
+
+export async function renderUserSkillsBlock(
+	scope: UserSkillScope,
+	opts?: { includeFileNotes?: boolean }
+): Promise<string> {
 	const skills = loadUserSkills(scope);
 	if (skills.length === 0) return '';
-	return skills.map((s) => `## Kullanıcı kuralı: ${s.name}\n${s.body}`).join('\n\n');
+	return skills
+		.map((s) => {
+			// Only appended when the tool is actually being attached this
+			// request (opts.includeFileNotes) — otherwise this would point the
+			// model at files it has no way to fetch (e.g. a non-tool-capable
+			// model, or a cloud provider — see registry.ts's modelCaps).
+			const note =
+				opts?.includeFileNotes && s.isFolder && s.files.length > 0
+					? `\n\n_Ek dosyalar: ${s.files.join(', ')} — gerekirse read_skill_file ile oku (skill: "${s.name}")._`
+					: '';
+			return `## Kullanıcı kuralı: ${s.name}\n${s.body}${note}`;
+		})
+		.join('\n\n');
 }
 
 function resolvePath(name: string): string | undefined {
 	const match = parseAll().find((s) => s.name === name);
 	return match?.absPath;
+}
+
+function findFolderSkill(name: string): ParsedSkill {
+	const skill = parseAll().find((s) => s.name === name && s.isFolder);
+	if (!skill) throw new Error(`Klasör skill bulunamadı: ${name}`);
+	return skill;
+}
+
+/** Same shape/intent as library-read.ts's resolveLibraryPath — scopes
+ * relPath to one folder-skill's own directory, rejecting anything that
+ * resolves outside it (../, absolute paths, drive-letter escapes). Purely
+ * lexical (path.resolve) — readSkillSupportingFile adds a realpath check on
+ * top of this for a symlink planted inside the folder. */
+export function resolveSkillFolderPath(name: string, relPath: string): string {
+	const root = path.dirname(findFolderSkill(name).absPath);
+	const resolved = path.resolve(root, relPath);
+	const withSep = root.endsWith(path.sep) ? root : root + path.sep;
+	if (resolved !== root && !resolved.startsWith(withSep)) {
+		throw new Error('Geçersiz yol (skill klasörü dışına çıkıyor)');
+	}
+	return resolved;
+}
+
+const READABLE_EXTENSIONS = new Set(['.md', '.markdown', '.txt', '.json', '.yaml', '.yml', '.csv']);
+
+/**
+ * What the read_skill_file tool actually calls. Every failure mode throws a
+ * plain Error with a Turkish message and NEVER touches the filesystem
+ * outside the skill's own folder — the caller (the chat route's tool
+ * hop-loop) always catches this and feeds the message back to the model as
+ * a "HATA: ..." tool-result string, never lets it become a route crash.
+ */
+export function readSkillSupportingFile(name: string, relPath: string): { content: string; truncated: boolean } {
+	const root = path.dirname(findFolderSkill(name).absPath);
+	const resolved = resolveSkillFolderPath(name, relPath);
+
+	const ext = path.extname(resolved).toLowerCase();
+	if (!READABLE_EXTENSIONS.has(ext)) {
+		throw new Error(`Desteklenmeyen dosya türü: ${ext || '(uzantısız)'}`);
+	}
+
+	let stat: fs.Stats;
+	try {
+		stat = fs.statSync(resolved); // follows symlinks; ENOENT if the target is missing
+	} catch {
+		throw new Error('Dosya bulunamadı');
+	}
+	if (!stat.isFile()) throw new Error('Dosya bulunamadı');
+
+	// Defense in depth: resolveSkillFolderPath's containment check is purely
+	// lexical, so a symlink planted INSIDE the folder pointing outside it
+	// would pass it. Re-contain the REAL path against the folder's real path.
+	const realResolved = fs.realpathSync(resolved);
+	const realRoot = fs.realpathSync(root);
+	const realWithSep = realRoot.endsWith(path.sep) ? realRoot : realRoot + path.sep;
+	if (realResolved !== realRoot && !realResolved.startsWith(realWithSep)) {
+		throw new Error('Geçersiz yol (symlink skill klasörü dışına çıkıyor)');
+	}
+
+	const raw = fs.readFileSync(realResolved, 'utf-8');
+	const truncated = raw.length > MAX_FILE_CHARS;
+	return { content: truncated ? raw.slice(0, MAX_FILE_CHARS) + TRUNCATE_MARKER : raw, truncated };
 }
 
 export function readSkillRaw(name: string): string | undefined {
@@ -259,7 +525,7 @@ export function readSkillRaw(name: string): string | undefined {
  * for anything this character check didn't anticipate — a null byte, a
  * Windows device name, a future Node path-parsing quirk.
  */
-function assertSafeSkillName(name: string): void {
+export function assertSafeSkillName(name: string): void {
 	if (!name || /[\\/]/.test(name)) {
 		throw new Error('Geçersiz skill adı');
 	}
@@ -309,10 +575,14 @@ export function patchSkillFrontmatter(
 }
 
 export function deleteSkill(name: string): boolean {
-	const absPath = resolvePath(name);
-	if (!absPath) return false;
-	fs.unlinkSync(absPath);
-	cache.delete(absPath);
+	const skill = parseAll().find((s) => s.name === name);
+	if (!skill) return false;
+	if (skill.isFolder) {
+		fs.rmSync(path.dirname(skill.absPath), { recursive: true, force: true });
+	} else {
+		fs.unlinkSync(skill.absPath);
+	}
+	cache.delete(skill.absPath);
 	return true;
 }
 

@@ -14,6 +14,14 @@ export const mindmapGeneration = $state<{ items: MindMapGenerationStatus[] }>({
 
 export async function startMindMapGeneration(body: MindMapGenerationRequest): Promise<void> {
 	const id = crypto.randomUUID();
+
+	// See quiz-generation.svelte.ts's identical comment — drops a stale
+	// error/done entry for this vault so a retry doesn't stack a new
+	// "generating" toast on top of the old error toast.
+	mindmapGeneration.items = mindmapGeneration.items.filter(
+		(s) => s.phase === 'generating' || s.vaultId !== body.vault
+	);
+
 	function setStatus(status: DistributiveOmit<MindMapGenerationStatus, 'id' | 'vaultId'>) {
 		const next = { id, vaultId: body.vault, ...status } as MindMapGenerationStatus;
 		const idx = mindmapGeneration.items.findIndex((s) => s.id === id);

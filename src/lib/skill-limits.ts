@@ -12,8 +12,8 @@
  * Ollama's default 4096-token context will feel a full budget long before a
  * cloud model does.
  */
-export const MAX_SKILL_FILE_CHARS = 8000;
+export const MAX_SKILL_FILE_CHARS = 32000;
 
 /** Total across all enabled, in-scope skills; lowest priority is dropped
  * first once exceeded (see loadUserSkills). */
-export const MAX_SKILL_TOTAL_CHARS = 32000;
+export const MAX_SKILL_TOTAL_CHARS = 256000;

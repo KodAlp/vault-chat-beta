@@ -179,7 +179,7 @@
 			{#if source === 'file'}
 				<label class="flex flex-col gap-1 text-sm">
 					{t('UploadDialog.fileLabel')}
-					<Input type="file" onchange={onFileChange} accept=".docx,.pptx,.xlsx,.html,.htm,.epub,.pdf" />
+					<Input type="file" onchange={onFileChange} accept=".docx,.pptx,.xlsx,.html,.htm,.epub,.pdf,.md,.tex" />
 				</label>
 			{:else}
 				<label class="flex flex-col gap-1 text-sm">

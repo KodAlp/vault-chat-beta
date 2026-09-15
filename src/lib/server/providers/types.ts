@@ -1,6 +1,30 @@
+export interface ToolCall {
+	id: string;
+	name: string;
+	arguments: Record<string, unknown>;
+}
+
+/** JSON-Schema function-tool definition, same shape both Ollama-native and
+ * OpenAI-compatible wire formats accept (as {type:'function', function:{...}}
+ * — adapters do that wrapping themselves, callers just pass this). */
+export interface ToolDefinition {
+	name: string;
+	description: string;
+	parameters: object;
+}
+
 export interface ChatMessage {
-	role: 'system' | 'user' | 'assistant';
+	role: 'system' | 'user' | 'assistant' | 'tool';
 	content: string;
+	/** Set on an assistant message that requested one or more tool calls —
+	 * the following messages in the array must be one 'tool' message per
+	 * entry here, each carrying that call's tool_call_id. */
+	tool_calls?: ToolCall[];
+	/** Set on a 'tool' message — which call this is the result of. */
+	tool_call_id?: string;
+	/** Set on a 'tool' message — the tool's name, mirrored back per the
+	 * OpenAI/Ollama tool-message convention. */
+	name?: string;
 }
 
 export interface ChatRequest {
@@ -24,11 +48,16 @@ export interface ChatRequest {
 	 * caller (see those files' *OutputBudget() helpers), not a tight
 	 * per-item allowance. */
 	maxOutputTokens?: number;
+	/** Function tools the model may call mid-turn (e.g. reading a skill's
+	 * supporting file) — omitted entirely when empty/undefined so providers
+	 * that never learned about tools see no behavior change. */
+	tools?: ToolDefinition[];
 }
 
 export type Chunk =
 	| { type: 'reasoning'; text: string }
 	| { type: 'text'; text: string }
+	| { type: 'tool_call'; id: string; name: string; arguments: Record<string, unknown> }
 	| { type: 'usage'; prompt: number; completion: number }
 	| { type: 'done' };
 
