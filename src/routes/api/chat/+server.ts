@@ -3,9 +3,19 @@ import type { RequestHandler } from './$types';
 import { retrieve } from '$lib/server/retrieve';
 import { buildRetrievalQuery } from '$lib/server/retrieval-query';
 import { buildPromptMessages } from '$lib/server/prompt';
-import { chatWithFallback, modelCaps } from '$lib/server/providers/registry';
+import { chatWithFallback, modelCaps, supportsPrefixResume } from '$lib/server/providers/registry';
 import { startFlight, endFlight } from '$lib/server/providers/inflight';
-import { ProviderError } from '$lib/server/providers/types';
+import { ProviderError, type ChatMessage as ProviderChatMessage } from '$lib/server/providers/types';
+import {
+	canRetryResume,
+	createSeamTrimmer,
+	findCorruption,
+	planRecovery,
+	RESUME_STOP,
+	type CorruptionKind,
+	type SeamPlan,
+	type SeamTrimmer
+} from '$lib/server/resume-plan';
 import { isNearCtxLimit } from '$lib/server/providers/ollama-usage';
 import { chatRetrievalK } from '$lib/server/env';
 import { createChat, getChat, insertMessage, updateMessage, touchChat } from '$lib/server/chats-db';
@@ -71,44 +81,6 @@ const MAX_CORRUPTION_RETRIES = 2;
  * unbounded chain of server round-trips. See userSkills.ts/skillTool.ts for
  * what the tool actually does; this route only orchestrates the hops. */
 const MAX_TOOL_ROUNDTRIPS = 4;
-
-const CJK_RANGE = /[一-鿿]/; // CJK Unified Ideographs — Chinese hanzi
-
-/** Language names that make CJK Unified Ideographs an EXPECTED script
- * rather than a leak — e.g. a language-learning vault with
- * allowedLanguages ['Türkçe', 'Korece'] must never have its own Korean
- * vocabulary flagged as corruption. Substring-matched, case-insensitive,
- * against LibrarySettings.allowedLanguages — deliberately a plain list,
- * not a rigid enum, so covering another spelling/language is a one-line
- * addition. */
-const CJK_LANGUAGE_NAMES = [
-	'çince',
-	'chinese',
-	'mandarin',
-	'中文',
-	'japonca',
-	'japanese',
-	'日本語',
-	'korece',
-	'korean',
-	'한국어'
-];
-
-function isCjkExpected(allowedLanguages: string[]): boolean {
-	return allowedLanguages.some((lang) => {
-		const lower = lang.toLowerCase();
-		return CJK_LANGUAGE_NAMES.some((name) => lower.includes(name));
-	});
-}
-
-/** A chunk is treated as corrupted output — never shown to the user,
- * triggers the regenerate-from-scratch loop below — for either of two
- * reasons: a literal U+FFFD (see MAX_CORRUPTION_RETRIES's doc comment), or
- * a CJK character appearing in a vault whose allowedLanguages doesn't
- * expect one (see isCjkExpected). */
-function isCorruptedChunk(text: string, allowedLanguages: string[]): boolean {
-	return text.includes('�') || (!isCjkExpected(allowedLanguages) && CJK_RANGE.test(text));
-}
 
 /** Auth failures get a clean, actionable message instead of a raw HTTP body
  * — the provider name + "check your key" is what the user can act on. */
@@ -242,6 +214,9 @@ export const POST: RequestHandler = async ({ request }) => {
 				}
 				const caps = await modelCaps(body.provider, body.model);
 				const toolsEnabled = caps.tools && hasFetchableFolderSkills('chat');
+				// Whether a corrupted answer may be continued from its clean prefix instead
+				// of regenerated (resume-plan.ts) — Ollama + a verified model family only.
+				const resumeSupported = await supportsPrefixResume(body.provider, body.model);
 				const basePromptMessages = await buildPromptMessages(body.messages, sources, allowedLanguages, {
 					toolsEnabled
 				});
@@ -276,12 +251,53 @@ export const POST: RequestHandler = async ({ request }) => {
 					// permanently kill `flight` and break the next retry. Still
 					// cancels immediately if `flight` itself is aborted (client
 					// disconnect / superseded by a second message).
-					const attemptController = new AbortController();
+					// `let`: a resume replaces it (the previous signal was aborted to stop the
+					// corrupted stream); onFlightAbort reads the variable, so it always cancels
+					// whichever controller is current.
+					let attemptController = new AbortController();
 					const onFlightAbort = () => attemptController.abort();
 					if (flight.signal.aborted) attemptController.abort();
 					else flight.signal.addEventListener('abort', onFlightAbort);
 
 					let corrupted = false;
+					// Corruption recovery (resume-plan.ts). A corrupted chunk in plain answer text
+					// is recovered by continuing from the clean text already shown instead of
+					// regenerating from scratch. `pendingResume` carries the seam from the moment a
+					// corruption is found to the next model call; `trimmer` then removes the part of
+					// the model's continuation the user has already seen.
+					let resumesUsed = 0;
+					let pendingResume: SeamPlan | null = null;
+					let trimmer: SeamTrimmer | null = null;
+					let resumeKind: CorruptionKind | undefined;
+					const attemptStartedAt = Date.now();
+					// The seam of the request in flight, so a miss can be retried with it.
+					let activeSeam: SeamPlan | null = null;
+					const logSeamMiss = (action: 'resume_retry' | 'resume_mismatch') =>
+						logAppEvent({
+							kind: 'output_corruption',
+							chatId,
+							provider: body.provider,
+							model: body.model,
+							message: 'resume did not line up',
+							action,
+							corruptKind: resumeKind,
+							charIndex: finalContent.length,
+							keptChars: action === 'resume_retry' ? finalContent.length : 0,
+							elapsedMs: Date.now() - attemptStartedAt,
+							resumeCount: resumesUsed
+						});
+					// A resumed stream whose first words did not match what the user already saw.
+					// Nothing was shown yet, so trying the same seam again is invisible (the model
+					// samples afresh); only when the tries run out does it fall back to a restart.
+					// Returns the decision; the caller applies it (no state is assigned in here).
+					const decideSeamMiss = (): 'retry' | 'restart' => {
+						if (activeSeam && canRetryResume(resumesUsed)) {
+							logSeamMiss('resume_retry');
+							return 'retry';
+						}
+						logSeamMiss('resume_mismatch');
+						return 'restart';
+					};
 					try {
 						// Normally runs once. Loops again only when the model asks to
 						// read a skill's supporting file (hopToolCalls non-empty) — the
@@ -292,22 +308,51 @@ export const POST: RequestHandler = async ({ request }) => {
 						while (true) {
 							let hopContent = '';
 							const hopToolCalls: { id: string; name: string; arguments: Record<string, unknown> }[] = [];
-							const attachTools = toolsEnabled && toolRoundTrips < MAX_TOOL_ROUNDTRIPS;
+							// A resumed request continues the partial answer: the clean text so far goes
+							// in as a trailing assistant message, no tools are offered (a resume is only
+							// planned when the answer had no tool activity), and the stop strings end the
+							// stream where qwen3 would otherwise restart the answer inside a fake <think>
+							// block. See resume-plan.ts for what was verified.
+							const resumeSeam: SeamPlan | null = pendingResume;
+							activeSeam = resumeSeam;
+							pendingResume = null;
+							trimmer = resumeSeam ? createSeamTrimmer(resumeSeam.tail) : null;
+							const requestMessages: ProviderChatMessage[] = resumeSeam
+								? [...promptMessages, { role: 'assistant', content: resumeSeam.prompt }]
+								: promptMessages;
+							const attachTools = !resumeSeam && toolsEnabled && toolRoundTrips < MAX_TOOL_ROUNDTRIPS;
 
 							for await (const event of chatWithFallback(
 								'chat',
 								{
 									model: body.model,
-									messages: promptMessages,
+									messages: requestMessages,
 									think: body.think ?? false,
 									maxOutputTokens: CHAT_MAX_OUTPUT_TOKENS,
-									...(attachTools ? { tools: [READ_SKILL_FILE_TOOL] } : {})
+									...(attachTools ? { tools: [READ_SKILL_FILE_TOOL] } : {}),
+									...(resumeSeam ? { continuation: true, stop: [...RESUME_STOP] } : {})
 								},
 								attemptController.signal,
 								body.provider
 							)) {
 								if (event.type === 'reasoning') {
-									if (isCorruptedChunk(event.text, allowedLanguages)) {
+									const bad = findCorruption(event.text, allowedLanguages);
+									if (bad) {
+										// Thinking text is never resumed (resume-plan.ts planRecovery).
+										logAppEvent({
+											kind: 'output_corruption',
+											chatId,
+											provider: body.provider,
+											model: body.model,
+											message: 'corrupted reasoning chunk',
+											corruptKind: bad.kind,
+											charIndex: finalThinking.length + bad.index,
+											keptChars: 0,
+											elapsedMs: Date.now() - attemptStartedAt,
+											action: 'restart',
+											restartReason: 'reasoning',
+											resumeCount: resumesUsed
+										});
 										corrupted = true;
 										attemptController.abort();
 										break;
@@ -315,43 +360,105 @@ export const POST: RequestHandler = async ({ request }) => {
 									finalThinking += event.text;
 									send({ type: 'thinking', content: event.text });
 								} else if (event.type === 'text') {
-									if (isCorruptedChunk(event.text, allowedLanguages)) {
-										corrupted = true;
+									let text = event.text;
+									if (trimmer) {
+										// First words of a resumed stream: drop what the user has already seen.
+										const seam = trimmer.push(text);
+										if (seam.status === 'mismatch') {
+											if (decideSeamMiss() === 'retry') {
+												pendingResume = activeSeam;
+												resumesUsed++;
+											} else {
+												corrupted = true;
+											}
+											attemptController.abort();
+											break;
+										}
+										text = seam.emit;
+										if (seam.status === 'ok') trimmer = null;
+									}
+									const bad = text ? findCorruption(text, allowedLanguages) : null;
+									if (bad) {
+										const clean = text.slice(0, bad.index);
+										const displayed = finalContent + clean;
+										const plan = planRecovery({
+											where: 'text',
+											thinkRequested: body.think === true,
+											hasThinking: finalThinking !== '',
+											toolRoundTrips,
+											hopHadToolCall: hopToolCalls.length > 0,
+											resumesUsed,
+											displayed,
+											supportsResume: resumeSupported
+										});
+										logAppEvent({
+											kind: 'output_corruption',
+											chatId,
+											provider: body.provider,
+											model: body.model,
+											message: 'corrupted answer chunk',
+											corruptKind: bad.kind,
+											charIndex: displayed.length,
+											keptChars: plan.action === 'resume' ? displayed.length : 0,
+											elapsedMs: Date.now() - attemptStartedAt,
+											action: plan.action,
+											...(plan.action === 'restart' ? { restartReason: plan.reason } : {}),
+											resumeCount: resumesUsed
+										});
+										if (plan.action === 'resume') {
+											// Show the clean part of this chunk, keep everything so far, and
+											// ask the model to continue from the last word boundary.
+											if (clean) {
+												finalContent += clean;
+												hopContent += clean;
+												send({ type: 'delta', content: clean });
+											}
+											pendingResume = plan.seam;
+											resumeKind = bad.kind;
+											resumesUsed++;
+											send({ type: 'notice', message: 'Yanıtta bozuk karakter algılandı, kaldığı yerden devam ediliyor…' });
+										} else {
+											corrupted = true;
+										}
 										attemptController.abort();
 										break;
 									}
-									finalContent += event.text;
-									hopContent += event.text;
-									send({ type: 'delta', content: event.text });
+									if (text) {
+										finalContent += text;
+										hopContent += text;
+										send({ type: 'delta', content: text });
+									}
 								} else if (event.type === 'tool_call') {
 									hopToolCalls.push({ id: event.id, name: event.name, arguments: event.arguments });
 								} else if (event.type === 'notice') {
 									send({ type: 'notice', message: event.message });
 									logAppEvent({ kind: 'fallback', chatId, message: event.message });
-							} else if (event.type === 'usage') {
-								// `attempt` and `retryReason` (why the PREVIOUS attempt was
-								// thrown away) make corruption/empty retries countable from
-								// the log; `toolRoundTrips` does the same for read_skill_file
-								// hops. An attempt aborted for corruption never reaches its
-								// final line, so it logs nothing — the next attempt's record
-								// carries retryReason instead.
-								logAppEvent({
-									kind: 'llm_timing',
-									chatId,
-									provider: body.provider,
-									model: body.model,
-									message: 'usage',
-									promptTokens: event.prompt,
-									completionTokens: event.completion,
-									promptMs: event.promptMs,
-									completionMs: event.completionMs,
-									loadMs: event.loadMs,
-									numCtx: event.numCtx,
-									nearCtxLimit: isNearCtxLimit(event),
-									attempt,
-									toolRoundTrips,
-									...(retryReason ? { retryReason } : {})
-								});
+								} else if (event.type === 'usage') {
+									// `attempt` and `retryReason` (why the PREVIOUS attempt was
+									// thrown away) make corruption/empty retries countable from
+									// the log; `toolRoundTrips` does the same for read_skill_file
+									// hops, `resumeCount` for continuations from a clean prefix.
+									// An attempt aborted for corruption never reaches its final
+									// line, so it logs no timing — the output_corruption record
+									// (with elapsedMs) covers that time instead.
+									logAppEvent({
+										kind: 'llm_timing',
+										chatId,
+										provider: body.provider,
+										model: body.model,
+										message: 'usage',
+										promptTokens: event.prompt,
+										completionTokens: event.completion,
+										promptMs: event.promptMs,
+										completionMs: event.completionMs,
+										loadMs: event.loadMs,
+										numCtx: event.numCtx,
+										nearCtxLimit: isNearCtxLimit(event),
+										attempt,
+										toolRoundTrips,
+										resumeCount: resumesUsed,
+										...(retryReason ? { retryReason } : {})
+									});
 								}
 
 								if (!assistantMessageId && (finalContent || finalThinking)) {
@@ -375,6 +482,31 @@ export const POST: RequestHandler = async ({ request }) => {
 										// still gets one more try at the end.
 									}
 								}
+							}
+
+							// The stream ended while a resumed answer was still waiting to line up with
+							// what the user saw (the model wrote nothing, or stopped inside the partial
+							// word): an unusable seam, so fall back to the full restart.
+							if (trimmer && !corrupted && !pendingResume) {
+								const end = trimmer.finish();
+								trimmer = null;
+								if (end.status === 'mismatch') {
+									if (decideSeamMiss() === 'retry') {
+										pendingResume = activeSeam;
+										resumesUsed++;
+									} else {
+										corrupted = true;
+									}
+								}
+							}
+
+							// A corrupted chunk was recovered by resuming: ask the model again from the
+							// clean text, with a fresh signal (the previous one was aborted to stop the
+							// bad stream). Bounded by MAX_RESUMES in planRecovery.
+							if (pendingResume && !corrupted) {
+								attemptController = new AbortController();
+								if (flight.signal.aborted) attemptController.abort();
+								continue;
 							}
 
 							if (corrupted || hopToolCalls.length === 0) break;

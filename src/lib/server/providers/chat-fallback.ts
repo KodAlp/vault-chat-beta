@@ -94,6 +94,9 @@ export async function* chatWithFallbackCore(
 		const model = resolveHopModel(i, deps.getProviderEntry(providerId), req.model);
 
 		if (model === null) {
+			// A continuation request is only valid against the provider that wrote the
+			// partial answer; skipping to another one is not an option.
+			if (req.continuation) throw firstError ?? new Error(`"${taskType}" için devam isteği başka sağlayıcıya aktarılamaz`);
 			const message = `${providerId} için varsayılan model tanımlı değil → atlanıyor`;
 			deps.logFallback(message, providerId);
 			yield { type: 'notice', message };
@@ -120,6 +123,10 @@ export async function* chatWithFallbackCore(
 			if (signal.aborted) throw err;
 			if (sawText) throw err;
 			if (err instanceof ProviderError && !err.retryable) throw err;
+			// A continuation must not hop: the next provider would read the partial
+			// answer as a finished earlier turn and answer from scratch (see
+			// ChatRequest.continuation). The caller falls back to a full restart.
+			if (req.continuation) throw err;
 
 			firstError ??= err;
 			if (isLast) throw err;
