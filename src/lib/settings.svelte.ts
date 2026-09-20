@@ -30,6 +30,11 @@ export interface Settings {
 	 * provider) can turn it on to queue several at once.
 	 */
 	allowConcurrentGeneration: boolean;
+	/** Whether /welcome shows once per app launch before the vault picker —
+	 * see $lib/welcome.ts for the per-session "already shown" flag this
+	 * gates alongside. On by default; a user who finds it slows down
+	 * getting to their vault can turn it off from /settings. */
+	showWelcomeScreen: boolean;
 }
 
 const STORAGE_KEY = 'vault-chat-settings';
@@ -42,7 +47,8 @@ const DEFAULTS: Settings = {
 	defaultProvider: 'ollama',
 	fastProvider: 'ollama',
 	reasoningProvider: 'ollama',
-	allowConcurrentGeneration: false
+	allowConcurrentGeneration: false,
+	showWelcomeScreen: true
 };
 
 function loadInitial(): Settings {

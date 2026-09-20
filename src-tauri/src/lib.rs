@@ -726,6 +726,26 @@ pub fn run() {
                 .build(app)?;
             app.manage(tray);
 
+            // Safety net for tauri.conf.json's "visible": false — the window
+            // is meant to be shown by the frontend (splash/index.html
+            // immediately, or +layout.svelte's onMount once a dev-mode
+            // launch has actually painted content) the moment there's
+            // something real to show instead of a blank/white flash. If
+            // that JS never runs at all (a genuine bug — bundle failed to
+            // load, uncaught error before the show() call), the window must
+            // not stay hidden forever with no way for the user to even see
+            // an error. is_visible() is checked right before forcing it, so
+            // this never fights a window the frontend already showed (the
+            // normal case) or one the user closed in the meantime.
+            if let Some(window) = app.get_webview_window("main") {
+                tauri::async_runtime::spawn(async move {
+                    tokio::time::sleep(Duration::from_secs(5)).await;
+                    if matches!(window.is_visible(), Ok(false)) {
+                        let _ = window.show();
+                    }
+                });
+            }
+
             Ok(())
         })
         .build(tauri::generate_context!())

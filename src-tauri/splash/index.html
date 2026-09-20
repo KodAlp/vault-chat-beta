@@ -181,6 +181,17 @@
 				confirmBtn.disabled = !pathInput.value.trim() || !nameInput.value.trim();
 			}
 
+			// The window starts hidden (tauri.conf.json's "visible": false) so
+			// SvelteKit's dev-mode CSR-boot gap (blank/white until its JS
+			// mounts) never flashes on screen — see +layout.svelte's own
+			// show() call for that path. This splash page's own content is
+			// instant (plain inline HTML/CSS, no bundle to wait for), so it
+			// shows the window itself, first thing, before even checking the
+			// Tauri bridge below.
+			if (window.__TAURI__ && window.__TAURI__.window) {
+				window.__TAURI__.window.getCurrentWindow().show();
+			}
+
 			async function main() {
 				if (!window.__TAURI__ || !window.__TAURI__.core) {
 					showError(

@@ -267,6 +267,12 @@
 		"profileComingSoon": "Profile (coming soon)"
 	},
 
+	"WelcomePage": {
+		"title": "Vault Agent Toolkit",
+		"tagline": "Your notes, fully local.",
+		"continue": "Continue"
+	},
+
 	"HomePage": {
 		"title": "Vault Agent Toolkit",
 		"emptyTitle": "No vaults yet",
@@ -334,6 +340,9 @@
 		"generationTitle": "Generation",
 		"allowConcurrentGeneration": "Allow multiple generations at once",
 		"allowConcurrentGenerationHint": "Off by default — quiz/card/report/map/slide generation waits for an existing generation of the same type to finish before starting a new one, so they don't all slow each other down on weaker hardware. Turn this on if your hardware can handle it.",
+		"welcomeScreenTitle": "Welcome screen",
+		"showWelcomeScreen": "Show the welcome screen on every launch",
+		"showWelcomeScreenHint": "Turning this off opens the app straight into the vault picker.",
 		"desktopVaultTitle": "Desktop — Default Vault (next launch)",
 		"desktopVaultDescription": "This is the vault the app will open into on its next launch — not the currently active one (see the \"Vaults\" card below). The change takes effect on the next app launch (the vault path can't be changed while the server is running).",
 		"vaultFolder": "Vault folder",
