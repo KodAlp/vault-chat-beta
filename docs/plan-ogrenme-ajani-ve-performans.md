@@ -96,7 +96,7 @@ network mimarisi sorunu olamaz** — bu soru kapandı, tekrar açılmasın.
 | Vektör deposu | `sqlite-vec`, `distance_metric=cosine`, eşik **0.6** |
 | İndeks boyutu | 330 dosya / **2 161 chunk** (`default` vault) |
 | `k` | chat 12, quiz/cards/report 12, mindmap 16 (`DEFAULT_K=8` yalnızca fallback) |
-| Keyword/FTS | **yok** — retrieval %100 vektör |
+| Keyword/FTS | **yedek olarak var (F5)** — `chunks_fts`; yalnızca vektör yolu boş dönünce ve yalnızca sohbette |
 | Korpus dili | 329 İngilizce / 1 Türkçe; sorgular Türkçe → bilinçli cross-lingual |
 
 ### Chunking (`indexer/chunk.ts`)
@@ -135,6 +135,12 @@ Ham veri var ama toplanmıyor: `attempt_answers` **97 satır (86 yanlış / 11 d
   `hardSplit` düzeltmesinden önceki kalıntılar. `--full` rebuild gerekiyor.
 - **`vault-rag-index/SKILL.md` güncel değil** — `nomic-embed-text`/768 diyor,
   gerçek `bge-m3`/1024.
+- ~~**İndeksli dosyayı yeniden adlandırmak patlıyordu.**~~ ✅ Düzeltildi (`85d69e2`):
+  `chunks.path`, `files.path`'e `ON UPDATE CASCADE` olmadan bağlı; `better-sqlite3` yabancı
+  anahtarı zorunlu kıldığından `renameFileInIndex` chunk'ı olan her dosyada
+  `SQLITE_CONSTRAINT_FOREIGNKEY` veriyor, üstelik `library.ts` dosyayı diskte çoktan
+  taşımış oluyordu. F5 testi yazılırken bulundu. `defer_foreign_keys` + regresyon
+  testleri (3'ü düzeltilmemiş kodda kırmızı).
 
 ---
 
@@ -322,6 +328,40 @@ toplam, 4147 kullanılan, **1775 MiB boş** — kart kullanılmadan kalıyor, t�
 
 Tablo **4.2 GB tahminiyle** yazılmıştı; gerçek **7.8 GB**. Yorum şimdi ölçülen
 sayılarla yeniden yazıldı ve `serveCtx` `16384 → 8192`.
+
+### Bozuk çıktıdan kaldığı yerden devam — uygulandı (2026-09-20)
+
+Modelin çıktısında U+FFFD veya beklenmeyen bir Çince karakter belirince eski davranış
+yanıtın **tamamını atıp baştan üretmekti**. Artık, koşullar uygunsa, temiz önekten devam
+edilir (`resume-plan.ts`, `chat/+server.ts`).
+
+**Kapı deneyi (kod yazılmadan önce, gerçek Ollama 0.32.5 + qwen3).** Sondaki yarım asistan
+mesajı **devam ettiriyor**, ama üç bulguyla:
+
+- qwen3 devamı `<think>` bloğunun *içinde* sayıyor: `</think>` yazıp yanıtı yeniden
+  veriyor → `stop` dizileri şart (`RESUME_STOP`).
+- Ön ek kelime ortasında bitince kelime bölünüyor → **dikiş**: istem son boşluğa kadar
+  verilir, devamın başındaki (kullanıcının zaten gördüğü) kuyruk kırpılır; tutmazsa aynı
+  dikiş en çok üç kez denenir, sonra baştan üretmeye düşülür.
+- KV önbelleği ön eki yeniden kullanıyor (devam isteğinde prompt yeniden işlenmiyor).
+
+**Ne zaman devam, ne zaman baştan:** yalnızca Ollama + doğrulanmış aile (qwen3), düz metin,
+düşünce/araç yok, ≥120 karakter. Diğer her durumda **eski davranış aynen** (`planRecovery`
+nedenleri: `reasoning`, `think-mode`, `has-thinking`, `tool-round-trips`, `tool-call`,
+`unsupported`, `resume-limit`, `too-short`, `no-seam`). Devam isteği başka sağlayıcıya
+**sıçramaz** (`chat-fallback.ts`: `continuation` ⇒ hata yükselir, rota baştan üretir).
+
+**Sonuç.** Deterministik uçtan uca (sahte Ollama, 42 kontrol) geçti. Gerçek modelde bozucu
+vekil ile 15 denemenin **14'ü baştan üretmeden kurtarıldı (%93)**. Ayrıca gerçek kullanımda
+**ilk doğal Çince bozulması** günlüğe düştü — sorun teorik değil.
+
+**Ölçüm.** `output_corruption` kaydı (yalnızca sayılar): tür, konum, tutulan karakter,
+denemenin süresi (baştan üretmede *boşa giden*, devamda *korunan* süre), `action`.
+`llm_timing`'e `resumeCount`. Sıklık ve maliyet artık günlükten okunur.
+
+**Sınır.** Kullanıcıya gösterilmiş metin geri çekilemez (`delta` gitti); bu yüzden bozuk
+yerden önceki son kelime sınırına dönülmez. Aynı token'ı yeniden üretme riski üst sınırla
+(3 devam) ve baştan üretmeye düşerek karşılanır.
 
 ### Rust neden çözüm değil
 
@@ -658,15 +698,61 @@ Yeni: `src/lib/server/memory.ts`, `memory.test.ts`.
 
 Sonrasında `npm run index -- --full` (sütun eski satırlarda boş).
 
-### F5 — Keyword/FTS fallback (§11) · küçük, bağımsız
+### F5 — Keyword/FTS fallback (§11) · ✅ uygulandı, bilerek küçük (2026-09-21)
 
-- `indexer/db.ts`: `CREATE VIRTUAL TABLE chunks_fts USING fts5(display_text,
-  content='chunks', content_rowid='id')` + `upsertFile`/`deleteFile` senkronu
-- `retrieve.ts`: vektör boşsa (veya `narrowScope` değilken eşik altındaysa) FTS
-  geçişi; maks 3 iterasyon, her turda sorgu yeniden formüle
-- `select-chunks.ts`'in `reason` alanına `'keyword'`
+**Ölçüm önce geldi.** Sohbet yolu `no_sources` **hiç yazmıyordu** (günlükteki "2/97" yalnızca
+üreticilerden geliyordu); "vektör araması neredeyse hiç boş dönmüyor" iddiam veriyle
+desteklenmiyordu — **düzeltiyorum**. Gerçek kullanıcı sorularıyla (93 tekil mesaj, indeks
+*kopyası*, bge-m3 CPU'da):
 
-**F12 aşama 5 bu tablonun üstüne kuruluyor** — birlikte planlanmalı.
+| | |
+|---|---|
+| Vektör yolu boş dönen soru | **5 / 93 = %5,4** — hepsi selamlaşma ("Selam", "Naber", "Dene"…), neden `filtered` |
+| Yedeğin bunlardan kurtardığı | **0 / 5** (selamlaşmanın FTS isabeti yok) |
+| En yakın komşu mesafesi p50 / p90 / max | 0,463 / 0,570 / 0,645 (eşik 0,6) |
+| İlk 18 komşunun gizli klasördeki payı | ortalama 2,6 / 18 |
+| Kaynak sayısı dağılımı (0…6) | 5, 1, 1, 1, 1, 2, **82** |
+
+**Sonuç: tetikleyici gerçek sorularda neredeyse hiç yok.** Plandaki kapıya göre F5 yine
+uygulandı ama **küçük tutuldu**: altyapı + yedek + günlük; hibrit sıralama yok (F9 harness'ı
+olmadan değerlendirilemez). Kazancı bugün için **kanıtlanmış değil**; asıl çıktı, artık
+ölçülebilir olması.
+
+**Ne yapıldı**
+
+- `indexer/db.ts`: bağımsız `chunks_fts(heading_path, display_text)` (harici-içerik **değil** —
+  silmelerde özel `delete` komutu tuzağı yok), `porter unicode61 remove_diacritics 2`,
+  `rowid = chunks.id`. `upsertFile`/`deleteFile` aynı transaction'da senkron tutar. Mevcut indeks,
+  yazma için ilk açılışta yeniden gömme **olmadan** doldurulur (`syncFts`; sayılar eşitse işlem
+  yok). FTS5 yoksa uyarı verir, indeksleme durmaz.
+- `keyword-query.ts`: her terim çift tırnaklanır (FTS5 sözdizimi enjeksiyonu etkisiz), durak
+  sözcük atılır, en çok 12 terim.
+- `retrieve()`: `opts.keywordFallback` (**varsayılan kapalı; yalnızca sohbet açar** — üreticiler
+  açmaz: alıntıladıkları parçanın mesafeyle doğrulanmasına dayanırlar). Yalnızca `filtered` /
+  `no-embedding-match` sonrası; `scope` **değil** (o "kapsamı genişlet?" demek). Önce AND, sonra
+  OR. Mesafe eşiği atlanır; kapsam, alan, gizli klasör ve dosya başı 3 sınırı aynen. `chunks_fts`
+  yoksa sessizce kapalı.
+- Günlük: `retrieval` (parça sayısı, `reason`, en iyi mesafe, `keyword`) — **sohbet ilk kez bunu
+  yazıyor** — ve `retrieval_fallback` (`mode`, terim, isabet). Yalnızca sayılar.
+
+**Doğrulama.** 293/293 test, `svelte-check` 0 hata. Kopya indekste `chunks` = `chunks_fts` = 2 161.
+Vektör komşuları hiç olmayan bir alan + o alandan nadir terimle: yedek **kapalıyken 0 parça,
+açıkken doğru dosyayı** buluyor; gizli klasördeki 18 isabet doğru şekilde 0 kullanılabilire
+iniyor; `scope`'ta yedek devreye girmiyor; tablo yokken sessizce kapalı. İzole dev sunucusunda
+gerçek sohbet: kaynak `via: keyword`, günlükte `retrieval_fallback` + `retrieval`; normal soruda
+yedek tetiklenmiyor.
+
+**Sınırlar (bilinmeli)**
+
+- **Çapraz dil:** korpus 329 İngilizce / 1 Türkçe, sorgular Türkçe ⇒ eşleşme yalnızca ortak
+  terimlerde (B-tree, TCP, kimlik adları, sayılar) çalışır. Sorguyu yeniden formüle etmek LLM
+  çağrısı ister; yapılmadı — yol haritasının "3 iterasyon"u yerine AND→OR iki geçiş.
+- **Uygulama indeksi salt okunur açıyor**, tabloyu kendisi oluşturamaz: **mevcut indeks için
+  `npm run index -- --fts`** (yalnızca doldurma, gömme yok) çalıştırılmalı; çalıştırılana kadar
+  yedek kapalı ve hiçbir şey bozulmaz. **Gerçek indekste henüz çalıştırılmadı** (kullanıcı onayı
+  bekliyor).
+
+**F12 aşama 5** bu tablonun üstüne kurulabilir — birlikte planlanmalı.
 
 ### F6 — Mode sistemi (§33–39) · F1 + F3'e bağımlı
 
@@ -825,7 +911,7 @@ F12 aşama 1-2   ← HER ŞEYDEN ÖNCE. İki env değişkeni + bir satır serveC
                   ve her yeni özellik bu yavaşlığın üstüne biniyor.
    └─> F12 aşama 3-4   (k düşür, ölçümü kalıcılaştır)
 
-F4, F5, F13-1/2 ← küçük, bağımsız   (F5'in FTS'i F12-5'i de besliyor)
+F4, F13-1/2     ← küçük, bağımsız   (F5 ✅ yapıldı; FTS'i F12-5'i de besleyebilir)
    └─> F1 (temel)
          ├─> F2 ─┐
          └─> F3 ─┴─> F6
@@ -882,7 +968,8 @@ F14 ← EN SON. Ana hattan bağımsız; F14-1 (timeout hatası) istenirse
 | **Kurulu aday modeller** | `qwen3:8b-bart-iq4xs`, `qwen3:8b-bart-iq3m`, `qwen3:8b-bart-q3km` model deposunda (~12.6 GB). `q3km` dominated olduğu için silinmesi önerilir; karar kullanıcıda. Ayrıca `ollama create`, her GGUF'un ham kopyasını da bıraktı: **4 yetim blob, 11.76 GiB**, hiçbir manifest başvurmuyor (doğrulandı). Ollama bunları bir sonraki başlatılışında kendi temizler; elle silinmedi. |
 | **F12-3 / `k=6` kalitesi** | `CHAT_K` 12 → 6 gecikmeyi ölçülebilir düşürür ama cevap kalitesine etkisini log ölçemez. Kullanıcı gerçek sorularla karşılaştırmalı; kalite düşerse `CHAT_K` tek satırda geri alınır (o zaman `serveCtx` ile birlikte yeniden dengelenmeli). |
 | **`LLAMA_ARG_FIT_TARGET=256` (kalıcı)** | En büyük kaldıraç (§3 "Motorun VRAM güvenlik payı"). Kullanıcı düzeyinde kalıcı ortam değişkeni + Ollama yeniden başlatması — **uygulandı ve doğrulandı (2026-09-20)**. Ayrıca makinedeki tüm llama.cpp tabanlı programları etkiler. `OLLAMA_FLASH_ATTENTION=1` ve `OLLAMA_KV_CACHE_TYPE=q8_0` ile birlikte ölçüldü; hızlar üçüne bağlı. Belgelenmemiş bir geçiş: Ollama güncellemesi kırabilir. |
-| **Bozuk çıktıdan kaldığı yerden devam** | Bozulan yanıtı baştan üretmek yerine temiz ön ekten devam ettirme planı (Ollama'nın yarım asistan mesajından devamı ve KV önbelleği deneyle doğrulanmadı). Kod yazılmadı. |
+| **Bozuk çıktıdan kaldığı yerden devam** | ✅ **Uygulandı** (§3). Yalnızca Ollama + qwen3 ailesi; başka aileye açmadan önce o modelde devam davranışı ayrıca deneyle doğrulanmalı (`prefixResume` bayrağı). Bulut sağlayıcılarda eski davranış. |
+| **F5 / gerçek indekse `--fts`** | `npm run index -- --fts` gerçek indeksi değiştirir (yalnızca `chunks_fts` ekler, gömme yok). **Kullanıcı onayı** bekliyor; onaylanana kadar yedek kapalı. Ölçüm tetikleyicinin nadir olduğunu gösterdi — acele yok. |
 | **Skill prompt yükü** | Ölçüldü: `educational-agent` chat başına **+1 708 token / +0.96 sn prefill** (§3). Açık bırakmak bu bedeli her turda ödemek demek; kalıcı karar kullanıcıya ait. Dosya bugün ikisi de `enabled: false` (kullanıcı arayüzden kapattı). ~700 token'ın kaynağı henüz ayrıştırılmadı. |
 | **F14 / yenilik eşiği** | `release_date` eşiği 12 ay mı olsun? Daha kısa eşik hâlâ kullanılan modelleri de düşürür, daha uzun eşik gürültüyü bırakır. |
 | **F14 / tool filtresi** | "Sadece tool destekleyenleri göster" anahtarı gelsin mi? Listeyi belirgin daraltır ama üreticilerin çoğu tool kullanmıyor. |
