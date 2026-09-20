@@ -207,10 +207,20 @@ export const POST: RequestHandler = async ({ request }) => {
 					const result = await retrieve(v, buildRetrievalQuery(body.messages), {
 						domains: body.domains,
 						includedPaths: body.includedPaths,
-						k: chatRetrievalK()
+						k: chatRetrievalK(),
+						keywordFallback: true
 					});
 					sources = result.chunks;
 					narrowScope = result.narrowScope;
+					logAppEvent({
+						kind: 'retrieval',
+						chatId,
+						message: sources.length ? `${sources.length} kaynak${result.keyword ? ' (anahtar kelime yedeği)' : ''}` : `kaynak yok (${result.reason ?? '?'})`,
+						chunks: sources.length,
+						reason: result.reason,
+						bestDistance: result.bestDistance === undefined ? undefined : Math.round(result.bestDistance * 1000) / 1000,
+						keyword: result.keyword ?? false
+					});
 				}
 				const caps = await modelCaps(body.provider, body.model);
 				const toolsEnabled = caps.tools && hasFetchableFolderSkills('chat');

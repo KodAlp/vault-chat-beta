@@ -57,7 +57,72 @@ export function openDb(dbPath: string): Database.Database {
 			embedding FLOAT[${EMBED_DIMS}] distance_metric=cosine
 		);
 	`);
+	if (ensureFts(db)) ftsEnabled.add(db);
 	return db;
+}
+
+/** Handles for which the keyword index exists and must be kept in step with
+ * `chunks`. A WeakSet, not a field on the handle, so a build of SQLite without
+ * FTS5 simply leaves it out and every write below skips the FTS work. */
+const ftsEnabled = new WeakSet<Database.Database>();
+
+/**
+ * Keyword index for retrieve.ts's fallback (F5). A standalone FTS5 table, NOT
+ * an external-content one: with `content='chunks'` every delete must replay the
+ * exact original row through a special command or the index silently corrupts,
+ * and it costs only a few MB to keep its own copy. `rowid` is `chunks.id`.
+ *
+ * `porter` stems English ("indexing" ~ "index"); `remove_diacritics 2` folds
+ * Turkish letters the same way for both the text and the query.
+ *
+ * Additive: nothing here needs `--full`. An index built before this existed
+ * gets the table filled from `chunks` the first time it is opened for writing
+ * (openDb) — no re-embedding. The app itself opens the index read-only and
+ * cannot create it, hence `npm run index -- --fts` for an existing index.
+ *
+ * Returns false (and warns) if this SQLite has no FTS5, so a missing feature
+ * can never take indexing down with it.
+ */
+function ensureFts(db: Database.Database): boolean {
+	try {
+		db.exec(`
+			CREATE VIRTUAL TABLE IF NOT EXISTS chunks_fts USING fts5(
+				heading_path,
+				display_text,
+				tokenize = 'porter unicode61 remove_diacritics 2'
+			);
+		`);
+	} catch (err) {
+		const message = err instanceof Error ? err.message : String(err);
+		console.warn(`[fts] FTS5 kullanılamıyor, anahtar kelime yedeği kapalı: ${message}`);
+		return false;
+	}
+	syncFts(db);
+	return true;
+}
+
+/**
+ * Makes `chunks_fts` match `chunks` exactly: adds rows for chunks that have none
+ * (an index that predates the table, or was written by an older build during an
+ * upgrade) and drops rows whose chunk is gone. Idempotent, and a no-op — two
+ * counts — when the tables already agree, which is the normal case.
+ */
+export function syncFts(db: Database.Database): { added: number; removed: number } {
+	const chunks = (db.prepare('SELECT count(*) AS c FROM chunks').get() as { c: number }).c;
+	const fts = (db.prepare('SELECT count(*) AS c FROM chunks_fts').get() as { c: number }).c;
+	if (chunks === fts) return { added: 0, removed: 0 };
+	const run = db.transaction(() => {
+		const removed = db.prepare('DELETE FROM chunks_fts WHERE rowid NOT IN (SELECT id FROM chunks)').run().changes;
+		const added = db
+			.prepare(
+				`INSERT INTO chunks_fts (rowid, heading_path, display_text)
+				 SELECT id, heading_path, display_text FROM chunks
+				 WHERE id NOT IN (SELECT rowid FROM chunks_fts)`
+			)
+			.run().changes;
+		return { added, removed };
+	});
+	return run();
 }
 
 export function listKnownFiles(db: Database.Database): Map<string, FileRow> {
@@ -89,6 +154,10 @@ export function deleteFile(db: Database.Database, filePath: string): void {
 	// sqlite-vec's vec0 rowid check rejects a plain JS number bound param here
 	// ("Only integers are allows for primary key values") — BigInt satisfies it.
 	for (const { id } of chunkIds) delVec.run(BigInt(id));
+	if (ftsEnabled.has(db)) {
+		const delFts = db.prepare('DELETE FROM chunks_fts WHERE rowid = ?');
+		for (const { id } of chunkIds) delFts.run(id);
+	}
 	db.prepare('DELETE FROM chunks WHERE path = ?').run(filePath);
 	db.prepare('DELETE FROM files WHERE path = ?').run(filePath);
 }
@@ -109,10 +178,14 @@ export function upsertFile(
 			`INSERT INTO chunks (path, heading_path, display_text) VALUES (?, ?, ?)`
 		);
 		const insertVec = db.prepare(`INSERT INTO vec_chunks (chunk_id, embedding) VALUES (?, ?)`);
+		const insertFts = ftsEnabled.has(db)
+			? db.prepare('INSERT INTO chunks_fts (rowid, heading_path, display_text) VALUES (?, ?, ?)')
+			: null;
 		for (const { insert, embedding } of chunks) {
 			const info = insertChunk.run(insert.path, insert.heading_path, insert.display_text);
 			// BigInt, not the plain number lastInsertRowid — see note in deleteFile above.
 			insertVec.run(BigInt(info.lastInsertRowid), Buffer.from(new Float32Array(embedding).buffer));
+			insertFts?.run(info.lastInsertRowid, insert.heading_path, insert.display_text);
 		}
 	});
 	tx();

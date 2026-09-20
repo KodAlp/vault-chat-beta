@@ -10,7 +10,11 @@ export interface RetrievedChunk {
 	topic: string;
 	depth: string;
 	domains: string[];
+	/** Cosine distance. For a chunk found by the keyword fallback (via === 'keyword')
+	 * this is a placeholder (1), NOT a distance — nothing reads it. */
 	distance: number;
+	/** Set only for chunks the keyword fallback found (retrieve.ts). */
+	via?: 'keyword';
 }
 
 /**
@@ -26,6 +30,13 @@ export interface RetrieveResult {
 	 * paths produced it, for app-log.ts's no_sources record. 'scope' is the
 	 * log-side counterpart of narrowScope=true. */
 	reason?: 'unindexed' | 'no-embedding-match' | 'filtered' | 'scope';
+	/** True when the vector search came back empty and these chunks are the
+	 * keyword fallback's (F5). Only ever set with opts.keywordFallback. */
+	keyword?: boolean;
+	/** Best cosine distance among the vector candidates, whether or not they
+	 * passed the filters — logging only (app-log.ts 'retrieval'). Absent when KNN
+	 * returned nothing. */
+	bestDistance?: number;
 }
 
 export type ChatRole = 'user' | 'assistant';

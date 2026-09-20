@@ -143,3 +143,30 @@ test('excludedPrefixes applies even when includedPaths would otherwise allow the
 	});
 	assert.deepEqual(result.chunks, []);
 });
+
+test('a keyword-sourced chunk skips the distance threshold (its distance is a placeholder)', () => {
+	const result = selectChunks([candidate({ distance: 1, via: 'keyword' })]);
+	assert.equal(result.chunks.length, 1);
+	assert.equal(result.chunks[0].via, 'keyword');
+});
+
+test('a vector chunk with the same placeholder distance is still dropped', () => {
+	assert.deepEqual(selectChunks([candidate({ distance: 1 })]).chunks, []);
+});
+
+test('keyword chunks are still subject to hidden folders, scope, domain and the per-file cap', () => {
+	const kw = (o: Partial<CandidateChunk>) => candidate({ distance: 1, via: 'keyword', ...o });
+	const hidden = selectChunks([kw({ path: 'cards/a.md' })], { excludedPrefixes: ['cards'] });
+	assert.deepEqual(hidden.chunks, []);
+	const outOfScope = selectChunks([kw({ path: 'wiki/x.md' })], { includedPaths: ['wiki/y'] });
+	assert.deepEqual(outOfScope.chunks, []);
+	assert.equal(outOfScope.narrowScope, true);
+	const wrongDomain = selectChunks([kw({ domains: ['electronics'] })], { domains: ['math'] });
+	assert.deepEqual(wrongDomain.chunks, []);
+	const capped = selectChunks(Array.from({ length: 5 }, (_, i) => kw({ path: 'same.md', heading_path: `h${i}` })), { k: 10 });
+	assert.equal(capped.chunks.length, 3);
+});
+
+test('vector chunks carry no via marker', () => {
+	assert.equal('via' in selectChunks([candidate()]).chunks[0], false);
+});
