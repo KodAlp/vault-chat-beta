@@ -249,8 +249,104 @@ npm run mcp:smoke   # 4 aracı tek süreçte, gerçek Ollama'ya dokunmadan test 
 Sunucu ayaktayken tanı için tek stderr satırı yeterli: `DATA_DIR=... vaults=N`.
 Claude Desktop'ta bu satır `%APPDATA%\Claude\logs\mcp-server-vault-chat.log`'a düşer.
 
+## Küçük GPU'lar için performans ayarları
+
+Yerel model yavaşsa önce şuna bak: bir model yüklüyken `ollama ps` çıktısındaki
+`PROCESSOR` sütunu `100% GPU` mu, yoksa `18%/82% CPU/GPU` gibi bir bölünme mi?
+Bölünme varsa model VRAM'e sığmıyor ve katmanların bir kısmı CPU'da koşuyor; hız
+büyük ölçüde CPU'da kalan katmanların oranına bağlı. Aşağıdaki ayarlar bu oranı
+düşürür. Bunlar **kalite değiştirmez** (aynı ağırlık, aynı hesap), yalnızca katmanların
+nerede koştuğunu değiştirir.
+
+> Tüm sayılar **tek makinede** ölçüldü (RTX 4050 Laptop 6 GB, `qwen3:8b`). Başka donanımda
+> sıralama aynı olabilir ama rakamlar farklı çıkar. Model zaten tamamen GPU'ya sığıyorsa
+> (`100% GPU`, genelde 12 GB+ kartlar) bu ayarların bir etkisi olmaz.
+
+### 1. Ollama tarafı (Ollama'nın ortamına yazılır)
+
+Üç kullanıcı-düzeyi ortam değişkeni, sonra Ollama'yı görev çubuğundan kapatıp yeniden aç:
+
+```powershell
+[Environment]::SetEnvironmentVariable('OLLAMA_FLASH_ATTENTION', '1',    'User')
+[Environment]::SetEnvironmentVariable('OLLAMA_KV_CACHE_TYPE',   'q8_0', 'User')
+[Environment]::SetEnvironmentVariable('LLAMA_ARG_FIT_TARGET',   '256',  'User')
+```
+
+- `OLLAMA_FLASH_ATTENTION=1` ve `OLLAMA_KV_CACHE_TYPE=q8_0`: KV önbelleğini yaklaşık yarıya
+  indirir, VRAM'de model katmanlarına yer açar.
+- `LLAMA_ARG_FIT_TARGET=256` (MiB): Ollama'nın motoru (`llama-server`) varsayılan olarak
+  **1024 MiB** VRAM'i boş bırakmaya çalışır; bu değer payı küçültür. Ölçülen etki, aynı
+  modelde katman sayısında artış ve bu makinede `qwen3:8b` Q4_K_M için ~%50 daha hızlı
+  üretim. Payı küçültmek, VRAM'i başka programlarla paylaşıyorsan bellek yetersizliği
+  riskini artırır; sorun görürsen değeri yükselt ya da değişkeni sil.
+
+**Bilmen gerekenler**
+
+- `LLAMA_ARG_FIT_TARGET` Ollama'nın **belgelenmiş bir ayarı değil**; Ollama motoru alt süreç
+  olarak başlatırken ortamını miras bıraktığı için çalışıyor. Bir Ollama güncellemesi bunu
+  değiştirebilir. Güncellemeden sonra `ollama ps`'e yeniden bak.
+- Bu değişken makinedeki **tüm llama.cpp tabanlı programları** etkiler.
+- Doğrulama: bir model yükle ve `ollama ps`'e bak; ayrıca Ollama'nın sunucu logunda
+  (`%LOCALAPPDATA%\Ollama\server.log`) `free memory target of 256 MiB` satırı görünmeli.
+- Geri alma: her değişken için `[Environment]::SetEnvironmentVariable('<AD>', $null, 'User')`,
+  sonra Ollama'yı yeniden başlat.
+
+### 2. Uygulama tarafı
+
+| Ayar | Varsayılan | Ne yapar |
+|---|---|---|
+| `OLLAMA_SERVE_CTX` | model tablosu (`qwen3`: 8192) | Ollama'dan istenen bağlam penceresi (`num_ctx`), tüm modeller için |
+| `CHAT_RETRIEVAL_K` | 6 (1–50) | Sohbette soru başına getirilen kaynak parçası sayısı |
+
+- **Nerede verilir:** `.env` yalnızca **`npm run dev`** için geçerli (bkz. `.env.example`).
+  **`node build` ("Kalıcı kullanım") ve paketli (Tauri) uygulama `.env` okumaz.** `node build`
+  için ayarı o komutu çalıştırdığın kabukta ver (`OLLAMA_SERVE_CTX=8192 node build`); paketli
+  uygulama için **işletim sistemi ortam değişkeni** olarak ver (yukarıdaki gibi `'User'` düzeyi)
+  ve uygulamayı kapatıp yeniden aç; sunucu süreci ortamı uygulamadan miras alır.
+- **`OLLAMA_SERVE_CTX`'i düşürmek tehlikeli olabilir.** Pencere küçülünce daha çok katman GPU'da
+  kalır ama prompt (k=6'da bile ~4k token'a çıkabiliyor) sığmazsa Ollama bağlamı kaydırır ve
+  **yalnızca ilk 4 token'ı korur**; sistem kuralları sessizce düşer. Varsayılan 8192'nin altına
+  inmeden önce `data/app-log.jsonl`'daki `llm_timing` kayıtlarında `nearCtxLimit: true` olup
+  olmadığına bak.
+- **Geniş VRAM'in varsa** ikisini birlikte yükselt (örn. `OLLAMA_SERVE_CTX=16384`,
+  `CHAT_RETRIEVAL_K=12`): daha çok kaynakla cevap verir. `k`'nın cevap kalitesine etkisi
+  ölçülemez, bir yargı meselesi; bir şey kötüleşirse eski değere dön.
+
+### 3. Daha küçük kuantizasyon (isteğe bağlı)
+
+Model tamamen GPU'ya sığmıyorsa daha küçük bir kuantizasyon (ör. `IQ4_XS`, ~4.6 GB; `Q4_K_M`
+~5.0 GB) katmanların daha çoğunu GPU'da tutar. Yayınlanmış bir ölçüme göre (başka bir
+yayıncının özel kuantizasyonları, eğilim gösterir) `IQ4_XS`'in sapması `Q4_K_M`'e yakındır;
+3-bit kuantizasyonlarda (`IQ3_M`, `Q3_K_M`) sapma yaklaşık 2-3 kat artar. Yerelde kaliteyi
+ayırt edecek güçte bir test yapılmadı: kararı gerçek sorularla kendin ver.
+
+**Ham GGUF'u doğrudan çekme.** Resmî `qwen3:8b`'in `tools` ve `thinking` yetenekleri modelin
+**şablonundan** gelir; başka bir kaynaktan ham GGUF çekmek bunları kaybettirir ve uygulamanın
+skill araçları/düşünme modu çalışmaz. Doğru yol, resmî modelin Modelfile'ını alıp yalnızca `FROM`
+satırını değiştirmektir:
+
+```powershell
+cmd /c "ollama show qwen3:8b --modelfile > Modelfile"
+# Modelfile içinde FROM satırını indirdiğin .gguf dosyasının yoluyla değiştir (ileri eğik çizgiyle),
+# başka hiçbir satıra dokunma. Sonra:
+ollama create qwen3:8b-iq4xs -f Modelfile
+ollama show qwen3:8b-iq4xs      # Capabilities altında tools ve thinking görünmeli
+```
+
+(`cmd /c` bilerek: Windows PowerShell 5.1'in `>` operatörü dosyayı UTF-16 yazar ve Ollama
+onu okuyamaz.)
+
+İndirdiğin dosyanın SHA256'sını yayıncının sayfasındaki değerle karşılaştır.
+
+### 4. Ölçmek
+
+Her sohbet çağrısı `data/app-log.jsonl`'a bir `llm_timing` kaydı yazar: `promptTokens`,
+`completionTokens`, `promptMs`, `completionMs`, `loadMs`, `numCtx`, `nearCtxLimit`. Yalnızca
+sayılar, metin içeriği yok.
+
 ## Sorun giderme
 
+- **Yerel model yavaş** → yukarıdaki "Küçük GPU'lar için performans ayarları".
 - **"Ollama sunucusuna ulaşılamadı"** → `ollama serve` çalışıyor mu, `OLLAMA_URL` doğru mu kontrol et.
 - **Model listesi boş / ModelPicker hata veriyor** → `ollama pull qwen3:8b` çalıştırıldı mı?
 - **Kaynak bulunamıyor / cevaplar alakasız** → `npm run index` çalıştırıldı mı, index güncel mi?
