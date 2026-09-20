@@ -4,6 +4,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import matter from 'gray-matter';
 import { openDb, listKnownFiles, deleteFile, upsertFile, type FileRow } from './db';
+import { hasKeywordIndex } from '../src/lib/server/keyword-search';
 import { chunkMarkdown, normalizeLevel } from './chunk';
 import { embedDocuments } from './embed';
 import { EXCLUDED_DIRS } from './excluded-dirs';
@@ -18,6 +19,7 @@ try {
 const args = process.argv.slice(2);
 const isFull = args.includes('--full');
 const isDryRun = args.includes('--dry-run');
+const isFts = args.includes('--fts');
 
 const vault = resolveIndexerVault(args);
 const LIBRARY_ROOT = vault.libraryRoot;
@@ -40,6 +42,25 @@ function sha256(content: string): string {
 async function main() {
 	const start = Date.now();
 	console.log(`vault: ${vault.name} (${vault.id})`);
+
+	// `--fts`: only create/refresh the keyword index (chunks_fts) from the chunks
+	// already stored. No file is read, nothing is re-embedded. This is how an index
+	// that was built before the keyword fallback existed gets the table, since the
+	// app opens the index read-only and cannot create it. See db.ts's ensureFts.
+	if (isFts) {
+		if (!fs.existsSync(DB_PATH)) {
+			console.error(`Bu vault henüz indekslenmemiş: ${DB_PATH}`);
+			process.exit(1);
+		}
+		const ftsDb = openDb(DB_PATH); // creates the table and syncs it with chunks
+		const chunks = (ftsDb.prepare('SELECT count(*) AS c FROM chunks').get() as { c: number }).c;
+		const rows = hasKeywordIndex(ftsDb)
+			? (ftsDb.prepare('SELECT count(*) AS c FROM chunks_fts').get() as { c: number }).c
+			: null;
+		ftsDb.close();
+		console.log(rows === null ? 'FTS5 bu SQLite derlemesinde yok; anahtar kelime yedeği kapalı.' : `chunks: ${chunks} | chunks_fts: ${rows}${chunks === rows ? ' (eşit)' : ' (UYUMSUZ)'}`);
+		return;
+	}
 
 	if (isFull) {
 		for (const suffix of ['', '-wal', '-shm']) {

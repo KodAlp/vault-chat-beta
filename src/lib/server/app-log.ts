@@ -43,7 +43,16 @@ export interface AppLogRecord {
 		 * character). Records which kind, how far into the answer, how long the
 		 * attempt had been running, and what was done about it — the numbers that
 		 * were missing to judge how often this happens and what it costs. */
-		| 'output_corruption';
+		| 'output_corruption'
+		/** One record per chat retrieval: how many chunks came back, why none did
+		 * (`reason`), how close the nearest vector match was, and whether the
+		 * keyword fallback supplied them. Chat never wrote no_sources, so until this
+		 * existed nobody could say how often a question got no context at all. */
+		| 'retrieval'
+		/** The keyword (FTS5) fallback ran because the vector search left nothing
+		 * usable: which pass (`mode`), how many query terms, raw hits, and how many
+		 * survived the scope/domain/hidden-folder filters. */
+		| 'retrieval_fallback';
 	chatId?: string;
 	provider?: string;
 	model?: string;
@@ -101,6 +110,16 @@ export interface AppLogRecord {
 	elapsedMs?: number;
 	action?: 'resume' | 'restart' | 'resume_mismatch' | 'resume_retry';
 	restartReason?: string;
+	/** retrieval, retrieval_fallback. `chunks`: usable chunks returned.
+	 * `bestDistance`: nearest vector match's cosine distance (retrieval only).
+	 * `keyword`: the chunks came from the keyword fallback. `mode`/`terms`/`hits`:
+	 * the fallback pass ('and' | 'or'), its query-term count and raw FTS hits. */
+	chunks?: number;
+	bestDistance?: number;
+	keyword?: boolean;
+	mode?: 'and' | 'or';
+	terms?: number;
+	hits?: number;
 	message: string;
 }
 

@@ -38,6 +38,9 @@ export interface CandidateChunk {
 	depth: string;
 	domains: string[];
 	distance: number;
+	/** 'keyword' = found by the FTS fallback: `distance` is meaningless, so the
+	 * threshold is skipped; every other filter still applies. */
+	via?: 'keyword';
 }
 
 function inScope(filePath: string, includedPaths: string[]): boolean {
@@ -81,7 +84,7 @@ export function selectChunks(
 	let sawInThresholdOutOfScope = false;
 
 	for (const c of candidates) {
-		if (c.distance > DISTANCE_THRESHOLD) continue;
+		if (c.via !== 'keyword' && c.distance > DISTANCE_THRESHOLD) continue;
 
 		// Checked before includedPaths and unconditionally (not gated on
 		// includedPaths being set): a hidden folder must disappear from
@@ -116,7 +119,8 @@ export function selectChunks(
 			topic: c.topic,
 			depth: c.depth,
 			domains: c.domains,
-			distance: c.distance
+			distance: c.distance,
+			...(c.via ? { via: c.via } : {})
 		});
 		if (results.length >= k) break;
 	}
