@@ -4,7 +4,7 @@
 **Kapsam:** Local Educational Agent spec'inin (63 bölüm) uygulamaya taşınması +
 yerel LLM performansı + MinerU görselleri + slayt kalitesi + API sağlayıcı model listesi
 **Durum:** F12 aşama 2, 3, 4 **uygulandı ve ölçüldü** (2026-09-20, §3). Aşama 1 (kalıcı
-Ollama env) onay bekliyor; aşama 5–6, F1–F9, F11, F13, F14 henüz uygulanmadı.
+Ollama env, artık üç değişken) **uygulandı ve doğrulandı** (2026-09-20, §3). Aşama 5–6, F1–F9, F11, F13, F14 henüz uygulanmadı.
 
 Bu belge `docs/ollama-latency-analysis.md`'nin (2026-09-18) **yerini aldı**; o dosya
 kaldırıldı. Eski rapor "ölç, muhtemelen prompt boyutu" diyordu; ölçüm geldi ve teşhis
@@ -217,7 +217,7 @@ hesaplanıp **eşleştiği doğrulandı**. Modeller, resmî `qwen3:8b`'in TEMPLA
 kontrol edildi); `tools` ve `thinking` yetenekleri her adayda görüldü.
 
 **Koşullar:** geçici Ollama (11435), `OLLAMA_FLASH_ATTENTION=1`, `OLLAMA_KV_CACHE_TYPE=q8_0`, `num_ctx 8192`,
-temp 0. **Bu env kalıcı olarak uygulanmadı (§8); uygulamadaki gerçek hız bundan düşüktür.**
+temp 0. **Bu env sonradan kalıcı uygulandı (bkz. "Son doğrulama" aşağıda); bu ölçümler o zamana kadar yalnızca geçici sunucudaydı.**
 KISA: ~80 token prompt → 128 token (n=5). UZUN: gerçek vault notu, ~3k token bağlam → 1 024 token (n=3).
 Taban çizgi: kurulu resmî `qwen3:8b` (Q4_K_M). Sondaki taban çizgi tekrarı **−%1.8** sapma (eşik ±%10).
 
@@ -293,8 +293,8 @@ toplam, 4147 kullanılan, **1775 MiB boş** — kart kullanılmadan kalıyor, t�
   masaüstü belleği kullanmıyor; dGPU-only (MUX) moda geçilirse pay daha önemli olur.
 - **Sonuç:** payı küçültünce IQ3_M'in IQ4_XS'e üstünlüğü %+100'den %+13'e iniyor, ama kalite riski IQ3_M'de.
   **IQ4_XS + pay 256 en iyi denge** (%100 GPU, ~40 tok/s, kalitesi Q4_K_M'e yakın).
-- **Kalıcı yapılmadı** (kullanıcı-düzeyi ortam değişkeni, Ollama yeniden başlatması, onay bekliyor). Ollama bunu belgelenmiş
-  bir ayar olarak sunmuyor, motor ortam değişkeninin geçişi bir uygulama ayrıntısı; güncellemeyle değişebilir.
+- **Sonradan kalıcı uygulandı** (kullanıcı onayıyla, bkz. "Son doğrulama"). Ollama bunu belgelenmiş bir ayar olarak
+  sunmuyor, motor ortam değişkeninin geçişi bir uygulama ayrıntısı; güncellemeyle değişebilir.
 
 ### Uygulama yolunda matris — 3 model × 3 bağlam (pay 1024, embed CPU'da)
 
@@ -339,18 +339,28 @@ doğru yerde duruyor. **Backend'i Rust'a taşımak ölçülebilir kazanç getirm
 
 ### Aşamalar
 
-**1 — Ollama env · ⏳ ölçüldü, kalıcı olarak UYGULANMADI (kullanıcı onayı bekliyor).**
+**1 — Ollama env · ✅ uygulandı (2026-09-20, kullanıcı onayıyla).** Üç kullanıcı-düzeyi değişken:
+`OLLAMA_FLASH_ATTENTION=1`, `OLLAMA_KV_CACHE_TYPE=q8_0` ve **`LLAMA_ARG_FIT_TARGET=256`** (bkz. aşağıdaki
+"Motorun VRAM güvenlik payı"). Öncesinde üçü de ayarsızdı. Geri alma: her biri için
+`[Environment]::SetEnvironmentVariable('<AD>', $null, 'User')` ve Ollama'yı yeniden başlat.
+Kod tarafı (aşama 2–4) env olmadan da çalışır ve değer üretir; env üstüne binen ikinci ve büyük kazanç.
 
-```bash
-setx OLLAMA_FLASH_ATTENTION 1
-setx OLLAMA_KV_CACHE_TYPE q8_0
-```
+**Son doğrulama (2026-09-20)** — kullanıcının kendi Ollama'sında (11434), yeni ayarlarla, uygulamanın gerçek
+`/api/chat` yolunda (izole veri dizin, kullanıcının `chats.db`'sine dokunulmadan), embed CPU'da, ctx 8192, k=6:
 
-Kalıcı ve kullanıcı-düzeyi bir değişiklik + Ollama yeniden başlatması gerektirdiği
-için yalnızca geçici sunucuda denendi. Ölçüm net: `8192`'de env olmadan 8.9, env ile
-12.4 tok/s (**+%39**). **Kod tarafı (aşama 2–4) env olmadan da çalışır ve değer
-üretir**; env ise üstüne binen ikinci kazanç. Uygulandıktan sonra `ollama ps` ile
-doğrulanır — burada yapılmadıysa bu satır "uygulandı" diye güncellenmemeli.
+| Model | ilk token (kısa / uzun) | decode (kısa / uzun) | uzun görev süresi (medyan) | VRAM |
+|---|---|---|---|---|
+| **IQ4_XS** | **1.5 / 1.3 sn** | **40.8 / 39.6 tok/s** | **38 sn** (1 488 token) | 4.98 GB = tamamı GPU'da |
+| Q4_K_M (resmî) | 1.9 / 1.7 sn | 19.0 / 18.0 tok/s | 96 sn (1 713 token)* | 4.92 / 6.01 GB (%82) |
+
+\* Q4_K_M'in bir uzun cevabı uygulamanın 4 096 token üst sınırına dayandı (244 sn).
+
+Başlangıç (embed GPU'da, env yok, Q4_K_M): ilk token **~11 sn**, decode 13.1 / 11.4 tok/s, uzun görev 118–190 sn.
+IQ4_XS ile: ilk token **−%86**, decode **~3.1–3.5×**, uzun görev **~3–5× kısa**. Model yükleme/tur ~130–145 ms
+(`bge-m3` 0 VRAM). Bu koşuda `nearCtx` 0/8 ve bozuk-çıktı bildirimi 0 (iki model de). Sunucu logu:
+`free memory target of 256 MiB`, `target=4817 MiB`, `FLASH_ATTENTION:true`, `KV_CACHE_TYPE:q8_0`.
+Önceki matriste IQ4_XS'te 2/27 istek bozuk çıktı nedeniyle yeniden üretilmişti; bu koşuda görülmedi
+(n küçük, olay rastgele olabilir).
 
 **2 — `serveCtx` · ✅ yapıldı:** `16384 → 8192` (`providers/ollama.ts`), yanlış "~4.2 GB"
 yorumu ölçülen sayılarla yeniden yazıldı. Seçim gerekçesi §3 ölçüm tablosunda.
@@ -866,12 +876,12 @@ F14 ← EN SON. Ana hattan bağımsız; F14-1 (timeout hatası) istenirse
 |---|---|
 | **F11 / `raw/` dokunulmazlığı** | Vault `CLAUDE.md` invariant 1 `raw/`'u salt okunur ilan ediyor; yeniden adlandırma bunu ihlal eder. İstisna açıkça yetkilendirilecek mi, yoksa çıktı ayrı dizine mi yazılacak? Karar verilmeden F11 başlamamalı. |
 | **F11 / önce teşhis** | `raw/` altında hiç görsel yok. MinerU'nun neden figür üretmediği bulunmadan adlandırma işine girmek erken. |
-| **F12-1 / kalıcı env** | `setx OLLAMA_FLASH_ATTENTION 1` + `setx OLLAMA_KV_CACHE_TYPE q8_0` + Ollama yeniden başlatma uygulansın mı? Ölçüm: `8192`'de +%39 decode (8.9 → 12.4 tok/s). Kullanıcı düzeyinde kalıcı değişiklik, bu yüzden **onay bekliyor**. |
+| **F12-1 / kalıcı env** | ✅ **Uygulandı** (bkz. aşağıdaki satır). |
 | **F12 / tur başına iki model yüklemesi** | En büyük tek gecikme kalemi (ilk tokenın ~%40'ı, ~5 sn/tur). Aday çözüm: sorgu embed'ini GPU dışında çalıştırmak (`num_gpu: 0`) ki `bge-m3` VRAM'de yer tutup qwen3'ü atmasın. **Denenmedi** — retrieval'ın embed hızına etkisi ve Ollama'nın bunu gerçekten uygulayıp uygulamadığı ölçülmeli. Bu turun kapsamı dışındaydı. |
 | **F12-6 / quantization** | **Ölçüldü (§3 "Kuantizasyon ölçümü").** `IQ3_M` +%69 (kısa) / +%130 (uzun) hız, kalite bedeli yayınlanmış KLD'ye göre ~2× ama yerel testte tespit edilemedi; `IQ4_XS` +%33 / +%49, kalitesi Q4_K_M'e yakın; `Q3_K_M` elenir (dominated). **Hangisinin varsayılan olacağı kullanıcının kararı** — modeller Ollama'da kurulu, uygulama değişmedi. Seçilirse `serveCtx` (8192, yalnızca Q4_K_M için ölçüldü) yeniden ölçülmeli: daha çok VRAM boşluğu var. |
 | **Kurulu aday modeller** | `qwen3:8b-bart-iq4xs`, `qwen3:8b-bart-iq3m`, `qwen3:8b-bart-q3km` model deposunda (~12.6 GB). `q3km` dominated olduğu için silinmesi önerilir; karar kullanıcıda. Ayrıca `ollama create`, her GGUF'un ham kopyasını da bıraktı: **4 yetim blob, 11.76 GiB**, hiçbir manifest başvurmuyor (doğrulandı). Ollama bunları bir sonraki başlatılışında kendi temizler; elle silinmedi. |
 | **F12-3 / `k=6` kalitesi** | `CHAT_K` 12 → 6 gecikmeyi ölçülebilir düşürür ama cevap kalitesine etkisini log ölçemez. Kullanıcı gerçek sorularla karşılaştırmalı; kalite düşerse `CHAT_K` tek satırda geri alınır (o zaman `serveCtx` ile birlikte yeniden dengelenmeli). |
-| **`LLAMA_ARG_FIT_TARGET=256` (kalıcı)** | En büyük kaldıraç (§3 "Motorun VRAM güvenlik payı"). Kullanıcı düzeyinde kalıcı ortam değişkeni + Ollama yeniden başlatması, **onay bekliyor**. `OLLAMA_FLASH_ATTENTION=1` ve `OLLAMA_KV_CACHE_TYPE=q8_0` ile birlikte ölçüldü; hızlar üçüne bağlı. Belgelenmemiş bir geçiş: Ollama güncellemesi kırabilir. |
+| **`LLAMA_ARG_FIT_TARGET=256` (kalıcı)** | En büyük kaldıraç (§3 "Motorun VRAM güvenlik payı"). Kullanıcı düzeyinde kalıcı ortam değişkeni + Ollama yeniden başlatması — **uygulandı ve doğrulandı (2026-09-20)**. Ayrıca makinedeki tüm llama.cpp tabanlı programları etkiler. `OLLAMA_FLASH_ATTENTION=1` ve `OLLAMA_KV_CACHE_TYPE=q8_0` ile birlikte ölçüldü; hızlar üçüne bağlı. Belgelenmemiş bir geçiş: Ollama güncellemesi kırabilir. |
 | **Bozuk çıktıdan kaldığı yerden devam** | Bozulan yanıtı baştan üretmek yerine temiz ön ekten devam ettirme planı (Ollama'nın yarım asistan mesajından devamı ve KV önbelleği deneyle doğrulanmadı). Kod yazılmadı. |
 | **Skill prompt yükü** | Ölçüldü: `educational-agent` chat başına **+1 708 token / +0.96 sn prefill** (§3). Açık bırakmak bu bedeli her turda ödemek demek; kalıcı karar kullanıcıya ait. Dosya bugün ikisi de `enabled: false` (kullanıcı arayüzden kapattı). ~700 token'ın kaynağı henüz ayrıştırılmadı. |
 | **F14 / yenilik eşiği** | `release_date` eşiği 12 ay mı olsun? Daha kısa eşik hâlâ kullanılan modelleri de düşürür, daha uzun eşik gürültüyü bırakır. |
