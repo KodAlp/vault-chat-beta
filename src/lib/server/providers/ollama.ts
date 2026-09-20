@@ -2,6 +2,7 @@ import { OpenAICompatAdapter, type Timeouts, classifyHttpStatus } from './openai
 import { ProviderError, type ChatRequest, type ChatMessage, type Chunk, type ModelInfo, type ToolDefinition } from './types';
 import { ollamaGate } from './ollama-gate';
 import { parseOllamaDone, type OllamaDoneLine } from './ollama-usage';
+import { serveCtxOverride } from '../env';
 
 /** /api/chat's NDJSON stream is newline-delimited, same as the base class's
  * SSE line splitting — a plain regex literal here (openai-compat.ts's own
@@ -58,6 +59,11 @@ function modelInfoFor(name: string): ModelInfo {
 }
 
 function serveCtxFor(name: string): number {
+	// OLLAMA_SERVE_CTX (env.ts) wins over the table: the table's numbers were
+	// measured for qwen3:8b Q4_K_M, and a smaller quantization frees VRAM the
+	// table knows nothing about.
+	const override = serveCtxOverride();
+	if (override !== undefined) return override;
 	const family = Object.keys(MODEL_FAMILY_TABLE).find((f) => name.startsWith(f));
 	const info = family ? MODEL_FAMILY_TABLE[family] : undefined;
 	return info?.serveCtx ?? info?.ctx ?? DEFAULT_SERVE_CTX;

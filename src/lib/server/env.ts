@@ -43,6 +43,23 @@ export function ollamaUrl(): string {
 	return nonEmpty(process.env.OLLAMA_URL) ?? 'http://127.0.0.1:11434';
 }
 
+/** Overrides the context window requested from Ollama (options.num_ctx) for
+ * every chat model, replacing providers/ollama.ts's per-family `serveCtx`.
+ * A tuning/measurement knob: on a small GPU the window decides how many model
+ * layers fit in VRAM, and the right value depends on the model and quantization
+ * in use. Unset, empty, non-numeric or non-positive values are ignored, so a
+ * typo can never silently shrink every prompt to nothing.
+ *
+ * Mind the floor: Ollama truncates an over-long prompt from the FRONT, where
+ * the system rules live. The `nearCtxLimit` flag in the llm_timing app-log
+ * marks calls that came close. */
+export function serveCtxOverride(): number | undefined {
+	const raw = nonEmpty(process.env.OLLAMA_SERVE_CTX);
+	if (!raw) return undefined;
+	const n = Number(raw);
+	return Number.isInteger(n) && n > 0 ? n : undefined;
+}
+
 export function chatsDbPath(): string {
 	return nonEmpty(process.env.CHATS_DB_PATH) ?? path.join(dataDir(), 'chats.db');
 }

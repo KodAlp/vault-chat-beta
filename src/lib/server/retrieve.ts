@@ -89,7 +89,9 @@ export async function retrieve(
 	const k = opts.k ?? DEFAULT_K;
 	const overfetch = opts.includedPaths?.length ? SCOPED_OVERFETCH_FACTOR : OVERFETCH_FACTOR;
 
-	const [vector] = await embed([`${QUERY_PREFIX}${query}`], EMBED_MODEL);
+	// cpuOnly: see ollama.ts embed() — keeps bge-m3 out of VRAM so it does not
+	// evict the chat model on every turn.
+	const [vector] = await embed([`${QUERY_PREFIX}${query}`], EMBED_MODEL, { cpuOnly: true });
 	const queryBlob = Buffer.from(new Float32Array(vector).buffer);
 
 	const matches = database
