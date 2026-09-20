@@ -158,6 +158,18 @@ body {
 	margin: 0;
 }
 
+/* Route-change cross-fade, driven by +layout.svelte's onNavigate +
+   document.startViewTransition — timed off the same --motion-* tokens as
+   every other transition in the app instead of the browser's own default
+   (250ms ease), so a route change doesn't feel like a different app than a
+   dialog opening. Falls under the prefers-reduced-motion !important block
+   above like any other animation-duration in this file. */
+::view-transition-old(root),
+::view-transition-new(root) {
+	animation-duration: var(--motion-base);
+	animation-timing-function: var(--motion-easing);
+}
+
 /* The ground colour is set on BOTH html and body on purpose. bits-ui toggles
    body.style.overflow/paddingRight/marginRight every time a Select, Dialog or
    DropdownMenu opens and closes (its internal body-scroll-lock). On a

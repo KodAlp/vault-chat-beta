@@ -267,6 +267,12 @@
 		"profileComingSoon": "Profil (yakında)"
 	},
 
+	"WelcomePage": {
+		"title": "Vault Agent Toolkit",
+		"tagline": "Notların, tamamen yerel.",
+		"continue": "Devam et"
+	},
+
 	"HomePage": {
 		"title": "Vault Agent Toolkit",
 		"emptyTitle": "Henüz bir vault yok",
@@ -334,6 +340,9 @@
 		"generationTitle": "Üretim",
 		"allowConcurrentGeneration": "Aynı anda birden fazla üretime izin ver",
 		"allowConcurrentGenerationHint": "Varsayılan olarak kapalı — test/kart/rapor/harita/slayt üretimi aynı türden yeni bir üretim başlatılmadan önce mevcut üretimin bitmesini bekler (zayıf donanımda hepsi birbirini yavaşlatmasın diye). Donanımınız yeterliyse açabilirsiniz.",
+		"welcomeScreenTitle": "Karşılama ekranı",
+		"showWelcomeScreen": "Her açılışta karşılama ekranını göster",
+		"showWelcomeScreenHint": "Kapatılırsa uygulama doğrudan kasa seçim ekranıyla açılır.",
 		"desktopVaultTitle": "Masaüstü — Varsayılan Kasa (sonraki başlatma)",
 		"desktopVaultDescription": "Bu, uygulamanın bir sonraki açılışta gireceği kasadır — şu an aktif olan kasa değil (o, aşağıdaki \"Vault'lar\" kartında görünür). Değişiklik bir sonraki uygulama başlatmasında etkili olur (sunucu şu an çalışırken kasa yolu değiştirilemez).",
 		"vaultFolder": "Kasa klasörü",

@@ -417,8 +417,8 @@
 						disabled={pulling}
 						onkeydown={(e) => e.key === 'Enter' && pullModel()}
 					/>
-					<Button type="button" onclick={pullModel} disabled={!pullName.trim() || pulling}>
-						<DownloadIcon size={14} aria-hidden="true" /> {pulling ? t('SettingsPage.downloading') : t('SettingsPage.downloadModel')}
+					<Button type="button" onclick={pullModel} disabled={!pullName.trim()} loading={pulling}>
+						{#if !pulling}<DownloadIcon size={14} aria-hidden="true" />{/if} {pulling ? t('SettingsPage.downloading') : t('SettingsPage.downloadModel')}
 					</Button>
 				</div>
 				{#if pullStatus}
@@ -445,6 +445,23 @@
 					{t('SettingsPage.allowConcurrentGeneration')}
 					<span class="text-xs text-muted-foreground">
 						{t('SettingsPage.allowConcurrentGenerationHint')}
+					</span>
+				</span>
+			</label>
+		</Card.Content>
+	</Card.Root>
+
+	<Card.Root class="mb-6">
+		<Card.Header>
+			<Card.Title>{t('SettingsPage.welcomeScreenTitle')}</Card.Title>
+		</Card.Header>
+		<Card.Content>
+			<label class="flex cursor-pointer items-start gap-2.5 text-sm">
+				<Switch bind:checked={settings.showWelcomeScreen} onCheckedChange={persistSettings} />
+				<span class="flex flex-col gap-0.5">
+					{t('SettingsPage.showWelcomeScreen')}
+					<span class="text-xs text-muted-foreground">
+						{t('SettingsPage.showWelcomeScreenHint')}
 					</span>
 				</span>
 			</label>

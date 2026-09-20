@@ -1,9 +1,13 @@
 <script lang="ts">
 	import '../app.css';
 	import 'katex/dist/katex.min.css';
-	import { goto } from '$app/navigation';
+	import { onMount } from 'svelte';
+	import { goto, onNavigate } from '$app/navigation';
 	import { page } from '$app/state';
+	import { isTauri } from '@tauri-apps/api/core';
+	import { getCurrentWindow } from '@tauri-apps/api/window';
 	import { settings } from '$lib/settings.svelte';
+	import { welcomeAlreadyShown } from '$lib/welcome';
 	import { quizGeneration, dismissQuizGeneration } from '$lib/quiz-generation.svelte';
 	import { cardGeneration, dismissCardGeneration } from '$lib/card-generation.svelte';
 	import { reportGeneration, dismissReportGeneration } from '$lib/report-generation.svelte';
@@ -46,6 +50,66 @@
 	$effect(() => {
 		document.documentElement.dataset.theme =
 			settings.theme === 'system' ? (systemPrefersDark ? 'dark' : 'light') : settings.theme;
+	});
+
+	// Root-level, not +page.svelte's: "/" itself 307-redirects straight to
+	// /vault/[id] server-side the moment a vault is active or there's only
+	// one (see +page.server.ts's "son vault'u hatırlama" load) — for
+	// exactly the common case this is meant to cover, +page.svelte never
+	// mounts at all. The root layout wraps whatever route that redirect (or
+	// any direct navigation) actually lands on, so this is the one place
+	// guaranteed to run once per launch regardless of the landing route.
+	onMount(() => {
+		if (settings.showWelcomeScreen && page.url.pathname !== '/welcome' && !welcomeAlreadyShown()) {
+			goto('/welcome', { replaceState: true });
+		}
+	});
+
+	// Desktop dev builds only (`desktop:dev` loads the Vite devUrl directly,
+	// no splash.html in front of it — see splash/index.html's own comment
+	// and tauri.conf.json's "visible": false). Without this, the window
+	// appears immediately, blank/white, for however long it takes this
+	// route's JS to be fetched and Svelte to mount — exactly the "looks
+	// stuck" flash reported after the welcome-screen timing pass. Two rAFs
+	// (not one) because the first only guarantees layout has been
+	// committed, not that the compositor has actually painted it — src-
+	// tauri/src/lib.rs has a timed force-show fallback in case this JS path
+	// never runs at all (a real bug, not just a slow one).
+	onMount(() => {
+		if (!isTauri()) return;
+		requestAnimationFrame(() => {
+			requestAnimationFrame(() => {
+				getCurrentWindow().show();
+			});
+		});
+	});
+
+	// Native cross-fade between routes, not a bolted-on animation library —
+	// startViewTransition is undefined in browsers/WebViews that don't
+	// support it (onNavigate then just returns undefined, SvelteKit
+	// navigates as it always did), and app.css's global
+	// prefers-reduced-motion override already collapses the
+	// ::view-transition-* animation durations it drives, same as every
+	// other animation in this app.
+	//
+	// /welcome's own two navigations (the automatic redirect into it right
+	// after hydration, and its own automatic redirect back out ~1.8s later)
+	// are excluded: those are the two navigations most likely to run before
+	// the app has settled, on whatever WebView2 build happens to be
+	// installed (Tauri doesn't pin one) — if a view transition there ever
+	// glitches, the only thing visible underneath is dark theme's
+	// near-black --ground, i.e. a "blank black screen" on literally the
+	// first thing a user sees. Not worth the risk for a splash screen that
+	// already animates its own content via svelte/transition.
+	onNavigate((navigation) => {
+		if (navigation.from?.url.pathname === '/welcome' || navigation.to?.url.pathname === '/welcome') return;
+		if (!document.startViewTransition) return;
+		return new Promise((resolve) => {
+			document.startViewTransition(async () => {
+				resolve();
+				await navigation.complete;
+			});
+		});
 	});
 
 	// Faz 13: each store now holds an array of concurrent generations, not

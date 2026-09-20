@@ -38,6 +38,13 @@
 		WithElementRef<HTMLAnchorAttributes> & {
 			variant?: ButtonVariant;
 			size?: ButtonSize;
+			/** Shows an inline spinner and forces disabled — for an async
+			 * action (kaydet/sil/generate) whose button should give immediate
+			 * feedback instead of looking unresponsive until the request
+			 * settles. Reuses the same animate-spin ring already used for
+			 * UploadDialog/ImportObsidianDialog's own status spinners, just on
+			 * border-current so it matches whatever variant's text color is. */
+			loading?: boolean;
 		};
 </script>
 
@@ -50,22 +57,34 @@
 		href = undefined,
 		type = "button",
 		disabled,
+		loading = false,
 		children,
 		...restProps
 	}: ButtonProps = $props();
+
+	let isDisabled = $derived(disabled || loading);
 </script>
+
+{#snippet spinner()}
+	<span
+		class="inline-block size-3.5 shrink-0 animate-spin rounded-full border-2 border-current/30 border-t-current"
+		aria-hidden="true"
+	></span>
+{/snippet}
 
 {#if href}
 	<a
 		bind:this={ref}
 		data-slot="button"
 		class={cn(buttonVariants({ variant, size }), className)}
-		href={disabled ? undefined : href}
-		aria-disabled={disabled}
-		role={disabled ? "link" : undefined}
-		tabindex={disabled ? -1 : undefined}
+		href={isDisabled ? undefined : href}
+		aria-disabled={isDisabled}
+		aria-busy={loading}
+		role={isDisabled ? "link" : undefined}
+		tabindex={isDisabled ? -1 : undefined}
 		{...restProps}
 	>
+		{#if loading}{@render spinner()}{/if}
 		{@render children?.()}
 	</a>
 {:else}
@@ -74,9 +93,11 @@
 		data-slot="button"
 		class={cn(buttonVariants({ variant, size }), className)}
 		{type}
-		{disabled}
+		disabled={isDisabled}
+		aria-busy={loading}
 		{...restProps}
 	>
+		{#if loading}{@render spinner()}{/if}
 		{@render children?.()}
 	</button>
 {/if}

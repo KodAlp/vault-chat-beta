@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { fly } from 'svelte/transition';
 	import type { VaultRecord } from '$lib/types';
 	import VaultCard from '$lib/components/VaultCard.svelte';
 	import { Button } from '$lib/components/ui/button';
@@ -63,8 +64,10 @@
 	{/if}
 
 	<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
-		{#each vaults as vault (vault.id)}
-			<VaultCard {vault} />
+		{#each vaults as vault, i (vault.id)}
+			<div in:fly={{ y: 8, duration: 200, delay: i * 30 }}>
+				<VaultCard {vault} />
+			</div>
 		{/each}
 
 		<button
@@ -97,7 +100,7 @@
 		{/if}
 		<Dialog.Footer>
 			<Button variant="outline" onclick={() => (createOpen = false)}>{t('Common.iptal')}</Button>
-			<Button onclick={createVault} disabled={!newVaultName.trim() || creating}>
+			<Button onclick={createVault} disabled={!newVaultName.trim()} loading={creating}>
 				{creating ? t('HomePage.creating') : t('HomePage.create')}
 			</Button>
 		</Dialog.Footer>

@@ -129,17 +129,18 @@ ${t('SkillsSettingsPage.templateBody')}
 		const input = e.currentTarget as HTMLInputElement;
 		const file = input.files?.[0];
 		if (!file) return;
-		const reader = new FileReader();
-		reader.onload = () => {
-			editorRaw = String(reader.result ?? '');
-			if (editorIsNew && !editorName.trim()) {
-				editorName = file.name.replace(/\.(md|markdown)$/i, '');
-			}
-		};
-		reader.onerror = () => {
-			editorError = t('SkillsSettingsPage.uploadFileFailed');
-		};
-		reader.readAsText(file);
+		editorError = '';
+		file
+			.text()
+			.then((text) => {
+				editorRaw = text;
+				if (editorIsNew && !editorName.trim()) {
+					editorName = file.name.replace(/\.(md|markdown)$/i, '');
+				}
+			})
+			.catch(() => {
+				editorError = t('SkillsSettingsPage.uploadFileFailed');
+			});
 		input.value = '';
 	}
 
