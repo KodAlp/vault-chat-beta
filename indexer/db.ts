@@ -69,6 +69,12 @@ export function listKnownFiles(db: Database.Database): Map<string, FileRow> {
  * re-chunk/re-embed. Used by the library tree's rename/move action. */
 export function renameFileInIndex(db: Database.Database, oldPath: string, newPath: string): void {
 	const tx = db.transaction(() => {
+		// chunks.path references files.path (no ON UPDATE CASCADE) and better-sqlite3
+		// enforces foreign keys by default, so updating files first failed with
+		// SQLITE_CONSTRAINT_FOREIGNKEY for every file that had chunks — after
+		// library.ts had already renamed the file on disk. Deferring the check to
+		// COMMIT lets both rows move together; the pragma resets itself at commit.
+		db.pragma('defer_foreign_keys = ON');
 		db.prepare('UPDATE files SET path = ? WHERE path = ?').run(newPath, oldPath);
 		db.prepare('UPDATE chunks SET path = ? WHERE path = ?').run(newPath, oldPath);
 	});
