@@ -7,6 +7,7 @@ import { chatWithFallback, modelCaps } from '$lib/server/providers/registry';
 import { startFlight, endFlight } from '$lib/server/providers/inflight';
 import { ProviderError } from '$lib/server/providers/types';
 import { isNearCtxLimit } from '$lib/server/providers/ollama-usage';
+import { chatRetrievalK } from '$lib/server/env';
 import { createChat, getChat, insertMessage, updateMessage, touchChat } from '$lib/server/chats-db';
 import { generateTitle } from '$lib/server/title';
 import { vaultFromId } from '$lib/server/requestVault';
@@ -40,18 +41,19 @@ const CHECKPOINT_INTERVAL_MS = 2000;
  * (their *OutputBudget() helpers); this is chat's equivalent. */
 const CHAT_MAX_OUTPUT_TOKENS = 4096;
 
-/** How many chunks chat retrieves. 12 chunks of up to 2048 chars is ~6k tokens
+/* How many chunks chat retrieves comes from env.ts's chatRetrievalK()
+ * (CHAT_RETRIEVAL_K, default 6). 12 chunks of up to 2048 chars is ~6k tokens
  * of <context> alone, which does not fit qwen3's 8192 serveCtx once the system
  * prompt and history are added — Ollama then truncates from the FRONT, where
  * the system rules live (providers/ollama.ts, MODEL_FAMILY_TABLE has the
- * measurements). Measured on the real GPU, prompt length also roughly halves
+ * measurements). Measured on a real 6 GB GPU, prompt length also roughly halves
  * decode speed (3.6 tok/s at an 8.4k prompt vs 7.2 at 2.8k, same 16384 window).
  * Chat only: the generators are one-shot calls that gain from breadth and are
  * not latency-sensitive, so they keep their own k.
  *
  * A quality/latency trade — whether 6 answers as well as 12 is a judgment the
- * timing logs cannot make. One constant, one line to revert. */
-const CHAT_K = 6;
+ * timing logs cannot make. A machine with more VRAM should raise it together
+ * with OLLAMA_SERVE_CTX (README, "Küçük GPU'lar için performans ayarları"). */
 
 /** qwen3:8b (Ollama, Q4_K_M) occasionally emits an invalid byte sequence
  * that decodes to U+FFFD mid-stream — confirmed model/quantization-level
@@ -233,7 +235,7 @@ export const POST: RequestHandler = async ({ request }) => {
 					const result = await retrieve(v, buildRetrievalQuery(body.messages), {
 						domains: body.domains,
 						includedPaths: body.includedPaths,
-						k: CHAT_K
+						k: chatRetrievalK()
 					});
 					sources = result.chunks;
 					narrowScope = result.narrowScope;

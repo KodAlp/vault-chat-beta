@@ -128,6 +128,9 @@ Bu seçim sadece ilk açılışta sorulur, sonra bir daha sorulmaz.
   modelin eksik olduğu ve tam komutu zaten yazılı.
 - **Kurulum sonrası hiçbir kaynak bulunamıyor** → 6. adımdaki indeksleme
   henüz yapılmamış olabilir.
+- **Cevaplar çok yavaş geliyor** → küçük bir ekran kartın varsa (6-8 GB) `README.md`'deki
+  "Küçük GPU'lar için performans ayarları" bölümüne bak; birkaç ortam değişkeniyle
+  belirgin hızlanma sağlanabilir.
 - **PDF/doküman içe aktarma çalışmıyor, turuncu uyarı çıkıyor** → bkz. "3b.
   PDF/doküman içe aktarma için Python" — Python kurulu değil ya da gereken
   paket henüz kurulmamış; uyarıdaki "Şimdi kur" butonu bunu senin yerine

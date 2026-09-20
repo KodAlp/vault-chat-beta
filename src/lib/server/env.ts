@@ -60,6 +60,28 @@ export function serveCtxOverride(): number | undefined {
 	return Number.isInteger(n) && n > 0 ? n : undefined;
 }
 
+/** Chat's default retrieval breadth. 6 was measured on a 6 GB laptop GPU, where a
+ * bigger <context> both slows decoding and no longer fits the 8192 window. */
+export const DEFAULT_CHAT_RETRIEVAL_K = 6;
+/** Upper bound for CHAT_RETRIEVAL_K. Past this the prompt cannot fit any
+ * realistic window anyway (each chunk is up to ~2k characters). */
+export const MAX_CHAT_RETRIEVAL_K = 50;
+
+/** How many chunks chat retrieves per question (CHAT_RETRIEVAL_K). A
+ * hardware knob like serveCtxOverride(): a machine with plenty of VRAM can
+ * afford a wider context, a small GPU cannot. Unset, empty, non-numeric or
+ * out-of-range values fall back to the default rather than being clamped, so
+ * a typo can never silently turn retrieval off (k=0) or flood the prompt.
+ *
+ * Raising it grows the prompt: raise OLLAMA_SERVE_CTX with it, and watch the
+ * `nearCtxLimit` flag in the llm_timing app-log. */
+export function chatRetrievalK(): number {
+	const raw = nonEmpty(process.env.CHAT_RETRIEVAL_K);
+	if (!raw) return DEFAULT_CHAT_RETRIEVAL_K;
+	const n = Number(raw);
+	return Number.isInteger(n) && n >= 1 && n <= MAX_CHAT_RETRIEVAL_K ? n : DEFAULT_CHAT_RETRIEVAL_K;
+}
+
 export function chatsDbPath(): string {
 	return nonEmpty(process.env.CHATS_DB_PATH) ?? path.join(dataDir(), 'chats.db');
 }
