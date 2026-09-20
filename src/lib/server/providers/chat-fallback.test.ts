@@ -283,3 +283,80 @@ test('when every hop fails, the caller sees the LAST hop error', async () => {
 	});
 	await assert.rejects(collect(chatWithFallbackCore(deps, 'chat', req(), new AbortController().signal)), errB);
 });
+
+// ---------- continuation (resume from a clean prefix — see resume-plan.ts)
+
+function continuationReq(): ChatRequest {
+	return {
+		model: 'requested-model',
+		messages: [
+			{ role: 'user', content: 'soru' },
+			{ role: 'assistant', content: 'yarım cevap' }
+		],
+		continuation: true,
+		stop: ['</think>']
+	};
+}
+
+test('a continuation request never hops: a retryable failure surfaces so the caller restarts', async () => {
+	const calls: string[] = [];
+	const err = new ProviderError('timeout_connect', 'a', 'timed out');
+	const deps = makeDeps({
+		getAdapter: async (id) => {
+			calls.push(id);
+			if (id === 'a') return failingAdapter('a', err);
+			throw new Error('must not reach b — b would read the partial answer as a finished turn');
+		}
+	});
+	await assert.rejects(collect(chatWithFallbackCore(deps, 'chat', continuationReq(), new AbortController().signal)), err);
+	assert.deepEqual(calls, ['a']);
+	assert.equal(deps.notices.length, 0, 'no fallback notice — nothing was switched');
+});
+
+test('the same failure WITHOUT continuation still falls back (behaviour unchanged)', async () => {
+	const calls: string[] = [];
+	const deps = makeDeps({
+		getAdapter: async (id) => {
+			calls.push(id);
+			if (id === 'a') return failingAdapter('a', new ProviderError('timeout_connect', 'a', 'timed out'));
+			return okAdapter('b', ['recovered']);
+		}
+	});
+	const events = await collect(chatWithFallbackCore(deps, 'chat', req(), new AbortController().signal));
+	assert.deepEqual(calls, ['a', 'b']);
+	assert.ok(events.some((e) => e.type === 'text' && e.text === 'recovered'));
+});
+
+test('a healthy continuation streams through untouched and the request reaches the adapter as sent', async () => {
+	let seen: ChatRequest | undefined;
+	const deps = makeDeps({
+		getAdapter: async (id) => ({
+			id,
+			async *chat(r: ChatRequest): AsyncGenerator<Chunk> {
+				seen = r;
+				yield { type: 'text', text: ' devamı' };
+				yield { type: 'done' };
+			},
+			async listModels() {
+				return [];
+			},
+			async health() {
+				return 'ok';
+			}
+		})
+	});
+	const events = await collect(chatWithFallbackCore(deps, 'chat', continuationReq(), new AbortController().signal));
+	assert.deepEqual(events, [
+		{ type: 'text', text: ' devamı' },
+		{ type: 'done' }
+	]);
+	assert.equal(seen?.continuation, true);
+	assert.deepEqual(seen?.stop, ['</think>']);
+	assert.equal(seen?.messages.at(-1)?.role, 'assistant');
+});
+
+test('a non-retryable failure of a continuation is still thrown as-is', async () => {
+	const err = new ProviderError('auth', 'a', 'bad key');
+	const deps = makeDeps({ getAdapter: async (id) => failingAdapter(id, err) });
+	await assert.rejects(collect(chatWithFallbackCore(deps, 'chat', continuationReq(), new AbortController().signal)), err);
+});

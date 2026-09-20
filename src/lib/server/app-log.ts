@@ -38,7 +38,12 @@ export interface AppLogRecord {
 		 * token counts and timings, so a latency decision rests on numbers from
 		 * the real request path instead of a synthetic curl. Numbers only, per
 		 * this file's content rule. */
-		| 'llm_timing';
+		| 'llm_timing'
+		/** A chunk of the model's answer was corrupted (U+FFFD or a stray CJK
+		 * character). Records which kind, how far into the answer, how long the
+		 * attempt had been running, and what was done about it — the numbers that
+		 * were missing to judge how often this happens and what it costs. */
+		| 'output_corruption';
 	chatId?: string;
 	provider?: string;
 	model?: string;
@@ -78,6 +83,24 @@ export interface AppLogRecord {
 	/** llm_timing only — how many read_skill_file round-trips preceded this call
 	 * within the attempt (0 = the first hop). */
 	toolRoundTrips?: number;
+	/** llm_timing, output_corruption — how many times this answer was continued
+	 * from its clean prefix instead of regenerated. */
+	resumeCount?: number;
+	/** output_corruption only. `corruptKind`: 'fffd' (U+FFFD) or 'cjk' (stray
+	 * Chinese character). `charIndex`: offset of the bad character in the answer
+	 * so far. `keptChars`: how much clean text was kept (0 on a restart).
+	 * `elapsedMs`: how long this attempt had been generating — WASTED time when
+	 * `action` is a restart, retained time when it is a resume. `action`:
+	 * 'resume' | 'restart' | 'resume_retry' (a resume whose first words did not
+	 * line up with what the user had seen; the same seam is tried again) |
+	 * 'resume_mismatch' (the retries ran out, so it fell back to a restart).
+	 * `restartReason`: why a restart was chosen (resume-plan.ts RestartReason). */
+	corruptKind?: 'fffd' | 'cjk';
+	charIndex?: number;
+	keptChars?: number;
+	elapsedMs?: number;
+	action?: 'resume' | 'restart' | 'resume_mismatch' | 'resume_retry';
+	restartReason?: string;
 	message: string;
 }
 

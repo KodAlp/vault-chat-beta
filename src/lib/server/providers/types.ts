@@ -52,6 +52,16 @@ export interface ChatRequest {
 	 * supporting file) — omitted entirely when empty/undefined so providers
 	 * that never learned about tools see no behavior change. */
 	tools?: ToolDefinition[];
+	/** Extra stop strings (Ollama: options.stop). Used by the resume path to end
+	 * the stream where qwen3 would otherwise restart the answer inside a fake
+	 * `<think>` block — see resume-plan.ts. Omitted means the model's own stops. */
+	stop?: string[];
+	/** The last message is a PARTIAL assistant answer the model must continue,
+	 * not a finished earlier turn. Only meaningful for the provider that
+	 * produced that text: another provider would read it as history and answer
+	 * from scratch, so chat-fallback.ts never hops to a second provider for
+	 * such a request — the caller restarts instead. */
+	continuation?: boolean;
 }
 
 export type Chunk =

@@ -21,6 +21,10 @@ interface FamilyInfo {
 	serveCtx?: number;
 	/** See ModelInfo.embeddingOnly — marks a family as unusable for chat. */
 	embeddingOnly?: boolean;
+	/** The family was VERIFIED to continue a partial answer from a trailing
+	 * assistant message (see resume-plan.ts for what was measured). Set only
+	 * for families that were actually tried; default is no resume. */
+	prefixResume?: boolean;
 }
 const MODEL_FAMILY_TABLE: Record<string, FamilyInfo> = {
 	// 40960 is qwen3:8b's real max. serveCtx is what we actually ask Ollama to
@@ -41,7 +45,7 @@ const MODEL_FAMILY_TABLE: Record<string, FamilyInfo> = {
 	// the prompt stays well under 8192; api/chat/+server.ts's CHAT_K keeps the
 	// retrieved <context> small enough, and the llm_timing app-log records
 	// nearCtxLimit so a violation is visible rather than silent.
-	qwen3: { ctx: 40960, serveCtx: 8192, caps: { tools: true, reasoning: true } },
+	qwen3: { ctx: 40960, serveCtx: 8192, caps: { tools: true, reasoning: true }, prefixResume: true },
 	'nomic-embed-text': { ctx: 2048, caps: { tools: false, reasoning: false }, embeddingOnly: true },
 	// EMBED_MODEL (embed-config.ts) — Ollama's /api/tags lists it right next
 	// to chat models with no way to tell them apart otherwise, and picking
@@ -134,6 +138,13 @@ export class OllamaAdapter extends OpenAICompatAdapter {
 		return modelInfoFor(model).caps;
 	}
 
+	/** Whether a partial assistant answer can be continued for this model — a
+	 * pure lookup like capsFor. False for every family that was not verified. */
+	supportsPrefixResume(model: string): boolean {
+		const family = Object.keys(MODEL_FAMILY_TABLE).find((f) => model.startsWith(f));
+		return family ? MODEL_FAMILY_TABLE[family].prefixResume === true : false;
+	}
+
 	/** The gate's lease spans the whole stream, not just the swap moment
 	 * before it — see ollama-gate.ts's doc comment for why that matters. */
 	override async *chat(req: ChatRequest, signal: AbortSignal): AsyncGenerator<Chunk> {
@@ -194,6 +205,7 @@ export class OllamaAdapter extends OpenAICompatAdapter {
 					...(req.tools?.length ? { tools: toOllamaWireTools(req.tools) } : {}),
 					options: {
 						num_ctx: numCtx,
+						...(req.stop?.length ? { stop: req.stop } : {}),
 						...(req.temperature !== undefined ? { temperature: req.temperature } : {}),
 						...(req.maxOutputTokens !== undefined ? { num_predict: req.maxOutputTokens } : {})
 					}

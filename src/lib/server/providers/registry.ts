@@ -139,13 +139,41 @@ export async function modelCaps(
 	model: string
 ): Promise<{ tools: boolean; reasoning: boolean }> {
 	try {
-		const providerId = pinnedProviderId ?? getChain('chat').find(isProviderEnabled) ?? getChain('chat')[0];
+		const providerId = chatProviderId(pinnedProviderId);
 		if (!providerId) return { tools: false, reasoning: false };
 		const adapter = await getAdapter(providerId);
 		if (adapter instanceof OllamaAdapter) return adapter.capsFor(model);
 		return { tools: false, reasoning: false };
 	} catch {
 		return { tools: false, reasoning: false };
+	}
+}
+
+/** Which provider a chat request will actually go to: the pin when there is
+ * one, else the first enabled provider of the 'chat' chain. */
+function chatProviderId(pinnedProviderId: string | undefined): string | undefined {
+	return pinnedProviderId ?? getChain('chat').find(isProviderEnabled) ?? getChain('chat')[0];
+}
+
+/**
+ * Whether the chat route may recover a corrupted answer by CONTINUING from the
+ * clean text already shown, instead of regenerating from scratch (see
+ * resume-plan.ts). Only Ollama and only model families that were verified to
+ * continue from a trailing assistant message; everything else fails closed to
+ * the old restart. Never throws, same as modelCaps.
+ *
+ * Caveat: with no pin, a fallback hop could later route to a different provider
+ * than the one resolved here. chat-fallback.ts refuses to hop for a
+ * `continuation` request, so that case ends in a restart, not a wrong answer.
+ */
+export async function supportsPrefixResume(pinnedProviderId: string | undefined, model: string): Promise<boolean> {
+	try {
+		const providerId = chatProviderId(pinnedProviderId);
+		if (!providerId) return false;
+		const adapter = await getAdapter(providerId);
+		return adapter instanceof OllamaAdapter && adapter.supportsPrefixResume(model);
+	} catch {
+		return false;
 	}
 }
 
