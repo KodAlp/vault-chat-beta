@@ -267,6 +267,51 @@ yakın, +%33–49). **Q3_K_M elenir.** Nihai kalite yargısı gerçek sorularla 
 Ollama deposunda bırakıldı (`qwen3:8b-bart-iq4xs`, `qwen3:8b-bart-iq3m`, `qwen3:8b-bart-q3km`) ve
 uygulamanın model seçicisinde görünür; **uygulamaya hiçbir model değişikliği yapılmadı**.
 
+### Motorun VRAM güvenlik payı (`--fit-target`) — en büyük kaldıraç (2026-09-20)
+
+**Düzeltme:** yukarıda "Ollama ~4.5 GiB bütçe ayırıyor" demiştim; bu yalnızca Ollama'nın **zamanlayıcı**
+katmanının sayısı (`free 5.0 − minimum 457 MiB`). GPU'ya ağırlık+KV+tampon koyma tavanını asıl belirleyen,
+motorun (`llama-server.exe`, llama.cpp) kendi **`--fit`** algoritması: varsayılan olarak cihazda **1024 MiB
+boş bellek bırakmaya** çalışıyor (`cannot meet free memory target of 1024 MiB … target=4049 MiB`). Ollama
+chat modellerini hiçbir `--fit`/`-ngl` bayrağı vermeden başlatıyor (yalnızca embed'e `-ngl 0`, yani
+`num_gpu:0`'ın çevirisi), bu yüzden motorun varsayılanı geçerli. Model çalışırken `nvidia-smi`: 6141 MiB
+toplam, 4147 kullanılan, **1775 MiB boş** — kart kullanılmadan kalıyor, tüm ölçümlerdeki `vramGB ≈ 4.2` tavanı bu.
+
+**Motor bu payı ortam değişkeniyle alıyor: `LLAMA_ARG_FIT_TARGET` (MiB).** Ollama ortamı motora aktarıyor
+(log: `free memory target of 256 MiB`, `target=4817 MiB`). Geçici Ollama, hedef konfigürasyon
+(FA + `q8_0` KV), `num_ctx 8192`, aynı prompt, tek istek:
+
+| Model | pay 1024 (varsayılan) | pay 512 | pay 256 |
+|---|---|---|---|
+| Q4_K_M (resmî) | 27/37 kat, **12.2** tok/s | 30/37, 15.3 (+%25) | 32/37, **18.1 (+%48)** |
+| **IQ4_XS** | 30/37, 16.4 | 35/37, 28.8 (+%76) | **37/37 (%100 GPU), 39.9 (+%143)** |
+| IQ3_M | 35/37, 24.7 | **37/37 (%100), 45.1 (+%83)** | 37/37, 45.2 |
+
+- **Kaliteyi değiştirmez:** aynı ağırlıklar, yalnızca katmanların nerede koştuğu değişiyor. Resmî Q4_K_M bile +%48.
+- **Güvenlik:** payı 256'ya çekince model yüklüyken `nvidia-smi` hâlâ **~1070 MiB boş** gösterdi (motorun "boş bellek"
+  hesabı CUDA bağlamı vb. kadar kısmı zaten düşüyor). 9 istekte OOM/çökme yok. Ekranı Intel çizdiği için NVIDIA
+  masaüstü belleği kullanmıyor; dGPU-only (MUX) moda geçilirse pay daha önemli olur.
+- **Sonuç:** payı küçültünce IQ3_M'in IQ4_XS'e üstünlüğü %+100'den %+13'e iniyor, ama kalite riski IQ3_M'de.
+  **IQ4_XS + pay 256 en iyi denge** (%100 GPU, ~40 tok/s, kalitesi Q4_K_M'e yakın).
+- **Kalıcı yapılmadı** (kullanıcı-düzeyi ortam değişkeni, Ollama yeniden başlatması, onay bekliyor). Ollama bunu belgelenmiş
+  bir ayar olarak sunmuyor, motor ortam değişkeninin geçişi bir uygulama ayrıntısı; güncellemeyle değişebilir.
+
+### Uygulama yolunda matris — 3 model × 3 bağlam (pay 1024, embed CPU'da)
+
+| Model | ctx | GPU kat. | KISA decode | UZUN decode | nearCtx |
+|---|---|---|---|---|---|
+| Q4_K_M | 8192 / 6144 / 4096 | 27 / 27 / 28 | 13.1 / 12.7 / 12.9 | 10.6 / 9.9 / 11.9 | 0 / 1 / 3 (/8) |
+| IQ4_XS | 8192 / 6144 / 4096 | 30 / 31 / 33 | 17.2 / 18.5 / 23.6 | 14.8 / 17.1 / 21.4 | 0 / 0 / 2 |
+| IQ3_M | 8192 / 6144 / 4096 | 35 / **37** / **37** | 24.6 / 42.8 / 46.3 | 23.2 / 42.1 / 44.8 | 0 / 0 / 3 |
+
+- Q4_K_M bağlam düşürmekten kazanmıyor (27→28 kat): darboğazı KV değil ağırlıklar. IQ3_M 6144'te tamamen GPU'da.
+- **Bağlam 4096 güvensiz.** Kısa sorulardan biri **4 091 token'lık prompt** aldı (k=6 bile 4k'ya çıkabiliyor) ve
+  Ollama `--context-shift --keep 4` ile başlatılıyor: pencere dolunca yalnızca ilk 4 token korunur, **sistem kuralları
+  sessizce düşer**. 6144 sınırda (bir uzun cevap 4096 token'a dayandı). **8192 güvenli kalsın**; pay küçültmek
+  bağlamı küçültmekten çok daha iyi bir yol.
+- Embed CPU düzeltmesi: ilk token ~11 sn → ~2 sn, tur başı model yükleme ~5 sn → ~130 ms.
+- Bozuk-çıktı yeniden üretimi: IQ4_XS 2/27 istek (ikisi de 8192 hücresinde), Q4_K_M 0/27, IQ3_M 0/27. n küçük.
+
 ### Kodun kendi varsayımı gerçekle çelişiyordu — düzeltildi
 
 `src/lib/server/providers/ollama.ts` tablo yorumu şunu söylüyordu:
@@ -826,6 +871,8 @@ F14 ← EN SON. Ana hattan bağımsız; F14-1 (timeout hatası) istenirse
 | **F12-6 / quantization** | **Ölçüldü (§3 "Kuantizasyon ölçümü").** `IQ3_M` +%69 (kısa) / +%130 (uzun) hız, kalite bedeli yayınlanmış KLD'ye göre ~2× ama yerel testte tespit edilemedi; `IQ4_XS` +%33 / +%49, kalitesi Q4_K_M'e yakın; `Q3_K_M` elenir (dominated). **Hangisinin varsayılan olacağı kullanıcının kararı** — modeller Ollama'da kurulu, uygulama değişmedi. Seçilirse `serveCtx` (8192, yalnızca Q4_K_M için ölçüldü) yeniden ölçülmeli: daha çok VRAM boşluğu var. |
 | **Kurulu aday modeller** | `qwen3:8b-bart-iq4xs`, `qwen3:8b-bart-iq3m`, `qwen3:8b-bart-q3km` model deposunda (~12.6 GB). `q3km` dominated olduğu için silinmesi önerilir; karar kullanıcıda. Ayrıca `ollama create`, her GGUF'un ham kopyasını da bıraktı: **4 yetim blob, 11.76 GiB**, hiçbir manifest başvurmuyor (doğrulandı). Ollama bunları bir sonraki başlatılışında kendi temizler; elle silinmedi. |
 | **F12-3 / `k=6` kalitesi** | `CHAT_K` 12 → 6 gecikmeyi ölçülebilir düşürür ama cevap kalitesine etkisini log ölçemez. Kullanıcı gerçek sorularla karşılaştırmalı; kalite düşerse `CHAT_K` tek satırda geri alınır (o zaman `serveCtx` ile birlikte yeniden dengelenmeli). |
+| **`LLAMA_ARG_FIT_TARGET=256` (kalıcı)** | En büyük kaldıraç (§3 "Motorun VRAM güvenlik payı"). Kullanıcı düzeyinde kalıcı ortam değişkeni + Ollama yeniden başlatması, **onay bekliyor**. `OLLAMA_FLASH_ATTENTION=1` ve `OLLAMA_KV_CACHE_TYPE=q8_0` ile birlikte ölçüldü; hızlar üçüne bağlı. Belgelenmemiş bir geçiş: Ollama güncellemesi kırabilir. |
+| **Bozuk çıktıdan kaldığı yerden devam** | Bozulan yanıtı baştan üretmek yerine temiz ön ekten devam ettirme planı (Ollama'nın yarım asistan mesajından devamı ve KV önbelleği deneyle doğrulanmadı). Kod yazılmadı. |
 | **Skill prompt yükü** | Ölçüldü: `educational-agent` chat başına **+1 708 token / +0.96 sn prefill** (§3). Açık bırakmak bu bedeli her turda ödemek demek; kalıcı karar kullanıcıya ait. Dosya bugün ikisi de `enabled: false` (kullanıcı arayüzden kapattı). ~700 token'ın kaynağı henüz ayrıştırılmadı. |
 | **F14 / yenilik eşiği** | `release_date` eşiği 12 ay mı olsun? Daha kısa eşik hâlâ kullanılan modelleri de düşürür, daha uzun eşik gürültüyü bırakır. |
 | **F14 / tool filtresi** | "Sadece tool destekleyenleri göster" anahtarı gelsin mi? Listeyi belirgin daraltır ama üreticilerin çoğu tool kullanmıyor. |
