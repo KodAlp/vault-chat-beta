@@ -33,7 +33,12 @@ export interface AppLogRecord {
 		 * error-monitoring bucket, but logged anyway with `reason` so a
 		 * recurring "kaynak bulunamadı" report is actually diagnosable instead
 		 * of invisible in app-log.jsonl. */
-		| 'no_sources';
+		| 'no_sources'
+		/** One record per completed model call in chat (Ollama only for now):
+		 * token counts and timings, so a latency decision rests on numbers from
+		 * the real request path instead of a synthetic curl. Numbers only, per
+		 * this file's content rule. */
+		| 'llm_timing';
 	chatId?: string;
 	provider?: string;
 	model?: string;
@@ -54,6 +59,25 @@ export interface AppLogRecord {
 	 * retrieve()'s empty-return paths caused it (unindexed vault, empty KNN
 	 * result, domain/distance filtering, or scope narrowing). */
 	reason?: string;
+	/** llm_timing only. Token counts and milliseconds straight from the
+	 * provider's final response line; `numCtx` is the window the request was
+	 * served with. `nearCtxLimit` is true when prompt+completion filled 90%+ of
+	 * it — the signature of a prompt Ollama may have truncated from the front. */
+	promptTokens?: number;
+	completionTokens?: number;
+	promptMs?: number;
+	completionMs?: number;
+	loadMs?: number;
+	numCtx?: number;
+	nearCtxLimit?: boolean;
+	/** llm_timing only — which retry-from-scratch attempt this call belongs to
+	 * (0 = first) and why the previous attempt was thrown away, so corruption
+	 * and empty-answer retries can be counted from the log with no extra code. */
+	attempt?: number;
+	retryReason?: string;
+	/** llm_timing only — how many read_skill_file round-trips preceded this call
+	 * within the attempt (0 = the first hop). */
+	toolRoundTrips?: number;
 	message: string;
 }
 

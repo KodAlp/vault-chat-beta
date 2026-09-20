@@ -58,7 +58,18 @@ export type Chunk =
 	| { type: 'reasoning'; text: string }
 	| { type: 'text'; text: string }
 	| { type: 'tool_call'; id: string; name: string; arguments: Record<string, unknown> }
-	| { type: 'usage'; prompt: number; completion: number }
+	| {
+			type: 'usage';
+			prompt: number;
+			completion: number;
+			/** Ollama-native only, milliseconds — see ollama-usage.ts. Optional
+			 * because a provider that reports only token counts stays valid. */
+			promptMs?: number;
+			completionMs?: number;
+			loadMs?: number;
+			/** The context window the request was actually served with. */
+			numCtx?: number;
+	  }
 	| { type: 'done' };
 
 export interface ModelInfo {

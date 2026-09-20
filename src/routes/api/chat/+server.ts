@@ -6,6 +6,7 @@ import { buildPromptMessages } from '$lib/server/prompt';
 import { chatWithFallback, modelCaps } from '$lib/server/providers/registry';
 import { startFlight, endFlight } from '$lib/server/providers/inflight';
 import { ProviderError } from '$lib/server/providers/types';
+import { isNearCtxLimit } from '$lib/server/providers/ollama-usage';
 import { createChat, getChat, insertMessage, updateMessage, touchChat } from '$lib/server/chats-db';
 import { generateTitle } from '$lib/server/title';
 import { vaultFromId } from '$lib/server/requestVault';
@@ -38,6 +39,19 @@ const CHECKPOINT_INTERVAL_MS = 2000;
  * generation. The five generators already size their own budgets per request
  * (their *OutputBudget() helpers); this is chat's equivalent. */
 const CHAT_MAX_OUTPUT_TOKENS = 4096;
+
+/** How many chunks chat retrieves. 12 chunks of up to 2048 chars is ~6k tokens
+ * of <context> alone, which does not fit qwen3's 8192 serveCtx once the system
+ * prompt and history are added — Ollama then truncates from the FRONT, where
+ * the system rules live (providers/ollama.ts, MODEL_FAMILY_TABLE has the
+ * measurements). Measured on the real GPU, prompt length also roughly halves
+ * decode speed (3.6 tok/s at an 8.4k prompt vs 7.2 at 2.8k, same 16384 window).
+ * Chat only: the generators are one-shot calls that gain from breadth and are
+ * not latency-sensitive, so they keep their own k.
+ *
+ * A quality/latency trade — whether 6 answers as well as 12 is a judgment the
+ * timing logs cannot make. One constant, one line to revert. */
+const CHAT_K = 6;
 
 /** qwen3:8b (Ollama, Q4_K_M) occasionally emits an invalid byte sequence
  * that decodes to U+FFFD mid-stream — confirmed model/quantization-level
@@ -219,12 +233,7 @@ export const POST: RequestHandler = async ({ request }) => {
 					const result = await retrieve(v, buildRetrievalQuery(body.messages), {
 						domains: body.domains,
 						includedPaths: body.includedPaths,
-						// retrieve.ts's own DEFAULT_K (8) is chat's fallback only
-						// because no caller ever overrode it — every generator
-						// already asks for 12-16. Explaining a whole topic in
-						// conversation needs at least as much context as a single
-						// quiz question does.
-						k: 12
+						k: CHAT_K
 					});
 					sources = result.chunks;
 					narrowScope = result.narrowScope;
@@ -317,6 +326,30 @@ export const POST: RequestHandler = async ({ request }) => {
 								} else if (event.type === 'notice') {
 									send({ type: 'notice', message: event.message });
 									logAppEvent({ kind: 'fallback', chatId, message: event.message });
+							} else if (event.type === 'usage') {
+								// `attempt` and `retryReason` (why the PREVIOUS attempt was
+								// thrown away) make corruption/empty retries countable from
+								// the log; `toolRoundTrips` does the same for read_skill_file
+								// hops. An attempt aborted for corruption never reaches its
+								// final line, so it logs nothing — the next attempt's record
+								// carries retryReason instead.
+								logAppEvent({
+									kind: 'llm_timing',
+									chatId,
+									provider: body.provider,
+									model: body.model,
+									message: 'usage',
+									promptTokens: event.prompt,
+									completionTokens: event.completion,
+									promptMs: event.promptMs,
+									completionMs: event.completionMs,
+									loadMs: event.loadMs,
+									numCtx: event.numCtx,
+									nearCtxLimit: isNearCtxLimit(event),
+									attempt,
+									toolRoundTrips,
+									...(retryReason ? { retryReason } : {})
+								});
 								}
 
 								if (!assistantMessageId && (finalContent || finalThinking)) {

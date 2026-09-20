@@ -1,6 +1,7 @@
 import { OpenAICompatAdapter, type Timeouts, classifyHttpStatus } from './openai-compat';
 import { ProviderError, type ChatRequest, type ChatMessage, type Chunk, type ModelInfo, type ToolDefinition } from './types';
 import { ollamaGate } from './ollama-gate';
+import { parseOllamaDone, type OllamaDoneLine } from './ollama-usage';
 
 /** /api/chat's NDJSON stream is newline-delimited, same as the base class's
  * SSE line splitting — a plain regex literal here (openai-compat.ts's own
@@ -21,12 +22,25 @@ interface FamilyInfo {
 	embeddingOnly?: boolean;
 }
 const MODEL_FAMILY_TABLE: Record<string, FamilyInfo> = {
-	// 40960 is qwen3:8b's real max, but serving at its full max costs VRAM
-	// (~4.2GB at 16384 already) for headroom this app's prompts don't need —
-	// the failing real chat that motivated this table peaked at ~4.6k tokens
-	// including retrieved context and thinking. 16384 clears that with room
-	// to spare without paying for context the model will not use.
-	qwen3: { ctx: 40960, serveCtx: 16384, caps: { tools: true, reasoning: true } },
+	// 40960 is qwen3:8b's real max. serveCtx is what we actually ask Ollama to
+	// allocate, and on a 6 GB card it is a VRAM decision, not a headroom one.
+	//
+	// Measured 2026-09-20, RTX 4050 Laptop 6 GB, Ollama 0.32.5, qwen3:8b Q4_K_M
+	// (Ollama budgets ~4.5 GiB of the card; the weights alone exceed that, so
+	// 100% GPU is unreachable at ANY num_ctx — the question is how many layers
+	// the KV cache leaves room for):
+	//   16384, f16 KV        → 20/37 layers on GPU, 54% GPU,  7.2 tok/s decode
+	//   16384, FA + q8_0 KV  → 23/37 layers,        62% GPU,  9.0 tok/s
+	//    8192, FA + q8_0 KV  →                      70% GPU, 12.4 tok/s
+	//    6144, FA + q8_0 KV  →                      70% GPU, 12.5 tok/s  (no gain over 8192)
+	//    4096, FA + q8_0 KV  →                      73% GPU, 13.3 tok/s  (too tight, see below)
+	// 8192 is the knee: everything below it buys <8% decode speed but risks
+	// silent front-truncation of the system prompt (the failure that created
+	// this table — 2 of 6 turns lost at Ollama's 4096 default). It only holds if
+	// the prompt stays well under 8192; api/chat/+server.ts's CHAT_K keeps the
+	// retrieved <context> small enough, and the llm_timing app-log records
+	// nearCtxLimit so a violation is visible rather than silent.
+	qwen3: { ctx: 40960, serveCtx: 8192, caps: { tools: true, reasoning: true } },
 	'nomic-embed-text': { ctx: 2048, caps: { tools: false, reasoning: false }, embeddingOnly: true },
 	// EMBED_MODEL (embed-config.ts) — Ollama's /api/tags lists it right next
 	// to chat models with no way to tell them apart otherwise, and picking
@@ -152,6 +166,9 @@ export class OllamaAdapter extends OpenAICompatAdapter {
 	 */
 	private async *chatNative(req: ChatRequest, signal: AbortSignal): AsyncGenerator<Chunk> {
 		const { connectMs, firstTokenMs, idleMs } = this.config.timeouts;
+		// Once, so the window we ask for and the window the usage chunk reports
+		// cannot drift apart.
+		const numCtx = serveCtxFor(req.model);
 		const bridge = this.makeAbortBridge(signal);
 		bridge.armTimer(connectMs, 'timeout_connect');
 
@@ -170,7 +187,7 @@ export class OllamaAdapter extends OpenAICompatAdapter {
 					...(req.think !== undefined ? { think: req.think } : {}),
 					...(req.tools?.length ? { tools: toOllamaWireTools(req.tools) } : {}),
 					options: {
-						num_ctx: serveCtxFor(req.model),
+						num_ctx: numCtx,
 						...(req.temperature !== undefined ? { temperature: req.temperature } : {}),
 						...(req.maxOutputTokens !== undefined ? { num_predict: req.maxOutputTokens } : {})
 					}
@@ -225,13 +242,17 @@ export class OllamaAdapter extends OpenAICompatAdapter {
 							thinking?: string;
 							tool_calls?: { function: { name: string; arguments: Record<string, unknown> } }[];
 						};
-						done?: boolean;
-					};
+					} & OllamaDoneLine;
 					try {
 						json = JSON.parse(trimmed);
 					} catch {
 						continue; // a stray partial/non-JSON line — ignore, not fatal
 					}
+					// The final line carries the token counts and timings. Read it
+					// before the `message` guard below so this never depends on that
+					// line also having a message.
+					const usage = parseOllamaDone(json, numCtx);
+					if (usage) yield usage;
 					const message = json.message;
 					if (!message) continue;
 					if (message.thinking) yield { type: 'reasoning', text: message.thinking };
