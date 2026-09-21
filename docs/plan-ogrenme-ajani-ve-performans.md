@@ -685,18 +685,43 @@ yazma (§21). Retrieval (§22): `prompt.ts`'e `buildMemoryBlock()` — task rele
 × importance × confidence × recency ile sıralı, karakter bütçeli.
 Yeni: `src/lib/server/memory.ts`, `memory.test.ts`.
 
-### F4 — Prerequisite graph (§28) · küçük, bağımsız
+### F4 — Prerequisite graph (§28) · ✅ kod hazır, gerçek indekse HENÜZ uygulanmadı (2026-09-21)
 
-`prerequisites` frontmatter'da var, indekste yok.
+**Ölçüm önce geldi** (default vault, salt okunur): `prerequisites` 289 notta var, **258'i boş değil**; 432 referansın
+**tamamı** `[[wikilink]]` (yol değil) ve **432/432'si dosya adıyla tekil çözülüyor** — çift anlamlı 0, kırık 0, **döngü 0**.
 
-- `indexer/chunk.ts` → `Frontmatter`'a `prerequisites?: string[]`
-- `indexer/db.ts` → `FileRow`'a `prerequisites_json`, `CREATE TABLE`'a sütun,
-  mevcut DB'ler için
-  `ensureColumns(db,'files',{prerequisites_json:"TEXT NOT NULL DEFAULT '[]'"})`
-- `indexer/index-vault.ts` → `fileRow`'a alan
-- Sorgu: `getPrerequisites(path)` + döngü tespiti
+**Bu yüzden plandaki iki nokta değişti:**
 
-Sonrasında `npm run index -- --full` (sütun eski satırlarda boş).
+- **Yazma zamanında çözümleme yok.** `prerequisites_json` linkin hedef ADINI saklar ("np-completeness"), yol değil; yola çevirme
+  grafik okunurken yapılır (`src/lib/server/prerequisites-query.ts`). Hedef not sonradan eklenir/yeniden adlandırılırsa, ona
+  işaret eden notlar yeniden indekslenmeden doğru çözülür (testli).
+- **`--full` yerine `npm run index -- --prereqs`.** Artımlı indeksleyici sha256 aynıysa dosyayı atlar; `--full` ise
+  indeksi silip 330 dosyayı yeniden gömer — birkaç satır metadata için. `--prereqs` yalnızca frontmatter okur, sütunu doldurur,
+  **gömme ve chunk yok**. `--dry-run` ile veritabanı salt okunur açılır: sütun bile eklenmez.
+
+**Ne yapıldı**
+
+- `indexer/prerequisites.ts` (saf, testli): `parsePrerequisites` (`[[x|alias]]`, `#başlık`, `klasör/x`, `.md`, tırnaksız YAML —
+  `- [[x]]` YAML'da **iki katlı iç içe dizi** olur, düzleştirilir —, düz string, virgüllü liste; bozuk değer atılır, indeksleyici
+  çökmez), `resolvePrerequisites` (çözülen / **çözülemeyen / belirsiz** ayrı raporlanır, tahmin edilmez), `findCycles`,
+  `transitivePrerequisites` (en yakın önce, döngüde sonsuz döngüye girmez).
+- `indexer/db.ts`: `files.prerequisites_json` (`CREATE TABLE` + `ensureColumns` — eski indeks `--full` gerektirmeden sütunu alır),
+  `upsertFile`, `setPrerequisites`. İki yazma yolu (`indexer/index-vault.ts`, `src/lib/server/incrementalIndex.ts`) yeni/değişen
+  dosyada alanı birlikte yazar.
+- `src/lib/server/prerequisites-query.ts`: `loadPrerequisiteGraph`, `getPrerequisites`, `getPrerequisiteChain`,
+  `findPrerequisiteCycles`. **Sütun yoksa hepsi `null` döner** — bu "önkoşulu yok" demek değildir (uygulama indeksi salt okunur
+  açar, sütunu kendisi ekleyemez); çağıran "indeks yenilenmeli" demeli.
+
+**Doğrulama.** 342/342 test, `svelte-check` 0 hata. **Gerçek indeksin izole kopyasında** (`DATA_DIR` kopya; vault indeksi yalnızca
+`DATA_DIR`'den çözülür): kuru çalıştırma hiçbir şey yazmadı; uygulama 258 satırı güncelledi (72'si zaten `[]`); ikinci çalıştırma **0
+değişiklik** (idempotent); çıktı ölçümle birebir (258 / 432 / 0 çözülemeyen / 0 belirsiz / 0 döngü); okuma tarafı 330 nota 432 kenar
+verdi, en derin zincir 14 ("love-linux-kernel-development" → … → "c-history"). Gerçek indekste sütun yok, okuyucular `null` döndürüyor.
+
+**Bekleyen (kullanıcı onayı):** gerçek indekste `npm run index -- --prereqs` (yalnızca `files` tablosuna sütun ekler ve 258 satırı
+doldurur; gömme yok). Onaylanana kadar hiçbir şey okumuyor bu veriyi, bu yüzden zararsız.
+
+**Dürüst not.** F4 tek başına kullanıcıya görünür bir şey üretmez: tüketicileri F1 (skill ağacı) ve F6 (REVIEW modu: "önkoşulu zayıf
+konulara dön"). Şimdilik yalnızca doğru, ölçülmüş bir altyapı.
 
 ### F5 — Keyword/FTS fallback (§11) · ✅ uygulandı, bilerek küçük (2026-09-21)
 
