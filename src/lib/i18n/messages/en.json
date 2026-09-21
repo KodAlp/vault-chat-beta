@@ -158,6 +158,7 @@
 		"stageRetrying": "Validation failed, retrying...",
 		"quizGenerating": "Generating questions...",
 		"quizDone": "Quiz ready — click to view",
+		"quizDoneShort": "Quiz ready: {delivered} of {requested} questions could be generated (the sources did not hold more distinct questions) — click to view",
 		"quizErrorPrefix": "Couldn't create quiz: ",
 		"cardsGenerating": "Generating cards...",
 		"cardsDone": "Cards ready — click to review",

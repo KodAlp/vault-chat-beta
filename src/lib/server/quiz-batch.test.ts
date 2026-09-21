@@ -1,66 +1,51 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { splitComposition } from './quiz-batch';
+import { assignSlots, splitCompositionByType } from './quiz-batch';
 
-function total(c: { mc: number; tf: number; open: number }): number {
-	return c.mc + c.tf + c.open;
-}
-
-test('a composition smaller than the batch size returns a single batch, unchanged', () => {
-	const batches = splitComposition({ mc: 2, tf: 1, open: 1 }, 5);
-	assert.deepEqual(batches, [{ mc: 2, tf: 1, open: 1 }]);
-});
-
-test('an exact multiple of the batch size splits evenly, mc-first', () => {
-	const batches = splitComposition({ mc: 10, tf: 0, open: 0 }, 5);
+test('one type per batch, in mc / tf / open order, and the counts add up exactly', () => {
+	const batches = splitCompositionByType({ mc: 4, tf: 2, open: 4 }, 5);
 	assert.deepEqual(batches, [
-		{ mc: 5, tf: 0, open: 0 },
-		{ mc: 5, tf: 0, open: 0 }
+		{ type: 'multiple_choice', count: 4 },
+		{ type: 'true_false', count: 2 },
+		{ type: 'open', count: 4 }
 	]);
 });
 
-test('a remainder becomes its own final, smaller batch', () => {
-	const batches = splitComposition({ mc: 6, tf: 2, open: 2 }, 5);
-	// Every batch sums to at most 5, batches cover the whole composition,
-	// mc drains first.
-	assert.equal(batches.length, 2);
-	for (const b of batches) assert.ok(total(b) <= 5);
-	const summed = batches.reduce(
-		(acc, b) => ({ mc: acc.mc + b.mc, tf: acc.tf + b.tf, open: acc.open + b.open }),
-		{ mc: 0, tf: 0, open: 0 }
-	);
-	assert.deepEqual(summed, { mc: 6, tf: 2, open: 2 });
-});
-
-test('a single type larger than the batch size splits into same-type batches', () => {
-	const batches = splitComposition({ mc: 0, tf: 0, open: 12 }, 5);
-	assert.deepEqual(batches, [
-		{ mc: 0, tf: 0, open: 5 },
-		{ mc: 0, tf: 0, open: 5 },
-		{ mc: 0, tf: 0, open: 2 }
+test('a type over the limit is split as evenly as possible, never 5+2', () => {
+	assert.deepEqual(splitCompositionByType({ mc: 7, tf: 0, open: 0 }, 5), [
+		{ type: 'multiple_choice', count: 4 },
+		{ type: 'multiple_choice', count: 3 }
 	]);
+	const twenty = splitCompositionByType({ mc: 0, tf: 0, open: 20 }, 5);
+	assert.deepEqual(twenty.map((b) => b.count), [5, 5, 5, 5]);
+	assert.deepEqual(splitCompositionByType({ mc: 11, tf: 0, open: 0 }, 5).map((b) => b.count), [4, 4, 3]);
 });
 
-test('a mixed composition fills each batch to the cap before moving to the next type', () => {
-	// mc=3 fits alone in batch 1 with room for 2 more -> 2 of the 4 tf.
-	// Remaining tf=2 and open=6 then split across the following batches.
-	const batches = splitComposition({ mc: 3, tf: 4, open: 6 }, 5);
-	for (const b of batches) assert.ok(total(b) <= 5 && total(b) > 0);
-	const summed = batches.reduce(
-		(acc, b) => ({ mc: acc.mc + b.mc, tf: acc.tf + b.tf, open: acc.open + b.open }),
-		{ mc: 0, tf: 0, open: 0 }
-	);
-	assert.deepEqual(summed, { mc: 3, tf: 4, open: 6 });
+test('every requested question is in exactly one batch, whatever the composition', () => {
+	for (const c of [{ mc: 1, tf: 1, open: 1 }, { mc: 20, tf: 20, open: 20 }, { mc: 0, tf: 3, open: 0 }, { mc: 6, tf: 0, open: 9 }]) {
+		const b = splitCompositionByType(c, 5);
+		assert.equal(b.filter((x) => x.type === 'multiple_choice').reduce((s, x) => s + x.count, 0), c.mc);
+		assert.equal(b.filter((x) => x.type === 'true_false').reduce((s, x) => s + x.count, 0), c.tf);
+		assert.equal(b.filter((x) => x.type === 'open').reduce((s, x) => s + x.count, 0), c.open);
+		assert.ok(b.every((x) => x.count >= 1 && x.count <= 5));
+	}
 });
 
-test('an all-zero composition produces zero batches, not one empty batch', () => {
-	assert.deepEqual(splitComposition({ mc: 0, tf: 0, open: 0 }, 5), []);
+test('an empty composition has no batches', () => {
+	assert.deepEqual(splitCompositionByType({ mc: 0, tf: 0, open: 0 }, 5), []);
 });
 
-test('a batch size of 1 produces one batch per item', () => {
-	const batches = splitComposition({ mc: 1, tf: 1, open: 0 }, 1);
-	assert.deepEqual(batches, [
-		{ mc: 1, tf: 0, open: 0 },
-		{ mc: 0, tf: 1, open: 0 }
-	]);
+test('assignSlots gives every question its own source part while the pool lasts, across batches', () => {
+	const pool = Array.from({ length: 12 }, (_, i) => `S${i + 1}`);
+	const slots = assignSlots(pool, [4, 2, 4]);
+	assert.deepEqual(slots.map((s) => s.length), [4, 2, 4]);
+	const flat = slots.flat();
+	assert.equal(new Set(flat).size, 10, 'ten questions, ten different source parts');
+	assert.deepEqual(slots[0], ['S1', 'S2', 'S3', 'S4']);
+});
+
+test('assignSlots wraps around when there are more questions than source parts, and copes with an empty pool', () => {
+	assert.deepEqual(assignSlots(['S1', 'S2', 'S3'], [2, 2, 2]), [['S1', 'S2'], ['S3', 'S1'], ['S2', 'S3']]);
+	assert.deepEqual(assignSlots([], [2, 1]), [[], []]);
+	assert.deepEqual(assignSlots(['S1'], []), []);
 });

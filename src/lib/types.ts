@@ -186,7 +186,9 @@ export interface QuizGenerationRequest {
  * offer "kapsamı genişlet?" instead of a flat "no sources" message. */
 export type QuizGenerationEvent =
 	| { type: 'progress'; stage: 'retrieving' | 'generating' | 'validating' | 'retrying'; elapsedMs?: number }
-	| { type: 'done'; quizId: string }
+	/** `delivered` < `requested` means the sources did not hold that many DISTINCT questions: the quiz is shorter than asked
+	 * rather than padded with repeats (generate-quiz.ts). Both optional so an older server's event still parses. */
+	| { type: 'done'; quizId: string; requested?: number; delivered?: number }
 	| { type: 'error'; message: string; narrowScope?: boolean };
 
 /** GET /api/study/{quizzes,decks,reports,mindmaps,slidedecks} response

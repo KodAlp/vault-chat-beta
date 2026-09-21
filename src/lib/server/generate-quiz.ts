@@ -2,9 +2,12 @@ import { chatWithFallback } from './providers/registry';
 import type { ChatMessage } from './providers/types';
 import { retrieve } from './retrieve';
 import { getMessages } from './chats-db';
-import { QuizItems, buildQuizItemsJsonSchema } from './quiz-schema';
+import { buildQuizItemsJsonSchema } from './quiz-schema';
 import { createQuiz, type NewQuizItem } from './study-db';
-import { splitComposition } from './quiz-batch';
+import { splitCompositionByType, assignSlots, type QuizItemType } from './quiz-batch';
+import { selectTeachingPool } from './quiz-pool';
+import { dedupeItems } from './quiz-dedupe';
+import { validateQuizBatch } from './quiz-validate';
 import { renderUserSkillsBlock } from './userSkills';
 import type { VaultContext } from './vaults';
 import { NoSourcesError } from './generate-errors';
@@ -46,6 +49,15 @@ function clampComposition(composition: GenerateQuizInput['composition']) {
  * applied there.
  */
 const QUIZ_ITEMS_PER_BATCH = 5;
+
+/**
+ * Candidates asked of retrieval and the pool kept from them. Index pages and "Related"/"Sources" sections rank high
+ * (they name the topic) but teach nothing, so more than a pool's worth is retrieved and only teaching parts are kept
+ * (quiz-pool.ts). Measured: 17% of the vault's chunks are such parts, they were 20-30% of the pools handed to the
+ * generator, and two of four test quizzes drew questions from a "> Related" / "> Sources" section.
+ */
+const QUIZ_CANDIDATES = 24;
+const QUIZ_POOL_SIZE = 12;
 
 /**
  * See generate-cards.ts's cardsOutputBudget for the same reasoning — a
@@ -151,54 +163,6 @@ async function callModel(
 	return text;
 }
 
-type ParseResult = { ok: true; items: NewQuizItem[] } | { ok: false; error: string };
-
-/** Rejects items whose source_id isn't one of the ids actually offered — the
- * anti-hallucination check the skill requires — and resolves the winning
- * ones to real source_path/heading_path from the server's own chunk table. */
-function parseAndValidate(
-	raw: string,
-	idToChunk: Map<string, { path: string; heading_path: string }>,
-	expectedCount: number
-): ParseResult {
-	let json: unknown;
-	try {
-		json = JSON.parse(raw);
-	} catch {
-		return { ok: false, error: 'Model geçerli JSON döndürmedi.' };
-	}
-	const result = QuizItems.safeParse(json);
-	if (!result.success) {
-		return { ok: false, error: result.error.issues.map((i) => i.message).join('; ') };
-	}
-	const badIds = result.data.items.filter((item) => !idToChunk.has(item.source_id));
-	if (badIds.length > 0) {
-		return {
-			ok: false,
-			error: `${badIds.length} sorunun source_id'si sağlanan kaynak kimlikleriyle eşleşmiyor. Sadece S1, S2, ... gibi verilen kimlikleri kullan.`
-		};
-	}
-	if (result.data.items.length !== expectedCount) {
-		return {
-			ok: false,
-			error: `Model ${expectedCount} soru istenirken ${result.data.items.length} soru üretti. Tam olarak ${expectedCount} soru üret.`
-		};
-	}
-	const items: NewQuizItem[] = result.data.items.map((item) => {
-		const chunk = idToChunk.get(item.source_id)!;
-		return {
-			type: item.type,
-			question: item.question,
-			options: item.options,
-			answer: item.answer,
-			explanation: item.explanation,
-			source_path: chunk.path,
-			heading_path: chunk.heading_path
-		};
-	});
-	return { ok: true, items };
-}
-
 /** Exported for /api/skills/preview — lets the settings page show exactly
  * how a scope's system prompt is assembled without a real generation call. */
 export function buildSystemPrompt(
@@ -243,7 +207,7 @@ export async function generateQuiz(
 	v: VaultContext,
 	input: GenerateQuizInput,
 	onProgress?: (stage: ProgressStage, elapsedMs?: number) => void
-): Promise<{ quizId: string }> {
+): Promise<{ quizId: string; requested: number; delivered: number }> {
 	onProgress?.('retrieving');
 	input = { ...input, composition: clampComposition(input.composition) };
 	const total = input.composition.mc + input.composition.tf + input.composition.open;
@@ -264,88 +228,101 @@ export async function generateQuiz(
 		}
 	}
 
-	const { chunks, narrowScope, reason } = await retrieve(v, query, {
+	const retrieved = await retrieve(v, query, {
 		domains: input.domains,
 		includedPaths: input.includedPaths,
-		k: 12
+		k: QUIZ_CANDIDATES
 	});
-	if (chunks.length === 0) {
-		throw new NoSourcesError(narrowScope, reason);
+	if (retrieved.chunks.length === 0) {
+		throw new NoSourcesError(retrieved.narrowScope, retrieved.reason);
 	}
+	const chunks = selectTeachingPool(retrieved.chunks, QUIZ_POOL_SIZE);
 
-	// Short id per chunk (S1, S2, ...) instead of a path for the model to
-	// copy — see quiz-schema.ts's doc comment. This is the same fix that took
-	// report generation from a 0% to a working success rate.
+	// Short id per chunk (S1, S2, ...) instead of a path for the model to copy — see quiz-schema.ts.
 	const idToChunk = new Map(chunks.map((c, i) => [`S${i + 1}`, c]));
-	const contextBlock = chunks
-		.map(
-			(c, i) =>
-				`id: S${i + 1}\nsource_path: ${c.path}\nheading_path: ${c.heading_path}\ndepth: ${c.depth}\n\n${c.display_text}`
-		)
-		.join('\n\n---\n\n');
+	const poolIds = [...idToChunk.keys()];
+	const contextFor = (ids: readonly string[]) =>
+		[...new Set(ids)]
+			.map((id) => {
+				const c = idToChunk.get(id)!;
+				return `id: ${id}\nsource_path: ${c.path}\nheading_path: ${c.heading_path}\ndepth: ${c.depth}\n\n${c.display_text}`;
+			})
+			.join('\n\n---\n\n');
 	const userSkillsBlock = await renderUserSkillsBlock('quiz');
 
-	// One deadline for the whole generation, every batch and every retry
-	// included — unchanged from before batching.
+	// One deadline for the whole generation, every batch and every retry included — unchanged from before batching.
 	const deadline = AbortSignal.timeout(GENERATION_BUDGET_MS);
 
-	const items: NewQuizItem[] = [];
-	const batches = splitComposition(input.composition, QUIZ_ITEMS_PER_BATCH);
-	onProgress?.('generating');
-	for (const batchComposition of batches) {
-		const batchTotal = batchComposition.mc + batchComposition.tf + batchComposition.open;
-		const batchSystemPrompt = buildSystemPrompt(batchComposition, contextBlock, userSkillsBlock);
-		const format = buildQuizItemsJsonSchema([...idToChunk.keys()], batchTotal);
-		// Same "don't repeat" nudge as generate-cards.ts's avoidNote — the
-		// full <context> stays available every batch, just steered away
-		// from re-covering ground already generated. Soft mitigation, not
-		// a guarantee (see that file's comment on source-pool size).
-		const avoidNote =
-			items.length > 0
-				? `\n\nBu sorular zaten üretildi, AYNI SORUYU TEKRAR ÜRETME:\n${items.map((i) => `- ${i.question}`).join('\n')}`
-				: '';
-		const batchPrompt = `${input.prompt}${avoidNote}`;
-		const outputBudget = quizOutputBudget(batchTotal);
+	type GenItem = NewQuizItem & { sourceId?: string };
+	const compositionOf = (kind: QuizItemType, count: number) => ({
+		mc: kind === 'multiple_choice' ? count : 0,
+		tf: kind === 'true_false' ? count : 0,
+		open: kind === 'open' ? count : 0
+	});
+	const TYPE_TR: Record<QuizItemType, string> = { multiple_choice: 'çoktan seçmeli', true_false: 'doğru/yanlış', open: 'açık uçlu' };
+
+	/**
+	 * One batch: ONE question type, and each question tied to its own source part (`slots`, in order). Both are enforced
+	 * by the grammar (quiz-schema.ts), not requested and hoped for:
+	 *  - a batch used to mix types under one grammar, so the requested 4/2/4 came back 6/2/2 in every measured quiz and
+	 *    46 of 80 real multiple-choice questions had no options (the list was optional);
+	 *  - asking the model to spread across the sources and rejecting batches that did not only produced retry loops — it does
+	 *    not spread (10 questions from 2-3 of 5-12 available parts) — while pinning the id per position guarantees it;
+	 *  - the earlier questions are NOT pasted into the prompt any more: the small model copied them back (14 of 20
+	 *    second-batch questions were exact copies), and batches with different source parts cannot re-ask each other's fact.
+	 */
+	const runBatch = async (kind: QuizItemType, slots: readonly string[]): Promise<GenItem[]> => {
+		const count = slots.length;
+		const ids = [...new Set(slots)];
+		const system = buildSystemPrompt(compositionOf(kind, count), contextFor(ids), userSkillsBlock);
+		const format = buildQuizItemsJsonSchema(ids, count, kind, slots);
+		const prompt =
+			`${input.prompt}\n\nBu partideki TÜM sorular ${TYPE_TR[kind]} türünde olmalı.` +
+			`\n\nHer sorunun kaynağı sabittir; sırayla: ${slots.map((id, i) => `${i + 1}. soru ${id}`).join(', ')}. ` +
+			`Her soruyu YALNIZCA kendi kimliğinin içeriğinden üret ve source_id alanına o kimliği yaz.`;
+		const budget = quizOutputBudget(count);
+		const parse = (raw: string) => validateQuizBatch(raw, { idToChunk, expectedCount: count, kind, allowedIds: ids, slots });
 
 		onProgress?.('generating');
-		let raw = await callModel(
-			input.model,
-			batchSystemPrompt,
-			batchPrompt,
-			format,
-			input.provider,
-			deadline,
-			(ms) => onProgress?.('generating', ms),
-			outputBudget
-		);
-		let parsed = parseAndValidate(raw, idToChunk, batchTotal);
-
+		let raw = await callModel(input.model, system, prompt, format, input.provider, deadline, (ms) => onProgress?.('generating', ms), budget);
+		let parsed = parse(raw);
 		const MAX_RETRIES = 2;
 		for (let attempt = 0; !parsed.ok && attempt < MAX_RETRIES; attempt++) {
 			onProgress?.('retrying');
-			const retryPrompt = `${batchPrompt}\n\nÖnceki cevabın geçersizdi: ${parsed.error}\nSADECE geçerli JSON döndür.`;
-			raw = await callModel(
-				input.model,
-				batchSystemPrompt,
-				retryPrompt,
-				format,
-				input.provider,
-				deadline,
-				(ms) => onProgress?.('retrying', ms),
-				outputBudget
-			);
-			parsed = parseAndValidate(raw, idToChunk, batchTotal);
+			const retryPrompt = `${prompt}\n\nÖnceki cevabın geçersizdi: ${parsed.error}\nSADECE geçerli JSON döndür.`;
+			raw = await callModel(input.model, system, retryPrompt, format, input.provider, deadline, (ms) => onProgress?.('retrying', ms), budget);
+			parsed = parse(raw);
 		}
+		// Same partial-accept policy as generate-cards.ts: a batch that never validates even after retries is skipped, not a
+		// reason to discard every question generated so far. Zero questions across every batch, below, is still a hard failure.
+		// A thrown exception from callModel itself (network/timeout/abort) is NOT caught here — it propagates immediately.
+		return parsed.ok ? (parsed.items as GenItem[]) : [];
+	};
 
-		// Same partial-accept policy as generate-cards.ts: a batch that
-		// never validates even after retries is skipped, not treated as a
-		// reason to discard every question generated so far. Zero
-		// questions across every batch, below, is still a hard failure.
-		// A thrown exception from callModel itself (network/timeout/abort)
-		// is NOT caught here — it still propagates immediately, same as
-		// before batching.
-		if (parsed.ok) items.push(...parsed.items);
+	const batches = splitCompositionByType(input.composition, QUIZ_ITEMS_PER_BATCH);
+	// One source part per question, dealt across the whole quiz: it uses as much of the pool as it has questions.
+	const slotPlan = assignSlots(poolIds, batches.map((b) => b.count));
+
+	let items: GenItem[] = [];
+	onProgress?.('generating');
+	for (let n = 0; n < batches.length; n++) items.push(...(await runBatch(batches[n].type, slotPlan[n])));
+
+	// Safety net, not the fix: a verbatim repeat is dropped (quiz-dedupe.ts is deliberately exact — a fuzzy gate cannot tell a
+	// paraphrase from "same template, different numbers"), then ONE top-up per type that came back short, drawn from source parts
+	// nothing has used yet. Never padded with repeats: a short quiz is reported as short (requested/delivered).
+	items = dedupeItems(items).kept;
+	const want: Record<QuizItemType, number> = { multiple_choice: input.composition.mc, true_false: input.composition.tf, open: input.composition.open };
+	for (const kind of ['multiple_choice', 'true_false', 'open'] as const) {
+		const have = items.filter((i) => i.type === kind).length;
+		if (have >= want[kind]) continue;
+		const used = new Set(items.map((i) => i.sourceId));
+		const fresh = poolIds.filter((id) => !used.has(id));
+		const need = Math.min(QUIZ_ITEMS_PER_BATCH, want[kind] - have);
+		const extra = await runBatch(kind, assignSlots(fresh.length > 0 ? fresh : poolIds, [need])[0]);
+		items.push(...dedupeItems(extra, items.map((i) => i.question)).kept);
 	}
+	const order: Record<string, number> = { multiple_choice: 0, true_false: 1, open: 2 };
+	items = items.map((it, idx) => ({ it, idx })).sort((x, y) => order[x.it.type] - order[y.it.type] || x.idx - y.idx).map((x) => x.it);
 
 	if (items.length === 0) {
 		throw new Error('Sınav üretilemedi: hiçbir batch geçerli soru üretemedi.');
@@ -357,7 +334,7 @@ export async function generateQuiz(
 		title,
 		{ domains: input.domains ?? null, chatId: input.chatId ?? null, prompt: input.prompt },
 		input.model,
-		items
+		items.map(({ sourceId: _sourceId, ...rest }) => rest)
 	);
-	return { quizId };
+	return { quizId, requested: total, delivered: items.length };
 }

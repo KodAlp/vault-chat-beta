@@ -13,7 +13,7 @@ export const POST: RequestHandler = async ({ request }) => {
 	return sseStream<QuizGenerationEvent>(
 		async (send) => {
 			try {
-				const { quizId } = await generateQuiz(
+				const { quizId, requested, delivered } = await generateQuiz(
 					v,
 					{
 						domains: body.domains,
@@ -26,7 +26,7 @@ export const POST: RequestHandler = async ({ request }) => {
 					},
 					(stage, elapsedMs) => send({ type: 'progress', stage, elapsedMs })
 				);
-				send({ type: 'done', quizId });
+				send({ type: 'done', quizId, requested, delivered });
 			} catch (err) {
 				const message = err instanceof Error ? err.message : 'Bilinmeyen hata';
 				if (err instanceof NoSourcesError) {

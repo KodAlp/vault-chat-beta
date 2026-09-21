@@ -158,6 +158,7 @@
 		"stageRetrying": "Doğrulama başarısız, tekrar deneniyor...",
 		"quizGenerating": "Sorular üretiliyor...",
 		"quizDone": "Test hazır — görüntülemek için tıkla",
+		"quizDoneShort": "Test hazır: {requested} sorudan {delivered} tanesi üretilebildi (kaynaklar bu kadar çeşitli soruya yetmedi) — görüntülemek için tıkla",
 		"quizErrorPrefix": "Test oluşturulamadı: ",
 		"cardsGenerating": "Kartlar üretiliyor...",
 		"cardsDone": "Kartlar hazır — incelemek için tıkla",
