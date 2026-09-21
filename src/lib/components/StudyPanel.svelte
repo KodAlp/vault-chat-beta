@@ -11,6 +11,7 @@
 	import FileTextIcon from '@lucide/svelte/icons/file-text';
 	import BrainIcon from '@lucide/svelte/icons/brain';
 	import PresentationIcon from '@lucide/svelte/icons/presentation';
+	import ChartColumnIcon from '@lucide/svelte/icons/chart-column';
 	import Trash2Icon from '@lucide/svelte/icons/trash-2';
 	import type { StudySummary } from '$lib/types';
 	import { t } from '$lib/i18n/index.svelte';
@@ -304,6 +305,14 @@
 						{/each}
 					</ul>
 				{/if}
+			</div>
+			<div class="type-group">
+				<div class="row">
+					<span class="label"><ChartColumnIcon size={16} aria-hidden="true" /> {t('StudyPanel.progress')}</span>
+					<div class="row-actions">
+						<Button variant="outline" size="sm" onclick={() => openItem('/study/progress')}>{t('StudyPanel.progressOpen')}</Button>
+					</div>
+				</div>
 			</div>
 		</div>
 	</Sheet.Content>

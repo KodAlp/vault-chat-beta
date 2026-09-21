@@ -149,7 +149,38 @@
 		"new": "New",
 		"dueBadge": "{count} due",
 		"review": "Review",
+		"progress": "Progress",
+		"progressOpen": "Open",
 		"deleteConfirmTitle": "Delete \"{title}\"?"
+	},
+
+	"ProgressPage": {
+		"back": "Back",
+		"title": "Your progress",
+		"loading": "Loading…",
+		"loadFailed": "Could not load your progress.",
+		"empty": "Nothing to show yet. Take a quiz or review some cards and your progress will appear here.",
+		"intro": "What your quiz answers and card reviews say about how well you know each topic. These are estimates: the more you answer, the more they mean.",
+		"overall": "Everything",
+		"byDomain": "By topic",
+		"unknownDomain": "Other notes",
+		"quizAnswers": "Quiz answers",
+		"cardMemory": "Card memory",
+		"noAnswers": "No answers yet",
+		"notEnough": "Not enough data yet",
+		"answers": "{count} answered",
+		"cards": "{count} cards reviewed",
+		"confidenceModerate": "some confidence",
+		"confidenceHigh": "high confidence",
+		"lastAnswered": "last {date}",
+		"showNotes": "Show notes ({count})",
+		"hideNotes": "Hide notes",
+		"bandsTitle": "By kind of question",
+		"bandBasic": "Remember / explain",
+		"bandApplied": "Apply / analyse",
+		"bandsHint": "Only questions written with the experimental level labels are split this way.",
+		"howTitle": "How to read this",
+		"howBody": "Right answers count for more when they are recent (they fade over about 45 days) and when they are hard to get by luck: an open answer counts for more than a true/false one. One answer never reads as 100%, and a number is shown only once there is enough evidence behind it. Blank answers and questions you flagged as faulty are ignored, and a question you answered several times counts once, with your latest answer. Card memory is the chance you still remember the cards you have reviewed, worked out from their review schedule."
 	},
 
 	"GenerationLayout": {
