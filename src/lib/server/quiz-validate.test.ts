@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { isStatement, matchOption, validateQuizBatch, type BatchContext } from './quiz-validate';
+import { isStatement, leaksSourceId, matchOption, validateQuizBatch, type BatchContext } from './quiz-validate';
 import { buildQuizItemsJsonSchema } from './quiz-schema';
 
 const chunks = new Map([
@@ -143,4 +143,33 @@ test('slots of the wrong length fall back to the plain enum grammar rather than 
 	const schema = buildQuizItemsJsonSchema(['S1', 'S2'], 3, 'open', ['S1']) as unknown as { properties: { items: { prefixItems?: unknown; items?: { properties: { source_id: { enum: string[] } } } } } };
 	assert.equal(schema.properties.items.prefixItems, undefined);
 	assert.deepEqual(schema.properties.items.items!.properties.source_id.enum, ['S1', 'S2']);
+});
+
+test('a source id written into the question, an option or the explanation is rejected with a retry message', () => {
+	for (const bad of [
+		open({ question: 'S3 kaynak parçasında verilen tanımı kullanarak $f(x)=x^2$ türevini hesaplayınız.' }),
+		open({ question: "S3 id'sindeki kaynakta hangi teorem verilmiştir?" }),
+		open({ explanation: 'S2 kaynağına göre sonuç 2x olur.' }),
+		mc({ options: ['S1 içindeki tanım', 'iki', 'üç', 'dört', 'beş'], answer: 'üç' })
+	]) {
+		const r = validateQuizBatch(raw(bad), ctx());
+		assert.equal(r.ok, false, JSON.stringify(bad).slice(0, 60));
+		assert.match(!r.ok ? r.error : '', /kaynak kimlik/);
+	}
+});
+
+test('leaksSourceId matches the id as a word only, and only ids of this pool', () => {
+	const ids = ['S1', 'S12'];
+	assert.equal(leaksSourceId('S1 kaynağına göre', ids), true);
+	assert.equal(leaksSourceId('(S12) tanımı', ids), true);
+	assert.equal(leaksSourceId('S123 ve S10 sayıları', ids), false, 'S123 / S10 are not S1 or S12');
+	assert.equal(leaksSourceId('BS1 protokolü ve S1x', ids), false, 'letters glued to the id are another token');
+	assert.equal(leaksSourceId('$S_1$ simetrik grup', ids), false, 'math subscript notation is not an id');
+	assert.equal(leaksSourceId('S5 kaynağına göre', ids), false, 'S5 is not in this pool');
+	assert.equal(leaksSourceId('Dijkstra algoritması negatif kenarlarla çalışmaz', ids), false);
+});
+
+test('ordinary questions with no id still pass', () => {
+	assert.ok(validateQuizBatch(raw(open()), ctx()).ok);
+	assert.ok(validateQuizBatch(raw(tf()), ctx()).ok);
 });
