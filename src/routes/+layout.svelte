@@ -166,7 +166,9 @@
 	<GenerationStatusToast
 		{status}
 		stageLabels={{ ...STAGE_LABELS, generating: t('GenerationLayout.quizGenerating') }}
-		doneMessage={t('GenerationLayout.quizDone')}
+		doneMessage={status.phase === 'done' && status.requested !== undefined && status.delivered !== undefined && status.delivered < status.requested
+			? t('GenerationLayout.quizDoneShort', { delivered: status.delivered, requested: status.requested })
+			: t('GenerationLayout.quizDone')}
 		errorPrefix={t('GenerationLayout.quizErrorPrefix')}
 		stackIndex={quizBase + i}
 		onView={() => {
