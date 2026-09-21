@@ -1,0 +1,117 @@
+import { embed } from './ollama';
+import { EMBED_MODEL, QUERY_PREFIX } from './embed-config';
+import { getChatsDb } from './chats-db';
+import { logAppEvent } from './app-log';
+import * as store from './smalltalk-store';
+import { decideSmallTalk, smallTalkGateEnabled, type GateDecision } from './smalltalk-gate';
+import type { RetrieveResult } from '$lib/types';
+
+/**
+ * SvelteKit-side glue for the small-talk gate: the gate itself (smalltalk-gate.ts) and the
+ * phrase store (smalltalk-store.ts) are pure so they can be unit-tested; this file is the part
+ * that needs the embedding model and the shared chats.db, like retrieve.ts, and is exercised
+ * through the app rather than `tsx --test`.
+ *
+ * Everything here fails soft. The gate is a heuristic layered over a working chat: a failure to
+ * seed, embed or write must degrade to "no gate" (sources attached, as before), never to an
+ * error in the user's answer. It is also the only place that logs, and it logs ids and numbers,
+ * never the message text (app-log.ts's content rule).
+ */
+
+// Same call as retrieve()'s query embedding: CPU-only so bge-m3 never evicts the chat model.
+const embedFn: store.EmbedFn = (texts) => embed(texts.map((t) => `${QUERY_PREFIX}${t}`), EMBED_MODEL, { cpuOnly: true });
+
+let readyFor: string | null = null;
+
+function logError(action: string, err: unknown): void {
+	const message = err instanceof Error ? err.message : String(err);
+	logAppEvent({ kind: 'smalltalk', message: `küçük konuşma kapısı: ${action} başarısız: ${message}`, smallTalkAction: 'error' });
+}
+
+/**
+ * The gate, as retrieve() calls it. Returns null (= no gate this turn) when it is switched off,
+ * not seeded yet, or anything fails. The first turn after an install (or an embedding-model
+ * change) seeds in the background instead of making that turn wait ~3 s; the gate is active from
+ * the next one.
+ */
+export function checkSmallTalk(vector: number[], bestDistance: number | undefined): GateDecision | null {
+	if (!smallTalkGateEnabled(process.env.CHAT_SMALLTALK_GATE)) return null;
+	try {
+		const db = getChatsDb();
+		if (readyFor !== EMBED_MODEL) {
+			if (!store.isReady(db, EMBED_MODEL)) {
+				void store
+					.ensureReady(db, embedFn, EMBED_MODEL)
+					.then(() => {
+						readyFor = EMBED_MODEL;
+					})
+					.catch((err) => logError('tohumlama', err));
+				return null;
+			}
+			readyFor = EMBED_MODEL;
+		}
+		return decideSmallTalk(vector, bestDistance, store.loadPhrases(db, EMBED_MODEL));
+	} catch (err) {
+		logError('karar', err);
+		return null;
+	}
+}
+
+/** Embeds a single short message and remembers it as small talk. */
+export async function learnFromMessage(text: string, source: 'auto' | 'user'): Promise<store.LearnResult | null> {
+	const clean = text.trim();
+	if (!clean || clean.length > store.MAX_PHRASE_CHARS) return null;
+	const [vec] = await embedFn([clean]);
+	return store.learn(getChatsDb(), EMBED_MODEL, clean, vec, source);
+}
+
+/**
+ * What the chat route does after the gate flagged a message, without making the answer wait:
+ *  - a plain flag counts a hit on the phrase, and one made by a SEED also teaches the message
+ *    (the only automatic learning: a personal match is already known, and a message the
+ *    seeds did not flag is never guessed at);
+ *  - an override ("Yine de kaynak ara") records the message as a confirmed question and
+ *    switches off the learned phrase that misfired — never a seed, which one message must not disable.
+ */
+export function afterSmallTalkGate(gate: NonNullable<RetrieveResult['gate']>, text: string): void {
+	try {
+		const db = getChatsDb();
+		if (gate.phraseId !== undefined) store.recordHit(db, gate.phraseId);
+		if (gate.overridden) {
+			const blockId = gate.phraseSource && gate.phraseSource !== 'seed' ? gate.phraseId : undefined;
+			void embedFn([text.trim()])
+				.then(([vec]) => {
+					store.confirmQuestion(db, EMBED_MODEL, text, vec, blockId);
+					logAppEvent({ kind: 'smalltalk', message: 'soru olarak onaylandı', smallTalkAction: 'confirmed_question', gatePhraseId: blockId });
+				})
+				.catch((err) => logError('soru onayı', err));
+		} else if (gate.via === 'seed') {
+			void learnFromMessage(text, 'auto')
+				.then((r) => {
+					if (r?.created) logAppEvent({ kind: 'smalltalk', message: 'sohbet cümlesi öğrenildi', smallTalkAction: 'learned', gatePhraseId: r.id });
+				})
+				.catch((err) => logError('öğrenme', err));
+		}
+	} catch (err) {
+		logError('sonrası', err);
+	}
+}
+
+/** "Kaynaklar alakasız": the user says this message is small talk. Returns whether it was stored. */
+export async function teachSmallTalk(text: string): Promise<boolean> {
+	const r = await learnFromMessage(text, 'user');
+	if (r) logAppEvent({ kind: 'smalltalk', message: 'kullanıcı öğretti', smallTalkAction: 'taught', gatePhraseId: r.id });
+	return r !== null;
+}
+
+export function listSmallTalk() {
+	return store.listPhrases(getChatsDb());
+}
+
+export function deleteSmallTalk(id: number): boolean {
+	return store.deletePhrase(getChatsDb(), id);
+}
+
+export function clearSmallTalk(): number {
+	return store.clearLearned(getChatsDb());
+}

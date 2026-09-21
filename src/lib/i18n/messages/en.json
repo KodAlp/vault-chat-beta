@@ -36,7 +36,11 @@
 
 	"Message": {
 		"narrowScope": "Not found in the selected sources.",
-		"expandScope": "Expand scope?"
+		"expandScope": "Expand scope?",
+		"smallTalk": "Read as small talk, so no sources were looked up.",
+		"forceSources": "Search sources anyway",
+		"notRelevant": "Sources are irrelevant",
+		"taught": "Learned: messages like this will get no sources next time."
 	},
 
 	"ChatBubble": {
@@ -362,6 +366,8 @@
 		"manageSkills": "Manage skills",
 		"providersCardDescription": "Ollama and cloud providers (DeepSeek, ...), API keys, task chains.",
 		"manageProviders": "Manage providers",
+		"smallTalkCardDescription": "Phrases learned so greetings and small talk do not trigger a source search.",
+		"manageSmallTalk": "Manage learned phrases",
 		"deleteModelConfirmTitle": "Delete \"{name}\"?",
 		"deleteModelConfirmDescription": "This model will be permanently removed from Ollama. Downloaded files are deleted from disk."
 	},
@@ -458,6 +464,23 @@
 		"notSelected": "not selected",
 		"noModelList": "no model list — test the connection",
 		"removeProvider": "Remove"
+	},
+
+	"SmallTalkSettingsPage": {
+		"title": "Small-talk phrases",
+		"intro": "Greetings, slang and test messages get no sources. This lists what you taught and what was learned automatically; built-in examples appear only if switched off. Delete anything learned by mistake.",
+		"empty": "Nothing learned yet.",
+		"loadError": "Could not load the phrase list.",
+		"deleteError": "Could not delete the phrase.",
+		"sourceAuto": "automatic",
+		"sourceUser": "you taught it",
+		"sourceSeed": "built-in",
+		"kindQuestion": "confirmed as a question",
+		"blocked": "off",
+		"hits": "{count} times",
+		"delete": "Delete",
+		"clearAll": "Clear all",
+		"clearConfirm": "Delete everything learned and switch the built-in examples back on?"
 	},
 
 	"SkillsSettingsPage": {

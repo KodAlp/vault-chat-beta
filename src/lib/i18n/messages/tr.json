@@ -36,7 +36,11 @@
 
 	"Message": {
 		"narrowScope": "Seçili kaynaklarda bulunamadı.",
-		"expandScope": "Kapsamı genişlet?"
+		"expandScope": "Kapsamı genişlet?",
+		"smallTalk": "Sohbet olarak algılandı, kaynak aranmadı.",
+		"forceSources": "Yine de kaynak ara",
+		"notRelevant": "Kaynaklar alakasız",
+		"taught": "Öğrenildi: bu tür mesajlara bir dahaki sefere kaynak eklenmeyecek."
 	},
 
 	"ChatBubble": {
@@ -362,6 +366,8 @@
 		"manageSkills": "Skill'leri yönet",
 		"providersCardDescription": "Ollama ve bulut sağlayıcıları (DeepSeek, ...), API anahtarları, görev zincirleri.",
 		"manageProviders": "Sağlayıcıları yönet",
+		"smallTalkCardDescription": "Selamlaşma ve sohbet cümlelerinde kaynak aranmaması için öğrenilen ifadeler.",
+		"manageSmallTalk": "Öğrenilen ifadeleri yönet",
 		"deleteModelConfirmTitle": "\"{name}\" silinsin mi?",
 		"deleteModelConfirmDescription": "Bu model Ollama'dan kalıcı olarak kaldırılacak. İndirme dosyaları diskten silinir."
 	},
@@ -458,6 +464,23 @@
 		"notSelected": "seçilmedi",
 		"noModelList": "model listesi yok — bağlantıyı test et",
 		"removeProvider": "Kaldır"
+	},
+
+	"SmallTalkSettingsPage": {
+		"title": "Sohbet ifadeleri",
+		"intro": "Selamlaşma, argo ya da deneme mesajlarında kaynak aranmaz. Bu liste senin öğrettiklerini ve otomatik öğrenilenleri gösterir; yerleşik örnekler yalnızca kapatılmışsa görünür. Yanlış öğrenileni silebilirsin.",
+		"empty": "Henüz öğrenilmiş bir ifade yok.",
+		"loadError": "İfade listesi alınamadı.",
+		"deleteError": "İfade silinemedi.",
+		"sourceAuto": "otomatik",
+		"sourceUser": "sen öğrettin",
+		"sourceSeed": "yerleşik",
+		"kindQuestion": "soru olarak onaylandı",
+		"blocked": "kapalı",
+		"hits": "{count} kez",
+		"delete": "Sil",
+		"clearAll": "Hepsini temizle",
+		"clearConfirm": "Öğrenilen tüm ifadeler silinsin ve yerleşik örnekler yeniden açılsın mı?"
 	},
 
 	"SkillsSettingsPage": {

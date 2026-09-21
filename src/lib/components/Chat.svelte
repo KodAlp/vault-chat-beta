@@ -8,6 +8,7 @@
 	import { parseSelectionKey } from '$lib/model-selection';
 	import { t } from '$lib/i18n/index.svelte';
 	import { takePendingMessage } from '$lib/pending-message';
+	import { MAX_PHRASE_CHARS } from '$lib/smalltalk-limits';
 	import ArrowDownIcon from '@lucide/svelte/icons/arrow-down';
 	import SendIcon from '@lucide/svelte/icons/send';
 	import SquareIcon from '@lucide/svelte/icons/square';
@@ -111,9 +112,46 @@
 	async function send() {
 		const question = input.trim();
 		if (!question || isStreaming) return;
-
-		errorMessage = '';
 		input = '';
+		await ask(question);
+	}
+
+	/** The user message that produced messages[i] (the assistant answer at index i). */
+	function questionBefore(i: number): string | null {
+		for (let j = i - 1; j >= 0; j--) if (messages[j].role === 'user') return messages[j].content.trim();
+		return null;
+	}
+
+	/** "Yine de kaynak ara": the same question again, this time with the small-talk gate bypassed. */
+	function retryWithSources(i: number) {
+		const question = questionBefore(i);
+		if (question && !isStreaming) void ask(question, true);
+	}
+
+	/** "Kaynaklar alakasız": this short message was small talk — remember it. */
+	async function teachNotRelevant(i: number) {
+		const question = questionBefore(i);
+		if (!question) return;
+		try {
+			const res = await fetch('/api/smalltalk', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ text: question })
+			});
+			if (res.ok) messages[i].taughtSmallTalk = true;
+		} catch {
+			// best effort: the button simply stays, the user can press it again
+		}
+	}
+
+	/** Only a short message can be small talk (smalltalk-limits.ts) — otherwise no button. */
+	function canTeach(i: number): boolean {
+		const question = questionBefore(i);
+		return question !== null && question.length > 0 && question.length <= MAX_PHRASE_CHARS;
+	}
+
+	async function ask(question: string, forceSources = false) {
+		errorMessage = '';
 		messages.push({ id: crypto.randomUUID(), role: 'user', content: question });
 		messages.push({ id: crypto.randomUUID(), role: 'assistant', content: '' });
 		// $state arrays deep-proxy their contents on push — grab the reference back
@@ -155,7 +193,8 @@
 				titleModel: settings.defaultModel,
 				titleProvider: settings.defaultProvider,
 				vault: vaultId,
-				includedPaths
+				includedPaths,
+				forceSources: forceSources || undefined
 			};
 			const res = await fetch('/api/chat', {
 				method: 'POST',
@@ -200,6 +239,7 @@
 					else if (event.type === 'done') {
 						assistantMessage.sources = event.sources;
 						assistantMessage.narrowScope = event.narrowScope;
+						assistantMessage.smallTalk = event.smallTalk;
 						assistantMessage.hedges = event.hedges;
 					}
 					else if (event.type === 'error') errorMessage = event.message;
@@ -384,7 +424,14 @@
 				</div>
 			{/if}
 			{#each messages as message, i (message.id)}
-				<Message {message} {vaultId} streaming={isStreaming && i === messages.length - 1} {onExpandScope} />
+				<Message
+					{message}
+					{vaultId}
+					streaming={isStreaming && i === messages.length - 1}
+					{onExpandScope}
+					onForceSources={message.smallTalk ? () => retryWithSources(i) : undefined}
+					onNotRelevant={message.sources?.length && canTeach(i) ? () => teachNotRelevant(i) : undefined}
+				/>
 			{/each}
 		</div>
 		{#if isStreaming && !isAtBottom}
