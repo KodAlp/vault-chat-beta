@@ -800,8 +800,7 @@ Yeni: `src/lib/server/memory.ts`, `memory.test.ts`.
 değişiklik** (idempotent); çıktı ölçümle birebir (258 / 432 / 0 çözülemeyen / 0 belirsiz / 0 döngü); okuma tarafı 330 nota 432 kenar
 verdi, en derin zincir 14 ("love-linux-kernel-development" → … → "c-history"). Gerçek indekste sütun yok, okuyucular `null` döndürüyor.
 
-**Bekleyen (kullanıcı onayı):** gerçek indekste `npm run index -- --prereqs` (yalnızca `files` tablosuna sütun ekler ve 258 satırı
-doldurur; gömme yok). Onaylanana kadar hiçbir şey okumuyor bu veriyi, bu yüzden zararsız.
+**Gerçek indekste uygulandı (2026-09-21, kullanıcı "3. adımı hallet" dedi):** önce `--prereqs --dry-run` (salt okunur: 330 dosya, 258 notta ön koşul, 432 referans, çözülemeyen/belirsiz/döngü 0), sonra gerçek indeksin SQLite çevrimiçi yedeği (`index-before-prereqs.db`), sonra `--prereqs`: 258 satır güncellendi, ikinci çalıştırma 0 değişiklik. Yedekle karşılaştırma: `chunks`, `vec_chunks`, `chunks_fts` sayıları ve tüm parça satırları ile `files` tablosunun (yeni sütun dışında) tüm sütunları **birebir aynı**; `integrity_check` ok. Yalnızca `files.prerequisites_json` eklendi.
 
 **Dürüst not.** F4 tek başına kullanıcıya görünür bir şey üretmez: tüketicileri F1 (skill ağacı) ve F6 (REVIEW modu: "önkoşulu zayıf
 konulara dön"). Şimdilik yalnızca doğru, ölçülmüş bir altyapı.
@@ -1168,22 +1167,24 @@ F15 ← EN SON (linklerden toplu içe aktarma, §5.6; kullanıcı kararı).
 
 ## 8. Açık kararlar
 
+*2026-09-21: dal `main`'e ileri sarma ile birleştirildi (yerel; `6616aca` → `66624d3`, 26 commit, push yok). Geri almak için: `git branch -f main 6616aca`.*
+
 | Konu | Karar gerekiyor |
 |---|---|
-| **F11 / `raw/` dokunulmazlığı** | Vault `CLAUDE.md` invariant 1 `raw/`'u salt okunur ilan ediyor; yeniden adlandırma bunu ihlal eder. İstisna açıkça yetkilendirilecek mi, yoksa çıktı ayrı dizine mi yazılacak? Karar verilmeden F11 başlamamalı. |
+| **F11 / `raw/` dokunulmazlığı** | **Açık bırakıldı (2026-09-21):** bir vault değişmezinin istisnası ancak kullanıcının açık yetkisiyle olur, F11 de başlamıyor. Önerim: çıktıyı ayrı dizine yazmak (değişmezi ihlal etmez). Vault `CLAUDE.md` invariant 1 `raw/`'u salt okunur ilan ediyor; yeniden adlandırma bunu ihlal eder. İstisna açıkça yetkilendirilecek mi, yoksa çıktı ayrı dizine mi yazılacak? Karar verilmeden F11 başlamamalı. |
 | **F11 / önce teşhis** | `raw/` altında hiç görsel yok. MinerU'nun neden figür üretmediği bulunmadan adlandırma işine girmek erken. |
 | **F12-1 / kalıcı env** | ✅ **Uygulandı** (bkz. aşağıdaki satır). |
 | **F12 / tur başına iki model yüklemesi** | En büyük tek gecikme kalemi (ilk tokenın ~%40'ı, ~5 sn/tur). Aday çözüm: sorgu embed'ini GPU dışında çalıştırmak (`num_gpu: 0`) ki `bge-m3` VRAM'de yer tutup qwen3'ü atmasın. **Denenmedi** — retrieval'ın embed hızına etkisi ve Ollama'nın bunu gerçekten uygulayıp uygulamadığı ölçülmeli. Bu turun kapsamı dışındaydı. |
-| **F12-6 / quantization** | **Ölçüldü (§3 "Kuantizasyon ölçümü").** `IQ3_M` +%69 (kısa) / +%130 (uzun) hız, kalite bedeli yayınlanmış KLD'ye göre ~2× ama yerel testte tespit edilemedi; `IQ4_XS` +%33 / +%49, kalitesi Q4_K_M'e yakın; `Q3_K_M` elenir (dominated). **Hangisinin varsayılan olacağı kullanıcının kararı** — modeller Ollama'da kurulu, uygulama değişmedi. Seçilirse `serveCtx` (8192, yalnızca Q4_K_M için ölçüldü) yeniden ölçülmeli: daha çok VRAM boşluğu var. |
+| **F12-6 / quantization** | **2026-09-21: varsayılan DEĞİŞTİRİLMEDİ (`qwen3:8b` kalır); kullanıcı arayüzden `iq4xs`'i seçebilir.** Kalite yerelde ölçülmedi (yalnızca yayınlanmış KLD) ve `serveCtx` yeniden ölçülmeden varsayılan yapılmamalı. **Ölçüldü (§3 "Kuantizasyon ölçümü").** `IQ3_M` +%69 (kısa) / +%130 (uzun) hız, kalite bedeli yayınlanmış KLD'ye göre ~2× ama yerel testte tespit edilemedi; `IQ4_XS` +%33 / +%49, kalitesi Q4_K_M'e yakın; `Q3_K_M` elenir (dominated). **Hangisinin varsayılan olacağı kullanıcının kararı** — modeller Ollama'da kurulu, uygulama değişmedi. Seçilirse `serveCtx` (8192, yalnızca Q4_K_M için ölçüldü) yeniden ölçülmeli: daha çok VRAM boşluğu var. |
 | **Kurulu aday modeller** | `qwen3:8b-bart-iq4xs`, `qwen3:8b-bart-iq3m`, `qwen3:8b-bart-q3km` model deposunda (~12.6 GB). `q3km` dominated olduğu için silinmesi önerilir; karar kullanıcıda. Ayrıca `ollama create`, her GGUF'un ham kopyasını da bıraktı: **4 yetim blob, 11.76 GiB**, hiçbir manifest başvurmuyor (doğrulandı). Ollama bunları bir sonraki başlatılışında kendi temizler; elle silinmedi. |
-| **F12-3 / `k=6` kalitesi** | `CHAT_K` 12 → 6 gecikmeyi ölçülebilir düşürür ama cevap kalitesine etkisini log ölçemez. Kullanıcı gerçek sorularla karşılaştırmalı; kalite düşerse `CHAT_K` tek satırda geri alınır (o zaman `serveCtx` ile birlikte yeniden dengelenmeli). |
+| **F12-3 / `k=6` kalitesi** | *(2026-09-21: dokunulmadı; kalite ölçümü F9 değerlendirme harness'ını bekliyor.)* | `CHAT_K` 12 → 6 gecikmeyi ölçülebilir düşürür ama cevap kalitesine etkisini log ölçemez. Kullanıcı gerçek sorularla karşılaştırmalı; kalite düşerse `CHAT_K` tek satırda geri alınır (o zaman `serveCtx` ile birlikte yeniden dengelenmeli). |
 | **`LLAMA_ARG_FIT_TARGET=256` (kalıcı)** | En büyük kaldıraç (§3 "Motorun VRAM güvenlik payı"). Kullanıcı düzeyinde kalıcı ortam değişkeni + Ollama yeniden başlatması — **uygulandı ve doğrulandı (2026-09-20)**. Ayrıca makinedeki tüm llama.cpp tabanlı programları etkiler. `OLLAMA_FLASH_ATTENTION=1` ve `OLLAMA_KV_CACHE_TYPE=q8_0` ile birlikte ölçüldü; hızlar üçüne bağlı. Belgelenmemiş bir geçiş: Ollama güncellemesi kırabilir. |
 | **Bozuk çıktıdan kaldığı yerden devam** | ✅ **Uygulandı** (§3). Yalnızca Ollama + qwen3 ailesi; başka aileye açmadan önce o modelde devam davranışı ayrıca deneyle doğrulanmalı (`prefixResume` bayrağı). Bulut sağlayıcılarda eski davranış. |
-| **F5 / gerçek indekse `--fts`** | `npm run index -- --fts` gerçek indeksi değiştirir (yalnızca `chunks_fts` ekler, gömme yok). **Kullanıcı onayı** bekliyor; onaylanana kadar yedek kapalı. Ölçüm tetikleyicinin nadir olduğunu gösterdi — acele yok. |
+| **F5 / gerçek indekse `--fts`** | ✅ **Uygulandı** (kullanıcı çalıştırdı, 2026-09-21): `chunks_fts` 2161 = `chunks` 2161. |
 | **Skill prompt yükü** | Ölçüldü: `educational-agent` chat başına **+1 708 token / +0.96 sn prefill** (§3). Açık bırakmak bu bedeli her turda ödemek demek; kalıcı karar kullanıcıya ait. Dosya bugün ikisi de `enabled: false` (kullanıcı arayüzden kapattı). ~700 token'ın kaynağı henüz ayrıştırılmadı. |
-| **F14 / yenilik eşiği** | `release_date` eşiği 12 ay mı olsun? Daha kısa eşik hâlâ kullanılan modelleri de düşürür, daha uzun eşik gürültüyü bırakır. |
-| **F14 / tool filtresi** | "Sadece tool destekleyenleri göster" anahtarı gelsin mi? Listeyi belirgin daraltır ama üreticilerin çoğu tool kullanmıyor. |
-| **F14 / ROADMAP kaydı** | F14 ayrıca `.claude/ROADMAP.md`'ye `Faz 20` olarak girsin mi? Repoda iki bağımsız numaralandırma var (`Faz N` ROADMAP'te, `F<N>` bu belgede) ve birbirlerine hiç atıf vermiyorlar. Not: Faz 17-19 kodda var ama ROADMAP'te yok, ilk boş numara 20. |
+| **F14 / yenilik eşiği** | **Kapandı (2026-09-21):** varsayılan 12 ay, ayarlanabilir (F14-3'teki tasarım); F14 en sona bırakıldığı için kod yok. |
+| **F14 / tool filtresi** | Açık. F14 başlamadan önce sorulacak (şimdi kod etkisi yok). |
+| **F14 / ROADMAP kaydı** | Açık; `.claude/ROADMAP.md`'ye dokunulmadı. F14 ayrıca `Faz 20` olarak girsin mi? Repoda iki bağımsız numaralandırma var (`Faz N` ROADMAP'te, `F<N>` bu belgede) ve birbirlerine hiç atıf vermiyorlar. Not: Faz 17-19 kodda var ama ROADMAP'te yok, ilk boş numara 20. |
 | **Donanım sınırı** | 6 GB VRAM'de aynı anda iki modeli GPU'da tutmak mümkün değil — router + uzman model mimarisi (1.7B routing + 8B generation) şimdilik kapsam dışı. |
 
 ---
