@@ -2,6 +2,7 @@ import Database from 'better-sqlite3';
 import type { CognitiveLevel } from '../cognitive-levels';
 import type { CardSchedule } from './schedule';
 import type { VaultContext } from './vaults';
+import type { LearnerProfile } from '../learner-model';
 import { logAppEvent } from './app-log';
 
 /** Shared shape for every "what's been generated in this vault" list
@@ -205,6 +206,28 @@ function getDb(v: VaultContext): Database.Database {
 				source_path TEXT NOT NULL
 			);
 			CREATE INDEX IF NOT EXISTS idx_slides_deck_id ON slides(deck_id);
+				CREATE TABLE IF NOT EXISTS skill_nodes (
+					id TEXT PRIMARY KEY,
+					name TEXT NOT NULL,
+					kind TEXT NOT NULL,
+					domains_json TEXT NOT NULL DEFAULT '[]',
+					source_path TEXT,
+					created_at TEXT NOT NULL
+				);
+				CREATE TABLE IF NOT EXISTS skill_state (
+					id TEXT PRIMARY KEY,
+					skill_id TEXT NOT NULL REFERENCES skill_nodes(id) ON DELETE CASCADE,
+					observed_at TEXT NOT NULL,
+					mastery REAL,
+					mastery_basic REAL,
+					mastery_applied REAL,
+					retention REAL,
+					evidence_count INTEGER NOT NULL,
+					retention_cards INTEGER NOT NULL DEFAULT 0,
+					confidence TEXT NOT NULL,
+					origin TEXT NOT NULL
+				);
+				CREATE INDEX IF NOT EXISTS idx_skill_state_skill ON skill_state(skill_id, observed_at);
 		`);
 		addMissingColumns(instance);
 	} catch (err) {
@@ -760,4 +783,125 @@ export function getSlides(v: VaultContext, deckId: string): SlideRow[] {
  * pragma. */
 export function deleteSlideDeck(v: VaultContext, id: string): void {
 	getDb(v).prepare('DELETE FROM slidedecks WHERE id = ?').run(id);
+}
+
+// ---- learner model (F1b) ----------------------------------------------------------------------------------------------------
+
+/** One stored answer with everything the evidence rules need (learner-evidence.ts decides what counts). */
+export interface AnswerEvidenceRow {
+	item_id: string;
+	answered_at: string;
+	given: string;
+	is_correct: 0 | 1;
+	type: string;
+	question: string;
+	source_path: string;
+	flagged_at: string | null;
+	cognitive_level: string | null;
+}
+
+/** Every stored answer joined to its question. An answer whose quiz was deleted is gone with it (ON DELETE CASCADE). */
+export function getAnswerEvidenceRows(v: VaultContext): AnswerEvidenceRow[] {
+	return getDb(v)
+		.prepare(
+			`SELECT aa.item_id AS item_id, COALESCE(a.finished_at, a.started_at) AS answered_at, aa.given AS given, aa.is_correct AS is_correct,
+			        qi.type AS type, qi.question AS question, qi.source_path AS source_path, qi.flagged_at AS flagged_at,
+			        qi.cognitive_level AS cognitive_level
+			 FROM attempt_answers aa
+			 JOIN attempts a ON a.id = aa.attempt_id
+			 JOIN quiz_items qi ON qi.id = aa.item_id`
+		)
+		.all() as AnswerEvidenceRow[];
+}
+
+export interface CardLearnerRow {
+	source_path: string;
+	domain: string;
+	interval_days: number;
+	due_at: string;
+	reps: number;
+	lapses: number;
+}
+
+export function getCardsForLearner(v: VaultContext): CardLearnerRow[] {
+	return getDb(v).prepare('SELECT source_path, domain, interval_days, due_at, reps, lapses FROM cards').all() as CardLearnerRow[];
+}
+
+export interface SkillStateRow {
+	id: string;
+	skill_id: string;
+	observed_at: string;
+	mastery: number | null;
+	mastery_basic: number | null;
+	mastery_applied: number | null;
+	retention: number | null;
+	evidence_count: number;
+	retention_cards: number;
+	confidence: string;
+	origin: string;
+}
+
+const round3 = (n: number | null) => (n === null ? null : Math.round(n * 1000) / 1000);
+
+/**
+ * Appends what a profile says to the append-only history (skill_state: an old value is never overwritten, so progress over time can
+ * be read back later). Only nodes with something to say are written, and a node whose numbers are unchanged since its last row
+ * (to three decimals, same evidence count) is skipped, so running it twice in a row writes nothing the second time.
+ * Never called by a page load: a snapshot is an explicit act (scripts/learner-report.ts --snapshot).
+ */
+export function appendSkillSnapshot(v: VaultContext, profile: LearnerProfile): { written: number; skipped: number } {
+	const database = getDb(v);
+	const upsertNode = database.prepare(
+		`INSERT INTO skill_nodes (id, name, kind, domains_json, source_path, created_at) VALUES (?, ?, ?, ?, ?, ?)
+		 ON CONFLICT(id) DO UPDATE SET name = excluded.name, kind = excluded.kind, domains_json = excluded.domains_json, source_path = excluded.source_path`
+	);
+	const latest = database.prepare('SELECT * FROM skill_state WHERE skill_id = ? ORDER BY observed_at DESC, rowid DESC LIMIT 1');
+	const insert = database.prepare(
+		`INSERT INTO skill_state (id, skill_id, observed_at, mastery, mastery_basic, mastery_applied, retention, evidence_count, retention_cards, confidence, origin)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'OBSERVED')`
+	);
+	let written = 0;
+	let skipped = 0;
+	const tx = database.transaction(() => {
+		for (const node of profile.nodes) {
+			if (node.quiz.mastery === null && node.retention.retention === null) continue;
+			upsertNode.run(node.id, node.name, node.kind, JSON.stringify(node.domains ?? []), node.sourcePath ?? null, profile.generatedAt);
+			const row = {
+				mastery: round3(node.quiz.mastery),
+				basic: round3(node.bands?.basic.mastery ?? null),
+				applied: round3(node.bands?.applied.mastery ?? null),
+				retention: round3(node.retention.retention)
+			};
+			const prev = latest.get(node.id) as SkillStateRow | undefined;
+			if (
+				prev &&
+				round3(prev.mastery) === row.mastery &&
+				round3(prev.mastery_basic) === row.basic &&
+				round3(prev.mastery_applied) === row.applied &&
+				round3(prev.retention) === row.retention &&
+				prev.evidence_count === node.quiz.count &&
+				prev.retention_cards === node.retention.cards
+			) {
+				skipped++;
+				continue;
+			}
+			insert.run(crypto.randomUUID(), node.id, profile.generatedAt, row.mastery, row.basic, row.applied, row.retention, node.quiz.count, node.retention.cards, node.quiz.confidence);
+			written++;
+		}
+	});
+	tx();
+	return { written, skipped };
+}
+
+/** The recorded history of one node, oldest first. */
+export function getSkillHistory(v: VaultContext, skillId: string, limit = 200): SkillStateRow[] {
+	// The newest `limit` rows, then oldest first. rowid breaks ties between rows written at the same instant; a subquery does not expose
+	// it, so it is carried out as `r`.
+	return getDb(v)
+		.prepare(
+			`SELECT id, skill_id, observed_at, mastery, mastery_basic, mastery_applied, retention, evidence_count, retention_cards, confidence, origin
+			 FROM (SELECT rowid AS r, * FROM skill_state WHERE skill_id = ? ORDER BY observed_at DESC, rowid DESC LIMIT ?)
+			 ORDER BY observed_at ASC, r ASC`
+		)
+		.all(skillId, limit) as SkillStateRow[];
 }

@@ -149,7 +149,38 @@
 		"new": "Yeni",
 		"dueBadge": "{count} bekliyor",
 		"review": "İncele",
+		"progress": "İlerleme",
+		"progressOpen": "Aç",
 		"deleteConfirmTitle": "\"{title}\" silinsin mi?"
+	},
+
+	"ProgressPage": {
+		"back": "Geri",
+		"title": "İlerlemen",
+		"loading": "Yükleniyor…",
+		"loadFailed": "İlerleme yüklenemedi.",
+		"empty": "Henüz gösterilecek bir şey yok. Bir test çöz ya da birkaç kart incele; ilerlemen burada görünür.",
+		"intro": "Test cevapların ve kart tekrarların, her konuyu ne kadar bildiğini gösteriyor. Bunlar tahmindir: ne kadar çok cevap verirsen o kadar anlamlı olur.",
+		"overall": "Hepsi",
+		"byDomain": "Konuya göre",
+		"unknownDomain": "Diğer notlar",
+		"quizAnswers": "Test cevapları",
+		"cardMemory": "Kart hafızası",
+		"noAnswers": "Henüz cevap yok",
+		"notEnough": "Henüz yeterli veri yok",
+		"answers": "{count} cevap",
+		"cards": "{count} kart incelendi",
+		"confidenceModerate": "orta güven",
+		"confidenceHigh": "yüksek güven",
+		"lastAnswered": "son: {date}",
+		"showNotes": "Notları göster ({count})",
+		"hideNotes": "Notları gizle",
+		"bandsTitle": "Soru türüne göre",
+		"bandBasic": "Hatırla / açıkla",
+		"bandApplied": "Uygula / çözümle",
+		"bandsHint": "Yalnızca deneysel düzey etiketleriyle yazılmış sorular bu şekilde ayrılır.",
+		"howTitle": "Nasıl okunur",
+		"howBody": "Doğru cevaplar yeni oldukça (yaklaşık 45 günde sönerler) ve şansla bulunması zor oldukça daha çok sayılır: açık uçlu bir cevap, doğru/yanlış bir cevaptan daha çok sayılır. Tek bir cevap asla %100 görünmez ve bir sayı yalnızca arkasında yeterli kanıt olduğunda gösterilir. Boş bırakılan cevaplar ve hatalı diye işaretlediğin sorular yok sayılır; aynı soruyu birkaç kez cevapladıysan son cevabınla bir kez sayılır. Kart hafızası, incelediğin kartları hâlâ hatırlama olasılığıdır ve tekrar takviminden hesaplanır."
 	},
 
 	"GenerationLayout": {
