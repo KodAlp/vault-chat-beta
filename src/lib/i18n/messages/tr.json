@@ -345,6 +345,8 @@
 		"generationTitle": "Üretim",
 		"allowConcurrentGeneration": "Aynı anda birden fazla üretime izin ver",
 		"allowConcurrentGenerationHint": "Varsayılan olarak kapalı — test/kart/rapor/harita/slayt üretimi aynı türden yeni bir üretim başlatılmadan önce mevcut üretimin bitmesini bekler (zayıf donanımda hepsi birbirini yavaşlatmasın diye). Donanımınız yeterliyse açabilirsiniz.",
+		"quizLevelLabels": "Sınav sorularını bilişsel düzeye göre etiketle (deneysel)",
+		"quizLevelLabelsHint": "Varsayılan olarak kapalı. Modelden her soruyu bir bilişsel düzey için (hatırlama, anlama, uygulama, üst düzey) yazmasını ister; böylece ilerleme düzey bazında raporlanabilir. Küçük yerel bir modelde (8B) ince etiketler güvenilir değil: bağımsız bir kontrol yalnızca yaklaşık yarı yarıya aynı düşündü ve \"hatırlama\" ile \"anlama\" arasındaki farkı tutarlı ayıramadı. Kaba ayrım (hatırla/açıkla ↔ uygula/çözümle) daha sağlam çıktı, yaklaşık %80. Daha güçlü bir modelle açın; küçük modelde etiketleri kaba bir ipucu sayın.",
 		"welcomeScreenTitle": "Karşılama ekranı",
 		"showWelcomeScreen": "Her açılışta karşılama ekranını göster",
 		"showWelcomeScreenHint": "Kapatılırsa uygulama doğrudan kasa seçim ekranıyla açılır.",

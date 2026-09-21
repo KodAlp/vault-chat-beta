@@ -1,4 +1,5 @@
 import Database from 'better-sqlite3';
+import type { CognitiveLevel } from '../cognitive-levels';
 import type { CardSchedule } from './schedule';
 import type { VaultContext } from './vaults';
 import { logAppEvent } from './app-log';
@@ -38,6 +39,8 @@ export interface QuizItemRow {
 	/** Set when the user flagged the question as faulty ("Bu soru hatalı"): it is no longer asked, no longer counts in the
 	 * score shown, and must not count as learning evidence. null = fine. */
 	flagged_at: string | null;
+	/** The level the question targets; null for questions generated before levels existed and for providers that ignored the schema. */
+	cognitive_level: string | null;
 }
 
 export interface AttemptRow {
@@ -107,7 +110,8 @@ function getDb(v: VaultContext): Database.Database {
 				explanation TEXT NOT NULL,
 				source_path TEXT NOT NULL,
 				heading_path TEXT NOT NULL,
-				flagged_at TEXT
+				flagged_at TEXT,
+				cognitive_level TEXT
 			);
 			CREATE INDEX IF NOT EXISTS idx_quiz_items_quiz_id ON quiz_items(quiz_id);
 			CREATE TABLE IF NOT EXISTS attempts (
@@ -231,7 +235,8 @@ function addMissingColumns(db: Database.Database): void {
 	const pending: { table: string; column: string; ddl: string }[] = [
 		{ table: 'mindmaps', column: 'root_summary', ddl: "TEXT NOT NULL DEFAULT ''" },
 		{ table: 'mindmap_nodes', column: 'summary', ddl: "TEXT NOT NULL DEFAULT ''" },
-		{ table: 'quiz_items', column: 'flagged_at', ddl: 'TEXT' }
+		{ table: 'quiz_items', column: 'flagged_at', ddl: 'TEXT' },
+		{ table: 'quiz_items', column: 'cognitive_level', ddl: 'TEXT' }
 	];
 	for (const { table, column, ddl } of pending) {
 		const columns = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
@@ -259,6 +264,7 @@ export interface NewQuizItem {
 	explanation: string;
 	source_path: string;
 	heading_path: string;
+	cognitiveLevel?: CognitiveLevel | null;
 }
 
 export function createQuiz(v: VaultContext, title: string, scope: unknown, model: string, items: NewQuizItem[]): string {
@@ -271,8 +277,8 @@ export function createQuiz(v: VaultContext, title: string, scope: unknown, model
 			.run(id, title, JSON.stringify(scope), model, now);
 
 		const insertItem = database.prepare(
-			`INSERT INTO quiz_items (id, quiz_id, position, type, question, options_json, answer, explanation, source_path, heading_path)
-			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+			`INSERT INTO quiz_items (id, quiz_id, position, type, question, options_json, answer, explanation, source_path, heading_path, cognitive_level)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 		);
 		items.forEach((item, position) => {
 			insertItem.run(
@@ -285,7 +291,8 @@ export function createQuiz(v: VaultContext, title: string, scope: unknown, model
 				item.answer,
 				item.explanation,
 				item.source_path,
-				item.heading_path
+				item.heading_path,
+				item.cognitiveLevel ?? null
 			);
 		});
 	});

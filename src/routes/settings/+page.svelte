@@ -448,6 +448,15 @@
 					</span>
 				</span>
 			</label>
+			<label class="mt-4 flex cursor-pointer items-start gap-2.5 text-sm">
+				<Switch bind:checked={settings.quizLevelLabels} onCheckedChange={persistSettings} />
+				<span class="flex flex-col gap-0.5">
+					{t('SettingsPage.quizLevelLabels')}
+					<span class="text-xs text-muted-foreground">
+						{t('SettingsPage.quizLevelLabelsHint')}
+					</span>
+				</span>
+			</label>
 		</Card.Content>
 	</Card.Root>
 
