@@ -345,6 +345,8 @@
 		"generationTitle": "Generation",
 		"allowConcurrentGeneration": "Allow multiple generations at once",
 		"allowConcurrentGenerationHint": "Off by default — quiz/card/report/map/slide generation waits for an existing generation of the same type to finish before starting a new one, so they don't all slow each other down on weaker hardware. Turn this on if your hardware can handle it.",
+		"quizLevelLabels": "Label quiz questions by cognitive level (experimental)",
+		"quizLevelLabelsHint": "Off by default. Asks the model to write each question for a cognitive level (recall, understanding, application, higher) so progress can be reported per level. On a small local model (8B) the fine labels are unreliable: an independent check agreed with them only about half the time, and it cannot tell \"recall\" from \"understanding\" consistently. The coarse split (remember/explain versus apply/analyse) held up better, about 80%. Turn it on with a stronger model; with a small one, treat the labels as a rough hint.",
 		"welcomeScreenTitle": "Welcome screen",
 		"showWelcomeScreen": "Show the welcome screen on every launch",
 		"showWelcomeScreenHint": "Turning this off opens the app straight into the vault picker.",

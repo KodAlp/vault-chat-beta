@@ -178,6 +178,8 @@ export interface QuizGenerationRequest {
 	/** Tri-state source-tree selection (same field/semantics as
 	 * ChatRequestBody.includedPaths) — omitted means "all". */
 	includedPaths?: string[];
+	/** Settings.quizLevelLabels — experimental cognitive-level labels on the generated questions. Absent = off. */
+	levels?: boolean;
 }
 
 /** SSE event shapes streamed by POST /api/generate/quiz. `narrowScope` on

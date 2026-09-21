@@ -7,7 +7,12 @@ import { createQuiz, type NewQuizItem } from './study-db';
 import { splitCompositionByType, assignSlots, type QuizItemType } from './quiz-batch';
 import { selectTeachingPool } from './quiz-pool';
 import { dedupeItems } from './quiz-dedupe';
-import { validateQuizBatch } from './quiz-validate';
+import { validateQuizBatch, type BatchFailureCode } from './quiz-validate';
+import { shuffleQuestionOptions } from './quiz-options';
+import { assignLevels } from '../cognitive-levels';
+import { buildBatchUserPrompt } from './quiz-prompt';
+import { chunkSupportsApplication } from './chunk-signals';
+import { logAppEvent } from './app-log';
 import { renderUserSkillsBlock } from './userSkills';
 import type { VaultContext } from './vaults';
 import { NoSourcesError } from './generate-errors';
@@ -24,6 +29,12 @@ export interface GenerateQuizInput {
 	provider?: string;
 	/** Chat's own source-tree scope selection — see ChatRequestBody.includedPaths. */
 	includedPaths?: string[];
+	/**
+	 * Off unless the user turned on Settings.quizLevelLabels. When set, every question is assigned a cognitive level (from a menu
+	 * that fits its type and its source part), the grammar pins it and it is stored. When not set the prompts, the grammar and the
+	 * stored rows are exactly what they were before levels existed.
+	 */
+	levels?: boolean;
 }
 
 export type ProgressStage = 'retrieving' | 'generating' | 'validating' | 'retrying';
@@ -241,6 +252,7 @@ export async function generateQuiz(
 	// Short id per chunk (S1, S2, ...) instead of a path for the model to copy — see quiz-schema.ts.
 	const idToChunk = new Map(chunks.map((c, i) => [`S${i + 1}`, c]));
 	const poolIds = [...idToChunk.keys()];
+	const supportsById = new Map(chunks.map((c, i) => [`S${i + 1}`, chunkSupportsApplication(c.display_text)]));
 	const contextFor = (ids: readonly string[]) =>
 		[...new Set(ids)]
 			.map((id) => {
@@ -259,7 +271,6 @@ export async function generateQuiz(
 		tf: kind === 'true_false' ? count : 0,
 		open: kind === 'open' ? count : 0
 	});
-	const TYPE_TR: Record<QuizItemType, string> = { multiple_choice: 'çoktan seçmeli', true_false: 'doğru/yanlış', open: 'açık uçlu' };
 
 	/**
 	 * One batch: ONE question type, and each question tied to its own source part (`slots`, in order). Both are enforced
@@ -274,29 +285,42 @@ export async function generateQuiz(
 	const runBatch = async (kind: QuizItemType, slots: readonly string[]): Promise<GenItem[]> => {
 		const count = slots.length;
 		const ids = [...new Set(slots)];
+		const levels = input.levels ? assignLevels(kind, count, slots.map((id) => supportsById.get(id) === true)) : undefined;
 		const system = buildSystemPrompt(compositionOf(kind, count), contextFor(ids), userSkillsBlock);
-		const format = buildQuizItemsJsonSchema(ids, count, kind, slots);
-		const prompt =
-			`${input.prompt}\n\nBu partideki TÜM sorular ${TYPE_TR[kind]} türünde olmalı.` +
-			`\n\nHer sorunun kaynağı sabittir; sırayla: ${slots.map((id, i) => `${i + 1}. soru ${id}`).join(', ')}. ` +
-			`Her soruyu YALNIZCA kendi kimliğinin içeriğinden üret ve source_id alanına o kimliği yaz.`;
+		const format = buildQuizItemsJsonSchema(ids, count, kind, slots, levels);
+		const prompt = buildBatchUserPrompt(input.prompt, kind, slots, levels);
 		const budget = quizOutputBudget(count);
-		const parse = (raw: string) => validateQuizBatch(raw, { idToChunk, expectedCount: count, kind, allowedIds: ids, slots });
+		const parse = (raw: string) => validateQuizBatch(raw, { idToChunk, expectedCount: count, kind, allowedIds: ids, slots, levels });
 
 		onProgress?.('generating');
 		let raw = await callModel(input.model, system, prompt, format, input.provider, deadline, (ms) => onProgress?.('generating', ms), budget);
 		let parsed = parse(raw);
+		const failures: BatchFailureCode[] = [];
+		if (!parsed.ok) failures.push(parsed.code);
 		const MAX_RETRIES = 2;
 		for (let attempt = 0; !parsed.ok && attempt < MAX_RETRIES; attempt++) {
 			onProgress?.('retrying');
 			const retryPrompt = `${prompt}\n\nÖnceki cevabın geçersizdi: ${parsed.error}\nSADECE geçerli JSON döndür.`;
 			raw = await callModel(input.model, system, retryPrompt, format, input.provider, deadline, (ms) => onProgress?.('retrying', ms), budget);
 			parsed = parse(raw);
+			if (!parsed.ok) failures.push(parsed.code);
+		}
+		// Retries and lost batches used to leave no trace at all; measured, half of all retries were one avoidable rule and a lost
+		// batch is 4 questions the user never sees. Codes only (no text), like every other record in this log.
+		if (failures.length > 0) {
+			logAppEvent({ kind: 'generation_warning', generationType: 'quiz', model: input.model, reason: parsed.ok ? 'batch_retried' : 'batch_lost', message: `${kind} x${count}: ${failures.join(', ')}`, attempt: failures.length });
 		}
 		// Same partial-accept policy as generate-cards.ts: a batch that never validates even after retries is skipped, not a
 		// reason to discard every question generated so far. Zero questions across every batch, below, is still a hard failure.
 		// A thrown exception from callModel itself (network/timeout/abort) is NOT caught here — it propagates immediately.
-		return parsed.ok ? (parsed.items as GenItem[]) : [];
+		if (!parsed.ok) return [];
+		// The model does not spread the correct option over the five slots (chi-square 22.2 over 88 questions); order is by text, so
+		// shuffling here costs nothing (quiz-options.ts).
+		return (parsed.items as GenItem[]).map((it) => {
+			if (it.type !== 'multiple_choice' || !it.options) return it;
+			const shuffled = shuffleQuestionOptions(it.options, it.answer);
+			return { ...it, options: shuffled.options, answer: shuffled.answer };
+		});
 	};
 
 	const batches = splitCompositionByType(input.composition, QUIZ_ITEMS_PER_BATCH);

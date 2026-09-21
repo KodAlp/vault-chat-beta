@@ -35,6 +35,12 @@ export interface Settings {
 	 * gates alongside. On by default; a user who finds it slows down
 	 * getting to their vault can turn it off from /settings. */
 	showWelcomeScreen: boolean;
+	/**
+	 * Experimental, OFF by default: label every generated quiz question with a cognitive level (recall / understanding / application /
+	 * higher) so the learner model can report per level. It asks the model to write each question FOR a level, which a small local
+	 * model does not do reliably (measured agreement with an independent re-labelling: about 50%), so it stays opt-in.
+	 */
+	quizLevelLabels: boolean;
 }
 
 const STORAGE_KEY = 'vault-chat-settings';
@@ -48,7 +54,8 @@ const DEFAULTS: Settings = {
 	fastProvider: 'ollama',
 	reasoningProvider: 'ollama',
 	allowConcurrentGeneration: false,
-	showWelcomeScreen: true
+	showWelcomeScreen: true,
+	quizLevelLabels: false
 };
 
 function loadInitial(): Settings {

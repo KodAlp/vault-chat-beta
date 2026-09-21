@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { isStatement, leaksSourceId, matchOption, validateQuizBatch, type BatchContext } from './quiz-validate';
+import { isStatement, leaksSourceId, matchOption, replaceSourceIds, sourceLabel, validateQuizBatch, type BatchContext } from './quiz-validate';
 import { buildQuizItemsJsonSchema } from './quiz-schema';
 
 const chunks = new Map([
@@ -145,20 +145,43 @@ test('slots of the wrong length fall back to the plain enum grammar rather than 
 	assert.deepEqual(schema.properties.items.items!.properties.source_id.enum, ['S1', 'S2']);
 });
 
-test('a source id written into the question, an option or the explanation is rejected with a retry message', () => {
+test('a source id in the question or an option is rejected (nothing sensible to repair it to)', () => {
 	for (const bad of [
 		open({ question: 'S3 kaynak parçasında verilen tanımı kullanarak $f(x)=x^2$ türevini hesaplayınız.' }),
 		open({ question: "S3 id'sindeki kaynakta hangi teorem verilmiştir?" }),
-		open({ explanation: 'S2 kaynağına göre sonuç 2x olur.' }),
 		mc({ options: ['S1 içindeki tanım', 'iki', 'üç', 'dört', 'beş'], answer: 'üç' })
 	]) {
 		const r = validateQuizBatch(raw(bad), ctx());
 		assert.equal(r.ok, false, JSON.stringify(bad).slice(0, 60));
 		assert.match(!r.ok ? r.error : '', /kaynak kimlik/);
+		assert.equal(!r.ok && r.code, 'id_in_question');
 	}
 });
 
-test('leaksSourceId matches the id as a word only, and only ids of this pool', () => {
+test('a source id in the EXPLANATION is replaced by the source\'s name instead of losing the batch', () => {
+	// measured: every leak that got a batch rejected sat in the explanation, and the model repeated it on the retry
+	const r = validateQuizBatch(raw(open({ explanation: 'S2 kaynağına göre sonuç 2x olur; S1 de aynısını söyler.' })), ctx());
+	assert.ok(r.ok);
+	assert.equal(r.items[0].explanation, 'Two kaynağına göre sonuç 2x olur; One de aynısını söyler.');
+	assert.equal(r.items[0].question, 'x²’in türevini hesaplayınız.', 'the question is untouched');
+	assert.equal(replaceSourceIds('Ilgisiz metin S7', { idToChunk: chunks }), 'Ilgisiz metin S7', 'an id that is not in this pool is left alone');
+});
+
+test('an id that is the part\'s own content is not a leak (a database note that talks about "Schedule S1")', () => {
+	const withText = new Map([
+		['S1', { path: 'wiki/db/tx.md', heading_path: 'Transactions > Schedules', display_text: 'Schedule S1 is serializable, schedule S2 is not.' }],
+		['S2', { path: 'wiki/db/other.md', heading_path: 'Other > A', display_text: 'nothing about ids' }]
+	]);
+	const c = ctx({ idToChunk: withText, allowedIds: ['S1', 'S2'] });
+	const legit = validateQuizBatch(raw(open({ question: 'Schedule S1 serileştirilebilir mi, hesaplayınız.', explanation: 'S1 serileştirilebilir, S2 değil.' })), c);
+	assert.ok(legit.ok, 'S1 and S2 occur in the shown text');
+	assert.equal(legit.items[0].explanation, 'S1 serileştirilebilir, S2 değil.', 'and are left as written');
+	// an id the shown text never uses is still a leak
+	const only = new Map([['S1', { path: 'a.md', heading_path: 'A > x', display_text: 'plain text' }], ['S2', { path: 'b.md', heading_path: 'B > y', display_text: 'plain text' }]]);
+	assert.equal(validateQuizBatch(raw(open({ question: 'S2 kaynağında ne yazar?' })), ctx({ idToChunk: only })).ok, false);
+});
+
+test('leaksSourceId matches the id as a word only, only ids of this pool, and not what the shown text itself contains', () => {
 	const ids = ['S1', 'S12'];
 	assert.equal(leaksSourceId('S1 kaynağına göre', ids), true);
 	assert.equal(leaksSourceId('(S12) tanımı', ids), true);
@@ -167,6 +190,28 @@ test('leaksSourceId matches the id as a word only, and only ids of this pool', (
 	assert.equal(leaksSourceId('$S_1$ simetrik grup', ids), false, 'math subscript notation is not an id');
 	assert.equal(leaksSourceId('S5 kaynağına göre', ids), false, 'S5 is not in this pool');
 	assert.equal(leaksSourceId('Dijkstra algoritması negatif kenarlarla çalışmaz', ids), false);
+	assert.equal(leaksSourceId('S1 serileştirilebilir', ids, ['the schedule S1 commits']), false, 'S1 is in the shown text');
+	assert.equal(leaksSourceId('S12 kaynağı', ids, ['the schedule S1 commits']), true, 'S12 is not');
+});
+
+test('sourceLabel is the note title (heading root), or the file name when there is none', () => {
+	assert.equal(sourceLabel({ path: 'wiki/db/x.md', heading_path: 'Database System Concepts > Chapter 1 > Intro' }), 'Database System Concepts');
+	assert.equal(sourceLabel({ path: 'wiki/db/normal-forms.md', heading_path: '' }), 'normal-forms');
+});
+
+test('every failure carries a code the caller can log without parsing Turkish text', () => {
+	const code = (r: ReturnType<typeof validateQuizBatch>) => (!r.ok ? r.code : 'ok');
+	assert.equal(code(validateQuizBatch('not json', ctx())), 'json');
+	assert.equal(code(validateQuizBatch('{"items":[{"type":"open"}]}', ctx())), 'schema');
+	assert.equal(code(validateQuizBatch(raw(mc(), mc({ question: 'b' })), ctx({ expectedCount: 1 }))), 'count');
+	assert.equal(code(validateQuizBatch(raw(mc({ source_id: 'S9' })), ctx())), 'source_id');
+	assert.equal(code(validateQuizBatch(raw(open()), ctx({ kind: 'multiple_choice' }))), 'type');
+	assert.equal(code(validateQuizBatch(raw(mc()), ctx({ slots: ['S2'] }))), 'slot');
+	assert.equal(code(validateQuizBatch(raw(mc({ options: undefined })), ctx())), 'options_count');
+	assert.equal(code(validateQuizBatch(raw(mc({ options: ['a', 'A', 'b', 'c', 'd'], answer: 'b' })), ctx())), 'options_not_distinct');
+	assert.equal(code(validateQuizBatch(raw(mc({ answer: 'altı' })), ctx())), 'answer_not_option');
+	assert.equal(code(validateQuizBatch(raw(tf({ answer: 'evet' })), ctx())), 'answer_not_bool');
+	assert.equal(code(validateQuizBatch(raw(tf({ question: 'kaçtır?' })), ctx())), 'not_statement');
 });
 
 test('ordinary questions with no id still pass', () => {

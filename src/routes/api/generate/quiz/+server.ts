@@ -22,7 +22,9 @@ export const POST: RequestHandler = async ({ request }) => {
 						composition: body.composition,
 						model: body.model,
 						provider: body.provider,
-						includedPaths: body.includedPaths
+						includedPaths: body.includedPaths,
+						// only an explicit true turns the experimental labels on
+						levels: body.levels === true
 					},
 					(stage, elapsedMs) => send({ type: 'progress', stage, elapsedMs })
 				);

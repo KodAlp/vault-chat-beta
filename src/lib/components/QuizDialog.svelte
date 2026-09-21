@@ -49,7 +49,8 @@
 	}) {
 		const body: QuizGenerationRequest = {
 			...args,
-			composition: { mc, tf, open: openCount }
+			composition: { mc, tf, open: openCount },
+			...(settings.quizLevelLabels ? { levels: true } : {})
 		};
 		void startQuizGeneration(body);
 	}
