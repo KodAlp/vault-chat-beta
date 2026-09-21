@@ -603,6 +603,8 @@ yönerge, ne CSS — Marp'ın varsayılan temasıyla render ediliyor.
 
 ### F1 — Learner model & skill state (§23, §24) · temel
 
+> **Güncel durum (2026-09-21):** aşağıdaki şema ve altı eksenli formül **ilk taslaktır**. Uygulanan: F1a (soruların kendisi) ve **F1b** (eksensiz öğrenen modeli; şema, formül ve ölçümler F1b bölümünde). Düzey etiketleri 4 düzeye indirildi ve düğmenin arkasında deneysel.
+
 Hammadde hazır: `attempt_answers` 97 satır, `quiz_items.source_path` 27/27
 `index.db`'deki `files.path` ile eşleşiyor → domain/level iki DB arasında
 `ATTACH` ile türetilebilir.
@@ -721,6 +723,39 @@ Düzeyler `recall / understanding / application / higher`; **ayarlar sayfasında
 **Kabul eşiği (4'lü uyum ≥%60) geçilmedi**, ama ölçümün kendisi bu hakemle çözünürlük sınırında: hakem kendi kendiyle yalnızca %57–63 tutarlı ve "recall" ↔ "understanding" arasında tanım sırasına göre gidip geliyor (recall %11 ↔ %53, understanding %68 ↔ %16). **Etiketin taşıdığı gerçek bilgi kaba ayrım** (≈%80, hakem tutarlılığı %83–88); ince ayrım (hatırlama/anlama) küçük modelde güvenilir değil. Elle okuma (öznel, 60 soru): sıkı sayımla 46/60 (%77), sınırdakiler yanlış sayılırsa 33/60 (%55). Ayarlar sayfasındaki uyarı bu sayıları söyler.
 
 **Sınırlar:** örneklem küçük (koşu başına 60 soru, konu başına tek tekrar); hakem üretici ile aynı modeldir (öz-tutarlılığı ölçer, doğruluğu değil); pipeline ↔ model ayrımı **güçlü bir modelle yapılmadı** (notların API'ye gönderilmesi onay ister). Anahtar gerçek tarayıcıda 9/9 doğrulandı (varsayılan kapalı, tıklama, kalıcılık, yenileme, tr/en); **sınav penceresinin `levels:true` göndermesi tıklanarak denenmedi** (tip denetimi ve kod incelemesiyle doğrulandı, canlı rota `levels:true` ile denendi). F1b: eksenler yalnızca `cognitive_level` dolu sorulardan; öneri **kaba ayrımla (2 kutu)** raporlamak, 4'lü etiket saklanır.
+
+### F1b — Öğrenen modeli · ✅ yapıldı, eksensiz (2026-09-21)
+
+Soru: sınav cevapları ve kart tekrarları, kişinin her konuyu **şu an ne kadar bildiğini** söylüyor mu? Her sayı bir **tahmin ve bir güvenle** verilir; kanıt yoksa sayı da yoktur.
+
+**Ne hesaplanır** (`src/lib/learner-model.ts`, saf ve testli). Vault genelinde, her alan (indeksteki `domains_json`) ve her not için:
+- **`quiz` (cevaplardan bilgi tahmini):** `(Σ w·doğru + 1) / (Σ w + 2)` — Beta(1,1) önseli güncellenir; tek doğru cevap %100 değil %67 okunur. Kanıt yoksa **`null`** (0,5 değil). `w` = yaş bozunumu × (1 − şansla bilme): yarı ömür **45 gün**; doğru/yanlış 0,5, çoktan seçmeli (5 seçenek) 0,8, açık uçlu 1,0 ağırlık. Güven: 3 birimden az kanıt = "yeterli veri yok" (sayı **gösterilmez**), 3–8 orta, ≥8 yüksek.
+- **`retention` (kart hafızası):** incelenmiş kartların şimdi hatırlanma olasılığının ortalaması: vade gününde 0,9, bir aralık sonra 0,81 (`0,9^(geçen/aralık)`). Kartlarda "son tekrar" sütunu yok; zamanlama `due_at = tekrar + aralık` yazdığı için `due_at − aralık` kullanılır (şema değişikliği yok). Hiç incelenmemiş kart sayılmaz; son cevabı "again" olan kart (aralık 0) 0. Sayı için en az 3 incelenmiş kart.
+- **`bands` (temel / uygulama):** yalnızca **düzey etiketli** sorular varsa (deneysel düğme açıkken); hatırla-anla ↔ uygula-üst düzey. Etiketler kapalıyken `null`, sayfa bu bölümü hiç göstermez. (Kaba ayrım seçildi çünkü ölçümde güvenilir olan yalnızca oydu; F1a.)
+- Quiz ve kart **ayrı sayılardır**, karıştırılmaz: biri doğru/yanlış sayımıdır, öbürü olasılık.
+
+**Hangi cevap kanıt sayılır** (`src/lib/server/learner-evidence.ts`, saf ve testli; her kural gerçek veride ölçülmüş bir şeyden):
+1. **Boş cevap asla kanıt değil.** Gerçek `study.db`'de 97 kayıtlı cevabın **84'ü boş** ve **6'sı "doğru" diye kaydedilmiş** (açık uçlu notlayıcı boş cevabı onaylayabiliyor); yalnız 13'ü gerçek cevap.
+2. **"Bu soru hatalı" işaretli soru kanıt değil** (cevap anahtarı ≈ %3 kesin yanlış, ≈ %11 sorunlu).
+3. **Bir soru = bir kanıt:** aynı `(kaynak parça, normalize soru metni)` tek soru sayılır (18 tarihsel kopya), ve aynı soruya birçok kez cevap verilmişse **en son cevaplanmış deneme** sayılır (aynı testi beş kez çözmek beş kanıt yapmaz; sonraki boş cevap öncekini silmez). Rakamlar korunur ("x=1" ile "x=3" ayrı soru).
+Gerçek veride (izole kopya): 97 kayıtlı cevap → 13 gerçek cevap → **11 tekil soru**.
+
+**Şema** (`study-db.ts`, `CREATE TABLE IF NOT EXISTS`, eski `study.db` yerinde yükseltilir): `skill_nodes(id, name, kind, domains_json, source_path, created_at)` ve **eklemeli** `skill_state(id, skill_id, observed_at, mastery, mastery_basic, mastery_applied, retention, evidence_count, retention_cards, confidence, origin='OBSERVED')` (§18: eski değer silinmez). `appendSkillSnapshot`: değişmeyen düğüm (3 ondalık) yazılmaz, ikinci çalıştırma 0 yazar; düğüm güncellemesi `ON CONFLICT DO UPDATE` (yerine koyma geçmişi silerdi). Bir sayfa açmak **hiçbir şey yazmaz**; anlık görüntü açık bir eylemdir.
+
+**Arayüz:** `GET /api/study/learner?vault=<id>` (salt okunur), sayfa `/study/progress` (çalışma panelinde "İlerleme → Aç"; tr/en; "yeterli veri yok" durumları, notları açılır liste, telefon genişliğinde yatay kaydırma yok), `scripts/learner-report.ts [--vault] [--notes N] [--json] [--snapshot]` (`--snapshot` tek yazma eylemi).
+
+**Gerçek verinin izole kopyasında** (gerçek `study.db` dokunulmadı: 23/129, skill tabloları yok): genel test cevapları **%43 (11 cevap, orta güven)**; matematik 7 cevap ama ağırlık 2,9 < 3 → "yeterli veri yok"; veritabanları 4 cevap → "yeterli veri yok"; kartlar: 40 incelenmiş, genel **%33** (sveltekit %14 / 20 kart, C %52 / 10 kart) — çoğu kart vadesinden çok sonra bakılmadığı için düşük çıkıyor.
+
+**Doğrulama:** 449 test (saf model 18, kanıt kuralları 11, gerçek SQLite üzerinde depo 6 — kural ucu uca, eski `study.db` yükseltme, eklemeli anlık görüntü —, i18n tamlığı 2), svelte-check 0; **gerçek tarayıcıda** sayfa 13/13 (yüzdeler, "yeterli veri yok", genişletme, 390 px'te taşma yok, bilinmeyen vault hata mesajı, sayfa hatası yok) ve çalışma paneli girişi 7/7 (panel → İlerleme → sayfa, `vault` ve `from` taşınır, "Geri" sohbete döner).
+Tarayıcı testi **gerçek bir hata yakaladı**: iki metin anahtarını `CardsDialog` bloğuna eklemiştim (`"review"` birden çok yerde var, ilk eşleşmeyi seçtim); geçerli JSON olduğu için hiçbir test görmedi, arayüz ham anahtar adını gösterdi. Kalıcı önlem: `src/lib/i18n/messages.test.ts` (iki dilin aynı anahtarlara sahip olması + koddaki her `t('Blok.anahtar')` için anahtarın var olması; 100+ anahtar taranır).
+
+**Sınırlar (bilinmeli).**
+- **11 kanıtla güven düşük;** rakamlar çoğunlukla "yeterli veri yok" der, ve doğrusu bu. Model, kişi daha çok test çözdükçe anlam kazanır.
+- Kart hafızası **gerçek hatırlama değil, zamanlama takviminden bir kestirim** (aralığa göre); kartı hiç tekrar etmemek düşük göstermesi doğru bir okumadır ama bir sınav sonucu değildir.
+- Tekilleştirme yalnızca **aynı parçadan aynı metni** birleştirir; iki farklı parça aynı soruyu sorarsa iki sayılır.
+- Alan, notun **şimdiki** indeks kaydından gelir; indekste olmayan not "(bilinmeyen)" alanına düşer, kaybolmaz.
+- Anlık görüntüyü **yazan bir çağrı yok** (yalnızca `--snapshot` betiği): zaman içindeki gidişat için gerekirse F2/F6 bir yazma noktası ekler; şimdilik geçmiş tablosu boş.
+- Yeni kodla ilk açılışta gerçek `study.db`'ye **boş tablolar ve boş sütunlar** eklenir (`flagged_at`, `cognitive_level`, `skill_*`); satır yazılmaz.
 
 ### F2 — Hata takibi (§27, §30) · F1'e bağımlı
 
