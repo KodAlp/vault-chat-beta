@@ -639,6 +639,47 @@ güvenden kaçınmak için. `evidence_count` her zaman raporlanır.
 Yeni: `src/lib/server/learner-model.ts` (saf fonksiyonlar) + `learner-model.test.ts`.
 Şema `study-db.ts`'e. Backfill: `scripts/backfill-learner-model.ts`, `--dry-run`.
 
+### F1a — Quiz üretici: kopya, seçeneksiz soru ve bileşim hatası · ✅ düzeltildi (2026-09-21)
+
+F1'in kanıtı quiz cevaplarından gelecek; bu yüzden önce soruların kendisinin geçerli olması gerekiyordu. Etiket deneyi sırasında görülen tekrarlar kök nedeni aramaya götürdü.
+Hepsi gerçek veride **salt okunur ölçüldü**; düzeltme aynı konularda, **izole** sunucuda gerçek `/api/generate/quiz` üzerinden karşılaştırıldı.
+
+**Bulgular (mevcut kod).**
+- **Aynı sorunun tekrarı:** ham metin eşitliğiyle gerçek sınavlarda **%14** (18/129), deneyde **%35** (14/40). ≤5 soruluk 13 sınavda **hiç yok**; kopyalar yalnızca çok partili sınavlarda ve **sonraki partide** (deneyde 20 sonraki-parti sorusunun 14'ü, %70).
+  Neden: önceki soruların **tam metni** "AYNI SORUYU TEKRAR ÜRETME" diye prompt'a yapıştırılıyordu; küçük model listeyi örnek alıp geri yazıyordu.
+- **Seçeneksiz çoktan seçmeli:** gerçek 80 sorunun **46'sında** (%58) seçenek listesi yok (deneyde 24'ün 18'i): `options` hem zod'da hem JSON şemasında isteğe bağlıydı → cevaplanamayan soru; ayrıca 7'sinde seçenek sayısı 5 değil.
+- **Bileşim:** 4/2/4 istendi, dört sınavın dördü **6/2/2** çıktı (karışık tür tek gramerde; doğrulama yalnızca toplam sayıyı sayıyordu).
+- **Kaynak çeşitliliği:** havuz dar değildi (5–12 bölüm) ama 10 soru **2–3 bölümden** çıkıyordu; havuzun %20–30'u öğretici olmayan parçaydı (`wiki/_index` MOC, "> Related", "> Sources"); tüm indekste %17 (375/2161). İki sınav sorularını tam bu tür bir bölümden üretmişti.
+- Doğru-yanlış "…kaçtır?" gibi soru cümlesi olarak üretilebiliyor; TF cevabı "False" (büyük harf) saklanırsa sayfanın gönderdiği "false" ile hiç eşleşmez.
+- **Yakın-kopya TESPİTİ güvenilmez:** bge-m3 kosinüsü gerçek parafraz kopyaları (0,94–0,96) ile "aynı şablon, farklı sayı" meşru soruları (0,91–0,94) ayıramıyor; Jaccard şablon sorularda 1,00 veriyor → kopya **önlemeyle** çözüldü, tespit yalnızca kesin eşitlik için emniyet ağı.
+- Kartlarda sorun yok (40 kart, 0 kopya).
+
+**Düzeltme.** `quiz-batch.ts`, `quiz-schema.ts`, `quiz-validate.ts`, `quiz-pool.ts`, `quiz-dedupe.ts`, `generate-quiz.ts`:
+- **Türe göre homojen partiler + gramerde tek `type`:** çoktan seçmelide `options` **zorunlu (5)**, doğru-yanlışta cevap `true|false` enum'u, açık/TF'de seçenek yok → bileşim yapı gereği tam.
+- **Her sorunun kaynağı gramerle sabitlenir** (`prefixItems`, soru başına bir `source_id`; test edildi, Ollama destekliyor): çeşitlilik doğrulama+retry ile değil yapı gereği. (İlk denenen "aynı kimlikten en fazla N soru" doğrulama kuralı retry döngüsüne yol açıp bir partiyi kaybettirdi ve süreyi 3–4 katına çıkardı; bırakıldı.)
+- **Tam metin "üretme" listesi kaldırıldı;** farklı kaynak parçaları görmeyen partiler aynı olguyu soramaz.
+- **Öğretici parça filtresi:** dizin/MOC/_meta, "Sources/Related/See also/…" bölümleri ve <200 kr parçalar dışlanır (24 aday çekilir, 12 öğretici parça kalır).
+- **Emniyet ağı:** kesin (harf/boşluk/noktalama duyarsız, **matematik korunur**, Türkçe İ/i noktası düzeltilmiş) tekrar düşer; eksik kalan türe **bir kez** kullanılmamış kaynak parçalarından tamamlama; dolgu yok, eksikse `done` olayında `requested/delivered` ve bildirim ("İstenen X, üretilen Y").
+- **Doğrulayıcı** (`quiz-validate.ts`): 5 farklı seçenek, cevap seçeneklerden biri (harf etiketli "A) …" cevabı seçenek metnine çözülür), TF cevabı küçük harfe, TF ifadesi soru cümlesi olamaz, tür/sayı/kaynak-slot uyumu. Retry mesajı modele geri verilir.
+
+| Ölçüm (izole, aynı 3 konu) | Eski kod (v0) | Yeni tasarım (v3, 6 sınav) |
+|---|---|---|
+| Aynı sorunun tekrarı | **11/30 (%37)** | **0/60** |
+| Bileşim (4/2/4) tam | **0/3** | **6/6** |
+| Seçeneksiz çoktan seçmeli | **8/20 (%40)** | **0/24** |
+| Geçersiz doğru-yanlış | 1/6 | 0/12 |
+| Sınav başına farklı bölüm | 2,7 | **9,8** |
+| Süre (ortalama / medyan) | 106 / 108 sn | 163 / 140 sn |
+
+Süre kabul kuralı (≤1,5×) ortalamada 1,54× ile 0,04 aşıldı; tek aykırı değer (dsa 318 sn), medyan 1,3×. Karşılığında çoktan seçmelilerin hepsi cevaplanabilir.
+
+**Sınırlar (bilinmeli).**
+- **Cevap anahtarının DOĞRULUĞU ölçülmedi.** "Cevap seçeneklerden biri mi" kontrolü 0 hata verir ama cevabın doğru olduğunu söylemez: küçük model bazen yanlış anahtar yazıyor (gözlenen: cevap "13", kendi açıklaması 7 hesaplıyor). F1'in doğruluk verisini doğrudan etkiler; ayrıca ele alınacak (ör. açıklamayı cevaptan önce yazdırmak).
+- **Repodaki son kodla uçtan uca doğrulandı** (izole sunucu, gerçek rota): 10 soruluk sınavlar 10/10, 0 kopya; **20 soruluk ölçek sınavı** (12/4/4) 20/20, 0 kopya, bileşim tam, 12 çoktan seçmelinin 12'sinde 5 seçenek, 12 farklı bölüm (12 parçalık havuz 20 soruya döngüyle dağıtıldı); `done` olayında `requested/delivered` geliyor. Süre 271–329 sn (Ollama'da kuyrukta bekleyen başka üretim vardı, ölçek sınavı temiz bir süre değil).
+- İstenenden az soru / tamamlama yolu hiçbir sınavda tetiklenmedi (yalnızca birim testli). v1/v2 ayrıştırması yapılmadı: hangi parçanın ne kadar katkı verdiği ayrı ölçülmedi, yalnızca bütünün sonucu.
+- Gerçek veride **18 tarihsel kopya** duruyor; öğrenen modeli kanıtı `(source_path, normalize soru)` ile tekilleştirecek.
+- Eski 129 soru olduğu gibi kalır (yeniden üretilmez).
+
 ### F2 — Hata takibi (§27, §30) · F1'e bağımlı
 
 ```sql
@@ -1009,6 +1050,26 @@ bahsettiği "statik muhafazakâr fallback" **hiç mevcut değil**.
 
 ---
 
+## 5.6. F15 — Linklerden toplu içe aktarma · spec dışı yan görev, **en sona bırakıldı** (kullanıcı kararı, 2026-09-21)
+
+**İhtiyaç.** Kullanıcının NotebookLM (şimdi "Gemini Notebook") ile aradığı çok sayıda kaynağın **linkleri** var; dosya sayısı çok, bir kısmı PDF değil düz web sayfası,
+elle kopyalanamaz. NotebookLM'den orijinal dosyaları geri indirmek mümkün değil (yalnızca çıkarılmış metin tutuyor), o yüzden linkler asıl kaynak.
+
+**Önerilen tasarım (uygulanmadı).** Link listesi → içerik türüne göre yol:
+- **PDF** (`%PDF` imzası doğrulanır) → olduğu gibi kaydedilir, mevcut `ingest/convert.py` hattı çevirir.
+- **Web sayfası** → **ham HTML değil, ana içerik** (`trafilatura`: menü/reklam/alt bilgi atılır) Markdown olarak, başlık/yazar/tarih ve `source_url` frontmatter'da; gerekirse ham HTML `_meta/originals`'a.
+  JavaScript ile çizilen sayfalar için yedek: başsız tarayıcı (Playwright), yalnızca çıkmayanlarda.
+- **Paralel ama nazik:** ~6 eşzamanlı, aynı siteye ≤ 2, zaman aşımı + yeniden deneme + `robots.txt`; yönlendirme sarmalayıcı linkler çözülür; içerik sha256 ile tekilleştirilir.
+- **Manifest** (`manifest.jsonl`: url, son url, durum, tür, yol, sha256, hata): yarıda kalırsa kaldığı yerden devam, başarısızlar sessizce kaybolmaz.
+- **Arayüz:** uygulama içinde "Linklerden içe aktar" (link kutusu, ilerleme, başarısız linkler); mevcut `api/import/youtube` deseni ve `convertQueue` yeniden kullanılır; çekirdek modül komut satırından da çalışacak şekilde ayrı tutulur (Python `ingest/fetch_url.py`, `convert.py` gibi JSON satırları sözleşmesi).
+- **Önce küçük örnek:** 20–30 link, izole kütüphanede; başarı oranı ve çeviri kalitesi ölçülür, sonra tamamı.
+
+**Bilinen sınırlar.** Ağır/matematikli PDF'lerde MarkItDown zayıf (`needs_review`; Marker/Docling kurulu değil); ödeme duvarı/giriş isteyen/bot engelleyen siteler indirilemez (manifest listeler);
+site şartları ve telif kullanıcının değerlendirmesi; binlerce parçanın gömülmesi Ollama'yı uzun süre meşgul eder (deney/ölçüm dışında yapılmalı).
+**Sıra:** F14'ten sonra, en son.
+
+---
+
 ## 6. Sıra
 
 ```
@@ -1025,8 +1086,9 @@ F4, F13-1/2     ← küçük, bağımsız   (F5 ✅ yapıldı; FTS'i F12-5'i de 
 F11 (ayrı hat, VLM geçişi) ──> F13-3 gerçek görsel kolu
 F7        F8 + F12-5 (birlikte)        F9 (erken başla)
 
-F14 ← EN SON. Ana hattan bağımsız; F14-1 (timeout hatası) istenirse
+F14 ← Ana hattan bağımsız; F14-1 (timeout hatası) istenirse
       tek başına öne alınabilir.
+F15 ← EN SON (linklerden toplu içe aktarma, §5.6; kullanıcı kararı).
 ```
 
 ---
