@@ -14,7 +14,7 @@ function tmpDbPath(): string {
 }
 
 const zero = () => Array.from({ length: EMBED_DIMS }, () => 0);
-const file = (p: string): FileRow => ({ path: p, sha256: 'x', mtime: 1, topic: 't', depth: 'undergrad', domains_json: '[]' });
+const file = (p: string): FileRow => ({ path: p, sha256: 'x', mtime: 1, topic: 't', depth: 'undergrad', domains_json: '[]', prerequisites_json: '[]' });
 const chunk = (p: string, heading: string, text: string) => ({ insert: { path: p, heading_path: heading, display_text: text }, embedding: zero() });
 const count = (db: Database.Database, table: string) => (db.prepare(`SELECT count(*) AS c FROM ${table}`).get() as { c: number }).c;
 const find = (db: Database.Database, expr: string) => keywordSearch(db, expr, 20).map((h) => h.chunkId);

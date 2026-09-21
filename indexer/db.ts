@@ -3,6 +3,7 @@ import * as sqliteVec from 'sqlite-vec';
 import path from 'node:path';
 import fs from 'node:fs';
 import { EMBED_DIMS } from '../src/lib/server/embed-config';
+import { ensureColumns } from '../src/lib/server/sqlite-schema';
 
 export interface FileRow {
 	path: string;
@@ -11,6 +12,10 @@ export interface FileRow {
 	topic: string;
 	depth: string;
 	domains_json: string;
+	/** JSON array of the link target NAMES from the note's `prerequisites` frontmatter
+	 * ("np-completeness", not a path) — resolved to files when the graph is read, see
+	 * indexer/prerequisites.ts. */
+	prerequisites_json: string;
 }
 
 export interface ChunkInsert {
@@ -33,7 +38,8 @@ export function openDb(dbPath: string): Database.Database {
 			mtime INTEGER NOT NULL,
 			topic TEXT NOT NULL DEFAULT '',
 			depth TEXT NOT NULL DEFAULT '',
-			domains_json TEXT NOT NULL DEFAULT '[]'
+			domains_json TEXT NOT NULL DEFAULT '[]',
+			prerequisites_json TEXT NOT NULL DEFAULT '[]'
 		);
 		CREATE TABLE IF NOT EXISTS chunks (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -43,6 +49,11 @@ export function openDb(dbPath: string): Database.Database {
 		);
 		CREATE INDEX IF NOT EXISTS idx_chunks_path ON chunks(path);
 	`);
+	// An index built before F4 has `files` without this column, and CREATE TABLE IF NOT EXISTS cannot
+	// add it (see sqlite-schema.ts). Additive: nothing needs `--full`; `npm run index -- --prereqs`
+	// fills it for files that are already indexed. The app opens the index read-only and cannot add it,
+	// so readers must cope with it missing (src/lib/server/prerequisites-query.ts does).
+	ensureColumns(db, 'files', { prerequisites_json: "TEXT NOT NULL DEFAULT '[]'" });
 	// Dimension AND distance metric are baked into the virtual table DDL —
 	// changing either requires `npm run index -- --full` so this table gets
 	// dropped and rebuilt. distance_metric=cosine is load-bearing: without it
@@ -125,6 +136,12 @@ export function syncFts(db: Database.Database): { added: number; removed: number
 	return run();
 }
 
+/** Sets one already-indexed file's prerequisite names without touching its chunks or embeddings
+ * (`npm run index -- --prereqs`). False when no such file is indexed. */
+export function setPrerequisites(db: Database.Database, filePath: string, prerequisitesJson: string): boolean {
+	return db.prepare('UPDATE files SET prerequisites_json = ? WHERE path = ?').run(prerequisitesJson, filePath).changes > 0;
+}
+
 export function listKnownFiles(db: Database.Database): Map<string, FileRow> {
 	const rows = db.prepare('SELECT * FROM files').all() as FileRow[];
 	return new Map(rows.map((r) => [r.path, r]));
@@ -170,9 +187,9 @@ export function upsertFile(
 	const tx = db.transaction(() => {
 		deleteFile(db, file.path);
 		db.prepare(
-			`INSERT INTO files (path, sha256, mtime, topic, depth, domains_json)
-			 VALUES (?, ?, ?, ?, ?, ?)`
-		).run(file.path, file.sha256, file.mtime, file.topic, file.depth, file.domains_json);
+			`INSERT INTO files (path, sha256, mtime, topic, depth, domains_json, prerequisites_json)
+			 VALUES (?, ?, ?, ?, ?, ?, ?)`
+		).run(file.path, file.sha256, file.mtime, file.topic, file.depth, file.domains_json, file.prerequisites_json);
 
 		const insertChunk = db.prepare(
 			`INSERT INTO chunks (path, heading_path, display_text) VALUES (?, ?, ?)`

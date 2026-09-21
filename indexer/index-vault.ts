@@ -3,7 +3,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import matter from 'gray-matter';
-import { openDb, listKnownFiles, deleteFile, upsertFile, type FileRow } from './db';
+import Database from 'better-sqlite3';
+import { openDb, listKnownFiles, deleteFile, upsertFile, setPrerequisites, type FileRow } from './db';
+import { buildSlugIndex, findCycles, parsePrerequisites, resolvePrerequisites } from './prerequisites';
 import { hasKeywordIndex } from '../src/lib/server/keyword-search';
 import { chunkMarkdown, normalizeLevel } from './chunk';
 import { embedDocuments } from './embed';
@@ -20,6 +22,7 @@ const args = process.argv.slice(2);
 const isFull = args.includes('--full');
 const isDryRun = args.includes('--dry-run');
 const isFts = args.includes('--fts');
+const isPrereqs = args.includes('--prereqs');
 
 const vault = resolveIndexerVault(args);
 const LIBRARY_ROOT = vault.libraryRoot;
@@ -59,6 +62,58 @@ async function main() {
 			: null;
 		ftsDb.close();
 		console.log(rows === null ? 'FTS5 bu SQLite derlemesinde yok; anahtar kelime yedeği kapalı.' : `chunks: ${chunks} | chunks_fts: ${rows}${chunks === rows ? ' (eşit)' : ' (UYUMSUZ)'}`);
+		return;
+	}
+
+	// `--prereqs`: fill files.prerequisites_json for notes that are ALREADY indexed, from their
+	// frontmatter alone. The normal pass skips a file whose sha256 is unchanged, so without this an index
+	// built before F4 would only get the column for notes edited afterwards, and `--full` would delete
+	// the database and re-embed every chunk for a few lines of metadata. Nothing is embedded or chunked.
+	// With `--dry-run` the database is opened read-only: nothing is written, not even the new column.
+	if (isPrereqs) {
+		if (!fs.existsSync(DB_PATH)) {
+			console.error(`Bu vault henüz indekslenmemiş: ${DB_PATH}`);
+			process.exit(1);
+		}
+		const pdb = isDryRun ? new Database(DB_PATH, { readonly: true }) : openDb(DB_PATH); // openDb adds the column
+		const knownFiles = listKnownFiles(pdb);
+		const slugIndex = buildSlugIndex(knownFiles.keys());
+		let withPrereqs = 0;
+		let refs = 0;
+		let changed = 0;
+		let notIndexed = 0;
+		const unresolved: string[] = [];
+		const ambiguous: string[] = [];
+		const graph = new Map<string, string[]>();
+		for (const absPath of walk(LIBRARY_ROOT)) {
+			const relPath = path.relative(LIBRARY_ROOT, absPath).split(path.sep).join('/');
+			const row = knownFiles.get(relPath);
+			if (!row) {
+				notIndexed++;
+				continue;
+			}
+			const names = parsePrerequisites(matter(fs.readFileSync(absPath, 'utf-8')).data.prerequisites);
+			const json = JSON.stringify(names);
+			const resolved = resolvePrerequisites(names, slugIndex);
+			graph.set(relPath, resolved.resolved);
+			if (names.length > 0) withPrereqs++;
+			refs += names.length;
+			for (const n of resolved.unresolved) unresolved.push(`${relPath} -> ${n}`);
+			for (const n of resolved.ambiguous) ambiguous.push(`${relPath} -> ${n}`);
+			// a database that predates the column has no value to compare with: everything counts as changed
+			if ((row as Partial<FileRow>).prerequisites_json !== json) {
+				changed++;
+				if (!isDryRun) setPrerequisites(pdb, relPath, json);
+			}
+		}
+		const cycles = findCycles(graph);
+		pdb.close();
+		console.log(isDryRun ? '(dry-run — hiçbir şey yazılmadı)' : 'Ön koşullar yazıldı.');
+		console.log(`  indeksli dosya: ${knownFiles.size}  ön koşulu olan: ${withPrereqs}  referans: ${refs}  güncellenen: ${changed}  indekste olmayan .md: ${notIndexed}`);
+		console.log(`  çözülemeyen: ${unresolved.length}  belirsiz (aynı ada birden çok dosya): ${ambiguous.length}  döngü: ${cycles.length}`);
+		for (const u of unresolved.slice(0, 10)) console.log(`    çözülemedi: ${u}`);
+		for (const a of ambiguous.slice(0, 10)) console.log(`    belirsiz: ${a}`);
+		for (const c of cycles.slice(0, 5)) console.log(`    döngü: ${c.join(' -> ')}`);
 		return;
 	}
 
@@ -112,7 +167,8 @@ async function main() {
 				depth: normalizeLevel(frontmatter.level ?? frontmatter.depth ?? ''),
 				domains_json: JSON.stringify(
 					frontmatter.domains ?? (frontmatter.domain ? [frontmatter.domain] : [])
-				)
+				),
+				prerequisites_json: JSON.stringify(parsePrerequisites(frontmatter.prerequisites))
 			};
 			upsertFile(
 				db,
