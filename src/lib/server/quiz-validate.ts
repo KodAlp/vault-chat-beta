@@ -7,7 +7,9 @@ import { QuizItems, type QuizItemKind } from './quiz-schema';
  *  - 46 of 80 multiple-choice questions had NO options and 2 more had the wrong number — unanswerable;
  *  - a true/false answer stored as "False" is never equal to the "false" the page sends, so it is graded wrong forever;
  *  - a "true/false" question that reads "…kaçtır?" is not a statement;
- *  - the same question came back verbatim from a later batch (source-part spread is enforced separately).
+ *  - the same question came back verbatim from a later batch (source-part spread is enforced separately);
+ *  - the prompt's own source ids leaked into the text the student reads ("S7 kaynak parçasında verilen … kullanarak"): 8 of 156
+ *    questions from the first slot-based generator, none in the 129 stored ones (the old prompt never said "question 1 comes from S7").
  * A failure returns a Turkish message that is fed back to the model on the retry, like the other generators.
  */
 
@@ -42,6 +44,19 @@ const LETTER_LABEL = /^\s*[A-Ea-e][)\.:]\s*/;
 /** A true/false item must be a statement to judge, not a question to answer. */
 export function isStatement(question: string): boolean {
 	return !/[?？]\s*$/u.test(question.trim());
+}
+
+/**
+ * Whether `text` contains one of the prompt's source ids ("S7") as a word. Ids are only meaningful inside the prompt, so a student
+ * must never see one. Only ids of THIS batch's pool count, which keeps "S" followed by digits elsewhere from being flagged
+ * unless it collides with a real id (a bare "S3" for a symmetric group would; the batch is then regenerated, which is cheap).
+ * Language-independent on purpose: it looks for the id itself, not for the Turkish phrases around it.
+ */
+export function leaksSourceId(text: string, ids: Iterable<string>): boolean {
+	for (const id of ids) {
+		if (new RegExp(String.raw`(?<![\p{L}\p{N}_])${id}(?![\p{L}\p{N}_])`, 'u').test(text)) return true;
+	}
+	return false;
 }
 
 /** The option `answer` refers to: exact match first, then ignoring a stray "A) " label on either side; null if none. */
@@ -85,6 +100,10 @@ export function validateQuizBatch(raw: string, ctx: BatchContext): BatchParse {
 	const out: ValidatedQuizItem[] = [];
 	for (const item of items) {
 		const chunk = ctx.idToChunk.get(item.source_id)!;
+		const visible = [item.question, item.explanation, ...(item.options ?? [])];
+		if (visible.some((t) => leaksSourceId(t, ctx.idToChunk.keys()))) {
+			return { ok: false, error: 'Soru, seçenek ve açıklama metinlerinde S1, S2 gibi kaynak kimliklerini ya da "S7 kaynağına göre" gibi ifadeleri yazma; öğrenci bu kimlikleri görmez. Soruyu kimliğe atıf yapmadan, konunun kendisi hakkında yaz.' };
+		}
 		let answer = item.answer.trim();
 		let options = item.options;
 
