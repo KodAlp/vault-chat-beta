@@ -813,6 +813,26 @@ yanlış-işaret sayıları. Yanlış işaret sessizce topraksız cevap demektir
 "Yine de kaynak ara" v1'de aynı soruyu ikinci kez bir tur olarak gönderir (kullanıcı mesajı iki kez görünür). `smallTalk` bayrağı
 sohbet yüklenirken geri gelmez (`narrowScope` gibi kalıcı değil).
 
+**Prompt kuralı (ilk seferde sızan sohbet).** Kapı yeni bir slang'i ilk seferde kaçırınca kaynaklar prompt'a girer ve
+`CORE_INVARIANTS`'taki "notları kullan / kapsamıyorsa söyle" kuralları modeli onları cevaba işlemeye iter (kayıtlı örnek:
+"Naber lan göt" → "Bilgi kaynağına göre, Borg sisteminin…", 3 571 karakter). Bu yüzden `prompt.ts`'e tek satır eklendi:
+"Selamlaşma, sohbet, argo, hakaret, teşekkür ya da deneme gibi mesajlara yalnızca o mesajın kendisine karşılık ver; notlardan
+hiç söz etme." **Ölçüm** (kapı kapalı, izole sunucu, kopya `chats.db`; 12 sohbet mesajı × 4 örnek + 10 gerçek soru; her varyantta
+36 kaynaklı sohbet cevabı):
+
+| Varyant | bozuk/uzun sohbet cevabı | kuralı/prompt'u geri yazma | ort. sohbet cevabı | gerçek soru ort. uzunluk |
+|---|---|---|---|---|
+| kuralsız | **16** | 1 | 451 kr | 2 451 |
+| "…`<context>` bloğunu yok say… **kısa** ve doğal…" | 2 | 1 | 64 | **1 587 (−%35)** |
+| aynısı, "kısa" yok | 7 | **4** ("…bloğunu yok sayarak…") | 111 | 2 499 |
+| **yayınlanan** (olumlu, bu kelimeler yok) | **1** | **0** | 44 | 1 896 (−%23) |
+
+Yorum: "kısa" gerçek soruları kısaltıyordu, "yok say / `<context>`" sözcükleri modelin cevabında kural olarak geri yazılıyordu;
+yayınlanan sürüm ikisinden de kaçınır. Gerçek sorularda 10/10 kaynaklı ve konuya uygun; uzunluk farkı tek örnekli ölçümde
+gürültü içinde (aynı işlevdeki iki varyantta soru başına ±%50 oynadı), gerileme olarak kanıtlanmadı. Sistem prompt'unu geri
+yazma (`gerizekalı` gibi hakaret mesajlarında "Kurallar: - Tüm matematiği…") kuralsız durumda görüldü, yayınlanan varyantta bu
+48 örnekte görülmedi — ayrı bir hata olarak izlenmeli. Kural kaynak listesini düzeltmez; yalnızca cevabı temizler.
+
 **F12 aşama 5** bu tablonun üstüne kurulabilir — birlikte planlanmalı.
 
 ### F6 — Mode sistemi (§33–39) · F1 + F3'e bağımlı
