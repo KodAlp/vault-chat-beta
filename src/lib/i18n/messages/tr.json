@@ -572,6 +572,11 @@
 		"resultTitle": "Sonuç: {score}%",
 		"yourAnswer": "Cevabın:",
 		"emptyAnswer": "(boş)",
+		"flagItem": "Bu soru hatalı",
+		"flaggedNote": "Hatalı olarak işaretlendi: bir daha sorulmayacak, puandan ve öğrenme verinden çıkarıldı.",
+		"unflag": "Geri al",
+		"flagFailed": "İşaret kaydedilemedi.",
+		"scoreExcludingFlagged": "{count} hatalı soru hariç",
 		"correctAnswer": "Doğru cevap:",
 		"modelFeedback": "Model değerlendirmesi:",
 		"viewFailed": "Test görüntülenemedi: {error}"

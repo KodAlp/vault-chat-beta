@@ -242,6 +242,8 @@ export interface AttemptResultItem {
 	modelFeedback: string | null;
 	sourcePath: string;
 	headingPath: string;
+	/** The user flagged this question as faulty (client-side toggle; see /api/study/quizzes/[id]/items/[itemId]). */
+	flagged?: boolean;
 }
 
 export interface SubmitAttemptResponse {

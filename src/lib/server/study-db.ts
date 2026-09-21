@@ -35,6 +35,9 @@ export interface QuizItemRow {
 	explanation: string;
 	source_path: string;
 	heading_path: string;
+	/** Set when the user flagged the question as faulty ("Bu soru hatalı"): it is no longer asked, no longer counts in the
+	 * score shown, and must not count as learning evidence. null = fine. */
+	flagged_at: string | null;
 }
 
 export interface AttemptRow {
@@ -103,7 +106,8 @@ function getDb(v: VaultContext): Database.Database {
 				answer TEXT NOT NULL,
 				explanation TEXT NOT NULL,
 				source_path TEXT NOT NULL,
-				heading_path TEXT NOT NULL
+				heading_path TEXT NOT NULL,
+				flagged_at TEXT
 			);
 			CREATE INDEX IF NOT EXISTS idx_quiz_items_quiz_id ON quiz_items(quiz_id);
 			CREATE TABLE IF NOT EXISTS attempts (
@@ -226,7 +230,8 @@ function getDb(v: VaultContext): Database.Database {
 function addMissingColumns(db: Database.Database): void {
 	const pending: { table: string; column: string; ddl: string }[] = [
 		{ table: 'mindmaps', column: 'root_summary', ddl: "TEXT NOT NULL DEFAULT ''" },
-		{ table: 'mindmap_nodes', column: 'summary', ddl: "TEXT NOT NULL DEFAULT ''" }
+		{ table: 'mindmap_nodes', column: 'summary', ddl: "TEXT NOT NULL DEFAULT ''" },
+		{ table: 'quiz_items', column: 'flagged_at', ddl: 'TEXT' }
 	];
 	for (const { table, column, ddl } of pending) {
 		const columns = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
@@ -303,6 +308,11 @@ export function getQuizItem(v: VaultContext, id: string): QuizItemRow | undefine
 }
 
 /** Most recent first — what a "recently generated" list wants to show. */
+/** Flags (or un-flags) a question as faulty. False when no such question exists. */
+export function setQuizItemFlagged(v: VaultContext, itemId: string, flagged: boolean): boolean {
+	return getDb(v).prepare('UPDATE quiz_items SET flagged_at = ? WHERE id = ?').run(flagged ? new Date().toISOString() : null, itemId).changes > 0;
+}
+
 export function listQuizzes(v: VaultContext): StudyListRow[] {
 	return getDb(v)
 		.prepare('SELECT id, title, model, created_at FROM quizzes ORDER BY created_at DESC')

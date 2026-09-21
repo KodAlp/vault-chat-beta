@@ -71,7 +71,8 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
 			isCorrect,
 			modelFeedback,
 			sourcePath: item.source_path,
-			headingPath: item.heading_path
+			headingPath: item.heading_path,
+			flagged: item.flagged_at !== null
 		});
 	}
 

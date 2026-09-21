@@ -11,7 +11,10 @@ export const GET: RequestHandler = async ({ params, url }) => {
 
 	// No answer/explanation here on purpose — the skill's UI spec is "no answer
 	// reveal until submitted". Those come back from the attempt-submit endpoint.
-	const items: QuizItemView[] = getQuizItems(v, params.id).map((row) => ({
+	// A question the user flagged as faulty is not asked again.
+	const items: QuizItemView[] = getQuizItems(v, params.id)
+		.filter((row) => row.flagged_at === null)
+		.map((row) => ({
 		id: row.id,
 		type: row.type,
 		question: row.question,

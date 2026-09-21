@@ -16,3 +16,21 @@
 export function isAnswered(given: string | null | undefined): boolean {
 	return typeof given === 'string' && given.trim().length > 0;
 }
+
+export interface ScoredItem {
+	isCorrect: boolean;
+	/** The user marked the question itself as faulty ("Bu soru hatalı"). */
+	flagged?: boolean;
+}
+
+/**
+ * The score with the questions the user flagged as faulty taken out of BOTH the numerator and the denominator: a question
+ * whose answer key is wrong should not count against the person who answered it correctly. (About 1 in 30 of the generated
+ * answer keys was definitely wrong and about 1 in 9 questions was faulty, ambiguous or source-specific nonsense — see the F1a
+ * measurements — and only the user can tell which.) `counted` is 0 when everything is flagged; the score is then 0.
+ */
+export function scoreExcludingFlagged(items: readonly ScoredItem[]): { score: number; correct: number; counted: number; excluded: number } {
+	const counted = items.filter((i) => !i.flagged);
+	const correct = counted.filter((i) => i.isCorrect).length;
+	return { score: counted.length > 0 ? correct / counted.length : 0, correct, counted: counted.length, excluded: items.length - counted.length };
+}
