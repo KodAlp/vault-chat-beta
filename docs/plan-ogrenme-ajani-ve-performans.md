@@ -685,6 +685,24 @@ Süre kabul kuralı (≤1,5×) ortalamada 1,54× ile 0,04 aşıldı; tek aykır�
 - Eski 129 soru olduğu gibi kalır (yeniden üretilmez).
 - **"Bu soru hatalı" işareti (kullanıcı, sonuç ekranında):** `quiz_items.flagged_at` (nullable; eski study.db'ler sütunu ilk açılışta alır). İşaretli soru bir daha sorulmaz (`GET /api/study/quizzes/[id]` süzer), görünen puandan hem pay hem paydadan çıkar (`scoreExcludingFlagged`), geri alınabilir (`PATCH /api/study/quizzes/[id]/items/[itemId]` `{flagged}`). **F1b kanıtından çıkarılacak** (henüz F1b yok; sözleşme: `flagged_at IS NOT NULL` olan soru kanıt sayılmaz). Nedeni: 36 soruluk elle okunan örnekte 1 kesin yanlış anahtar ve ≈ 9'da 1 sorunlu soru vardı ve yalnızca cevaplayan kişi hangisi olduğunu bilir. Uçtan uca 12/12 (izole sunucu, sütunsuz study.db kopyasıyla geçiş dahil); düğmenin tarayıcıda tıklanması yapılmadı (arayüz derlendi/tiplendi, API doğrulandı). Sebep/gerekçe alanı bilerek yok (v1).
 
+**Kaynak kimliği sızıntısı (F1a'nın kendi hatası, 2026-09-21 düzeltildi).** Yeni yuva tabanlı üretici, prompt'ta "1. soru S7 kaynağından…" dediği için model kimliği öğrencinin göreceği metne yazıyordu ("S7 kaynak parçasında verilen … kullanarak"): A2 verisinde **8/156** soru (%5), etiket deneyinde veritabanları sınavının 4 açık sorusunun **4'ü**; eski gerçek 129 soruda **0**. F1a ölçümlerinde bu bakılmamıştı. Düzeltme yalnızca doğrulayıcıda (`leaksSourceId`, dile bağımsız: kimliğin kendisini kelime olarak arar, çevresindeki Türkçe kalıbı değil): soru/seçenek/açıklamada bu partinin kimliklerinden biri geçerse parti reddedilir ve retry mesajı modele döner. Prompt'a ek kural yazılmadı (küçük modelde "yazma" kuralları ters tepebiliyor; ölçmeden eklenmedi). İzole sunucuda 3 konu × 10 soru: **0/30 sızıntı**, 0 kopya, hepsi 10/10, süre 172/257/198 sn (önceki 154–413). Sınır: n=30; "kaynak parçasında verilen…" gibi **kimliksiz** kalıplar hâlâ çıkabilir (dile bağlı olduğu için kural yazılmadı). Ayrıca bir veritabanları sınavının 4/4 çoktan seçmelisinde İngilizce "None of the above" seçeneği görüldü; yeni kodda bir daha görülmedi (n=1 parti), önlem yok.
+
+#### F1 etiketleri: 4 düzey — deney **kabul eşiğini geçmedi, ertelendi**
+
+Düzeyler `recall / understanding / application / higher` (higher = analiz + sentez + transfer; 6 düzeyde son üçü güvenilmezdi). Kopyasız veriyle yeniden ölçüldü: 6 konu × (4 çoktan seçmeli / 2 doğru-yanlış / 4 açık) = **60 soru, 60 benzersiz**; her sorunun hedef düzeyi türüne uygun bir menüden **önceden atanıp gramerle sabitlendi** (`prefixItems`), sonra etiketi görmeyen ayrı bir çağrıyla (aynı model, sıcaklık 0) kör yeniden etiketlendi; tanım sırası hem ters hem düz denendi.
+
+| Ölçüm | Sonuç | Kabul kuralı |
+|---|---|---|
+| Kör yargıç ↔ atanan düzey (ters / düz sıra) | **%48 / %47** (29/60, 28/60) | ≥ %60 → **geçmedi** |
+| Yargıcın kendisiyle tutarlılığı (yalnızca tanım sırası değişince) | %63 | — |
+| Yargıç sıraya duyarlı | recall %33 ↔ %75, understanding %78 ↔ %39 | — |
+| İki yargıç da atananla aynı | %33 | — |
+| Yargıç dağılımı | understanding 31, higher 14, recall 8, application 7 | ≥ 3 düzey ≥ %10: geçti |
+
+Hepsini tek tek okudum (öznel; 21 soruda atanan düzeyi savunamadım, 8-9'unda sınırdaydı → **kabaca %50–65 uyum**, yargıcın sayısıyla aynı bölge). Hata rastgele değil, **tam da işe yarayacak düzeylerde**: "application" olarak atananların çoğu tanım/çoktan seçmeli hatırlama sorusu ("hangi yöntem kullanılır?", "CFS için hangisi doğru?"), "higher" olarak atananların çoğu tek cümlelik açıklama sorusu; gerçekten uygulama/analiz olanlar ağırlıkla hesaplama içeren matematik notlarından ve birkaç "karşılaştır" sorusundan geliyordu. Kavramsal notlardan (işletim sistemi, veri yapıları, veritabanı) model uygulama düzeyinde soru **kuramıyor**; düzey etiketi sorunun kendisini değiştirmiyor, yalnızca üstüne yazılıyor.
+
+**Karar:** bu etiketler öğrenen modeline eksen olarak **girmez** (zehirlerdi). Kod (`cognitive-levels.ts`, gramer, `quiz_items.cognitive_level`) repoya alınmadı; yama betiği deney dizininde. F1b eksensiz yapılır: genel mastery + güven + kart retention. Eksenler için ileride ya önce daha iyi soru üretimi (uygulama sorusu için somut girdi zorunluluğu) ya da kullanıcının işaretlediği düzey gibi başka bir sinyal gerekir.
+
 ### F2 — Hata takibi (§27, §30) · F1'e bağımlı
 
 ```sql
