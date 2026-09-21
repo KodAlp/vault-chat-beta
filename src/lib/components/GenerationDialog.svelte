@@ -98,7 +98,11 @@
 
 	let domains = $state<string[]>([]);
 	let selectedDomain = $state('');
-	let useChatContext = $state(true);
+	// Off by default. The chat's last messages are appended to the retrieval query, and a 1500-character chat swamps a
+	// 30-character topic: measured on the quiz generator, the pool shared 0.00-0.20 of its top parts with the topic-only
+	// pool (even a chat of pure greetings), and no automatic rule separated "chat is the topic" from "chat is noise"
+	// (see docs/plan-ogrenme-ajani-ve-performans.md, F1a). Tick it when the prompt has no topic of its own ("bu konudan sınav yap").
+	let useChatContext = $state(false);
 	let prompt = $state('');
 
 	let modelOptions = $state<ProviderModelOption[]>([]);
