@@ -22,6 +22,18 @@ export function coreIntro(allowedLanguages: string[]): string {
 Her zaman ${primary} dilinde cevap ver.${extraNote}`;
 }
 
+/*
+ * The last rule below is measured wording, do not "improve" it casually. Retrieval attaches
+ * sources to small talk the gate has not learned yet (smalltalk-gate.ts), and the two rules
+ * above ("use the notes", "say if they do not cover it") made the model weave them into its
+ * answer. A/B on the real vault, 36 small-talk answers with sources per variant: no rule 16
+ * odd/long (e.g. "Bilgi kaynağına göre, Borg sisteminin…"); "…<context> bloğunu yok say… kısa
+ * ve doğal bir karşılık ver" 2, but real answers got 35% shorter and the model started
+ * narrating the rule ("…bloğunu yok sayarak…", 4/36); this wording 1, no echo, real questions
+ * still sourced and on topic. Keep it positive and free of the words the model echoes
+ * (<context>, "yok say", "bilgi sorusu", "kısa").
+ */
+
 /**
  * Non-overridable, appended after any user skills — see userSkills.ts and
  * the user-skills skill doc's "assembly order" section. Local models weight
@@ -34,7 +46,8 @@ export const CORE_INVARIANTS = `Kurallar:
   üst/alt simge gibi yapının açtığı parantez/süslü parantezi kapat ve
   formülü tamamla, sonra $ veya $$ ile kapat.
 - Aşağıdaki <context> bloğundaki notları kullandığında kaynağını topic başlığıyla belirt.
-- <context> soruyu kapsamıyorsa bunu açıkça söyle; kapsamayan bir konuda uydurma cevap verme.`;
+- <context> soruyu kapsamıyorsa bunu açıkça söyle; kapsamayan bir konuda uydurma cevap verme.
+- Selamlaşma, sohbet, argo, hakaret, teşekkür ya da deneme gibi mesajlara yalnızca o mesajın kendisine karşılık ver; notlardan hiç söz etme.`;
 
 /**
  * Injects retrieved chunks as a fenced <context> block above the latest user
