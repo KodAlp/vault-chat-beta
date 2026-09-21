@@ -52,7 +52,10 @@ export interface AppLogRecord {
 		/** The keyword (FTS5) fallback ran because the vector search left nothing
 		 * usable: which pass (`mode`), how many query terms, raw hits, and how many
 		 * survived the scope/domain/hidden-folder filters. */
-		| 'retrieval_fallback';
+		| 'retrieval_fallback'
+		/** The small-talk gate (smalltalk-gate.ts) learned, was taught, was overridden or failed:
+		 * `smallTalkAction` and, where there is one, `gatePhraseId`. Ids only, never the text. */
+		| 'smalltalk';
 	chatId?: string;
 	provider?: string;
 	model?: string;
@@ -120,6 +123,15 @@ export interface AppLogRecord {
 	mode?: 'and' | 'or';
 	terms?: number;
 	hits?: number;
+	/** retrieval: the message was judged small talk (`smallTalk`) and by what — `gateSim`
+	 * similarity to the closest phrase, `gateVia` 'personal' | 'seed', `gatePhraseId` — or
+	 * the user asked for sources anyway (`gateOverridden`). smalltalk: `smallTalkAction`. */
+	smallTalk?: boolean;
+	gateSim?: number;
+	gateVia?: string;
+	gatePhraseId?: number;
+	gateOverridden?: boolean;
+	smallTalkAction?: 'learned' | 'taught' | 'confirmed_question' | 'error';
 	message: string;
 }
 

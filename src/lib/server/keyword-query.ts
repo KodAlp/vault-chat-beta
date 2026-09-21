@@ -66,3 +66,34 @@ export function buildFtsQuery(query: string, mode: FtsMode = 'or'): string | nul
 	// doubling it anyway is FTS5's own escape and keeps this safe if that changes.
 	return terms.map((t) => `"${t.replace(/"/g, '""')}"`).join(mode === 'and' ? ' AND ' : ' OR ');
 }
+
+/** A message needs at least this many distinct content terms before the keyword
+ * fallback may run. */
+export const MIN_FALLBACK_TERMS = 2;
+
+/**
+ * The FTS5 expression the keyword FALLBACK is allowed to run, or null when the
+ * message does not earn a keyword search at all.
+ *
+ * Why a gate and not a longer stopword list: the fallback runs exactly when the
+ * vector search found nothing, and that is what a greeting, slang or small talk
+ * looks like in ANY language ("merhaba", "sup dawg", "napıyon lan"). Such words
+ * turn up by accident in a technical corpus (a code sample, an example
+ * sentence), and a keyword hit skips the distance threshold, so the chat showed
+ * an unrelated note as its source and the model wove it into the answer. A word
+ * list cannot cover every language and slang.
+ *
+ * The rule is language-independent instead: one stray word is not evidence, but
+ * two or more distinct terms appearing together in one chunk is. So it is AND
+ * only (an OR pass matched 12 of 24 multilingual greeting/slang messages against
+ * the real index, AND with two or more terms matched 0) and it needs
+ * MIN_FALLBACK_TERMS terms. The cost is stated, not hidden: a Turkish question
+ * over an English vault rarely has two terms that co-occur (3 of 232 real
+ * multi-term messages did), so in practice the fallback now rescues precise
+ * multi-term matches such as "FreeRTOS task scheduling" and stays out of the way
+ * of chit-chat.
+ */
+export function buildFallbackQuery(query: string): string | null {
+	if (extractTerms(query).length < MIN_FALLBACK_TERMS) return null;
+	return buildFtsQuery(query, 'and');
+}

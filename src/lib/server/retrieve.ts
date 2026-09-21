@@ -8,8 +8,9 @@ import { getLibrarySettings } from './library-read';
 import type { RetrieveResult } from '$lib/types';
 import type { VaultContext } from './vaults';
 import { logAppEvent } from './app-log';
-import { buildFtsQuery, extractTerms, type FtsMode } from './keyword-query';
+import { buildFallbackQuery, extractTerms } from './keyword-query';
 import { hasKeywordIndex, keywordSearch } from './keyword-search';
+import type { GateDecision } from './smalltalk-gate';
 
 const DEFAULT_K = 8;
 const OVERFETCH_FACTOR = 3;
@@ -94,6 +95,18 @@ export async function retrieve(
 		 * generators cite what retrieval returns, and a keyword hit carries no
 		 * distance to vouch for its relevance. */
 		keywordFallback?: boolean;
+		/** The text the keyword fallback searches, when it should differ from `query`:
+		 * the chat passes the newest user message alone, because `query` carries the
+		 * last few turns for the vector search and an AND over all of them would demand
+		 * every term of every turn in one chunk. Defaults to `query`. */
+		keywordQuery?: string;
+		/** Chat only: the small-talk gate (smalltalk-gate.ts, wired in smalltalk-runtime.ts). Called
+		 * with the query vector and the nearest chunk's distance; a message it flags gets no sources,
+		 * because the vector search cannot tell a greeting from a question and would attach
+		 * unrelated ones. The generators never pass it: they cite what retrieval returns. */
+		smallTalkGate?: (vector: number[], bestDistance: number | undefined) => GateDecision | null;
+		/** "Yine de kaynak ara": retrieve even when the gate flags the message (still reported in `gate`). */
+		forceSources?: boolean;
 	} = {}
 ): Promise<RetrieveResult> {
 	const database = getDb(v);
@@ -113,6 +126,18 @@ export async function retrieve(
 		.all(queryBlob, k * overfetch) as { chunk_id: number; distance: number }[];
 
 	const bestDistance = matches[0]?.distance;
+
+	// Small talk gets no sources at all. This runs on the vector computed above, so it costs a few
+	// dot products, not another model call.
+	let gateInfo: RetrieveResult['gate'];
+	const verdict = opts.smallTalkGate?.(vector, bestDistance) ?? null;
+	if (verdict?.smallTalk) {
+		const info = { via: verdict.via, phraseId: verdict.phraseId, phraseSource: verdict.phraseSource, sim: verdict.sim };
+		if (!opts.forceSources) {
+			return { chunks: [], narrowScope: false, reason: 'small-talk', smallTalk: true, gate: info, bestDistance };
+		}
+		gateInfo = { ...info, overridden: true };
+	}
 
 	const chunkStmt = database.prepare<[number], ChunkRow>(
 		`SELECT c.id, c.heading_path, c.display_text, f.path, f.topic, f.depth, f.domains_json
@@ -151,6 +176,7 @@ export async function retrieve(
 			? { chunks: [], narrowScope: false, reason: 'no-embedding-match' }
 			: selectChunks(candidates, { ...opts, excludedPrefixes, k });
 	vectorResult.bestDistance = bestDistance;
+	if (gateInfo) vectorResult.gate = gateInfo;
 
 	// Only "the vector search found nothing usable". 'scope' is deliberately
 	// excluded: it means relevant content exists outside the user's chosen scope,
@@ -162,32 +188,31 @@ export async function retrieve(
 		(vectorResult.reason === 'filtered' || vectorResult.reason === 'no-embedding-match');
 	if (!wantsFallback || !hasKeywordIndex(database)) return vectorResult;
 
-	// AND first (every term must appear: precise), then OR (any term: recall).
+	// One AND pass over the current message. buildFallbackQuery is null for fewer
+	// than two content terms — a greeting, slang, a follow-up like "neden?" — since
+	// one coincidental word is not evidence (keyword-query.ts has the measurements).
 	// Same filters as the vector path; only the distance threshold is skipped.
+	const fallbackQuery = opts.keywordQuery ?? query;
+	const expr = buildFallbackQuery(fallbackQuery);
+	if (!expr) return vectorResult;
 	const pool = k * (opts.includedPaths?.length ? SCOPED_OVERFETCH_FACTOR : OVERFETCH_FACTOR);
-	const termCount = extractTerms(query).length;
-	for (const mode of ['and', 'or'] as FtsMode[]) {
-		if (mode === 'or' && termCount < 2) break; // same expression as the AND pass
-		const expr = buildFtsQuery(query, mode);
-		if (!expr) break;
-		const hits = keywordSearch(database, expr, pool);
-		const keywordCandidates: CandidateChunk[] = [];
-		for (const hit of hits) {
-			// 1, not a real distance — see RetrievedChunk.distance.
-			const c = toCandidate(hit.chunkId, 1, 'keyword');
-			if (c) keywordCandidates.push(c);
-		}
-		const found = selectChunks(keywordCandidates, { ...opts, excludedPrefixes, k });
-		logAppEvent({
-			kind: 'retrieval_fallback',
-			message: `anahtar kelime yedeği (${mode}): ${hits.length} isabet, ${found.chunks.length} kullanılabilir`,
-			mode,
-			terms: termCount,
-			hits: hits.length,
-			chunks: found.chunks.length
-		});
-		if (found.chunks.length > 0) return { ...found, keyword: true, bestDistance };
+	const hits = keywordSearch(database, expr, pool);
+	const keywordCandidates: CandidateChunk[] = [];
+	for (const hit of hits) {
+		// 1, not a real distance — see RetrievedChunk.distance.
+		const c = toCandidate(hit.chunkId, 1, 'keyword');
+		if (c) keywordCandidates.push(c);
 	}
+	const found = selectChunks(keywordCandidates, { ...opts, excludedPrefixes, k });
+	logAppEvent({
+		kind: 'retrieval_fallback',
+		message: `anahtar kelime yedeği (and): ${hits.length} isabet, ${found.chunks.length} kullanılabilir`,
+		mode: 'and',
+		terms: extractTerms(fallbackQuery).length,
+		hits: hits.length,
+		chunks: found.chunks.length
+	});
+	if (found.chunks.length > 0) return { ...found, keyword: true, bestDistance, ...(gateInfo ? { gate: gateInfo } : {}) };
 	return vectorResult;
 }
 

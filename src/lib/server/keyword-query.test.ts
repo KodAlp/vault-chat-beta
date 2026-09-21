@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import Database from 'better-sqlite3';
-import { buildFtsQuery, extractTerms, MAX_FTS_TERMS } from './keyword-query';
+import { buildFallbackQuery, buildFtsQuery, extractTerms, MAX_FTS_TERMS } from './keyword-query';
 
 test('content words survive, question words and articles are dropped', () => {
 	assert.deepEqual(extractTerms('B-tree indeksi nedir?'), ['tree', 'indeksi']);
@@ -100,4 +100,51 @@ test('hostile input never throws in FTS5 and never matches everything by injecti
 test('Turkish diacritics fold the same way FTS5 does (şeker matches seker)', () => {
 	const search = fts(['seker pancarindan uretilir', 'baska bir metin']);
 	assert.deepEqual(search(buildFtsQuery('şeker')!), [1]);
+});
+
+// ---- the fallback's acceptance gate
+
+test('the fallback needs two content terms: one stray word is not evidence', () => {
+	for (const q of ['Merhaba', 'sup', 'neden?', 'nabıyon', 'dijkstra', 'ok', '']) {
+		assert.equal(buildFallbackQuery(q), null, JSON.stringify(q));
+	}
+	assert.equal(buildFallbackQuery('FreeRTOS task scheduling'), '"freertos" AND "task" AND "scheduling"');
+	assert.equal(buildFallbackQuery('big-o notation'), '"big" AND "notation"');
+});
+
+test('greetings and slang in any language match nothing unless their words co-occur', () => {
+	// Every word below occurs somewhere in the corpus ON ITS OWN — that is what made the
+	// old OR pass return unrelated chunks for small talk — but never together in a chunk.
+	const search = fts([
+		'the dawg barked at the mailman',
+		'sup with the build pipeline',
+		'napıyon appears in this row alone',
+		'lan cable and ethernet switch',
+		'göt is in this one only',
+		'hey ho let us go',
+		'there is a bro code',
+		'a hell of a bug'
+	]);
+	const messages = ['sup dawg', 'napıyon lan göt', 'hey there bro', "what's up bro", 'what the hell', 'yo yo yo', 'Merhaba nasılsın'];
+	for (const msg of messages) {
+		const expr = buildFallbackQuery(msg);
+		if (expr === null) continue;
+		assert.deepEqual(search(expr), [], msg);
+	}
+	// the contrast that motivates the gate: OR would have returned something for these
+	assert.ok(search(buildFtsQuery('sup dawg', 'or')!).length > 0);
+	assert.ok(search(buildFtsQuery('napıyon lan göt', 'or')!).length > 0);
+});
+
+test('two terms that really co-occur do pass the gate', () => {
+	const search = fts(['TCP is a reliable transport protocol', 'protocol buffers are a serialization format', 'tcpdump captures packets']);
+	assert.deepEqual(search(buildFallbackQuery('tcp protocol')!), [1]);
+});
+
+test('the fallback expression is only quoted terms joined by AND, whatever the input', () => {
+	for (const q of ['foo" OR "bar baz', 'NEAR(a b, 5) c', 'title:secret heading_path:x', '(x AND y) NOT zz']) {
+		const built = buildFallbackQuery(q);
+		if (built === null) continue;
+		assert.match(built, /^"[\p{L}\p{N}_]+"( AND "[\p{L}\p{N}_]+")+$/u, `unsafe expression for ${JSON.stringify(q)}: ${built}`);
+	}
 });

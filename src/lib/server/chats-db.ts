@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import { chatsDbPath } from './env';
 import { ensureColumns } from './sqlite-schema';
 import { logAppEvent } from './app-log';
+import { initSmallTalkSchema } from './smalltalk-store';
 
 export interface ChatRow {
 	id: string;
@@ -99,6 +100,8 @@ export function initChatsSchema(instance: Database.Database): void {
 	// Only safe now that vault_id is guaranteed to exist, regardless of
 	// whether `chats` was just created or already existed.
 	instance.exec(`CREATE INDEX IF NOT EXISTS idx_chats_vault_id ON chats(vault_id);`);
+	// The user's own small-talk phrases (smalltalk-gate.ts): user-level like chats, not per vault.
+	initSmallTalkSchema(instance);
 }
 
 /** Separate from data/vaults/<id>/index.db on purpose — this is user
@@ -125,6 +128,9 @@ function getDb(): Database.Database {
 	db = instance;
 	return db;
 }
+
+/** The shared chats.db handle, for the small-talk store (smalltalk-runtime.ts). */
+export const getChatsDb = getDb;
 
 /**
  * Id is supplied by the caller, not generated here — the client generates it

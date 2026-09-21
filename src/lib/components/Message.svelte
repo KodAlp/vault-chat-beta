@@ -12,12 +12,18 @@
 		message,
 		vaultId,
 		streaming = false,
-		onExpandScope
+		onExpandScope,
+		onForceSources,
+		onNotRelevant
 	}: {
 		message: ChatMessage;
 		vaultId: string;
 		streaming?: boolean;
 		onExpandScope?: () => void;
+		/** Shown when no sources were looked up because the message read as small talk. */
+		onForceSources?: () => void;
+		/** Offered under a sourced answer to a short message: teaches the gate it was small talk. */
+		onNotRelevant?: () => void;
 	} = $props();
 	let html = $state('');
 
@@ -88,6 +94,23 @@
 	</div>
 	{#if message.role === 'assistant' && message.sources?.length}
 		<SourceChip sources={message.sources} {vaultId} />
+		{#if onNotRelevant && !streaming}
+			<p class="narrow-scope">
+				{#if message.taughtSmallTalk}
+					{t('Message.taught')}
+				{:else}
+					<Button variant="link" class="h-auto p-0 text-xs" onclick={onNotRelevant}>{t('Message.notRelevant')}</Button>
+				{/if}
+			</p>
+		{/if}
+	{/if}
+	{#if message.role === 'assistant' && message.smallTalk && !streaming}
+		<p class="narrow-scope">
+			{t('Message.smallTalk')}
+			{#if onForceSources}
+				<Button variant="link" class="h-auto p-0 text-xs" onclick={onForceSources}>{t('Message.forceSources')}</Button>
+			{/if}
+		</p>
 	{/if}
 	{#if message.role === 'assistant' && message.narrowScope && !streaming}
 		<p class="narrow-scope">

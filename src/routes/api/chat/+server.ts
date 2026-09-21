@@ -18,6 +18,7 @@ import {
 } from '$lib/server/resume-plan';
 import { isNearCtxLimit } from '$lib/server/providers/ollama-usage';
 import { chatRetrievalK } from '$lib/server/env';
+import { afterSmallTalkGate, checkSmallTalk } from '$lib/server/smalltalk-runtime';
 import { createChat, getChat, insertMessage, updateMessage, touchChat } from '$lib/server/chats-db';
 import { generateTitle } from '$lib/server/title';
 import { vaultFromId } from '$lib/server/requestVault';
@@ -128,6 +129,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			let isNewChat = false;
 			let sources: RetrievedChunk[] = [];
 			let narrowScope = false;
+			let smallTalk = false;
 			let finalContent = '';
 			let finalThinking = '';
 			// Set at the bottom of the retry loop, read at the top — lets the
@@ -208,10 +210,16 @@ export const POST: RequestHandler = async ({ request }) => {
 						domains: body.domains,
 						includedPaths: body.includedPaths,
 						k: chatRetrievalK(),
-						keywordFallback: true
+						keywordFallback: true,
+						// The newest message alone, not the multi-turn vector query: see retrieve.ts.
+						keywordQuery: lastUser.content,
+						// Greetings/slang/tests get no sources (smalltalk-gate.ts); "Yine de kaynak ara" bypasses it.
+						smallTalkGate: checkSmallTalk,
+						forceSources: body.forceSources === true
 					});
 					sources = result.chunks;
 					narrowScope = result.narrowScope;
+					smallTalk = result.smallTalk === true;
 					logAppEvent({
 						kind: 'retrieval',
 						chatId,
@@ -219,8 +227,19 @@ export const POST: RequestHandler = async ({ request }) => {
 						chunks: sources.length,
 						reason: result.reason,
 						bestDistance: result.bestDistance === undefined ? undefined : Math.round(result.bestDistance * 1000) / 1000,
-						keyword: result.keyword ?? false
+						keyword: result.keyword ?? false,
+						...(result.gate
+							? {
+									smallTalk,
+									gateSim: Math.round(result.gate.sim * 1000) / 1000,
+									gateVia: result.gate.via,
+									gatePhraseId: result.gate.phraseId,
+									gateOverridden: result.gate.overridden === true
+								}
+							: {})
 					});
+					// Hits, learning and override bookkeeping never make the answer wait.
+					if (result.gate) afterSmallTalkGate(result.gate, lastUser.content);
 				}
 				const caps = await modelCaps(body.provider, body.model);
 				const toolsEnabled = caps.tools && hasFetchableFolderSkills('chat');
@@ -589,7 +608,7 @@ export const POST: RequestHandler = async ({ request }) => {
 				}
 				if (!exhaustedEmpty) {
 					const hedges = computeHedges();
-					send({ type: 'done', sources, narrowScope, hedges: hedges.length ? hedges : undefined });
+					send({ type: 'done', sources, narrowScope, smallTalk: smallTalk || undefined, hedges: hedges.length ? hedges : undefined });
 				}
 			} catch (err) {
 				// User-initiated stop (interrupt button / navigation) — propagates from

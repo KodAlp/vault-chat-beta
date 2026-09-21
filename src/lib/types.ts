@@ -29,7 +29,21 @@ export interface RetrieveResult {
 	/** Set only when chunks is empty — which of retrieve()'s empty-return
 	 * paths produced it, for app-log.ts's no_sources record. 'scope' is the
 	 * log-side counterpart of narrowScope=true. */
-	reason?: 'unindexed' | 'no-embedding-match' | 'filtered' | 'scope';
+	reason?: 'unindexed' | 'no-embedding-match' | 'filtered' | 'scope' | 'small-talk';
+	/** True when the message was judged small talk (a greeting, slang, a test) and
+	 * retrieval was skipped on purpose — no sources, and the UI says why. Only ever
+	 * set with opts.smallTalkGate (the chat route). */
+	smallTalk?: boolean;
+	/** Why the small-talk gate flagged the message; `overridden` when the user asked
+	 * for sources anyway ("Yine de kaynak ara") and retrieval ran regardless. Logging
+	 * and the route's learning step read it; the client never needs it. */
+	gate?: {
+		via?: 'personal' | 'seed';
+		phraseId?: number;
+		phraseSource?: 'seed' | 'auto' | 'user';
+		sim: number;
+		overridden?: boolean;
+	};
 	/** True when the vector search came back empty and these chunks are the
 	 * keyword fallback's (F5). Only ever set with opts.keywordFallback. */
 	keyword?: boolean;
@@ -56,6 +70,11 @@ export interface ChatMessage {
 	 * when retrieve() found relevant chunks but a scope filter excluded all
 	 * of them. Drives Message.svelte's "kapsamı genişlet?" suggestion. */
 	narrowScope?: boolean;
+	/** Mirrors RetrieveResult.smallTalk: no sources were looked up because the
+	 * message read as small talk. Drives Message.svelte's "Yine de kaynak ara". Client-only. */
+	smallTalk?: boolean;
+	/** Client-only: the user pressed "Kaynaklar alakasız" on this answer. */
+	taughtSmallTalk?: boolean;
 	/** Hedge/uncertainty phrases detected in this message's `thinking` text
 	 * (see $lib/server/hallucination.ts) — only ever populated when the
 	 * message was generated with think mode on. Empty/absent means no
@@ -98,6 +117,9 @@ export interface ChatRequestBody {
 	vault?: string;
 	/** Tri-state source-tree selection (Faz 9 UI) — omitted means "all". */
 	includedPaths?: string[];
+	/** "Yine de kaynak ara": retrieve even if the small-talk gate would skip it, and
+	 * record that this message is a question. */
+	forceSources?: boolean;
 }
 
 export interface OllamaModel {
@@ -135,7 +157,7 @@ export type StreamEvent =
 	 * read_skill_file tool — see /api/chat/+server.ts's tool hop-loop. */
 	| { type: 'toolCall'; skill: string; path: string }
 	| { type: 'toolResult'; skill: string; path: string; ok: boolean; error?: string }
-	| { type: 'done'; sources: RetrievedChunk[]; narrowScope?: boolean; hedges?: string[] }
+	| { type: 'done'; sources: RetrievedChunk[]; narrowScope?: boolean; smallTalk?: boolean; hedges?: string[] }
 	| { type: 'error'; message: string }
 	/** A U+FFFD (corrupted-output) retry is starting — the client must
 	 * discard whatever partial content/thinking it already rendered for
