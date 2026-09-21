@@ -572,6 +572,11 @@
 		"resultTitle": "Result: {score}%",
 		"yourAnswer": "Your answer:",
 		"emptyAnswer": "(empty)",
+		"flagItem": "This question is faulty",
+		"flaggedNote": "Marked as faulty: it will not be asked again and is excluded from the score and your learning data.",
+		"unflag": "Undo",
+		"flagFailed": "Could not save the flag.",
+		"scoreExcludingFlagged": "excluding {count} faulty question(s)",
 		"correctAnswer": "Correct answer:",
 		"modelFeedback": "Model feedback:",
 		"viewFailed": "Couldn't display the quiz: {error}"

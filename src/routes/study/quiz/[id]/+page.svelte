@@ -6,6 +6,7 @@
 	import { libraryViewerUrl } from '$lib/sourceLink';
 	import { resolveBackHref } from '$lib/back-link';
 	import { t } from '$lib/i18n/index.svelte';
+	import { scoreExcludingFlagged } from '$lib/study-answers';
 	import type { PageProps } from './$types';
 	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
 	import CheckIcon from '@lucide/svelte/icons/check';
@@ -44,6 +45,26 @@
 			optionsHtml: string[] | null;
 		}[]
 	>([]);
+
+	let flagError = $state('');
+	// The score with faulty-flagged questions out of numerator and denominator (a wrong answer key must not count against you).
+	let adjusted = $derived(result ? scoreExcludingFlagged(renderedResults.map((r) => r.item)) : null);
+
+	async function toggleFlag(r: (typeof renderedResults)[number]) {
+		const next = !r.item.flagged;
+		flagError = '';
+		try {
+			const res = await fetch(`/api/study/quizzes/${data.quizId}/items/${r.item.itemId}`, {
+				method: 'PATCH',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ vault: data.vaultId, flagged: next })
+			});
+			if (!res.ok) throw new Error();
+			r.item.flagged = next;
+		} catch {
+			flagError = t('QuizStudyPage.flagFailed');
+		}
+	}
 
 	let questionHtml = $state('');
 	let optionsHtml = $state<string[]>([]);
@@ -230,7 +251,13 @@
 			{/if}
 		</div>
 	{:else if phase === 'results' && result}
-		<h1>{t('QuizStudyPage.resultTitle', { score: Math.round(result.score * 100) })}</h1>
+		<h1>{t('QuizStudyPage.resultTitle', { score: Math.round((adjusted?.score ?? result.score) * 100) })}</h1>
+		{#if adjusted && adjusted.excluded > 0}
+			<p class="score-note">{t('QuizStudyPage.scoreExcludingFlagged', { count: adjusted.excluded })}</p>
+		{/if}
+		{#if flagError}
+			<p class="status error" role="alert">{flagError}</p>
+		{/if}
 		<div class="results">
 			{#each renderedResults as r (r.item.itemId)}
 				<div class="result-item" class:correct={r.item.isCorrect} class:incorrect={!r.item.isCorrect}>
@@ -279,6 +306,14 @@
 						{/if}
 
 						<div class="explanation markdown-body">{@html r.explanationHtml}</div>
+						<div class="flag-row">
+							<button type="button" class="flag-btn" onclick={() => toggleFlag(r)}>
+								{r.item.flagged ? t('QuizStudyPage.unflag') : t('QuizStudyPage.flagItem')}
+							</button>
+							{#if r.item.flagged}
+								<span class="flagged-note">{t('QuizStudyPage.flaggedNote')}</span>
+							{/if}
+						</div>
 						{#if r.item.modelFeedback}
 							<div class="model-feedback">
 								<strong>{t('QuizStudyPage.modelFeedback')}</strong>
@@ -620,6 +655,38 @@
 	}
 
 	.source-link:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
+	}
+
+	.score-note {
+		margin: -1rem 0 1.25rem;
+		font-size: 0.8rem;
+		color: var(--color-muted-foreground, #666);
+	}
+
+	.flag-row {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		gap: 0.6rem;
+		margin-top: 0.5rem;
+		font-size: 0.78rem;
+		color: var(--color-muted-foreground, #666);
+	}
+
+	.flag-btn {
+		border: none;
+		background: transparent;
+		padding: 0;
+		font: inherit;
+		color: inherit;
+		text-decoration: underline;
+		text-underline-offset: 2px;
+		cursor: pointer;
+	}
+
+	.flag-btn:focus-visible {
 		outline: 2px solid var(--accent);
 		outline-offset: 2px;
 	}
