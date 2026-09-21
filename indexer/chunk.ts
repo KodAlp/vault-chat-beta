@@ -16,6 +16,9 @@ export interface Frontmatter {
 	topic?: string;
 	domains?: string[];
 	depth?: string;
+	/** Raw YAML value, whatever shape it has (a list of wikilinks, a nested list, a string) —
+	 * indexer/prerequisites.ts turns it into note names. */
+	prerequisites?: unknown;
 }
 
 const TARGET_CHARS = 1400; // ~350 tokens, chars/4 estimate

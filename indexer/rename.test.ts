@@ -11,7 +11,7 @@ function tmpDbPath(): string {
 	return path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'vc-rename-')), 'index.db');
 }
 const zero = () => Array.from({ length: EMBED_DIMS }, () => 0);
-const file = (p: string): FileRow => ({ path: p, sha256: 'x', mtime: 1, topic: 't', depth: 'undergrad', domains_json: '[]' });
+const file = (p: string): FileRow => ({ path: p, sha256: 'x', mtime: 1, topic: 't', depth: 'undergrad', domains_json: '[]', prerequisites_json: '[]' });
 const chunk = (p: string, text: string) => ({ insert: { path: p, heading_path: 'h', display_text: text }, embedding: zero() });
 const paths = (db: Database.Database, table: 'files' | 'chunks') =>
 	(db.prepare(`SELECT DISTINCT path FROM ${table} ORDER BY path`).all() as { path: string }[]).map((r) => r.path);
