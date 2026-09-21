@@ -7,6 +7,7 @@ import {
 	finishAttempt
 } from '$lib/server/study-db';
 import { gradeOpenAnswer } from '$lib/server/grade-open';
+import { isAnswered } from '$lib/study-answers';
 import { vaultFromId } from '$lib/server/requestVault';
 import type { AttemptResultItem, SubmitAttemptRequest, SubmitAttemptResponse } from '$lib/types';
 
@@ -27,7 +28,12 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
 		let isCorrect: boolean;
 		let modelFeedback: string | null = null;
 
-		if (item.type === 'open') {
+		if (!isAnswered(answer.given)) {
+			// Skipped: the page sends every question on finish, blanks included. A blank is never
+			// correct and never goes to the model — it used to, and the grader approved 6 of 21 blank
+			// open answers ("Doğru cevap!" for an answer nobody wrote). See study-answers.ts.
+			isCorrect = false;
+		} else if (item.type === 'open') {
 			// Never graded by code — the skill requires the model here, clearly
 			// labeled in the UI as "model değerlendirmesi".
 			const grade = await gradeOpenAnswer(
