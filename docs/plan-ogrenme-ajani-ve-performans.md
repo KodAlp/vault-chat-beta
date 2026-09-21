@@ -729,8 +729,8 @@ olmadan değerlendirilemez). Kazancı bugün için **kanıtlanmış değil**; as
   sözcük atılır, en çok 12 terim.
 - `retrieve()`: `opts.keywordFallback` (**varsayılan kapalı; yalnızca sohbet açar** — üreticiler
   açmaz: alıntıladıkları parçanın mesafeyle doğrulanmasına dayanırlar). Yalnızca `filtered` /
-  `no-embedding-match` sonrası; `scope` **değil** (o "kapsamı genişlet?" demek). Önce AND, sonra
-  OR. Mesafe eşiği atlanır; kapsam, alan, gizli klasör ve dosya başı 3 sınırı aynen. `chunks_fts`
+  `no-embedding-match` sonrası; `scope` **değil** (o "kapsamı genişlet?" demek). **Tek AND geçişi,
+  yalnızca güncel mesajda, en az 2 terimle** (bkz. "Sonradan bulunan sorun"). Mesafe eşiği atlanır; kapsam, alan, gizli klasör ve dosya başı 3 sınırı aynen. `chunks_fts`
   yoksa sessizce kapalı.
 - Günlük: `retrieval` (parça sayısı, `reason`, en iyi mesafe, `keyword`) — **sohbet ilk kez bunu
   yazıyor** — ve `retrieval_fallback` (`mode`, terim, isabet). Yalnızca sayılar.
@@ -746,11 +746,72 @@ yedek tetiklenmiyor.
 
 - **Çapraz dil:** korpus 329 İngilizce / 1 Türkçe, sorgular Türkçe ⇒ eşleşme yalnızca ortak
   terimlerde (B-tree, TCP, kimlik adları, sayılar) çalışır. Sorguyu yeniden formüle etmek LLM
-  çağrısı ister; yapılmadı — yol haritasının "3 iterasyon"u yerine AND→OR iki geçiş.
+  çağrısı ister; yapılmadı — yol haritasının "3 iterasyon"u yerine tek AND geçişi.
 - **Uygulama indeksi salt okunur açıyor**, tabloyu kendisi oluşturamaz: **mevcut indeks için
-  `npm run index -- --fts`** (yalnızca doldurma, gömme yok) çalıştırılmalı; çalıştırılana kadar
-  yedek kapalı ve hiçbir şey bozulmaz. **Gerçek indekste henüz çalıştırılmadı** (kullanıcı onayı
-  bekliyor).
+  `npm run index -- --fts`** (yalnızca doldurma, gömme yok) çalıştırılmalı. **Gerçek indekste
+  çalıştırıldı (2026-09-21, kullanıcı):** `data/vaults/default/index.db`, chunks = chunks_fts = 2 161,
+  yetim 0.
+
+**Sonradan bulunan sorun: selamlaşmada alakasız kaynak (2026-09-21).** `--fts` açıldıktan sonra kullanıcı
+"Merhaba" yazdı; kaynak listesi bir SvelteKit notuna gitti **ve model bunu cevaba işledi** ("Sizden
+bahsettiğiniz içerik, web temelleri ve Svelte'in derleme zamanı felsefesi ile ilgilidir"). Neden: vektör yolu
+selamlaşmada boş döner (yukarıdaki 5/93), yedek tam o anda çalışır, "merhaba" korpusta rastlantıyla tek bir
+chunk'ta geçer ve anahtar kelime isabeti mesafe eşiğini atlar. Sorgu son 3 kullanıcı turundan kurulduğu
+için önceki yazım hatalı tur ("Meerhaba") ikinci terim olup OR kipini açmıştı (günlük: `and:0 → or:1`).
+
+İlk düzeltme (selamlaşma sözcüklerini durak listesine eklemek) **bırakıldı**: dil ve slang'e bağlı ("sup dawg",
+"napıyon lan"), her dil için sürdürülemez. Yerine dilden bağımsız bir **kabul kapısı**
+(`keyword-query.ts` `buildFallbackQuery`): tek bir rastlantısal sözcük kanıt değildir, aynı chunk'ta ≥2 ayrık
+terimin birlikte geçmesi kanıttır. Yani **yalnızca AND ve ≥2 terim**; OR kaldırıldı; yedek sorgusu çok turlu
+vektör sorgusu değil **yalnızca güncel kullanıcı mesajı** (`retrieve` `keywordQuery`).
+
+| Gerçek indekste ölçüm (salt okunur) | Sonuç |
+|---|---|
+| Çok dilli 24 slang/selamlaşma mesajı, eski OR geçişi | **12 / 24** alakasız chunk'a isabet ("what the hell" 1 923, "hey there buddy" 105) |
+| Aynı mesajlar, yeni kapı (32 mesajlık genişletilmiş batarya) | **0 / 32** isabet; 12'sinde yedek hiç çalışmıyor |
+| Başlık-eşleşmesi kapısı (elenen aday) | 6 / 24 sızdırıyor |
+| Gerçek çok terimli İngilizce sorgular ("FreeRTOS task scheduling", "big-o notation", "B-tree insert") | hâlâ isabet (9 / 14 / 62) |
+| Kullanıcının 266 gerçek mesajı | 234'ü kapıdan geçiyor, yalnızca **3'ünde** birlikte-geçen isabet var |
+
+**Bedel açıkça:** Türkçe sorular İngilizce korpusta iki terimle birleşmediği için yedek, karma-dil sorularda
+pratikte neredeyse hiç çalışmaz; yalnızca kesin çok terimli eşleşmeleri kurtarır ve sohbetin dışında durur.
+Faydası zaten ölçülmemişti (gerçek bir soruyu kurtardığı olay: 0); zararı gösterilmişti. Kalite için hibrit
+sıralama F9 ölçümüne bağlı. Doğrulama: 297/297 test, `svelte-check` 0 hata. Ollama'lı uçtan uca yeniden deneme
+yapılmadı (kullanıcı "Merhaba" / "sup dawg" ile deneyecek).
+
+**Kaynaksız sohbet kapısı — vektör yolu (2026-09-21).** Yukarıdaki kapı yalnızca *yedek* yolu düzeltti; kullanıcının
+gerçek denemesi ("Naber lan tipine çaktığım") **vektör aramasının kendisinin** sohbete de 6 kaynak getirdiğini gösterdi (mesafe
+0,535 — gerçek sorulardan iyi; `keyword=false`) ve model kaynakları cevaba işledi. Mesafe ayırt etmiyor (sohbet 0,494–0,651, gerçek
+sorular 0,318–0,569), durak listesi her dil ve slang için yanlış olur; bu yüzden kapı, `retrieve()`'in zaten hesapladığı sorgu
+vektörünü bilinen sohbet ifadeleriyle karşılaştırır (`smalltalk-gate.ts`, saf; `smalltalk-store.ts`, `chats.db` — kullanıcı düzeyi,
+vault'tan bağımsız; `smalltalk-runtime.ts`, yapıştırıcı). Karar: sohbet ise **kaynak aranmaz**, arayüz "Sohbet olarak algılandı,
+kaynak aranmadı · Yine de kaynak ara" der.
+
+| Ölçüm (gerçek vault, bge-m3, 2 016 negatif = 252 not başlığı × 8 biçim; 95 held-out sohbet) | Sonuç |
+|---|---|
+| İlk aday kural (tohum ≥ 0,65, korpus mesafesi ≥ 0,5) | 53/95 yakalar ama **13/2016 yanlış** (%0,64) — hep selamlaşma önekli tek sözcüklük konu ("selam asm nedir") → plan kriteri "0" sağlanmadı |
+| Seçilen tohum kuralı: benzerlik ≥ **0,78**, korpus mesafesi ≥ 0,45 | **0/2016 yanlış**, marj 0,054; sohbetin 23/95'i (%24) — tohumlar yalnızca standart selamlaşmayı ilk seferde yakalar |
+| Kişisel kayıt (kullanıcının kendi ifadesi): benzerlik ≥ **0,82** | 0/2016 yanlış, marj 0,094; yalnızca önceden görülenleri/varyantlarını yakalar ("Merhabaa" 0,91, "napıyon lan" 0,89) |
+| Çok turlu pencere ("türev nedir \| devam et") | 0,34 → kaynaklar korunur (kapı, birleşik sorgu vektörüne uygulanır) |
+| Tur başına maliyet | ≈ 0 (ek model çağrısı yok, birkaç yüz kosinüs); sohbet turunda ≈ 1,3–1,7 sn prefill tasarrufu; tohumlar bir kez ~3 sn, arka planda |
+
+**Öğrenme.** Tohum bir mesajı yakalarsa (yalnızca en yeni, ≤ 80 karakterlik mesaj) otomatik kaydedilir. Kaçanları ("sup dawg",
+"Naber lan tipine çaktığım" — tohum eşiğinin altında) tohum yakalamadığı için otomatik öğrenilemez: cevabın altındaki **"Kaynaklar
+alakasız"** düğmesi öğretir. **Geri alma:** "Yine de kaynak ara" kapıyı atlar, mesajı *onaylı soru* olarak kaydeder (benzer her
+mesaj bir daha sohbet sayılmaz) ve yanlış işaretleyen **öğrenilmiş** ifadeyi kapatır — tek bir mesaj yerleşik (tohum) ifadeyi
+kapatmaz. Ayarlar → "Sohbet ifadeleri": liste, tek tek silme, hepsini temizleme. Kapatma anahtarı: `CHAT_SMALLTALK_GATE=0`.
+
+**Doğrulama.** 325/325 test, `svelte-check` 0 hata; izole sunucuda (kopya indeks, ayrı `chats.db`) gerçek `/api/chat` üzerinden 12/12
+senaryo: soğuk başlangıç (ilk tur beklemez, tohum arka planda), "Merhaba" → kaynaksız, yeni slang ilk seferde sızar, öğretildikten
+sonra ve varyantı ("naber lan gööt") kaynaksız, "Selam bana türev anlat" / "dijkstra algoritması nasıl çalışır" / "türev nedir →
+devam et" **kaynaklı**, "Yine de kaynak ara" sonrası aynı mesaj bir daha sohbet sayılmıyor, temizleyince bellek gerçekten boşalıyor.
+
+**Sınırlar (bilinmeli).** Yeni bir slang cümlesi ilk seferde sızar (örn. temizlenmiş bellekle "Naber lan göt" 6 kaynak getirdi ve model
+kaynaklardan özet uydurdu) — öğretilene kadar. Recall sayıları iyimser (eşikler veriyi gördükten sonra seçildi); güvenilecek olan
+yanlış-işaret sayıları. Yanlış işaret sessizce topraksız cevap demektir; bu yüzden "Yine de kaynak ara" ve kayıtlar var
+(`retrieval` günlüğünde `gateSim`/`gateVia`/`gateOverridden`, metin yok). Yeni bir eşiği yeniden doğrulamadan gevşetme.
+"Yine de kaynak ara" v1'de aynı soruyu ikinci kez bir tur olarak gönderir (kullanıcı mesajı iki kez görünür). `smallTalk` bayrağı
+sohbet yüklenirken geri gelmez (`narrowScope` gibi kalıcı değil).
 
 **F12 aşama 5** bu tablonun üstüne kurulabilir — birlikte planlanmalı.
 
