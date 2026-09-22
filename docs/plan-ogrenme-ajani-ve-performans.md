@@ -1076,94 +1076,61 @@ Spec 12 kategori istiyor; doc'un F9 stub'ı 8'e daraltmıştı. **Kullanıcı bu
 
 ---
 
-## 5.5. F14 — API sağlayıcı model listesi · spec dışı yan görev
+## 5.5. F14 — API sağlayıcı model listesi · spec dışı yan görev · ✅ F14-1..4 yapıldı (2026-09-22)
 
 **Sorun.** Groq / OpenRouter / Google AI Studio gibi kanallarda seçim listesi işlevsiz
 modellerle doluyor: kullanımdan kalkmış sürümler, embedding modelleri, VLM/TTS girdileri,
 eski flash'lar. Liste hardcoded olmamalı, otomatik güncellenmeli.
 
-Kod okunarak doğrulanmış iki düzeltme — ikisi de kapsamı değiştiriyor:
+**Kapsam kararı (kullanıcı, 2026-09-22):** F14-1..4 bu turda yapıldı; **F14-5 bilerek ayrı bırakıldı** — ana hattı etkiliyor (`modelCaps`) ve kendi başına bir gizlilik kararı gerektiriyor: bulut sağlayıcılara `read_skill_file` açılırsa kullanıcının skill dosyası içeriği üçüncü taraf API'sine gider. Kullanıcının kararı: bu **açılıp kapatılabilir bir kullanıcı ayarı** olmalı (sabit açık ya da sabit kapalı değil) — F14-5 kendi turunda, bu ayarın tasarımıyla birlikte ele alınacak.
 
-> **Checkbox listesi diye bir şey yok.** İki ayar sayfasında `checkbox` geçmiyor.
-> Bugünkü kontrol, sağlayıcı başına **tek seçimlik** `defaultModel` select'i
-> (`settings/providers/+page.svelte:405-419`) artı dört dropdown. Yani bu iş "mevcut
-> listeyi filtrele" değil; **çoklu seçim arayüzü de yazılacak.**
+Kod okurken doğrulanan iki düzeltme (ikisi de kod hâlâ doğru çıktı, spot-check yapıldı) uygulamayı yönlendirdi:
 
-> **`ctx` ve `caps` ölü yük.** `ProviderModelOption.ctx`/`caps`
-> (`src/lib/types.ts:489-495`) hiçbir `.svelte` dosyasında ve sunucuda okunmuyor.
-> Uydurma `ctx: 8192` bugün **yanlış karar üretmiyor** — tüketicisi olmayan bir kurgu.
-> Onu düzeltmek ancak `modelCaps` bu veriyi okumaya başlarsa kazanca döner (F14-5).
+> **Checkbox listesi diye bir şey yoktu.** Bugünkü kontrol sağlayıcı başına **tek seçimlik** `defaultModel` select'iydi. Bu iş "mevcut listeyi filtrele" değildi; **çoklu seçim arayüzü de yazıldı** (F14-4).
 
-### F14-1 — dürüst `listModels()` + timeout · en ucuz parça
+> **`ctx`/`caps` ölü yüktü** (hiçbir tüketicisi yok) — F14-5'e bırakıldığı için bu turda dokunulmadı, hâlâ ölü yük.
 
-`openai-compat.ts:422-437` yanıttan yalnızca `id` alıyor; `owned_by`, `created`,
-`context_length`, OpenRouter'ın `architecture.modality`/`supported_parameters`,
-Gemini'nin `supportedGenerationMethods` alanları çöpe gidiyor.
+### F14-1 — dürüst `listModels()` + timeout · ✅ yapıldı
 
-Ayrıca `:426`'daki `fetch`'in **signal'i yok** — kardeşi `health()` (`:441-443`)
-`AbortSignal.timeout(connectMs)` kullanıyor. `models/+server.ts:14` `Promise.all`
-olduğu için **tek takılı sağlayıcı tüm model endpoint'ini süresiz kilitliyor.**
-Filtrelemeden bağımsız gerçek bir hata.
+`openai-compat.ts`'in `listModels()`'ı artık `AbortSignal.timeout(connectMs)` kullanıyor (kardeşi `health()` ile aynı desen — tek takılı sağlayıcının `Promise.all`'ı süresiz kilitlemesi düzeldi) ve `created` alanını (OpenAI-uyumlu `/models`'ın standart alanı) `ModelInfo`'ya taşıyor — katalogda eşleşmeyen modeller için yaş filtresinin yedek sinyali. +4 test (`openai-compat.test.ts`, fetch enjekte edilerek, gerçek ağ çağrısı yok).
 
-### F14-2 — katalog + cache
+### F14-2 — katalog + cache · ✅ yapıldı
 
-Canlı `/models` (anahtarla gerçekten çağrılabilenler) × katalog metadatası kesişimi;
-hardcoded model adı listesi tutulmaz. Kaynaklar, ham JSON çekilerek doğrulandı:
+**Gerçek API'lere karşı doğrulandı** (anahtarsız, salt okunur çekim): OpenRouter `/api/v1/models` 444 model döndü (`architecture.output_modalities`, `supported_parameters` — "tools" varsa araç desteği var, `created`, `context_length`, gerçek alan adları teyit edildi); `models.dev/api.json` 223 sağlayıcı anahtarı, bizim 6 sağlayıcımızdan 5'i (`groq`, `google`, `anthropic`, `deepseek`, `mistral`) birebir eşleşti (`openrouter` zaten kendi kataloğuyla eşleşiyor, `ollama` hiç aranmıyor — aşağıya bak). `status` alanı yalnızca bazı modellerde var (`'deprecated'`/`'beta'`, yoksa stabil); Google'ın canlı `/models` yanıtının `models/` önekini modele.dev'in önekiz id'leriyle eşleştirmek için **id normalize edici** eklendi (`normalizeModelId`).
 
-| Kaynak | Ne veriyor |
-|---|---|
-| OpenRouter `/api/v1/models` | 446 model; `architecture.output_modalities`, `supported_parameters`, `context_length`, `created`. **Anahtar gerekmiyor.** |
-| `models.dev/api.json` | Groq, Google, Mistral, DeepSeek, Anthropic, OpenAI; `modalities`, `tool_call`, `reasoning`, `release_date`, `limit.context`, `status` (`beta`/`deprecated`) |
+`src/lib/server/providers/model-catalog.ts`: iki kaynak, her biri kendi timeout'u + try/catch'iyle (asla throw etmez). Disk cache `data/model-catalog.json`, 24 saat TTL, `registry.ts`'in mtime-cache okuma mantığıyla aynı ruhta ama kendi basit tmp+rename yazıcısıyla (vaults.ts'in tam retry-döngüsü **bilerek kopyalanmadı** — bu yalnızca bir önbellek, bozulursa bir sonraki çağrıda kendi kendine yeniden çekilir, kalıcı kullanıcı verisi değil). Çekim başarısız olursa eski (stale) cache'e düşer, o da yoksa boş kataloğa — dış API hiçbir zaman uygulamayı bloklamaz, API anahtarı hiçbir yere gönderilmez. +8 test, gerçek OpenRouter/models.dev örnek verisinden alınmış gerçek alan adlarıyla (uydurma şekil değil).
 
-**TTL'li ya da diske yazan cache bu repoda hiç yok** (`ttl|maxAge|expiresAt` araması
-boş) — bu yeni altyapı. Yeniden icat edilmeyecekler: `registry.ts:13-41`
-mtime-anahtarlı cache deseni, `vaults.ts:92-108` atomik tmp+rename yazıcısı (Windows
-EPERM retry'lı), `app-log.ts`.
+### F14-3 — filtre kuralları · ✅ yapıldı
 
-### F14-3 — filtre kuralları
+`src/lib/server/providers/model-filter.ts` (saf, +9 test): katalogda eşleşen bir model metin-çıktısı yoksa VEYA deprecated'sa VEYA yaş eşiğinden eskiyse **tamamen elenir**; eşleşen ve geçen **approved**; katalogda **hiç eşleşmeyen** — silinmez — **"other"**'a düşer. Yaş eşiği `MODEL_MAX_AGE_MONTHS` ortam değişkeni, varsayılan 12 (kullanıcı kararıyla zaten kapanmıştı).
 
-Metadata üzerinden, isim listesiyle değil:
+**`ollama` sağlayıcısı bu filtreden geçmiyor, bilerek.** Ollama'nın zaten kendi metadata kaynağı var (`ollama.ts`'in `MODEL_FAMILY_TABLE`'ı — `embeddingOnly`/`ctx`/`caps`); yerel modellerde "deprecated"/"çok eski" kavramı da yok ve hiçbir dış katalogda da bulunmuyorlar (o kataloglar yalnızca bulut API'lerini kapsıyor) — kataloğa sorulsaydı her Ollama modeli yanlış nedenle "other"a düşerdi. Ollama'nın embedding-olmayan her modeli olduğu gibi "approved" sayılıyor (F14 öncesiyle aynı davranış).
 
-- metin çıktısı olmayanlar (embedding / tts / görsel / video) elenir
-- `deprecated` ve süresi geçmiş olanlar elenir
-- `release_date` eşiğinden eski olanlar elenir — varsayılan 12 ay, ayarlanabilir
-- katalogla eşleşmeyenler **silinmez**, kapalı bir "Diğer" grubunda kalır
+**Gerçek katalog verisiyle ölçüldü** (models.dev'in kendi model listesi, provider başına — canlı authenticated `/models` çağrısı YAPILMADI, kullanıcının API kotasını harcamamak için; bu yüzden sayılar "kataloğun o sağlayıcı için bildiği model sayısı", "o sağlayıcının şu an gerçekten döndürdüğü model sayısı" değil — ikisi arasındaki fark canlı bir çağrı gerektirir):
 
-Bugünkü tek filtre `!m.embeddingOnly` (`api/providers/models/+server.ts:25`) ve
-`embeddingOnly` yalnızca `ollama.ts`'in 3 satırlık aile tablosunda set ediliyor —
-yapısal olarak Ollama'ya özel, `ProviderModelOption`'da bile yok, yani hiçbir istemci
-yeniden filtreleyemez. **Gürültünün kaynağı tam olarak burası:** şu an açık olan iki
-bulut sağlayıcısı (`google-ai-studio`, `deepseek-api` — `data/providers.json`) hiçbir
-filtreden geçmiyor; Google `v1beta/openai` uçtan `text-embedding-004`, TTS, görsel ve
-`-vision` girdilerini `models/` önekiyle birlikte olduğu gibi döküyor.
+| Sağlayıcı | Toplam | Onaylanan | Metin-dışı | Deprecated | Çok eski |
+|---|---|---|---|---|---|
+| groq | 16 | 3 | 2 | 0 | 11 |
+| google-ai-studio | 39 | 26 | 7 | 1 | 5 |
+| deepseek-api | 4 | 4 | 0 | 0 | 0 |
+| mistral | 35 | **7** | 1 | **8** | **19** |
 
-### F14-4 — seçim durumu + UI
+Mistral'de 35 modelin 27'si (%77) elendi — gürültünün gerçekten var olduğunu doğruluyor.
 
-`providers.json`'a sağlayıcı başına `enabledModels` (`ProviderConfigEntry`,
-`config-store.ts:4-26` — bugün yalnızca `defaultModel` var). Dikkat:
-`config-store.ts:44` whole-file `writeFileSync` ve **atomik değil**; aynı dosyaya model
-seçimleri yazılacaksa `vaults.ts`'in sağlamlaştırılmış yazıcısı buraya taşınmalı.
+### F14-4 — seçim durumu + UI · ✅ yapıldı
 
-- `checkbox` bileşeni **mevcut** (`ui/checkbox/`, `indeterminate` destekli). Kopyalanacak
-  desen: `SourceTreeNode.svelte:51-58` (üç durumlu, `onCheckedChange` + stopPropagation).
-- "Diğer" grubunun kapalı durabilmesi için `collapsible`/`accordion` **yok** — elle
-  yazılır ya da `printf "y\n" | npx shadcn-svelte@latest add collapsible`
-  (`.claude/ROADMAP.md:354-358` bu yolu belgeliyor: CLI `init` bu ortamda interaktif
-  olduğu için `components.json` elle yazılmıştı).
-- Sayfanın kayıt deseni: her mutasyon **anında** `PATCH` + `await refresh()`; dirty
-  state ve Save düğmesi yok (`+page.svelte:83-95`). `enabledModels` aynı desene uyar.
-- **"Yenile" düğmesi yeni** — bugün sayfada refresh düğmesi yok, `refresh()` yalnızca
-  `onMount` ve mutasyon sonrası çağrılıyor.
-- i18n: namespace `ProvidersSettingsPage` (bugün 70 anahtar); **hem `tr.json` hem
-  `en.json`** eksiksiz (0 boş değer). Yeni anahtarlar ikisine de girer — yoksa
-  `FALLBACK_LOCALE='tr'` yüzünden İngilizce arayüzde Türkçe metin çıkar.
+`providers.json`'a sağlayıcı başına `enabledModels?: string[]` (`ProviderConfigEntry`) — yoksa/tanımsızsa filtrenin onayladığı her şey görünür; boş dizi (`[]`) "hiçbiri seçili değil" olarak **ayrıca saklanır**, `undefined`'dan (hiç düzenlenmemiş) farklı bir durum. `config-store.ts`'in `writeFile()`'ı artık `vaults.ts`'in tmp+rename+retry desenine taşındı (checkbox tıklamaları dosyayı artık daha sık yazıyor).
 
-Listeyi tüketen **beş** çağrı yeri var ve hepsi mount'ta önbelleksiz çağırıyor:
-`Chat.svelte:74`, `vault/[id]/+page.svelte:79`, `GenerationDialog.svelte:136`,
-`settings/+page.svelte:56`, `settings/providers/+page.svelte:76`. Filtrenin **sunucu
-tarafında** olması bu yüzden doğru karar.
+- Checkbox bileşeni mevcut olanı kullanıldı (`ui/checkbox/`), `SourceTreeNode.svelte`'in `checked`/`onCheckedChange` deseniyle.
+- "Diğer" grubu için yeni bir shadcn bileşeni **eklenmedi** — `ThinkingPanel.svelte`'in zaten kullandığı native `<details>`/`<summary>` deseni yeniden kullanıldı (CLI'nin bu ortamda interaktif olması sorunu bu şekilde tamamen atlandı).
+- Yeni `GET /api/providers/[id]/models` (F14'ün planındaki `models/manage?providerId=` yerine, mevcut `[id]/key`, `[id]/test` alt-rota deseniyle tutarlı) — approved + other, her biri `enabled` durumuyla etiketli. Mevcut `PATCH /api/providers/[id]` genişletildi (`enabledModels` alanı), yeni bir yazma ucu açılmadı.
+- Sayfanın kayıt deseni korundu: her checkbox tıklaması anında `PATCH` + `refresh()`.
+- Model-yönetim bölümü **tembel yükleniyor** (sayfa açılışında değil, provider kartındaki `<details>` ilk açıldığında) — katalog+filtre hesaplaması her sayfa yüklemesinde bütün sağlayıcılar için çalışmasın diye.
+- i18n: `ProvidersSettingsPage`'e 4 yeni anahtar, tr+en ikisine birden.
 
-### F14-5 — metadatayı gerçekten kullan · ana hattı ilgilendirir
+Ana `GET /api/providers/models` (5 çağrı yerinin kullandığı, `Chat.svelte` vb.) sözleşmesi **değişmedi** — artık yalnızca katalog+filtre+`enabledModels`'tan geçmiş temiz bir liste döndürüyor, hiçbir çağıran dosyaya dokunulmadı.
+
+### F14-5 — metadatayı gerçekten kullan · ana hattı ilgilendirir · **bu turda YOK, kullanıcı kararıyla ertelendi**
 
 `registry.modelCaps:137-150` `capsFor()`'u yalnızca `OllamaAdapter` için çağırıyor,
 diğer **her** sağlayıcıya sabit `{tools:false, reasoning:false}` dönüyor (`:146`).
@@ -1178,17 +1145,27 @@ Ek olarak `anthropic.ts:255-274` uydurma `ctx: 200_000` + `caps:{tools:true}` d�
 "model listesi endpoint'i yok" diyor, `:260` o endpoint'i çağırıyor, ve yorumun
 bahsettiği "statik muhafazakâr fallback" **hiç mevcut değil**.
 
+**Kullanıcı kararı (2026-09-22):** F14-5 açılırsa bile bulut sağlayıcılara `read_skill_file` erişimi **açılıp kapatılabilir bir kullanıcı ayarı olmalı** — sabit açık ya da sabit kapalı olmamalı. Bu ayarın varsayılanı, anahtarı ve nerede yaşayacağı (ayarlar sayfası, hangi kart) F14-5'in kendi turunda tasarlanacak; bu turda kod yazılmadı.
+
 ### Sınırlar
 
 - **"Top tier" hiçbir API'de yok**, öznel bir kavram. En yakın vekiller: yenilik,
   `tool_call`, `reasoning`, context boyutu.
 - `models.dev` üçüncü taraf. Kapanırsa ya da yeni model henüz eklenmemişse "Diğer"
-  grubu + ham liste devreye girer. **API anahtarı hiçbir yere gönderilmez** — yalnızca
-  herkese açık katalog çekilir.
-- Id eşleştirmesi (Google'ın `models/` öneki gibi) sağlayıcı başına doğrulanmalı.
+  grubu + ham liste devreye girer (`loadCatalog`'un stale-cache-'e-düş davranışı bunu
+  yumuşatır). **API anahtarı hiçbir yere gönderilmez** — yalnızca herkese açık katalog
+  çekilir.
+- **Id eşleştirmesi canlı authenticated `/models` çağrısına karşı doğrulanmadı** —
+  yalnızca `normalizeModelId`'nin Google `models/` önek kuralı, dokümantasyon+gerçek
+  models.dev verisinden çıkarıldı; gerçek `deepseek-api`/`google-ai-studio`
+  `listModels()` yanıtlarına karşı test edilmedi (kullanıcının API kotasını harcamamak
+  için canlı çağrı yapılmadı). F14-3'ün tablosundaki sayılar bu yüzden "kataloğun
+  bildiği model sayısı", canlı `/models`'ın döndürdüğü sayı değil.
 - Sağlayıcı/model sınırında **hiç zod yok** — her üretici şemasında ve `userSkills.ts`'de
-  var. Dış katalog verisi girerken doğrulama eklenmesi tartışılmalı.
-- `listModels()`'ı test eden **hiçbir test yok**.
+  var. Dış katalog verisi girerken doğrulama eklenmesi tartışılmalı, bu turda eklenmedi.
+- `model-catalog.json` cache dosyası `vaults.json`'ın tam EPERM-retry döngüsünü
+  **almıyor** — bilerek, bu yalnızca bir önbellek (kalıcı kullanıcı verisi değil),
+  bozulursa bir sonraki çağrıda kendiliğinden yeniden çekilir.
 
 ---
 
@@ -1283,8 +1260,9 @@ F15 ← EN SON (linklerden toplu içe aktarma, §5.6; kullanıcı kararı).
 | **Bozuk çıktıdan kaldığı yerden devam** | ✅ **Uygulandı** (§3). Yalnızca Ollama + qwen3 ailesi; başka aileye açmadan önce o modelde devam davranışı ayrıca deneyle doğrulanmalı (`prefixResume` bayrağı). Bulut sağlayıcılarda eski davranış. |
 | **F5 / gerçek indekse `--fts`** | ✅ **Uygulandı** (kullanıcı çalıştırdı, 2026-09-21): `chunks_fts` 2161 = `chunks` 2161. |
 | **Skill prompt yükü** | Ölçüldü: `educational-agent` chat başına **+1 708 token / +0.96 sn prefill** (§3). Açık bırakmak bu bedeli her turda ödemek demek; kalıcı karar kullanıcıya ait. Dosya bugün ikisi de `enabled: false` (kullanıcı arayüzden kapattı). ~700 token'ın kaynağı henüz ayrıştırılmadı. |
-| **F14 / yenilik eşiği** | **Kapandı (2026-09-21):** varsayılan 12 ay, ayarlanabilir (F14-3'teki tasarım); F14 en sona bırakıldığı için kod yok. |
-| **F14 / tool filtresi** | Açık. F14 başlamadan önce sorulacak (şimdi kod etkisi yok). |
+| **F14 / yenilik eşiği** | **Kapandı (2026-09-21):** varsayılan 12 ay, ayarlanabilir. **Uygulandı (2026-09-22):** `MODEL_MAX_AGE_MONTHS` ortam değişkeni, `env.ts`. |
+| **F14-1..4** | **Kapandı ve uygulandı (2026-09-22):** dürüst `listModels()`+timeout, katalog+cache, metadata-bazlı filtre, `enabledModels` çoklu seçim UI'ı. Bkz. §5.5. |
+| **F14-5 / bulut tool erişimi** | **Kapandı (2026-09-22):** açılırsa **açılıp kapatılabilir bir kullanıcı ayarı** olmalı, sabit açık/kapalı olmamalı. F14-5'in kendisi (kod) hâlâ yapılmadı — kendi turunda, bu ayarın tasarımıyla birlikte. |
 | **F14 / ROADMAP kaydı** | Açık; `.claude/ROADMAP.md`'ye dokunulmadı. F14 ayrıca `Faz 20` olarak girsin mi? Repoda iki bağımsız numaralandırma var (`Faz N` ROADMAP'te, `F<N>` bu belgede) ve birbirlerine hiç atıf vermiyorlar. Not: Faz 17-19 kodda var ama ROADMAP'te yok, ilk boş numara 20. |
 | **Donanım sınırı** | 6 GB VRAM'de aynı anda iki modeli GPU'da tutmak mümkün değil — router + uzman model mimarisi (1.7B routing + 8B generation) şimdilik kapsam dışı. |
 
