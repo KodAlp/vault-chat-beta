@@ -21,6 +21,8 @@ import { questionKey } from './quiz-dedupe';
 
 export interface AnswerRow {
 	itemId: string;
+	/** The quiz this question belongs to — needed to call the "Bu soru hatalı" route, which is scoped by quiz id. */
+	quizId: string;
 	/** ISO time the attempt was finished (or started, if it never was). */
 	answeredAt: string;
 	given: string;
@@ -28,6 +30,11 @@ export interface AnswerRow {
 	type: string;
 	question: string;
 	sourcePath: string;
+	headingPath: string;
+	/** The stored answer key (option text for MC, "true"/"false" for TF, the reference text for open). */
+	correctAnswer: string;
+	/** Set only for a model-graded open answer. */
+	modelFeedback: string | null;
 	/** Set when the user flagged the question as faulty. */
 	flaggedAt: string | null;
 	cognitiveLevel: string | null;
@@ -37,13 +44,23 @@ export interface AnswerRow {
 
 const TYPES: readonly string[] = ['multiple_choice', 'true_false', 'open'];
 
+/**
+ * Whether a stored answer counts as evidence at all — shared by `pickEvidence` (F1b, what the person knows) and
+ * `buildWeakSpots` (F2, where they got it wrong): both must agree on what a "real" answer is, or the two features would
+ * quietly disagree about the same row.
+ */
+export function isCountableAnswer(row: Pick<AnswerRow, 'given' | 'flaggedAt' | 'type' | 'options'>): boolean {
+	if (!isAnswered(row.given)) return false;
+	if (row.flaggedAt !== null) return false;
+	if (!TYPES.includes(row.type)) return false;
+	if (row.type === 'multiple_choice' && (!row.options || row.options.length === 0)) return false;
+	return true;
+}
+
 export function pickEvidence(rows: readonly AnswerRow[], domainsOf: (sourcePath: string) => string[]): EvidencePoint[] {
 	const latest = new Map<string, AnswerRow>();
 	for (const row of rows) {
-		if (!isAnswered(row.given)) continue;
-		if (row.flaggedAt !== null) continue;
-		if (!TYPES.includes(row.type)) continue;
-		if (row.type === 'multiple_choice' && (!row.options || row.options.length === 0)) continue;
+		if (!isCountableAnswer(row)) continue;
 		const key = `${row.sourcePath}::${questionKey(row.question)}`;
 		const prev = latest.get(key);
 		// >= so that, on identical timestamps, the row that came later in the input wins

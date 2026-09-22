@@ -180,7 +180,23 @@
 		"bandApplied": "Uygula / çözümle",
 		"bandsHint": "Yalnızca deneysel düzey etiketleriyle yazılmış sorular bu şekilde ayrılır.",
 		"howTitle": "Nasıl okunur",
-		"howBody": "Doğru cevaplar yeni oldukça (yaklaşık 45 günde sönerler) ve şansla bulunması zor oldukça daha çok sayılır: açık uçlu bir cevap, doğru/yanlış bir cevaptan daha çok sayılır. Tek bir cevap asla %100 görünmez ve bir sayı yalnızca arkasında yeterli kanıt olduğunda gösterilir. Boş bırakılan cevaplar ve hatalı diye işaretlediğin sorular yok sayılır; aynı soruyu birkaç kez cevapladıysan son cevabınla bir kez sayılır. Kart hafızası, incelediğin kartları hâlâ hatırlama olasılığıdır ve tekrar takviminden hesaplanır."
+		"howBody": "Doğru cevaplar yeni oldukça (yaklaşık 45 günde sönerler) ve şansla bulunması zor oldukça daha çok sayılır: açık uçlu bir cevap, doğru/yanlış bir cevaptan daha çok sayılır. Tek bir cevap asla %100 görünmez ve bir sayı yalnızca arkasında yeterli kanıt olduğunda gösterilir. Boş bırakılan cevaplar ve hatalı diye işaretlediğin sorular yok sayılır; aynı soruyu birkaç kez cevapladıysan son cevabınla bir kez sayılır. Kart hafızası, incelediğin kartları hâlâ hatırlama olasılığıdır ve tekrar takviminden hesaplanır.",
+		"weakSpotsTitle": "Üzerinde durulacaklar",
+		"weakSpotsEmpty": "Henüz üzerinde durulacak bir şey yok.",
+		"weakSpotsLoadFailed": "Üzerinde durulacaklar yüklenemedi.",
+		"weakSpotOpenCount": "{count} açık",
+		"weakSpotResolvedCount": "{count} çözülmüş",
+		"weakSpotForgottenCount": "{count} unutulan kart",
+		"weakSpotShowDetails": "Ayrıntıları göster",
+		"weakSpotHideDetails": "Ayrıntıları gizle",
+		"weakSpotConfusion": "Seçtin: {chose} · Doğrusu: {correct}",
+		"weakSpotResolvedNote": "Düzeltildi",
+		"weakSpotWrongCount": "{count} kez yanlış",
+		"weakSpotCardBack": "Cevap: {back}",
+		"weakSpotCardForgotten": "Şu an unutulmuş durumda",
+		"weakSpotCardRecovering": "Toparlanıyor",
+		"flagQuestion": "Bu soru hatalı",
+		"flagFailed": "İşaretlenemedi, tekrar dene."
 	},
 
 	"GenerationLayout": {

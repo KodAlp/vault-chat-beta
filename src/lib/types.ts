@@ -481,6 +481,36 @@ export type PythonSetupEvent =
 	| { type: 'done'; ok: boolean }
 	| { type: 'error'; message: string };
 
+/** GET /api/study/errors (F2). Mirrors src/lib/server/learner-errors.ts's WeakSpot/ErrorItem — kept as a separate,
+ * client-safe copy the same way LearnerProfile (learner-model.ts) is kept apart from the server's AnswerRow. */
+export interface WeakSpotView {
+	id: string;
+	sourcePath: string;
+	headingPath: string;
+	noteName: string;
+	domains: string[];
+	openErrors: number;
+	resolvedErrors: number;
+	lapsedCards: number;
+	forgottenCards: number;
+	lastSeen: string;
+	errors: WeakSpotErrorView[];
+}
+
+export interface WeakSpotErrorView {
+	kind: 'quiz' | 'card';
+	id: string;
+	quizId?: string;
+	type?: string;
+	question: string;
+	back?: string;
+	confusion: { chose: string; correct: string } | null;
+	modelFeedback?: string | null;
+	wrongCount: number;
+	resolved: boolean;
+	lastAt: string;
+}
+
 /** GET /api/providers response shape — settings/providers page's model. */
 export interface ProviderStatus {
 	id: string;

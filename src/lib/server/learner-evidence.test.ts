@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import { pickEvidence, type AnswerRow } from './learner-evidence';
 
 const row = (over: Partial<AnswerRow> = {}): AnswerRow => ({
-	itemId: 'i' + Math.random(), answeredAt: '2026-09-10T10:00:00.000Z', given: 'B', isCorrect: true, type: 'multiple_choice',
-	question: 'Hangisi doğrudur?', sourcePath: 'wiki/os/scheduling.md', flaggedAt: null, cognitiveLevel: null,
-	options: ['A', 'B', 'C', 'D'], ...over
+	itemId: 'i' + Math.random(), quizId: 'q1', answeredAt: '2026-09-10T10:00:00.000Z', given: 'B', isCorrect: true, type: 'multiple_choice',
+	question: 'Hangisi doğrudur?', sourcePath: 'wiki/os/scheduling.md', headingPath: 'Scheduling', correctAnswer: 'B', modelFeedback: null,
+	flaggedAt: null, cognitiveLevel: null, options: ['A', 'B', 'C', 'D'], ...over
 });
 const domains = (p: string) => (p.startsWith('wiki/os') ? ['os'] : []);
 
