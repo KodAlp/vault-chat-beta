@@ -1039,12 +1039,23 @@ Spec §10 modelin her önemli ifadeyi 6 sınıftan birine (FACT/INFERENCE/EXAMPL
 - `CORE_INVARIANTS`'ın yeni 2 maddesinin gerçek cevap kalitesine etkisi (modelin ne kadar uyduğu) **ölçülmedi** — yalnızca eklendi, canlı bir A/B yapılmadı.
 - Hedge rüzeti hâlâ kaba bir kelime-listesi eşleşmesi; INFERENCE/HYPOTHESIS gibi sınıfları ayırt etmiyor, yalnızca "model bir yerde belirsizlik ifadesi kullandı" diyor.
 
-### F8 — Context yönetimi (§47)
+### F8 — Context yönetimi (§47) · ✅ yapıldı, küçük savunma önlemi (2026-09-22)
 
-Bugün yalnızca `retrieval-query.ts`'te `QUERY_TURNS = 3` var; konuşma sıkıştırma
-yok. §47'nin önem sıralamasına göre koruma + sıkıştırma; kayıp görev doğruluğunu
-etkileyecek seviyeye gelirse kullanıcıyı bilgilendirme.
-**F12 ile aynı bütçeyi paylaşıyor** — birlikte ele alınmalı.
+**Ölçüm önce geldi.** `QUERY_TURNS = 3` (`retrieval-query.ts`) yalnızca *retrieval sorgusu* için — modele gönderilen konuşma geçmişi (`prompt.ts`'in `priorTurns`'ü) tamamen **sınırsızdı**: `history.slice(0, -1)`, hiç kırpma yok. Gerçek `app-log.jsonl`'ı okudum (salt okunur, 22 `llm_timing` kaydı): **`nearCtxLimit` şimdiye kadar hiç tetiklenmemiş** (0/22), en dolu prompt 5211/8192 token (~%64). Yani F8'in çözmeye çalıştığı sorun (Ollama'nın çok uzun promptu **baştan** kesip sistem kurallarını kaybetmesi) gerçek kullanımda **henüz hiç yaşanmadı** — mimari olarak mümkün ama ölçülmüş bir olay değil. Ayrıca spec'in öncelik listesi ("active plan", "user constraints" vb.) genel bir ajan için yazılmış, bu sohbet uygulamasının veri modeline doğrudan uymuyor.
+
+**Kullanıcı kararı: küçük, ucuz bir sigorta yap, tam sistemi kurma.** İki parça:
+1. **Konuşma geçmişine karakter bütçesi.** `src/lib/history-limits.ts`: `trimConversationHistory(turns, maxChars)` — en yeni turdan geriye doğru bütçeye sığdığı kadar tur tutar, en eskilerini önce düşürür (spec'in "düşük değerli eski bağlam önce sıkıştırılır" ilkesinin bu uygulamaya çevirisi: burada "aktif plan/kullanıcı kısıtı" gibi bir kavram yok, yalnızca yenilik önceliği var). En yeni tur tek başına bütçeyi aşsa bile hep tutulur (boş listeye düşmez). `MAX_HISTORY_CHARS=12000`, **ölçülmedi, tahmin edildi** — 8192 token'lık pencerede ~32.000 karakterlik toplam bütçenin makul bir dilimi (retrieval bağlamı tek başına k=6×~2000 kr = ~12.000 kr kullanabiliyor, artı sistem blokları). **Gerçek `chats.db`'de (salt okunur) sağlaması yapıldı:** en uzun sohbetler 17-26 bin karakter arası (18-19 mesaj) — yani 12.000 karakterlik bütçe gerçek veride anlamlı, ne her zaman tetiklenen aşırı küçük bir sayı ne de asla tetiklenmeyen aşırı büyük bir sayı.
+2. **`nearCtxLimit` artık yalnızca günlükte değil, arayüzde de.** `api/chat/+server.ts`: bir turdaki (yeniden deneme/araç turu dahil) herhangi bir model çağrısı sınıra yaklaştıysa `nearCtxLimit` SSE `done` olayında istemciye gidiyor. `Message.svelte`'de `.narrow-scope` ile aynı yerleşimde küçük bir uyarı: "Bu sohbet bağlam sınırına yaklaştı; … eksik bağlamla üretilmiş olabilir." `narrowScope`/`smallTalk` ile aynı iskelet: istemci-yalnız, kalıcı değil (DB'ye yazılmıyor).
+
+**Kod:** `src/lib/history-limits.ts` (+6 test), `prompt.ts` (`priorTurns` artık `trimConversationHistory` ile sınırlı), `api/chat/+server.ts` (`nearCtxLimit` değişkeni + `done` olayına eklendi), `types.ts` (`ChatMessage.nearCtxLimit`, `StreamEvent`'in `done` varyantı), `Chat.svelte` (atama), `Message.svelte` (uyarı), i18n `Message.nearCtxLimit`.
+
+**Doğrulama:** 513/513 test, svelte-check 0. Gerçek `chats.db` yalnızca okundu (yazılmadı). Gerçek tarayıcıda tıklama testi yapılmadı (aynı açık madde — bu sefer zaten tetiklenmesi için gerçekten çok uzun bir sohbet gerekiyor, gerçek veride hiç görülmedi).
+
+**Sınırlar (bilinmeli).**
+- Spec'in tam önem sıralaması (aktif plan/kullanıcı kısıtları/önemli kararlar vb.) uygulanmadı — bu sohbet uygulamasında bu kavramların çoğu yok, yalnızca yenilik-bazlı basit bir kırpma yapıldı.
+- Kırpılan geçmiş yerine modele bir not eklenmedi ("daha eski kısım kısaltıldı" gibi) — bilerek basit tutuldu, gerçek bir kırpma olayı görülüp cevapları bozduğu ölçülürse eklenebilir.
+- 12.000 karakterlik bütçe ve `nearCtxLimit` eşiği (mevcut, `ollama-usage.ts`'te) birlikte yeniden ölçülmedi — F12'nin `serveCtx`/`k=6` ölçümleriyle aynı "seçildi, doğrulanmadı" kategorisinde.
+- Bu turda hiç gerçekleşmemiş bir riske karşı yazıldı; canlıda hiç tetiklenmeyebilir — bu beklenen ve kabul edilen bir sonuç.
 
 ### F9 — Değerlendirme harness'ı (§53–61)
 
