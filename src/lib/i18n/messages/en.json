@@ -259,6 +259,24 @@
 		"importFailed": "Import failed"
 	},
 
+	"LinksImportDialog": {
+		"trigger": "Import from Links",
+		"dialogTitle": "Import from Links",
+		"dialogDescription": "PDF links go to the existing converter, web pages go through main-content extraction. Runs sequentially; links already imported successfully are skipped.",
+		"linksLabel": "Links (one per line)",
+		"linksPlaceholder": "https://...\nhttps://...",
+		"domainLabel": "Target folder",
+		"start": "Start",
+		"scanning": "Scanning...",
+		"processingLink": "Processing: {fileName}",
+		"filesProcessed": "{count} links processed...",
+		"statusConverted": "imported",
+		"statusSkipped": "skipped",
+		"statusNeedsReview": "needs review",
+		"statusFailed": "failed",
+		"importFailed": "Import failed"
+	},
+
 	"LibraryTree": {
 		"loadError": "Couldn't load the library.",
 		"empty": "The library is empty. Upload a document, or import an Obsidian vault from Settings → Library."
@@ -432,6 +450,8 @@
 		"saveError": "Couldn't save settings.",
 		"importObsidianTitle": "Import from Obsidian",
 		"importObsidianDescription": "Copies an Obsidian vault one-way (the source is never written to). Wikilinks are converted to relative markdown links, attachments are copied, and notes missing frontmatter fields get a default value plus a review badge.",
+		"importLinksTitle": "Import from Links",
+		"importLinksDescription": "Paste PDF and web page links — they're downloaded in sequence and added to the library. Links already imported successfully are skipped on a re-run.",
 		"uploadSettingsTitle": "Upload Settings",
 		"keepOriginals": "Keep the original files of converted documents ({path})",
 		"allowedLanguages": "Allowed languages in chat",

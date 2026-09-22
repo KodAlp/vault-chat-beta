@@ -77,6 +77,12 @@ export function pythonBin(): string {
 
 const CONVERT_PY = path.resolve(process.cwd(), 'ingest', 'convert.py');
 
+// A malformed/adversarial PDF (more likely once Faz 15 feeds this from
+// arbitrary downloaded links, not just the user's own uploads) can hang
+// MarkItDown indefinitely. sharedJobMutex is shared with Ollama model-swap,
+// so a stuck child here blocks chat too — never wait forever.
+const PROCESS_TIMEOUT_MS = 120_000;
+
 /**
  * Runs one conversion (never in parallel — see queue below). Rejects with a
  * readable message on failure; never leaves the caller staring at a hung
@@ -96,6 +102,12 @@ function runConvert(
 
 		let lastDone: (ConvertEvent & { type: 'done' }) | null = null;
 		let lastError: string | null = null;
+		let timedOut = false;
+
+		const timer = setTimeout(() => {
+			timedOut = true;
+			child.kill();
+		}, PROCESS_TIMEOUT_MS);
 
 		const rl = readline.createInterface({ input: child.stdout });
 		rl.on('line', (line) => {
