@@ -1,7 +1,8 @@
 import Database from 'better-sqlite3';
 import { buildProfile, type CardPoint, type LearnerProfile } from '../learner-model';
 import { pickEvidence, type AnswerRow } from './learner-evidence';
-import { getAnswerEvidenceRows, getCardsForLearner } from './study-db';
+import { buildWeakSpots, type CardErrorPoint, type WeakSpot } from './learner-errors';
+import { getAnswerEvidenceRows, getCardsForErrors, getCardsForLearner } from './study-db';
 import type { VaultContext } from './vaults';
 
 /**
@@ -40,24 +41,31 @@ function parseOptions(optionsJson: string | null): string[] | null {
 	}
 }
 
-/** The learner profile of a vault, computed from what is stored right now. Read-only: it writes nothing. */
-export function computeLearnerProfile(v: VaultContext, now: Date = new Date()): LearnerProfile {
-	const domains = loadDomainsByPath(v);
-	const domainsOf = (sourcePath: string) => domains.get(sourcePath) ?? [];
-
-	const answers: AnswerRow[] = getAnswerEvidenceRows(v).map((r) => ({
+function loadAnswerRows(v: VaultContext): AnswerRow[] {
+	return getAnswerEvidenceRows(v).map((r) => ({
 		itemId: r.item_id,
+		quizId: r.quiz_id,
 		answeredAt: r.answered_at,
 		given: r.given,
 		isCorrect: r.is_correct === 1,
 		type: r.type,
 		question: r.question,
 		sourcePath: r.source_path,
+		headingPath: r.heading_path,
+		correctAnswer: r.correct_answer,
+		modelFeedback: r.model_feedback,
 		flaggedAt: r.flagged_at,
 		cognitiveLevel: r.cognitive_level,
 		options: parseOptions(r.options_json)
 	}));
-	const points = pickEvidence(answers, domainsOf);
+}
+
+/** The learner profile of a vault, computed from what is stored right now. Read-only: it writes nothing. */
+export function computeLearnerProfile(v: VaultContext, now: Date = new Date()): LearnerProfile {
+	const domains = loadDomainsByPath(v);
+	const domainsOf = (sourcePath: string) => domains.get(sourcePath) ?? [];
+
+	const points = pickEvidence(loadAnswerRows(v), domainsOf);
 
 	const cards: CardPoint[] = getCardsForLearner(v).map((c) => {
 		const known = domainsOf(c.source_path);
@@ -72,4 +80,27 @@ export function computeLearnerProfile(v: VaultContext, now: Date = new Date()): 
 		};
 	});
 	return buildProfile({ points, cards, now });
+}
+
+/** The weak-spot list of a vault (F2), computed fresh from the same stored answers and cards as the learner model.
+ * Read-only: it writes nothing. */
+export function computeWeakSpots(v: VaultContext): WeakSpot[] {
+	const domains = loadDomainsByPath(v);
+	const domainsOf = (sourcePath: string) => domains.get(sourcePath) ?? [];
+
+	const cards: CardErrorPoint[] = getCardsForErrors(v).map((c) => {
+		const known = domainsOf(c.source_path);
+		return {
+			id: c.id,
+			front: c.front,
+			back: c.back,
+			sourcePath: c.source_path,
+			headingPath: c.heading_path,
+			domains: known.length > 0 ? known : c.domain ? [c.domain] : [],
+			intervalDays: c.interval_days,
+			lapses: c.lapses,
+			dueAt: c.due_at
+		};
+	});
+	return buildWeakSpots({ answers: loadAnswerRows(v), cards, domainsOf });
 }

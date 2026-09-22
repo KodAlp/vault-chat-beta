@@ -787,15 +787,20 @@ export function deleteSlideDeck(v: VaultContext, id: string): void {
 
 // ---- learner model (F1b) ----------------------------------------------------------------------------------------------------
 
-/** One stored answer with everything the evidence rules need (learner-evidence.ts decides what counts). */
+/** One stored answer with everything the evidence rules need (learner-evidence.ts decides what counts) — shared by the
+ * learner model (F1b) and the weak-spot list (F2), so both read the exact same joined data. */
 export interface AnswerEvidenceRow {
 	item_id: string;
+	quiz_id: string;
 	answered_at: string;
 	given: string;
 	is_correct: 0 | 1;
 	type: string;
 	question: string;
 	source_path: string;
+	heading_path: string;
+	correct_answer: string;
+	model_feedback: string | null;
 	flagged_at: string | null;
 	cognitive_level: string | null;
 	options_json: string | null;
@@ -805,8 +810,10 @@ export interface AnswerEvidenceRow {
 export function getAnswerEvidenceRows(v: VaultContext): AnswerEvidenceRow[] {
 	return getDb(v)
 		.prepare(
-			`SELECT aa.item_id AS item_id, COALESCE(a.finished_at, a.started_at) AS answered_at, aa.given AS given, aa.is_correct AS is_correct,
-			        qi.type AS type, qi.question AS question, qi.source_path AS source_path, qi.flagged_at AS flagged_at,
+			`SELECT aa.item_id AS item_id, qi.quiz_id AS quiz_id, COALESCE(a.finished_at, a.started_at) AS answered_at,
+			        aa.given AS given, aa.is_correct AS is_correct, qi.type AS type, qi.question AS question,
+			        qi.source_path AS source_path, qi.heading_path AS heading_path, qi.answer AS correct_answer,
+			        aa.model_feedback AS model_feedback, qi.flagged_at AS flagged_at,
 			        qi.cognitive_level AS cognitive_level, qi.options_json AS options_json
 			 FROM attempt_answers aa
 			 JOIN attempts a ON a.id = aa.attempt_id
@@ -826,6 +833,26 @@ export interface CardLearnerRow {
 
 export function getCardsForLearner(v: VaultContext): CardLearnerRow[] {
 	return getDb(v).prepare('SELECT source_path, domain, interval_days, due_at, reps, lapses FROM cards').all() as CardLearnerRow[];
+}
+
+/** A card with enough of its content to show as a weak spot (F2) — `CardLearnerRow` only carries what the mastery number needs. */
+export interface CardErrorRow {
+	id: string;
+	front: string;
+	back: string;
+	source_path: string;
+	heading_path: string;
+	domain: string;
+	interval_days: number;
+	due_at: string;
+	lapses: number;
+}
+
+/** Only cards forgotten at least once (`lapses > 0`): a card that has never been forgotten is not a weak spot. */
+export function getCardsForErrors(v: VaultContext): CardErrorRow[] {
+	return getDb(v)
+		.prepare('SELECT id, front, back, source_path, heading_path, domain, interval_days, due_at, lapses FROM cards WHERE lapses > 0')
+		.all() as CardErrorRow[];
 }
 
 export interface SkillStateRow {

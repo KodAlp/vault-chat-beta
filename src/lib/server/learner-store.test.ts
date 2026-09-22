@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import Database from 'better-sqlite3';
-import { computeLearnerProfile } from './learner-store';
+import { computeLearnerProfile, computeWeakSpots } from './learner-store';
 import {
 	appendSkillSnapshot, closeVaultStudyDb, createAttempt, createDeck, createQuiz, finishAttempt, getAnswerEvidenceRows, getDeckCards,
 	getQuizItems, getSkillHistory, insertAttemptAnswer, setQuizItemFlagged, updateCardSchedule
@@ -145,6 +145,32 @@ test('a snapshot is append-only: a second run writes nothing, new evidence write
 		assert.equal(history[0].origin, 'OBSERVED');
 		assert.ok(history[1].mastery! < history[0].mastery!, 'a wrong answer lowered the estimate');
 	});
+});
+
+test('end to end on real SQL: computeWeakSpots groups a wrong quiz answer and a forgotten card by note and heading', () => {
+	withVault((v) => {
+		const quiz = createQuiz(v, 't', {}, 'm', [
+			item({ question: 'Zamanlayıcı ne yapar?', type: 'multiple_choice', options: ['a', 'b', 'c', 'd', 'e'], answer: 'a', heading_path: 'Scheduling' }), // 0: wrong
+			item({ question: 'Süreç grubu nedir?', heading_path: 'Scheduling' }), // 1: right, never a weak spot
+			item({ question: 'Hatalı soru', heading_path: 'Scheduling' }) // 2: flagged wrong answer, excluded
+		]);
+		const items = getQuizItems(v, quiz);
+		setQuizItemFlagged(v, items[2].id, true);
+		attempt(v, quiz, daysAgo(1), { 0: { given: 'b', correct: false }, 1: { given: 'doğru', correct: true }, 2: { given: 'x', correct: false } });
+
+		const deck = createDeck(v, 'd', {}, 'm', [{ front: 'f1', back: 'b1', source_path: 'wiki/os/a.md', heading_path: 'Scheduling', domain: 'os', level: 'basic' }]);
+		const cards = getDeckCards(v, deck);
+		updateCardSchedule(v, cards[0].id, { ease: 2.5, interval_days: 0, due_at: daysAgo(0), reps: 1, lapses: 1 });
+
+		const spots = computeWeakSpots(v);
+		assert.equal(spots.length, 1, 'one note+heading, one weak spot');
+		const spot = spots[0];
+		assert.equal(spot.sourcePath, 'wiki/os/a.md');
+		assert.equal(spot.headingPath, 'Scheduling');
+		assert.equal(spot.openErrors, 1, 'only the wrong, unflagged MC question counts');
+		assert.equal(spot.forgottenCards, 1);
+		assert.equal(spot.errors.length, 2, 'the quiz error and the forgotten card, not the right answer or the flagged one');
+	}, { index: { 'wiki/os/a.md': ['os'] } });
 });
 
 test('a node with nothing to say (no evidence, no reviewed card) is not written', () => {

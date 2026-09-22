@@ -4,6 +4,7 @@
 	import { resolveBackHref } from '$lib/back-link';
 	import { t } from '$lib/i18n/index.svelte';
 	import { UNKNOWN_DOMAIN, type LearnerProfile, type MasteryEstimate, type RetentionEstimate, type SkillNode } from '$lib/learner-model';
+	import type { WeakSpotErrorView, WeakSpotView } from '$lib/types';
 	import type { PageProps } from './$types';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
@@ -12,22 +13,66 @@
 
 	// See back-link.ts — falls back to the vault's chat list when this page was opened directly.
 	let backHref = $derived(resolveBackHref(page.url.searchParams.get('from'), data.vaultId ? `/vault/${data.vaultId}` : '/'));
+	let vaultQuery = $derived(data.vaultId ? `?vault=${encodeURIComponent(data.vaultId)}` : '');
 
 	let phase = $state<'loading' | 'ready' | 'error'>('loading');
 	let profile = $state<LearnerProfile | null>(null);
 	let expanded = $state<Record<string, boolean>>({});
 
-	onMount(async () => {
+	let spotsPhase = $state<'loading' | 'ready' | 'error'>('loading');
+	let spots = $state<WeakSpotView[]>([]);
+	let expandedSpots = $state<Record<string, boolean>>({});
+	let flagError = $state('');
+
+	async function loadProfile() {
 		try {
-			const query = data.vaultId ? `?vault=${encodeURIComponent(data.vaultId)}` : '';
-			const res = await fetch(`/api/study/learner${query}`);
+			const res = await fetch(`/api/study/learner${vaultQuery}`);
 			if (!res.ok) throw new Error(String(res.status));
 			profile = (await res.json()) as LearnerProfile;
 			phase = 'ready';
 		} catch {
 			phase = 'error';
 		}
+	}
+
+	async function loadSpots() {
+		try {
+			const res = await fetch(`/api/study/errors${vaultQuery}`);
+			if (!res.ok) throw new Error(String(res.status));
+			spots = (await res.json()) as WeakSpotView[];
+			spotsPhase = 'ready';
+		} catch {
+			spotsPhase = 'error';
+		}
+	}
+
+	onMount(() => {
+		void loadProfile();
+		void loadSpots();
 	});
+
+	/** "Bu soru hatalı" from the weak-spot list — the same route the quiz result page uses. On success the row (and, once a
+	 * spot has none left, the spot) disappears locally, and the learner profile is reloaded: a flagged answer no longer
+	 * counts as evidence (learner-evidence.ts), so the quiz percentages above can change too. */
+	async function flagQuestion(spot: WeakSpotView, e: WeakSpotErrorView) {
+		if (e.kind !== 'quiz' || !e.quizId) return;
+		flagError = '';
+		try {
+			const res = await fetch(`/api/study/quizzes/${e.quizId}/items/${e.id}`, {
+				method: 'PATCH',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ vault: data.vaultId, flagged: true })
+			});
+			if (!res.ok) throw new Error();
+			spot.errors = spot.errors.filter((x) => x.id !== e.id);
+			if (!e.resolved) spot.openErrors--;
+			else spot.resolvedErrors--;
+			if (spot.errors.length === 0) spots = spots.filter((s) => s.id !== spot.id);
+			void loadProfile();
+		} catch {
+			flagError = t('ProgressPage.flagFailed');
+		}
+	}
 
 	let overall = $derived(profile?.nodes.find((n) => n.kind === 'overall') ?? null);
 	let domains = $derived(profile?.nodes.filter((n) => n.kind === 'domain') ?? []);
@@ -91,6 +136,68 @@
 	{/if}
 {/snippet}
 
+{#snippet errorRow(spot: WeakSpotView, e: WeakSpotErrorView)}
+	<li class="error-row" class:resolved={e.resolved}>
+		<p class="error-question">{e.question}</p>
+		{#if e.kind === 'card'}
+			<p class="muted small">{t('ProgressPage.weakSpotCardBack', { back: e.back ?? '' })}</p>
+			<p class="muted small">{e.resolved ? t('ProgressPage.weakSpotCardRecovering') : t('ProgressPage.weakSpotCardForgotten')}</p>
+		{:else if e.resolved}
+			<p class="muted small">{t('ProgressPage.weakSpotResolvedNote')}</p>
+		{:else}
+			{#if e.confusion}
+				<p class="confusion">{t('ProgressPage.weakSpotConfusion', e.confusion)}</p>
+			{/if}
+			{#if e.modelFeedback}
+				<p class="muted small">{e.modelFeedback}</p>
+			{/if}
+		{/if}
+		<div class="error-meta">
+			{#if e.wrongCount > 1}<span class="muted small">{t('ProgressPage.weakSpotWrongCount', { count: e.wrongCount })}</span>{/if}
+			<span class="muted small">{t('ProgressPage.lastAnswered', { date: new Date(e.lastAt).toLocaleDateString() })}</span>
+			{#if e.kind === 'quiz' && !e.resolved}
+				<button type="button" class="flag" onclick={() => flagQuestion(spot, e)}>{t('ProgressPage.flagQuestion')}</button>
+			{/if}
+		</div>
+	</li>
+{/snippet}
+
+{#snippet weakSpots()}
+	{#if spotsPhase === 'error'}
+		<p class="status error small" role="alert">{t('ProgressPage.weakSpotsLoadFailed')}</p>
+	{:else if spotsPhase === 'ready'}
+		<h2 class="section-title">{t('ProgressPage.weakSpotsTitle')}</h2>
+		{#if flagError}<p class="status error small" role="alert">{flagError}</p>{/if}
+		{#if spots.length === 0}
+			<p class="status small">{t('ProgressPage.weakSpotsEmpty')}</p>
+		{:else}
+			{#each spots as spot (spot.id)}
+				<section class="card-block" aria-label={spot.noteName}>
+					<h3>{spot.noteName}</h3>
+					<p class="muted small">
+						{#if spot.openErrors > 0}{t('ProgressPage.weakSpotOpenCount', { count: spot.openErrors })}{/if}
+						{#if spot.openErrors > 0 && spot.resolvedErrors > 0}· {/if}
+						{#if spot.resolvedErrors > 0}{t('ProgressPage.weakSpotResolvedCount', { count: spot.resolvedErrors })}{/if}
+						{#if (spot.openErrors > 0 || spot.resolvedErrors > 0) && spot.forgottenCards > 0}· {/if}
+						{#if spot.forgottenCards > 0}{t('ProgressPage.weakSpotForgottenCount', { count: spot.forgottenCards })}{/if}
+					</p>
+					<button type="button" class="toggle" aria-expanded={expandedSpots[spot.id] === true} onclick={() => (expandedSpots[spot.id] = !expandedSpots[spot.id])}>
+						<ChevronDownIcon size={16} class={expandedSpots[spot.id] ? 'open' : ''} aria-hidden="true" />
+						{expandedSpots[spot.id] ? t('ProgressPage.weakSpotHideDetails') : t('ProgressPage.weakSpotShowDetails')}
+					</button>
+					{#if expandedSpots[spot.id]}
+						<ul class="errors">
+							{#each spot.errors as e (e.id)}
+								{@render errorRow(spot, e)}
+							{/each}
+						</ul>
+					{/if}
+				</section>
+			{/each}
+		{/if}
+	{/if}
+{/snippet}
+
 <div class="progress-screen">
 	<a class="home-link" href={backHref}><ArrowLeftIcon size={16} aria-hidden="true" /> {t('ProgressPage.back')}</a>
 	<h1>{t('ProgressPage.title')}</h1>
@@ -110,6 +217,8 @@
 			{@render cardRow(t('ProgressPage.cardMemory'), overall.retention)}
 			{@render bandRows(overall)}
 		</section>
+
+		{@render weakSpots()}
 
 		{#if domains.length > 0}
 			<h2 class="section-title">{t('ProgressPage.byDomain')}</h2>
@@ -334,6 +443,56 @@
 		font-weight: 600;
 		color: var(--color-foreground);
 		margin: 0 0 0.4rem;
+	}
+
+	.status.small {
+		margin: 0.75rem 0;
+		font-size: 0.85rem;
+	}
+
+	.errors {
+		list-style: none;
+		padding: 0;
+		margin: 0.6rem 0 0;
+	}
+
+	.error-row {
+		padding: 0.6rem 0;
+		border-top: 1px solid var(--color-border);
+	}
+
+	.error-row.resolved {
+		opacity: 0.7;
+	}
+
+	.error-question {
+		font-size: 0.85rem;
+		font-weight: 600;
+		margin: 0 0 0.3rem;
+		overflow-wrap: anywhere;
+	}
+
+	.confusion {
+		font-size: 0.82rem;
+		margin: 0 0 0.3rem;
+	}
+
+	.error-meta {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.6rem;
+		margin-top: 0.3rem;
+	}
+
+	.flag {
+		background: none;
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-md);
+		padding: 0.15rem 0.5rem;
+		font-size: 0.75rem;
+		color: var(--color-destructive);
+		cursor: pointer;
 	}
 
 	@media (max-width: 480px) {
