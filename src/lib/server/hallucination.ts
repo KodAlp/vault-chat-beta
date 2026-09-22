@@ -1,10 +1,13 @@
 /**
- * Cheap hallucination-risk signal: scans a model's `think`-mode reasoning
- * text for hedge/uncertainty phrases instead of a second LLM call. Single-
- * purpose word-list matching, not a scored/weighted classifier — the UI
- * shows the exact matched phrases so a false positive is self-evident to
- * the reader rather than hidden behind an opaque score. See api/chat/
- * +server.ts for where this is invoked (think-mode only).
+ * Cheap hallucination-risk signal: scans model-generated text for hedge/
+ * uncertainty phrases instead of a second LLM call. Single-purpose word-list
+ * matching, not a scored/weighted classifier — the UI shows the exact
+ * matched phrases so a false positive is self-evident to the reader rather
+ * than hidden behind an opaque score. See api/chat/+server.ts's
+ * computeHedges() for where this is invoked — both the think-mode reasoning
+ * trace (when there is one) and the final answer text (always), merged via
+ * mergeHedgeMatches below. detectHallucinationHedges() itself is text-source
+ * agnostic despite the `thinking`-flavored parameter name below.
  *
  * Bare high-frequency words like "olabilir" ("could be") or "maybe" are
  * deliberately excluded — they're too common in confident Turkish/English
@@ -62,17 +65,24 @@ const HEDGE_PATTERNS: { phrase: string; regex: RegExp }[] = HEDGE_PHRASES.map((p
 	regex: new RegExp(`\\b${phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i')
 }));
 
-const MAX_MATCHES = 6;
+export const MAX_HEDGE_MATCHES = 6;
 
 /** Returns the distinct matched hedge phrases (original casing from the
- * list, not the source text) found in `thinking`, capped at MAX_MATCHES.
+ * list, not the source text) found in `thinking`, capped at MAX_HEDGE_MATCHES.
  * Empty array means no detected risk. */
 export function detectHallucinationHedges(thinking: string): string[] {
 	if (!thinking) return [];
 	const matches: string[] = [];
 	for (const { phrase, regex } of HEDGE_PATTERNS) {
-		if (matches.length >= MAX_MATCHES) break;
+		if (matches.length >= MAX_HEDGE_MATCHES) break;
 		if (regex.test(thinking)) matches.push(phrase);
 	}
 	return matches;
+}
+
+/** Merges hedge matches found in two texts (the reasoning trace and the final answer) — each
+ * detectHallucinationHedges() call already caps at MAX_HEDGE_MATCHES on its own, so combining two
+ * full lists needs deduping and re-capping, not a plain concat. */
+export function mergeHedgeMatches(a: readonly string[], b: readonly string[]): string[] {
+	return [...new Set([...a, ...b])].slice(0, MAX_HEDGE_MATCHES);
 }

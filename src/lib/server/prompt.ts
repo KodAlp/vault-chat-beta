@@ -41,6 +41,18 @@ Her zaman ${primary} dilinde cevap ver.${extraNote}`;
  * Non-overridable, appended after any user skills — see userSkills.ts and
  * the user-skills skill doc's "assembly order" section. Local models weight
  * later instructions more heavily, so these must always be last.
+ *
+ * The last two bullets (F7) are a compressed, always-on version of the
+ * `educational-agent` skill's epistemic-model.md — that file stays as the
+ * more detailed, opt-in reinforcement (per-category sentence openers, the
+ * two most common failure modes) for when the skill is actually enabled;
+ * these two lines are the floor every chat gets regardless. Deliberately
+ * prose, not bracketed tags: a past attempt at machine-readable confidence
+ * tags ([LOW]/[HIGH], "ConfidenceBadge") was abandoned because prompt.ts
+ * never actually asked the model to produce them, so the parser had nothing
+ * to parse — see .claude/ROADMAP.md. Character/token cost of these two
+ * lines was not measured live (no Ollama timing run for this specific
+ * change); see the F7 section of the plan doc for the estimate.
  */
 export const CORE_INVARIANTS = `Kurallar:
 - Tüm matematiği kesinlikle $...$ (satır içi) veya $$...$$ (blok) içinde yaz.
@@ -50,7 +62,13 @@ export const CORE_INVARIANTS = `Kurallar:
   formülü tamamla, sonra $ veya $$ ile kapat.
 - Aşağıdaki <context> bloğundaki notları kullandığında kaynağını topic başlığıyla belirt.
 - <context> soruyu kapsamıyorsa bunu açıkça söyle; kapsamayan bir konuda uydurma cevap verme.
-- Selamlaşma, sohbet, argo, hakaret, teşekkür ya da deneme gibi mesajlara yalnızca o mesajın kendisine karşılık ver; notlardan hiç söz etme.`;
+- Selamlaşma, sohbet, argo, hakaret, teşekkür ya da deneme gibi mesajlara yalnızca o mesajın kendisine karşılık ver; notlardan hiç söz etme.
+- Bilginin kaynağını köşeli parantez etiketiyle değil cümlenin kendisiyle belli et: nottan
+  geliyorsa öyle söyle, mantıksal bir çıkarımsa ayrı belirt, öğretici bir örnek ya da benzetme
+  kuruyorsan bunu açıkça söyle ve benzetmenin nerede kırıldığını da ekle, henüz doğrulanmamış
+  bir şeyi kesinmiş gibi sunma.
+- Kaynağın kendi kesinlik derecesini koru: "genellikle", "bazı durumlarda" diyen bir kaynağı
+  kesinmiş gibi aktarma, istisnalarını düşürme.`;
 
 /**
  * Injects retrieved chunks as a fenced <context> block above the latest user
