@@ -11,6 +11,9 @@ import { questionKey } from './quiz-dedupe';
  *    question on finish) and the model that graded 21 blank open answers called 6 of them correct;
  *  - a question the user flagged as faulty ("Bu soru hatalı") is not evidence: about 1 generated answer key in 30 was plainly wrong
  *    and about 1 question in 9 was faulty or ambiguous, and only the person answering can tell which;
+ *  - a multiple-choice question stored without options is not evidence: an older generator left `options_json` empty for some
+ *    items, so "the answer matched" can mean the grader compared free text to a label (`"2e^2"` vs `"2e²"`) rather than the
+ *    person actually choosing among alternatives — 4 of the 13 real answers in the first study.db were this case;
  *  - one question is one piece of evidence: 18 of the 129 stored questions were verbatim repeats of another, and retaking the same
  *    quiz five times must not make five pieces of evidence out of one. For each distinct question the LATEST answered attempt
  *    counts, because it says the most about what the person knows now.
@@ -28,6 +31,8 @@ export interface AnswerRow {
 	/** Set when the user flagged the question as faulty. */
 	flaggedAt: string | null;
 	cognitiveLevel: string | null;
+	/** Parsed `quiz_items.options_json`; null/empty means the question was stored without answer choices. */
+	options: readonly string[] | null;
 }
 
 const TYPES: readonly string[] = ['multiple_choice', 'true_false', 'open'];
@@ -38,6 +43,7 @@ export function pickEvidence(rows: readonly AnswerRow[], domainsOf: (sourcePath:
 		if (!isAnswered(row.given)) continue;
 		if (row.flaggedAt !== null) continue;
 		if (!TYPES.includes(row.type)) continue;
+		if (row.type === 'multiple_choice' && (!row.options || row.options.length === 0)) continue;
 		const key = `${row.sourcePath}::${questionKey(row.question)}`;
 		const prev = latest.get(key);
 		// >= so that, on identical timestamps, the row that came later in the input wins
