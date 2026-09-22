@@ -420,16 +420,26 @@ export class OpenAICompatAdapter implements ProviderAdapter {
 	}
 
 	/** Best-effort — not every OpenAI-compatible endpoint implements /models
-	 * well; a failure here must never take down the whole registry. */
+	 * well; a failure here must never take down the whole registry.
+	 *
+	 * F14-1: this used to have no timeout at all — health() right below it already used
+	 * AbortSignal.timeout(connectMs), but this one didn't, so one unreachable provider could hang the
+	 * whole /api/providers/models Promise.all indefinitely, independent of any filtering question.
+	 * Also now captures `created` (the one extra field this endpoint's response reliably has across
+	 * providers) as an age fallback for model-filter.ts when a model id isn't in the F14-2 catalog. */
 	async listModels(): Promise<ModelInfo[]> {
 		try {
-			const res = await fetch(`${this.config.baseUrl}/models`, { headers: this.headers() });
+			const res = await fetch(`${this.config.baseUrl}/models`, {
+				headers: this.headers(),
+				signal: AbortSignal.timeout(this.config.timeouts.connectMs)
+			});
 			if (!res.ok) return [];
-			const body = (await res.json()) as { data?: { id: string }[] };
+			const body = (await res.json()) as { data?: { id: string; created?: number }[] };
 			return (body.data ?? []).map((m) => ({
 				id: m.id,
 				ctx: 8192,
-				caps: { tools: false, reasoning: false }
+				caps: { tools: false, reasoning: false },
+				...(typeof m.created === 'number' ? { created: m.created } : {})
 			}));
 		} catch {
 			return [];

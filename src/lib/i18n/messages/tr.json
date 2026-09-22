@@ -517,6 +517,10 @@
 		"defaultModelLabel": "Varsayılan model",
 		"defaultModelUpdateFailed": "\"{label}\" varsayılan modeli güncellenemedi.",
 		"notSelected": "seçilmedi",
+		"manageModels": "Model listesini yönet",
+		"modelManageLoadError": "Model listesi alınamadı.",
+		"modelManageSaveError": "Kaydedilemedi.",
+		"otherModels": "Diğer ({count})",
 		"noModelList": "model listesi yok — bağlantıyı test et",
 		"removeProvider": "Kaldır"
 	},
