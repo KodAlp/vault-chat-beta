@@ -603,7 +603,7 @@ yönerge, ne CSS — Marp'ın varsayılan temasıyla render ediliyor.
 
 ### F1 — Learner model & skill state (§23, §24) · temel
 
-> **Güncel durum (2026-09-21):** aşağıdaki şema ve altı eksenli formül **ilk taslaktır**. Uygulanan: F1a (soruların kendisi) ve **F1b** (eksensiz öğrenen modeli; şema, formül ve ölçümler F1b bölümünde). Düzey etiketleri 4 düzeye indirildi ve düğmenin arkasında deneysel.
+> **Güncel durum (2026-09-22):** aşağıdaki şema ve altı eksenli formül **ilk taslaktır**. Uygulanan: F1a (soruların kendisi), **F1b** (eksensiz öğrenen modeli; şema, formül ve ölçümler F1b bölümünde) ve **F2** (zayıf nokta izleme + "Üzerinde durulacaklar"; ayrı bölümde, F1'e bağımlı olduğu için burada anılıyor). Düzey etiketleri 4 düzeye indirildi ve düğmenin arkasında deneysel.
 
 Hammadde hazır: `attempt_answers` 97 satır, `quiz_items.source_path` 27/27
 `index.db`'deki `files.path` ile eşleşiyor → domain/level iki DB arasında
@@ -759,26 +759,33 @@ Tarayıcı testi **gerçek bir hata yakaladı**: iki metin anahtarını `CardsDi
 - Anlık görüntüyü **yazan bir çağrı yok** (yalnızca `--snapshot` betiği): zaman içindeki gidişat için gerekirse F2/F6 bir yazma noktası ekler; şimdilik geçmiş tablosu boş.
 - Yeni kodla ilk açılışta gerçek `study.db`'ye **boş tablolar ve boş sütunlar** eklenir (`flagged_at`, `cognitive_level`, `skill_*`); satır yazılmaz.
 
-### F2 — Hata takibi (§27, §30) · F1'e bağımlı
+### F2 — Hata takibi (zayıf noktalar) · ✅ yapıldı, izleme + sayfa (2026-09-22)
 
-```sql
-CREATE TABLE IF NOT EXISTS errors (
-  id TEXT PRIMARY KEY,
-  skill_id TEXT REFERENCES skill_nodes(id),
-  domain TEXT NOT NULL,
-  pattern TEXT NOT NULL,          -- "overfitting ile underfitting karıştırılıyor"
-  first_seen TEXT NOT NULL,
-  last_seen TEXT NOT NULL,
-  occurrences INTEGER NOT NULL DEFAULT 1,
-  resolved INTEGER NOT NULL DEFAULT 0,
-  evidence_json TEXT NOT NULL     -- attempt_answer id listesi
-);
-```
+Belgedeki ilk tasarım (yukarıda arşivlendiği haliyle §27/§30) ayrı bir `errors` tablosu öngörüyordu, `is_correct = 0` olan "86 cevaptan" besleneceğini varsayıyordu ve üreticiyi/REVIEW modunu/kart üretimini tüketici sayıyordu. Ölçüm bu üçünü de yanlış çıkardı ve kullanıcı kapsamı daralttı — gerçekleşen tasarım aşağıda, sapmalar açıkça işaretli.
 
-`is_correct = 0` olan 86 cevaptan beslenir. Tüketiciler: `generate-quiz.ts` (§35),
-REVIEW modu (§38), `generate-cards.ts` (§39).
+**Kapsam kararı (kullanıcı):** yalnızca izleme + ilerleme sayfasında liste + mevcut "Bu soru hatalı" düğmesi. Sınav/kart üretimi ve REVIEW modu **bu turda yok** (F3/F6 ile birlikte düşünülecek).
 
-> İsim tuzağı: `generate-errors.ts` hata takibi değil, `NoSourcesError` sınıfı.
+**Gerçek veri tasarımı belirledi (izole kopya, salt okunur):** "86 yanlış cevap" yanıltıcıydı — 84'ü boş (F1b zaten dışlıyordu), gerçek yanlış cevap 8. Bu 8'in en az 4'ü öğrencinin hatası değildi: 3'ü seçeneksiz çoktan seçmeli (F1b'nin Adım-0 düzeltmesiyle zaten kanıt dışı), 2'si "hangisi normal formdur?" sorusunda `BCNF` seçilmiş ama anahtar `3NF` (birden çok savunulabilir seçenek), 1'i anlamsız "disk teoremi" sorusu. Kartlar çok daha zengin ve tartışmasız bir sinyaldi: 40 incelenmiş kartın 20'si en az bir kez unutulmuştu (`lapses`).
+
+**Kararlar (gerekçeli):**
+1. **Depolanan `errors` tablosu YOK; hesaplanan görünüm** (F1b'nin `computeLearnerProfile`'ı gibi `computeWeakSpots` her seferinde sıfırdan hesaplar). Tabloyu haklı çıkaracak tek şey elle "çözüldü" işaretlemekti; istenmedi, ve senkron tutma yükü (işaretleme/kaldırma, silinen sınav, yeniden cevaplama) gerçek bir maliyetti.
+2. **Hata = zayıf nokta, konum bazlı:** gruplama `(source_path, heading_path)`. Bir satırda soru hataları ve unutulan kartlar birlikte.
+3. **Çözülmüş** = sorunun en son cevaplanmış denemesi doğru (F1b'nin "en son cevap" kuralıyla aynı, aynı tekilleştirme anahtarıyla: `questionKey`). Kart: son aralığı > 0 ise "toparlanıyor" (sayılır, ama "şu an unutulmuş" değil); aralık 0 ise unutulmuş.
+4. **Kalıp metni LLM'siz, yapısal:** `confusion: {chose, correct}` ham metin olarak taşınır (i18n/biçimlendirme sayfada); açık uçlu soruda ayrıca `modelFeedback`.
+5. **F1b ile aynı kanıt kuralı paylaşılır:** `learner-evidence.ts`'ten `isCountableAnswer` dışa aktarıldı (boş/işaretli/seçeneksiz-ÇS/tanınmayan tür → sayılmaz) ve hem `pickEvidence` hem `buildWeakSpots` bunu kullanır — iki özellik aynı cevap için asla anlaşmazlığa düşmez.
+6. **Birden çok geçerli seçenek olan soru kuralla yakalanamaz** (yukarıdaki BCNF örneği) — "Bu soru hatalı" düğmesi tam bunun için var; bir çözüm uydurulmadı.
+
+**Kod:** `src/lib/server/learner-errors.ts` (saf: `buildWeakSpots`, `ErrorItem`, `WeakSpot`; +14 test), `learner-store.ts` (`computeWeakSpots`, okuma-yalnız), `study-db.ts` (`AnswerEvidenceRow` genişletildi — `quiz_id`, `heading_path`, `correct_answer`, `model_feedback` — F1b ile paylaşılıyor; yeni `getCardsForErrors`, yalnızca `lapses > 0`), `GET /api/study/errors` (salt okunur; yazma için **yeni uç yok**, mevcut `PATCH /api/study/quizzes/[id]/items/[itemId]` kullanılıyor), `src/lib/types.ts` (`WeakSpotView`/`WeakSpotErrorView` — LearnerProfile örneğiyle aynı desen: sunucu tipinin istemci tarafı ayrı kopyası, `.svelte` dosyaları `$lib/server/*`'tan tip bile almaz), `/study/progress` sayfasına "Üzerinde durulacaklar" bölümü (genel karta bitişik, konu kartlarının üstünde; genişlet/daralt, her açık soru satırında "Bu soru hatalı" — tıklanınca satır ve gerekirse tüm zayıf nokta yerelde kaybolur, öğrenen profili yeniden yüklenir çünkü işaretlenen cevap artık kanıt sayılmaz).
+
+**Doğrulama:** 466 test (saf modül 14, gerçek SQLite üzerinde uçtan uca 1 — wrong-quiz + forgotten-card aynı not/başlıkta birleşiyor —, i18n tamlığı), svelte-check 0. **Gerçek verinin izole kopyasında** (`DATA_DIR` yönlendirmesi, `computeWeakSpots` doğrudan çağrıldı, chats.db'ye hiç dokunulmadı): 12 zayıf nokta, 4 açık soru hatası (0 çözülmüş), 20 unutulan-kart girdisi (şu an 0'ı "unutulmuş" durumda, hepsi toparlanmış) — beklenen BCNF/3NF çifti ve "disk teoremi" tam olarak listede çıktı, ayrıca bir "türev" doğru/yanlış sorusunda anahtar muhtemelen ters (kesin yanlış anahtar sınıfı). Seçeneksiz 3 cevap listede **yok** (F1b kuralı paylaşıldığı için otomatik).
+**YAPILMADI:** gerçek tarayıcıda tıklama testi (Playwright) — `.env`'in `CHATS_DB_PATH`/`INDEX_DB_PATH`/`VAULT_PATH`'i sabit yol olarak geçersiz kılması nedeniyle bir dev sunucusunu güvenle izole etmek bu turda ek bir adım gerektiriyordu ve F5'teki gerçek veri kirlenmesi olayından sonra bu adım atlanmadan önce onay isteniyor; arayüz derlendi/tiplendi (svelte-check 0) ve veri katmanı gerçek veri üzerinde ayrıca doğrulandı, ama düğmenin fiilen tıklanması yok.
+
+**Sınırlar (bilinmeli).**
+- Gerçek veride bu haliyle 1–3 gerçek öğrenci hatası var (BCNF/3NF ve disk teoremi öğrencinin hatası değil); sayfa çoğunlukla kart unutmalarını ve düzeltilecek soruları gösterecek — dürüst ama alçakgönüllü bir tablo.
+- "Birden çok geçerli seçenek" ve anlamsız sorular otomatik yakalanmaz; "Bu soru hatalı" tek çıkış yolu.
+- Kalıp metni yapısal ("seçtin X, doğrusu Y"); kavramsal "X ile Y karıştırılıyor" özeti yok.
+- Kartın gerçek hatırlaması bilinmiyor: "unutulmuş" durumu `interval_days`'e dayanır (tekrar günlüğü tutulmuyor, F1b'deki `cardRetention` ile aynı kısıt).
+- Tüketiciler (üretici, REVIEW modu, kart üretimi) bu turda yok; F3/F6 ile birlikte düşünülecek.
 
 ### F3 — Memory (§18–22, §52)
 
