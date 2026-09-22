@@ -511,6 +511,16 @@ export interface WeakSpotErrorView {
 	lastAt: string;
 }
 
+/** GET/POST /api/memory, PATCH/DELETE /api/memory/[id] (F3). Mirrors src/lib/server/memory-store.ts's MemoryRow —
+ * kept as a separate, client-safe copy, same pattern as WeakSpotView. */
+export interface MemoryNoteView {
+	id: string;
+	type: 'GLOBAL' | 'PERSONAL';
+	domain: string | null;
+	value: string;
+	createdAt: string;
+}
+
 /** GET /api/providers response shape — settings/providers page's model. */
 export interface ProviderStatus {
 	id: string;

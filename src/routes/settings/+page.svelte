@@ -575,6 +575,18 @@
 			</a>
 		</Card.Content>
 	</Card.Root>
+
+	<Card.Root>
+		<Card.Header>
+			<Card.Title>{t('MemorySettingsPage.title')}</Card.Title>
+			<Card.Description>{t('SettingsPage.memoryCardDescription')}</Card.Description>
+		</Card.Header>
+		<Card.Content>
+			<a href="/settings/memory" class="flex items-center gap-1 text-sm font-semibold text-primary hover:underline">
+				{t('SettingsPage.manageMemory')} <ArrowRightIcon size={14} aria-hidden="true" />
+			</a>
+		</Card.Content>
+	</Card.Root>
 </div>
 
 <AlertDialog.Root open={!!deleteTarget} onOpenChange={(open) => !open && (deleteTarget = null)}>

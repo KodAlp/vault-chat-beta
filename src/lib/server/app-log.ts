@@ -55,7 +55,10 @@ export interface AppLogRecord {
 		| 'retrieval_fallback'
 		/** The small-talk gate (smalltalk-gate.ts) learned, was taught, was overridden or failed:
 		 * `smallTalkAction` and, where there is one, `gatePhraseId`. Ids only, never the text. */
-		| 'smalltalk';
+		| 'smalltalk'
+		/** computeMemoryBlock (memory-runtime.ts, F3) failed and fell back to no memory block —
+		 * never an error in the user's answer. `message` only, no note/domain content. */
+		| 'memory_error';
 	chatId?: string;
 	provider?: string;
 	model?: string;

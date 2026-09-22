@@ -418,6 +418,8 @@
 		"manageProviders": "Sağlayıcıları yönet",
 		"smallTalkCardDescription": "Selamlaşma ve sohbet cümlelerinde kaynak aranmaması için öğrenilen ifadeler.",
 		"manageSmallTalk": "Öğrenilen ifadeleri yönet",
+		"memoryCardDescription": "Sohbette hatırlanmasını istediğin kişisel notlar.",
+		"manageMemory": "Notları yönet",
 		"deleteModelConfirmTitle": "\"{name}\" silinsin mi?",
 		"deleteModelConfirmDescription": "Bu model Ollama'dan kalıcı olarak kaldırılacak. İndirme dosyaları diskten silinir."
 	},
@@ -531,6 +533,28 @@
 		"delete": "Sil",
 		"clearAll": "Hepsini temizle",
 		"clearConfirm": "Öğrenilen tüm ifadeler silinsin ve yerleşik örnekler yeniden açılsın mı?"
+	},
+
+	"MemorySettingsPage": {
+		"title": "Hafıza",
+		"intro": "Sohbette hatırlanmasını istediğin kişisel notlar (ör. \"kısa cevapları tercih ederim\"). Bunlar sen yazmadıkça oluşmaz; modelin sohbetten kendiliğinden çıkarım yapması yok.",
+		"empty": "Henüz not yok.",
+		"loadError": "Notlar alınamadı.",
+		"deleteError": "Not silinemedi.",
+		"saveError": "Kaydedilemedi.",
+		"valueRequired": "Not metni gerekli.",
+		"deleteConfirm": "Bu not silinsin mi?",
+		"addNote": "Not ekle",
+		"delete": "Sil",
+		"edit": "Düzenle",
+		"newDialogTitle": "Yeni not",
+		"editDialogTitle": "Notu düzenle",
+		"typeLabel": "Tür",
+		"typeGlobal": "Genel",
+		"typePersonal": "Kişisel öğrenme tercihi",
+		"domainLabel": "Konu (isteğe bağlı)",
+		"domainPlaceholder": "ör. matematik",
+		"valueLabel": "Not"
 	},
 
 	"SkillsSettingsPage": {

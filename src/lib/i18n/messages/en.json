@@ -418,6 +418,8 @@
 		"manageProviders": "Manage providers",
 		"smallTalkCardDescription": "Phrases learned so greetings and small talk do not trigger a source search.",
 		"manageSmallTalk": "Manage learned phrases",
+		"memoryCardDescription": "Personal notes you want remembered in chat.",
+		"manageMemory": "Manage notes",
 		"deleteModelConfirmTitle": "Delete \"{name}\"?",
 		"deleteModelConfirmDescription": "This model will be permanently removed from Ollama. Downloaded files are deleted from disk."
 	},
@@ -531,6 +533,28 @@
 		"delete": "Delete",
 		"clearAll": "Clear all",
 		"clearConfirm": "Delete everything learned and switch the built-in examples back on?"
+	},
+
+	"MemorySettingsPage": {
+		"title": "Memory",
+		"intro": "Personal notes you want remembered in chat (e.g. \"I prefer short answers\"). These only exist if you write them — the model never infers anything about you from the conversation on its own.",
+		"empty": "No notes yet.",
+		"loadError": "Could not load the notes.",
+		"deleteError": "Could not delete the note.",
+		"saveError": "Could not save.",
+		"valueRequired": "Note text is required.",
+		"deleteConfirm": "Delete this note?",
+		"addNote": "Add note",
+		"delete": "Delete",
+		"edit": "Edit",
+		"newDialogTitle": "New note",
+		"editDialogTitle": "Edit note",
+		"typeLabel": "Type",
+		"typeGlobal": "General",
+		"typePersonal": "Personal learning preference",
+		"domainLabel": "Topic (optional)",
+		"domainPlaceholder": "e.g. math",
+		"valueLabel": "Note"
 	},
 
 	"SkillsSettingsPage": {
