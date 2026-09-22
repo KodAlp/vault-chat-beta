@@ -1018,15 +1018,26 @@ Orijinal spec 8 mod tanımlıyor (TEACH, QUIZ, EXAM, RESEARCH, REVIEW, FLASHCARD
 - F4'ün önkoşul grafiği (`prerequisites_json`) **kullanılmıyor** — F4'ün kendi belgesi REVIEW modunu ("önkoşulu zayıf konulara dön") olası bir tüketici olarak anmıştı, bu turda bağlanmadı; zayıf alan sıralaması yalnızca F1b'nin mastery sayısına dayanıyor, önkoşul zincirine değil.
 - Gerçek tarayıcıda tıklama testi **yapılmadı** (F2/F3'teki aynı açık madde).
 
-### F7 — Epistemik etiketler + UI (§10)
+### F7 — Epistemik etiketler + UI (§10) · ✅ yapıldı, küçük güvenli dilim (2026-09-22)
 
-`prompt.ts` etiket üretimini **ister** (bugün istemiyor); ayrıştırıcı ve rozet
-bileşeni aynı anda gelir. Ayrı giderlerse ham etiket metni transkripte sızar —
-`ConfidenceBadge`'in ROADMAP'te reddedilme gerekçesi buydu ("üreticisi olmayan
-ayrıştırıcı ölü kod olurdu"), bu sefer üretici de var.
+Spec §10 modelin her önemli ifadeyi 6 sınıftan birine (FACT/INFERENCE/EXAMPLE/ANALOGY/HYPOTHESIS/MODEL_OPINION) ayırıp arayüzde göstermesini istiyor — makine-okunur etiket + ayrıştırıcı + rozet bileşeni. **Bu turda yapılmadı.** Gerekçe: bu incelikte sınıflandırma F1a'nın 4 düzeyli bilişsel etiketleme deneyiyle (bkz. F1a bölümü) aynı sınıf bir güvenilirlik riski — o deney yalnızca ~%48-50 kör hakem uyumuna ulaştı ve rafa kaldırıldı; küçük yerel modelin (qwen3:8b) FACT/INFERENCE/HYPOTHESIS gibi ince sınırları tutarlı ayırt edebileceği hiç ölçülmedi. Ayrıca satır/cümle bazında etiket ayrıştırmak için bu kod tabanında hiç altyapı yok (`ChatBubble` cevabı tek parça HTML olarak çiziyor) ve bu tam olarak `ConfidenceBadge`'in ([LOW]/[HIGH]) ROADMAP'te bilinçli terk edilme nedeniydi ("üreticisi olmayan bir ayrıştırıcı ölü kod olurdu").
 
-Teslim edilen `educational-agent` skill'i bu yüzden bugün köşeli parantezli
-etiket ürettirmiyor; ayrımı dilin içinde yapıyor. F7 ile birlikte açılır.
+**Kod keşfi iki şey buldu, ikisi de küçük ve güvenli bir genişletmeye izin verdi:**
+1. **6 sınıf zaten vardı — düzyazı olarak, etiketsiz.** `data/skills/educational-agent/references/epistemic-model.md` aynı 6 kategoriyi tanımlıyor ve makine-okunur etiket yerine cümlenin kendisiyle ayrım yapmayı öğretiyor ("Notta şöyle tanımlanıyor: ..." → kaynağa dayalı, vb.) — ama yalnızca bu skill açıkken çalışıyordu, bugün her iki skill de kullanıcı tarafından kapalı.
+2. **Çalışan bir hedge-tespiti rüzeti zaten vardı.** `hallucination.ts`'in `detectHallucinationHedges()`'i (38 kelimelik Türkçe/İngilizce belirsizlik ifadesi listesi, ör. "sanırım", "emin değilim", "i'm not sure") + eski `ThinkingPanel.svelte` rozeti tam işlevseldi ama yalnızca think-mode açıkken ve yalnızca akıl yürütme metninde çalışıyordu — nihai cevap metninde ya da think kapalıyken hiçbir şey yakalamıyordu.
+
+**Yapılan (A+B, kullanıcı kararı):**
+- **A — epistemik dil kuralı `CORE_INVARIANTS`'a taşındı (özet, düzyazı hâliyle).** `epistemic-model.md`'nin 46 satırlık tam hâli değil, mevcut 5 maddenin stiliyle tutarlı 2 kısa madde eklendi: (1) kaynağa dayalı/çıkarım/örnek/benzetme/hipotez ayrımını cümlenin kendisiyle yap, köşeli parantez etiketi kullanma; benzetmenin nerede kırıldığını söyle, doğrulanmamışı kesinmiş gibi sunma; (2) kaynağın kendi kesinlik derecesini koru ("genellikle"/"bazı durumlarda"), istisnaları düşürme. Skill dosyasına dokunulmadı — o hâlâ daha ayrıntılı, opsiyonel bir katman (örnek cümle açılışları, en sık yapılan iki hata) olarak kalıyor; `CORE_INVARIANTS` artık her sohbette çalışan sıkıştırılmış taban, skill açıkken ekstra pekiştirme sağlıyor, gerçek bir çakışma yok. **Maliyet ölçülmedi, karakter sayımıyla tahmin edildi:** eklenen 2 madde 452 karakter ≈ 113 token (chars/4 kestirimi, `ThinkingPanel.svelte`'in kendi token tahmini yöntemiyle aynı) — her sohbet turunda, F12'nin skill-yükü ölçümüyle (`+1708 token/skill`) aynı dürüstlükte işaretli.
+- **B — hedge rüzeti nihai cevaba ve think-kapalı sohbetlere genişletildi.** `hallucination.ts`'e `mergeHedgeMatches(a, b)` (iki eşleşme listesini birleştirip tekilleştirip `MAX_HEDGE_MATCHES`'e yeniden kırpar, +5 test); `api/chat/+server.ts`'in `computeHedges()`'i artık `body.think` koşuluna bakmıyor — `finalThinking` varsa onu, `finalContent`'i her zaman tarıyor. `detectHallucinationHedges()`'in kendisi değişmedi (zaten metin-kaynağından bağımsızdı). **UI taşındı**: rozet artık `ThinkingPanel.svelte`'in içinde değil (think kapalıyken `ThinkingPanel` hiç render edilmiyor, nihai-cevap kaynaklı hedge'lerin gösterileceği bir yer olmazdı) — `Message.svelte`'e taşındı, think açık/kapalı ve `ThinkingPanel` var/yok fark etmeksizin `!streaming && message.hedges?.length` olduğunda görünüyor. Veri akışı (SSE `done.hedges` → `messages.hallucination_hedges_json` → `ChatMessage.hedges`) değişmedi.
+
+**Kod:** `src/lib/server/hallucination.ts` (`MAX_MATCHES` → dışa açık `MAX_HEDGE_MATCHES`, yeni `mergeHedgeMatches`, +5 test), `api/chat/+server.ts` (`computeHedges()` gövdesi), `prompt.ts` (`CORE_INVARIANTS`'a 2 madde), `ThinkingPanel.svelte` (`hedges` prop'u ve `.hedge-badge` kaldırıldı), `Message.svelte` (rozet eklendi), i18n `ThinkingPanel.hedgeBadge*` → `Message.hedgeBadge*` taşındı (metin aynı).
+
+**Doğrulama:** 507/507 test, svelte-check 0. Gerçek veri/tarayıcı ölçümü bu turda yapılmadı (F2/F3/F6'daki aynı açık madde) — değişiklik saf metin/prompt düzenlemesi olduğu için (yeni DB tablosu, yeni sorgu yok), elle okuma + testlerle doğrulandı.
+
+**Sınırlar (bilinmeli).**
+- Gerçek 6 sınıflı satır-bazlı etiketleme/rozet **yapılmadı** — bu hâlâ açık, F1a'nın deneyine benzer bir güvenilirlik ölçümü olmadan yapılmamalı.
+- `CORE_INVARIANTS`'ın yeni 2 maddesinin gerçek cevap kalitesine etkisi (modelin ne kadar uyduğu) **ölçülmedi** — yalnızca eklendi, canlı bir A/B yapılmadı.
+- Hedge rüzeti hâlâ kaba bir kelime-listesi eşleşmesi; INFERENCE/HYPOTHESIS gibi sınıfları ayırt etmiyor, yalnızca "model bir yerde belirsizlik ifadesi kullandı" diyor.
 
 ### F8 — Context yönetimi (§47)
 
