@@ -82,7 +82,7 @@
 		</div>
 	{/if}
 	{#if message.role === 'assistant' && message.thinking}
-		<ThinkingPanel thinking={message.thinking} {streaming} hedges={message.hedges} />
+		<ThinkingPanel thinking={message.thinking} {streaming} />
 	{/if}
 	<!-- "polite" (not "assertive") so a screen reader announces streamed
 	     content without interrupting whatever the user is already doing —
@@ -92,6 +92,11 @@
 	<div aria-live={streaming ? 'polite' : 'off'} aria-atomic="false">
 		<ChatBubble role={message.role} {html} interrupted={isEmptyInterrupted} loading={isWaitingForFirstToken} />
 	</div>
+	{#if message.role === 'assistant' && !streaming && message.hedges?.length}
+		<span class="hedge-badge" title={t('Message.hedgeBadgeTitle', { hedges: message.hedges.join(', ') })}
+			>{t('Message.hedgeBadge', { count: message.hedges.length })}</span
+		>
+	{/if}
 	{#if message.role === 'assistant' && message.sources?.length}
 		<SourceChip sources={message.sources} {vaultId} />
 		{#if onNotRelevant && !streaming}
@@ -141,6 +146,16 @@
 		margin-top: 0.4rem;
 		font-size: 0.78rem;
 		color: var(--color-muted-foreground);
+	}
+
+	.hedge-badge {
+		align-self: flex-start;
+		margin-top: 0.35rem;
+		padding: 0.05rem 0.4rem;
+		border-radius: 999px;
+		font-size: 0.72rem;
+		color: var(--warning);
+		background: color-mix(in srgb, var(--warning) 20%, transparent);
 	}
 
 	.tool-calls {

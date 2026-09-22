@@ -42,7 +42,9 @@
 		"smallTalk": "Read as small talk, so no sources were looked up.",
 		"forceSources": "Search sources anyway",
 		"notRelevant": "Sources are irrelevant",
-		"taught": "Learned: messages like this will get no sources next time."
+		"taught": "Learned: messages like this will get no sources next time.",
+		"hedgeBadgeTitle": "Hedging phrases: {hedges}",
+		"hedgeBadge": "⚠ {count} hedge phrase"
 	},
 
 	"ChatBubble": {
@@ -56,9 +58,7 @@
 
 	"ThinkingPanel": {
 		"streamingSummary": "thinking… ~{tokens} tokens",
-		"doneSummary": "Thinking process (~{tokens} tokens)",
-		"hedgeBadgeTitle": "Hedging phrases: {hedges}",
-		"hedgeBadge": "⚠ {count} hedge phrase"
+		"doneSummary": "Thinking process (~{tokens} tokens)"
 	},
 
 	"SourceChip": {

@@ -23,7 +23,7 @@ import { createChat, getChat, insertMessage, updateMessage, touchChat } from '$l
 import { generateTitle } from '$lib/server/title';
 import { vaultFromId } from '$lib/server/requestVault';
 import { logAppEvent } from '$lib/server/app-log';
-import { detectHallucinationHedges } from '$lib/server/hallucination';
+import { detectHallucinationHedges, mergeHedgeMatches } from '$lib/server/hallucination';
 import { getLibrarySettings } from '$lib/server/library';
 import { hasFetchableFolderSkills } from '$lib/server/userSkills';
 import { READ_SKILL_FILE_TOOL, executeReadSkillFile } from '$lib/server/skillTool';
@@ -157,10 +157,12 @@ export const POST: RequestHandler = async ({ request }) => {
 			let lastCheckpointedThinking = '';
 			let checkpointTimer: ReturnType<typeof setInterval> | null = null;
 
-			// Think-mode only — a non-think chat never produces reasoning text to
-			// scan, so this returns [] for it (see hallucination.ts's doc comment).
+			// Scans both the reasoning trace (when there is one — think-mode only) and the final
+			// answer text (always), merged — see hallucination.ts's doc comment.
 			function computeHedges(): string[] {
-				return body.think && finalThinking ? detectHallucinationHedges(finalThinking) : [];
+				const fromThinking = finalThinking ? detectHallucinationHedges(finalThinking) : [];
+				const fromAnswer = finalContent ? detectHallucinationHedges(finalContent) : [];
+				return mergeHedgeMatches(fromThinking, fromAnswer);
 			}
 
 			function checkpoint() {

@@ -42,7 +42,9 @@
 		"smallTalk": "Sohbet olarak algılandı, kaynak aranmadı.",
 		"forceSources": "Yine de kaynak ara",
 		"notRelevant": "Kaynaklar alakasız",
-		"taught": "Öğrenildi: bu tür mesajlara bir dahaki sefere kaynak eklenmeyecek."
+		"taught": "Öğrenildi: bu tür mesajlara bir dahaki sefere kaynak eklenmeyecek.",
+		"hedgeBadgeTitle": "Belirsizlik ifadeleri: {hedges}",
+		"hedgeBadge": "⚠ {count} belirsizlik ifadesi"
 	},
 
 	"ChatBubble": {
@@ -56,9 +58,7 @@
 
 	"ThinkingPanel": {
 		"streamingSummary": "düşünüyor… ~{tokens} token",
-		"doneSummary": "Düşünme süreci (~{tokens} token)",
-		"hedgeBadgeTitle": "Belirsizlik ifadeleri: {hedges}",
-		"hedgeBadge": "⚠ {count} belirsizlik ifadesi"
+		"doneSummary": "Düşünme süreci (~{tokens} token)"
 	},
 
 	"SourceChip": {
