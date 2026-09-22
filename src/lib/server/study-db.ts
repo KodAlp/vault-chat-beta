@@ -798,6 +798,7 @@ export interface AnswerEvidenceRow {
 	source_path: string;
 	flagged_at: string | null;
 	cognitive_level: string | null;
+	options_json: string | null;
 }
 
 /** Every stored answer joined to its question. An answer whose quiz was deleted is gone with it (ON DELETE CASCADE). */
@@ -806,7 +807,7 @@ export function getAnswerEvidenceRows(v: VaultContext): AnswerEvidenceRow[] {
 		.prepare(
 			`SELECT aa.item_id AS item_id, COALESCE(a.finished_at, a.started_at) AS answered_at, aa.given AS given, aa.is_correct AS is_correct,
 			        qi.type AS type, qi.question AS question, qi.source_path AS source_path, qi.flagged_at AS flagged_at,
-			        qi.cognitive_level AS cognitive_level
+			        qi.cognitive_level AS cognitive_level, qi.options_json AS options_json
 			 FROM attempt_answers aa
 			 JOIN attempts a ON a.id = aa.attempt_id
 			 JOIN quiz_items qi ON qi.id = aa.item_id`

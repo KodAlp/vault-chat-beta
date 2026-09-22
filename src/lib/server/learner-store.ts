@@ -30,6 +30,16 @@ export function loadDomainsByPath(v: VaultContext): Map<string, string[]> {
 	return map;
 }
 
+function parseOptions(optionsJson: string | null): string[] | null {
+	if (!optionsJson) return null;
+	try {
+		const parsed: unknown = JSON.parse(optionsJson);
+		return Array.isArray(parsed) ? parsed.filter((o): o is string => typeof o === 'string') : null;
+	} catch {
+		return null;
+	}
+}
+
 /** The learner profile of a vault, computed from what is stored right now. Read-only: it writes nothing. */
 export function computeLearnerProfile(v: VaultContext, now: Date = new Date()): LearnerProfile {
 	const domains = loadDomainsByPath(v);
@@ -44,7 +54,8 @@ export function computeLearnerProfile(v: VaultContext, now: Date = new Date()): 
 		question: r.question,
 		sourcePath: r.source_path,
 		flaggedAt: r.flagged_at,
-		cognitiveLevel: r.cognitive_level
+		cognitiveLevel: r.cognitive_level,
+		options: parseOptions(r.options_json)
 	}));
 	const points = pickEvidence(answers, domainsOf);
 

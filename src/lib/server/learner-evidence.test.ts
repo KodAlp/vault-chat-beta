@@ -4,7 +4,8 @@ import { pickEvidence, type AnswerRow } from './learner-evidence';
 
 const row = (over: Partial<AnswerRow> = {}): AnswerRow => ({
 	itemId: 'i' + Math.random(), answeredAt: '2026-09-10T10:00:00.000Z', given: 'B', isCorrect: true, type: 'multiple_choice',
-	question: 'Hangisi doğrudur?', sourcePath: 'wiki/os/scheduling.md', flaggedAt: null, cognitiveLevel: null, ...over
+	question: 'Hangisi doğrudur?', sourcePath: 'wiki/os/scheduling.md', flaggedAt: null, cognitiveLevel: null,
+	options: ['A', 'B', 'C', 'D'], ...over
 });
 const domains = (p: string) => (p.startsWith('wiki/os') ? ['os'] : []);
 
@@ -76,4 +77,15 @@ test('the point carries the note, its domains, the type and the level (only a re
 
 test('an unknown question type is skipped rather than guessed', () => {
 	assert.equal(pickEvidence([row({ type: 'essay' })], domains).length, 0);
+});
+
+test('a multiple-choice question stored without options is not evidence', () => {
+	assert.equal(pickEvidence([row({ options: null })], domains).length, 0);
+	assert.equal(pickEvidence([row({ options: [] })], domains).length, 0);
+	assert.equal(pickEvidence([row({ options: ['A', 'B'] })], domains).length, 1);
+});
+
+test('a true/false or open question needs no options to be evidence', () => {
+	assert.equal(pickEvidence([row({ type: 'true_false', options: null })], domains).length, 1);
+	assert.equal(pickEvidence([row({ type: 'open', options: null })], domains).length, 1);
 });
