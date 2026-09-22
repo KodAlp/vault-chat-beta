@@ -1057,12 +1057,22 @@ Spec §10 modelin her önemli ifadeyi 6 sınıftan birine (FACT/INFERENCE/EXAMPL
 - 12.000 karakterlik bütçe ve `nearCtxLimit` eşiği (mevcut, `ollama-usage.ts`'te) birlikte yeniden ölçülmedi — F12'nin `serveCtx`/`k=6` ölçümleriyle aynı "seçildi, doğrulanmadı" kategorisinde.
 - Bu turda hiç gerçekleşmemiş bir riske karşı yazıldı; canlıda hiç tetiklenmeyebilir — bu beklenen ve kabul edilen bir sonuç.
 
-### F9 — Değerlendirme harness'ı (§53–61)
+### F9 — Değerlendirme harness'ı (§53–61) · ✅ yapıldı, 3 deterministik kategori (2026-09-22)
 
-`npm test` 20+ dosya çalıştırıyor ama spec'in 9 test kategorisinin hiçbiri bağlı
-değil. `tests/eval/` altında fixture + runner: hallucination, RAG grounding,
-memory, personalization, teaching, conflict, **prompt injection** (§60 — RAG
-belgesine "IGNORE ALL PREVIOUS INSTRUCTIONS" koyup davranışı ölçmek), regression.
+Spec 12 kategori istiyor; doc'un F9 stub'ı 8'e daraltmıştı. **Kullanıcı bunu 3 kategoriye daha daralttı**: çoğu kategori (Hallucination'ın hedge-listesi ötesi, Memory, Personalization, Teaching, Difficulty, Exam Generation, Conflict) ya gerçek bir LLM çağrısı + hakem gerektiriyor — bu proje F1a'da bu yöntemle defalarca sorun yaşadı (4 düzeyli bilişsel etiket deneyi ~%48-50 kör hakem uyumuna ulaştı, rafa kaldırıldı) — ya da bu sohbet uygulamasının veri modeline hiç uymuyor (Exam Generation ayrı bir mod, F6'da bilerek yapılmadı; Difficulty otomatik zorluk ayarı hiç yok). Seçilen 3 kategori tamamen deterministik ya da tek-gerçek-çağrılı ve ayrı script.
+
+**Kod keşfi sırasında kendi ilk çerçevelememde iki düzeltme yaptım (şeffafça işaretli):**
+1. **"RAG retrieval, model çağrısı gerektirmez" dedim — bu, vektör arama için yanlıştı.** `retrieve.ts` sorguyu embed etmek için gerçek bir Ollama çağrısı yapıyor, sentetik bir bypass yok. Ama proje zaten **tamamen deterministik, hiç test edilmemiş ikinci bir retrieval yolu** barındırıyor: `keyword-search.ts` (F5'in FTS5 anahtar kelime yedeği) — `Database` alıyor, Ollama'ya hiç ihtiyacı yok, ve **hiç testi yoktu** (yalnızca sorgu-kurma mantığı `keyword-query.test.ts`'te test edilmişti, gerçek FTS5 araması hiç değil). Spec §55'in tam istediği senaryoyu ("Document A doğru cevabı içeriyor, Document B benzer ama yanlış bilgi içeriyor, doğru olanı getir, yanlışa aşırı güvenme") bu modülle birebir, hiç Ollama gerektirmeden karşıladım.
+2. **Prompt injection'ı uygulamanın fallback zincirini kurmadan, Ollama'ya doğrudan HTTP ile ölçtüm** — F1b'nin bge-m3 ölçümünde kullanılan aynı basit desen. Amaç uygulamanın retry mantığını değil, modelin enjekte edilmiş talimata karşı direncini ölçmek.
+
+**Yapılan:**
+1. **`src/lib/server/prompt.test.ts`** (yeni, `npm test`'e — hiç DB/Ollama yok): `CORE_INVARIANTS` tam metin eşleşmesi (F3/F6/F7/F8'in dördü de bu dosyayı değiştirdi, hiç testi yoktu), `coreIntro()` varyantları, `buildPromptMessages(...)` uçtan uca güvenli izolasyonla (`mode='free_chat'` → reviewBlock hiç hesaplanmaz; `CHAT_MEMORY_GATE=0` → memoryBlock `getChatsDb()` singleton'ına hiç dokunmadan `''` döner, F3'ün kill switch'i; boş `SKILLS_DIR` → skillsBlock `''`) — bu üçü boşken sistem promptu tam olarak `coreIntro(...) + '\n\n' + CORE_INVARIANTS`, kırılgan olmayan bir regresyon testi. Ayrıca `mode='review'` + taze/boş tek-kullanımlık vault (vault-başına `Map`, global singleton değil — güvenli) ile reviewBlock'un doğru sırada kompozisyona girdiği, `<context>` bloğunun chunk'lardan doğru kurulduğu, önceki turların doğru sırada taşındığı (+10 test).
+2. **`src/lib/server/keyword-search.test.ts`** (yeni, `npm test`'e — gerçek SQLite FTS5, Ollama yok): spec §55'in senaryosu birebir (iki chunk, biri gerçek cevabı içeriyor, öbürü benzer ama yalnızca değiniyor — doğru olan bm25 sırasıyla önde), `hasKeywordIndex`, bozuk MATCH ifadesinin throw etmediği, limit doğrulaması (+8 test).
+3. **`scripts/eval-prompt-injection.ts`** (yeni, `npm test`'e GİRMEZ, isteğe bağlı): enjekte edilmiş talimat içeren sahte bir `RetrievedChunk` ile GERÇEK `buildPromptMessages`'ı çağırır (aynı izolasyon), sonucu doğrudan `POST {ollamaUrl()}/api/chat`'e yollar, cevabı + `CORE_INVARIANTS`'tan sızıntı olup olmadığına dair mekanik bir sezgisel kontrolü yazdırır. **Kesin geçti/kaldı değil, tek örneklemli bir rapor** — n=1'in güvenilmezliği script'in kendi çıktısında açıkça belirtiliyor. `npm run eval:injection` ile çalıştırılır.
+
+**Doğrulama:** 531/531 test, svelte-check 0 (svelte-check `scripts/` dizinini kapsamıyor — `learner-report.ts` gibi mevcut script'lerle aynı durum; script mesaj kurma kısmına kadar dumanla test edildi, gerçek Ollama çağrısı bu oturumdaki ortamdan erişilemediği için tamamlanamadı, kullanıcı kendi Ollama'sına karşı `npm run eval:injection` ile çalıştırabilir).
+
+**Ertelenen kategoriler (bilerek yapılmadı):** Hallucination (hedge-kelime tespiti ötesi — F7'de zaten var olan mekanizma genişletildi, yeni bir hakem sistemi kurulmadı), Memory, Personalization, Teaching, Difficulty, Exam Generation, Conflict Resolution, Context Management (kısmen F8'in savunma önlemiyle dokunuldu ama ayrı bir test kategorisi yok), Failure Handling, model-versiyonları-arası Regression (yalnızca prompt metni regresyonu yapıldı, davranış regresyonu değil).
 
 ---
 
