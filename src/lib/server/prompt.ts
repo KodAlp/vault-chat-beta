@@ -3,6 +3,7 @@ import type { ChatMessage as ProviderChatMessage } from './providers/types';
 import { renderUserSkillsBlock } from './userSkills';
 import { computeMemoryBlock } from './memory-runtime';
 import { computeReviewBlock } from './review-mode';
+import { trimConversationHistory } from '../history-limits';
 import type { VaultContext } from './vaults';
 
 /** Vault-level default when a vault has no LibrarySettings.allowedLanguages
@@ -83,9 +84,11 @@ export async function buildPromptMessages(
 	opts?: { toolsEnabled?: boolean }
 ): Promise<ProviderChatMessage[]> {
 	const lastUser = history[history.length - 1];
-	const priorTurns: ProviderChatMessage[] = history
-		.slice(0, -1)
-		.map(({ role, content }) => ({ role, content }));
+	// F8 — bounded, not the whole conversation: a very long chat must not grow the prompt past the context
+	// window and get silently truncated from the front, where CORE_INVARIANTS lives. See history-limits.ts.
+	const priorTurns: ProviderChatMessage[] = trimConversationHistory(
+		history.slice(0, -1).map(({ role, content }) => ({ role, content }))
+	);
 
 	const context =
 		chunks.length > 0

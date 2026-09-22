@@ -44,7 +44,8 @@
 		"notRelevant": "Sources are irrelevant",
 		"taught": "Learned: messages like this will get no sources next time.",
 		"hedgeBadgeTitle": "Hedging phrases: {hedges}",
-		"hedgeBadge": "⚠ {count} hedge phrase"
+		"hedgeBadge": "⚠ {count} hedge phrase",
+		"nearCtxLimit": "This chat is close to the context limit; part of the prompt sent to the model may have been cut, so this answer may have been generated with incomplete context."
 	},
 
 	"ChatBubble": {

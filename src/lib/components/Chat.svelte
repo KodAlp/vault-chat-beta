@@ -260,6 +260,7 @@
 						assistantMessage.narrowScope = event.narrowScope;
 						assistantMessage.smallTalk = event.smallTalk;
 						assistantMessage.hedges = event.hedges;
+						assistantMessage.nearCtxLimit = event.nearCtxLimit;
 					}
 					else if (event.type === 'error') errorMessage = event.message;
 					else if (event.type === 'notice') {

@@ -44,7 +44,8 @@
 		"notRelevant": "Kaynaklar alakasız",
 		"taught": "Öğrenildi: bu tür mesajlara bir dahaki sefere kaynak eklenmeyecek.",
 		"hedgeBadgeTitle": "Belirsizlik ifadeleri: {hedges}",
-		"hedgeBadge": "⚠ {count} belirsizlik ifadesi"
+		"hedgeBadge": "⚠ {count} belirsizlik ifadesi",
+		"nearCtxLimit": "Bu sohbet bağlam sınırına yaklaştı; modele giden promptun bir kısmı kesilmiş olabilir, bu cevap eksik bağlamla üretilmiş olabilir."
 	},
 
 	"ChatBubble": {

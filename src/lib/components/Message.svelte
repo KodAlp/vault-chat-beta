@@ -125,6 +125,9 @@
 			{/if}
 		</p>
 	{/if}
+	{#if message.role === 'assistant' && message.nearCtxLimit && !streaming}
+		<p class="narrow-scope">{t('Message.nearCtxLimit')}</p>
+	{/if}
 </div>
 
 <style>
