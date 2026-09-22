@@ -989,12 +989,34 @@ yazma (`gerizekalı` gibi hakaret mesajlarında "Kurallar: - Tüm matematiği…
 
 **F12 aşama 5** bu tablonun üstüne kurulabilir — birlikte planlanmalı.
 
-### F6 — Mode sistemi (§33–39) · F1 + F3'e bağımlı
+### F6 — Mode sistemi (§33–39) · ✅ yapıldı, yalnızca REVIEW (2026-09-22)
 
-`chats`'e `mode TEXT NOT NULL DEFAULT 'free_chat'` (`ensureColumns`). `prompt.ts`
-moda göre farklı blok birleştirir. EXAM (§36) QUIZ'den ayrı: çok konulu, puanlı,
-sonrasında hata analizi → F2'ye yazar. REVIEW (§38): due kartlar + düşük mastery
-+ uzun süredir tekrarlanmamış konular.
+Orijinal spec 8 mod tanımlıyor (TEACH, QUIZ, EXAM, RESEARCH, REVIEW, FLASHCARD, PROBLEM_SOLVING, FREE_CHAT) ama hazırlık seviyeleri çok farklı çıktı (kod keşfi): **REVIEW** neredeyse tamamen hazırdı — `study-db.ts`'te tam bir due-kart sorgusu (`getDueCards`) ve F1b/F2'nin zaten hesapladığı zayıf alan/açık zayıf nokta verisi vardı, yalnızca "uzun süredir tekrarlanmamış konu" gerçekten yeniydi. **TEACH/QUIZ/EXAM/FLASHCARD'ın sohbet-içi hali** gerçek yeni konuşma mantığı gerektiriyor — mevcut ayrı quiz/kart üretici diyalogları (`GenerationDialog.svelte` vb.) sohbetin kendisine hiç dokunmuyor, `study.db`'de bağımsız bir belge üretiyor; sohbet-içi bir mod bambaşka bir şey. **RESEARCH** web erişimi altyapısı (bu uygulamada hiç yok) ve yetkilendirme arayüzü gerektiriyor; **PROBLEM_SOLVING** kod çalıştırma/hata ayıklama altyapısı gerektiriyor — ikisi de başlı başına ayrı özellik büyüklüğünde. **Kullanıcı bu turda yalnızca REVIEW'ı seçti**; diğerleri bilerek ertelendi.
+
+**Tasarım kararları (gerekçeli):**
+1. **`chats.mode TEXT NOT NULL DEFAULT 'free_chat'`** (`ensureColumns`, `provider` sütunuyla birebir aynı emsal). Bu turda yalnızca iki değer dolduruluyor: `'free_chat'` (varsayılan, mevcut davranış, bayt-bayt aynı prompt) ve `'review'`.
+2. **Mod, model/provider gibi istekle birlikte taşınır**, her turda DB'den yeniden okunmaz. `Chat.svelte` sohbeti açarken `data.chat.mode`'u yükler (`overrideModel`'in aynısı), her mesajda `ChatRequestBody.mode` olarak gönderir, değiştiğinde `PATCH /api/chats/[id]` ile kalıcı hale getirir (`onModelChange`'in aynısı). `createChat(...)` yeni bir sohbetin başladığı modu kaydeder. Bu, `api/chat/+server.ts`'in sıcak yoluna her turda ekstra bir DB okuması eklemez.
+3. **`computeReviewBlock(v)` yalnızca `mode === 'review'` iken çalışır** — sıradan bir sohbet turunda hiçbir ekstra DB işi yok (F12'nin belgelediği gecikme hassasiyetiyle tutarlı).
+4. **Prompt sırası: `coreIntro → memoryBlock → skillsBlock → reviewBlock → CORE_INVARIANTS`.** `prompt.ts`'in kendi ilkesi: yerel modeller sonraki talimatlara daha çok ağırlık veriyor. Tekrar-modu gündemi arka plan bilgisinden (memory) ve kullanıcının kendi skill özelleştirmelerinden daha güçlü bir yönerge (bu sohbetin NE İÇİN olduğunu söylüyor) — bu yüzden ikisinden sonra, ama hâlâ değişmez kurallardan önce.
+5. **F3'ün `deriveMemorySignals`'ı aynen yeniden kullanılıyor** (zayıf alanlar + açık zayıf noktalar) — ikinci bir tanım yok. Yalnızca "uzun süredir tekrarlanmamış alan" ve due kartlar bu mod için yeni.
+6. **"Uzun süredir tekrarlanmamış alan"**: güvenilir ustalığı olan bir alan (`quiz.reliable && quiz.lastAt`), son cevaplanan kanıtı bir eşikten (21 gün, ölçülmedi, ilk tahmin) eski. Doğrudan F1b'nin zaten döndürdüğü `quiz.lastAt`'tan hesaplanıyor, yeni sorgu yok.
+7. **Due kartlar**: mevcut `getDueCards(v, now, 5)` — bu bir prompt ipucu, tam tekrar kuyruğu değil (o `/study/cards`'ta).
+8. **Blok tekrar modunda asla sessizce kaybolmaz.** F3'ün memory bloğunun aksine (`''` sorun değil, isteğe bağlı renk), kullanıcı tekrar modunu açıkça seçti — gerçekten tekrar edilecek bir şey yoksa blok bunu açıkça söylüyor ("şu anda belirgin bir öncelik yok"), modeli hiç yönergesiz bırakıp sessizce sıradan sohbete düşmüyor.
+9. **Tamamı yumuşak başarısız olur** (`computeMemoryBlock`/`smalltalk-runtime.ts` ile aynı duruş): try/catch, hatada `''`, `app-log.jsonl`'a yeni `review_error` türü.
+10. **Bloğu kurmak için LLM çağrısı yok** — F1b/F2/F3 ile aynı disiplin. Blok şablonlanmış veri; asıl "sor, değerlendir" işini model TALİMATLA yapıyor.
+11. **Bu turda bilerek YOK**: "görev niyeti/konuşma bağlamı/öğrenme durumu"na göre otomatik mod geçişi (spec §33'ün saydığı yöntemlerden yalnızca biri — v1 yalnızca elle geçiş, model/provider override'ıyla aynı basitlik). Vault ana ekranından ayrı bir "tekrar oturumu başlat" hızlı-başlatma düğmesi **planlanmamıştı ama neredeyse bedavaya geldi**: `ModelPickerRow.svelte`'in zaten paylaşılan think-mode düğmesi deseni + `pending-message.ts`'in zaten var olan aktarım mekanizması sayesinde, yeni sohbet kutusundaki aynı "Tekrar" düğmesi yeni bir sohbeti doğrudan tekrar modunda başlatabiliyor — plana sonradan eklenen küçük, düşük riskli bir genişletme. Tekrar sonrası puanlama/skill güncelleme döngüsü yok (o EXAM modunun işi, ertelendi).
+
+**Kod:** şema `chats-db.ts` (`mode` sütunu, `ChatRow.mode`, `createChat`'e `mode?` parametresi, yeni `updateChatMode`). Saf: `src/lib/review-limits.ts`, `src/lib/review-block.ts` (`buildReviewBlockText`, +7 test — boşken bile açık bir "öncelik yok" satırı, asla `''`). Sunucu: `src/lib/server/review-mode.ts` (`deriveStaleDomains` saf +4 test, `computeReviewBlock` gerçek kasada uçtan uca +2 test — `chats.db` tekilinden farklı olarak burada döngü riski yok, doğrudan test edilebildi). `prompt.ts`: `buildPromptMessages` artık `mode` parametresi alıyor. `api/chat/+server.ts` ve `api/chats/[id]/+server.ts` mod alanını taşıyor/kalıcılaştırıyor. `Chat.svelte` + `vault/[id]/+page.svelte` + `ModelPickerRow.svelte`'e "Tekrar" düğmesi (think-mode düğmesiyle aynı pill deseni), `pending-message.ts`'e `mode` alanı.
+
+**Doğrulama:** 503/503 test, svelte-check 0. `mode !== 'review'` için `computeReviewBlock` hiç çağrılmıyor (yalnızca `''` dönmüyor) — sıradan sohbetler F6 öncesiyle bayt-bayt aynı prompt alır. **Gerçek verinin izole kopyasında** (`DATA_DIR` yönlendirmesi, gerçek `chats.db`/`study.db` dokunulmadı — mtime değişmedi): 808 karakterlik blok, F2'nin doğruladığı aynı açık zayıf noktaları (`relational-model (2), stewart-calculus-early-transcendentals (1), real-analysis (1)`) ve 5 due kart (SvelteKit state management notlarından, F2'nin "20 unutulan kart" ölçümüyle tutarlı) listeledi; hiçbir alan "zayıf" ya da "uzun süredir tekrarlanmamış" eşiğini geçmedi (F1b'nin "çoğu alanda yeterli veri yok" bulgusuyla tutarlı, dürüst bir boş sonuç).
+
+**Sınırlar (bilinmeli).**
+- TEACH/QUIZ/EXAM/FLASHCARD (sohbet-içi hali)/RESEARCH/PROBLEM_SOLVING bu turda yok; her biri kendi ölçümünü/tasarımını ister.
+- Eşik (21 gün) ve bütçe (1200 karakter) **ölçülmedi**, ilk tahmin — `k=6`/`serveCtx` gibi işaretli.
+- Otomatik mod seçimi yok; yalnızca elle geçiş.
+- Tekrar sonrası puanlama/skill güncelleme yok — REVIEW modu yalnızca önceliklendirir, sınav gibi değerlendirmez.
+- F4'ün önkoşul grafiği (`prerequisites_json`) **kullanılmıyor** — F4'ün kendi belgesi REVIEW modunu ("önkoşulu zayıf konulara dön") olası bir tüketici olarak anmıştı, bu turda bağlanmadı; zayıf alan sıralaması yalnızca F1b'nin mastery sayısına dayanıyor, önkoşul zincirine değil.
+- Gerçek tarayıcıda tıklama testi **yapılmadı** (F2/F3'teki aynı açık madde).
 
 ### F7 — Epistemik etiketler + UI (§10)
 
