@@ -603,7 +603,7 @@ yönerge, ne CSS — Marp'ın varsayılan temasıyla render ediliyor.
 
 ### F1 — Learner model & skill state (§23, §24) · temel
 
-> **Güncel durum (2026-09-22):** aşağıdaki şema ve altı eksenli formül **ilk taslaktır**. Uygulanan: F1a (soruların kendisi), **F1b** (eksensiz öğrenen modeli; şema, formül ve ölçümler F1b bölümünde) ve **F2** (zayıf nokta izleme + "Üzerinde durulacaklar"; ayrı bölümde, F1'e bağımlı olduğu için burada anılıyor). Düzey etiketleri 4 düzeye indirildi ve düğmenin arkasında deneysel.
+> **Güncel durum (2026-09-22):** aşağıdaki şema ve altı eksenli formül **ilk taslaktır**. Uygulanan: F1a (soruların kendisi), **F1b** (eksensiz öğrenen modeli; şema, formül ve ölçümler F1b bölümünde), **F2** (zayıf nokta izleme + "Üzerinde durulacaklar") ve **F3** (LLM'siz hafıza: elle GLOBAL/PERSONAL not + F1b/F2'den canlı türetilmiş DOMAIN/LEARNING_HISTORY; ayrı bölümlerde, F1'e bağımlı oldukları için burada anılıyor). Düzey etiketleri 4 düzeye indirildi ve düğmenin arkasında deneysel.
 
 Hammadde hazır: `attempt_answers` 97 satır, `quiz_items.source_path` 27/27
 `index.db`'deki `files.path` ile eşleşiyor → domain/level iki DB arasında
@@ -787,30 +787,33 @@ Belgedeki ilk tasarım (yukarıda arşivlendiği haliyle §27/§30) ayrı bir `e
 - Kartın gerçek hatırlaması bilinmiyor: "unutulmuş" durumu `interval_days`'e dayanır (tekrar günlüğü tutulmuyor, F1b'deki `cardRetention` ile aynı kısıt).
 - Tüketiciler (üretici, REVIEW modu, kart üretimi) bu turda yok; F3/F6 ile birlikte düşünülecek.
 
-### F3 — Memory (§18–22, §52)
+### F3 — Memory (§18–22, §52) · ✅ yapıldı, LLM'siz alt küme (2026-09-22)
 
-```sql
-CREATE TABLE IF NOT EXISTS memory (
-  id TEXT PRIMARY KEY,
-  type TEXT NOT NULL,             -- GLOBAL|PERSONAL|DOMAIN|EPISODIC|ERROR|PROBLEM|LEARNING_HISTORY
-  domain TEXT,
-  key TEXT NOT NULL,
-  value_json TEXT NOT NULL,
-  origin TEXT NOT NULL,           -- STATED | OBSERVED | INFERRED
-  confidence REAL,
-  evidence TEXT,
-  created_at TEXT NOT NULL,
-  superseded_by TEXT REFERENCES memory(id)   -- §21: sessizce silme yok
-);
-CREATE INDEX IF NOT EXISTS idx_memory_live
-  ON memory(type, domain, key) WHERE superseded_by IS NULL;
-```
+Orijinal spec (`Local Educational Agent — Agent Specification v1.md` §18–22) modelin sohbetten kendiliğinden "hatırlanmaya değer" olgu çıkarmasını öngörüyor (OBSERVED/INFERRED, her turdan sonra ek bir LLM çağrısı). Kullanıcıya soruldu: bu projede küçük yerel modelin serbest metinden güvenilir çıkarım yapma geçmişi zayıf (F1a: kaynak sızıntısı, ~%3 yanlış cevap anahtarı; düzey etiketleme hakem uyumu yalnızca %50) — **kullanıcı LLM'siz yolu seçti.**
 
-§52 gizlilik kısıtı somut: `chats.db` zaten tüm ham mesajları tutuyor; memory
-**ham konuşma saklamaz**, yalnızca türetilmiş olgu. Yazmadan önce oku, aynıysa
-yazma (§21). Retrieval (§22): `prompt.ts`'e `buildMemoryBlock()` — task relevance
-× importance × confidence × recency ile sıralı, karakter bütçeli.
-Yeni: `src/lib/server/memory.ts`, `memory.test.ts`.
+**Kapsam kararı:** yeni LLM çağrısı yok. GLOBAL/PERSONAL notlar **elle** (STATED, kullanıcı ayarlar sayfasından yazar). DOMAIN/LEARNING_HISTORY **hiç saklanmaz**, F1b/F2'nin zaten hesapladığı öğrenen profilinden (`computeLearnerProfile`) ve zayıf nokta listesinden (`computeWeakSpots`) her turda canlı türetilir. EPISODIC/ERROR/PROBLEM **tamamen ertelendi** (F2'nin zayıf nokta verisini bile bu turda memory'ye köprülemedi) — bunlar serbest metinden LLM çıkarımı gerektirir ve bu projenin pratiğine göre (F5, F1b'nin düzey-etiketi deneyi) önce ayrı bir güvenilirlik ölçümü ister.
+
+**Tasarım kararları (gerekçeli):**
+1. **`memory` tablosu `chats.db`'de (kullanıcı düzeyi), vault-özel `study.db`'de değil.** `smalltalk_phrases` ile birebir aynı gerekçe (`smalltalk-store.ts`: "argo kişiye ait, vault'a değil"). GLOBAL/PERSONAL notlar hangi vault açık olduğuna bağlı değil. DOMAIN/LEARNING_HISTORY hiç saklanmadığı için (canlı türetilir) vault-özel depolamaya hiç gerek yok.
+2. **Silme ayrı bir sütun (`deleted_at`).** Planın orijinal şemasında yalnızca `superseded_by` vardı (değer değişti, geçmiş korunsun). Kullanıcının bir notu tamamen istememesi "değer değişti"den farklı bir eylem — ikisi karışmasın diye ayrıldı.
+3. **Düzenleme = yeni satır + eskisi `superseded_by` ile zincirlenir.** Satırlar bu şekilde değişmez kalır; §21'in "geçmiş sessizce yok edilmez" kuralı bedavaya geliyor, ayrı bir geçmiş arayüzü gerekmiyor (yalnızca canlı satır ayarlar sayfasında görünür).
+4. **Prompt sırası: `coreIntro → memoryBlock → skillsBlock → CORE_INVARIANTS`.** `prompt.ts`'in kendi belgelediği ilke: yerel modeller sonraki talimatlara daha çok ağırlık veriyor (bu yüzden `CORE_INVARIANTS` hep en sonda, geçersiz kılınamaz). Memory öğrenci hakkında arka plan bilgisi — hiçbir şeyi geçersiz kılmamalı, bu yüzden genel giriş cümlesinden hemen sonra, kullanıcının kendi skill özelleştirmelerinden önce.
+5. **Küçük, ölçülmemiş bir karakter bütçesi** (`src/lib/memory-limits.ts`, `MEMORY_MAX_CHARS=1200`) — F12'nin belgelenmiş prompt-boyutu hassasiyeti (6 GB GPU) yüzünden bilerek küçük; `k=6`/`serveCtx` gibi "seçildi, ölçülmedi" diye işaretli.
+6. **Kill switch: `CHAT_MEMORY_GATE`** ortam değişkeni, `smalltalkGateEnabled` ile birebir aynı ayrıştırma (`off`/`0`/`false`).
+7. **`key` sütunu şemada var ama v1'de anlamlı kullanılmıyor** (metinden otomatik slug) — gelecekteki bir otomatik yazıcı (OBSERVED/INFERRED) için ayrılmış.
+8. **Tamamı yumuşak başarısız olur.** `computeMemoryBlock` tüm gövdeyi try/catch'e alır, hata durumunda `''` döner ve `app-log.jsonl`'a `memory_error` yazar — `smalltalk-runtime.ts`'in belgelediği kuralla aynı duruş.
+9. **Türetilmiş (DOMAIN/LEARNING_HISTORY) içerik yalnızca gerçek sinyal varsa görünür**: en az bir güvenilir düşük-ustalık alan (mastery < %60) ya da en az bir açık zayıf nokta; yoksa hiçbir şey eklenmez (F1b'nin "yeterli veri yok" dürüstlüğüyle aynı). **Ölçülmedi:** bu türetilmiş içeriğin sohbette doğal mı yoksa "seni izliyorum" gibi mi okunduğu — F5'in sohbet sızıntısı gibi ancak gerçek kullanımda görülür, izlenmesi gereken bir açık madde.
+
+**Kod:** saf `src/lib/memory-limits.ts`, `src/lib/memory-block.ts` (`buildMemoryBlockText`, +8 test) — DB'siz, girdi düz veri (F1b/F2'nin `EvidencePoint`/`WeakSpot` desenine benzer). Sunucu: `src/lib/server/memory-store.ts` (şema + CRUD, `db` parametre alır — `smalltalk-store.ts` gibi, +9 test gerçek SQLite) ve **ayrı** `src/lib/server/memory-runtime.ts` (`getChatsDb()` + F1b/F2 + saf biçimlendiriciyi birleştiren yapıştırıcı — `chats-db.ts ↔ memory-store.ts` çevrimini önlemek için ayrı dosya, `smalltalk-runtime.ts`'in var olma nedeniyle aynı; `deriveMemorySignals` saf yardımcı, +7 test). `GET/POST /api/memory`, `PATCH/DELETE /api/memory/[id]`. `src/lib/types.ts`'e `MemoryNoteView` (F2'deki `WeakSpotView` deseniyle aynı: istemci için ayrı kopya). `/settings/memory` sayfası (liste/ekle/düzenle/sil — `settings/smalltalk`'ın liste/sil iskeleti + `settings/skills`'in `Dialog` düzenleyicisi), ayarlar hub'ına yeni kart. `prompt.ts`: `buildPromptMessages` artık `v: VaultContext` alıyor, `computeMemoryBlock(v)` ile `skillsBlock` paralel (`Promise.all`) hesaplanıyor. `chats-db.ts`: `initChatsSchema` içine `initMemorySchema(instance)`.
+
+**Doğrulama:** 490/490 test, svelte-check 0. **Gerçek verinin izole kopyasında** (`DATA_DIR` yönlendirmesi, `computeMemoryBlock`/`addMemory` doğrudan çağrıldı — dev sunucu/`.env` üzerinden değil, gerçek `chats.db` dokunulmadı): notsuz durumda türetilmiş blok yalnızca (136 karakter) F2'nin doğruladığı açık zayıf noktaları listeledi (`relational-model (2), stewart-calculus-early-transcendentals (1), real-analysis (1)`); `CHAT_MEMORY_GATE=0` ile boş döndü; iki elle not eklenince en yeni önce sırayla listeye eklendi, toplam 232 karakter (bütçenin çok altında). Trim davranışı (önce türetilmiş içerik, sonra en eski not) yalnızca sentetik testte ölçüldü (gerçek veri bütçeyi hiç zorlamadı).
+
+**Sınırlar (bilinmeli).**
+- EPISODIC/ERROR/PROBLEM yok; "geçmişte şunu sormuştun", "bu problemi çözmüştük" gibi bellek bu turda hiç yok.
+- Türetilmiş kısmın eşiği (mastery < %60) ve bütçe (1200 karakter) **ölçülmedi**, ilk tahmin.
+- Yalnızca canlı (silinmemiş/geçersiz kılınmamış) satır ayarlar sayfasında görünür; `superseded_by` zinciri DB'de var ama okuyan bir arayüz yok.
+- Gerçek tarayıcıda tıklama testi **yapılmadı** (F2'de bırakılan aynı açık madde: `.env`/dev-sunucu izolasyonu ek dikkat gerektiriyor).
+- Bir soru/kart zaten F2'nin zayıf nokta sayfasında görünüyor; memory bloğu bunun küçük bir özetini sohbete de taşıyor — iki yerde (biraz) tekrar var, bilerek (biri arayüzde okunur, öbürü modele arka plan bilgisi verir).
 
 ### F4 — Prerequisite graph (§28) · ✅ kod hazır, gerçek indekse HENÜZ uygulanmadı (2026-09-21)
 
