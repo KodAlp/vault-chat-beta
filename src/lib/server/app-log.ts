@@ -58,7 +58,10 @@ export interface AppLogRecord {
 		| 'smalltalk'
 		/** computeMemoryBlock (memory-runtime.ts, F3) failed and fell back to no memory block —
 		 * never an error in the user's answer. `message` only, no note/domain content. */
-		| 'memory_error';
+		| 'memory_error'
+		/** computeReviewBlock (review-mode.ts, F6) failed and fell back to no review block —
+		 * same posture, `message` only. */
+		| 'review_error';
 	chatId?: string;
 	provider?: string;
 	model?: string;

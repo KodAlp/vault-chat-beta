@@ -64,11 +64,29 @@
 	 */
 	let overrideProvider = $state<string | undefined>(undefined);
 	let hasChatRow = $state(false);
+	/** F6 — this chat's mode toggle. Persisted to chats.mode (unlike thinkMode, which is per-request only) so
+	 * reopening a review chat keeps showing it as one. See onReviewModeChange. */
+	let reviewMode = $state(false);
 
 	let activeModel = $derived(overrideModel ?? (thinkMode ? settings.reasoningModel : settings.fastModel));
 	let activeProvider = $derived(
 		overrideProvider ?? (thinkMode ? settings.reasoningProvider : settings.fastProvider)
 	);
+
+	async function onReviewModeChange(value: boolean) {
+		reviewMode = value;
+		if (hasChatRow) {
+			try {
+				await fetch(`/api/chats/${chatId}`, {
+					method: 'PATCH',
+					headers: { 'content-type': 'application/json' },
+					body: JSON.stringify({ mode: value ? 'review' : 'free_chat' })
+				});
+			} catch {
+				// Best-effort persistence — the in-memory toggle still applies to this session, same as onModelChange.
+			}
+		}
+	}
 
 	onMount(async () => {
 		try {
@@ -189,6 +207,7 @@
 				model: activeModel,
 				provider: activeProvider,
 				think: thinkMode,
+				mode: reviewMode ? 'review' : 'free_chat',
 				chatId,
 				titleModel: settings.defaultModel,
 				titleProvider: settings.defaultProvider,
@@ -312,13 +331,14 @@
 				messages = [];
 				overrideModel = undefined;
 				overrideProvider = undefined;
+				reviewMode = false;
 				hasChatRow = false;
 				onChatLoaded?.(undefined);
 				return;
 			}
 			if (!res.ok) throw new Error();
 			const data = (await res.json()) as {
-				chat: { model: string; provider: string | null; included_paths_json: string | null };
+				chat: { model: string; provider: string | null; included_paths_json: string | null; mode: string };
 				messages: ChatMessage[];
 			};
 			messages = data.messages;
@@ -326,6 +346,7 @@
 			// null (pre-migration chats, or none ever chosen) → undefined, same
 			// fallback-to-current-default as before — see its doc comment.
 			overrideProvider = data.chat.provider ?? undefined;
+			reviewMode = data.chat.mode === 'review';
 			hasChatRow = true;
 			isAtBottom = true;
 			scrollToBottom(true);
@@ -357,6 +378,7 @@
 			overrideModel = pending.modelId;
 			overrideProvider = pending.providerId;
 			if (pending.think !== undefined) thinkMode = pending.think;
+			reviewMode = pending.mode === 'review';
 			hasChatRow = false;
 			onChatLoaded?.(undefined);
 			input = pending.question;
@@ -451,7 +473,9 @@
 		{activeProvider}
 		{activeModel}
 		bind:thinkMode
+		bind:reviewMode
 		{onModelChange}
+		{onReviewModeChange}
 		class="chat-compose-row"
 	/>
 

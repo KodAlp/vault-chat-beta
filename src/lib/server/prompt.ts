@@ -2,6 +2,7 @@ import type { ChatMessage, RetrievedChunk } from '$lib/types';
 import type { ChatMessage as ProviderChatMessage } from './providers/types';
 import { renderUserSkillsBlock } from './userSkills';
 import { computeMemoryBlock } from './memory-runtime';
+import { computeReviewBlock } from './review-mode';
 import type { VaultContext } from './vaults';
 
 /** Vault-level default when a vault has no LibrarySettings.allowedLanguages
@@ -60,6 +61,7 @@ export async function buildPromptMessages(
 	chunks: RetrievedChunk[],
 	allowedLanguages: string[],
 	v: VaultContext,
+	mode: string = 'free_chat',
 	opts?: { toolsEnabled?: boolean }
 ): Promise<ProviderChatMessage[]> {
 	const lastUser = history[history.length - 1];
@@ -78,13 +80,19 @@ export async function buildPromptMessages(
 			: '';
 
 	// Order matters: local models weight later instructions more heavily (see CORE_INVARIANTS's own doc comment).
-	// The memory block (F3, facts about the learner) sits below the user's own explicit skill customizations and
-	// well below the hard invariants — it should outweigh nothing.
-	const [skillsBlock, memoryBlock] = await Promise.all([
+	// The memory block (F3, facts about the learner) sits below the user's own explicit skill customizations —
+	// it should outweigh nothing. The review block (F6), when this chat is in review mode, sits ABOVE the user's
+	// skills: it's a stronger, session-defining directive (what THIS conversation is for), but still yields to
+	// the hard invariants right below it. computeReviewBlock only runs for mode === 'review' — an ordinary
+	// free_chat turn does no extra work and produces the exact same prompt as before F6.
+	const [skillsBlock, memoryBlock, reviewBlock] = await Promise.all([
 		renderUserSkillsBlock('chat', { includeFileNotes: opts?.toolsEnabled }),
-		computeMemoryBlock(v)
+		computeMemoryBlock(v),
+		mode === 'review' ? computeReviewBlock(v) : Promise.resolve('')
 	]);
-	const systemPrompt = [coreIntro(allowedLanguages), memoryBlock, skillsBlock, CORE_INVARIANTS].filter(Boolean).join('\n\n');
+	const systemPrompt = [coreIntro(allowedLanguages), memoryBlock, skillsBlock, reviewBlock, CORE_INVARIANTS]
+		.filter(Boolean)
+		.join('\n\n');
 
 	return [
 		{ role: 'system', content: systemPrompt },

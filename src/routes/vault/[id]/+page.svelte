@@ -37,6 +37,9 @@
 	let overrideModel = $state<string | undefined>(undefined);
 	let overrideProvider = $state<string | undefined>(undefined);
 	let thinkMode = $state(false);
+	/** F6 — carried into the new chat's initial mode via pending-message.ts's `mode`, same hand-off as
+	 * think/model/provider above. */
+	let reviewMode = $state(false);
 	let activeModel = $derived(overrideModel ?? (thinkMode ? settings.reasoningModel : settings.fastModel));
 	let activeProvider = $derived(
 		overrideProvider ?? (thinkMode ? settings.reasoningProvider : settings.fastProvider)
@@ -115,7 +118,8 @@
 			question: trimmed,
 			providerId: overrideProvider,
 			modelId: overrideModel,
-			think: thinkMode
+			think: thinkMode,
+			mode: reviewMode ? 'review' : undefined
 		});
 		goto(`/vault/${data.vaultId}/chat/${chatId}`);
 	}
@@ -251,6 +255,7 @@
 				{activeProvider}
 				{activeModel}
 				bind:thinkMode
+				bind:reviewMode
 				{onModelChange}
 			/>
 			<div class="flex gap-2">
