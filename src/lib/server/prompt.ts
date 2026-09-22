@@ -1,6 +1,8 @@
 import type { ChatMessage, RetrievedChunk } from '$lib/types';
 import type { ChatMessage as ProviderChatMessage } from './providers/types';
 import { renderUserSkillsBlock } from './userSkills';
+import { computeMemoryBlock } from './memory-runtime';
+import type { VaultContext } from './vaults';
 
 /** Vault-level default when a vault has no LibrarySettings.allowedLanguages
  * of its own yet (pre-existing settings.json, or /api/skills/preview's
@@ -57,6 +59,7 @@ export async function buildPromptMessages(
 	history: ChatMessage[],
 	chunks: RetrievedChunk[],
 	allowedLanguages: string[],
+	v: VaultContext,
 	opts?: { toolsEnabled?: boolean }
 ): Promise<ProviderChatMessage[]> {
 	const lastUser = history[history.length - 1];
@@ -74,8 +77,14 @@ export async function buildPromptMessages(
 					.join('\n\n---\n\n')}\n</context>\n\n`
 			: '';
 
-	const skillsBlock = await renderUserSkillsBlock('chat', { includeFileNotes: opts?.toolsEnabled });
-	const systemPrompt = [coreIntro(allowedLanguages), skillsBlock, CORE_INVARIANTS].filter(Boolean).join('\n\n');
+	// Order matters: local models weight later instructions more heavily (see CORE_INVARIANTS's own doc comment).
+	// The memory block (F3, facts about the learner) sits below the user's own explicit skill customizations and
+	// well below the hard invariants — it should outweigh nothing.
+	const [skillsBlock, memoryBlock] = await Promise.all([
+		renderUserSkillsBlock('chat', { includeFileNotes: opts?.toolsEnabled }),
+		computeMemoryBlock(v)
+	]);
+	const systemPrompt = [coreIntro(allowedLanguages), memoryBlock, skillsBlock, CORE_INVARIANTS].filter(Boolean).join('\n\n');
 
 	return [
 		{ role: 'system', content: systemPrompt },

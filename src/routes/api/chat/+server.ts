@@ -246,7 +246,7 @@ export const POST: RequestHandler = async ({ request }) => {
 				// Whether a corrupted answer may be continued from its clean prefix instead
 				// of regenerated (resume-plan.ts) — Ollama + a verified model family only.
 				const resumeSupported = await supportsPrefixResume(body.provider, body.model);
-				const basePromptMessages = await buildPromptMessages(body.messages, sources, allowedLanguages, {
+				const basePromptMessages = await buildPromptMessages(body.messages, sources, allowedLanguages, v, {
 					toolsEnabled
 				});
 

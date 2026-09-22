@@ -5,6 +5,7 @@ import { chatsDbPath } from './env';
 import { ensureColumns } from './sqlite-schema';
 import { logAppEvent } from './app-log';
 import { initSmallTalkSchema } from './smalltalk-store';
+import { initMemorySchema } from './memory-store';
 
 export interface ChatRow {
 	id: string;
@@ -102,6 +103,8 @@ export function initChatsSchema(instance: Database.Database): void {
 	instance.exec(`CREATE INDEX IF NOT EXISTS idx_chats_vault_id ON chats(vault_id);`);
 	// The user's own small-talk phrases (smalltalk-gate.ts): user-level like chats, not per vault.
 	initSmallTalkSchema(instance);
+	// Manual memory notes (F3, memory-store.ts): user-level for the same reason.
+	initMemorySchema(instance);
 }
 
 /** Separate from data/vaults/<id>/index.db on purpose — this is user
