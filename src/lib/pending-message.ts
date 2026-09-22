@@ -15,6 +15,8 @@ export interface PendingMessage {
 	providerId?: string;
 	modelId?: string;
 	think?: boolean;
+	/** F6 — 'review' if the welcome screen's own review-mode toggle was on; undefined (→ 'free_chat') otherwise. */
+	mode?: string;
 }
 
 let pending: PendingMessage | null = null;

@@ -21,7 +21,9 @@
 		"modelSelectTitle": "Model/provider selection",
 		"modelSrLabel": "Model",
 		"thinkModeTitle": "When on, the reasoning model thinks before answering (slower but deeper), and the process is shown in the chat. When off, the fast model is used.",
-		"thinkModeLabel": "Think"
+		"thinkModeLabel": "Think",
+		"reviewModeTitle": "When on, this chat prioritizes due cards, weak areas, and topics you haven't reviewed in a while.",
+		"reviewModeLabel": "Review"
 	},
 	"Chat": {
 		"emptyStateTitle": "Ask a question about your notes",

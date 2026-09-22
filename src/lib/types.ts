@@ -120,6 +120,9 @@ export interface ChatRequestBody {
 	/** "Yine de kaynak ara": retrieve even if the small-talk gate would skip it, and
 	 * record that this message is a question. */
 	forceSources?: boolean;
+	/** F6 — 'free_chat' (default, omit) | 'review'. Travels with every request the same way model/provider do
+	 * (Chat.svelte's chatMode) — see prompt.ts's buildPromptMessages. */
+	mode?: string;
 }
 
 export interface OllamaModel {

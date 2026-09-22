@@ -21,7 +21,9 @@
 		"modelSelectTitle": "Model/sağlayıcı seçimi",
 		"modelSrLabel": "Model",
 		"thinkModeTitle": "Açıkken muhakeme modeli önce akıl yürütür (yavaş ama daha derin), süreç sohbette görünür. Kapalıyken hızlı model kullanılır.",
-		"thinkModeLabel": "Derin düşün"
+		"thinkModeLabel": "Derin düşün",
+		"reviewModeTitle": "Açıkken bu sohbet, vadesi gelen kartları, zayıf alanları ve uzun süredir tekrarlanmamış konuları önceliklendirir.",
+		"reviewModeLabel": "Tekrar"
 	},
 	"Chat": {
 		"emptyStateTitle": "Kasandaki notlar hakkında bir soru sor",

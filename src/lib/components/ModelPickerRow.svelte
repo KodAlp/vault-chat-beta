@@ -4,6 +4,7 @@
 	import { t } from '$lib/i18n/index.svelte';
 	import BotIcon from '@lucide/svelte/icons/bot';
 	import BrainIcon from '@lucide/svelte/icons/brain';
+	import RotateCcwIcon from '@lucide/svelte/icons/rotate-ccw';
 
 	/**
 	 * The model/provider pill + "Derin düşün" pill row — extracted from
@@ -28,7 +29,9 @@
 		activeProvider,
 		activeModel,
 		thinkMode = $bindable(),
+		reviewMode = $bindable(false),
 		onModelChange,
+		onReviewModeChange,
 		class: className = ''
 	}: {
 		/** Both callers can be mounted on their own separate route at once
@@ -39,7 +42,15 @@
 		activeProvider: string;
 		activeModel: string;
 		thinkMode: boolean;
+		/** F6 — this chat's mode toggle ('review' vs the default 'free_chat'), as a boolean pill like thinkMode.
+		 * Optional/bindable so a caller that doesn't care (there is none yet, but matches thinkMode's own shape)
+		 * can ignore it. */
+		reviewMode?: boolean;
 		onModelChange: (key: string) => void;
+		/** Unlike thinkMode, a review-mode change needs a side effect (Chat.svelte persists it to the chat row) —
+		 * called after `reviewMode` already updated. The vault page's pre-chat composer has nothing to persist
+		 * yet and can leave this unset. */
+		onReviewModeChange?: (value: boolean) => void;
 		/** Forwarded onto the root element — e.g. Chat.svelte adds its own
 		 * top padding via a :global() rule keyed to a class passed here,
 		 * since Svelte's scoped styles can't reach into a child's markup
@@ -81,6 +92,26 @@
 		/>
 		<BrainIcon size={13} aria-hidden="true" />
 		{t('ModelPickerRow.thinkModeLabel')}
+	</label>
+	<label
+		class="think-pill"
+		class:active={reviewMode}
+		for="{idPrefix}-review-mode"
+		title={t('ModelPickerRow.reviewModeTitle')}
+	>
+		<input
+			id="{idPrefix}-review-mode"
+			name="{idPrefix}-review-mode"
+			type="checkbox"
+			checked={reviewMode}
+			onchange={(e) => {
+				reviewMode = e.currentTarget.checked;
+				onReviewModeChange?.(reviewMode);
+			}}
+			class="sr-only"
+		/>
+		<RotateCcwIcon size={13} aria-hidden="true" />
+		{t('ModelPickerRow.reviewModeLabel')}
 	</label>
 </div>
 

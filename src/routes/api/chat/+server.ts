@@ -188,7 +188,7 @@ export const POST: RequestHandler = async ({ request }) => {
 				// a `send({type:'error'})` to the client and an app-log record,
 				// not a stream that dies with no explanation.
 				isNewChat = !getChat(chatId);
-				if (isNewChat) createChat(chatId, body.model, v.id, body.provider);
+				if (isNewChat) createChat(chatId, body.model, v.id, body.provider, body.mode);
 				send({ type: 'chatId', chatId });
 				if (lastUser) insertMessage({ chatId, role: 'user', content: lastUser.content });
 
@@ -246,7 +246,7 @@ export const POST: RequestHandler = async ({ request }) => {
 				// Whether a corrupted answer may be continued from its clean prefix instead
 				// of regenerated (resume-plan.ts) — Ollama + a verified model family only.
 				const resumeSupported = await supportsPrefixResume(body.provider, body.model);
-				const basePromptMessages = await buildPromptMessages(body.messages, sources, allowedLanguages, v, {
+				const basePromptMessages = await buildPromptMessages(body.messages, sources, allowedLanguages, v, body.mode ?? 'free_chat', {
 					toolsEnabled
 				});
 
