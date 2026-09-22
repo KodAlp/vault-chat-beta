@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import ImportObsidianDialog from '$lib/components/ImportObsidianDialog.svelte';
+	import LinksImportDialog from '$lib/components/LinksImportDialog.svelte';
 	import LibraryTree from '$lib/components/LibraryTree.svelte';
 	import type { LibrarySettings } from '$lib/types';
 	import { Switch } from '$lib/components/ui/switch';
@@ -97,6 +98,18 @@
 		</Card.Header>
 		<Card.Content>
 			<ImportObsidianDialog />
+		</Card.Content>
+	</Card.Root>
+
+	<Card.Root class="mb-6">
+		<Card.Header>
+			<Card.Title>{t('LibrarySettingsPage.importLinksTitle')}</Card.Title>
+			<Card.Description>
+				{t('LibrarySettingsPage.importLinksDescription')}
+			</Card.Description>
+		</Card.Header>
+		<Card.Content>
+			<LinksImportDialog />
 		</Card.Content>
 	</Card.Root>
 

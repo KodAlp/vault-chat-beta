@@ -8,6 +8,11 @@ markitdown[all]
 # fetching only, never downloads video/audio.
 yt-dlp
 
+# Faz 15 (linkten içe aktarma, web sayfası kolu): ana-içerik ayıklama.
+# MarkItDown'ın HTML'i de "çevirdiği" doğru ama nav/reklam/gövde-dışı öğeleri
+# ayıklamıyor — trafilatura tam olarak bu problemi çözüyor. Hafif, saf Python.
+trafilatura
+
 # Deferred, optional, heavy (pull PyTorch + multi-GB model weights on first
 # run) — see .claude/skills/source-ingest/SKILL.md. convert.py detects their
 # absence via ImportError and reports a clear "not installed" message rather
