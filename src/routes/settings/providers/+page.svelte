@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import type { ProviderStatus, ProviderModelOption } from '$lib/types';
+	import type { ProviderStatus, ProviderModelOption, ModelListItem } from '$lib/types';
+	import { Checkbox } from '$lib/components/ui/checkbox';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Switch } from '$lib/components/ui/switch';
@@ -41,6 +42,52 @@
 
 	function modelsFor(providerId: string): ProviderModelOption[] {
 		return providerModels.filter((m) => m.providerId === providerId);
+	}
+
+	// F14-4 — "model listesini yönet": lazy per-provider (the catalog fetch/filter this hits is not free),
+	// loaded the first time that provider's <details> is opened, not on page mount.
+	let modelManage = $state<Record<string, { approved: ModelListItem[]; other: ModelListItem[] } | null>>({});
+	let modelManageError = $state<Record<string, string>>({});
+	let modelManageBusy = $state<Record<string, boolean>>({});
+
+	async function loadModelManage(providerId: string) {
+		if (modelManage[providerId] !== undefined) return; // already loaded (or loading) once
+		modelManage[providerId] = null;
+		try {
+			const res = await fetch(`/api/providers/${encodeURIComponent(providerId)}/models`);
+			if (!res.ok) throw new Error();
+			modelManage[providerId] = (await res.json()) as { approved: ModelListItem[]; other: ModelListItem[] };
+		} catch {
+			delete modelManage[providerId];
+			modelManageError[providerId] = t('ProvidersSettingsPage.modelManageLoadError');
+		}
+	}
+
+	/** Toggling one checkbox materializes the full enabledModels allow-list (every currently-checked id, not
+	 * just this one) — the first uncheck is what turns "uncurated, everything approved shows" into an
+	 * explicit list; see config-store.ts's ProviderConfigEntry.enabledModels doc comment. */
+	async function toggleModelEnabled(providerId: string, modelId: string, checked: boolean) {
+		const state = modelManage[providerId];
+		if (!state) return;
+		for (const item of [...state.approved, ...state.other]) {
+			if (item.id === modelId) item.enabled = checked;
+		}
+		const enabledIds = [...state.approved, ...state.other].filter((m) => m.enabled).map((m) => m.id);
+		modelManageBusy[providerId] = true;
+		modelManageError[providerId] = '';
+		try {
+			const res = await fetch(`/api/providers/${encodeURIComponent(providerId)}`, {
+				method: 'PATCH',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ enabledModels: enabledIds })
+			});
+			if (!res.ok) throw new Error();
+			await refresh(); // the plain picker list (modelsFor) must reflect the new allow-list too
+		} catch {
+			modelManageError[providerId] = t('ProvidersSettingsPage.modelManageSaveError');
+		} finally {
+			modelManageBusy[providerId] = false;
+		}
 	}
 
 	let keyDrafts = $state<Record<string, string>>({});
@@ -423,6 +470,49 @@
 									</span>
 								{/if}
 							</div>
+
+							<details class="mt-2 text-xs" ontoggle={(e) => e.currentTarget.open && loadModelManage(p.id)}>
+								<summary class="cursor-pointer text-muted-foreground">{t('ProvidersSettingsPage.manageModels')}</summary>
+								<div class="mt-2 flex flex-col gap-1 pl-2">
+									{#if modelManageError[p.id]}
+										<p class="text-destructive">{modelManageError[p.id]}</p>
+									{:else if modelManage[p.id] === undefined || modelManage[p.id] === null}
+										<p class="text-muted-foreground">{t('Common.yukleniyor')}</p>
+									{:else if modelManage[p.id]!.approved.length === 0 && modelManage[p.id]!.other.length === 0}
+										<p class="text-muted-foreground">{t('ProvidersSettingsPage.noModelList')}</p>
+									{:else}
+										{#each modelManage[p.id]!.approved as m (m.id)}
+											<label class="flex cursor-pointer items-center gap-1.5">
+												<Checkbox
+													checked={m.enabled}
+													disabled={modelManageBusy[p.id]}
+													onCheckedChange={(v: boolean) => toggleModelEnabled(p.id, m.id, v)}
+												/>
+												{m.id}
+											</label>
+										{/each}
+										{#if modelManage[p.id]!.other.length > 0}
+											<details class="mt-1">
+												<summary class="cursor-pointer text-muted-foreground">
+													{t('ProvidersSettingsPage.otherModels', { count: modelManage[p.id]!.other.length })}
+												</summary>
+												<div class="mt-1 flex flex-col gap-1 pl-2">
+													{#each modelManage[p.id]!.other as m (m.id)}
+														<label class="flex cursor-pointer items-center gap-1.5">
+															<Checkbox
+																checked={m.enabled}
+																disabled={modelManageBusy[p.id]}
+																onCheckedChange={(v: boolean) => toggleModelEnabled(p.id, m.id, v)}
+															/>
+															{m.id}
+														</label>
+													{/each}
+												</div>
+											</details>
+										{/if}
+									{/if}
+								</div>
+							</details>
 
 							{#if keyEditingId === p.id}
 								<div class="mt-2 flex gap-1.5">

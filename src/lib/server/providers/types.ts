@@ -91,6 +91,10 @@ export interface ModelInfo {
 	 * them, so pickers must filter these out rather than offer them as a
 	 * chat/generation choice. Undefined/false means chat-capable. */
 	embeddingOnly?: boolean;
+	/** F14 — the OpenAI-compatible /models endpoint's standard `created` field (unix seconds), when the
+	 * provider returns one. Used by model-filter.ts as an age fallback for a model id the catalog (F14-2)
+	 * doesn't know about — without it, a catalog-unmatched model has no age signal at all. */
+	created?: number;
 }
 
 export type ProviderHealth = 'ok' | 'unreachable' | 'auth_error';

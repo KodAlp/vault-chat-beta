@@ -1,6 +1,22 @@
 import fs from 'node:fs';
 import { providersPath } from '../env';
 
+/**
+ * F14-4 — providers.json is now written more often (a checkbox toggle in the model-management UI writes on
+ * every click, same "instant PATCH" pattern as the rest of this settings page), so a plain whole-file
+ * writeFileSync is more likely to collide with a concurrent read. Same tmp+rename-with-retry shape as
+ * vaults.ts's writeRegistry — Windows can transiently EPERM/EBUSY a rename right after a write.
+ */
+const RENAME_ATTEMPTS = 4;
+const RENAME_BACKOFF_MS = 25;
+
+/** Synchronous blocking sleep (Atomics.wait on a throwaway SharedArrayBuffer) — same trick vaults.ts's
+ * writeRegistry uses, so this stays a sync function and every existing caller (addProvider, deleteProvider,
+ * updateProviderEnabled, ...) keeps its current sync signature. */
+function sleepSync(ms: number): void {
+	Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
 export interface ProviderConfigEntry {
 	id: string;
 	label: string;
@@ -23,6 +39,11 @@ export interface ProviderConfigEntry {
 	 * chain rather than asked for a model known to be wrong.
 	 */
 	defaultModel?: string;
+	/** F14-4 — a manual allow-list of model ids for this provider's pickers. Absent/empty means "show
+	 * everything model-filter.ts's approved list already contains" — this field only ever NARROWS that list
+	 * further, it never re-adds a model the filter rejected. Set the first time the user unchecks anything in
+	 * the settings page's "model listesini yönet" section. */
+	enabledModels?: string[];
 }
 
 /** Cloud providers are OpenAI-compatible except Anthropic — this drives the
@@ -41,7 +62,28 @@ function readFile(): ProvidersFile {
 }
 
 function writeFile(data: ProvidersFile): void {
-	fs.writeFileSync(providersPath(), JSON.stringify(data, null, 2) + '\n', 'utf-8');
+	const p = providersPath();
+	const tmp = `${p}.${process.pid}.tmp`;
+	fs.writeFileSync(tmp, JSON.stringify(data, null, 2) + '\n', 'utf-8');
+
+	for (let attempt = 1; ; attempt++) {
+		try {
+			fs.renameSync(tmp, p);
+			return;
+		} catch (err) {
+			const code = (err as NodeJS.ErrnoException).code;
+			const transient = code === 'EPERM' || code === 'EBUSY' || code === 'EACCES';
+			if (!transient || attempt === RENAME_ATTEMPTS) {
+				try {
+					fs.rmSync(tmp, { force: true });
+				} catch {
+					// Nothing useful to do — do not mask the real failure below.
+				}
+				throw err;
+			}
+			sleepSync(RENAME_BACKOFF_MS * attempt);
+		}
+	}
 }
 
 /** Settings-UI writers for data/providers.json — separate from registry.ts's
@@ -73,6 +115,19 @@ export function updateProviderDefaultModel(id: string, defaultModel: string | nu
 	if (!entry) throw new Error(`Bilinmeyen provider: ${id}`);
 	if (defaultModel) entry.defaultModel = defaultModel;
 	else delete entry.defaultModel;
+	writeFile(data);
+}
+
+/** F14-4 — the manual model allow-list (see ProviderConfigEntry.enabledModels's doc comment). An empty array
+ * is stored as-is, not deleted: "the user unchecked everything" is a real, distinct state from "never
+ * curated" — the settings page can tell them apart to say "hiçbiri seçili değil" instead of silently falling
+ * back to the filter's full approved list. `null` clears it back to that uncurated state. */
+export function updateEnabledModels(id: string, modelIds: string[] | null): void {
+	const data = readFile();
+	const entry = data.providers.find((p) => p.id === id);
+	if (!entry) throw new Error(`Bilinmeyen provider: ${id}`);
+	if (modelIds === null) delete entry.enabledModels;
+	else entry.enabledModels = modelIds;
 	writeFile(data);
 }
 

@@ -517,6 +517,10 @@
 		"defaultModelLabel": "Default model",
 		"defaultModelUpdateFailed": "Couldn't update the default model for \"{label}\".",
 		"notSelected": "not selected",
+		"manageModels": "Manage model list",
+		"modelManageLoadError": "Could not load the model list.",
+		"modelManageSaveError": "Could not save.",
+		"otherModels": "Other ({count})",
 		"noModelList": "no model list — test the connection",
 		"removeProvider": "Remove"
 	},

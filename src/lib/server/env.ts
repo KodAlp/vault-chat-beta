@@ -98,6 +98,21 @@ export function secretsPath(): string {
 	return nonEmpty(process.env.SECRETS_PATH) ?? path.join(dataDir(), 'secrets.json');
 }
 
+/** F14-2 — where model-catalog.ts caches the OpenRouter/models.dev fetch (TTL'd, atomic write). */
+export function modelCatalogPath(): string {
+	return nonEmpty(process.env.MODEL_CATALOG_PATH) ?? path.join(dataDir(), 'model-catalog.json');
+}
+
+/** F14-3 — a model whose catalog release date (or, failing that, its live `created` field) is older than
+ * this many months is filtered out of the clean list. Closed by user decision at 12, adjustable. Unset,
+ * empty, non-integer or non-positive values fall back to the default. */
+export function modelMaxAgeMonths(): number {
+	const raw = nonEmpty(process.env.MODEL_MAX_AGE_MONTHS);
+	if (!raw) return 12;
+	const n = Number(raw);
+	return Number.isInteger(n) && n > 0 ? n : 12;
+}
+
 /** Set only when launched via the Tauri desktop build — spawn_sidecar()
  * (src-tauri/src/lib.rs) generates/DPAPI-unwraps a 32-byte key once per
  * launch and hands it through here, hex-encoded, since Node has no other

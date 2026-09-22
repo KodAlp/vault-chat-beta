@@ -566,6 +566,13 @@ export interface ProviderStatus {
 	} | null;
 }
 
+/** GET /api/providers/[id]/models (F14-4) response shape — settings page's "model listesini yönet" checkbox
+ * list. `enabled` reflects the provider's enabledModels allow-list (true for everything when uncurated). */
+export interface ModelListItem {
+	id: string;
+	enabled: boolean;
+}
+
 /** GET /api/providers/models response shape — chat header's per-chat
  * model/provider override selector. */
 export interface ProviderModelOption {
