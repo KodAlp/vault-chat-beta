@@ -132,6 +132,10 @@ export const POST: RequestHandler = async ({ request }) => {
 			let smallTalk = false;
 			let finalContent = '';
 			let finalThinking = '';
+			// F8 — true once any model call this turn (across retries/tool-hops) came close to the context
+			// window; surfaced to the client so "the answer may be missing earlier context" is visible, not
+			// only logged. Ephemeral like narrowScope/smallTalk, not persisted (see Message.svelte).
+			let nearCtxLimit = false;
 			// Set at the bottom of the retry loop, read at the top — lets the
 			// attempt>0 reset below pick the right notice wording instead of
 			// always claiming corruption, now that an empty-thinking-only
@@ -465,6 +469,7 @@ export const POST: RequestHandler = async ({ request }) => {
 									send({ type: 'notice', message: event.message });
 									logAppEvent({ kind: 'fallback', chatId, message: event.message });
 								} else if (event.type === 'usage') {
+									if (isNearCtxLimit(event)) nearCtxLimit = true;
 									// `attempt` and `retryReason` (why the PREVIOUS attempt was
 									// thrown away) make corruption/empty retries countable from
 									// the log; `toolRoundTrips` does the same for read_skill_file
@@ -484,7 +489,7 @@ export const POST: RequestHandler = async ({ request }) => {
 										completionMs: event.completionMs,
 										loadMs: event.loadMs,
 										numCtx: event.numCtx,
-										nearCtxLimit: isNearCtxLimit(event),
+										nearCtxLimit,
 										attempt,
 										toolRoundTrips,
 										resumeCount: resumesUsed,
@@ -610,7 +615,7 @@ export const POST: RequestHandler = async ({ request }) => {
 				}
 				if (!exhaustedEmpty) {
 					const hedges = computeHedges();
-					send({ type: 'done', sources, narrowScope, smallTalk: smallTalk || undefined, hedges: hedges.length ? hedges : undefined });
+					send({ type: 'done', sources, narrowScope, smallTalk: smallTalk || undefined, hedges: hedges.length ? hedges : undefined, nearCtxLimit: nearCtxLimit || undefined });
 				}
 			} catch (err) {
 				// User-initiated stop (interrupt button / navigation) — propagates from

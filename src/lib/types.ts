@@ -75,12 +75,12 @@ export interface ChatMessage {
 	smallTalk?: boolean;
 	/** Client-only: the user pressed "Kaynaklar alakasız" on this answer. */
 	taughtSmallTalk?: boolean;
-	/** Hedge/uncertainty phrases detected in this message's `thinking` text
-	 * (see $lib/server/hallucination.ts) — only ever populated when the
-	 * message was generated with think mode on. Empty/absent means no
-	 * signal, not "checked and clean" vs "never checked" — think-mode-off
-	 * messages simply never run detection. */
+	/** Hedge/uncertainty phrases detected in this message's reasoning trace (when there was one) and its
+	 * final answer text (always) — see $lib/server/hallucination.ts. Empty/absent means none found. */
 	hedges?: string[];
+	/** F8 — true when some model call this turn came close to the context window (see history-limits.ts /
+	 * env.ts's serveCtxOverride). Client-only, never persisted — same footing as narrowScope/smallTalk. */
+	nearCtxLimit?: boolean;
 	/** Client-only, never persisted — same footing as `notices` above: a
 	 * folder-skill's supporting file the model fetched mid-turn via the
 	 * read_skill_file tool. A page reload loses this "📄 read" chip, but the
@@ -160,7 +160,7 @@ export type StreamEvent =
 	 * read_skill_file tool — see /api/chat/+server.ts's tool hop-loop. */
 	| { type: 'toolCall'; skill: string; path: string }
 	| { type: 'toolResult'; skill: string; path: string; ok: boolean; error?: string }
-	| { type: 'done'; sources: RetrievedChunk[]; narrowScope?: boolean; smallTalk?: boolean; hedges?: string[] }
+	| { type: 'done'; sources: RetrievedChunk[]; narrowScope?: boolean; smallTalk?: boolean; hedges?: string[]; nearCtxLimit?: boolean }
 	| { type: 'error'; message: string }
 	/** A U+FFFD (corrupted-output) retry is starting — the client must
 	 * discard whatever partial content/thinking it already rendered for
