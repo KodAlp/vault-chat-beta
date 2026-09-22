@@ -1169,7 +1169,21 @@ bahsettiği "statik muhafazakâr fallback" **hiç mevcut değil**.
 
 ---
 
-## 5.6. F15 — Linklerden toplu içe aktarma · spec dışı yan görev, **en sona bırakıldı** (kullanıcı kararı, 2026-09-21)
+## 5.6. F15 — Linklerden toplu içe aktarma · küçük ilk dilim ✅ yapıldı (2026-09-22)
+
+**Uygulanan (küçük ilk dilim, kullanıcı kararıyla daraltıldı):** PDF linkleri → mevcut `ingest/convert.py`; web sayfaları → yeni `ingest/extract_web.py` (`trafilatura`, ana içerik ayıklama). Sıralı çalışır (`sharedJobMutex`, Ollama'yla paylaşılır). Yeni manifest formatı yok — mevcut `_meta/import-log.jsonl` `sourceUrl` alanıyla genişletildi; tekrar çalıştırmada başarıyla içe aktarılmış linkler atlanır (`loadImportedUrls`), başarısızlar tekrar denenebilir kalır. Yeni `POST /api/import/links` (JSON `{links, domain}`, SSE), yeni `LinksImportDialog.svelte` (`settings/library`).
+
+**Bilinçli olarak bu turun dışında bırakılanlar:** Playwright yedeği (JS-ağırlıklı sayfalar), `robots.txt` saygısı, gerçek eşzamanlılık (bugün tek istekte en fazla 50 link, sıralı), AV/malware taraması (kullanıcıyla konuşuldu, "göz önünde bulundurulsun" notuyla açık bırakıldı).
+
+**Eklenen güvenlik katmanı (kullanıcının doğrudan sorusu üzerine, orijinal tasarımda yoktu):**
+- SSRF: `assertPublicHost()` — hedef host DNS ile çözülür, loopback/private/link-local (`127.0.0.0/8, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16, ::1, fc00::/7`) reddedilir; yönlendirme sonrası son URL de aynı kontrolden geçer.
+- Sınırsız indirme: `Content-Length`'e güvenilmez, akış halinde okunup `MAX_UPLOAD_BYTES` (100MB) aşılırsa anında iptal edilir.
+- Alt-süreç zaman aşımı (`PROCESS_TIMEOUT_MS=120s`): hem yeni `webExtractQueue.ts`'e hem de **mevcut** `convertQueue.ts`'e eklendi — sarkan bir alt-süreç `sharedJobMutex` paylaşımı yüzünden Ollama'yı da kilitleyebilirdi.
+- Prompt injection: yeni bir mekanizma **eklenmedi** — taranan içerik sıradan bir kütüphane parçası olarak F7 (`CORE_INVARIANTS`) + F9 (`eval-prompt-injection.ts`)'un zaten kapsadığı tehdit modeline giriyor.
+
+**Gerçek veri ölçümü** (izole `DATA_DIR`, uçtan uca): Wikipedia "Cat" sayfası → trafilatura, 113.190 karakter, temiz (nav/footer ayıklandı), 2,5s. Küçük test PDF'i → markitdown, doğru şekilde `needs_review` (içerik gerçekten neredeyse boş), 9,5s (Python alt-süreç başlatma dahil). SSRF guard `127.0.0.1` hedefini doğru reddetti; geçersiz URL doğru reddedildi. Tekrar-çalıştırmada atlama mantığı (`loadImportedUrls`) yazılan log formatına karşı test edildi.
+
+**Orijinal tasarımdan (uygulanmayan, bilerek ertelenen) kısım:**
 
 **İhtiyaç.** Kullanıcının NotebookLM (şimdi "Gemini Notebook") ile aradığı çok sayıda kaynağın **linkleri** var; dosya sayısı çok, bir kısmı PDF değil düz web sayfası,
 elle kopyalanamaz. NotebookLM'den orijinal dosyaları geri indirmek mümkün değil (yalnızca çıkarılmış metin tutuyor), o yüzden linkler asıl kaynak.
@@ -1183,9 +1197,8 @@ elle kopyalanamaz. NotebookLM'den orijinal dosyaları geri indirmek mümkün de�
 - **Arayüz:** uygulama içinde "Linklerden içe aktar" (link kutusu, ilerleme, başarısız linkler); mevcut `api/import/youtube` deseni ve `convertQueue` yeniden kullanılır; çekirdek modül komut satırından da çalışacak şekilde ayrı tutulur (Python `ingest/fetch_url.py`, `convert.py` gibi JSON satırları sözleşmesi).
 - **Önce küçük örnek:** 20–30 link, izole kütüphanede; başarı oranı ve çeviri kalitesi ölçülür, sonra tamamı.
 
-**Bilinen sınırlar.** Ağır/matematikli PDF'lerde MarkItDown zayıf (`needs_review`; Marker/Docling kurulu değil); ödeme duvarı/giriş isteyen/bot engelleyen siteler indirilemez (manifest listeler);
-site şartları ve telif kullanıcının değerlendirmesi; binlerce parçanın gömülmesi Ollama'yı uzun süre meşgul eder (deney/ölçüm dışında yapılmalı).
-**Sıra:** F14'ten sonra, en son.
+**Bilinen sınırlar.** Ağır/matematikli PDF'lerde MarkItDown zayıf (`needs_review`; Marker/Docling kurulu değil); ödeme duvarı/giriş isteyen/bot engelleyen siteler indirilemez (net hata mesajıyla `failed`);
+JS-ağırlıklı sayfalar trafilatura ile boş/kısa çıkabilir (Playwright yedeği yok, ertelendi); site şartları ve telif kullanıcının değerlendirmesi; istek başına en fazla 50 link.
 
 ---
 
@@ -1205,9 +1218,8 @@ F4, F13-1/2     ← küçük, bağımsız   (F5 ✅ yapıldı; FTS'i F12-5'i de 
 F11 (ayrı hat, VLM geçişi) ──> F13-3 gerçek görsel kolu
 F7        F8 + F12-5 (birlikte)        F9 (erken başla)
 
-F14 ← Ana hattan bağımsız; F14-1 (timeout hatası) istenirse
-      tek başına öne alınabilir.
-F15 ← EN SON (linklerden toplu içe aktarma, §5.6; kullanıcı kararı).
+F14 ✅ yapıldı (F14-1..4; F14-5 kullanıcı-ayarı olarak ertelendi).
+F15 ✅ yapıldı (küçük ilk dilim, §5.6). Sıradaki yan görevler: F13 (slaytlar) → F11 (MinerU).
 ```
 
 ---
