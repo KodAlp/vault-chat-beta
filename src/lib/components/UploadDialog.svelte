@@ -207,7 +207,15 @@
 			</p>
 		{:else if phase === 'confirming' || phase === 'saving'}
 			{#if warnings.length > 0}
-				<p class="text-sm text-destructive">{warnings.join(' ')}</p>
+				<!-- One item per warning: convert.py now emits several full sentences
+				     (broken font mapping, no headings, no paragraph breaks) where it
+				     used to emit none, and joining them ran them together into one
+				     unreadable paragraph. -->
+				<ul class="list-disc space-y-1 pl-5 text-sm text-destructive">
+					{#each warnings as warning (warning)}
+						<li>{warning}</li>
+					{/each}
+				</ul>
 			{/if}
 			<label class="flex flex-col gap-1 text-sm">
 				{t('UploadDialog.titleLabel')}

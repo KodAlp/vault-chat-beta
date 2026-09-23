@@ -3,6 +3,7 @@ handed back to the Node caller. Kept independent of any one converter so
 MarkItDown today and Marker/Docling later (see requirements.txt) all go
 through the exact same normalization step.
 """
+import html
 import re
 from datetime import date
 
@@ -12,6 +13,46 @@ _HTML_TAG = re.compile(r"</?[a-zA-Z][^>]{0,200}>")
 _BLANK_RUN = re.compile(r"\n{3,}")
 _HEADING = re.compile(r"^(#{1,6})\s+(.*)$", re.MULTILINE)
 
+_DISPLAY_MATH = re.compile(r"\$\$.*?\$\$", re.DOTALL)
+_FENCE = re.compile(r"^[ \t]*(`{3,}|~{3,}).*?^[ \t]*\1[ \t]*$", re.DOTALL | re.MULTILINE)
+_BARE_ENV = re.compile(
+    r"\\begin\{(equation|align|gather|multline|alignat|eqnarray)(\*?)\}"
+    r".*?"
+    r"\\end\{\1\2\}",
+    re.DOTALL,
+)
+_CID = re.compile(r"\(cid:\d+\)")
+# 15+ letters with no break is not a word in the languages this library holds;
+# it is two or three words the extractor glued together. Never split by
+# dictionary (invents errors that read like content); heading_repair.py
+# restores spaces only from the PDF's own text layer, and this warning counts
+# what that could not prove. Real long words (Controllability) also match, so
+# the threshold below matters.
+_GLUED_WORDS = re.compile(r"[A-Za-zÇĞİÖŞÜçğıöşü]{15,}")
+
+# Mirrors HARD_MAX_CHARS in indexer/chunk.ts. Beyond it, hardSplit() cuts an
+# atomic block mid-token, which breaks LaTeX commands and code lines.
+HARD_MAX_CHARS = 2048
+
+
+def _blank(text: str, start: int, end: int) -> str:
+    """Replaces a span with spaces, keeping newlines, so offsets stay valid."""
+    kept = re.sub(r"[^\n]", " ", text[start:end])
+    return text[:start] + kept + text[end:]
+
+
+def _mask_verbatim(text: str) -> str:
+    """A copy with existing display math and fenced code blanked out, for
+    scanning without matching inside them."""
+    masked = text
+    for pattern in (_FENCE, _DISPLAY_MATH):
+        while True:
+            m = pattern.search(masked)
+            if not m:
+                break
+            masked = _blank(masked, m.start(), m.end())
+    return masked
+
 
 def normalize_math_delimiters(text: str) -> str:
     """Marker/Docling may emit \\( \\) / \\[ \\] — normalize to $ / $$ so the
@@ -19,6 +60,116 @@ def normalize_math_delimiters(text: str) -> str:
     text = _MATH_BLOCK.sub(lambda m: f"$$ {m.group(1).strip()} $$", text)
     text = _MATH_INLINE.sub(lambda m: f"${m.group(1).strip()}$", text)
     return text
+
+
+def wrap_bare_math_environments(text: str) -> str:
+    """Wraps a top-level \\begin{align}...\\end{align} in $$.
+
+    Not cosmetic. indexer/chunk.ts pulls atomic blocks with a regex that matches
+    exactly two things — a ``` fence and a $$...$$ pair. A bare LaTeX
+    environment is ordinary text to it, so a derivation written that way can be
+    split across two chunks, each half rendering as a KaTeX error. Wrapping it
+    is what makes the block atomic.
+
+    Environments already inside $$ or inside a code fence are left alone.
+    """
+    masked = _mask_verbatim(text)
+    spans = [(m.start(), m.end()) for m in _BARE_ENV.finditer(masked)]
+    for start, end in reversed(spans):  # right to left: earlier offsets stay valid
+        body = text[start:end].strip()
+        text = f"{text[:start]}$$\n{body}\n$${text[end:]}"
+    return text
+
+
+def quality_warnings(text: str, *, is_pdf: bool) -> list[str]:
+    """Problems worth telling the user about, in Turkish, for the import
+    dialog and import-log.jsonl.
+
+    These are warnings, not errors: the file is still written. The point is
+    that a conversion can fail completely while producing well-formed Markdown
+    — a 22k-line textbook with zero headings and zero equations reads as a
+    successful conversion to every automated check that only looks at whether
+    the process exited 0.
+    """
+    warnings: list[str] = []
+    lines = [l for l in text.split("\n") if l.strip()]
+
+    cid_count = len(_CID.findall(text))
+    if cid_count > 20:
+        warnings.append(
+            f"{cid_count} adet (cid:NN) artığı — PDF'in font eşlemesi çözülemedi, "
+            "metnin bir kısmı (çoğunlukla formüller) kayıp olabilir"
+        )
+
+    if is_pdf and len(lines) > 200 and not re.search(r"^##\s", text, re.MULTILINE):
+        warnings.append(
+            "hiç ## başlığı yok — indeksleyici tüm dosyayı tek bir bölüm olarak "
+            "parçalar, getirilen her chunk aynı breadcrumb'ı taşır"
+        )
+
+    if len(text) > 5000:
+        blank_ratio = text.count("\n\n") / max(len(text) / 1000, 1)
+        if blank_ratio < 1:
+            warnings.append(
+                "paragraflar boş satırla ayrılmamış — parçalayıcının "
+                "kullanabileceği sınır yok"
+            )
+
+    headings = re.findall(r"^#{2,6}\s+(.*)$", text, re.MULTILINE)
+    if headings:
+        glued = [h for h in headings if _GLUED_WORDS.search(h)]
+        if len(glued) > max(3, len(headings) // 10):
+            warnings.append(
+                f"{len(glued)}/{len(headings)} başlıkta kelimeler bitişik "
+                "(\"Linearcontrolsystems\") — çıkarıcı kelime aralarını kaybetmiş. "
+                "heading_path gömülü metnin parçası olduğu için bu doğrudan "
+                "retrieval doğruluğunu düşürür; başlıklar elle düzeltilmeli"
+            )
+
+    oversize = 0
+    for pattern in (_FENCE, _DISPLAY_MATH):
+        oversize += sum(1 for m in pattern.finditer(text) if len(m.group(0)) > HARD_MAX_CHARS)
+    if oversize:
+        warnings.append(
+            f"{oversize} atomik blok {HARD_MAX_CHARS} karakteri aşıyor — "
+            "hardSplit() bunları kelime ortasından kesecek"
+        )
+
+    return warnings
+
+
+def wrap_alignment_math(text: str) -> str:
+    """Wraps a $$ block that uses `&` alignment markers in \\begin{aligned}.
+
+    Docling emits multi-line aligned equations as bare `a & = b \\\\ c & = d`,
+    with no alignment environment around them. KaTeX rejects `&` outside one, so
+    the block renders as a red error. Measured on 12 equation-dense pages of
+    Trentelman: 5 of 63 decoded formulas failed for exactly this reason.
+
+    Only blocks that use `&` and declare no environment of their own are
+    touched — an existing \\begin{...} is left alone.
+    """
+
+    def fix(match: re.Match) -> str:
+        body = match.group(1).strip()
+        if "&" not in body or "\\begin{" in body:
+            return match.group(0)
+        # A trailing row separator would open an empty final row.
+        body = re.sub(r"\\\\\s*$", "", body).strip()
+        return "$$\\begin{aligned}" + body + "\\end{aligned}$$"
+
+    return re.sub(r"\$\$(.*?)\$\$", fix, text, flags=re.DOTALL)
+
+
+def decode_html_entities(text: str) -> str:
+    """Converters leak entities into prose and into math: docling wrote
+    `|λ| &lt; 1` into the body verbatim.
+
+    Runs *after* tag stripping, never before: decoding first would turn
+    `&lt;something&gt;` into `<something>`, which the tag stripper would then
+    delete as markup.
+    """
+    return html.unescape(text)
 
 
 def strip_html_remnants(text: str) -> str:
@@ -70,7 +221,10 @@ def build_frontmatter(title: str, converted_by: str, needs_review: bool) -> dict
 
 def postprocess(text: str, *, title_fallback: str, converted_by: str, needs_review: bool) -> tuple[str, dict]:
     text = normalize_math_delimiters(text)
+    text = wrap_bare_math_environments(text)
+    text = wrap_alignment_math(text)
     text = strip_html_remnants(text)
+    text = decode_html_entities(text)
     text = fix_heading_jumps(text)
     text = collapse_blank_lines(text).strip() + "\n"
     title = derive_title(text, title_fallback)
