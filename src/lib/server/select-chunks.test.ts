@@ -29,6 +29,16 @@ test('filters by domain when domains is provided', () => {
 	assert.equal(result.chunks[0].path, 'a.md');
 });
 
+// Ö7 (2026-09-23 report): search_library's domain filter was the only one
+// of the two MCP filters that was case-sensitive — the same domain string
+// returned 8 real matches from list_sources (SQL `lower(d.value) =
+// lower(?)`) and 0 from search_library, for the same vault.
+test('domain filter is case-insensitive, matching list_sources', () => {
+	const candidates = [candidate({ path: 'a.md', domains: ['Databases'] })];
+	const result = selectChunks(candidates, { domains: ['databases'] });
+	assert.equal(result.chunks.length, 1);
+});
+
 test('caps chunks per file at 3', () => {
 	const candidates = Array.from({ length: 5 }, (_, i) =>
 		candidate({ path: 'same.md', heading_path: `h${i}`, distance: 0.1 + i * 0.01 })
@@ -100,6 +110,23 @@ test('filters by level when levels is provided', () => {
 test('level filter is case-insensitive (frontmatter is hand-written, not an enum)', () => {
 	const candidates = [candidate({ path: 'a.md', depth: 'Undergrad' })];
 	const result = selectChunks(candidates, { levels: ['UNDERGRAD'] });
+	assert.equal(result.chunks.length, 1);
+});
+
+// Ö7 (2026-09-23 report): an index built before normalizeLevel existed could
+// still store the un-folded synonym ("undergraduate") in files.depth. A
+// query for the canonical spelling ("undergrad") — which is what a caller
+// would reasonably type, since that is what normalizeLevel folds every new
+// write to — used to miss it entirely.
+test('level filter folds synonyms on the stored side, not just the query side', () => {
+	const candidates = [candidate({ path: 'a.md', depth: 'undergraduate' })]; // pre-normalizeLevel index
+	const result = selectChunks(candidates, { levels: ['undergrad'] });
+	assert.equal(result.chunks.length, 1);
+});
+
+test('level filter folds synonyms on the query side too', () => {
+	const candidates = [candidate({ path: 'a.md', depth: 'undergrad' })]; // canonical, post-fix index
+	const result = selectChunks(candidates, { levels: ['undergraduate'] }); // caller typed the alias
 	assert.equal(result.chunks.length, 1);
 });
 

@@ -18,9 +18,11 @@ import { createServer } from './create-server';
  * covered by a separate live-Ollama pass, not this fast/repeatable one.
  *
  * Never touches the real vault — seeds an isolated scratch DATA_DIR with
- * a hand-written vault entry and one real note (no index.db: list_vaults/
- * list_sources' summary queries all degrade to zero/[] for an unindexed
- * vault, per retrieve.ts's getDb() null-return contract — get_note works
+ * a hand-written vault entry and one real note (no index.db: list_vaults
+ * reports it via `indexed: false` + `unindexedCount: 1`, while
+ * search_library/list_sources — which need an actual query result, not a
+ * status summary — report the distinct NOT_INDEXED error instead of a
+ * silent empty success; see retrieve.ts's vaultIsIndexed(). get_note works
  * regardless of indexing, since it reads the filesystem directly).
  */
 const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'vault-chat-mcp-smoke-'));
@@ -65,12 +67,13 @@ try {
 		assert.equal(result.isError, undefined, 'list_vaults should not return an error');
 		const content = result.content as { type: string; text: string }[];
 		const parsed = JSON.parse(content[0].text) as {
-			vaults: { id: string; active: boolean; indexed: boolean; noteCount: number }[];
+			vaults: { id: string; active: boolean; indexed: boolean; noteCount: number; unindexedCount: number }[];
 		};
 		assert.equal(parsed.vaults.length, 1);
 		assert.equal(parsed.vaults[0].active, true, 'the only vault falls back to active via getActiveVaultId()');
 		assert.equal(parsed.vaults[0].indexed, false, 'never-indexed vault must not throw or report indexed:true');
-		console.log('ok - list_vaults returns the seeded vault, correctly reporting it as unindexed');
+		assert.equal(parsed.vaults[0].unindexedCount, 1, 'the one real .md file on disk, never indexed, must be counted');
+		console.log('ok - list_vaults returns the seeded vault, correctly reporting it as unindexed (unindexedCount: 1)');
 	}
 
 	// get_note — happy path
@@ -102,17 +105,24 @@ try {
 		console.log('ok - get_note reports NOTE_NOT_FOUND for a missing file, not a raw ENOENT');
 	}
 
-	// list_sources — unindexed vault degrades to empty, not an error
+	// list_sources / search_library — unindexed vault reports NOT_INDEXED,
+	// not a silent empty success (Ö7, 2026-09-23 report: `{"results":[]},
+	// isError:false` from an unindexed vault used to be indistinguishable
+	// from "searched, nothing matched" — NOT_INDEXED existed in errors.ts
+	// from the start, nothing ever produced it).
 	{
 		const result = await client.callTool({ name: 'list_sources', arguments: {} });
-		assert.equal(result.isError, undefined);
-		const parsed = JSON.parse((result.content as { type: string; text: string }[])[0].text) as {
-			total: number;
-			sources: unknown[];
-		};
-		assert.equal(parsed.total, 0);
-		assert.deepEqual(parsed.sources, []);
-		console.log('ok - list_sources degrades to empty for an unindexed vault, no error');
+		assert.equal(result.isError, true, 'list_sources on an unindexed vault must be a distinct error, not empty success');
+		const text = (result.content as { type: string; text: string }[])[0].text;
+		assert.ok(text.startsWith('NOT_INDEXED:'), `expected NOT_INDEXED, got: ${text}`);
+		console.log('ok - list_sources reports NOT_INDEXED for an unindexed vault (was isError:false, empty results)');
+	}
+	{
+		const result = await client.callTool({ name: 'search_library', arguments: { query: 'test' } });
+		assert.equal(result.isError, true, 'search_library on an unindexed vault must be a distinct error, not empty success');
+		const text = (result.content as { type: string; text: string }[])[0].text;
+		assert.ok(text.startsWith('NOT_INDEXED:'), `expected NOT_INDEXED, got: ${text}`);
+		console.log('ok - search_library reports NOT_INDEXED for an unindexed vault');
 	}
 
 	// unknown vault — every vault-scoped tool must report VAULT_NOT_FOUND, never throw

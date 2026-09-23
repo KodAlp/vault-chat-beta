@@ -11,6 +11,41 @@ import { logAppEvent } from './app-log';
 import { buildFallbackQuery, extractTerms } from './keyword-query';
 import { hasKeywordIndex, keywordSearch } from './keyword-search';
 import type { GateDecision } from './smalltalk-gate';
+import { normalizeLevel } from '../../../indexer/chunk';
+import { walkMarkdownFiles } from '../../../indexer/walk-md';
+
+/** True once `npm run index` has been run for this vault at least once —
+ * a direct existsSync check, not list_vaults's `total > 0 ||
+ * listDomains().length > 0` heuristic (which cannot tell "never indexed"
+ * from "indexed, but genuinely empty"). Lets an MCP tool return a distinct
+ * NOT_INDEXED error instead of a silent empty result that reads exactly
+ * like "no matches" (mcp/errors.ts already defined the code; nothing
+ * produced it — Ö7). */
+export function vaultIsIndexed(v: VaultContext): boolean {
+	return existsSync(v.indexDbPath);
+}
+
+/**
+ * Files on disk that `npm run index` would walk, minus files actually in
+ * the index — not against listSources()'s hiddenFolders-filtered total, but
+ * the raw `files` table count, so a cards/frontier note that IS indexed
+ * (just hidden from list_sources' output) is never miscounted as unindexed.
+ *
+ * E2 (2026-09-23 report): the knowledge-editor skill's curation flow only
+ * ever *proposes* `npm run index` — see the plan's Aşama 4 skill-contract
+ * item — and a proposal that never gets run looks, from both the app and
+ * Claude's side, exactly like a vault with no new content at all. Measured
+ * on the real yapay-zeka vault before this signal existed: 2 curated notes
+ * sat unindexed with nothing surfacing it anywhere.
+ */
+export function countUnindexedFiles(v: VaultContext): number {
+	if (!existsSync(v.libraryRoot)) return 0;
+	const onDisk = walkMarkdownFiles(v.libraryRoot).length;
+	const database = getDb(v);
+	if (!database) return onDisk; // never indexed at all: everything is "unindexed"
+	const indexed = (database.prepare('SELECT count(*) AS n FROM files').get() as { n: number }).n;
+	return Math.max(onDisk - indexed, 0);
+}
 
 const DEFAULT_K = 8;
 const OVERFETCH_FACTOR = 3;
@@ -276,9 +311,26 @@ export function listSources(
 		params.push(...opts.domains);
 	}
 	if (opts.levels?.length) {
+		// normalizeLevel, not just lower() — a caller can reasonably type
+		// "undergraduate" and expect it to match the canonical "undergrad"
+		// depth values normalizeLevel folds every write to (Ö7).
 		conditions.push(`(${opts.levels.map(() => 'lower(f.depth) = lower(?)').join(' OR ')})`);
-		params.push(...opts.levels);
+		params.push(...opts.levels.map((l) => normalizeLevel(l)));
 	}
+
+	// A vault's bookkeeping folders (raw/cards/frontier/...) are never real
+	// study content — list_sources used to list them anyway (330 files for
+	// the real default vault: 304 wiki + 26 raw/cards/frontier/_meta), while
+	// search_library already excluded them via retrieve()'s excludedPrefixes.
+	// A path is excluded if it equals a prefix or starts with `${prefix}/`;
+	// substr-equality, not LIKE, because a prefix like "wiki/_index" contains
+	// `_`, a LIKE single-char wildcard that would need its own escaping.
+	const excludedPrefixes = getLibrarySettings(v).hiddenFolders;
+	if (excludedPrefixes.length) {
+		conditions.push(excludedPrefixes.map(() => `NOT (f.path = ? OR substr(f.path, 1, ?) = ?)`).join(' AND '));
+		for (const p of excludedPrefixes) params.push(p, p.length + 1, `${p}/`);
+	}
+
 	const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
 	const total = (

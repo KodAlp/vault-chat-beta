@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { fly } from 'svelte/transition';
-	import type { VaultRecord } from '$lib/types';
+	import type { VaultRecord, VaultWithStatus } from '$lib/types';
 	import VaultCard from '$lib/components/VaultCard.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
@@ -13,7 +13,7 @@
 
 	let { data }: PageProps = $props();
 
-	let vaults = $derived<VaultRecord[]>(data.vaults);
+	let vaults = $derived<VaultWithStatus[]>(data.vaults);
 	let createOpen = $state(false);
 	let newVaultName = $state('');
 	let createError = $state('');

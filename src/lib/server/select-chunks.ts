@@ -1,4 +1,5 @@
 import type { RetrievedChunk, RetrieveResult } from '$lib/types';
+import { normalizeLevel } from '../../../indexer/chunk';
 
 /**
  * Coarse floor, NOT a relevance filter — measured, not guessed, and the
@@ -100,11 +101,25 @@ export function selectChunks(
 			continue;
 		}
 
-		if (opts.domains?.length && !opts.domains.some((d) => c.domains.includes(d))) continue;
+		// Case-insensitive — matches list_sources's SQL-side `lower(d.value) =
+		// lower(?)`. Before this, search_library's domain filter was the only
+		// one of the two that was case-sensitive: `domain=Databases` returned
+		// 8 real matches from list_sources and 0 from search_library, for the
+		// same vault and the same domain string (Ö7).
+		if (opts.domains?.length && !opts.domains.some((d) => c.domains.some((cd) => cd.toLowerCase() === d.toLowerCase()))) {
+			continue;
+		}
 
-		// Faz 10's search_library MCP tool — case-insensitive because
-		// frontmatter's level/depth field is hand-written, not an enum.
-		if (opts.levels?.length && !opts.levels.some((l) => l.toLowerCase() === c.depth.toLowerCase())) {
+		// Case-insensitive AND synonym-folded (normalizeLevel), because
+		// frontmatter's level/depth field is hand-written, not an enum: a
+		// caller (or Claude) can reasonably type "undergraduate" and expect it
+		// to match a chunk stored as the canonical "undergrad" (Ö7 — an old
+		// index that predated normalizeLevel stored the alias literally,
+		// which no query-side case fold alone could bridge).
+		if (
+			opts.levels?.length &&
+			!opts.levels.some((l) => normalizeLevel(l).toLowerCase() === normalizeLevel(c.depth).toLowerCase())
+		) {
 			continue;
 		}
 
