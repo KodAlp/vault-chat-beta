@@ -11,7 +11,14 @@ import { fetch as undiciFetch } from 'undici';
 import type { RequestHandler } from './$types';
 import { enqueueConversion } from '$lib/server/convertQueue';
 import { enqueueWebExtract } from '$lib/server/webExtractQueue';
-import { isPdfBytes, validateLinkUrl, assertPublicHost, pinnedDispatcher, loadImportedUrls } from '$lib/server/link-import';
+import {
+	isPdfBytes,
+	validateLinkUrl,
+	assertPublicHost,
+	pinnedDispatcher,
+	loadImportedUrls,
+	sourceNameFromUrl
+} from '$lib/server/link-import';
 import { stagingDir, resolveLibraryPath, slugify, appendImportLog, importLogPath, MAX_UPLOAD_BYTES } from '$lib/server/library';
 import { indexLibraryFile } from '$lib/server/incrementalIndex';
 import { vaultFromId } from '$lib/server/requestVault';
@@ -79,7 +86,7 @@ export const POST: RequestHandler = async ({ request }) => {
 				fs.writeFileSync(tempIn, bytes);
 
 				const result = isPdf
-					? await enqueueConversion(tempIn, workDir, 'auto')
+					? await enqueueConversion(tempIn, workDir, 'auto', undefined, sourceNameFromUrl(url))
 					: await enqueueWebExtract(tempIn, url.href, workDir);
 				if (!result.outPath) throw new Error('Dönüştürme çıktı üretmedi');
 
@@ -107,6 +114,10 @@ export const POST: RequestHandler = async ({ request }) => {
 					sourcePath: relPath,
 					sourceUrl: url.href,
 					sha256: crypto.createHash('sha256').update(finalRaw).digest('hex'),
+					// Only the PDF path has one — convert.py writes it, the HTML/
+					// trafilatura path (extract_web.py) has no single "original
+					// file" to hash in the same sense.
+					sourceSha256: isPdf ? frontmatter.source_sha256 : undefined,
 					importedAt: new Date().toISOString(),
 					status: needsReview ? 'needs_review' : 'converted',
 					tool: frontmatter.converted_by ?? 'import-links'

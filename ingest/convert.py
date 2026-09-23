@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Conversion sidecar — CLI contract owned by the source-ingest skill doc:
 
-    python ingest/convert.py --in <file> --out-dir <dir> --tool auto|markitdown|marker|docling|pandoc [--dry-run]
+    python ingest/convert.py --in <file> --out-dir <dir> --tool auto|markitdown|marker|docling|pandoc [--dry-run] [--source-name <name>]
 
 JSON-lines progress on stdout, one object per line:
     {"type": "progress", "stage": "..."}
@@ -14,8 +14,17 @@ one that is not installed, or auto-routing a PDF that needs it, reports a clear
 "not installed" message instead of crashing or silently emitting garbage.
 Detection is by ImportError at call time, not a hardcoded capability flag, so
 installing them later needs no change here.
+
+--source-name (2026-09-23, E5/K2-5): every caller (upload, batch upload, link
+import) stages the input under a generic name (`original.pdf`) before calling
+this script, to keep the staging dir collision-free — so --in's own stem is
+never a usable title or source record. Pass the REAL filename here; it
+becomes source_file frontmatter and the title fallback when the document has
+no usable title of its own. Callers that omit it get the old (worse)
+behavior — the staged name — never a crash.
 """
 import argparse
+import hashlib
 import json
 import re
 import shutil
@@ -23,8 +32,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-from heading_repair import read_text_layer, repair_headings, restructure_headings
-from postprocess import postprocess, quality_warnings
+from heading_repair import body_size, read_text_layer, repair_headings, restructure_headings
+from postprocess import _apply_outside_verbatim, postprocess, quality_warnings
 
 MARKITDOWN_EXTS = {".docx", ".pptx", ".xlsx", ".html", ".htm", ".epub"}
 PDF_EXT = ".pdf"
@@ -37,10 +46,99 @@ MIN_PAGES_FOR_HEADING_CHECK = 5
 CID_ARTIFACT = re.compile(r"\(cid:\d+\)")
 # A handful can appear in any PDF; hundreds mean the font mapping is gone.
 CID_ARTIFACT_THRESHOLD = 50
+# Below this, a MarkItDown pass that "looks broken" and couldn't be escalated
+# has nothing worth salvaging (S9's false-positive fallback below only makes
+# sense with real extracted text to fall back TO).
+MIN_FALLBACK_CHARS = 200
 
 
 def emit(obj: dict) -> None:
     print(json.dumps(obj), flush=True)
+
+
+# A line is "large" when its size exceeds the body size by this factor —
+# same threshold heading_repair.py uses to tell a real heading from a
+# body-size run-in label, reused here for the same reason: it is the one
+# signal that has actually been measured to separate title-sized text from
+# prose on a real book (Trentelman: body 10.0pt, chapter titles 20.7/24.8pt).
+_LARGE_TITLE_FACTOR = 1.15
+# Title search window, in PAGES (not fragments — a page count is what
+# actually keeps this away from unrelated large text deeper in the
+# document). Measured on Trentelman: pages 1-3 (repository cover sheet +
+# real title page) correctly isolate the 17.2pt title; page 4 is where
+# "Preface" (a 24.8pt chapter heading) would start outscoring it if the
+# window were any wider.
+_TITLE_SEARCH_PAGES = 3
+
+
+def pdf_title_from_metadata(path: Path) -> str | None:
+    """The PDF's own /Title field, when it looks like a real title and not
+    a placeholder some tool wrote (empty, or literally the filename)."""
+    try:
+        from pypdf import PdfReader
+
+        meta = PdfReader(str(path)).metadata
+        title = (meta.title or "").strip() if meta else ""
+        return title or None
+    except Exception:  # noqa: BLE001 — a title guess is a heuristic input, not a result
+        return None
+
+
+def pdf_title_from_first_large_line(path: Path) -> str | None:
+    """The run of text set at the single largest size near the start of the
+    document — the visual title, used when the PDF carries neither a usable
+    metadata Title nor a Markdown H1 in the converted body (K2-5: those two
+    gaps are exactly how a converted PDF ends up titled "original" or
+    "input", the staged filename convert.py was actually invoked with).
+
+    Reuses heading_repair.py's own size machinery (read_text_layer,
+    body_size) rather than a second PDF-layout reader — fragments are
+    already in page/reading order.
+
+    Not simply "the first run above the body-size threshold": measured on a
+    real repository-hosted PDF (Trentelman), the actual first page is an
+    auto-generated cover sheet whose institution/title/author block is all
+    set at one size (12.0pt, against an 8.0pt body on that page) — large
+    enough to clear the threshold, but not the real title, which sits on
+    the *next* page at 17.2pt. Taking the first "large enough" run picked
+    the cover sheet's three-line jumble instead; the true title is the run
+    at the single largest size in the window, wherever it first occurs.
+    Also measured: the window has to be page-bounded, not fragment-count-
+    bounded — with the first ~200 fragments (past page 3), "Preface" (a
+    24.8pt chapter heading) outscored the 17.2pt title.
+    """
+    _lines, window = read_text_layer(path, max_pages=_TITLE_SEARCH_PAGES)
+    return title_from_fragments(window)
+
+
+def title_from_fragments(window: list[tuple[str, float]]) -> str | None:
+    """The pure selection logic behind pdf_title_from_first_large_line,
+    split out so it can be tested without a real PDF on disk — see that
+    function's doc comment for what it does and why."""
+    if not window:
+        return None
+    limit = body_size(window) * _LARGE_TITLE_FACTOR
+    sizes_above_limit = [size for _text, size in window if size >= limit]
+    if not sizes_above_limit:
+        return None
+    max_size = max(sizes_above_limit)
+    words: list[str] = []
+    for text, size in window:
+        if size >= max_size - 0.05:  # float rounding, not a real size difference
+            words.append(text)
+        elif words:
+            break  # the max-size run ended
+    title = " ".join(words).strip()
+    return title or None
+
+
+def derive_pdf_title(path: Path) -> str | None:
+    """3-tier fallback (K2-5): metadata Title, then the first large-font
+    line, then None — the caller falls back further to the real source
+    filename (never in_path.stem, which is the staged "original"/"input").
+    Only consulted when the converted body has no H1 of its own
+    (postprocess.py's derive_title already prefers a real H1)."""
+    return pdf_title_from_metadata(path) or pdf_title_from_first_large_line(path)
 
 
 def pdf_page_count(path: Path) -> int:
@@ -75,11 +173,33 @@ def looks_broken(text: str, page_count: int) -> bool:
     return False
 
 
+_H1_LINE = re.compile(r"^#[ \t]+(.+)$", re.MULTILINE)
+
+
+def demote_slide_headings(text: str) -> str:
+    """K2-7: MarkItDown emits every slide's own title as `# `, so a 29-slide
+    deck came back with 29 top-level H1s (measured: Ayrık Sistemler slides.01
+    — the chunker's own heading tree assumes one H1 per document, and this
+    is what "başlık araması" upstream then has to guess a single title
+    from). Every slide title becomes a `##` section instead; nothing is
+    dropped, just demoted.
+
+    Runs outside fenced code (_apply_outside_verbatim, postprocess.py) —
+    unlikely in a pptx's own text (no native code-block shape in
+    PowerPoint), but a slide can still legitimately show example code as
+    plain text with its own `# ` comment, and that must never be read as a
+    slide title."""
+    return _apply_outside_verbatim(text, lambda chunk: _H1_LINE.sub(lambda m: f"## {m.group(1)}", chunk))
+
+
 def convert_with_markitdown(path: Path) -> str:
     from markitdown import MarkItDown
 
     result = MarkItDown().convert(str(path))
-    return result.text_content
+    text = result.text_content
+    if path.suffix.lower() == ".pptx":
+        text = demote_slide_headings(text)
+    return text
 
 
 def convert_with_pandoc(path: Path) -> str:
@@ -188,7 +308,22 @@ def route_auto(path: Path) -> tuple[str, str]:
         text = convert_with_markitdown(path)
         page_count = pdf_page_count(path) or text.count("\f") + 1
         if looks_broken(text, page_count):
-            return escalate_pdf(path)
+            try:
+                return escalate_pdf(path)
+            except RuntimeError:
+                if len(text.strip()) >= MIN_FALLBACK_CHARS:
+                    # S9: looks_broken() can be a false positive — a dense,
+                    # multi-column or figure-heavy layout with a real text
+                    # layer gets flagged as "looks scanned" the same way a
+                    # genuinely scanned page does. When escalation is
+                    # unavailable or fails, losing real extracted text
+                    # outright is worse than a flagged, lower-confidence
+                    # MarkItDown pass (needs_review is already forced for
+                    # every unescalated PDF pass below). A near-empty
+                    # extraction has nothing worth salvaging, so it still
+                    # raises.
+                    return text, "markitdown"
+                raise
         return text, "markitdown"
 
     raise RuntimeError(f"Desteklenmeyen dosya türü: {ext}")
@@ -241,6 +376,28 @@ def route_explicit(path: Path, tool: str) -> tuple[str, str]:
     raise RuntimeError(f"Bilinmeyen araç: {tool}")
 
 
+def sha256_of_file(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def unique_output_path(out_dir: Path, stem: str) -> Path:
+    """K2: convert.py used to always write `<stem>.md`, silently overwriting
+    whatever was already there — a real risk once source_sha256 makes
+    re-imports of a changed source routine (E5) rather than a rare manual
+    re-run. A numeric suffix is appended instead of overwriting; the first
+    free name wins, `<stem>.md` itself if nothing is there yet."""
+    candidate = out_dir / f"{stem}.md"
+    n = 2
+    while candidate.exists():
+        candidate = out_dir / f"{stem}-{n}.md"
+        n += 1
+    return candidate
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--in", dest="in_path", required=True)
@@ -254,6 +411,8 @@ def main() -> int:
         choices=["auto", "markitdown", "marker", "docling", "pandoc"],
     )
     parser.add_argument("--dry-run", action="store_true")
+    # See the module docstring's --source-name section (E5/K2-5).
+    parser.add_argument("--source-name", dest="source_name", default=None)
     args = parser.parse_args()
 
     in_path = Path(args.in_path)
@@ -284,8 +443,20 @@ def main() -> int:
     # rough (page-break form-feeds, no headings at all) — flag for review
     # rather than silently presenting it as clean.
     needs_review = is_pdf and converted_by == "markitdown"
+
+    # K2-5: in_path.stem is never a usable title or filename — every caller
+    # stages the real file under a generic name ("original.pdf") before
+    # invoking this script, which is how five different real PDFs all came
+    # back titled "original"/"input". --source-name carries the real one
+    # through; callers that omit it get the old, worse fallback, not a crash.
+    filename_fallback = Path(args.source_name).stem if args.source_name else in_path.stem
+    # derive_title (postprocess.py) already prefers a real H1 over this
+    # fallback — the PDF-specific tiers below only ever apply when the
+    # converted body has none of its own.
+    title_fallback = (derive_pdf_title(in_path) or filename_fallback) if is_pdf else filename_fallback
+
     final_text, frontmatter = postprocess(
-        text, title_fallback=in_path.stem, converted_by=converted_by, needs_review=needs_review
+        text, title_fallback=title_fallback, converted_by=converted_by, needs_review=needs_review
     )
 
     # Until now this was always []: a conversion that destroyed every equation
@@ -295,13 +466,22 @@ def main() -> int:
     if warnings and not frontmatter.get("needs_review"):
         frontmatter["needs_review"] = True
 
+    # E5: the idempotency key and provenance record for the WHOLE pipeline
+    # (knowledge-editor's schemas/frontmatter.yaml documents source_sha256
+    # this way already) were never actually written — hashing the final
+    # curated Markdown (confirm/+server.ts) answers "did the note change",
+    # never "which original PDF/file did this come from" or "was this exact
+    # file already imported once before".
+    frontmatter["source_sha256"] = sha256_of_file(in_path)
+    frontmatter["source_file"] = args.source_name or in_path.name
+
     if args.dry_run:
         emit({"type": "done", "outPath": None, "frontmatter": frontmatter, "warnings": warnings})
         return 0
 
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
-    out_path = out_dir / (in_path.stem + ".md")
+    out_path = unique_output_path(out_dir, in_path.stem)
 
     fm_lines = "\n".join(f"{k}: {json.dumps(v)}" for k, v in frontmatter.items())
     out_path.write_text(f"---\n{fm_lines}\n---\n\n{final_text}", encoding="utf-8")

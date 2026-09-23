@@ -26,6 +26,23 @@ export function validateLinkUrl(raw: string): URL {
 	return url;
 }
 
+/** A stand-in filename for convert.py's --source-name (E5/K2-5) — a link
+ * has no local file to name, but a PDF's own URL path is usually
+ * descriptive ("/papers/cooley-tukey-fft.pdf"), which is exactly what a
+ * `source_file` frontmatter field and a title fallback both want instead of
+ * the staged "original.pdf" every link gets written under. Falls back to
+ * the hostname when the path is empty or just "/" (a bare domain link, or a
+ * download endpoint like "/download?id=123" with nothing file-shaped in it). */
+export function sourceNameFromUrl(url: URL): string {
+	const lastSegment = url.pathname.split('/').filter(Boolean).pop();
+	if (!lastSegment) return url.hostname;
+	try {
+		return decodeURIComponent(lastSegment);
+	} catch {
+		return lastSegment; // malformed percent-encoding — use it verbatim rather than throw
+	}
+}
+
 /**
  * Blocked ranges, checked via node:net's built-in BlockList rather than
  * hand-rolled bit masks (2026-09-23 rewrite — the hand-rolled version had

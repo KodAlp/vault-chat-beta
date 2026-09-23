@@ -92,11 +92,19 @@ function runConvert(
 	inPath: string,
 	outDir: string,
 	tool: string,
-	onEvent?: (event: ConvertEvent) => void
+	onEvent?: (event: ConvertEvent) => void,
+	sourceName?: string
 ): Promise<ConvertEvent & { type: 'done' }> {
 	return new Promise((resolve, reject) => {
 		const bin = pythonBin();
-		const child = spawn(bin, [CONVERT_PY, '--in', inPath, '--out-dir', outDir, '--tool', tool], {
+		const args = [CONVERT_PY, '--in', inPath, '--out-dir', outDir, '--tool', tool];
+		// The real filename (E5/K2-5) — every caller stages the input under a
+		// generic name ("original.pdf") to keep the staging dir collision-free,
+		// which is why convert.py can no longer be trusted to know its own
+		// source_file/title fallback from --in alone. See convert.py's module
+		// docstring for the "original"/"input" title bug this fixes.
+		if (sourceName) args.push('--source-name', sourceName);
+		const child = spawn(bin, args, {
 			windowsHide: true
 		});
 
@@ -165,7 +173,8 @@ export function enqueueConversion(
 	inPath: string,
 	outDir: string,
 	tool: string,
-	onEvent?: (event: ConvertEvent) => void
+	onEvent?: (event: ConvertEvent) => void,
+	sourceName?: string
 ): Promise<ConvertEvent & { type: 'done' }> {
-	return sharedJobMutex.run(() => runConvert(inPath, outDir, tool, onEvent));
+	return sharedJobMutex.run(() => runConvert(inPath, outDir, tool, onEvent, sourceName));
 }
