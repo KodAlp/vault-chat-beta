@@ -10,10 +10,12 @@ external services: one Node process talking to Ollama at `localhost:11434`.
 Retrieval is handled by the companion skill `vault-rag-index` — this skill owns
 the app itself: routes, streaming, rendering, and UI conventions.
 
-> **The app now lives in its own repo**, `C:\Users\Alp\Desktop\vault-chat` —
-> not as a subfolder of this vault repo. This skill's own `.claude/skills/`
-> should really be invoked from *that* repo going forward; the tree below is
-> kept for reference but its root path no longer resolves from here.
+> **The app now lives in its own repo**, separate from this vault repo —
+> not as a subfolder of it (corrected 2026-09-23: this used to hardcode one
+> developer's local checkout path, which means nothing on another machine).
+> This skill's own `.claude/skills/` should really be invoked from *that*
+> repo going forward; the tree below is kept for reference but its root
+> path no longer resolves from here.
 >
 > **Corrected 2026-09-23: "Project structure" below is the pre-build MVP
 > skeleton, not the current app.** The real app has grown to a multi-vault
