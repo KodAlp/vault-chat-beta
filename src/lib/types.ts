@@ -483,7 +483,10 @@ export interface ImportSummary {
 
 /** SSE event shapes streamed by POST /api/import and /api/import/batch. */
 export type ImportEvent =
-	| { type: 'progress'; stage: string; fileName?: string }
+	// pageCount/estimatedSeconds (Aşama 7, 2026-09-23): only present once
+	// convert.py's early PDF page-count event reaches convertQueue.ts —
+	// absent for non-PDF sources and for every progress event before it.
+	| { type: 'progress'; stage: string; fileName?: string; pageCount?: number; estimatedSeconds?: number }
 	| { type: 'ready'; importId: string; proposed: { title: string; domain: string; level: string }; warnings: string[] }
 	| { type: 'item'; item: ImportResultItem }
 	| { type: 'done'; summary?: ImportSummary }

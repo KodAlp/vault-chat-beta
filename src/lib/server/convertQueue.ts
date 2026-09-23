@@ -6,7 +6,7 @@ import readline from 'node:readline';
 import { sharedJobMutex } from './jobMutex';
 
 export type ConvertEvent =
-	| { type: 'progress'; stage: string }
+	| { type: 'progress'; stage: string; pageCount?: number; estimatedSeconds?: number }
 	| { type: 'done'; outPath: string | null; frontmatter: Record<string, unknown>; warnings: string[] }
 	| { type: 'error'; message: string };
 
@@ -81,7 +81,41 @@ const CONVERT_PY = path.resolve(process.cwd(), 'ingest', 'convert.py');
 // arbitrary downloaded links, not just the user's own uploads) can hang
 // MarkItDown indefinitely. sharedJobMutex is shared with Ollama model-swap,
 // so a stuck child here blocks chat too — never wait forever.
+//
+// This is the floor, used until convert.py's early `pageCount` progress
+// event (PDFs only) lets runConvert() replace it with a page-aware budget
+// below — a flat 120s is nowhere near enough for docling: measured on an
+// RTX 4050 (Aşama 7, 2026-09-23), CPU took 79 s/page and 23 s/page on an
+// 8-page arXiv paper and a 12-page OSTEP chapter respectively (635s/271s
+// total — both already blow past 120s alone), and even GPU with Ollama's
+// qwen3:8b already resident (the worst realistic case, contention roughly
+// triples docling's own idle time) took 8.8 s/page and 7.5 s/page.
 const PROCESS_TIMEOUT_MS = 120_000;
+
+// Page-aware timeout for a PDF once pageCount is known — sized off the
+// worst measured case (GPU + qwen3 loaded, ~8.8-9 s/page) with headroom for
+// a larger or more complex document than the two 8-12 page fixtures this
+// was measured against. Applies to every PDF tool uniformly, not just
+// docling — MarkItDown is far faster in practice, so it only ever gets more
+// slack, never less; Node can't know in advance which tool route_auto will
+// actually pick.
+const DOCLING_BASE_TIMEOUT_MS = 45_000;
+const DOCLING_MS_PER_PAGE_TIMEOUT = 12_000;
+
+// Optimistic (Ollama-idle) rate for the UI's "yaklaşık N saniye" estimate —
+// a different number than the timeout above on purpose: most uploads don't
+// happen while a chat generation is mid-stream, so the common case is worth
+// showing accurately rather than always showing the pessimistic worst case.
+const DOCLING_BASE_ESTIMATE_MS = 15_000;
+const DOCLING_MS_PER_PAGE_ESTIMATE = 4_000;
+
+function pdfTimeoutMs(pageCount: number): number {
+	return DOCLING_BASE_TIMEOUT_MS + pageCount * DOCLING_MS_PER_PAGE_TIMEOUT;
+}
+
+function pdfEstimatedSeconds(pageCount: number): number {
+	return Math.round((DOCLING_BASE_ESTIMATE_MS + pageCount * DOCLING_MS_PER_PAGE_ESTIMATE) / 1000);
+}
 
 /**
  * Runs one conversion (never in parallel — see queue below). Rejects with a
@@ -93,7 +127,8 @@ function runConvert(
 	outDir: string,
 	tool: string,
 	onEvent?: (event: ConvertEvent) => void,
-	sourceName?: string
+	sourceName?: string,
+	pages?: string
 ): Promise<ConvertEvent & { type: 'done' }> {
 	return new Promise((resolve, reject) => {
 		const bin = pythonBin();
@@ -104,6 +139,8 @@ function runConvert(
 		// source_file/title fallback from --in alone. See convert.py's module
 		// docstring for the "original"/"input" title bug this fixes.
 		if (sourceName) args.push('--source-name', sourceName);
+		// #37 — see convert.py's parse_page_range for the "START-END" format.
+		if (pages) args.push('--pages', pages);
 		const child = spawn(bin, args, {
 			windowsHide: true
 		});
@@ -111,11 +148,12 @@ function runConvert(
 		let lastDone: (ConvertEvent & { type: 'done' }) | null = null;
 		let lastError: string | null = null;
 		let timedOut = false;
+		let currentTimeoutMs = PROCESS_TIMEOUT_MS;
 
-		const timer = setTimeout(() => {
+		let timer = setTimeout(() => {
 			timedOut = true;
 			child.kill();
-		}, PROCESS_TIMEOUT_MS);
+		}, currentTimeoutMs);
 
 		const rl = readline.createInterface({ input: child.stdout });
 		rl.on('line', (line) => {
@@ -125,6 +163,20 @@ function runConvert(
 				event = JSON.parse(line);
 			} catch {
 				return; // non-JSON stdout noise — ignore rather than crash the stream
+			}
+			// Aşama 7: convert.py's early pageCount event (PDFs only) replaces
+			// the flat startup-hang floor with a budget sized to this document
+			// — a page count of 0 means pdf_page_count() itself failed
+			// (malformed PDF), which is exactly when the floor should stay in
+			// effect rather than collapse to just the base.
+			if (event.type === 'progress' && event.pageCount) {
+				clearTimeout(timer);
+				currentTimeoutMs = pdfTimeoutMs(event.pageCount);
+				timer = setTimeout(() => {
+					timedOut = true;
+					child.kill();
+				}, currentTimeoutMs);
+				event.estimatedSeconds = pdfEstimatedSeconds(event.pageCount);
 			}
 			onEvent?.(event);
 			if (event.type === 'done') lastDone = event;
@@ -149,7 +201,7 @@ function runConvert(
 				// process finished writing its `done` line just as the timer
 				// fired) and would otherwise report success on a run that was
 				// actually killed for running too long.
-				reject(new Error(`Dönüştürme zaman aşımına uğradı (>${PROCESS_TIMEOUT_MS / 1000}s)`));
+				reject(new Error(`Dönüştürme zaman aşımına uğradı (>${currentTimeoutMs / 1000}s)`));
 			} else if (lastDone) {
 				resolve(lastDone);
 			} else if (lastError) {
@@ -174,7 +226,8 @@ export function enqueueConversion(
 	outDir: string,
 	tool: string,
 	onEvent?: (event: ConvertEvent) => void,
-	sourceName?: string
+	sourceName?: string,
+	pages?: string
 ): Promise<ConvertEvent & { type: 'done' }> {
-	return sharedJobMutex.run(() => runConvert(inPath, outDir, tool, onEvent, sourceName));
+	return sharedJobMutex.run(() => runConvert(inPath, outDir, tool, onEvent, sourceName, pages));
 }

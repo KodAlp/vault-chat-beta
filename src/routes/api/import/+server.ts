@@ -82,7 +82,15 @@ export const POST: RequestHandler = async ({ request }) => {
 				workDir,
 				'auto',
 				(event) => {
-					if (event.type === 'progress') send({ type: 'progress', stage: event.stage, fileName: safeName });
+					if (event.type === 'progress') {
+						send({
+							type: 'progress',
+							stage: event.stage,
+							fileName: safeName,
+							pageCount: event.pageCount,
+							estimatedSeconds: event.estimatedSeconds
+						});
+					}
 				},
 				safeName
 			);
