@@ -15,6 +15,15 @@ export interface VaultRecord {
 	 * longer silently go stale with nothing surfacing when it last matched
 	 * the real Obsidian vault; see the vault-registry skill. */
 	lastSyncedAt?: string;
+	/** İ6 (Aşama 8, 2026-09-23): whether an external MCP client (Claude
+	 * Desktop, Claude Code, any other MCP-speaking agent) can see and read
+	 * this vault at all. Absent/false means closed — mcp/vault-scope.ts's
+	 * withVault() rejects every tool call against a vault that isn't
+	 * explicitly opened this way, and list-vaults.ts never lists it, so a
+	 * closed vault is invisible to an external client, not just
+	 * access-denied on request (a client that already knows or guesses an
+	 * id, e.g. "default", must not be able to reach it either). */
+	mcpExposed?: boolean;
 }
 
 export interface VaultContext {
@@ -29,6 +38,16 @@ export interface VaultContext {
 interface RegistryFile {
 	vaults: VaultRecord[];
 	activeVaultId: string | null;
+	/** İ6 migration (Aşama 8, 2026-09-23): true once the user has answered
+	 * the one-time "keep existing vaults open to MCP, or close them?"
+	 * prompt — closed is the new field's default for every vault, which
+	 * would silently break an MCP setup (Aşama 0) that already worked
+	 * against every vault implicitly. Absent/false on a registry written
+	 * before this field existed is exactly "needs asking"; a registry
+	 * created fresh after this field existed has nothing to migrate, so
+	 * createVault() below stamps it true immediately, never showing the
+	 * prompt for a vault that was never open to begin with. */
+	mcpMigrationAsked?: boolean;
 }
 
 function registryPath(): string {
@@ -61,7 +80,8 @@ function readRegistry(): RegistryFile {
 		const vaults = Array.isArray(parsed.vaults) ? parsed.vaults : [];
 		return {
 			vaults: vaults.map((v) => ({ ...v, path: contextFor(v).libraryRoot })),
-			activeVaultId: parsed.activeVaultId ?? null
+			activeVaultId: parsed.activeVaultId ?? null,
+			mcpMigrationAsked: parsed.mcpMigrationAsked ?? false
 		};
 	} catch {
 		// A fresh array every call — never share one mutable array across
@@ -69,7 +89,7 @@ function readRegistry(): RegistryFile {
 		// caused createVault()'s `reg.vaults.push()` to permanently mutate a
 		// module-level array, leaking entries into every later "missing
 		// registry" read regardless of which directory was being read from.
-		return { vaults: [], activeVaultId: null };
+		return { vaults: [], activeVaultId: null, mcpMigrationAsked: false };
 	}
 }
 
@@ -173,6 +193,10 @@ export function createVault(name: string): VaultRecord {
 	if (!trimmed) throw new Error('Vault adı boş olamaz');
 
 	const reg = readRegistry();
+	// İ6: a vault created into a genuinely empty registry never had implicit
+	// MCP access to lose — nothing to migrate, so the one-time prompt is
+	// pre-answered rather than surfacing for a setup that's brand new.
+	const isFirstVaultEver = reg.vaults.length === 0;
 	const id = uniqueId(reg, trimmed);
 	const now = new Date().toISOString();
 	const record: VaultRecord = {
@@ -180,13 +204,15 @@ export function createVault(name: string): VaultRecord {
 		name: trimmed,
 		path: path.join(vaultsRoot(), id, 'library'),
 		createdAt: now,
-		lastOpenedAt: now
+		lastOpenedAt: now,
+		mcpExposed: false
 	};
 
 	fs.mkdirSync(contextFor(record).libraryRoot, { recursive: true });
 
 	reg.vaults.push(record);
 	if (!reg.activeVaultId) reg.activeVaultId = id;
+	if (isFirstVaultEver) reg.mcpMigrationAsked = true;
 	writeRegistry(reg);
 	return record;
 }
@@ -201,6 +227,42 @@ export function renameVault(id: string, name: string): VaultRecord {
 	record.name = trimmed;
 	writeRegistry(reg);
 	return record;
+}
+
+/** İ6: per-vault MCP exposure toggle. */
+export function setVaultMcpExposed(id: string, exposed: boolean): VaultRecord {
+	const reg = readRegistry();
+	const record = reg.vaults.find((v) => v.id === id);
+	if (!record) throw new Error(`Bilinmeyen vault: ${id}`);
+	record.mcpExposed = exposed;
+	writeRegistry(reg);
+	return record;
+}
+
+export function isVaultMcpExposed(id: string): boolean {
+	return listVaults().find((v) => v.id === id)?.mcpExposed === true;
+}
+
+/** True when there are pre-existing vaults from before İ6 shipped whose
+ * exposure the user hasn't been asked about yet — see RegistryFile's
+ * mcpMigrationAsked doc comment for why this can't just default silently. */
+export function needsMcpMigrationPrompt(): boolean {
+	const reg = readRegistry();
+	return !reg.mcpMigrationAsked && reg.vaults.length > 0;
+}
+
+/** Answers the one-time migration prompt. exposeAll=true keeps every
+ * existing vault reachable over MCP exactly as it was (implicitly, before
+ * this gate existed) — exposeAll=false adopts the new closed-by-default
+ * posture for all of them. Either way, mcpMigrationAsked flips permanently
+ * so this never asks again. */
+export function resolveMcpMigration(exposeAll: boolean): void {
+	const reg = readRegistry();
+	if (exposeAll) {
+		for (const v of reg.vaults) v.mcpExposed = true;
+	}
+	reg.mcpMigrationAsked = true;
+	writeRegistry(reg);
 }
 
 export function touchVault(id: string): void {

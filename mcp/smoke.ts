@@ -24,6 +24,11 @@ import { createServer } from './create-server';
  * status summary — report the distinct NOT_INDEXED error instead of a
  * silent empty success; see retrieve.ts's vaultIsIndexed(). get_note works
  * regardless of indexing, since it reads the filesystem directly).
+ *
+ * `default` is seeded `mcpExposed: true` (İ6, Aşama 8) so the rest of this
+ * file keeps exercising every OTHER path (NOT_INDEXED, traversal, unknown
+ * vault, ...) rather than every call short-circuiting on the new exposure
+ * gate — `closed` below is the vault that actually tests that gate.
  */
 const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'vault-chat-mcp-smoke-'));
 process.env.DATA_DIR = scratch;
@@ -32,8 +37,12 @@ const now = new Date().toISOString();
 fs.writeFileSync(
 	path.join(scratch, 'vaults.json'),
 	JSON.stringify({
-		vaults: [{ id: 'default', name: 'Smoke Test', path: 'default', createdAt: now, lastOpenedAt: now }],
-		activeVaultId: 'default'
+		vaults: [
+			{ id: 'default', name: 'Smoke Test', path: 'default', createdAt: now, lastOpenedAt: now, mcpExposed: true },
+			{ id: 'closed', name: 'Closed Vault', path: 'closed', createdAt: now, lastOpenedAt: now, mcpExposed: false }
+		],
+		activeVaultId: 'default',
+		mcpMigrationAsked: true
 	})
 );
 const libraryRoot = path.join(scratch, 'vaults', 'default', 'library');
@@ -42,6 +51,7 @@ fs.writeFileSync(
 	path.join(libraryRoot, 'note.md'),
 	'---\ntitle: Test Notu\ndomain: test\nlevel: undergrad\n---\n\n# Test\n\nİçerik.'
 );
+fs.mkdirSync(path.join(scratch, 'vaults', 'closed', 'library'), { recursive: true });
 
 try {
 	const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
@@ -134,6 +144,25 @@ try {
 		assert.ok(text.startsWith('VAULT_NOT_FOUND:'), `${name}: expected VAULT_NOT_FOUND, got: ${text}`);
 	}
 	console.log('ok - every vault-scoped tool reports VAULT_NOT_FOUND for an unknown vault id (never throws)');
+
+	// İ6 (Aşama 8): a vault that exists but was never opened to external
+	// clients must be both invisible to discovery (list_vaults, already
+	// asserted length 1 above — 'closed' is the second, unlisted vault) and
+	// unreachable by every other tool even when the id is known outright —
+	// guessing "default"-style ids at a closed vault must not work either.
+	for (const name of ['search_library', 'get_note', 'list_sources']) {
+		const args =
+			name === 'search_library'
+				? { vault: 'closed', query: 'x' }
+				: name === 'get_note'
+					? { vault: 'closed', path: 'x.md' }
+					: { vault: 'closed' };
+		const result = await client.callTool({ name, arguments: args });
+		assert.equal(result.isError, true, `${name} against a closed vault must return isError`);
+		const text = (result.content as { type: string; text: string }[])[0].text;
+		assert.ok(text.startsWith('VAULT_NOT_EXPOSED:'), `${name}: expected VAULT_NOT_EXPOSED, got: ${text}`);
+	}
+	console.log('ok - every vault-scoped tool reports VAULT_NOT_EXPOSED for a vault that exists but is not opened to MCP');
 
 	const logPath = path.join(scratch, 'mcp-log.jsonl');
 	assert.ok(fs.existsSync(logPath), 'mcp-log.jsonl should exist after these calls');

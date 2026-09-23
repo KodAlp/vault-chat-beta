@@ -4,7 +4,8 @@ import { listEnabledProviders, getAdapter } from '$lib/server/providers/registry
 import { loadCatalog } from '$lib/server/providers/model-catalog';
 import { filterModels, type FilterResult } from '$lib/server/providers/model-filter';
 import { modelMaxAgeMonths } from '$lib/server/env';
-import type { ProviderConfigEntry } from '$lib/server/providers/config-store';
+import { isCloud, type ProviderConfigEntry } from '$lib/server/providers/config-store';
+import { isProviderConsented } from '$lib/server/provider-consent';
 import type { ModelInfo } from '$lib/server/providers/types';
 import type { ProviderModelOption } from '$lib/types';
 
@@ -44,12 +45,19 @@ export const GET: RequestHandler = async () => {
 				const { approved } = await approvedModels(p, models, catalog, maxAgeMonths);
 				const allowed = p.enabledModels !== undefined ? new Set(p.enabledModels) : null;
 				const final = allowed ? approved.filter((m) => allowed.has(m.id)) : approved;
+				// İ2 (Aşama 8): computed once per provider, not per model —
+				// consent is granted/revoked for the whole provider, never a
+				// single model within it.
+				const cloud = isCloud(p.kind);
+				const consented = !cloud || isProviderConsented(p.id);
 				return final.map<ProviderModelOption>((m) => ({
 					providerId: p.id,
 					providerLabel: p.label,
 					id: m.id,
 					ctx: m.ctx,
-					caps: m.caps
+					caps: m.caps,
+					cloud,
+					consented
 				}));
 			} catch {
 				return [];

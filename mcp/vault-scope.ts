@@ -1,4 +1,4 @@
-import { resolveVault, type VaultContext } from '../src/lib/server/vaults';
+import { resolveVault, isVaultMcpExposed, type VaultContext } from '../src/lib/server/vaults';
 import { closeVaultIndexDb } from '../src/lib/server/retrieve';
 import { createMutex } from '../src/lib/server/jobMutex';
 import { ToolError } from './errors';
@@ -38,6 +38,17 @@ export async function withVault<T>(
 		} catch (err) {
 			const message = err instanceof Error ? err.message : String(err);
 			throw new ToolError('VAULT_NOT_FOUND', message);
+		}
+		// İ6 (Aşama 8): closed by default — an unset vaultId resolves to the
+		// active vault, which itself may be closed, so this rejects that path
+		// too rather than only ever gating an explicit id. A client that
+		// already knows or guesses an id (e.g. "default") gets the same
+		// rejection a client that never saw it in list_vaults would.
+		if (!isVaultMcpExposed(v.id)) {
+			throw new ToolError(
+				'VAULT_NOT_EXPOSED',
+				`Bu kasa dış istemcilere açık değil: ${v.id}. Ayarlar → Kasalar'dan açabilirsin.`
+			);
 		}
 		try {
 			return await fn(v);

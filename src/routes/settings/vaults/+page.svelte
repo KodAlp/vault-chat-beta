@@ -4,6 +4,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Badge } from '$lib/components/ui/badge';
+	import { Switch } from '$lib/components/ui/switch';
 	import * as Card from '$lib/components/ui/card';
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
 	import { t } from '$lib/i18n/index.svelte';
@@ -18,20 +19,64 @@
 	let renameValue = $state('');
 	let deleteTarget = $state<{ vault: VaultRecord; chatCount: number } | null>(null);
 	let deleteError = $state('');
+	// İ6 (Aşama 8): the one-time "keep existing vaults open to MCP, or close
+	// them?" prompt — see vaults.ts's RegistryFile doc comment. Hidden once
+	// answered, whichever way; never shown again after that.
+	let showMcpMigration = $state(false);
+	let mcpMigrationBusy = $state(false);
+	let mcpToggleBusy = $state<string | null>(null);
 
 	async function loadVaults() {
 		try {
 			const res = await fetch('/api/vaults');
 			if (!res.ok) throw new Error();
-			const data = (await res.json()) as { vaults: VaultWithStatus[]; activeVaultId: string | null };
+			const data = (await res.json()) as {
+				vaults: VaultWithStatus[];
+				activeVaultId: string | null;
+				needsMcpMigrationPrompt: boolean;
+			};
 			vaults = data.vaults;
 			activeVaultId = data.activeVaultId;
+			showMcpMigration = data.needsMcpMigrationPrompt;
 		} catch {
 			loadError = t('VaultsSettingsPage.loadError');
 		}
 	}
 
 	onMount(loadVaults);
+
+	async function resolveMcpMigration(exposeAll: boolean) {
+		mcpMigrationBusy = true;
+		try {
+			await fetch('/api/vaults/mcp-migration', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ exposeAll })
+			});
+			showMcpMigration = false;
+			await loadVaults();
+		} catch {
+			loadError = t('VaultsSettingsPage.mcpMigrationFailed');
+		} finally {
+			mcpMigrationBusy = false;
+		}
+	}
+
+	async function toggleMcpExposed(vault: VaultWithStatus) {
+		mcpToggleBusy = vault.id;
+		try {
+			await fetch(`/api/vaults/${vault.id}`, {
+				method: 'PATCH',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ mcpExposed: !vault.mcpExposed })
+			});
+			await loadVaults();
+		} catch {
+			loadError = t('VaultsSettingsPage.mcpToggleFailed');
+		} finally {
+			mcpToggleBusy = null;
+		}
+	}
 
 	async function createVault() {
 		createError = '';
@@ -128,6 +173,30 @@
 		<p class="mb-4 text-sm text-destructive">{loadError}</p>
 	{/if}
 
+	{#if showMcpMigration}
+		<!-- İ6 one-time migration: pre-existing vaults default to CLOSED under
+		     the new MCP-exposure gate, which would silently stop working for
+		     anyone whose MCP setup (Claude Desktop/Code) already reached every
+		     vault implicitly — this lets them keep that working exactly as it
+		     was, or adopt the new closed-by-default posture, once, explicitly. -->
+		<Card.Root class="mb-6 border-primary">
+			<Card.Header>
+				<Card.Title>{t('VaultsSettingsPage.mcpMigrationTitle')}</Card.Title>
+			</Card.Header>
+			<Card.Content class="flex flex-col gap-3">
+				<p class="text-sm text-muted-foreground">{t('VaultsSettingsPage.mcpMigrationDescription')}</p>
+				<div class="flex gap-2">
+					<Button size="sm" disabled={mcpMigrationBusy} onclick={() => resolveMcpMigration(true)}>
+						{t('VaultsSettingsPage.mcpMigrationKeepOpen')}
+					</Button>
+					<Button size="sm" variant="outline" disabled={mcpMigrationBusy} onclick={() => resolveMcpMigration(false)}>
+						{t('VaultsSettingsPage.mcpMigrationCloseAll')}
+					</Button>
+				</div>
+			</Card.Content>
+		</Card.Root>
+	{/if}
+
 	<Card.Root class="mb-6">
 		<Card.Header>
 			<Card.Title>{t('VaultsSettingsPage.existingVaultsTitle')}</Card.Title>
@@ -135,9 +204,10 @@
 		<Card.Content class="flex flex-col gap-2">
 			{#each vaults as vault (vault.id)}
 				<div
-					class="flex items-center justify-between gap-3 rounded-lg border px-3 py-2 text-sm"
+					class="flex flex-col gap-2 rounded-lg border px-3 py-2 text-sm"
 					class:border-primary={vault.id === activeVaultId}
 				>
+					<div class="flex items-center justify-between gap-3">
 					{#if renamingId === vault.id}
 						<Input
 							type="text"
@@ -175,6 +245,15 @@
 							</Button>
 						</div>
 					{/if}
+					</div>
+					<div class="flex items-center justify-between gap-3 border-t pt-2">
+						<span class="text-xs text-muted-foreground">{t('VaultsSettingsPage.mcpExposedLabel')}</span>
+						<Switch
+							checked={vault.mcpExposed === true}
+							disabled={mcpToggleBusy === vault.id}
+							onCheckedChange={() => toggleMcpExposed(vault)}
+						/>
+					</div>
 				</div>
 			{/each}
 		</Card.Content>

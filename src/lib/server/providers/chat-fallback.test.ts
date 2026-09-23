@@ -91,6 +91,7 @@ function makeDeps(overrides: Partial<ChatFallbackDeps> = {}): ChatFallbackDeps &
 		notices,
 		getChain: () => ['a', 'b'],
 		isProviderEnabled: () => true,
+		isProviderConsented: () => true,
 		getProviderEntry: (id) => stubEntry(id),
 		getAdapter: async () => {
 			throw new Error('getAdapter not stubbed for this test');
@@ -173,6 +174,48 @@ test('a disabled provider never appears in the chain at all', async () => {
 	});
 	await collect(chatWithFallbackCore(deps, 'chat', req(), new AbortController().signal));
 	assert.deepEqual(calls, ['b']);
+});
+
+// İ2 (Aşama 8): consent is filtered exactly like the enabled toggle above —
+// same three shapes (pin falls through, chain skips, all-filtered throws),
+// proving a non-consented provider can never be reached even silently via
+// chain fallback, not just when explicitly pinned.
+test('a pin to a not-yet-consented provider falls through to the base chain, with a notice', async () => {
+	const calls: string[] = [];
+	const deps = makeDeps({
+		getChain: () => ['a'],
+		isProviderConsented: (id) => id !== 'z',
+		getAdapter: async (id) => {
+			calls.push(id);
+			return okAdapter(id, ['ok']);
+		}
+	});
+	await collect(chatWithFallbackCore(deps, 'chat', req(), new AbortController().signal, 'z'));
+	assert.deepEqual(calls, ['a']);
+	assert.match(deps.notices[0], /z henüz onaylanmadı/);
+});
+
+test('a not-yet-consented provider never appears in the chain at all', async () => {
+	const calls: string[] = [];
+	const deps = makeDeps({
+		isProviderConsented: (id) => id !== 'a',
+		getAdapter: async (id) => {
+			calls.push(id);
+			return okAdapter(id, ['ok']);
+		}
+	});
+	await collect(chatWithFallbackCore(deps, 'chat', req(), new AbortController().signal));
+	assert.deepEqual(calls, ['b']);
+});
+
+test('an all-not-consented chain throws before any adapter is touched', async () => {
+	const deps = makeDeps({
+		isProviderConsented: () => false,
+		getAdapter: async () => {
+			throw new Error('must not be called — nothing is consented');
+		}
+	});
+	await assert.rejects(collect(chatWithFallbackCore(deps, 'chat', req(), new AbortController().signal)), /etkin bir provider zinciri yok/);
 });
 
 test('an all-disabled chain throws before any adapter is touched', async () => {

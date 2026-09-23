@@ -15,6 +15,10 @@
 	let open = $state(false);
 	let linksText = $state('');
 	let domain = $state('genel');
+	// İ4 (Aşama 8): a rights checkbox that gates the start button — the app
+	// fetches whatever URL the user gives it, so this is the point where
+	// they're actually asked to confirm they're allowed to.
+	let rightsConfirmed = $state(false);
 	type Phase = 'idle' | 'running' | 'done' | 'error';
 	let phase = $state<Phase>('idle');
 	let items = $state<ImportResultItem[]>([]);
@@ -35,10 +39,12 @@
 		items = [];
 		drafts = {};
 		savingIds = new Set();
+		rightsConfirmed = false;
 		errorMessage = '';
 	}
 
 	async function run() {
+		if (!rightsConfirmed) return;
 		const links = linksText
 			.split('\n')
 			.map((l) => l.trim())
@@ -187,9 +193,13 @@
 				{t('LinksImportDialog.domainLabel')}
 				<Input type="text" bind:value={domain} placeholder="genel" />
 			</label>
+			<label class="flex items-start gap-2 text-xs text-muted-foreground">
+				<input type="checkbox" bind:checked={rightsConfirmed} class="mt-0.5" />
+				{t('LinksImportDialog.rightsConfirm')}
+			</label>
 			<Dialog.Footer>
 				<Button variant="outline" onclick={() => (open = false)}>{t('Common.iptal')}</Button>
-				<Button onclick={run} disabled={!linksText.trim()}>{t('LinksImportDialog.start')}</Button>
+				<Button onclick={run} disabled={!linksText.trim() || !rightsConfirmed}>{t('LinksImportDialog.start')}</Button>
 			</Dialog.Footer>
 		{:else if phase === 'running'}
 			<p class="flex items-center gap-2 text-sm">

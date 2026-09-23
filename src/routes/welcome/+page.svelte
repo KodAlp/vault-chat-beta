@@ -8,8 +8,12 @@
 
 	// Auto-continue keeps this from becoming a click-through chore on every
 	// launch; the button just lets an impatient user skip the wait instead
-	// of forcing them to sit through it.
-	const AUTO_CONTINUE_MS = 5000;
+	// of forcing them to sit through it. Longer than the original 5s
+	// (İ1, Aşama 8, 2026-09-23) now that there's real disclosure text to
+	// read, not just a title/tagline — still skippable, this is an
+	// informational notice, not a blocking consent gate like İ4/İ5's
+	// checkboxes.
+	const AUTO_CONTINUE_MS = 12000;
 
 	function proceed() {
 		markWelcomeShown();
@@ -39,6 +43,11 @@
 	<p in:fly={{ y: 12, duration: 150, delay: 40 }} class="max-w-sm text-sm text-muted-foreground">
 		{t('WelcomePage.tagline')}
 	</p>
+	<ul in:fly={{ y: 12, duration: 150, delay: 60 }} class="flex max-w-md flex-col gap-2 text-left text-xs text-muted-foreground">
+		<li>{t('WelcomePage.note1')}</li>
+		<li>{t('WelcomePage.note2')}</li>
+		<li>{t('WelcomePage.note3')}</li>
+	</ul>
 	<div in:fly={{ y: 12, duration: 150, delay: 80 }}>
 		<Button onclick={proceed}>{t('WelcomePage.continue')}</Button>
 	</div>

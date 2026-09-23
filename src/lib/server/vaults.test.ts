@@ -14,7 +14,11 @@ import {
 	contextFor,
 	markVaultUsed,
 	markVaultSynced,
-	setActiveVault
+	setActiveVault,
+	setVaultMcpExposed,
+	isVaultMcpExposed,
+	needsMcpMigrationPrompt,
+	resolveMcpMigration
 } from './vaults';
 
 /**
@@ -160,5 +164,52 @@ test('vault registry', async (t) => {
 		markVaultUsed(v.id);
 		const strays = fs.readdirSync(process.env.DATA_DIR!).filter((f) => f.endsWith('.tmp'));
 		assert.deepEqual(strays, []);
+	});
+
+	// İ6 (Aşama 8): a vault is closed to MCP by default, and a fresh
+	// install (no pre-existing vaults to migrate) never sees the prompt —
+	// only a registry that already had vaults before this field existed.
+	await t.test('a freshly created vault is closed to MCP by default', () => {
+		useTmpDataDir();
+		const v = createVault('Kapali');
+		assert.equal(v.mcpExposed, false);
+		assert.equal(isVaultMcpExposed(v.id), false);
+	});
+
+	await t.test('setVaultMcpExposed flips the flag and persists it', () => {
+		useTmpDataDir();
+		const v = createVault('Acilacak');
+		setVaultMcpExposed(v.id, true);
+		assert.equal(isVaultMcpExposed(v.id), true);
+		assert.equal(listVaults().find((r) => r.id === v.id)?.mcpExposed, true);
+	});
+
+	await t.test('setVaultMcpExposed rejects an unknown vault', () => {
+		useTmpDataDir();
+		assert.throws(() => setVaultMcpExposed('yok-boyle-bir-vault', true));
+	});
+
+	await t.test('a vault created into an empty registry pre-answers the migration prompt — nothing to migrate', () => {
+		useTmpDataDir();
+		createVault('Ilk Vault');
+		assert.equal(needsMcpMigrationPrompt(), false);
+	});
+
+	await t.test('resolveMcpMigration(true) opens every existing vault and answers the prompt', () => {
+		useTmpDataDir();
+		const a = createVault('A');
+		const b = createVault('B');
+		resolveMcpMigration(true);
+		assert.equal(isVaultMcpExposed(a.id), true);
+		assert.equal(isVaultMcpExposed(b.id), true);
+		assert.equal(needsMcpMigrationPrompt(), false);
+	});
+
+	await t.test('resolveMcpMigration(false) keeps every existing vault closed but still answers the prompt', () => {
+		useTmpDataDir();
+		const a = createVault('A');
+		resolveMcpMigration(false);
+		assert.equal(isVaultMcpExposed(a.id), false);
+		assert.equal(needsMcpMigrationPrompt(), false);
 	});
 });

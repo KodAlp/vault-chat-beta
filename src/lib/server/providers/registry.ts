@@ -9,6 +9,7 @@ import { readProvidersFile, type ProviderConfigEntry, type ProvidersFile } from 
 import type { ChatRequest, ProviderAdapter, RateLimitSnapshot } from './types';
 import { logAppEvent } from '../app-log';
 import { chatWithFallbackCore, type FallbackEvent } from './chat-fallback';
+import { isProviderConsented as isCloudProviderConsented } from '../provider-consent';
 
 let cachedMtime = -1;
 let cachedConfig: ProvidersFile | null = null;
@@ -113,6 +114,19 @@ function isProviderEnabled(providerId: string): boolean {
 	return getProviderEntry(providerId)?.enabled === true;
 }
 
+/** İ2 (Aşama 8): Ollama is always consented (local, nothing leaves the
+ * device — the same distinction config-store.ts's isCloud() draws); a
+ * cloud provider needs an explicit "remember my choice" from the model
+ * picker's first-use prompt, tracked in provider-consent.ts. An unknown
+ * provider id (already deleted, or never existed) is never consented —
+ * mirrors isProviderEnabled's fail-closed shape. */
+function isProviderConsented(providerId: string): boolean {
+	const entry = getProviderEntry(providerId);
+	if (!entry) return false;
+	if (entry.kind === 'ollama') return true;
+	return isCloudProviderConsented(providerId);
+}
+
 export function listEnabledProviders(): ProviderConfigEntry[] {
 	return loadConfig().providers.filter((p) => p.enabled);
 }
@@ -199,6 +213,7 @@ export function chatWithFallback(
 		{
 			getChain,
 			isProviderEnabled,
+			isProviderConsented,
 			getProviderEntry,
 			getAdapter,
 			logFallback: (message, providerId, errorKind) =>
