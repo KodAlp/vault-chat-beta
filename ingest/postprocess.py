@@ -9,12 +9,39 @@ from datetime import date
 
 _MATH_BLOCK = re.compile(r"\\\[(.*?)\\\]", re.DOTALL)
 _MATH_INLINE = re.compile(r"\\\((.*?)\\\)", re.DOTALL)
-_HTML_TAG = re.compile(r"</?[a-zA-Z][^>]{0,200}>")
+# Restricted to real HTML tag names (case-insensitive). The old
+# `</?[a-zA-Z][^>]{0,200}>` matched *anything* shaped like `<word ...>`, so it
+# ate C++ generics and headers wherever they appeared, tagged or not:
+# `List<Token>` -> `List`, `<stdio.h>` -> "", `template <typename T>` ->
+# `template  T` ("typename"/"Token"/"int"/"stdio.h" are not tag names, so none
+# of them match here even outside a code region).
+_HTML_TAG_NAMES = (
+    "a|abbr|address|area|article|aside|audio|b|base|bdi|bdo|blockquote|body|br|"
+    "button|canvas|caption|center|cite|col|colgroup|data|datalist|dd|del|"
+    "details|dfn|dialog|div|dl|dt|em|embed|fieldset|figcaption|figure|font|"
+    "footer|form|h1|h2|h3|h4|h5|h6|head|header|hr|html|i|iframe|img|input|ins|"
+    "kbd|label|legend|li|link|main|map|mark|meta|meter|nav|noscript|object|ol|"
+    "optgroup|option|output|p|param|picture|pre|progress|q|rp|rt|ruby|s|samp|"
+    "script|section|select|small|source|span|strike|strong|style|sub|summary|"
+    "sup|table|tbody|td|textarea|tfoot|th|thead|time|title|tr|track|tt|u|ul|"
+    "var|video|wbr"
+)
+_HTML_TAG = re.compile(rf"</?(?:{_HTML_TAG_NAMES})(?:\s[^>]{{0,200}})?/?>", re.IGNORECASE)
 _BLANK_RUN = re.compile(r"\n{3,}")
 _HEADING = re.compile(r"^(#{1,6})\s+(.*)$", re.MULTILINE)
 
 _DISPLAY_MATH = re.compile(r"\$\$.*?\$\$", re.DOTALL)
+_INLINE_MATH = re.compile(r"\$[^$\n]*?\$")
 _FENCE = re.compile(r"^[ \t]*(`{3,}|~{3,}).*?^[ \t]*\1[ \t]*$", re.DOTALL | re.MULTILINE)
+_INLINE_CODE = re.compile(r"(`+)(?:(?!\1).)*?\1", re.DOTALL)
+# Order matters: at a shared start position (e.g. the first `$` of `$$...$$`),
+# re tries alternatives left to right and keeps the first that matches, so
+# _DISPLAY_MATH must precede _INLINE_MATH or the latter would match just the
+# degenerate `$$` pair instead of the whole block.
+_VERBATIM = re.compile(
+    "|".join(p.pattern for p in (_FENCE, _DISPLAY_MATH, _INLINE_CODE, _INLINE_MATH)),
+    re.DOTALL | re.MULTILINE,
+)
 _BARE_ENV = re.compile(
     r"\\begin\{(equation|align|gather|multline|alignat|eqnarray)(\*?)\}"
     r".*?"
@@ -172,8 +199,26 @@ def decode_html_entities(text: str) -> str:
     return html.unescape(text)
 
 
+def _apply_outside_verbatim(text: str, fn) -> str:
+    """Runs `fn` on every span of `text` that is not fenced code, inline code,
+    or math ($…$/$$…$$) — those spans are copied through untouched.
+
+    Ö5: the HTML-tag stripper used to run over the whole document, so
+    `#include <stdio.h>` inside a fenced code block and `$a<b$ … $c>d$` both
+    lost content to a regex that had no idea it was looking at code or math.
+    """
+    out: list[str] = []
+    pos = 0
+    for m in _VERBATIM.finditer(text):
+        out.append(fn(text[pos : m.start()]))
+        out.append(m.group(0))  # verbatim: copied through, never transformed
+        pos = m.end()
+    out.append(fn(text[pos:]))
+    return "".join(out)
+
+
 def strip_html_remnants(text: str) -> str:
-    return _HTML_TAG.sub("", text)
+    return _apply_outside_verbatim(text, lambda chunk: _HTML_TAG.sub("", chunk))
 
 
 def collapse_blank_lines(text: str) -> str:

@@ -89,6 +89,71 @@ test('a huge fenced code block is split under HARD_MAX_CHARS', () => {
 	}
 });
 
+// Ö4 (2026-09-23 report): the old splitter ran plain hardSplit() over an
+// oversized code block's raw text as if it were prose, so only the first
+// piece kept the opening ``` and only the last kept the closing ``` — a
+// 150-line C block over budget rendered as one real fenced block followed by
+// unfenced plain-text fragments. "Code blocks are atomic" was only true
+// below 2048 characters.
+
+test('an oversized fenced code block splits into individually-fenced pieces with every line intact', () => {
+	// Deeply indented, matching a real Python function body — hardSplit()'s
+	// `.replace(/^\s+/, '')` on the continuation would strip exactly this
+	// leading whitespace at every split point, silently de-indenting it.
+	const lines = Array.from({ length: 300 }, (_, i) => `        value_${i} = compute_something(x, y, z_${i})`);
+	const original = lines.join('\n');
+	const giant = '```python\n' + original + '\n```';
+	const { chunks } = chunkMarkdown(fileWith(`## Kod\n\n${giant}`));
+	assert.ok(chunks.length > 1, 'a code block bigger than the budget must split');
+
+	const fenceRe = /```python\n([\s\S]*?)\n```/;
+	let reassembled = '';
+	let fencedPieceCount = 0;
+	for (const c of chunks) {
+		assert.ok(c.displayText.length <= HARD_MAX_CHARS);
+		const m = fenceRe.exec(c.displayText);
+		if (!m) continue; // e.g. a leading heading-only chunk with no code in it
+		fencedPieceCount++;
+		reassembled += (reassembled ? '\n' : '') + m[1];
+	}
+	assert.ok(fencedPieceCount > 1, 'expected more than one fenced piece, not one block plus unfenced fragments');
+	assert.equal(
+		reassembled,
+		original,
+		'every line must survive unaltered, in order and correctly indented, once fences are stripped back off'
+	);
+});
+
+// Ö3 (2026-09-23 report): `## ` is a common comment marker in Python/shell. A
+// `## not a heading` line inside a fenced code block used to be scanned as a
+// real section break, splitting the code block in two mid-block.
+
+test('a "## " comment line inside a fenced code block is not treated as a heading', () => {
+	const { chunks } = chunkMarkdown(
+		fileWith(
+			'## Kod testi\n\n```python\n' +
+				'## bu bir yorum satırı, başlık değil\n' +
+				'print("hello")\n' +
+				'```\n'
+		)
+	);
+	assert.equal(chunks.length, 1, 'the code block must not be split into a second, phantom section');
+	assert.ok(chunks[0].headingPath.endsWith('Kod testi'));
+	assert.ok(!chunks[0].headingPath.includes('yorum satırı'), 'the comment text must never leak into headingPath');
+	assert.ok(chunks[0].displayText.includes('```python'), 'the fence itself must survive intact');
+});
+
+test('a real heading right after a fenced block that contains a "## " comment is still found', () => {
+	const { chunks } = chunkMarkdown(
+		fileWith(
+			'## Bölüm A\n\n```python\n## not a heading\n```\n\n## Bölüm B\n\nGerçek içerik burada.\n'
+		)
+	);
+	const headings = chunks.map((c) => c.headingPath);
+	assert.ok(headings.some((h) => h.endsWith('Bölüm A')));
+	assert.ok(headings.some((h) => h.endsWith('Bölüm B')));
+});
+
 test('ordinary short content is still one chunk, not fragmented', () => {
 	const { chunks } = chunkMarkdown(fileWith('## Kısa\n\nBir iki cümlelik tamamen normal içerik.'));
 	assert.equal(chunks.length, 1);
@@ -108,4 +173,21 @@ test('normalizeLevel leaves already-canonical and unknown values untouched', () 
 	assert.equal(normalizeLevel('phd'), 'phd');
 	assert.equal(normalizeLevel(''), '');
 	assert.equal(normalizeLevel('meta'), 'meta');
+});
+
+// Ö2 (2026-09-23 report): hand-written YAML frontmatter has no runtime schema
+// check. `level: 3` parses to a JS number, `level: [a, b]` to an array —
+// normalizeLevel used to call `.trim()` unconditionally and threw
+// `TypeError: level.trim is not a function`, which aborted the whole indexing
+// run mid-walk: files alphabetically after the bad one were silently never
+// indexed, and --dry-run never caught it ahead of time because the crashing
+// call only happened inside the real-write branch.
+
+test('normalizeLevel never throws on a non-string frontmatter value and falls back to empty', () => {
+	assert.equal(normalizeLevel(3), '');
+	assert.equal(normalizeLevel(['undergrad']), '');
+	assert.equal(normalizeLevel({ x: 1 }), '');
+	assert.equal(normalizeLevel(true), '');
+	assert.equal(normalizeLevel(null), '');
+	assert.equal(normalizeLevel(undefined), '');
 });
