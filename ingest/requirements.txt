@@ -13,9 +13,20 @@ yt-dlp
 # ayıklamıyor — trafilatura tam olarak bu problemi çözüyor. Hafif, saf Python.
 trafilatura
 
-# Deferred, optional, heavy (pull PyTorch + multi-GB model weights on first
-# run) — see .claude/skills/source-ingest/SKILL.md. convert.py detects their
+# pypdf: page count for convert.py's escalation heuristic. MarkItDown does not
+# reliably emit the form-feed separator the old proxy counted, so the heading
+# check silently never ran on real books. Lightweight, pure Python; markitdown
+# already pulls it transitively, pinned here because convert.py imports it
+# directly.
+pypdf
+
+# Marker and Docling are implemented in convert.py but stay OPTIONAL: they pull
+# PyTorch and multi-GB model weights, and the user's RAM belongs to Ollama
+# first (.claude/skills/source-ingest/SKILL.md). convert.py detects their
 # absence via ImportError and reports a clear "not installed" message rather
-# than crashing or silently degrading output quality. Uncomment to opt in:
-# marker-pdf
-# docling
+# than crashing or silently degrading output quality.
+#
+# A math-heavy or scanned PDF genuinely needs one of them — MarkItDown returns
+# well-formed Markdown with the equations destroyed. Opt in with:
+#
+#     pip install -r ingest/requirements-optional.txt

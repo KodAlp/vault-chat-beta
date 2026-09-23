@@ -1,0 +1,20 @@
+# Optional heavy converters. Not installed by requirements.txt on purpose —
+# these pull PyTorch and download multi-GB model weights on first run.
+#
+#     pip install -r ingest/requirements-optional.txt
+#
+# Install them when you need to convert PDFs that MarkItDown cannot handle:
+# textbooks and papers with real mathematics, scanned documents, or anything
+# where convert.py reports "(cid:NN) artığı" or escalates and finds no tool.
+#
+# convert.py picks them up automatically once present (ImportError at call
+# time, not a capability flag) — nothing else needs changing.
+
+# Default escalation for complex/scanned/math-heavy PDFs. Strong on book-like
+# documents. API used: marker.converters.pdf.PdfConverter (marker-pdf 2.x).
+marker-pdf
+
+# Preferred when the document's value is in its tables — best table detection
+# of the three. API used: docling.document_converter.DocumentConverter
+# (docling 2.x). Requires Python 3.10+.
+docling
