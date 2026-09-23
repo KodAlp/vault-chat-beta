@@ -27,7 +27,11 @@ Every library file carries the standard frontmatter (`title`, `domain`,
 
 ```yaml
 source_file: "Oppenheim_Signals.pdf"
-converted_by: "marker"        # markitdown | marker | docling | pandoc | obsidian-import | manual
+source_sha256: "…"            # of the ORIGINAL file's bytes (2026-09-23) — content-addressed
+                               # dedup, not the curated Markdown's own hash (that's `sha256` in
+                               # import-log.jsonl, answers "did this note change", not "was this
+                               # exact source ever imported before under a different name/URL")
+converted_by: "marker"        # markitdown | marker | docling | pandoc | already-markdown | trafilatura | youtube-transcript | obsidian-import | manual
 converted_at: 2026-07-29
 needs_review: true            # set when conversion had warnings (OCR, tables)
 ```
@@ -56,26 +60,47 @@ Conversion tools are Python; the Node app shells out to
 Keep the sidecar's CLI contract stable:
 
 ```
-python ingest/convert.py --in <file> --out-dir <dir> --tool auto|markitdown|marker|docling|pandoc [--dry-run]
+python ingest/convert.py --in <file> --out-dir <dir> --tool auto|markitdown|marker|docling|pandoc [--dry-run] [--source-name <name>]
 ```
+
+`--source-name` (2026-09-23): every caller stages the input under a generic
+name (`original.pdf`) before invoking this script, so `--in`'s own stem is
+never a usable title or provenance record — five real PDFs all came back
+titled "original"/"input" before this existed. Pass the real filename (or,
+for a link import, `sourceNameFromUrl`'s URL-path-segment guess); it becomes
+`source_file` frontmatter and the title fallback when the document has no
+title of its own. Omitted by a caller that doesn't have one → old, worse
+fallback (the staged name), never a crash.
 
 **Tool routing (`--tool auto`)** — decision order, based on the
 comparative research (MarkItDown/Docling/Marker/MinerU/Pandoc/Unstructured):
 
-1. `.tex` → **Pandoc** (`pandoc -f latex -t gfm`). Industry standard for
+1. `.md` → **no tool at all** (2026-09-23, Ö6) — already Markdown. Any
+   frontmatter the source already carries is split off before
+   `postprocess()` runs (never mistaken for body text), and its own `title`
+   (if present) outranks the filename fallback the same way a PDF's own
+   metadata Title does. Neither source frontmatter nor a body H1 has one? →
+   filename fallback, `needs_review: true`, and a warning naming that.
+2. `.tex` → **Pandoc** (`pandoc -f latex -t gfm`). Industry standard for
    LaTeX; math survives as `$...$` natively.
-2. `.docx/.pptx/.xlsx/.html/.epub` → **MarkItDown**. Lightweight, fast,
-   structure-preserving; ideal default for office documents.
-3. `.pdf` born-digital, simple layout → **MarkItDown** first; if the
+3. `.docx/.pptx/.xlsx/.html/.epub` → **MarkItDown**. Lightweight, fast,
+   structure-preserving; ideal default for office documents. `.pptx`
+   (2026-09-23, K2-7): MarkItDown makes every slide's title an H1 — a
+   29-slide deck came back as 29 top-level H1s — so pptx output gets every
+   H1 demoted to H2 (outside fenced/verbatim regions) after conversion.
+4. `.pdf` born-digital, simple layout → **MarkItDown** first; if the
    output smells broken (heuristics: >30% lines are 1–2 chars, or zero
    headings detected in >5 pages), escalate to Marker.
-4. `.pdf` complex/scanned/math-heavy → **Marker** (default escalation:
+5. `.pdf` complex/scanned/math-heavy → **Marker** (default escalation:
    fast, strong on book-like documents, outputs Markdown+JSON) or
    **Docling** (`--tool docling` for papers with heavy tables/formulas —
    best table detection). Scanned pages: flag OCR exactly like
    `pdf2md.py` (`needs_review: true` + log entry) rather than silently
-   emitting garbage.
-5. MinerU: not in the default path (mixed-language accuracy caveats);
+   emitting garbage. A false "looks scanned" positive on a real text layer
+   (S9, 2026-09-23) no longer discards the extracted text outright when
+   escalation is unavailable/fails — a ≥200-char MarkItDown pass is kept,
+   flagged `needs_review`, rather than losing real content to a bad heuristic.
+6. MinerU: not in the default path (mixed-language accuracy caveats);
    RAGFlow/Unstructured: not used — chunking already belongs to
    `vault-rag-index`, do not introduce a second chunking layer.
 
@@ -90,6 +115,12 @@ comparative research (MarkItDown/Docling/Marker/MinerU/Pandoc/Unstructured):
   (no H1→H3 skips; the chunker depends on sane heading trees).
 - Generate the frontmatter block; never overwrite an existing
   `title/domain/level` on re-import.
+- `derive_title()` takes the first H1, falling back to the caller's
+  `title_fallback` when there is none. It also strips markdown link markup
+  from that H1 (2026-09-23, K3-7): some web-book HTML wraps a
+  self-referencing anchor around its heading (`# [Scanning4](#top)`), which
+  without this became the literal bracketed-and-linked string as the note's
+  title rather than "Scanning4".
 - `quality_warnings()` returns what actually went wrong, and `convert.py`
   emits it in the `done` event. Until this existed, `warnings` was
   hardcoded `[]`: a 1.9 MB control-theory textbook converted to 22k lines
@@ -97,6 +128,14 @@ comparative research (MarkItDown/Docling/Marker/MinerU/Pandoc/Unstructured):
   reported a clean conversion. The checks are broken font mapping, no `##`
   in a long PDF, missing paragraph breaks, and atomic blocks over 2048
   chars. Any warning also forces `needs_review: true`.
+- `convert.py` never silently overwrites an existing output file (K2,
+  2026-09-23) — a name collision in `--out-dir` gets a numeric suffix
+  (`unique_output_path`), the first free `<stem>-N.md` wins.
+- PDF title derivation (K2-5, 2026-09-23): metadata `Title` → the single
+  largest-font run in the first few pages (page-bounded, not
+  fragment-count-bounded — an unbounded window let a later chapter heading
+  like "Preface" outscore the real, smaller-font title) → `--source-name`'s
+  filename. "original"/"input" (the staged name) is never the title.
 
 - For docling/marker PDFs, `heading_repair.py` runs first: docling drops the
   spaces in headings (98/194 `## 1.3 Linearcontrolsystems` on Trentelman),
@@ -113,8 +152,10 @@ comparative research (MarkItDown/Docling/Marker/MinerU/Pandoc/Unstructured):
   (documents that mark headings by weight alone). Trentelman: 22 demoted,
   all correct; 15 chapter headings joined; 0 real headings lost.
 
-Covered by `ingest/postprocess_test.py` and `ingest/heading_repair_test.py`
-(`python ingest/<name>_test.py` — not part of `npm test`, which runs tsx).
+Covered by `ingest/postprocess_test.py`, `ingest/heading_repair_test.py` and
+`ingest/convert_test.py` (title derivation, `.pptx` heading demotion,
+`unique_output_path`, `split_existing_frontmatter`) — `python
+ingest/<name>_test.py`, not part of `npm test`, which runs tsx.
 
 **Escalation heuristic:** `looks_broken()` also counts `(cid:NN)`
 artifacts, and the page count now comes from `pypdf` rather than counting
@@ -203,6 +244,41 @@ ingest/youtube_transcript_test.py`) — same convention as
   `stagingDir()`. Only the "how did a staged .md file get here" step
   differs; review/save/index is identical.
 
+## Web page extraction (Python sidecar)
+
+A third sidecar, `ingest/extract_web.py`, shelled out from
+`src/lib/server/webExtractQueue.ts`. The Node route
+(`api/import/links/+server.ts`) does the one HTTP fetch itself — through
+`fetchWithCap`/`assertPublicHost` in `src/lib/server/link-import.ts`, the
+SSRF-hardened path documented in that module, not here — and hands this
+script the already-downloaded HTML:
+
+```
+python ingest/extract_web.py --in <html-file> --url <original-url> --out-dir <dir>
+```
+
+- `trafilatura.extract(..., with_metadata=True)` (2026-09-23) — without it,
+  a page with no H1 fell back to `title_fallback=args.url`, the raw URL
+  string, as its title. `parse_trafilatura_metadata()` splits the
+  `---\nkey: value\n---\n` block trafilatura prepends (its own fixed
+  format, not real YAML — `pyyaml` is only a transitive dependency of the
+  optional docling/marker extras, so web extraction, a core feature, isn't
+  made to depend on it). Title now comes from `meta.title` (the page's own
+  `<title>`/metadata) → `title_from_url()` (the URL's last path segment,
+  percent-decoded) → the H1-or-fallback logic `postprocess.py`'s
+  `derive_title()` already applies to every other converter.
+- Links import (`api/import/links/+server.ts`) now stages every result —
+  PDF or HTML alike — through the same `stagingDir()` → confirm flow file
+  and YouTube uploads use, instead of writing straight into the library.
+  It also redirects a YouTube URL submitted through the generic link box
+  to the transcript sidecar above (`isYoutubeUrl()`,
+  `link-import.ts`) rather than fetching it as an ordinary web page.
+
+Covered by `ingest/extract_web_test.py` (`parse_trafilatura_metadata`,
+`title_from_url`) and `src/lib/server/link-import.test.ts`
+(`fetchWithCap`, `nextRedirectTarget`, `pdfContentTypeMismatch`,
+`isYoutubeUrl`, `describeError`).
+
 ## App integration
 
 - Left tree = `data/library/` folder walk (server load function), with
@@ -217,3 +293,10 @@ ingest/youtube_transcript_test.py`) — same convention as
 - Conversion is CPU-bound and can be slow (Marker/Docling): run ONE
   conversion at a time with a queue; the user's RAM/CPU belongs to
   Ollama first.
+- The confirm step (`api/library/import/[id]/confirm`) is shared by all
+  three sources (file, YouTube, link) — a fix here covers all three at
+  once. If indexing fails after the file already landed in the library
+  tree (2026-09-23, #11), it's removed and the staged copy restored rather
+  than left behind unindexed with no signal; the log gets an
+  `"indekslenmedi"` entry and the client sees the actual reason, not a
+  generic "kaydedilemedi".
