@@ -144,23 +144,58 @@ python ingest/youtube_transcript.py --url <youtube-url> --out-dir <dir> --lang t
 ```
 
 - Uses `yt-dlp` (`skip_download: True`, `writesubtitles`/`writeautomaticsub:
-  True`) to fetch **captions only** — never downloads video or audio, never
-  runs local transcription (Whisper etc.). A video with neither manual nor
-  automatic captions in a requested language is a clean error, not a
-  fallback to something heavier.
-- Language priority: walks `--lang` in order (app always passes `tr,en`);
-  within a language, a **manual subtitle is preferred over an
-  auto-generated one** — manual is more reliable, so `needs_review: true`
-  is set on the resulting frontmatter only when the auto-generated track
-  had to be used.
+  True`, `noplaylist: True`) to fetch **captions only** — never downloads
+  video or audio, never runs local transcription (Whisper etc.). A video
+  with neither manual nor automatic captions in a requested language is a
+  clean error, not a fallback to something heavier. `noplaylist` (added
+  2026-09-23): a `watch?v=...&list=...` link — MIT OCW's own channel pages
+  are exactly this shape — is a playlist URL to yt-dlp, and without it every
+  video in the list gets processed while holding `sharedJobMutex`, locking
+  out chat's model swap until the whole list finishes.
+- Language selection (rewritten 2026-09-23 — see `find_subtitle_file`,
+  `_find_manual_key`, `_find_auto_original_key`): walks `--lang` in order
+  (app always passes `tr,en`); within a language, a **manual subtitle is
+  preferred over an auto-generated one**, so `needs_review: true` is set on
+  the resulting frontmatter only when the auto-generated track had to be
+  used. Two corrections, both measured on a real MIT OCW video
+  (`ryLdyDrBfvI`):
+  - A manual track's key is not always the bare language code — that
+    video's English manual caption was keyed `en-qlPKC2UN_YU`. Matching is
+    now by prefix (`{lang}-*`, BCP-47-shaped), not exact string equality,
+    which used to fall straight through to the auto-generated track.
+  - An auto-generated track is only accepted as the video's own
+    `-orig` (untranslated) track, or the bare key when it provably matches
+    the video's own `language` — never a bare requested-language key on
+    faith. YouTube auto-translates its auto-captions into every UI language
+    it supports, so `automatic_captions['tr']` on an English video is a
+    machine translation of the English auto-caption, not a Turkish
+    original; requesting `tr,en` used to pick exactly that translation over
+    the far more accurate `en-orig` track.
+  - `ydl_opts['subtitleslangs']` requests `"{lang}(-.*)?"` per language, not
+    the bare code — yt-dlp treats each entry as a regex against its own
+    available caption keys, so a bare `"en"` only ever downloads a track
+    keyed exactly `en`, never `en-orig` or a suffixed manual key; without
+    the wider pattern the files the selection logic above needs never get
+    written to disk in the first place.
+  - Selected `frontmatter["language"]` is the base code of whichever key was
+    actually used (`en` for `en-qlPKC2UN_YU` or `en-orig` alike) — new
+    field, was absent before.
 - VTT parsing strips cue timestamps/numbers and inline `<c>`/`<00:00:01.000>`
   tags, then drops consecutive duplicate lines — YouTube's auto-generated
   captions render as "rolling" cues where each new cue repeats most of the
   previous one's text; without dedup the transcript would be full of
   near-duplicate lines.
-- Frontmatter adds `source_url`, `video_id`, `channel` on top of the same
-  `postprocess.py` base (`converted_by: "youtube-transcript"`) the document
-  converters use — same `title/domain/level` confirm step, same indexing.
+- Frontmatter adds `source_url`, `video_id`, `channel`, `language` on top of
+  the same `postprocess.py` base (`converted_by: "youtube-transcript"`) the
+  document converters use — same `title/domain/level` confirm step, same
+  indexing.
+- `youtubeQueue.ts` now carries the same `PROCESS_TIMEOUT_MS` (120s)
+  kill-on-hang guard as `convertQueue.ts`/`webExtractQueue.ts` (added
+  2026-09-23 — it was the one process spawner in the app with none).
+
+Covered by `ingest/youtube_transcript_test.py` (`python
+ingest/youtube_transcript_test.py`) — same convention as
+`postprocess_test.py`/`heading_repair_test.py` above, not part of `npm test`.
 - App integration reuses the file-upload flow's confirm/cancel endpoints
   unchanged — `POST /api/import/youtube` (JSON `{url}` instead of
   multipart) produces the exact same `{type:'ready', importId, proposed,
