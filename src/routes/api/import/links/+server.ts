@@ -2,10 +2,16 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import matter from 'gray-matter';
+// undici's own fetch, not the global one: its RequestInit is typed with
+// `dispatcher` (a Node/undici extension the Fetch API's own lib.dom types
+// don't know about), and it's the exact same implementation Node's global
+// fetch delegates to — no behavior difference, just proper types for a
+// feature we rely on for SSRF pinning (pinnedDispatcher).
+import { fetch as undiciFetch } from 'undici';
 import type { RequestHandler } from './$types';
 import { enqueueConversion } from '$lib/server/convertQueue';
 import { enqueueWebExtract } from '$lib/server/webExtractQueue';
-import { isPdfBytes, validateLinkUrl, assertPublicHost, loadImportedUrls } from '$lib/server/link-import';
+import { isPdfBytes, validateLinkUrl, assertPublicHost, pinnedDispatcher, loadImportedUrls } from '$lib/server/link-import';
 import { stagingDir, resolveLibraryPath, slugify, appendImportLog, importLogPath, MAX_UPLOAD_BYTES } from '$lib/server/library';
 import { indexLibraryFile } from '$lib/server/incrementalIndex';
 import { vaultFromId } from '$lib/server/requestVault';
@@ -127,34 +133,77 @@ export const POST: RequestHandler = async ({ request }) => {
 	}, (message) => logAppEvent({ kind: 'fatal_error', message: `links import stream: ${message}` }));
 };
 
+const MAX_REDIRECTS = 5;
+
 /**
  * Streamed read with a hard byte cap — Content-Length can be missing or
  * wrong, so the cap is enforced against bytes actually received, not the
- * header. Also re-validates the *final* URL (after any redirects) against
- * assertPublicHost, since fetch follows redirects automatically and the
- * first check only covers the link as typed.
+ * header.
+ *
+ * Redirects are followed *manually* (`redirect: 'manual'`), not by fetch
+ * itself: fetch's own automatic following only ever leaves the *final*
+ * `res.url` for a caller to check afterward, so a malicious/compromised
+ * link could 302 through a public first hop straight into a private
+ * service and only the last, already-public hop would ever be validated
+ * (a real chain proved this: the first hop's `assertPublicHost` call
+ * passed, the actual private-service response still got fetched). Every
+ * hop is now checked — and pinned to the address that check validated,
+ * via `pinnedDispatcher` — before it is followed.
+ *
+ * One deadline for the whole chain, not one per hop: a hop-by-hop timeout
+ * would let a redirect chain tie up sharedJobMutex for
+ * `LINK_FETCH_TIMEOUT_MS * MAX_REDIRECTS`, several minutes, instead of the
+ * single request's usual 30s budget.
  */
 async function fetchWithCap(url: URL): Promise<Buffer> {
-	const res = await fetch(url.href, {
-		signal: AbortSignal.timeout(LINK_FETCH_TIMEOUT_MS),
-		headers: { 'user-agent': USER_AGENT }
-	});
-	await assertPublicHost(new URL(res.url));
-	if (!res.ok) throw new Error(`İstek başarısız: ${res.status}`);
-	if (!res.body) return Buffer.alloc(0);
+	const deadline = Date.now() + LINK_FETCH_TIMEOUT_MS;
+	let current = url;
 
-	const reader = res.body.getReader();
-	const chunks: Uint8Array[] = [];
-	let total = 0;
-	while (true) {
-		const { done, value } = await reader.read();
-		if (done) break;
-		total += value.byteLength;
-		if (total > MAX_UPLOAD_BYTES) {
-			await reader.cancel();
-			throw new Error('Dosya çok büyük (100MB sınırı)');
+	for (let hop = 0; ; hop++) {
+		if (hop > MAX_REDIRECTS) throw new Error(`Çok fazla yönlendirme (>${MAX_REDIRECTS})`);
+		const remaining = deadline - Date.now();
+		if (remaining <= 0) throw new Error('İstek zaman aşımına uğradı');
+
+		const addrs = await assertPublicHost(current);
+		const res = await undiciFetch(current.href, {
+			redirect: 'manual',
+			signal: AbortSignal.timeout(remaining),
+			headers: { 'user-agent': USER_AGENT },
+			dispatcher: pinnedDispatcher(addrs)
+		});
+
+		if (res.status >= 300 && res.status < 400) {
+			const location = res.headers.get('location');
+			if (!location) throw new Error(`Yönlendirme hedefsiz (${res.status})`);
+			let next: URL;
+			try {
+				next = new URL(location, current);
+			} catch {
+				throw new Error(`Geçersiz yönlendirme hedefi: ${location}`);
+			}
+			if (next.protocol !== 'http:' && next.protocol !== 'https:') {
+				throw new Error(`Desteklenmeyen yönlendirme protokolü: ${next.protocol}`);
+			}
+			current = next;
+			continue;
 		}
-		chunks.push(value);
+
+		if (!res.ok) throw new Error(`İstek başarısız: ${res.status}`);
+		if (!res.body) return Buffer.alloc(0);
+
+		const reader = res.body.getReader();
+		const chunks: Uint8Array[] = [];
+		let total = 0;
+		while (true) {
+			const { done, value } = await reader.read();
+			if (done) break;
+			total += value.byteLength;
+			if (total > MAX_UPLOAD_BYTES) {
+				await reader.cancel();
+				throw new Error('Dosya çok büyük (100MB sınırı)');
+			}
+			chunks.push(value);
+		}
+		return Buffer.concat(chunks);
 	}
-	return Buffer.concat(chunks);
 }
