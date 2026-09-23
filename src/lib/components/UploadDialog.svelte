@@ -19,6 +19,9 @@
 	let source = $state<Source>('file');
 	let selectedFile = $state<File | null>(null);
 	let youtubeUrl = $state('');
+	// İ5 (Aşama 8): rights checkbox, YouTube only — a local file the user
+	// picks is already theirs; a YouTube URL is fetched from outside.
+	let rightsConfirmed = $state(false);
 	let importId = $state('');
 	let title = $state('');
 	let domain = $state('');
@@ -42,6 +45,7 @@
 		source = 'file';
 		selectedFile = null;
 		youtubeUrl = '';
+		rightsConfirmed = false;
 		estimatedSeconds = null;
 		errorMessage = '';
 	}
@@ -59,7 +63,7 @@
 
 	async function upload() {
 		if (source === 'file' && !selectedFile) return;
-		if (source === 'youtube' && !youtubeUrl.trim()) return;
+		if (source === 'youtube' && (!youtubeUrl.trim() || !rightsConfirmed)) return;
 		phase = 'uploading';
 		statusLabel = t('UploadDialog.uploading');
 		estimatedSeconds = null;
@@ -201,12 +205,16 @@
 						placeholder={t('UploadDialog.youtubePlaceholder')}
 					/>
 				</label>
+				<label class="flex items-start gap-2 text-xs text-muted-foreground">
+					<input type="checkbox" bind:checked={rightsConfirmed} class="mt-0.5" />
+					{t('UploadDialog.youtubeRightsConfirm')}
+				</label>
 			{/if}
 			<Dialog.Footer>
 				<Button variant="outline" onclick={cancelStaged}>{t('Common.iptal')}</Button>
 				<Button
 					onclick={upload}
-					disabled={source === 'file' ? !selectedFile : !youtubeUrl.trim()}
+					disabled={source === 'file' ? !selectedFile : !youtubeUrl.trim() || !rightsConfirmed}
 				>
 					{t('UploadDialog.upload')}
 				</Button>

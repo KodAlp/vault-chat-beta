@@ -19,6 +19,12 @@ data/mcp-log.jsonl*
 # Faz 11 — app-level error log (chat/fallback/title/db errors, metadata
 # only, same treatment as mcp-log.jsonl above).
 data/app-log.jsonl*
+# F14-2 — disk cache of the OpenRouter/models.dev catalog fetch, rebuilt
+# automatically (24h TTL); not source, same treatment as the DBs above.
+data/model-catalog.json
+# İ2 (Aşama 8) — which cloud providers this instance's user has consented
+# to send chat data to; local-instance state, not source.
+data/provider-consent.json
 .env
 !.env.example
 

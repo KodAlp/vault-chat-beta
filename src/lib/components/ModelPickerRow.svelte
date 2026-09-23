@@ -2,6 +2,7 @@
 	import type { ProviderModelOption } from '$lib/types';
 	import { selectionKey } from '$lib/model-selection';
 	import { t } from '$lib/i18n/index.svelte';
+	import * as AlertDialog from '$lib/components/ui/alert-dialog';
 	import BotIcon from '@lucide/svelte/icons/bot';
 	import BrainIcon from '@lucide/svelte/icons/brain';
 	import RotateCcwIcon from '@lucide/svelte/icons/rotate-ccw';
@@ -57,6 +58,44 @@
 		 * any other way. */
 		class?: string;
 	} = $props();
+
+	// İ2 (Aşama 8): the cloud option the user just picked but hasn't
+	// consented to yet — set instead of calling onModelChange immediately,
+	// so the confirmation dialog below can still cancel back to the
+	// current selection. null the rest of the time.
+	let pendingModel = $state<ProviderModelOption | null>(null);
+	let consentBusy = $state(false);
+
+	function handleModelSelect(e: Event & { currentTarget: HTMLSelectElement }): void {
+		const key = e.currentTarget.value;
+		const opt = modelOptions.find((m) => selectionKey(m.providerId, m.id) === key);
+		if (opt && opt.cloud && !opt.consented) {
+			pendingModel = opt;
+			// The browser already applied the click to the <select>'s own DOM
+			// value; onModelChange hasn't run, so the `value` prop below is
+			// still the OLD key and Svelte won't reassert an attribute whose
+			// reactive expression didn't change. Reset it by hand so the
+			// select visibly stays on the current model while the dialog is
+			// up. Confirming below calls onModelChange, which changes the
+			// prop and reasserts the select's value anyway.
+			e.currentTarget.value = selectionKey(activeProvider, activeModel);
+			return;
+		}
+		onModelChange(key);
+	}
+
+	async function confirmPendingModel(): Promise<void> {
+		if (!pendingModel) return;
+		const opt = pendingModel;
+		consentBusy = true;
+		try {
+			await fetch(`/api/providers/${opt.providerId}/consent`, { method: 'POST' });
+			onModelChange(selectionKey(opt.providerId, opt.id));
+		} finally {
+			consentBusy = false;
+			pendingModel = null;
+		}
+	}
 </script>
 
 <div class="compose-controls {className}">
@@ -67,7 +106,7 @@
 			id="{idPrefix}-model-select"
 			title={t('ModelPickerRow.modelSelectTitle')}
 			value={selectionKey(activeProvider, activeModel)}
-			onchange={(e) => onModelChange(e.currentTarget.value)}
+			onchange={handleModelSelect}
 		>
 			{#if !modelOptions.some((m) => m.providerId === activeProvider && m.id === activeModel)}
 				<option value={selectionKey(activeProvider, activeModel)}>{activeModel}</option>
@@ -114,6 +153,31 @@
 		{t('ModelPickerRow.reviewModeLabel')}
 	</label>
 </div>
+
+<AlertDialog.Root open={pendingModel !== null} onOpenChange={(open) => !open && (pendingModel = null)}>
+	<AlertDialog.Content>
+		{#if pendingModel}
+			<AlertDialog.Header>
+				<AlertDialog.Title>{t('ModelPickerRow.consentTitle')}</AlertDialog.Title>
+				<AlertDialog.Description>
+					{t('ModelPickerRow.consentDescription', { provider: pendingModel.providerLabel })}
+				</AlertDialog.Description>
+			</AlertDialog.Header>
+			<AlertDialog.Footer>
+				<AlertDialog.Cancel>{t('Common.iptal')}</AlertDialog.Cancel>
+				<AlertDialog.Action
+					disabled={consentBusy}
+					onclick={(e) => {
+						e.preventDefault();
+						confirmPendingModel();
+					}}
+				>
+					{t('ModelPickerRow.consentConfirm')}
+				</AlertDialog.Action>
+			</AlertDialog.Footer>
+		{/if}
+	</AlertDialog.Content>
+</AlertDialog.Root>
 
 <style>
 	.compose-controls {

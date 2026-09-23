@@ -103,6 +103,12 @@ export function modelCatalogPath(): string {
 	return nonEmpty(process.env.MODEL_CATALOG_PATH) ?? path.join(dataDir(), 'model-catalog.json');
 }
 
+/** İ2 (Aşama 8) — provider-consent.ts's persisted "which cloud providers has
+ * the user explicitly consented to send chat data to" set. */
+export function providerConsentPath(): string {
+	return nonEmpty(process.env.PROVIDER_CONSENT_PATH) ?? path.join(dataDir(), 'provider-consent.json');
+}
+
 /** F14-3 — a model whose catalog release date (or, failing that, its live `created` field) is older than
  * this many months is filtered out of the clean list. Closed by user decision at 12, adjustable. Unset,
  * empty, non-integer or non-positive values fall back to the default. */

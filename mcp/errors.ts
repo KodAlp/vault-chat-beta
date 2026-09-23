@@ -6,6 +6,7 @@
  */
 export type ToolErrorCode =
 	| 'VAULT_NOT_FOUND'
+	| 'VAULT_NOT_EXPOSED'
 	| 'NOT_INDEXED'
 	| 'OLLAMA_UNAVAILABLE'
 	| 'NOTE_NOT_FOUND'

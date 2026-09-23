@@ -21,6 +21,16 @@ export interface ChatFallbackDeps {
 	/** registry.ts's providers.json "Etkin" toggle — see its own doc
 	 * comment for why routing must actually honor this. */
 	isProviderEnabled(providerId: string): boolean;
+	/** İ2 (Aşama 8, 2026-09-23): true for Ollama always (local, nothing
+	 * ever leaves the device) — for a cloud provider, true only once the
+	 * user has explicitly consented via the model picker's first-use
+	 * prompt (provider-consent.ts). Filtered exactly like isProviderEnabled
+	 * — both the base chain AND a pin — so a provider the user has not
+	 * consented to can never be reached even as a silent chain fallback,
+	 * not just when explicitly pinned. The client is expected to gate
+	 * provider selection with the same prompt before ever sending a
+	 * request; this is the server-side backstop, not the primary UX. */
+	isProviderConsented(providerId: string): boolean;
 	getProviderEntry(providerId: string): ProviderConfigEntry | undefined;
 	getAdapter(providerId: string): Promise<ProviderAdapter>;
 	/** Real implementation (registry.ts) writes to data/app-log.jsonl — the
@@ -71,10 +81,13 @@ export async function* chatWithFallbackCore(
 	signal: AbortSignal,
 	pinnedProviderId?: string
 ): AsyncGenerator<FallbackEvent> {
-	const baseChain = deps.getChain(taskType).filter(deps.isProviderEnabled);
-	const pin = pinnedProviderId && deps.isProviderEnabled(pinnedProviderId) ? pinnedProviderId : undefined;
+	const baseChain = deps.getChain(taskType).filter(deps.isProviderEnabled).filter(deps.isProviderConsented);
+	const pinEnabled = pinnedProviderId ? deps.isProviderEnabled(pinnedProviderId) : false;
+	const pinConsented = pinnedProviderId ? deps.isProviderConsented(pinnedProviderId) : false;
+	const pin = pinEnabled && pinConsented ? pinnedProviderId : undefined;
 	if (pinnedProviderId && !pin) {
-		const message = `${pinnedProviderId} devre dışı → görev zinciri kullanılıyor`;
+		const reason = !pinEnabled ? 'devre dışı' : 'henüz onaylanmadı';
+		const message = `${pinnedProviderId} ${reason} → görev zinciri kullanılıyor`;
 		deps.logFallback(message, pinnedProviderId);
 		yield { type: 'notice', message };
 	}

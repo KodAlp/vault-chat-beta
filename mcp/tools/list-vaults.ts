@@ -11,11 +11,14 @@ export function registerListVaults(server: McpServer): void {
 		{
 			title: 'List vaults',
 			description:
-				'List every vault in this vault-chat instance, with indexing status, note count, ' +
-				'and the domains/levels actually present. unindexedCount > 0 means files exist on disk ' +
-				'that `npm run index` has not been run against since — search_library/list_sources will ' +
-				'not see them yet. Call this first — every other tool takes an optional vault id, and ' +
-				'this is how you find one (or confirm the active vault is the right one to search).',
+				'List every vault in this vault-chat instance that the user has explicitly opened to ' +
+				'external MCP clients (Ayarlar → Kasalar) — a vault the user has not opened this way ' +
+				'never appears here and cannot be reached by any other tool either, even by its id. ' +
+				'With indexing status, note count, and the domains/levels actually present. ' +
+				'unindexedCount > 0 means files exist on disk that `npm run index` has not been run ' +
+				'against since — search_library/list_sources will not see them yet. Call this first — ' +
+				'every other tool takes an optional vault id, and this is how you find one (or confirm ' +
+				'the active vault is the right one to search).',
 			inputSchema: {},
 			annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false }
 		},
@@ -24,28 +27,33 @@ export function registerListVaults(server: McpServer): void {
 			try {
 				const vaults = await runSerialized(() => {
 					const activeId = getActiveVaultId();
-					return listVaults().map((record) => {
-						const v = contextFor(record);
-						try {
-							const { total } = listSources(v, { limit: 0 });
-							return {
-								id: v.id,
-								name: v.name,
-								active: v.id === activeId,
-								indexed: total > 0 || listDomains(v).length > 0,
-								noteCount: total,
-								// Files on disk index-vault.ts would walk but hasn't yet —
-								// a curation pass that finished without a `npm run index`
-								// afterward (E2). 0 for a vault with nothing pending.
-								unindexedCount: countUnindexedFiles(v),
-								domains: listDomains(v),
-								levels: listLevels(v),
-								lastOpenedAt: record.lastOpenedAt
-							};
-						} finally {
-							closeVaultIndexDb(v.id);
-						}
-					});
+					// İ6 (Aşama 8): a closed vault is invisible here, not just
+					// access-denied on a direct call — same-name-guessing (e.g.
+					// "default") must not work as a discovery bypass either.
+					return listVaults()
+						.filter((record) => record.mcpExposed === true)
+						.map((record) => {
+							const v = contextFor(record);
+							try {
+								const { total } = listSources(v, { limit: 0 });
+								return {
+									id: v.id,
+									name: v.name,
+									active: v.id === activeId,
+									indexed: total > 0 || listDomains(v).length > 0,
+									noteCount: total,
+									// Files on disk index-vault.ts would walk but hasn't yet —
+									// a curation pass that finished without a `npm run index`
+									// afterward (E2). 0 for a vault with nothing pending.
+									unindexedCount: countUnindexedFiles(v),
+									domains: listDomains(v),
+									levels: listLevels(v),
+									lastOpenedAt: record.lastOpenedAt
+								};
+							} finally {
+								closeVaultIndexDb(v.id);
+							}
+						});
 				});
 
 				logCall({

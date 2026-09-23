@@ -419,6 +419,8 @@ export interface VaultRecord {
 	path: string;
 	createdAt: string;
 	lastOpenedAt: string;
+	/** İ6 (Aşama 8) — see the server-side VaultRecord's own doc comment. */
+	mcpExposed?: boolean;
 }
 
 /** VaultRecord plus a computed, non-persisted field — api/vaults/+server.ts
@@ -602,4 +604,15 @@ export interface ProviderModelOption {
 	id: string;
 	ctx: number;
 	caps: { tools: boolean; reasoning: boolean };
+	/** İ2 (Aşama 8) — false for Ollama (local, nothing ever leaves the
+	 * device); true for any cloud provider (config-store.ts's isCloud()).
+	 * ModelPickerRow/GenerationDialog gate switching onto a cloud option
+	 * with `consented: false` behind a first-use confirmation instead of
+	 * sending the request and relying on chat-fallback.ts's server-side
+	 * backstop to silently reroute it. */
+	cloud: boolean;
+	/** Always true when `cloud` is false. For a cloud option, whether the
+	 * user has already granted provider-consent.ts's "remember my choice" —
+	 * see the doc comment on `cloud` above. */
+	consented: boolean;
 }

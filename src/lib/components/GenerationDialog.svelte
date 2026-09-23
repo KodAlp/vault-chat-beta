@@ -7,6 +7,7 @@
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import * as Select from '$lib/components/ui/select';
+	import * as AlertDialog from '$lib/components/ui/alert-dialog';
 	import { t } from '$lib/i18n/index.svelte';
 	import { selectionKey, parseSelectionKey } from '$lib/model-selection';
 	import type { ProviderModelOption } from '$lib/types';
@@ -129,6 +130,36 @@
 		wasOpen = open;
 	});
 
+	// İ2 (Aşama 8): same first-use consent gate as ModelPickerRow.svelte —
+	// the picker's onValueChange (not bind:value, see below) routes here
+	// instead of writing straight to selectionKeyState, so an unconsented
+	// cloud pick can still be cancelled back to the current selection
+	// instead of already having taken effect.
+	let pendingModel = $state<ProviderModelOption | null>(null);
+	let consentBusy = $state(false);
+
+	function handleModelSelect(key: string): void {
+		const opt = modelOptions.find((m) => selectionKey(m.providerId, m.id) === key);
+		if (opt && opt.cloud && !opt.consented) {
+			pendingModel = opt;
+			return;
+		}
+		selectionKeyState = key;
+	}
+
+	async function confirmPendingModel(): Promise<void> {
+		if (!pendingModel) return;
+		const opt = pendingModel;
+		consentBusy = true;
+		try {
+			await fetch(`/api/providers/${opt.providerId}/consent`, { method: 'POST' });
+			selectionKeyState = selectionKey(opt.providerId, opt.id);
+		} finally {
+			consentBusy = false;
+			pendingModel = null;
+		}
+	}
+
 	onMount(async () => {
 		try {
 			const res = await fetch(`/api/domains?vault=${encodeURIComponent(vaultId)}`);
@@ -197,7 +228,7 @@
 
 		<label class="flex flex-col gap-1 text-sm">
 			{t('GenerationDialog.modelLabel')}
-			<Select.Root type="single" bind:value={selectionKeyState}>
+			<Select.Root type="single" value={selectionKeyState} onValueChange={handleModelSelect}>
 				<Select.Trigger class="w-full">
 					{selectedOption
 						? `${selectedOption.providerLabel} · ${selectedOption.id}`
@@ -255,3 +286,28 @@
 		</Dialog.Footer>
 	</Dialog.Content>
 </Dialog.Root>
+
+<AlertDialog.Root open={pendingModel !== null} onOpenChange={(o) => !o && (pendingModel = null)}>
+	<AlertDialog.Content>
+		{#if pendingModel}
+			<AlertDialog.Header>
+				<AlertDialog.Title>{t('GenerationDialog.consentTitle')}</AlertDialog.Title>
+				<AlertDialog.Description>
+					{t('GenerationDialog.consentDescription', { provider: pendingModel.providerLabel })}
+				</AlertDialog.Description>
+			</AlertDialog.Header>
+			<AlertDialog.Footer>
+				<AlertDialog.Cancel>{t('Common.iptal')}</AlertDialog.Cancel>
+				<AlertDialog.Action
+					disabled={consentBusy}
+					onclick={(e) => {
+						e.preventDefault();
+						confirmPendingModel();
+					}}
+				>
+					{t('GenerationDialog.consentConfirm')}
+				</AlertDialog.Action>
+			</AlertDialog.Footer>
+		{/if}
+	</AlertDialog.Content>
+</AlertDialog.Root>

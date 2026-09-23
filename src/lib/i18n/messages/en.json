@@ -23,7 +23,10 @@
 		"thinkModeTitle": "When on, the reasoning model thinks before answering (slower but deeper), and the process is shown in the chat. When off, the fast model is used.",
 		"thinkModeLabel": "Think",
 		"reviewModeTitle": "When on, this chat prioritizes due cards, weak areas, and topics you haven't reviewed in a while.",
-		"reviewModeLabel": "Review"
+		"reviewModeLabel": "Review",
+		"consentTitle": "Send to an external provider?",
+		"consentDescription": "{provider} isn't local — your chat content will be sent to that provider's servers. Once you confirm, this choice is remembered and you won't be asked again.",
+		"consentConfirm": "I agree, send it"
 	},
 	"Chat": {
 		"emptyStateTitle": "Ask a question about your notes",
@@ -92,7 +95,10 @@
 		"domainLabel": "Domain (optional)",
 		"allDomains": "All domains",
 		"useChatContext": "Use this conversation as context",
-		"generate": "Generate"
+		"generate": "Generate",
+		"consentTitle": "Send to an external provider?",
+		"consentDescription": "{provider} isn't local — this generation request will be sent to that provider's servers. Once you confirm, this choice is remembered and you won't be asked again.",
+		"consentConfirm": "I agree, send it"
 	},
 
 	"GenerationStatusToast": {
@@ -265,6 +271,7 @@
 		"dialogDescription": "PDF links go to the existing converter, web pages go through main-content extraction. Runs sequentially; links already imported successfully are skipped.",
 		"linksLabel": "Links (one per line)",
 		"linksPlaceholder": "https://...\nhttps://...",
+		"rightsConfirm": "I confirm I have the right/permission to use the content at these links.",
 		"domainLabel": "Target folder",
 		"start": "Start",
 		"scanning": "Scanning...",
@@ -301,6 +308,7 @@
 		"fileLabel": "File (DOCX / PPTX / XLSX / HTML / EPUB / simple PDF)",
 		"youtubeLabel": "YouTube link",
 		"youtubePlaceholder": "https://www.youtube.com/watch?v=...",
+		"youtubeRightsConfirm": "I confirm I have the right/permission to use this video's content.",
 		"upload": "Upload",
 		"stageQueued": "Queued...",
 		"stageConverting": "Converting...",
@@ -345,6 +353,9 @@
 	"WelcomePage": {
 		"title": "Vault Agent Toolkit",
 		"tagline": "Your notes, fully local.",
+		"note1": "By default everything stays on your device — conversion, search, and local (Ollama) chat never send data anywhere. If you pick a cloud provider (e.g. Deepseek, Gemini), that chat's content goes to that provider; importing a link or YouTube video sends a request to that address.",
+		"note2": "AI output can be wrong or incomplete — especially numbers, dates, and quotes. Verify before relying on it for anything important.",
+		"note3": "You're responsible for making sure you hold the rights to whatever you import (PDFs, videos, links).",
 		"continue": "Continue"
 	},
 
@@ -645,7 +656,14 @@
 		"deleteConfirmNoChats": "Its library, search index, and chat history (none) will be permanently deleted. This action cannot be undone.",
 		"remove": "Remove",
 		"unindexedBadge": "{count} file(s) unindexed",
-		"unindexedTitle": "This vault has unindexed files — chat and Claude can't see them yet. Run npm run index -- --vault {id} from the repo."
+		"unindexedTitle": "This vault has unindexed files — chat and Claude can't see them yet. Run npm run index -- --vault {id} from the repo.",
+		"mcpExposedLabel": "Open to external AI clients (MCP)",
+		"mcpToggleFailed": "Couldn't change that.",
+		"mcpMigrationTitle": "Vaults are now closed to MCP clients by default",
+		"mcpMigrationDescription": "External MCP clients like Claude Desktop/Code can now only see vaults you've explicitly opened. They used to all be visible — to avoid breaking your existing setup, we're asking once: should all your existing vaults stay open, or should they all be closed (you can still open any of them individually, any time)?",
+		"mcpMigrationKeepOpen": "Keep them all open",
+		"mcpMigrationCloseAll": "Close them all (recommended)",
+		"mcpMigrationFailed": "Couldn't change that."
 	},
 
 	"CardsStudyPage": {
