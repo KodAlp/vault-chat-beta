@@ -18,6 +18,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
+from urllib.parse import unquote, urlparse
 
 import trafilatura
 
@@ -28,6 +29,45 @@ MIN_EXTRACTED_CHARS = 200
 
 def emit(obj: dict) -> None:
     print(json.dumps(obj), flush=True)
+
+
+def parse_trafilatura_metadata(output: str) -> tuple[dict[str, str], str]:
+    """trafilatura's `with_metadata=True` prepends a `---\\nkey: value\\n...\\n---\\n`
+    block ahead of the body. Not real YAML parsing — pyyaml is not a required
+    dependency here (it's only pulled in transitively by the optional
+    docling/marker extras in requirements-optional.txt; web import is core,
+    not optional, and must not gain a hard dependency on something that
+    might not be installed), and this fixed, trafilatura-controlled shape
+    needs nothing more than line-based `key: value` splitting."""
+    if not output.startswith("---\n"):
+        return {}, output
+    end = output.find("\n---\n", 4)
+    if end == -1:
+        return {}, output
+    header = output[4:end]
+    body = output[end + 5 :]
+    meta: dict[str, str] = {}
+    for line in header.split("\n"):
+        if ":" not in line:
+            continue
+        key, _, value = line.partition(":")
+        meta[key.strip()] = value.strip()
+    return meta, body
+
+
+def title_from_url(url: str) -> str:
+    """K2-5's URL-side fallback — mirrors link-import.ts's sourceNameFromUrl:
+    the last path segment is usually more descriptive than the bare
+    technical string a raw URL is, which is what title_fallback=args.url
+    used to hand straight to postprocess.py's derive_title()."""
+    path = urlparse(url).path
+    last_segment = [p for p in path.split("/") if p][-1:] or []
+    if not last_segment:
+        return urlparse(url).hostname or url
+    try:
+        return unquote(last_segment[0])
+    except (ValueError, UnicodeDecodeError):
+        return last_segment[0]
 
 
 def main() -> int:
@@ -46,20 +86,28 @@ def main() -> int:
     html = in_path.read_text(encoding="utf-8", errors="replace")
 
     try:
-        text = trafilatura.extract(html, url=args.url, output_format="markdown")
+        raw = trafilatura.extract(html, url=args.url, output_format="markdown", with_metadata=True)
     except Exception as err:  # noqa: BLE001 — trafilatura'nın iç hatası da temiz mesaja çevrilir
         emit({"type": "error", "message": f"İçerik ayıklanamadı: {err}"})
         return 1
 
-    if not text or not text.strip():
+    if not raw or not raw.strip():
         emit({"type": "error", "message": "Sayfadan okunabilir bir ana içerik ayıklanamadı (JS-ağırlıklı veya paywall'lı olabilir)."})
         return 1
 
+    meta, text = parse_trafilatura_metadata(raw)
     needs_review = len(text.strip()) < MIN_EXTRACTED_CHARS
+
+    # K2-5: sayfa <title>/og:title varsa ondan, yoksa URL'nin son path
+    # segmentinden (link-import.ts'in sourceNameFromUrl'üyle aynı fikir) —
+    # ham URL'nin tamamı title_fallback olarak kullanılmıyor artık, çünkü
+    # postprocess.py'nin derive_title'ı H1 bulamazsa bunu olduğu gibi
+    # başlığa yazıyordu.
+    title_fallback = meta.get("title") or title_from_url(args.url)
 
     emit({"type": "progress", "stage": "postprocessing"})
     final_text, frontmatter = postprocess(
-        text, title_fallback=args.url, converted_by="trafilatura", needs_review=needs_review
+        text, title_fallback=title_fallback, converted_by="trafilatura", needs_review=needs_review
     )
     frontmatter["source_url"] = args.url
 

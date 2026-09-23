@@ -1,13 +1,36 @@
 import fs from 'node:fs';
 import dns from 'node:dns/promises';
 import net from 'node:net';
-import { Agent } from 'undici';
+import { Agent, fetch as undiciFetch } from 'undici';
+import { MAX_UPLOAD_BYTES } from './library';
 
 /** First bytes, not Content-Type — servers routinely send a wrong/missing
  * header, and the magic signature is what actually determines whether
  * enqueueConversion (PDF) or enqueueWebExtract (HTML) can handle the bytes. */
 export function isPdfBytes(buf: Buffer): boolean {
 	return buf.subarray(0, 5).toString('ascii') === '%PDF-';
+}
+
+/** Aşama 6 #17: a YouTube link pasted into the generic links importer used
+ * to be fetched as a plain web page — trafilatura extracting whatever
+ * boilerplate/JS-shell HTML youtube.com serves, never the actual video
+ * transcript. Shared with api/import/youtube/+server.ts's own check so the
+ * two can't drift apart. */
+export const YOUTUBE_URL = /^https?:\/\/(www\.)?(youtube\.com\/(watch\?|shorts\/)|youtu\.be\/)/i;
+
+export function isYoutubeUrl(url: URL): boolean {
+	return YOUTUBE_URL.test(url.href);
+}
+
+/** #19: a generic Error#message from a TLS/DNS failure is often just
+ * "fetch failed" — the actionable detail (CERT_HAS_EXPIRED,
+ * UNABLE_TO_VERIFY_LEAF_SIGNATURE, ENOTFOUND, ...) lives one level down, on
+ * Node's/undici's `cause`, which Error#message never includes. */
+export function describeError(err: unknown, fallback: string): string {
+	if (!(err instanceof Error)) return fallback;
+	const cause = (err as Error & { cause?: unknown }).cause;
+	const code = cause && typeof cause === 'object' && 'code' in cause ? String((cause as { code: unknown }).code) : undefined;
+	return code ? `${err.message} (${code})` : err.message;
 }
 
 /** Rejects anything that isn't a plain http(s) URL — no file:/javascript:/
@@ -224,4 +247,111 @@ export function loadImportedUrls(logPath: string): Set<string> {
 		}
 	}
 	return known;
+}
+
+const MAX_REDIRECTS = 5;
+const LINK_FETCH_TIMEOUT_MS = 30_000;
+const USER_AGENT = 'Mozilla/5.0 (compatible; vault-chat-import/1.0)';
+
+/** Pure redirect-hop decision, pulled out of fetchWithCap's loop so the
+ * actual bug-prone part — this is exactly where the original "only the
+ * final hop was checked" SSRF gap lived — is unit-testable without a live
+ * server (fetchWithCap's own assertPublicHost call can't be exercised
+ * against a real local target: 127.0.0.0/8 is unconditionally blocked, by
+ * design, regardless of how the hostname resolves).
+ *
+ * Returns null when `status` isn't a redirect (the caller should treat the
+ * response as final); throws for a redirect this code can't safely follow
+ * (no Location, unparseable, or a non-http(s) target — the exact three
+ * ways a redirect could smuggle a request somewhere assertPublicHost never
+ * gets to check). */
+export function nextRedirectTarget(current: URL, status: number, location: string | null): URL | null {
+	if (status < 300 || status >= 400) return null;
+	if (!location) throw new Error(`Yönlendirme hedefsiz (${status})`);
+	let next: URL;
+	try {
+		next = new URL(location, current);
+	} catch {
+		throw new Error(`Geçersiz yönlendirme hedefi: ${location}`);
+	}
+	if (next.protocol !== 'http:' && next.protocol !== 'https:') {
+		throw new Error(`Desteklenmeyen yönlendirme protokolü: ${next.protocol}`);
+	}
+	return next;
+}
+
+/**
+ * Streamed read with a hard byte cap — Content-Length can be missing or
+ * wrong, so the cap is enforced against bytes actually received, not the
+ * header.
+ *
+ * Redirects are followed *manually* (`redirect: 'manual'`), not by fetch
+ * itself: fetch's own automatic following only ever leaves the *final*
+ * `res.url` for a caller to check afterward, so a malicious/compromised
+ * link could 302 through a public first hop straight into a private
+ * service and only the last, already-public hop would ever be validated
+ * (a real chain proved this: the first hop's `assertPublicHost` call
+ * passed, the actual private-service response still got fetched). Every
+ * hop is now checked — and pinned to the address that check validated,
+ * via `pinnedDispatcher` — before it is followed.
+ *
+ * One deadline for the whole chain, not one per hop: a hop-by-hop timeout
+ * would let a redirect chain tie up sharedJobMutex for
+ * `LINK_FETCH_TIMEOUT_MS * MAX_REDIRECTS`, several minutes, instead of the
+ * single request's usual 30s budget.
+ *
+ * Moved here from api/import/links/+server.ts (Aşama 6, #33) so it can be
+ * unit-tested against a real local HTTP server — route files in this repo
+ * are never imported by a test, only $lib/server/*.ts is.
+ */
+export async function fetchWithCap(url: URL): Promise<Buffer> {
+	const deadline = Date.now() + LINK_FETCH_TIMEOUT_MS;
+	let current = url;
+
+	for (let hop = 0; ; hop++) {
+		if (hop > MAX_REDIRECTS) throw new Error(`Çok fazla yönlendirme (>${MAX_REDIRECTS})`);
+		const remaining = deadline - Date.now();
+		if (remaining <= 0) throw new Error('İstek zaman aşımına uğradı');
+
+		const addrs = await assertPublicHost(current);
+		const res = await undiciFetch(current.href, {
+			redirect: 'manual',
+			signal: AbortSignal.timeout(remaining),
+			headers: { 'user-agent': USER_AGENT },
+			dispatcher: pinnedDispatcher(addrs)
+		});
+
+		const next = nextRedirectTarget(current, res.status, res.headers.get('location'));
+		if (next) {
+			current = next;
+			continue;
+		}
+
+		if (!res.ok) throw new Error(`İstek başarısız: ${res.status}`);
+		if (!res.body) return Buffer.alloc(0);
+
+		const reader = res.body.getReader();
+		const chunks: Uint8Array[] = [];
+		let total = 0;
+		while (true) {
+			const { done, value } = await reader.read();
+			if (done) break;
+			total += value.byteLength;
+			if (total > MAX_UPLOAD_BYTES) {
+				await reader.cancel();
+				throw new Error('Dosya çok büyük (100MB sınırı)');
+			}
+			chunks.push(value);
+		}
+		return Buffer.concat(chunks);
+	}
+}
+
+/** #10: a URL ending in .pdf that comes back as something other than a real
+ * PDF (no %PDF- magic signature) usually means a redirect chain landed on
+ * an HTML error/login page, not the expected document — this says so,
+ * rather than the caller silently importing that page as if it were the
+ * PDF it asked for. */
+export function pdfContentTypeMismatch(url: URL, isPdf: boolean): boolean {
+	return /\.pdf(?:[?#]|$)/i.test(url.pathname) && !isPdf;
 }

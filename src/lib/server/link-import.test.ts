@@ -3,7 +3,19 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { isPdfBytes, validateLinkUrl, assertPublicHost, pinnedDispatcher, loadImportedUrls } from './link-import';
+import {
+	isPdfBytes,
+	validateLinkUrl,
+	assertPublicHost,
+	pinnedDispatcher,
+	loadImportedUrls,
+	sourceNameFromUrl,
+	isYoutubeUrl,
+	describeError,
+	nextRedirectTarget,
+	pdfContentTypeMismatch,
+	fetchWithCap
+} from './link-import';
 
 test('isPdfBytes recognizes the %PDF- magic signature', () => {
 	assert.equal(isPdfBytes(Buffer.from('%PDF-1.7\n...')), true);
@@ -125,4 +137,95 @@ test('loadImportedUrls collects only successful entries, skipping failed ones', 
 	} finally {
 		fs.rmSync(dir, { recursive: true, force: true });
 	}
+});
+
+test('sourceNameFromUrl uses the last path segment, percent-decoded', () => {
+	assert.equal(sourceNameFromUrl(new URL('https://example.com/papers/cooley-tukey-fft.pdf')), 'cooley-tukey-fft.pdf');
+	assert.equal(sourceNameFromUrl(new URL('https://example.com/notes/some%20paper.pdf')), 'some paper.pdf');
+});
+
+test('sourceNameFromUrl falls back to the hostname when the path is empty or bare', () => {
+	assert.equal(sourceNameFromUrl(new URL('https://example.com')), 'example.com');
+	assert.equal(sourceNameFromUrl(new URL('https://example.com/')), 'example.com');
+});
+
+test('sourceNameFromUrl uses the raw segment verbatim on malformed percent-encoding rather than throwing', () => {
+	assert.equal(sourceNameFromUrl(new URL('https://example.com/a%zzpage')), 'a%zzpage');
+});
+
+test('isYoutubeUrl recognizes watch/shorts/youtu.be links, rejects everything else', () => {
+	assert.equal(isYoutubeUrl(new URL('https://www.youtube.com/watch?v=abc123')), true);
+	assert.equal(isYoutubeUrl(new URL('https://youtube.com/watch?v=abc123')), true);
+	assert.equal(isYoutubeUrl(new URL('https://youtube.com/shorts/abc123')), true);
+	assert.equal(isYoutubeUrl(new URL('https://youtu.be/abc123')), true);
+	// #17: a channel/playlist page, or a lookalike domain, is not a video —
+	// only the shapes yt-dlp can actually fetch a transcript from route here.
+	assert.equal(isYoutubeUrl(new URL('https://www.youtube.com/@somechannel')), false);
+	assert.equal(isYoutubeUrl(new URL('https://example.com/watch?v=abc123')), false);
+	assert.equal(isYoutubeUrl(new URL('https://notyoutube.com.evil.example/watch?v=abc')), false);
+});
+
+test('describeError appends cause.code when present, e.g. a TLS chain failure', () => {
+	const err = Object.assign(new Error('fetch failed'), { cause: { code: 'UNABLE_TO_VERIFY_LEAF_SIGNATURE' } });
+	assert.equal(describeError(err, 'fallback'), 'fetch failed (UNABLE_TO_VERIFY_LEAF_SIGNATURE)');
+});
+
+test('describeError returns the bare message when there is no cause.code', () => {
+	assert.equal(describeError(new Error('plain failure'), 'fallback'), 'plain failure');
+	assert.equal(describeError(Object.assign(new Error('x'), { cause: 'not an object' }), 'fallback'), 'x');
+});
+
+test('describeError falls back for a non-Error throw', () => {
+	assert.equal(describeError('a string was thrown', 'fallback'), 'fallback');
+	assert.equal(describeError(undefined, 'fallback'), 'fallback');
+});
+
+test('nextRedirectTarget returns null for a non-redirect status, the loop must stop there', () => {
+	assert.equal(nextRedirectTarget(new URL('https://a.example'), 200, null), null);
+	assert.equal(nextRedirectTarget(new URL('https://a.example'), 404, null), null);
+	assert.equal(nextRedirectTarget(new URL('https://a.example'), 500, '/somewhere'), null);
+});
+
+test('nextRedirectTarget resolves a relative Location against the current URL', () => {
+	const next = nextRedirectTarget(new URL('https://a.example/dir/page'), 302, '../other');
+	assert.equal(next?.href, 'https://a.example/other');
+});
+
+test('nextRedirectTarget resolves an absolute Location to a different host', () => {
+	const next = nextRedirectTarget(new URL('https://a.example/x'), 301, 'https://b.example/y');
+	assert.equal(next?.href, 'https://b.example/y');
+});
+
+test('nextRedirectTarget rejects a redirect with no Location header', () => {
+	assert.throws(() => nextRedirectTarget(new URL('https://a.example'), 302, null), /Yönlendirme hedefsiz/);
+});
+
+test('nextRedirectTarget rejects an unparseable Location', () => {
+	// "http://[" is invalid IPv6-literal syntax, not just a relative path —
+	// new URL() throws on it even with a base, unlike a merely-odd relative path.
+	assert.throws(() => nextRedirectTarget(new URL('https://a.example'), 302, 'http://['), /Geçersiz yönlendirme hedefi/);
+});
+
+test('nextRedirectTarget rejects a redirect to a non-http(s) scheme', () => {
+	// #S15-style: a 302 to file:/data: must be rejected outright, not
+	// followed and not silently treated as a dead end either.
+	assert.throws(() => nextRedirectTarget(new URL('https://a.example'), 302, 'file:///etc/passwd'), /Desteklenmeyen yönlendirme protokolü/);
+	assert.throws(() => nextRedirectTarget(new URL('https://a.example'), 302, 'javascript:alert(1)'), /Desteklenmeyen yönlendirme protokolü/);
+});
+
+test('pdfContentTypeMismatch flags a .pdf URL that did not come back as a real PDF', () => {
+	assert.equal(pdfContentTypeMismatch(new URL('https://a.example/paper.pdf'), false), true);
+	assert.equal(pdfContentTypeMismatch(new URL('https://a.example/paper.pdf?x=1'), false), true);
+	assert.equal(pdfContentTypeMismatch(new URL('https://a.example/paper.pdf#frag'), false), true);
+});
+
+test('pdfContentTypeMismatch is silent when the bytes match, or the URL never promised a PDF', () => {
+	assert.equal(pdfContentTypeMismatch(new URL('https://a.example/paper.pdf'), true), false);
+	assert.equal(pdfContentTypeMismatch(new URL('https://a.example/page.html'), false), false);
+	assert.equal(pdfContentTypeMismatch(new URL('https://a.example/download?id=1'), false), false);
+});
+
+test('fetchWithCap rejects a loopback/private target before ever sending a request — the SSRF check cannot be routed around by calling it directly', async () => {
+	await assert.rejects(fetchWithCap(new URL('http://127.0.0.1:1/x')), /Yerel\/özel ağ/);
+	await assert.rejects(fetchWithCap(new URL('http://[::ffff:127.0.0.1]:1/x')), /Yerel\/özel ağ/);
 });

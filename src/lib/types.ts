@@ -460,13 +460,21 @@ export interface LibrarySettings {
 	flattenFolders: string[];
 }
 
-export type ImportResultStatus = 'converted' | 'skipped' | 'needs_review' | 'failed';
+export type ImportResultStatus = 'converted' | 'skipped' | 'needs_review' | 'failed' | 'pending';
 
 export interface ImportResultItem {
 	fileName: string;
 	status: ImportResultStatus;
 	reason?: string;
 	path?: string;
+	/** Only set when status is 'pending' (Aşama 6 #10): the links importer
+	 * now stages each result instead of writing it straight into the
+	 * library, matching the file/YouTube upload flow's staging → confirm
+	 * step — these three fields are what a per-item confirm/cancel UI needs,
+	 * the same shape the 'ready' event already carries for a single upload. */
+	importId?: string;
+	proposed?: { title: string; domain: string; level: string };
+	warnings?: string[];
 }
 
 export interface ImportSummary {

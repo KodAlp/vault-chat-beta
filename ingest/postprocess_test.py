@@ -20,6 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from postprocess import (  # noqa: E402
     decode_html_entities,
+    derive_title,
     postprocess,
     quality_warnings,
     strip_html_remnants,
@@ -189,6 +190,22 @@ def test_html_stripping() -> None:
     )
 
 
+def test_derive_title() -> None:
+    # K3-7: craftinginterpreters' scanning.html converted with a self-
+    # referencing anchor wrapped around its H1 — the title used to come out
+    # as the literal "[Scanning4](#top)", brackets and anchor target intact.
+    check(
+        "a self-linking H1's markup is stripped, not kept verbatim",
+        derive_title("# [Scanning4](#top)\n\nbody", "fb") == "Scanning4",
+    )
+    check(
+        "a link mid-title is unwrapped in place",
+        derive_title("# See [the appendix](#a1) for details", "fb") == "See the appendix for details",
+    )
+    check("a plain H1 is untouched", derive_title("# Plain Title\n\nbody", "fb") == "Plain Title")
+    check("no H1 falls back", derive_title("no heading here", "fb") == "fb")
+
+
 def test_signature() -> None:
     # extract_web.py and youtube_transcript.py call postprocess() with this
     # exact shape; adding warnings must not have changed it.
@@ -207,6 +224,7 @@ if __name__ == "__main__":
     test_entities()
     test_html_stripping()
     test_warnings()
+    test_derive_title()
     test_signature()
     print(f"\n{len(failures)} başarısız" if failures else "\nhepsi geçti")
     sys.exit(1 if failures else 0)

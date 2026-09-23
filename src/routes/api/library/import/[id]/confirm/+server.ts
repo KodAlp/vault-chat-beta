@@ -43,10 +43,31 @@ export const POST: RequestHandler = async ({ params, request }) => {
 	const finalRaw = matter.stringify(parsed.content, frontmatter);
 	fs.writeFileSync(destAbs, finalRaw, 'utf-8');
 
-	await indexLibraryFile(v, destAbs, relPath);
+	// #11: indexLibraryFile can fail (a corrupt DB handle, an Ollama call that
+	// errors mid-embedding) after the file already landed in the library tree
+	// — until now that left an unindexed orphan behind with no signal at all:
+	// not in the index, not back in staging, no log entry either way, and
+	// nothing in the UI to say it needed a retry.
+	try {
+		await indexLibraryFile(v, destAbs, relPath);
+	} catch (err) {
+		fs.rmSync(destAbs, { force: true });
+		fs.writeFileSync(stagedPath, raw, 'utf-8');
+		appendImportLog(v, {
+			sourcePath: relPath,
+			sourceUrl: frontmatter.source_url,
+			sha256: crypto.createHash('sha256').update(finalRaw).digest('hex'),
+			sourceSha256: frontmatter.source_sha256,
+			importedAt: new Date().toISOString(),
+			status: 'indekslenmedi',
+			tool: frontmatter.converted_by ?? 'upload'
+		});
+		error(500, `Dosya kaydedildi ama indekslenemedi, staging'e geri alındı: ${err instanceof Error ? err.message : 'bilinmeyen hata'}`);
+	}
 
 	appendImportLog(v, {
 		sourcePath: relPath,
+		sourceUrl: frontmatter.source_url,
 		sha256: crypto.createHash('sha256').update(finalRaw).digest('hex'),
 		sourceSha256: frontmatter.source_sha256,
 		importedAt: new Date().toISOString(),
