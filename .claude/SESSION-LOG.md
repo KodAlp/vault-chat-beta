@@ -35,7 +35,8 @@ Yapılanlar:
   yönlendirildi — artık hepsi uygulama içi `/library/view` rotasını açıyor.
 - "Obsidian'da aç" etiketleri/i18n anahtarı ("Kaynağı aç" oldu),
   Ayarlar sayfasındaki "Obsidian'da görünen vault adı" etiketi ("Kasa adı"
-  oldu), `.env.example`/`KURULUM.md`'deki `PUBLIC_VAULT_NAME` açıklaması
+  oldu), `.env.example`/`KURULUM-REHBERI.md`'deki `PUBLIC_VAULT_NAME` açıklaması
+  (dosya adı 2026-09-23'te düzeltildi, dosya hiç `KURULUM.md` olarak var olmadı)
   güncellendi.
 - `importObsidianVault` / "Obsidian'dan İçe Aktar" özelliğine dokunulmadı —
   bilinçli olarak: tek gerçek Obsidian bağlantısı bu, korunması gereken.

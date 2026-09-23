@@ -3,9 +3,10 @@
 // that could drift from the actual code (required models, providers.json
 // location) reads that code/config directly instead of hardcoding a
 // duplicate value — see the embed-model regex-extraction below for why:
-// KURULUM.md itself drifted from embed-config.ts's real EMBED_MODEL once
-// already (nomic-embed-text vs bge-m3), and this check exists so that class
-// of bug is caught by a command instead of by a user's failed `npm run index`.
+// KURULUM-REHBERI.md itself drifted from embed-config.ts's real EMBED_MODEL
+// once already (nomic-embed-text vs bge-m3), and this check exists so that
+// class of bug is caught by a command instead of by a user's failed
+// `npm run index`.
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
@@ -130,8 +131,8 @@ let ollamaUrl = nonEmpty(process.env.OLLAMA_URL) ?? 'http://127.0.0.1:11434';
 }
 
 // EMBED_MODEL'i embed-config.ts'in KENDİSİNDEN oku (regex ile) — bu değeri
-// burada tekrar hardcode etmek, KURULUM.md'nin bir kez düştüğü aynı hataya
-// (kodla dokümanın ayrışması) doctor.mjs'i de düşürür.
+// burada tekrar hardcode etmek, KURULUM-REHBERI.md'nin bir kez düştüğü aynı
+// hataya (kodla dokümanın ayrışması) doctor.mjs'i de düşürür.
 let requiredEmbedModel = null;
 {
 	const embedConfigPath = path.join(root, 'src', 'lib', 'server', 'embed-config.ts');

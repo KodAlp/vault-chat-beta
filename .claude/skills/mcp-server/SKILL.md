@@ -77,10 +77,19 @@ alınabilsin.
    tanımı" maddesi onu gerektirmiyor.
 
 5. **Vektör-only arama.** ROADMAP `search_library` için "hibrit arama"
-   diyor, ama `indexer/db.ts` yalnızca `files`, `chunks`, `vec_chunks`
-   yaratıyor — hiçbir FTS tablosu yok. FTS5 eklemek şema değişikliği +
-   tam reindex demektir. v1 saf vektör KNN'dir ve bu ROADMAP'e açıkça
-   yazılır; sessizce "hibrit" diye işaretlenmez.
+   diyor, ama bu kararın alındığı sırada `indexer/db.ts` yalnızca `files`,
+   `chunks`, `vec_chunks` yaratıyordu — hiçbir FTS tablosu yoktu. v1 saf
+   vektör KNN'dir ve bu ROADMAP'e açıkça yazılır; sessizce "hibrit" diye
+   işaretlenmez.
+
+   **Not (2026-09-23): öncül artık geçersiz, karar hâlâ geçerli.**
+   `db.ts` Faz 5'ten beri bir `chunks_fts` (FTS5) tablosu da yaratıyor —
+   sohbet rotasının anahtar kelime yedeği için (vektör arama boş dönünce).
+   Yani "FTS tablosu yok" artık doğru değil; ama `search_library`/
+   `list_sources` bilinçli olarak hâlâ FTS'e dokunmuyor — v1 salt-okunur
+   sözleşmesi vektör-only kalsın diye, karar yeniden alınmadı. FTS'i MCP'ye
+   açmak istenirse bu ayrı bir tur, çünkü keyword-search.ts'in AND/≥2-terim
+   kapısı sohbete özgü kalibre edilmiş (bkz. vault-rag-index skill'i).
 
 ## Neyin salt-okunur olduğunun tam tanımı
 
@@ -103,13 +112,15 @@ halidir ve istemciler bunu kullanıcıya gösterir.
 
 ```
 mcp/
-  launch.mjs      # MCP istemcilerinin spawn ettiği düz JS giriş (loader'sız başlar)
-  server.ts       # McpServer + registerTool wiring
-  vault-scope.ts  # vault çözümleme + serileştirme + handle kapatma
-  errors.ts       # tipli araç hataları
-  log.ts          # data/mcp-log.jsonl
-  tools/          # araç başına bir dosya
-  smoke.ts        # süreç-içi Client↔Server harness
+  launch.mjs        # MCP istemcilerinin spawn ettiği düz JS giriş (loader'sız başlar)
+  create-server.ts  # McpServer + registerTool wiring (düzeltme 2026-09-23: bu satır
+                     #   önceden server.ts'e atfediliyordu — yanlıştı)
+  server.ts         # ince stdio giriş noktası: createServer() + connect(StdioServerTransport)
+  vault-scope.ts    # vault çözümleme + serileştirme + handle kapatma
+  errors.ts         # tipli araç hataları
+  log.ts            # data/mcp-log.jsonl
+  tools/            # araç başına bir dosya
+  smoke.ts          # süreç-içi Client↔Server harness (create-server.ts'i kullanır)
   tsconfig.json
   claude-config.example.json
 ```
@@ -183,9 +194,16 @@ opsiyonel değildir. Log satırları **asla** `console.log`'a yazılmaz.
   açılışta `CREATE TABLE IF NOT EXISTS` çalıştırıyor.
 - WAL notu: temiz yazar kapanışından sonra `-shm` yoksa salt-okur açılış
   `SQLITE_CANTOPEN` verebilir. `retrieve.ts` bu deseni Faz 8'den beri
-  kullanıyor ama çağrı-başına aç/kapat bunu çok daha sık zorlar. Fallback
-  `{ readonly: false, fileMustExist: true }` (yine şema yazmaz). Her
-  hâlükârda tipli hata yoluna bağlanır; süreç asla çökmez.
+  kullanıyor ama çağrı-başına aç/kapat bunu çok daha sık zorlar.
+  **Düzeltme (2026-09-23): `getDb()`'de böyle bir fallback YOK.**
+  Bu satır önceden `{ readonly: false, fileMustExist: true }`'a düşen bir
+  yedek açılış tarif ediyordu; gerçek kod yalnızca `new Database(path,
+  { readonly: true, fileMustExist: true })` çağırıyor, başarısız olursa
+  (`existsSync` zaten `null` dönüyorsa hariç) hatayı olduğu gibi fırlatıyor
+  — `sqliteVec.load()` başarısız olursa handle kapatılıp hata tekrar
+  fırlatılıyor (`instance.close()` + `throw`), ama `readonly: false`'a
+  düşen bir ikinci deneme hiç yok. Gözlenmiş bir `SQLITE_CANTOPEN` de yok;
+  eğer görülürse gerçek davranış budur, yedek açılış değil.
 
 ## Araç tasarımı kuralları
 
@@ -200,7 +218,11 @@ opsiyonel değildir. Log satırları **asla** `console.log`'a yazılmaz.
 - **Hatalar fırlatılmaz, döndürülür:** `{ isError: true, content: [...] }`,
   tipli kodlarla (`VAULT_NOT_FOUND`, `NOT_INDEXED`, `OLLAMA_UNAVAILABLE`,
   `NOTE_NOT_FOUND`, `PATH_OUTSIDE_LIBRARY`). Agent bir hata koduna göre
-  davranabilir; exception ise turunu iptal ettirir.
+  davranabilir; exception ise turunu iptal ettirir. `NOT_INDEXED` uzun süre
+  tanımlı ama hiç üretilmiyordu — indekssiz bir kasada `search_library`/
+  `list_sources` sessizce boş sonuç dönüyordu (`isError:false`), "arandı,
+  eşleşme yok" ile ayırt edilemiyordu. 2026-09-23'te `vaultIsIndexed()`
+  eklenip ikisi de gerçekten `NOT_INDEXED` fırlatır oldu.
 - **Enum kullanma, `z.string()` kullan** — özellikle `level` için.
   `undergrad/grad/phd` yalnızca *bu* vault'ta bulunan değerler;
   `index-vault.ts` frontmatter'daki `level`/`depth`'i olduğu gibi yazıyor.
@@ -315,8 +337,9 @@ SESSION-LOG'da kayıtlı.
 
    Salt-okunur araçlar bu riskten **muaftır**: `retrieve()` → `embed()`
    doğrudan `/api/embed`'e gider, `OllamaAdapter`'a hiç uğramaz,
-   `ensureModelLoaded` çağrılmaz, model `nomic-embed-text` (137M).
-   v1 kapsamının en güçlü gerekçesi budur.
+   `ensureModelLoaded` çağrılmaz, model `bge-m3` (566M — düzeltme
+   2026-09-23, gömme modeli `nomic-embed-text`'ten `bge-m3`'e geçti,
+   bkz. vault-rag-index skill'i). v1 kapsamının en güçlü gerekçesi budur.
 3. **Sunucu tarafında varsayılan model yok.** `generateQuiz` zorunlu
    `model: string` istiyor; her mevcut çağrı noktası kullanıcının UI
    seçimini iletiyor. Ayrıca ROADMAP `count?` diyor ama fonksiyon

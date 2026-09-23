@@ -510,7 +510,9 @@ Kalıcı kararlar:
       `npm run mcp:config`/`claude mcp add` ile yerel kurulum yeterli.
 - [ ] README + örnek vault + config bloğu tamam — **Faz 10.5'e
       ertelendi** (açık kaynak hazırlığı bu fazın kapsamından ayrıldı,
-      kullanıcı onaylı). `KURULUM.md`'ye MCP kurulum bölümü ve
+      kullanıcı onaylı). `KURULUM-REHBERI.md`'ye MCP kurulum bölümü
+      (2026-09-23'te eklendi — dosya adı burada da düzeltildi, dosya hiç
+      `KURULUM.md` olarak var olmadı) ve
       `mcp/claude-config.example.json` bu faz kapsamında eklendi;
       LICENSE/README(TR+EN)/`examples/library/`/CHANGELOG değil.
 

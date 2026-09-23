@@ -111,9 +111,25 @@ Bu seçim sadece ilk açılışta sorulur, sonra bir daha sorulmaz.
    notlarının olduğu klasörü göster.
 2. Sohbet edebilmek için notların önce aranabilir hale getirilmesi (indeks)
    gerekiyor — bu adım şu an sadece kaynak koddan çalıştırılan geliştirici
-   akışında (`npm run index`) elle tetikleniyor; paketlenmiş sürümde bu adım
+   akışında (`npm run index -- --vault <id>`, kasa kimliği Ayarlar →
+   Vault'lar'da) elle tetikleniyor; paketlenmiş sürümde bu adım
    otomatikleştirilmedi. Kaynak koda erişimin yoksa, bu konuda bize
    ulaş — bu rehberin bir sonraki sürümünde bu adım da kapatılacak.
+
+## 7. Claude'a bağlamak (isteğe bağlı, yalnızca kaynak koddan)
+
+Kasan indekslendiyse, Claude Code veya Claude Desktop'ı kasana salt-okunur
+bağlayabilirsin — Claude notlarını arayabilir ve okuyabilir, hiçbir şeyi
+değiştiremez. **Bugün yalnızca kaynak koddan çalıştırınca mümkün** (paketli
+masaüstü sürümüne henüz eklenmedi):
+
+```bash
+claude mcp add --scope user vault-chat -- node "<repo yolun>\mcp\launch.mjs"
+```
+
+Claude Desktop için `npm run mcp:config` çıktısını
+`%APPDATA%\Claude\claude_desktop_config.json`'a ekle. Ayrıntı: `README.md`'nin
+"MCP Sunucusu" bölümü.
 
 ## Sorun giderme
 

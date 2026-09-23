@@ -14,6 +14,15 @@ the app itself: routes, streaming, rendering, and UI conventions.
 > not as a subfolder of this vault repo. This skill's own `.claude/skills/`
 > should really be invoked from *that* repo going forward; the tree below is
 > kept for reference but its root path no longer resolves from here.
+>
+> **Corrected 2026-09-23: "Project structure" below is the pre-build MVP
+> skeleton, not the current app.** The real app has grown to a multi-vault
+> registry, provider/model management, study artifacts (quiz/cards), memory,
+> smalltalk gating, an MCP server, and many more routes/components than shown
+> — see `vault-registry`, `model-provider`, `study-artifacts`, `mcp-server`
+> and `frontend-revamp` skills for the phases that actually built those. Use
+> the tree below only for the constraints it illustrates (no Docker/daemon,
+> local-only, Windows-first), not as a map of what exists today.
 
 ## Non-negotiable constraints
 
@@ -52,7 +61,11 @@ vault-chat/
 │   │       ├── chat/+server.ts       # POST → SSE stream
 │   │       └── models/+server.ts     # GET → installed Ollama models
 ├── static/
-├── .env                              # VAULT_PATH, OLLAMA_URL, INDEX_DB_PATH
+├── .env                              # DATA_DIR, OLLAMA_URL (corrected 2026-09-23 —
+│                                      #   VAULT_PATH/INDEX_DB_PATH are gone; a single
+│                                      #   fixed index path made no sense once Faz 8's
+│                                      #   vault registry made index.db per-vault, see
+│                                      #   src/lib/server/env.ts for what's actually read)
 └── package.json
 ```
 
