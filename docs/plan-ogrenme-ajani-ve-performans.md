@@ -1219,8 +1219,18 @@ F11 (ayrı hat, VLM geçişi) ──> F13-3 gerçek görsel kolu
 F7        F8 + F12-5 (birlikte)        F9 (erken başla)
 
 F14 ✅ yapıldı (F14-1..4; F14-5 kullanıcı-ayarı olarak ertelendi).
-F15 ✅ yapıldı (küçük ilk dilim, §5.6). Sıradaki yan görevler: F13 (slaytlar) → F11 (MinerU).
+F15 ✅ yapıldı (küçük ilk dilim, §5.6).
 ```
+
+**2026-09-23: F13/F11'in sırası ve kapsamı, `docs/yol-2026-09-23.md`'deki
+birleşik durum raporu sonrası çözüm yoluyla değişti.** O yol 41 ölçülmüş
+bulguyu (dönüştürücü kalitesi, sessiz veri bozulması, MCP kaydı/tutarlılığı,
+SSRF, YouTube dil/oynatma-listesi, içe aktarma güvenliği, izin modeli, hukuk)
+bağımlılık sırasına diziyor; F13-1/2 (şema+tema) Aşama 9'da bağımsız ara adım
+olarak duruyor, F13-3 (gerçek görsel kolu) ve F11 raporun "görseller A→B"
+kararıyla Aşama 11'de tek görsel hattında birleşti. Bu bölümdeki F13/F11
+ayrıntıları (§4) hâlâ geçerli tasarım notları; sıralama ve bağımlılıklar için
+`docs/yol-2026-09-23.md` esas alınmalı.
 
 ---
 
@@ -1277,6 +1287,7 @@ F15 ✅ yapıldı (küçük ilk dilim, §5.6). Sıradaki yan görevler: F13 (sla
 | **F14-5 / bulut tool erişimi** | **Kapandı (2026-09-22):** açılırsa **açılıp kapatılabilir bir kullanıcı ayarı** olmalı, sabit açık/kapalı olmamalı. F14-5'in kendisi (kod) hâlâ yapılmadı — kendi turunda, bu ayarın tasarımıyla birlikte. |
 | **F14 / ROADMAP kaydı** | Açık; `.claude/ROADMAP.md`'ye dokunulmadı. F14 ayrıca `Faz 20` olarak girsin mi? Repoda iki bağımsız numaralandırma var (`Faz N` ROADMAP'te, `F<N>` bu belgede) ve birbirlerine hiç atıf vermiyorlar. Not: Faz 17-19 kodda var ama ROADMAP'te yok, ilk boş numara 20. |
 | **Donanım sınırı** | 6 GB VRAM'de aynı anda iki modeli GPU'da tutmak mümkün değil — router + uzman model mimarisi (1.7B routing + 8B generation) şimdilik kapsam dışı. |
+| **F11 `raw/` istisnası (2026-09-23'te tekrar açık)** | `docs/yol-2026-09-23.md` Aşama 11'de öneri **ayrı dizin** (değişmezi ihlal etmez); karar kesinleşmedi, aşamaya girmeden önce sorulacak. |
 
 ---
 

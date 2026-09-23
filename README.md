@@ -215,10 +215,11 @@ olarak açan yerel bir sunucu — ayrı bir paket veya kurulum gerektirmez,
 `generate_flashcards` gibi üretici araçlar bilinçli olarak ertelendi —
 gerekçe `.claude/skills/mcp-server/SKILL.md`'de.
 
-Claude Code'a eklemek için (en hızlı yol):
+Claude Code'a eklemek için (en hızlı yol — `--scope user` olmadan kayıt
+yalnızca komutun çalıştırıldığı dizine bağlanır):
 
 ```bash
-claude mcp add vault-chat -- node "<bu repo>\vault-chat\mcp\launch.mjs"
+claude mcp add --scope user vault-chat -- node "<bu repo>\mcp\launch.mjs"
 ```
 
 Claude Desktop için, `%APPDATA%\Claude\claude_desktop_config.json`'a
