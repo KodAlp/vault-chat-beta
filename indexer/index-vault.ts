@@ -7,7 +7,7 @@ import Database from 'better-sqlite3';
 import { openDb, listKnownFiles, deleteFile, upsertFile, setPrerequisites, type FileRow } from './db';
 import { buildSlugIndex, findCycles, parsePrerequisites, resolvePrerequisites } from './prerequisites';
 import { hasKeywordIndex } from '../src/lib/server/keyword-search';
-import { chunkMarkdown, normalizeLevel } from './chunk';
+import { chunkMarkdown, normalizeLevel, HARD_MAX_CHARS } from './chunk';
 import { embedDocuments } from './embed';
 import { EXCLUDED_DIRS } from './excluded-dirs';
 import { resolveIndexerVault } from './paths';
@@ -40,6 +40,24 @@ function walk(dir: string, out: string[] = []): string[] {
 
 function sha256(content: string): string {
 	return crypto.createHash('sha256').update(content).digest('hex');
+}
+
+/**
+ * True when a file's already-indexed chunks include one that HARD_MAX_CHARS
+ * was supposed to rule out. The hash-based skip below is a genuine
+ * optimization for unchanged files, but "unchanged" and "already correctly
+ * chunked" are different claims: a chunk produced before Ö3/Ö4 (or before
+ * chunk.ts existed at all) can be oversized forever, because nothing ever
+ * re-chunks a file whose content hash hasn't moved. Measured on the real
+ * index: yapay-zeka's Chollet note stayed one 1.449.838-char chunk across
+ * repeated non-`--full` runs (E4) — a chunk that large reaches the model as
+ * ~362k tokens and blows every cloud provider's context window.
+ */
+function hasOversizedChunk(db: Database.Database, relPath: string): boolean {
+	const row = db
+		.prepare('SELECT 1 FROM chunks WHERE path = ? AND length(display_text) > ? LIMIT 1')
+		.get(relPath, HARD_MAX_CHARS);
+	return row !== undefined;
 }
 
 async function main() {
@@ -123,13 +141,28 @@ async function main() {
 		}
 	}
 
-	const db = openDb(DB_PATH);
-	const known = listKnownFiles(db);
+	// Ö1: --dry-run claimed "hiçbir şey yazılmadı" but called openDb()
+	// unconditionally, and openDb() runs CREATE TABLE IF NOT EXISTS, adds
+	// columns and creates the vec0/FTS virtual tables as a side effect of
+	// opening — real schema writes, dry-run or not. Measured on a copy: a
+	// dry-run took a 12-table DB with no FTS and no prerequisites_json to an
+	// 18-table DB with both. A dry-run only ever reads `known` below (the
+	// write path is already gated by `!isDryRun`), so it needs a connection
+	// at all only when the DB already exists, and never one that can migrate
+	// anything — same pattern the --prereqs branch above already uses.
+	const dbExistedBeforeThisRun = fs.existsSync(DB_PATH);
+	const db = isDryRun
+		? dbExistedBeforeThisRun
+			? new Database(DB_PATH, { readonly: true })
+			: null
+		: openDb(DB_PATH);
+	const known = db ? listKnownFiles(db) : new Map<string, FileRow>();
 	const seen = new Set<string>();
 
 	let indexed = 0;
 	let skipped = 0;
 	let warnings = 0;
+	let resplit = 0;
 
 	for (const absPath of walk(LIBRARY_ROOT)) {
 		const relPath = path.relative(LIBRARY_ROOT, absPath).split(path.sep).join('/');
@@ -139,8 +172,17 @@ async function main() {
 
 		const existing = known.get(relPath);
 		if (existing && existing.sha256 === hash) {
-			skipped++;
-			continue;
+			// E4: an unchanged hash normally means "skip", but not when this
+			// file's existing chunks predate a chunker fix and are still
+			// oversized — see hasOversizedChunk's doc comment. `db` is
+			// guaranteed non-null here: `existing` can only be set from
+			// `known`, and `known` is only ever populated when `db` was.
+			if (!db || !hasOversizedChunk(db, relPath)) {
+				skipped++;
+				continue;
+			}
+			resplit++;
+			console.log(`[yeniden bölünüyor] hash aynı, ama eski parça HARD_MAX_CHARS'ı aşıyor: ${relPath}`);
 		}
 
 		const { data } = matter(raw);
@@ -157,7 +199,22 @@ async function main() {
 			continue;
 		}
 
-		if (!isDryRun) {
+		// Ö2: runs in both dry-run and real passes — previously this check only
+		// existed implicitly, inside normalizeLevel(), inside the write-only
+		// branch below. A non-string `level` (e.g. `level: 3`, valid YAML)
+		// threw TypeError there and aborted the whole directory walk midway;
+		// files alphabetically after the bad one were silently never indexed,
+		// and --dry-run could not have caught it ahead of time because the
+		// crashing call never ran during a dry run.
+		const rawLevel = frontmatter.level ?? frontmatter.depth;
+		if (rawLevel != null && typeof rawLevel !== 'string') {
+			console.warn(
+				`[uyarı] level/depth metin değil (${JSON.stringify(rawLevel)}), boş seviyeye düşürüldü: ${relPath}`
+			);
+			warnings++;
+		}
+
+		if (!isDryRun && db) {
 			const embeddings = await embedDocuments(chunks.map((c) => c.embedText));
 			const fileRow: FileRow = {
 				path: relPath,
@@ -185,18 +242,18 @@ async function main() {
 	let deletedCount = 0;
 	for (const knownPath of known.keys()) {
 		if (!seen.has(knownPath)) {
-			if (!isDryRun) deleteFile(db, knownPath);
+			if (!isDryRun && db) deleteFile(db, knownPath);
 			deletedCount++;
 		}
 	}
 
-	db.close();
+	db?.close();
 
 	const seconds = ((Date.now() - start) / 1000).toFixed(1);
 	console.log('');
 	console.log(isDryRun ? '(dry-run — hiçbir şey yazılmadı)' : 'İndeksleme tamamlandı.');
 	console.log(
-		`  indexed: ${indexed}  skipped: ${skipped}  deleted: ${deletedCount}  warnings: ${warnings}`
+		`  indexed: ${indexed}  skipped: ${skipped}  yeniden bölünen: ${resplit}  deleted: ${deletedCount}  warnings: ${warnings}`
 	);
 	console.log(`  süre: ${seconds}s`);
 }

@@ -22,6 +22,7 @@ from postprocess import (  # noqa: E402
     decode_html_entities,
     postprocess,
     quality_warnings,
+    strip_html_remnants,
     wrap_alignment_math,
     wrap_bare_math_environments,
 )
@@ -158,6 +159,36 @@ def test_entities() -> None:
     check("tags stripped and entities decoded", "x < y and bold" in text)
 
 
+def test_html_stripping() -> None:
+    # Table from the 2026-09-23 report (Ö5): `_HTML_TAG` used to treat any
+    # `<word ...>` as markup, so it ate C++ generics, headers and inequalities
+    # wherever they appeared — inside code, inside math, or in plain prose.
+    # Measured on real content: craftinginterpreters' scanning.html turned
+    # `List<Token>` into `List` and `Map<String, TokenType>` into `Map`.
+    unchanged = [
+        ("`#include <stdio.h>`", "inline code, single angle-bracket header"),
+        ("```\n#include <stdio.h>\n```", "fenced code, angle-bracket header"),
+        ("`std::vector<int>`", "inline code, template instantiation"),
+        ("`List<Token>`", "inline code, Java generic (real craftinginterpreters case)"),
+        ("template <typename T>", "plain prose: 'typename' is not an HTML tag name"),
+        ("$a<b$ ve $c>d$", "two separate inline-math spans on one line"),
+        ("$x < y$", "spaced inequality inside inline math"),
+    ]
+    for text, label in unchanged:
+        check(f"untouched: {label}", strip_html_remnants(text) == text)
+
+    check(
+        "real HTML tag still stripped in prose",
+        strip_html_remnants('prose with <div class="x">hi</div> remnant') == "prose with hi remnant",
+    )
+    check("real void tag still stripped", strip_html_remnants("a <br> break") == "a  break")
+    check(
+        "code survives even next to a real tag on the same line",
+        strip_html_remnants("<b>bold</b> then `List<Token>` in code")
+        == "bold then `List<Token>` in code",
+    )
+
+
 def test_signature() -> None:
     # extract_web.py and youtube_transcript.py call postprocess() with this
     # exact shape; adding warnings must not have changed it.
@@ -174,6 +205,7 @@ if __name__ == "__main__":
     test_wrapping()
     test_alignment_wrapping()
     test_entities()
+    test_html_stripping()
     test_warnings()
     test_signature()
     print(f"\n{len(failures)} başarısız" if failures else "\nhepsi geçti")
