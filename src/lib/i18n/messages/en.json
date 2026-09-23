@@ -641,7 +641,9 @@
 		"deleteConfirmTitle": "Delete \"{name}\"?",
 		"deleteConfirmWithChats": "Its library, search index, and {chatCount} chats will be permanently deleted. This action cannot be undone.",
 		"deleteConfirmNoChats": "Its library, search index, and chat history (none) will be permanently deleted. This action cannot be undone.",
-		"remove": "Remove"
+		"remove": "Remove",
+		"unindexedBadge": "{count} file(s) unindexed",
+		"unindexedTitle": "This vault has unindexed files — chat and Claude can't see them yet. Run npm run index -- --vault {id} from the repo."
 	},
 
 	"CardsStudyPage": {

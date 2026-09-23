@@ -9,8 +9,8 @@ import { buildSlugIndex, findCycles, parsePrerequisites, resolvePrerequisites } 
 import { hasKeywordIndex } from '../src/lib/server/keyword-search';
 import { chunkMarkdown, normalizeLevel, HARD_MAX_CHARS } from './chunk';
 import { embedDocuments } from './embed';
-import { EXCLUDED_DIRS } from './excluded-dirs';
 import { resolveIndexerVault } from './paths';
+import { walkMarkdownFiles as walk } from './walk-md';
 
 try {
 	process.loadEnvFile();
@@ -27,16 +27,6 @@ const isPrereqs = args.includes('--prereqs');
 const vault = resolveIndexerVault(args);
 const LIBRARY_ROOT = vault.libraryRoot;
 const DB_PATH = vault.indexDbPath;
-
-function walk(dir: string, out: string[] = []): string[] {
-	for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-		if (EXCLUDED_DIRS.has(entry.name)) continue;
-		const full = path.join(dir, entry.name);
-		if (entry.isDirectory()) walk(full, out);
-		else if (entry.isFile() && entry.name.endsWith('.md')) out.push(full);
-	}
-	return out;
-}
 
 function sha256(content: string): string {
 	return crypto.createHash('sha256').update(content).digest('hex');

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import type { VaultRecord } from '$lib/types';
+	import type { VaultRecord, VaultWithStatus } from '$lib/types';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Badge } from '$lib/components/ui/badge';
@@ -9,7 +9,7 @@
 	import { t } from '$lib/i18n/index.svelte';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 
-	let vaults = $state<VaultRecord[]>([]);
+	let vaults = $state<VaultWithStatus[]>([]);
 	let activeVaultId = $state<string | null>(null);
 	let loadError = $state('');
 	let newVaultName = $state('');
@@ -23,7 +23,7 @@
 		try {
 			const res = await fetch('/api/vaults');
 			if (!res.ok) throw new Error();
-			const data = (await res.json()) as { vaults: VaultRecord[]; activeVaultId: string | null };
+			const data = (await res.json()) as { vaults: VaultWithStatus[]; activeVaultId: string | null };
 			vaults = data.vaults;
 			activeVaultId = data.activeVaultId;
 		} catch {
@@ -154,6 +154,11 @@
 							{vault.name}
 							{#if vault.id === activeVaultId}
 								<Badge variant="secondary">{t('VaultsSettingsPage.active')}</Badge>
+							{/if}
+							{#if vault.unindexedCount > 0}
+								<Badge variant="outline" title={t('VaultsSettingsPage.unindexedTitle', { id: vault.id })}>
+									{t('VaultsSettingsPage.unindexedBadge', { count: vault.unindexedCount })}
+								</Badge>
 							{/if}
 						</span>
 						<div class="flex shrink-0 gap-1.5">

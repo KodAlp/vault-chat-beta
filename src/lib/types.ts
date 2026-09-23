@@ -421,6 +421,16 @@ export interface VaultRecord {
 	lastOpenedAt: string;
 }
 
+/** VaultRecord plus a computed, non-persisted field — api/vaults/+server.ts
+ * and +page.server.ts both add this via retrieve.ts's countUnindexedFiles();
+ * it never lives in vaults.json itself (see api/vaults/+server.ts's doc
+ * comment). Files on disk that `npm run index` would walk but hasn't yet —
+ * a curation pass that finished without a following reindex looked, before
+ * this existed, identical to a vault with nothing new (E2). */
+export interface VaultWithStatus extends VaultRecord {
+	unindexedCount: number;
+}
+
 export interface LibraryNode {
 	name: string;
 	/** Relative to data/library/, forward-slash separated. */

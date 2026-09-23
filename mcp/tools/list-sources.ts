@@ -1,9 +1,9 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { listSources } from '../../src/lib/server/retrieve';
+import { listSources, vaultIsIndexed } from '../../src/lib/server/retrieve';
 import { withVault } from '../vault-scope';
 import { logCall } from '../log';
-import { toolErrorResult } from '../errors';
+import { toolErrorResult, ToolError } from '../errors';
 
 const DEFAULT_LIMIT = 200;
 
@@ -29,6 +29,12 @@ export function registerListSources(server: McpServer): void {
 			const start = Date.now();
 			try {
 				const { vaultId, total, sources } = await withVault(vault, (v) => {
+					// Ö7: same NOT_INDEXED gap as search_library — an unindexed
+					// vault returned `{"total":0,"sources":[]}, isError:false`,
+					// indistinguishable from "indexed, filter matched nothing".
+					if (!vaultIsIndexed(v)) {
+						throw new ToolError('NOT_INDEXED', `Vault '${v.id}' henüz indekslenmemiş (npm run index -- --vault ${v.id}).`);
+					}
 					const r = listSources(v, {
 						domains: domain ? [domain] : undefined,
 						levels: level ? [level] : undefined,

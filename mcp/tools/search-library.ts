@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { retrieve } from '../../src/lib/server/retrieve';
+import { retrieve, vaultIsIndexed } from '../../src/lib/server/retrieve';
 import { withVault } from '../vault-scope';
 import { logCall } from '../log';
 import { toolErrorResult, ToolError } from '../errors';
@@ -44,6 +44,13 @@ export function registerSearchLibrary(server: McpServer): void {
 			const start = Date.now();
 			try {
 				const { vaultId, result } = await withVault(vault, async (v) => {
+					// Ö7: an empty result set from an unindexed vault used to look
+					// exactly like "searched, nothing matched" — both are
+					// `{"results":[]}, isError:false`. NOT_INDEXED was defined in
+					// errors.ts from the start; nothing produced it.
+					if (!vaultIsIndexed(v)) {
+						throw new ToolError('NOT_INDEXED', `Vault '${v.id}' henüz indekslenmemiş (npm run index -- --vault ${v.id}).`);
+					}
 					let r;
 					try {
 						r = await retrieve(v, query, {

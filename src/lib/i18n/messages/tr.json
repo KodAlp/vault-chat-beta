@@ -641,7 +641,9 @@
 		"deleteConfirmTitle": "\"{name}\" silinsin mi?",
 		"deleteConfirmWithChats": "Kütüphanesi, arama indeksi ve {chatCount} sohbet kalıcı olarak silinecek. Bu işlem geri alınamaz.",
 		"deleteConfirmNoChats": "Kütüphanesi, arama indeksi ve sohbet geçmişi (yok) kalıcı olarak silinecek. Bu işlem geri alınamaz.",
-		"remove": "Kaldır"
+		"remove": "Kaldır",
+		"unindexedBadge": "{count} dosya indekslenmemiş",
+		"unindexedTitle": "Bu vault'ta indekslenmemiş dosya var — sohbet ve Claude bunları göremez. Kaynak klasöründe npm run index -- --vault {id} çalıştır."
 	},
 
 	"CardsStudyPage": {
