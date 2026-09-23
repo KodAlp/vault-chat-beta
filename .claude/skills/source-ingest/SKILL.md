@@ -82,17 +82,55 @@ comparative research (MarkItDown/Docling/Marker/MinerU/Pandoc/Unstructured):
 **Post-processing for all tools**, in `ingest/postprocess.py`:
 - Normalize math delimiters to `$`/`$$` (Marker/Docling may emit
   `\(`/`\[`), matching the renderer's expectations.
+- Wrap a top-level `\begin{align|equation|gather}` in `$$`. Not cosmetic:
+  `indexer/chunk.ts` treats only ``` fences and `$$…$$` as atomic, so a
+  bare environment gets split across chunks and each half renders as a
+  KaTeX error. Environments already inside `$$` or a fence are left alone.
 - Strip HTML remnants, collapse >2 blank lines, fix heading level jumps
   (no H1→H3 skips; the chunker depends on sane heading trees).
 - Generate the frontmatter block; never overwrite an existing
   `title/domain/level` on re-import.
+- `quality_warnings()` returns what actually went wrong, and `convert.py`
+  emits it in the `done` event. Until this existed, `warnings` was
+  hardcoded `[]`: a 1.9 MB control-theory textbook converted to 22k lines
+  with **zero headings, zero equations and 5507 `(cid:NN)` artifacts** and
+  reported a clean conversion. The checks are broken font mapping, no `##`
+  in a long PDF, missing paragraph breaks, and atomic blocks over 2048
+  chars. Any warning also forces `needs_review: true`.
 
-**Environment:** one `ingest/requirements.txt` (markitdown, marker-pdf,
-docling, none of them imported at app runtime); document that pip needs
+- For docling/marker PDFs, `heading_repair.py` runs first: docling drops the
+  spaces in headings (98/194 `## 1.3 Linearcontrolsystems` on Trentelman),
+  and `heading_path` is embedded, so half the sections lost their retrieval
+  key. Spaces are copied from the PDF's own text layer (pypdf, ~5 s for 404
+  pages) only when the letters match exactly and the spacing is unambiguous
+  — never from a dictionary. Measured: 98 → 0, zero letters changed.
+  `restructure_headings()` then demotes docling's pseudo-headings
+  (`Theorem 2.19`, `Proof :`, `Remarks:`, exercise items `3.12 Let`) to
+  bold paragraphs and joins `Chapter 2` with the title heading after it.
+  The signal is type size in the text layer, not a word list: a heading is
+  kept if it starts in larger-than-body type and covers that whole line.
+  Demotion is skipped when fewer than 30% of placeable headings are large
+  (documents that mark headings by weight alone). Trentelman: 22 demoted,
+  all correct; 15 chapter headings joined; 0 real headings lost.
+
+Covered by `ingest/postprocess_test.py` and `ingest/heading_repair_test.py`
+(`python ingest/<name>_test.py` — not part of `npm test`, which runs tsx).
+
+**Escalation heuristic:** `looks_broken()` also counts `(cid:NN)`
+artifacts, and the page count now comes from `pypdf` rather than counting
+form-feeds. MarkItDown does not reliably emit that separator, so the
+"no headings in a long PDF" branch silently never ran on real books — which
+is how the textbook above came back as a successful MarkItDown conversion.
+
+**Environment:** `ingest/requirements.txt` holds the light, always-installed
+deps (markitdown, yt-dlp, trafilatura, pypdf); document that pip needs
 `--trusted-host` flags on this machine if SSL interception reappears.
-Heavy deps (marker/docling pull torch) are OPTIONAL extras — `convert.py`
-must degrade gracefully with a clear "bu araç kurulu değil: pip install
-..." message when an unavailable tool is requested.
+Marker and Docling are implemented in `convert.py` but live in
+`ingest/requirements-optional.txt` — they pull torch and multi-GB weights,
+and the user's RAM belongs to Ollama first. `convert.py` degrades gracefully
+with a clear "bu araç kurulu değil: pip install ..." message when an
+unavailable tool is requested, and detects them by ImportError at call time,
+so installing them later needs no code change.
 
 ## YouTube transcript ingest (Python sidecar)
 
