@@ -553,9 +553,9 @@ export interface ProviderStatus {
 	 * regardless of which provider handles chat, so this isn't a per-
 	 * provider concept. Sourced from embed-config.ts's EMBED_MODEL so a
 	 * client-side "is the required model pulled?" check never hardcodes a
-	 * model name that could drift from the real one (see KURULUM.md's
-	 * nomic-embed-text/bge-m3 mixup this is meant to prevent from
-	 * recurring). */
+	 * model name that could drift from the real one (see
+	 * KURULUM-REHBERI.md's nomic-embed-text/bge-m3 mixup this is meant to
+	 * prevent from recurring). */
 	embedModel: string | null;
 	/** 'live' = read straight off this provider's own rate-limit response
 	 * headers (Groq/Mistral send these on every response — see
