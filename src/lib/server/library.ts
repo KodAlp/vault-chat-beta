@@ -31,6 +31,21 @@ export const ALLOWED_EXTENSIONS = new Set([
  * call site, which runs BEFORE arrayBuffer() is called, not after. */
 export const MAX_UPLOAD_BYTES = 100 * 1024 * 1024;
 
+/** A browser's <input type=file> always sends a bare filename, but nothing
+ * enforces that at the HTTP layer — a hand-crafted multipart request (curl,
+ * a script) can set filename="..\\..\\evil.md" and reach a path outside the
+ * intended directory wherever that raw name is later joined onto one (the
+ * originals copy, `--source-name`'s source_file frontmatter). Moved here
+ * (2026-09-23) from a private copy in api/import/+server.ts, which was the
+ * only one of the two upload routes that had it — /api/import/batch used
+ * `file.name` raw. */
+export function safeBasename(name: string): string {
+	// path.basename alone doesn't strip a Windows-style "..\\" prefix on
+	// POSIX (no backslash-as-separator there), so both separators are
+	// normalized to "/" first.
+	return path.basename(name.replace(/\\/g, '/'));
+}
+
 // Read-only tree/file-read/settings-read functions moved to library-read.ts
 // (a leaf module with no incrementalIndex/./ollama dependency — see its own
 // doc comment and the mcp-server skill for why). Re-exported here so every
@@ -113,6 +128,35 @@ export function appendImportLog(v: VaultContext, entry: object): void {
 	const p = importLogPath(v);
 	fs.mkdirSync(path.dirname(p), { recursive: true });
 	fs.appendFileSync(p, JSON.stringify(entry) + '\n', 'utf-8');
+}
+
+/**
+ * Successfully-imported sources by their ORIGINAL file's sha256 (E5) — the
+ * same shape as link-import.ts's loadImportedUrls, keyed by content instead
+ * of URL, so a re-uploaded copy of a PDF already in the library (renamed,
+ * or fetched from a different link) is still recognized as "already have
+ * this", not just an exact-URL repeat.
+ *
+ * `sourceSha256` (the original file's hash, from convert.py's
+ * `source_sha256` frontmatter) is a different value from the log entry's
+ * own `sha256` field (the hash of the final CURATED Markdown, which
+ * changes on every re-title/re-domain edit even when the source didn't).
+ */
+export function loadImportedSourceHashes(logPath: string): Set<string> {
+	const known = new Set<string>();
+	if (!fs.existsSync(logPath)) return known;
+	const lines = fs.readFileSync(logPath, 'utf-8').split('\n').filter(Boolean);
+	for (const line of lines) {
+		try {
+			const entry = JSON.parse(line) as { sourceSha256?: string; status?: string };
+			if (entry.sourceSha256 && (entry.status === 'converted' || entry.status === 'needs_review')) {
+				known.add(entry.sourceSha256);
+			}
+		} catch {
+			// malformed line — skip, don't let one bad entry break the whole scan
+		}
+	}
+	return known;
 }
 
 /** kebab-case, ascii-folded, collision-safe (numeric suffix) — used to turn

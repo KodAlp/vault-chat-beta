@@ -279,10 +279,17 @@ def restructure_headings(
     return "\n".join(l for l in lines if l is not None), stats
 
 
-def read_text_layer(path: Path) -> tuple[list[str], list[tuple[str, float]]]:
+def read_text_layer(path: Path, max_pages: int | None = None) -> tuple[list[str], list[tuple[str, float]]]:
     """(lines, (fragment, effective font size) pairs) from the PDF's text
     layer. Empty on failure: a missing reference only means no repair, never
-    a failed conversion."""
+    a failed conversion.
+
+    `max_pages` (added for convert.py's title-search, which only ever wants
+    the first few pages — scanning the whole document risks a later chapter
+    heading outscoring the actual title) reads only that many pages from the
+    front; omitted, the whole document is read, as every existing caller
+    (repair_headings/restructure_headings, which need the full text layer)
+    still gets."""
     try:
         import math
 
@@ -297,7 +304,8 @@ def read_text_layer(path: Path) -> tuple[list[str], list[tuple[str, float]]]:
                 scale = math.hypot(tm[2], tm[3]) * math.hypot(cm[2], cm[3])
                 fragments.append((text, round(size * scale, 1)))
 
-        for page in PdfReader(str(path)).pages:
+        pages = PdfReader(str(path)).pages
+        for page in pages[:max_pages] if max_pages is not None else pages:
             lines.extend((page.extract_text(visitor_text=visit) or "").splitlines())
         return lines, fragments
     except Exception:  # noqa: BLE001 — optional enrichment

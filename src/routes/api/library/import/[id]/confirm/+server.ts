@@ -48,6 +48,7 @@ export const POST: RequestHandler = async ({ params, request }) => {
 	appendImportLog(v, {
 		sourcePath: relPath,
 		sha256: crypto.createHash('sha256').update(finalRaw).digest('hex'),
+		sourceSha256: frontmatter.source_sha256,
 		importedAt: new Date().toISOString(),
 		status: 'converted',
 		tool: frontmatter.converted_by ?? 'upload'

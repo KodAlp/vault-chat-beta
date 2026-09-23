@@ -9,6 +9,9 @@ import {
 	resolveLibraryPath,
 	slugify,
 	appendImportLog,
+	importLogPath,
+	loadImportedSourceHashes,
+	safeBasename,
 	ALLOWED_EXTENSIONS,
 	MAX_UPLOAD_BYTES
 } from '$lib/server/library';
@@ -39,14 +42,19 @@ export const POST: RequestHandler = async ({ request }) => {
 	// whole server down instead of just this one request.
 	return sseStream<ImportEvent>(async (send) => {
 		const items: ImportResultItem[] = [];
+		// E5: content-addressed, not just "have we seen this exact URL/name
+		// before" — catches the same PDF re-dropped under a different
+		// filename, which a name-only check never would.
+		const alreadyImported = loadImportedSourceHashes(importLogPath(v));
 
 		for (const file of files) {
-			send({ type: 'progress', stage: 'converting', fileName: file.name });
+			const safeName = safeBasename(file.name);
+			send({ type: 'progress', stage: 'converting', fileName: safeName });
 
-			const ext = path.extname(file.name).toLowerCase() || '.bin';
+			const ext = path.extname(safeName).toLowerCase() || '.bin';
 			if (!ALLOWED_EXTENSIONS.has(ext)) {
 				const item: ImportResultItem = {
-					fileName: file.name,
+					fileName: safeName,
 					status: 'failed',
 					reason: `Desteklenmeyen dosya türü: ${ext || '(uzantısız)'}`
 				};
@@ -56,7 +64,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			}
 			if (file.size > MAX_UPLOAD_BYTES) {
 				const item: ImportResultItem = {
-					fileName: file.name,
+					fileName: safeName,
 					status: 'failed',
 					reason: 'Dosya çok büyük (100MB sınırı)'
 				};
@@ -65,18 +73,27 @@ export const POST: RequestHandler = async ({ request }) => {
 				continue;
 			}
 
+			const fileBytes = Buffer.from(await file.arrayBuffer());
+			const sourceSha256 = crypto.createHash('sha256').update(fileBytes).digest('hex');
+			if (alreadyImported.has(sourceSha256)) {
+				const item: ImportResultItem = { fileName: safeName, status: 'skipped' };
+				items.push(item);
+				send({ type: 'item', item });
+				continue;
+			}
+
 			const workDir = path.join(stagingDir(v), crypto.randomUUID());
 			fs.mkdirSync(workDir, { recursive: true });
 			const tempIn = path.join(workDir, `original${ext}`);
-			fs.writeFileSync(tempIn, Buffer.from(await file.arrayBuffer()));
+			fs.writeFileSync(tempIn, fileBytes);
 
 			try {
-				const result = await enqueueConversion(tempIn, workDir, 'auto');
+				const result = await enqueueConversion(tempIn, workDir, 'auto', undefined, safeName);
 				if (!result.outPath) throw new Error('Dönüştürme çıktı üretmedi');
 
 				const raw = fs.readFileSync(result.outPath, 'utf-8');
 				const parsed = matter(raw);
-				const title = (parsed.data.title as string) ?? path.parse(file.name).name;
+				const title = (parsed.data.title as string) ?? path.parse(safeName).name;
 				const needsReview = parsed.data.needs_review === true;
 				const frontmatter: Record<string, unknown> = {
 					...parsed.data,
@@ -96,13 +113,14 @@ export const POST: RequestHandler = async ({ request }) => {
 				appendImportLog(v, {
 					sourcePath: relPath,
 					sha256: crypto.createHash('sha256').update(finalRaw).digest('hex'),
+					sourceSha256: frontmatter.source_sha256 ?? sourceSha256,
 					importedAt: new Date().toISOString(),
 					status: needsReview ? 'needs_review' : 'converted',
 					tool: frontmatter.converted_by ?? 'upload-batch'
 				});
 
 				const item: ImportResultItem = {
-					fileName: file.name,
+					fileName: safeName,
 					status: needsReview ? 'needs_review' : 'converted',
 					path: relPath
 				};
@@ -110,7 +128,7 @@ export const POST: RequestHandler = async ({ request }) => {
 				send({ type: 'item', item });
 			} catch (err) {
 				const item: ImportResultItem = {
-					fileName: file.name,
+					fileName: safeName,
 					status: 'failed',
 					reason: err instanceof Error ? err.message : 'Bilinmeyen hata'
 				};

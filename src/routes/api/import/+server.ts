@@ -1,11 +1,15 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import type { RequestHandler } from './$types';
 import { enqueueConversion } from '$lib/server/convertQueue';
 import {
 	stagingDir,
 	originalsDir,
 	getLibrarySettings,
+	safeBasename,
+	importLogPath,
+	loadImportedSourceHashes,
 	ALLOWED_EXTENSIONS,
 	MAX_UPLOAD_BYTES
 } from '$lib/server/library';
@@ -16,20 +20,6 @@ import type { ImportEvent } from '$lib/types';
 
 function sseEvent(event: ImportEvent): string {
 	return `data: ${JSON.stringify(event)}\n\n`;
-}
-
-/** A browser's <input type=file> always sends a bare filename, but nothing
- * enforces that at the HTTP layer — a hand-crafted multipart request (curl,
- * a script) can set filename="..\\..\\evil.md" and reach the originals copy
- * below (`${importId}-${file.name}`) with a path outside originalsDir(v).
- * basename() once, use the result everywhere file.name would otherwise
- * appear, same fix shape as convert.py's own MARKITDOWN_EXTS gate on the
- * other side of this pipeline. */
-function safeBasename(name: string): string {
-	// path.basename alone doesn't strip a Windows-style "..\\" prefix on
-	// POSIX (no backslash-as-separator there), so both separators are
-	// normalized to "/" first.
-	return path.basename(name.replace(/\\/g, '/'));
 }
 
 /** Single-file upload with a confirm step — see /api/library/import/[id]/confirm.
@@ -61,11 +51,21 @@ export const POST: RequestHandler = async ({ request }) => {
 
 	const v = vaultFromId(formData.get('vault') as string | null);
 
+	const fileBytes = Buffer.from(await file.arrayBuffer());
+	// E5: content-addressed duplicate check, computed before conversion so it
+	// costs nothing beyond a hash even on a hit. A confirm step still exists
+	// here (unlike the batch route, which skips outright) — the user might
+	// legitimately want a second copy under a different title/domain, so
+	// this surfaces as a warning in the confirm dialog rather than blocking.
+	const alreadyImportedHash = loadImportedSourceHashes(importLogPath(v)).has(
+		crypto.createHash('sha256').update(fileBytes).digest('hex')
+	);
+
 	const importId = crypto.randomUUID();
 	const workDir = path.join(stagingDir(v), importId);
 	fs.mkdirSync(workDir, { recursive: true });
 	const tempIn = path.join(workDir, `original${ext}`);
-	fs.writeFileSync(tempIn, Buffer.from(await file.arrayBuffer()));
+	fs.writeFileSync(tempIn, fileBytes);
 
 	// sseStream, not a bare ReadableStream: send() used to enqueue
 	// unconditionally, so a client that gave up mid-conversion (closed tab,
@@ -77,9 +77,15 @@ export const POST: RequestHandler = async ({ request }) => {
 	return sseStream<ImportEvent>(async (send) => {
 		try {
 			send({ type: 'progress', stage: 'queued' });
-			const result = await enqueueConversion(tempIn, workDir, 'auto', (event) => {
-				if (event.type === 'progress') send({ type: 'progress', stage: event.stage, fileName: safeName });
-			});
+			const result = await enqueueConversion(
+				tempIn,
+				workDir,
+				'auto',
+				(event) => {
+					if (event.type === 'progress') send({ type: 'progress', stage: event.stage, fileName: safeName });
+				},
+				safeName
+			);
 
 			if (!result.outPath) throw new Error('Dönüştürme çıktı üretmedi');
 
@@ -93,11 +99,15 @@ export const POST: RequestHandler = async ({ request }) => {
 			fs.rmSync(workDir, { recursive: true, force: true });
 
 			const proposedTitle = (result.frontmatter.title as string) ?? path.parse(safeName).name;
+			const warnings = [...(result.warnings ?? [])];
+			if (alreadyImportedHash) {
+				warnings.push('Bu dosya (aynı içerik) daha önce içe aktarılmış görünüyor — yine de devam edebilirsin.');
+			}
 			send({
 				type: 'ready',
 				importId,
 				proposed: { title: proposedTitle, domain: 'genel', level: 'undergraduate' },
-				warnings: result.warnings ?? []
+				warnings
 			});
 		} catch (err) {
 			fs.rmSync(workDir, { recursive: true, force: true });
