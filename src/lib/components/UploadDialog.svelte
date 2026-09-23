@@ -120,7 +120,14 @@
 				headers: { 'content-type': 'application/json' },
 				body: JSON.stringify({ title: title.trim(), domain: domain.trim(), level })
 			});
-			if (!res.ok) throw new Error(t('UploadDialog.saveFailed'));
+			if (!res.ok) {
+				// #11: a failed-indexing rollback surfaces a specific reason here
+				// (confirm/+server.ts's error(500, ...) body) rather than the
+				// generic "kaydedilemedi" — the user needs to know the file went
+				// back to staging, not just that something failed.
+				const body = await res.json().catch(() => null);
+				throw new Error(typeof body?.message === 'string' ? body.message : t('UploadDialog.saveFailed'));
+			}
 			open = false;
 			onImported();
 		} catch (err) {

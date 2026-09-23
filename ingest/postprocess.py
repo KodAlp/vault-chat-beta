@@ -245,9 +245,18 @@ def fix_heading_jumps(text: str) -> str:
     return "\n".join(out)
 
 
+_TITLE_MD_LINK = re.compile(r"\[([^\]]*)\]\([^)]*\)")
+
+
 def derive_title(text: str, fallback: str) -> str:
     m = re.search(r"^#\s+(.+)$", text, re.MULTILINE)
-    return m.group(1).strip() if m else fallback
+    if not m:
+        return fallback
+    # K3-7: some web-book HTML wraps a self-referencing anchor around the
+    # H1 (e.g. `# [Scanning4](#top)`), which without this would put the
+    # literal "[Scanning4](#top)" — brackets, target and all — in the title.
+    title = _TITLE_MD_LINK.sub(lambda mm: mm.group(1), m.group(1)).strip()
+    return title or fallback
 
 
 def build_frontmatter(title: str, converted_by: str, needs_review: bool) -> dict:

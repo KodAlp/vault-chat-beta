@@ -28,6 +28,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from convert import (  # noqa: E402
     demote_slide_headings,
     looks_broken,
+    split_existing_frontmatter,
     title_from_fragments,
     unique_output_path,
 )
@@ -119,6 +120,26 @@ def test_unique_output_path() -> None:
         check("the next free suffix is found, not just -2 forever", unique_output_path(d, "note").name == "note-3.md")
 
 
+def test_split_existing_frontmatter() -> None:
+    # Ö6: a re-uploaded .md (a prior vault-chat export, an Obsidian note)
+    # may already carry a frontmatter block — postprocess() must never see
+    # it as body text, and its title (if any) should be readable back out.
+    with_fm = '---\ntitle: "Var Olan Ba\\u015fl\\u0131k"\ntags: ["a", "b"]\n---\n\n# Body H1\n\nprose'
+    meta, body = split_existing_frontmatter(with_fm)
+    check("title read back out of an existing frontmatter block", meta.get("title") == "Var Olan Başlık")
+    check("the frontmatter block itself is not part of the returned body", "---" not in body)
+    check("body content survives", "# Body H1" in body and "prose" in body)
+
+    no_fm = "# Just a heading\n\nprose, no frontmatter here at all"
+    meta2, body2 = split_existing_frontmatter(no_fm)
+    check("no frontmatter: empty meta, not an exception", meta2 == {})
+    check("no frontmatter: body passed through byte-for-byte", body2 == no_fm)
+
+    unterminated = "---\ntitle: x\nno closing fence anywhere"
+    meta3, body3 = split_existing_frontmatter(unterminated)
+    check("unterminated block: treated as no frontmatter, nothing silently dropped", meta3 == {} and body3 == unterminated)
+
+
 def test_looks_broken_unaffected_by_this_pass() -> None:
     # Regression guard: convert.py was restructured around looks_broken()
     # (the S9 false-positive fallback wraps its caller, not looks_broken()
@@ -139,6 +160,7 @@ if __name__ == "__main__":
     test_title_from_fragments()
     test_demote_slide_headings()
     test_unique_output_path()
+    test_split_existing_frontmatter()
     test_looks_broken_unaffected_by_this_pass()
     print(f"\n{len(failures)} başarısız" if failures else "\nhepsi geçti")
     sys.exit(1 if failures else 0)

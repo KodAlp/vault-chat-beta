@@ -6,9 +6,8 @@ import { stagingDir } from '$lib/server/library';
 import { vaultFromId } from '$lib/server/requestVault';
 import { sseStream } from '$lib/server/sse';
 import { logAppEvent } from '$lib/server/app-log';
+import { YOUTUBE_URL } from '$lib/server/link-import';
 import type { ImportEvent } from '$lib/types';
-
-const YOUTUBE_URL = /^https?:\/\/(www\.)?(youtube\.com\/(watch\?|shorts\/)|youtu\.be\/)/i;
 
 function sseEvent(event: ImportEvent): string {
 	return `data: ${JSON.stringify(event)}\n\n`;

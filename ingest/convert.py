@@ -38,6 +38,7 @@ from postprocess import _apply_outside_verbatim, postprocess, quality_warnings
 MARKITDOWN_EXTS = {".docx", ".pptx", ".xlsx", ".html", ".htm", ".epub"}
 PDF_EXT = ".pdf"
 TEX_EXT = ".tex"
+MD_EXT = ".md"
 
 # Heuristic straight from the skill doc: escalate a MarkItDown PDF result
 # that smells broken rather than trusting it.
@@ -304,6 +305,12 @@ def route_auto(path: Path) -> tuple[str, str]:
     if ext in MARKITDOWN_EXTS:
         return convert_with_markitdown(path), "markitdown"
 
+    if ext == MD_EXT:
+        # Ö6: already Markdown — no conversion tool has anything to do here.
+        # Any pre-existing frontmatter is split off in main() before
+        # postprocess() runs, so its YAML isn't mistaken for body text.
+        return path.read_text(encoding="utf-8", errors="replace"), "already-markdown"
+
     if ext == PDF_EXT:
         text = convert_with_markitdown(path)
         page_count = pdf_page_count(path) or text.count("\f") + 1
@@ -376,6 +383,35 @@ def route_explicit(path: Path, tool: str) -> tuple[str, str]:
     raise RuntimeError(f"Bilinmeyen araç: {tool}")
 
 
+_EXISTING_FRONTMATTER = re.compile(r"^---\n(.*?)\n---\n?", re.DOTALL)
+
+
+def split_existing_frontmatter(text: str) -> tuple[dict, str]:
+    """Ö6: a directly-uploaded .md may already carry its own frontmatter (a
+    prior vault-chat export re-imported, an Obsidian note) — postprocess()
+    must not run its HTML-stripping/math-wrapping passes over that YAML
+    block, and an existing title there should win over guessing one. Only
+    `title` is ever read back out; the rest is discarded rather than
+    merged into the output frontmatter (domain/level/converted_by are the
+    Node confirm step's to set, per build_frontmatter's contract, not a
+    re-imported file's own say-so)."""
+    m = _EXISTING_FRONTMATTER.match(text)
+    if not m:
+        return {}, text
+    meta: dict = {}
+    for line in m.group(1).split("\n"):
+        if ":" not in line:
+            continue
+        key, _, value = line.partition(":")
+        value = value.strip()
+        try:
+            value = json.loads(value)
+        except (json.JSONDecodeError, ValueError):
+            pass
+        meta[key.strip()] = value
+    return meta, text[m.end() :]
+
+
 def sha256_of_file(path: Path) -> str:
     h = hashlib.sha256()
     with path.open("rb") as f:
@@ -432,6 +468,7 @@ def main() -> int:
 
     emit({"type": "progress", "stage": "postprocessing"})
     is_pdf = in_path.suffix.lower() == PDF_EXT
+    is_md = in_path.suffix.lower() == MD_EXT
     # docling drops spaces from PDF headings (98/194 on Trentelman); the PDF's
     # own text layer has them. MarkItDown emits no headings, so skip it there.
     if is_pdf and converted_by in ("docling", "marker"):
@@ -444,6 +481,12 @@ def main() -> int:
     # rather than silently presenting it as clean.
     needs_review = is_pdf and converted_by == "markitdown"
 
+    existing_md_title: str | None = None
+    if is_md:
+        existing_frontmatter, text = split_existing_frontmatter(text)
+        candidate = existing_frontmatter.get("title")
+        existing_md_title = candidate.strip() if isinstance(candidate, str) and candidate.strip() else None
+
     # K2-5: in_path.stem is never a usable title or filename — every caller
     # stages the real file under a generic name ("original.pdf") before
     # invoking this script, which is how five different real PDFs all came
@@ -452,8 +495,14 @@ def main() -> int:
     filename_fallback = Path(args.source_name).stem if args.source_name else in_path.stem
     # derive_title (postprocess.py) already prefers a real H1 over this
     # fallback — the PDF-specific tiers below only ever apply when the
-    # converted body has none of its own.
-    title_fallback = (derive_pdf_title(in_path) or filename_fallback) if is_pdf else filename_fallback
+    # converted body has none of its own; a re-uploaded .md's own frontmatter
+    # title (if any) outranks the filename the same way.
+    if is_pdf:
+        title_fallback = derive_pdf_title(in_path) or filename_fallback
+    elif is_md:
+        title_fallback = existing_md_title or filename_fallback
+    else:
+        title_fallback = filename_fallback
 
     final_text, frontmatter = postprocess(
         text, title_fallback=title_fallback, converted_by=converted_by, needs_review=needs_review
@@ -463,6 +512,11 @@ def main() -> int:
     # in a textbook still reported zero warnings, so neither the import dialog
     # nor import-log.jsonl had anything to show.
     warnings = quality_warnings(final_text, is_pdf=is_pdf)
+    # Ö6: neither the source's own frontmatter nor its body had a usable
+    # title — flag it, since guessing from the filename is the last resort,
+    # not something to present as if it were the note's real title.
+    if is_md and existing_md_title is None and not re.search(r"^#\s+\S", text, re.MULTILINE):
+        warnings.append("Başlık kaynak dosyada bulunamadı, dosya adından türetildi.")
     if warnings and not frontmatter.get("needs_review"):
         frontmatter["needs_review"] = True
 

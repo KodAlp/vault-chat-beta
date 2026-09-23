@@ -274,6 +274,7 @@
 		"statusSkipped": "skipped",
 		"statusNeedsReview": "needs review",
 		"statusFailed": "failed",
+		"statusPending": "awaiting confirmation",
 		"importFailed": "Import failed"
 	},
 

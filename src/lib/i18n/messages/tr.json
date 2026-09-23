@@ -274,6 +274,7 @@
 		"statusSkipped": "atlandı",
 		"statusNeedsReview": "gözden geçirilmeli",
 		"statusFailed": "başarısız",
+		"statusPending": "onay bekliyor",
 		"importFailed": "İçe aktarma başarısız"
 	},
 
