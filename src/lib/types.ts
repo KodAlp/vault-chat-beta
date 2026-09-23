@@ -384,7 +384,14 @@ export interface SlideDeckView {
 export interface SlideView {
 	id: string;
 	position: number;
+	/** F13-1 (Aşama 9) — see slides-schema.ts's SLIDE_LAYOUTS. */
+	layout: string;
+	heading: string;
 	content_markdown: string;
+	/** Presenter-only note, never rendered onto the slide itself; not
+	 * currently surfaced anywhere in study/slides/[id]/+page.svelte's
+	 * viewer — persisted for a future speaker-notes view. */
+	notes: string | null;
 	source_path: string;
 }
 

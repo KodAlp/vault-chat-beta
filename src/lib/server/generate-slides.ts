@@ -4,6 +4,8 @@ import type { ChatMessage } from './providers/types';
 import { retrieve } from './retrieve';
 import { getMessages } from './chats-db';
 import { Slides, buildSlidesJsonSchema } from './slides-schema';
+import { SLIDES_THEME_CSS } from './slides-theme';
+import { buildMarpDeck } from './slides-deck';
 import { createSlideDeck, type NewSlide } from './study-db';
 import { renderUserSkillsBlock } from './userSkills';
 import type { VaultContext } from './vaults';
@@ -125,7 +127,10 @@ function parseAndValidate(raw: string, idToPath: Map<string, string>): ParseResu
 		return { ok: false, error: 'Model hiç slayt üretmedi.' };
 	}
 	const slides: NewSlide[] = result.data.slides.map((s) => ({
+		layout: s.layout,
+		heading: s.heading,
 		content_markdown: s.content_markdown,
+		notes: s.notes ?? null,
 		source_path: idToPath.get(s.source_id)!
 	}));
 	return { ok: true, slides };
@@ -134,14 +139,32 @@ function parseAndValidate(raw: string, idToPath: Map<string, string>): ParseResu
 export function buildSystemPrompt(contextBlock: string, userSkillsBlock: string): string {
 	const taskIntro = `Sen bir sunum (slayt) hazırlama asistanısın. Aşağıdaki <context> bloğu, her biri kısa bir
 kimlikle (id: S1, S2, ...) ve source_path/heading_path/depth etiketleriyle işaretlenmiş kaynak
-parçalarından oluşuyor. Bu kaynaklara dayanarak 3-20 slaytlık bir sunum hazırla. Her slaytın
-content_markdown alanı KISA madde işaretleri (bullet point) içermeli, uzun paragraflar değil — bir
-slayt ekranda gösterilecek, okunacak bir makale değil.`;
+parçalarından oluşuyor. Bu kaynaklara dayanarak 3-20 slaytlık bir sunum hazırla. Her slayt bir
+düzen (layout), bir başlık (heading) ve bir gövde (content_markdown) taşır — gövde ekranda
+gösterilecek, okunacak bir makale değil.`;
 
 	const invariants = `Kurallar:
 - SADECE <context> bloğundaki bilgiye dayanarak slaytlar hazırla. Context dışında hiçbir bilgi kullanma.
-- Türkçe yaz. Her slaytta en fazla 4-6 kısa madde işareti olsun, uzun cümleler kurma.
-- content_markdown'da bir başlık satırı (# ile başlayan) ve altında madde işaretleri (- ile başlayan) kullan.
+- Türkçe yaz.
+- layout altı değerden biri olmalı, her birinin gövdesi farklı biçimlenir:
+  - "title": sunumun açılış ya da yeni bir bölüme geçiş slaytı. Gövde tek kısa bir alt başlık/tanıtım
+    cümlesi olsun, madde işareti YOK.
+  - "bullets": standart bilgi slaytı. Gövdede en fazla 4-6 kısa madde işareti (- ile başlayan) olsun,
+    uzun cümleler kurma.
+  - "two-column": "bullets" ile aynı, yalnızca daha uzun bir liste iki sütuna bölünecek şekilde
+    gösterilir — 6-10 kısa madde kullanabilirsin.
+  - "quote": kaynaktan alıntılanan TEK bir cümle/tanım. Gövde yalnızca "> " ile başlayan bir Markdown
+    alıntısı olsun, madde işareti YOK.
+  - "code": bir kod örneği. Gövde bir Markdown kod bloğu (\`\`\` ile) + en fazla 1-2 açıklama cümlesi
+    olsun.
+  - "diagram": bir süreç/ilişki anlatımı; şimdilik gövdeyi kısa madde işaretleriyle yaz (gerçek
+    diyagram çizimi henüz bağlı değil).
+  - İLK slaytı her zaman "title" yap. Aradan sonra ÇOĞUNLUKLA "bullets" kullan ama konu uygunsa
+    "quote"/"two-column"/"code"/"diagram"ı da kullan — bütün sunumu tek düzende yazma.
+- content_markdown'a heading'i TEKRAR YAZMA — heading ayrı bir alan, gövdeye yalnızca o slaytın
+  içeriğini yaz.
+- notes alanı isteğe bağlı: sunucuyu yapan kişiye (konuşmacıya) sözlü anlatım için kısa bir not,
+  ekranda GÖSTERİLMEZ. Gerekmiyorsa boş bırak.
 - Matematik sadece $...$ (satır içi) veya $$...$$ (blok) içinde, asla çıplak LaTeX.
 - content_markdown içinde yalnız "---" karakterlerinden oluşan bir satır KULLANMA (bu slayt ayracı
   olarak yorumlanır) — yatay çizgi gerekiyorsa bunun yerine düzyazıda belirt.
@@ -151,39 +174,6 @@ slayt ekranda gösterilecek, okunacak bir makale değil.`;
 	return [taskIntro, userSkillsBlock, invariants, `<context>\n${contextBlock}\n</context>`]
 		.filter(Boolean)
 		.join('\n\n');
-}
-
-const INLINE_MATH_RE = /\$\$([\s\S]*?)\$\$|\$([^$\n]+?)\$/g;
-
-/**
- * marp-core's bundled KaTeX plugin (a different implementation from this
- * app's own @vscode/markdown-it-katex, used by markdown.ts for report/chat)
- * requires NO whitespace immediately inside inline `$...$` delimiters to
- * recognize them as math — `$x^2$` renders, `$ x^2 $` silently falls through
- * as literal text. Verified empirically against the real package: block
- * `$$...$$` tolerates interior spaces fine, only inline is strict. Local
- * models (qwen3:8b observed in practice) routinely pad both sides with a
- * space, so this trim is load-bearing, not defensive — without it, math in
- * slides silently renders as raw dollar-sign text with no error anywhere.
- */
-function trimMathDelimiterWhitespace(text: string): string {
-	return text.replace(INLINE_MATH_RE, (full, display: string | undefined, inline: string | undefined) => {
-		if (display !== undefined) return `$$${display.trim()}$$`;
-		if (inline !== undefined) return `$${inline.trim()}$`;
-		return full;
-	});
-}
-
-/** Marpit's slide separator ("\n---\n" between blank lines) requires the
- * concatenated deck to be built with real newlines, not string interpolation
- * that could accidentally merge a slide's trailing content into the next
- * separator line. */
-function buildMarpDeck(slides: NewSlide[]): string {
-	const header = '---\nmarp: true\n---\n\n';
-	const body = slides
-		.map((s) => trimMathDelimiterWhitespace(s.content_markdown.trim()))
-		.join('\n\n---\n\n');
-	return header + body;
 }
 
 export async function generateSlides(
@@ -260,6 +250,10 @@ export async function generateSlides(
 	// to match this app's KaTeX-based rendering elsewhere and avoid pulling
 	// in a second math runtime.
 	const marp = new Marp({ math: 'katex' });
+	// F13-2 (Aşama 9): registered fresh on this per-call `marp` instance —
+	// cheap (a themeSet is just a Map, this call parses ~150 lines of CSS
+	// once) and avoids any cross-request module-level mutable state.
+	marp.themeSet.add(SLIDES_THEME_CSS);
 	const deck = buildMarpDeck(parsed.slides);
 	const { html, css } = marp.render(deck);
 

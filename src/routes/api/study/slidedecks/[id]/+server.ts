@@ -12,7 +12,10 @@ export const GET: RequestHandler = async ({ params, url }) => {
 	const slides: SlideView[] = getSlides(v, params.id).map((row) => ({
 		id: row.id,
 		position: row.position,
+		layout: row.layout,
+		heading: row.heading,
 		content_markdown: row.content_markdown,
+		notes: row.notes,
 		source_path: row.source_path
 	}));
 
