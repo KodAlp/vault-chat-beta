@@ -28,6 +28,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from convert import (  # noqa: E402
     demote_slide_headings,
     looks_broken,
+    parse_page_range,
     split_existing_frontmatter,
     title_from_fragments,
     unique_output_path,
@@ -140,6 +141,20 @@ def test_split_existing_frontmatter() -> None:
     check("unterminated block: treated as no frontmatter, nothing silently dropped", meta3 == {} and body3 == unterminated)
 
 
+def test_parse_page_range() -> None:
+    # #37, Aşama 7: 1-indexed inclusive, matching docling's own convention
+    # so the value passes straight through with no reindexing.
+    check("simple range parses", parse_page_range("1-50") == (1, 50))
+    check("single-page range parses", parse_page_range("12-12") == (12, 12))
+
+    for bad in ["0-50", "50-1", "abc", "1-", "-50", "1-50-100", ""]:
+        try:
+            parse_page_range(bad)
+            check(f"rejects invalid range {bad!r}", False)
+        except ValueError:
+            check(f"rejects invalid range {bad!r}", True)
+
+
 def test_looks_broken_unaffected_by_this_pass() -> None:
     # Regression guard: convert.py was restructured around looks_broken()
     # (the S9 false-positive fallback wraps its caller, not looks_broken()
@@ -161,6 +176,7 @@ if __name__ == "__main__":
     test_demote_slide_headings()
     test_unique_output_path()
     test_split_existing_frontmatter()
+    test_parse_page_range()
     test_looks_broken_unaffected_by_this_pass()
     print(f"\n{len(failures)} başarısız" if failures else "\nhepsi geçti")
     sys.exit(1 if failures else 0)

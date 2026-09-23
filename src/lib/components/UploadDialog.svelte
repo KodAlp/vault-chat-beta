@@ -12,6 +12,7 @@
 	type Phase = 'idle' | 'uploading' | 'confirming' | 'saving' | 'error';
 	let phase = $state<Phase>('idle');
 	let statusLabel = $state('');
+	let estimatedSeconds = $state<number | null>(null);
 	let errorMessage = $state('');
 
 	type Source = 'file' | 'youtube';
@@ -41,6 +42,7 @@
 		source = 'file';
 		selectedFile = null;
 		youtubeUrl = '';
+		estimatedSeconds = null;
 		errorMessage = '';
 	}
 
@@ -60,6 +62,7 @@
 		if (source === 'youtube' && !youtubeUrl.trim()) return;
 		phase = 'uploading';
 		statusLabel = t('UploadDialog.uploading');
+		estimatedSeconds = null;
 
 		try {
 			const res =
@@ -92,6 +95,7 @@
 					const event = JSON.parse(line.slice(5)) as ImportEvent;
 					if (event.type === 'progress') {
 						statusLabel = STAGE_LABELS[event.stage] ?? event.stage;
+						if (event.estimatedSeconds) estimatedSeconds = event.estimatedSeconds;
 					} else if (event.type === 'ready') {
 						importId = event.importId;
 						title = event.proposed.title;
@@ -212,6 +216,9 @@
 				<span class="inline-block size-3.5 animate-spin rounded-full border-2 border-border border-t-primary" aria-hidden="true"></span>
 				{statusLabel}
 			</p>
+			{#if estimatedSeconds}
+				<p class="text-xs text-muted-foreground">{t('UploadDialog.estimatedTime', { seconds: estimatedSeconds })}</p>
+			{/if}
 		{:else if phase === 'confirming' || phase === 'saving'}
 			{#if warnings.length > 0}
 				<!-- One item per warning: convert.py now emits several full sentences

@@ -31,6 +31,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+from typing import Callable
 
 from heading_repair import body_size, read_text_layer, repair_headings, restructure_headings
 from postprocess import _apply_outside_verbatim, postprocess, quality_warnings
@@ -250,7 +251,7 @@ def pdf_has_text_layer(path: Path, sample_pages: int = 10) -> bool:
         return False
 
 
-def convert_with_docling(path: Path) -> str:
+def convert_with_docling(path: Path, page_range: tuple[int, int] | None = None) -> str:
     """docling 2.x — preferred over marker when the document's value is in its
     tables, and the only one of the two that works on Windows (see
     escalate_pdf). Same optional-extra and ImportError contract as marker.
@@ -262,26 +263,55 @@ def convert_with_docling(path: Path) -> str:
       every display equation and decodes none: the first run produced 1239
       `<!-- formula-not-decoded -->` placeholders and zero LaTeX. Good prose
       with holes where the mathematics was is worse than a failed conversion,
-      because it looks complete.
+      because it looks complete. Measured limitation, not fixed by this app
+      (Aşama 7, 2026-09-23): the recognizer sometimes emits a bare operator
+      name as space-joined single-character tokens outside `\\text{}` (e.g.
+      `A t t e n t i o n` for "Attention") rather than one word, and can
+      misread a technical subscript outright (`d_model` came back
+      `d_\\minodl` on a real arXiv PDF) — inherent to the recognition model,
+      not something a regex here can safely correct without risking
+      over-correcting genuine multi-variable products (`a b c` meaning
+      a·b·c). Equation-heavy docling imports are worth a manual spot-check.
     - `do_code_enrichment` is off by default, which matters for the CS and ML
       sources in this library.
     - `do_ocr` is on by default. That book is born-digital, so all 404 pages
       were OCR'd for nothing — on CPU, because onnxruntime-gpu did not match
       the installed CUDA. OCR now runs only when there is no text layer.
+
+    Device (Aşama 7, 2026-09-23, measured on an RTX 4050 6GB against an
+    8-page arXiv paper and a 12-page OSTEP chapter): CPU is categorically
+    unusable — 79 s/page and 23 s/page respectively (635s/271s total), while
+    GPU does the same documents in 3.4 s/page and 2.6 s/page (27s/32s) even
+    with nothing else loaded. GPU with qwen3:8b already resident is slower
+    still (8.8 s/page and 7.5 s/page — contention roughly triples docling's
+    own time) and knocks concurrent chat decode down from an 11.8 tok/s
+    baseline to 5–10 tok/s, but chat keeps generating throughout (same-model
+    leases never touch sharedJobMutex — see ollama-gate.ts — so nothing
+    blocks, only slows). VRAM peaked at ~5.9 of 6.1 GB in that contended
+    case: tight, but it held across both runs without OOMing. CPU's 20–30x
+    slowdown is a far worse outcome than GPU's 2–3x slowdown under
+    contention, so `AUTO` (not a hardcoded CPU fallback) is kept explicit
+    here — it already resolves to CUDA on this machine, and degrades
+    gracefully to CPU on a GPU-less one instead of hard-failing.
+
+    page_range (#37, Aşama 7): 1-indexed inclusive, docling's own convention
+    — for a document too large to convert whole in one sitting.
     """
     from docling.datamodel.base_models import InputFormat
-    from docling.datamodel.pipeline_options import PdfPipelineOptions
+    from docling.datamodel.pipeline_options import AcceleratorDevice, AcceleratorOptions, PdfPipelineOptions
     from docling.document_converter import DocumentConverter, PdfFormatOption
 
     options = PdfPipelineOptions()
     options.do_ocr = not pdf_has_text_layer(path)
     options.do_formula_enrichment = True
     options.do_code_enrichment = True
+    options.accelerator_options = AcceleratorOptions(device=AcceleratorDevice.AUTO)
 
     converter = DocumentConverter(
         format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=options)}
     )
-    result = converter.convert(str(path))
+    convert_kwargs = {"page_range": page_range} if page_range else {}
+    result = converter.convert(str(path), **convert_kwargs)
     return result.document.export_to_markdown()
 
 
@@ -293,8 +323,12 @@ def pandoc_not_installed_message() -> str:
     return "Bu araç kurulu değil: pandoc bir sistem paketi, pip install ile kurulmaz — https://pandoc.org/installing.html"
 
 
-def route_auto(path: Path) -> tuple[str, str]:
-    """Returns (markdown_text, converted_by)."""
+def route_auto(path: Path, page_range: tuple[int, int] | None = None) -> tuple[str, str]:
+    """Returns (markdown_text, converted_by). page_range (#37) only ever
+    restricts the docling escalation path below — MarkItDown's initial pass
+    is fast enough on a huge document that there's nothing to save by
+    partial-converting it too, and MarkItDown has no partial-page mode to
+    give it anyway."""
     ext = path.suffix.lower()
 
     if ext == TEX_EXT:
@@ -316,7 +350,7 @@ def route_auto(path: Path) -> tuple[str, str]:
         page_count = pdf_page_count(path) or text.count("\f") + 1
         if looks_broken(text, page_count):
             try:
-                return escalate_pdf(path)
+                return escalate_pdf(path, page_range=page_range)
             except RuntimeError:
                 if len(text.strip()) >= MIN_FALLBACK_CHARS:
                     # S9: looks_broken() can be a false positive — a dense,
@@ -336,7 +370,7 @@ def route_auto(path: Path) -> tuple[str, str]:
     raise RuntimeError(f"Desteklenmeyen dosya türü: {ext}")
 
 
-def escalate_pdf(path: Path) -> tuple[str, str]:
+def escalate_pdf(path: Path, page_range: tuple[int, int] | None = None) -> tuple[str, str]:
     """Marker first, then Docling, then a clean error naming why each failed.
 
     Trying both is not belt-and-braces. An installed converter can fail at
@@ -349,12 +383,18 @@ def escalate_pdf(path: Path) -> tuple[str, str]:
     machine cannot convert math-heavy PDFs" and "it can".
 
     Both failures are reported, so a genuinely broken install still looks
-    broken rather than silently degrading.
+    broken rather than silently degrading. page_range (#37) only reaches
+    docling — marker has no equivalent option, and in practice never gets
+    this far on Windows anyway (see above).
     """
     reasons: list[str] = []
-    for convert, name in ((convert_with_marker, "marker"), (convert_with_docling, "docling")):
+    attempts: list[tuple[str, Callable[[], str]]] = [
+        ("marker", lambda: convert_with_marker(path)),
+        ("docling", lambda: convert_with_docling(path, page_range=page_range)),
+    ]
+    for name, convert in attempts:
         try:
-            return convert(path), name
+            return convert(), name
         except ImportError:
             reasons.append(f"{name}: kurulu değil")
         except Exception as err:  # noqa: BLE001 — reported, not swallowed
@@ -366,14 +406,14 @@ def escalate_pdf(path: Path) -> tuple[str, str]:
     )
 
 
-def route_explicit(path: Path, tool: str) -> tuple[str, str]:
+def route_explicit(path: Path, tool: str, page_range: tuple[int, int] | None = None) -> tuple[str, str]:
     try:
         if tool == "markitdown":
             return convert_with_markitdown(path), "markitdown"
         if tool == "marker":
             return convert_with_marker(path), "marker"
         if tool == "docling":
-            return convert_with_docling(path), "docling"
+            return convert_with_docling(path, page_range=page_range), "docling"
         if tool == "pandoc":
             if not shutil.which("pandoc"):
                 raise RuntimeError(pandoc_not_installed_message())
@@ -434,6 +474,19 @@ def unique_output_path(out_dir: Path, stem: str) -> Path:
     return candidate
 
 
+def parse_page_range(raw: str) -> tuple[int, int]:
+    """--pages START-END (#37), 1-indexed inclusive — docling's own
+    page_range convention, so the value round-trips straight through with
+    no reindexing."""
+    m = re.fullmatch(r"(\d+)-(\d+)", raw)
+    if not m:
+        raise ValueError(f"--pages biçimi START-END olmalı, alınan: {raw!r}")
+    start, end = int(m.group(1)), int(m.group(2))
+    if start < 1 or end < start:
+        raise ValueError(f"--pages geçersiz aralık: {raw!r}")
+    return start, end
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--in", dest="in_path", required=True)
@@ -449,6 +502,9 @@ def main() -> int:
     parser.add_argument("--dry-run", action="store_true")
     # See the module docstring's --source-name section (E5/K2-5).
     parser.add_argument("--source-name", dest="source_name", default=None)
+    # #37, Aşama 7: only ever restricts the docling path — see route_auto's
+    # and escalate_pdf's own doc comments for why.
+    parser.add_argument("--pages", dest="pages", default=None)
     args = parser.parse_args()
 
     in_path = Path(args.in_path)
@@ -456,12 +512,27 @@ def main() -> int:
         emit({"type": "error", "message": f"Dosya bulunamadı: {in_path}"})
         return 1
 
-    emit({"type": "progress", "stage": "converting"})
+    page_range: tuple[int, int] | None = None
+    if args.pages:
+        try:
+            page_range = parse_page_range(args.pages)
+        except ValueError as err:
+            emit({"type": "error", "message": str(err)})
+            return 1
+
+    # Aşama 7: emitted before the (potentially many-minutes-long) conversion
+    # call, not after — a caller sizing a timeout or showing an ETA needs
+    # the page count before that call blocks, not once it's already done.
+    if in_path.suffix.lower() == PDF_EXT:
+        emit({"type": "progress", "stage": "converting", "pageCount": pdf_page_count(in_path)})
+    else:
+        emit({"type": "progress", "stage": "converting"})
+
     try:
         if args.tool == "auto":
-            text, converted_by = route_auto(in_path)
+            text, converted_by = route_auto(in_path, page_range=page_range)
         else:
-            text, converted_by = route_explicit(in_path, args.tool)
+            text, converted_by = route_explicit(in_path, args.tool, page_range=page_range)
     except Exception as err:  # noqa: BLE001 — surfaced to the caller as a clean message either way
         emit({"type": "error", "message": str(err)})
         return 1

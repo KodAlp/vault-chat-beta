@@ -307,6 +307,7 @@
 		"stagePostprocessing": "Processing...",
 		"stageFetching": "Downloading captions...",
 		"stageParsing": "Processing...",
+		"estimatedTime": "May take about {seconds} seconds",
 		"titleLabel": "Title",
 		"domainLabel": "Domain",
 		"domainPlaceholder": "e.g. math",
