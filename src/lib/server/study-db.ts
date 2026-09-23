@@ -68,13 +68,14 @@ const dbCache = new Map<string, Database.Database>();
  * user), not part of either conversation history or the regenerable index.
  * One connection per vault, cached for the process lifetime (mirrors the
  * old module-level singleton, keyed by vault id now). */
-/** No ALTER-guard block here yet, unlike chats-db.ts — because no column has
- * been added to any of these tables since they first shipped. The moment one
- * is (e.g. a future `cards.suspended` flag), add it to the `CREATE TABLE`
- * below AND to an `ensureColumns(instance, table, {...})` call right after
- * `instance.exec(...)`, same as chats-db.ts's `vault_id`/`included_paths_json`
- * — otherwise every pre-existing study.db on disk fails with "no such column"
- * the instant that code path runs. See sqlite-schema.ts's doc comment. */
+/** Column additions after first ship go through `addMissingColumns()` below
+ * (this file's own hand-rolled equivalent of sqlite-schema.ts's shared
+ * `ensureColumns` — predates that extraction, never consolidated onto it):
+ * add the column to the `CREATE TABLE` below for a fresh install AND to
+ * `addMissingColumns`'s `pending` list for an existing on-disk study.db,
+ * same two-places rule as chats-db.ts's `vault_id`/`included_paths_json` —
+ * otherwise every pre-existing study.db fails with "no such column" the
+ * instant that code path runs. */
 function getDb(v: VaultContext): Database.Database {
 	let db = dbCache.get(v.id);
 	if (db) return db;
@@ -202,7 +203,10 @@ function getDb(v: VaultContext): Database.Database {
 				id TEXT PRIMARY KEY,
 				deck_id TEXT NOT NULL REFERENCES slidedecks(id) ON DELETE CASCADE,
 				position INTEGER NOT NULL,
+				layout TEXT NOT NULL DEFAULT 'bullets',
+				heading TEXT NOT NULL DEFAULT '',
 				content_markdown TEXT NOT NULL,
+				notes TEXT,
 				source_path TEXT NOT NULL
 			);
 			CREATE INDEX IF NOT EXISTS idx_slides_deck_id ON slides(deck_id);
@@ -259,7 +263,14 @@ function addMissingColumns(db: Database.Database): void {
 		{ table: 'mindmaps', column: 'root_summary', ddl: "TEXT NOT NULL DEFAULT ''" },
 		{ table: 'mindmap_nodes', column: 'summary', ddl: "TEXT NOT NULL DEFAULT ''" },
 		{ table: 'quiz_items', column: 'flagged_at', ddl: 'TEXT' },
-		{ table: 'quiz_items', column: 'cognitive_level', ddl: 'TEXT' }
+		{ table: 'quiz_items', column: 'cognitive_level', ddl: 'TEXT' },
+		// F13-1 (Aşama 9): a slide deck generated before this shipped keeps
+		// rendering fine (rendered_html/rendered_css already has the old
+		// plain-theme markup baked in) — these just backfill the row shape
+		// so getSlides() doesn't return `undefined` for them.
+		{ table: 'slides', column: 'layout', ddl: "TEXT NOT NULL DEFAULT 'bullets'" },
+		{ table: 'slides', column: 'heading', ddl: "TEXT NOT NULL DEFAULT ''" },
+		{ table: 'slides', column: 'notes', ddl: 'TEXT' }
 	];
 	for (const { table, column, ddl } of pending) {
 		const columns = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
@@ -720,12 +731,18 @@ export interface SlideRow {
 	id: string;
 	deck_id: string;
 	position: number;
+	layout: string;
+	heading: string;
 	content_markdown: string;
+	notes: string | null;
 	source_path: string;
 }
 
 export interface NewSlide {
+	layout: string;
+	heading: string;
 	content_markdown: string;
+	notes: string | null;
 	source_path: string;
 }
 
@@ -749,11 +766,20 @@ export function createSlideDeck(
 			.run(id, title, JSON.stringify(scope), model, now, rendered.html, rendered.css);
 
 		const insertSlide = database.prepare(
-			`INSERT INTO slides (id, deck_id, position, content_markdown, source_path)
-			 VALUES (?, ?, ?, ?, ?)`
+			`INSERT INTO slides (id, deck_id, position, layout, heading, content_markdown, notes, source_path)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
 		);
 		slides.forEach((slide, position) => {
-			insertSlide.run(crypto.randomUUID(), id, position, slide.content_markdown, slide.source_path);
+			insertSlide.run(
+				crypto.randomUUID(),
+				id,
+				position,
+				slide.layout,
+				slide.heading,
+				slide.content_markdown,
+				slide.notes,
+				slide.source_path
+			);
 		});
 	});
 	tx();
