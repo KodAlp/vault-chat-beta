@@ -60,8 +60,17 @@ Conversion tools are Python; the Node app shells out to
 Keep the sidecar's CLI contract stable:
 
 ```
-python ingest/convert.py --in <file> --out-dir <dir> --tool auto|markitdown|marker|docling|pandoc [--dry-run] [--source-name <name>]
+python ingest/convert.py --in <file> --out-dir <dir> --tool auto|markitdown|marker|docling|pandoc [--dry-run] [--source-name <name>] [--pages START-END]
 ```
+
+`--pages` (#37, Aşama 7, 2026-09-23): 1-indexed inclusive, only ever reaches
+docling (`route_auto`/`escalate_pdf`/`route_explicit`) — MarkItDown's own
+pre-pass always sees the whole file (it's fast regardless of size and has
+no partial-page mode), and marker doesn't support it either (moot on
+Windows anyway, see below). For a PDF too large to convert in one sitting.
+The early `pageCount` progress event (next section) still reports the
+FULL document's page count even when `--pages` restricts what actually
+gets converted, so a timeout/estimate computed from it stays meaningful.
 
 `--source-name` (2026-09-23): every caller stages the input under a generic
 name (`original.pdf`) before invoking this script, so `--in`'s own stem is
@@ -100,6 +109,29 @@ comparative research (MarkItDown/Docling/Marker/MinerU/Pandoc/Unstructured):
    (S9, 2026-09-23) no longer discards the extracted text outright when
    escalation is unavailable/fails — a ≥200-char MarkItDown pass is kept,
    flagged `needs_review`, rather than losing real content to a bad heuristic.
+   - Device (Aşama 7, 2026-09-23, measured on an RTX 4050 6GB — see
+     `convert_with_docling`'s doc comment for the full numbers): CPU is
+     79 s/page and 23 s/page on the two documents measured, categorically
+     unusable; GPU is 20-30x faster even with nothing else loaded, and
+     stays functional (just ~2.7x slower, chat decode dropping from an
+     11.8 tok/s baseline to 5-10 tok/s) with Ollama's qwen3:8b already
+     resident — VRAM peaked at ~5.9 of 6.1 GB in that case but held. GPU is
+     never "breaking" chat, only slowing it — a same-model Ollama lease
+     never touches `sharedJobMutex` (see `ollama-gate.ts`), so nothing
+     blocks. `AcceleratorOptions(device=AcceleratorDevice.AUTO)` is set
+     explicitly rather than left to docling's own default, documenting
+     this as a measured choice rather than an implicit one — it already
+     resolves to CUDA here and degrades to CPU on a GPU-less machine
+     instead of hard-failing.
+   - Formula quality (measured, not fixed — see `convert_with_docling`'s
+     doc comment): the formula-enrichment model sometimes emits a bare
+     operator name as space-joined single characters outside `\text{}`
+     (`A t t e n t i o n` for "Attention") instead of one word, and can
+     misread a technical subscript outright (`d_model` → `d_\minodl` on a
+     real arXiv PDF — an `l`→`1`-class character confusion). Both are the
+     recognition model's own limitation, not a convert.py bug; a regex fix
+     risks corrupting genuine multi-variable products (`a b c` = a·b·c).
+     Spot-check equation-heavy docling imports.
 6. MinerU: not in the default path (mixed-language accuracy caveats);
    RAGFlow/Unstructured: not used — chunking already belongs to
    `vault-rag-index`, do not introduce a second chunking layer.
@@ -154,8 +186,8 @@ comparative research (MarkItDown/Docling/Marker/MinerU/Pandoc/Unstructured):
 
 Covered by `ingest/postprocess_test.py`, `ingest/heading_repair_test.py` and
 `ingest/convert_test.py` (title derivation, `.pptx` heading demotion,
-`unique_output_path`, `split_existing_frontmatter`) — `python
-ingest/<name>_test.py`, not part of `npm test`, which runs tsx.
+`unique_output_path`, `split_existing_frontmatter`, `parse_page_range`) —
+`python ingest/<name>_test.py`, not part of `npm test`, which runs tsx.
 
 **Escalation heuristic:** `looks_broken()` also counts `(cid:NN)`
 artifacts, and the page count now comes from `pypdf` rather than counting
@@ -293,6 +325,14 @@ Covered by `ingest/extract_web_test.py` (`parse_trafilatura_metadata`,
 - Conversion is CPU-bound and can be slow (Marker/Docling): run ONE
   conversion at a time with a queue; the user's RAM/CPU belongs to
   Ollama first.
+- `convertQueue.ts`'s process-kill timeout (Aşama 7, 2026-09-23) is a flat
+  120s only until a PDF's early `pageCount` progress event arrives (emitted
+  by `convert.py` before conversion starts, not after) — from there it's
+  `45s + pageCount × 12s`, sized off the worst measured docling rate
+  (~9 s/page under GPU+chat contention) with headroom. The same event
+  carries an optimistic `estimatedSeconds` (`15s + pageCount × 4s`, the
+  idle-GPU rate — most uploads don't happen mid chat-generation) that
+  `UploadDialog.svelte` shows during the "Dönüştürülüyor..." stage.
 - The confirm step (`api/library/import/[id]/confirm`) is shared by all
   three sources (file, YouTube, link) — a fix here covers all three at
   once. If indexing fails after the file already landed in the library
