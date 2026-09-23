@@ -129,11 +129,20 @@ function runConvert(
 		});
 
 		child.on('error', (err) => {
+			clearTimeout(timer);
 			reject(new Error(`Python başlatılamadı (${bin} kurulu mu?): ${err.message}`));
 		});
 
 		child.on('exit', (code) => {
-			if (lastDone) {
+			clearTimeout(timer);
+			if (timedOut) {
+				// Checked first — a killed process exits with lastDone/lastError
+				// both still null in the common case, but a race is possible (the
+				// process finished writing its `done` line just as the timer
+				// fired) and would otherwise report success on a run that was
+				// actually killed for running too long.
+				reject(new Error(`Dönüştürme zaman aşımına uğradı (>${PROCESS_TIMEOUT_MS / 1000}s)`));
+			} else if (lastDone) {
 				resolve(lastDone);
 			} else if (lastError) {
 				reject(new Error(lastError));

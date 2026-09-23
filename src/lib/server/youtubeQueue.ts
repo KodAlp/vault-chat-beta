@@ -11,9 +11,19 @@ export type YoutubeEvent =
 
 const YOUTUBE_TRANSCRIPT_PY = path.resolve(process.cwd(), 'ingest', 'youtube_transcript.py');
 
+// yt-dlp can hang — a slow/unresponsive network path, or (before the
+// `noplaylist` fix in youtube_transcript.py) a playlist URL that used to
+// walk every video in the list. sharedJobMutex is shared with Ollama
+// model-swap and document conversion, so a stuck child here locks out chat
+// too — never wait forever. Mirrors convertQueue.ts/webExtractQueue.ts's
+// identical guard (2026-09-23 report: this queue was the one process
+// spawner in the app with no timeout at all).
+const PROCESS_TIMEOUT_MS = 120_000;
+
 /** Same shape as convertQueue.ts's runConvert() — NDJSON stdout, explicit
- * child.on('error'/'exit') classification. Never runs in parallel with a
- * document conversion or an Ollama model swap (see sharedJobMutex below). */
+ * child.on('error'/'exit') classification, timeout+kill. Never runs in
+ * parallel with a document conversion or an Ollama model swap (see
+ * sharedJobMutex below). */
 function runYoutubeTranscript(
 	url: string,
 	outDir: string,
@@ -28,6 +38,12 @@ function runYoutubeTranscript(
 
 		let lastDone: (YoutubeEvent & { type: 'done' }) | null = null;
 		let lastError: string | null = null;
+		let timedOut = false;
+
+		const timer = setTimeout(() => {
+			timedOut = true;
+			child.kill();
+		}, PROCESS_TIMEOUT_MS);
 
 		const rl = readline.createInterface({ input: child.stdout });
 		rl.on('line', (line) => {
@@ -49,11 +65,15 @@ function runYoutubeTranscript(
 		});
 
 		child.on('error', (err) => {
+			clearTimeout(timer);
 			reject(new Error(`Python başlatılamadı (${bin} kurulu mu?): ${err.message}`));
 		});
 
 		child.on('exit', (code) => {
-			if (lastDone) {
+			clearTimeout(timer);
+			if (timedOut) {
+				reject(new Error(`Transkript alma zaman aşımına uğradı (>${PROCESS_TIMEOUT_MS / 1000}s)`));
+			} else if (lastDone) {
 				resolve(lastDone);
 			} else if (lastError) {
 				reject(new Error(lastError));

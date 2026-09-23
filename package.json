@@ -48,6 +48,7 @@
     "sqlite-vec": "^0.1.6",
     "tailwind-merge": "^3.6.0",
     "tailwind-variants": "^3.3.0",
+    "undici": "^6.28.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
