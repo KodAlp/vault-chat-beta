@@ -44,6 +44,7 @@
     "markmap-lib": "^0.18.12",
     "markmap-view": "^0.18.12",
     "paneforge": "^1.0.2",
+    "robots-parser": "^3.0.1",
     "shiki": "^1.29.2",
     "sqlite-vec": "^0.1.6",
     "tailwind-merge": "^3.6.0",

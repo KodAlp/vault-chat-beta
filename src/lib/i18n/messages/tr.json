@@ -282,7 +282,15 @@
 		"statusNeedsReview": "gözden geçirilmeli",
 		"statusFailed": "başarısız",
 		"statusPending": "onay bekliyor",
-		"importFailed": "İçe aktarma başarısız"
+		"importFailed": "İçe aktarma başarısız",
+		"scanPageButton": "Bu sayfadaki PDF bağlantılarını listele",
+		"scanPageHelp": "Yalnızca sayfanın statik HTML'inde yer alan bağlantıları bulur — JavaScript ile sonradan yüklenen içerik görünmez. Örn. bir MIT OCW dersinin \"Download course materials\" sayfası çalışır, ders içi normal sayfaları genelde çalışmaz.",
+		"scanPageUrlPlaceholder": "https://ocw.mit.edu/.../download/",
+		"scanPageStart": "Tara",
+		"scanPageRunning": "Taranıyor...",
+		"scanPageEmpty": "Bu sayfada PDF bağlantısı bulunamadı.",
+		"scanPageError": "Sayfa taranamadı",
+		"scanPageAddSelected": "{count} bağlantıyı ekle"
 	},
 
 	"LibraryTree": {

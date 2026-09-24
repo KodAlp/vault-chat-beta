@@ -15,6 +15,18 @@
 	let open = $state(false);
 	let linksText = $state('');
 	let domain = $state('genel');
+
+	// Aşama 10 #1: "list this page's PDF links, then let the user choose"
+	// (D2 — no automatic crawling). A small inline sub-panel, not a second
+	// dialog, so the found links can be appended straight into linksText
+	// above without leaving this dialog.
+	let scanOpen = $state(false);
+	let scanUrl = $state('');
+	type ScanPhase = 'idle' | 'running' | 'done' | 'error';
+	let scanPhase = $state<ScanPhase>('idle');
+	let scanError = $state('');
+	let scanResults = $state<{ url: string; text: string }[]>([]);
+	let scanSelected = $state<Set<string>>(new Set());
 	// İ4 (Aşama 8): a rights checkbox that gates the start button — the app
 	// fetches whatever URL the user gives it, so this is the point where
 	// they're actually asked to confirm they're allowed to.
@@ -41,6 +53,58 @@
 		savingIds = new Set();
 		rightsConfirmed = false;
 		errorMessage = '';
+		scanOpen = false;
+		scanUrl = '';
+		scanPhase = 'idle';
+		scanError = '';
+		scanResults = [];
+		scanSelected = new Set();
+	}
+
+	async function runScan() {
+		if (!scanUrl.trim()) return;
+		scanPhase = 'running';
+		scanError = '';
+		scanResults = [];
+		scanSelected = new Set();
+		try {
+			const res = await fetch('/api/import/links/scan', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ url: scanUrl.trim() })
+			});
+			const body = await res.json().catch(() => null);
+			if (!res.ok) throw new Error(typeof body?.message === 'string' ? body.message : t('Common.istekBasarisiz', { status: res.status }));
+			scanResults = Array.isArray(body?.links) ? body.links : [];
+			scanSelected = new Set(scanResults.map((l: { url: string }) => l.url));
+			scanPhase = 'done';
+		} catch (err) {
+			scanError = err instanceof Error ? err.message : t('LinksImportDialog.scanPageError');
+			scanPhase = 'error';
+		}
+	}
+
+	function toggleScanSelected(url: string) {
+		const next = new Set(scanSelected);
+		if (next.has(url)) next.delete(url);
+		else next.add(url);
+		scanSelected = next;
+	}
+
+	function addSelectedScanLinks() {
+		const chosen = scanResults.filter((l) => scanSelected.has(l.url)).map((l) => l.url);
+		if (chosen.length === 0) return;
+		const existing = linksText
+			.split('\n')
+			.map((l) => l.trim())
+			.filter(Boolean);
+		const merged = [...new Set([...existing, ...chosen])];
+		linksText = merged.join('\n');
+		scanOpen = false;
+		scanUrl = '';
+		scanPhase = 'idle';
+		scanResults = [];
+		scanSelected = new Set();
 	}
 
 	async function run() {
@@ -189,6 +253,48 @@
 					class="w-full resize-y rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
 				></textarea>
 			</label>
+
+			<!-- Aşama 10 #1: scan one page for its own PDF links instead of
+			     pasting each one by hand. Inline sub-panel, not a second
+			     dialog, so results merge straight into linksText above. -->
+			{#if !scanOpen}
+				<Button type="button" variant="ghost" size="sm" class="w-fit text-xs" onclick={() => (scanOpen = true)}>
+					{t('LinksImportDialog.scanPageButton')}
+				</Button>
+			{:else}
+				<div class="flex flex-col gap-1.5 rounded-md border p-2 text-sm">
+					<p class="text-xs text-muted-foreground">{t('LinksImportDialog.scanPageHelp')}</p>
+					<div class="flex gap-1.5">
+						<Input type="text" bind:value={scanUrl} placeholder={t('LinksImportDialog.scanPageUrlPlaceholder')} class="flex-1" />
+						<Button type="button" size="sm" onclick={runScan} disabled={!scanUrl.trim() || scanPhase === 'running'}>
+							{scanPhase === 'running' ? t('LinksImportDialog.scanPageRunning') : t('LinksImportDialog.scanPageStart')}
+						</Button>
+					</div>
+					{#if scanPhase === 'error'}
+						<p class="text-xs text-destructive">{scanError}</p>
+					{:else if scanPhase === 'done'}
+						{#if scanResults.length === 0}
+							<p class="text-xs text-muted-foreground">{t('LinksImportDialog.scanPageEmpty')}</p>
+						{:else}
+							<div class="flex max-h-40 flex-col gap-1 overflow-y-auto">
+								{#each scanResults as link (link.url)}
+									<label class="flex items-start gap-2 text-xs">
+										<input type="checkbox" class="mt-0.5" checked={scanSelected.has(link.url)} onchange={() => toggleScanSelected(link.url)} />
+										<span class="overflow-hidden text-ellipsis whitespace-nowrap" title={link.url}>{link.text}</span>
+									</label>
+								{/each}
+							</div>
+							<div class="flex justify-end gap-1.5">
+								<Button type="button" variant="outline" size="sm" onclick={() => (scanOpen = false)}>{t('Common.iptal')}</Button>
+								<Button type="button" size="sm" onclick={addSelectedScanLinks} disabled={scanSelected.size === 0}>
+									{t('LinksImportDialog.scanPageAddSelected', { count: scanSelected.size })}
+								</Button>
+							</div>
+						{/if}
+					{/if}
+				</div>
+			{/if}
+
 			<label class="flex flex-col gap-1 text-sm">
 				{t('LinksImportDialog.domainLabel')}
 				<Input type="text" bind:value={domain} placeholder="genel" />

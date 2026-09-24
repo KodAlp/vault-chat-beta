@@ -14,8 +14,12 @@ import {
 	sourceNameFromUrl,
 	isYoutubeUrl,
 	describeError,
-	fetchWithCap,
-	pdfContentTypeMismatch
+	fetchWithRetry,
+	pdfContentTypeMismatch,
+	rewriteArxivAbsToPdf,
+	fetchRobotsTxt,
+	isAllowedByRobots,
+	politeDelay
 } from '$lib/server/link-import';
 import { stagingDir, importLogPath } from '$lib/server/library';
 import { vaultFromId } from '$lib/server/requestVault';
@@ -66,7 +70,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
 			let url: URL;
 			try {
-				url = validateLinkUrl(rawLink);
+				url = rewriteArxivAbsToPdf(validateLinkUrl(rawLink));
 			} catch (err) {
 				const item: ImportResultItem = { fileName: rawLink, status: 'failed', reason: describeError(err, 'Geçersiz bağlantı') };
 				items.push(item);
@@ -122,12 +126,24 @@ export const POST: RequestHandler = async ({ request }) => {
 				continue;
 			}
 
+			// Aşama 10 #3: robots.txt is cached per origin (fetchRobotsTxt),
+			// so a batch of several links from the same site fetches it once,
+			// not once per link.
+			const robotsTxt = await fetchRobotsTxt(url.origin);
+			if (!isAllowedByRobots(url, robotsTxt)) {
+				const item: ImportResultItem = { fileName: rawLink, status: 'failed', reason: 'robots.txt bu sayfayı taramaya izin vermiyor' };
+				items.push(item);
+				send({ type: 'item', item });
+				continue;
+			}
+			await politeDelay(url.hostname);
+
 			const importId = crypto.randomUUID();
 			const workDir = path.join(stagingDir(v), importId);
 			fs.mkdirSync(workDir, { recursive: true });
 
 			try {
-				const bytes = await fetchWithCap(url);
+				const bytes = await fetchWithRetry(url);
 				if (bytes.length === 0) throw new Error('Boş yanıt');
 
 				const isPdf = isPdfBytes(bytes);

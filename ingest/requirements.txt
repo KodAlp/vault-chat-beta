@@ -13,6 +13,13 @@ yt-dlp
 # ayıklamıyor — trafilatura tam olarak bu problemi çözüyor. Hafif, saf Python.
 trafilatura
 
+# Aşama 10 (#2): MathML -> LaTeX fallback for extract_web.py's math handling
+# (mathml_convert.py) — used only when a <math> element carries neither an
+# alttext nor a TeX annotation (see that module's docstring for the two
+# preferred, source-preserving paths tried first). Pure Python, pulls only
+# lxml (already a trafilatura dependency).
+py-asciimath
+
 # pypdf: page count for convert.py's escalation heuristic. MarkItDown does not
 # reliably emit the form-feed separator the old proxy counted, so the heading
 # check silently never ran on real books. Lightweight, pure Python; markitdown

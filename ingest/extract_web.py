@@ -22,6 +22,7 @@ from urllib.parse import unquote, urlparse
 
 import trafilatura
 
+from mathml_convert import replace_math_with_placeholders
 from postprocess import postprocess
 
 MIN_EXTRACTED_CHARS = 200
@@ -85,6 +86,15 @@ def main() -> int:
     emit({"type": "progress", "stage": "extracting"})
     html = in_path.read_text(encoding="utf-8", errors="replace")
 
+    # Aşama 10 #2: trafilatura silently drops <math> elements (measured —
+    # see mathml_convert.py's docstring), so every formula is turned into a
+    # $...$/$$...$$ text placeholder BEFORE trafilatura ever sees the HTML.
+    math_failed = 0
+    try:
+        html, _math_total, math_failed = replace_math_with_placeholders(html)
+    except Exception:  # noqa: BLE001 — a malformed page must not block the whole import over math handling
+        pass
+
     try:
         raw = trafilatura.extract(html, url=args.url, output_format="markdown", with_metadata=True)
     except Exception as err:  # noqa: BLE001 — trafilatura'nın iç hatası da temiz mesaja çevrilir
@@ -96,7 +106,7 @@ def main() -> int:
         return 1
 
     meta, text = parse_trafilatura_metadata(raw)
-    needs_review = len(text.strip()) < MIN_EXTRACTED_CHARS
+    needs_review = len(text.strip()) < MIN_EXTRACTED_CHARS or math_failed > 0
 
     # K2-5: sayfa <title>/og:title varsa ondan, yoksa URL'nin son path
     # segmentinden (link-import.ts'in sourceNameFromUrl'üyle aynı fikir) —
@@ -118,7 +128,8 @@ def main() -> int:
     fm_lines = "\n".join(f"{k}: {json.dumps(v)}" for k, v in frontmatter.items())
     out_path.write_text(f"---\n{fm_lines}\n---\n\n{final_text}", encoding="utf-8")
 
-    emit({"type": "done", "outPath": str(out_path), "frontmatter": frontmatter, "warnings": []})
+    warnings = [f"{math_failed} matematik ifadesi MathML'den LaTeX'e çevrilemedi, olduğu gibi işaretlendi"] if math_failed > 0 else []
+    emit({"type": "done", "outPath": str(out_path), "frontmatter": frontmatter, "warnings": warnings})
     return 0
 
 
