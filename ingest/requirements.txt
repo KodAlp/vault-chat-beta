@@ -2,30 +2,36 @@
 # Pandoc is used for .tex when present on PATH (system tool, not a Python
 # package) but isn't a hard requirement — convert.py degrades gracefully
 # when it's missing, same as the tools below.
-markitdown[all]
+#
+# Aşama 12: versions pinned to what this repo was last tested against —
+# reproducible installs, and a version bump is now a visible, reviewable
+# diff instead of a silent drift. Bump deliberately, not by habit.
+markitdown[all]==0.1.6
 
 # YouTube transcript ingest (youtube_transcript.py) — subtitle/caption
-# fetching only, never downloads video/audio.
-yt-dlp
+# fetching only, never downloads video/audio. Pinned like the rest, but
+# yt-dlp ships near-daily releases to keep up with YouTube's own changes —
+# if YouTube import starts failing, bumping this first is the usual fix.
+yt-dlp==2026.7.4
 
 # Faz 15 (linkten içe aktarma, web sayfası kolu): ana-içerik ayıklama.
 # MarkItDown'ın HTML'i de "çevirdiği" doğru ama nav/reklam/gövde-dışı öğeleri
 # ayıklamıyor — trafilatura tam olarak bu problemi çözüyor. Hafif, saf Python.
-trafilatura
+trafilatura==2.2.0
 
 # Aşama 10 (#2): MathML -> LaTeX fallback for extract_web.py's math handling
 # (mathml_convert.py) — used only when a <math> element carries neither an
 # alttext nor a TeX annotation (see that module's docstring for the two
 # preferred, source-preserving paths tried first). Pure Python, pulls only
 # lxml (already a trafilatura dependency).
-py-asciimath
+py-asciimath==0.3.0
 
 # pypdf: page count for convert.py's escalation heuristic. MarkItDown does not
 # reliably emit the form-feed separator the old proxy counted, so the heading
 # check silently never ran on real books. Lightweight, pure Python; markitdown
 # already pulls it transitively, pinned here because convert.py imports it
 # directly.
-pypdf
+pypdf==6.14.2
 
 # Marker and Docling are implemented in convert.py but stay OPTIONAL: they pull
 # PyTorch and multi-GB model weights, and the user's RAM belongs to Ollama
