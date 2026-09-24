@@ -210,11 +210,17 @@ section.quote blockquote {
 	padding: 0 40px;
 }
 
-/* layout: diagram — reserved for Aşama 11's real vector-diagram output; for
-   now just centers whatever markdown the model produced. */
+/* layout: diagram — F13-3 (Aşama 11): the section centers the deterministic
+   inline SVG slides-diagram.ts renders (or, when the model didn't produce a
+   valid node/edge structure and generate-slides.ts fell back to plain text,
+   whatever markdown ended up in content_markdown instead). */
 section.diagram {
 	align-items: center;
 	text-align: center;
+}
+section.diagram svg {
+	max-width: 100%;
+	max-height: 460px;
 }
 
 /* layout: code — mostly a fenced code block; the heading needs less room. */

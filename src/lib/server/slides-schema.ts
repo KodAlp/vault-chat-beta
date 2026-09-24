@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { DiagramSpec } from './slides-diagram';
 
 /**
  * F13-1 (Aşama 9) — every layout `buildMarpDeck` (generate-slides.ts) and
@@ -25,11 +26,34 @@ export type SlideLayout = (typeof SLIDE_LAYOUTS)[number];
  * produces a usable deck without it, same reasoning as quiz-schema.ts's
  * `cognitive_level`.
  */
+
+/**
+ * F13-3 (Aşama 11) — only meaningful when `layout === 'diagram'`, optional
+ * everywhere else (same "superset schema, prompt + soft validation carry
+ * the per-layout meaning" pattern the "4-6 madde" bullets rule already
+ * uses — see generate-slides.ts). The model supplies structure and labels
+ * only; slides-diagram.ts's renderDiagramSvg is the only thing that ever
+ * produces markup from it, so there's no schema-level need to sanitize
+ * strings here beyond the length/count bounds below.
+ */
+const DiagramNode = z.object({ id: z.string().min(1).max(40), label: z.string().min(1).max(200) });
+const DiagramEdge = z.object({
+	from: z.string().min(1).max(40),
+	to: z.string().min(1).max(40),
+	label: z.string().max(80).optional()
+});
+export const SlideDiagram = z.object({
+	nodes: z.array(DiagramNode).min(1).max(8),
+	edges: z.array(DiagramEdge).max(12)
+}) satisfies z.ZodType<DiagramSpec>;
+export type SlideDiagramT = z.infer<typeof SlideDiagram>;
+
 export const Slide = z.object({
 	layout: z.enum(SLIDE_LAYOUTS),
 	heading: z.string().min(1),
 	content_markdown: z.string().min(1),
 	notes: z.string().optional(),
+	diagram: SlideDiagram.optional(),
 	source_id: z.string().min(1)
 });
 export type SlideT = z.infer<typeof Slide>;
@@ -58,7 +82,36 @@ export function buildSlidesJsonSchema(validIds: string[]) {
 						heading: { type: 'string' },
 						content_markdown: { type: 'string' },
 						notes: { type: 'string' },
-						source_id: { type: 'string', enum: validIds }
+						diagram: {
+								type: 'object',
+								properties: {
+									nodes: {
+										type: 'array',
+										minItems: 1,
+										maxItems: 8,
+										items: {
+											type: 'object',
+											properties: { id: { type: 'string' }, label: { type: 'string' } },
+											required: ['id', 'label']
+										}
+									},
+									edges: {
+										type: 'array',
+										maxItems: 12,
+										items: {
+											type: 'object',
+											properties: {
+												from: { type: 'string' },
+												to: { type: 'string' },
+												label: { type: 'string' }
+											},
+											required: ['from', 'to']
+										}
+									}
+								},
+								required: ['nodes', 'edges']
+							},
+							source_id: { type: 'string', enum: validIds }
 					},
 					required: ['layout', 'heading', 'content_markdown', 'source_id']
 				}

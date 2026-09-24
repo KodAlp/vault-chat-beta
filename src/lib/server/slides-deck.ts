@@ -1,4 +1,5 @@
 import { SLIDES_THEME_NAME } from './slides-theme';
+import { isRenderableDiagram, renderDiagramSvg, type DiagramSpec } from './slides-diagram';
 
 /**
  * F13-1/2 (Aşama 9): pulled out of generate-slides.ts into its own module —
@@ -36,6 +37,12 @@ export interface DeckSlide {
 	layout: string;
 	heading: string;
 	content_markdown: string;
+	/** F13-3 (Aşama 11) — only consulted when layout === 'diagram'. Missing
+	 * or, after sanitizing, empty (isRenderableDiagram false) falls back to
+	 * content_markdown untouched, same graceful-degradation stance as
+	 * mindmap-validate.ts's soft checks: a provider/model that skips this
+	 * field still produces a usable slide, just without the drawing. */
+	diagram?: DiagramSpec;
 }
 
 /** Marpit's slide separator ("\n---\n" between blank lines) requires the
@@ -54,7 +61,10 @@ export function buildMarpDeck(slides: DeckSlide[]): string {
 	const header = `---\nmarp: true\ntheme: ${SLIDES_THEME_NAME}\n---\n\n`;
 	const body = slides
 		.map((s) => {
-			const content = trimMathDelimiterWhitespace(s.content_markdown.trim());
+			const useDiagram = s.layout === 'diagram' && s.diagram && isRenderableDiagram(s.diagram);
+			const content = useDiagram
+				? renderDiagramSvg(s.diagram!)
+				: trimMathDelimiterWhitespace(s.content_markdown.trim());
 			return `<!-- _class: ${s.layout} -->\n\n# ${s.heading}\n\n${content}`;
 		})
 		.join('\n\n---\n\n');
