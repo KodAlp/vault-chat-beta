@@ -3,6 +3,11 @@
 Yerel, Docker'sız bir SvelteKit sohbet uygulaması. Kasandaki notlar üzerinde
 RAG yapar, Ollama'daki modellerle konuşur. Tek Node süreci, `localhost`'a bağlı.
 
+Bu proje kişisel bir öğrenme aracı olarak başladı, artık açık kaynak
+(MIT — bkz. `LICENSE`). Katkıda bulunmak isterseniz `CONTRIBUTING.md`'ye,
+gizlilik/güvenlik/kullanım koşulları için `PRIVACY.md`/`SECURITY.md`/
+`TERMS.md`'ye bakın.
+
 ## Ön koşullar
 
 1. **Node.js 22+** (zaten kurulu: `node --version`).
@@ -173,7 +178,7 @@ kendi "Ollama çalışmıyor" banner'ı (masaüstü paketi) eksik olanı söyler
 | Ollama + `qwen3:8b` + `bge-m3` | Evet | Elle — https://ollama.com |
 | WebView2 Runtime | Evet (yalnızca masaüstü paketi) | Otomatik — NSIS installer yoksa internetten indirip kurar |
 | Visual C++ Redistributable | Teknik olarak evet | Genelde Windows 10/11'de zaten var; eksikse elle |
-| Python 3 | Hayır — yalnızca PDF/doküman/YouTube içe aktarma için | Elle — https://python.org |
+| Python 3.12+ (kararlı sürüm) | Hayır — yalnızca PDF/doküman/YouTube içe aktarma için | Elle — https://python.org |
 | `markitdown` paketi (`pip install -r ingest/requirements.txt`) | Hayır — yalnızca PDF/doküman/YouTube içe aktarma için | Elle, veya masaüstü paketinde uygulamanın kendi "Şimdi kur" banner'ı |
 | pandoc | Hayır — yalnızca `.tex` dönüştürme için | Elle |
 
