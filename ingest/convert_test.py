@@ -26,9 +26,12 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from convert import (  # noqa: E402
+    CODE_EXTENSIONS,
+    convert_code_file,
     demote_slide_headings,
     looks_broken,
     parse_page_range,
+    route_auto,
     split_existing_frontmatter,
     title_from_fragments,
     unique_output_path,
@@ -170,6 +173,38 @@ def test_looks_broken_unaffected_by_this_pass() -> None:
     )
 
 
+def test_convert_code_file() -> None:
+    # Kod dosyaları, Seçenek B (Aşama 11): the file becomes one fenced block,
+    # nothing else — no heading, no title guess (main()'s title_fallback
+    # already owns that, from --source-name).
+    with tempfile.TemporaryDirectory() as d:
+        py_path = Path(d) / "original.py"
+        py_path.write_text("def f(x):\n    return x + 1\n", encoding="utf-8")
+        out = convert_code_file(py_path)
+        check("wraps in a python-tagged fence", out.startswith("```python\n"))
+        check("body preserved verbatim", "def f(x):\n    return x + 1\n" in out)
+        check("fence closed", out.rstrip().endswith("```"))
+
+        # route_auto dispatches purely on extension, same as the .md
+        # "already-markdown" branch — this is what /api/import's --tool auto
+        # actually calls.
+        text, converted_by = route_auto(py_path)
+        check("route_auto recognizes a code extension", converted_by == "code-wrap")
+        check("route_auto's output matches convert_code_file's", text == out)
+
+    with tempfile.TemporaryDirectory() as d:
+        # A stray ``` inside the source (e.g. a fenced snippet in a
+        # docstring) must not be able to close the wrapper early — the fence
+        # widens past the longest run already present.
+        ts_path = Path(d) / "original.ts"
+        ts_path.write_text("/** ```\n * example\n * ``` */\nexport const x = 1;\n", encoding="utf-8")
+        out = convert_code_file(ts_path)
+        check("fence widens past an embedded ``` run", out.startswith("````typescript\n"))
+        check("embedded ``` survives untouched inside the wider fence", " * ```" in out)
+
+    check(".html/.htm are not in CODE_EXTENSIONS (already routed as real documents)", ".html" not in CODE_EXTENSIONS and ".htm" not in CODE_EXTENSIONS)
+
+
 if __name__ == "__main__":
     sys.stdout.reconfigure(encoding="utf-8")
     test_title_from_fragments()
@@ -178,5 +213,6 @@ if __name__ == "__main__":
     test_split_existing_frontmatter()
     test_parse_page_range()
     test_looks_broken_unaffected_by_this_pass()
+    test_convert_code_file()
     print(f"\n{len(failures)} başarısız" if failures else "\nhepsi geçti")
     sys.exit(1 if failures else 0)

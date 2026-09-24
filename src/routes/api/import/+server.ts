@@ -11,6 +11,7 @@ import {
 	importLogPath,
 	loadImportedSourceHashes,
 	ALLOWED_EXTENSIONS,
+	CODE_EXTENSIONS,
 	MAX_UPLOAD_BYTES
 } from '$lib/server/library';
 import { vaultFromId } from '$lib/server/requestVault';
@@ -35,7 +36,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
 	const safeName = safeBasename(file.name);
 	const ext = path.extname(safeName).toLowerCase();
-	if (!ALLOWED_EXTENSIONS.has(ext)) {
+	if (!ALLOWED_EXTENSIONS.has(ext) && !CODE_EXTENSIONS.has(ext)) {
 		return new Response(sseEvent({ type: 'error', message: `Desteklenmeyen dosya türü: ${ext || '(uzantısız)'}` }), {
 			headers: { 'content-type': 'text/event-stream' }
 		});
