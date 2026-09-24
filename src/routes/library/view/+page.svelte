@@ -36,7 +36,7 @@
 			// markdown renderer has no concept of frontmatter and would
 			// otherwise show the raw "---\nkey: value\n---" block as text.
 			const body = data.raw.replace(/^---\n[\s\S]*?\n---\n/, '');
-			html = await renderMarkdown(body);
+			html = await renderMarkdown(body, vaultId ? { vaultId, currentPath: filePath } : undefined);
 		} catch {
 			error = t('LibraryViewPage.loadFailed');
 		}

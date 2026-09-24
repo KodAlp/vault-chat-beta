@@ -3,6 +3,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import matter from 'gray-matter';
 import { libraryRoot, importLogPath, appendImportLog } from './library';
+import { copyAttachmentIntoLibrary } from './attachments';
 import { indexLibraryFile } from './incrementalIndex';
 // Was its own separate list here (missing 'raw', among others): a source
 // folder containing raw/ got copied AND incrementally indexed on import,
@@ -13,8 +14,6 @@ import { indexLibraryFile } from './incrementalIndex';
 import { EXCLUDED_DIRS } from '../../../indexer/excluded-dirs';
 import type { ImportResultItem, ImportSummary } from '$lib/types';
 import type { VaultContext } from './vaults';
-
-const ATTACHMENT_EXT = new Set(['.png', '.jpg', '.jpeg', '.gif', '.svg', '.pdf', '.webp']);
 
 function sha256(content: string): string {
 	return crypto.createHash('sha256').update(content).digest('hex');
@@ -84,33 +83,25 @@ function rewriteWikilinks(content: string, currentRel: string, mdIndex: Map<stri
 }
 
 /** ![[image.png]] -> markdown image, attachment copied into a flat shared
- * folder (library docs move to different relative paths than the vault, so
- * per-note-relative attachment copies would break on any future move).
- * Scoping note: copying is implemented; serving these files back to the
- * browser is not (no static route this pass) — see Faz 5 plan. */
+ * folder via attachments.ts's copyAttachmentIntoLibrary (also used by the
+ * new /api/library/attachment route, Görsel B) — library docs move to
+ * different relative paths than the vault, so per-note-relative attachment
+ * copies would break on any future move. */
 function rewriteEmbeds(
 	content: string,
 	currentRel: string,
 	attachmentIndex: Map<string, string>,
 	sourceRoot: string,
-	attachmentsDir: string
+	v: VaultContext
 ): string {
 	return content.replace(/!\[\[([^\]]+)\]\]/g, (match, target: string) => {
 		const base = target.trim();
 		const srcRel = attachmentIndex.get(base.toLowerCase());
 		if (!srcRel) return match;
-		const ext = path.extname(base).toLowerCase();
-		if (!ATTACHMENT_EXT.has(ext)) return match;
-		fs.mkdirSync(attachmentsDir, { recursive: true });
-		const destAbs = path.join(attachmentsDir, base);
-		if (!fs.existsSync(destAbs)) {
-			fs.copyFileSync(path.join(sourceRoot, srcRel), destAbs);
-		}
+		const destRel = copyAttachmentIntoLibrary(v, path.join(sourceRoot, srcRel), base);
+		if (!destRel) return match;
 		const relLink = encodeURI(
-			path
-				.relative(path.dirname(currentRel), path.join('_meta', 'attachments', base))
-				.split(path.sep)
-				.join('/')
+			path.relative(path.dirname(currentRel), destRel).split(path.sep).join('/')
 		);
 		return `![](${relLink})`;
 	});
@@ -142,7 +133,6 @@ export async function importObsidianVault(
 
 	const root = libraryRoot(v);
 	const logPath = importLogPath(v);
-	const attachmentsDir = path.join(root, '_meta', 'attachments');
 	const lastKnownHashes = loadLastKnownHashes(logPath);
 
 	const items: ImportResultItem[] = [];
@@ -169,7 +159,7 @@ export async function importObsidianVault(
 			const needsReview = missingRequired || !data.domain && !data.domains || !data.level && !data.depth;
 
 			let body = rewriteWikilinks(parsed.content, rel, mdIndex);
-			body = rewriteEmbeds(body, rel, attachmentIndex, resolvedSource, attachmentsDir);
+			body = rewriteEmbeds(body, rel, attachmentIndex, resolvedSource, v);
 
 			const nextFrontmatter = {
 				...data,
