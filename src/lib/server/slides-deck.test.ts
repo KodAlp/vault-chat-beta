@@ -1,8 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { Marp } from '@marp-team/marp-core';
-import { buildMarpDeck } from './slides-deck';
-import { SLIDES_THEME_CSS } from './slides-theme';
+import { buildMarpDeck, createSlidesMarp } from './slides-deck';
 import { SLIDE_LAYOUTS } from './slides-schema';
 
 test('buildMarpDeck emits the theme name, a local _class directive and the heading for every slide', () => {
@@ -44,8 +42,7 @@ test('every SLIDE_LAYOUTS value renders via the real Marp/theme pipeline without
 	}));
 	const deck = buildMarpDeck(slides);
 
-	const marp = new Marp({ math: 'katex' });
-	marp.themeSet.add(SLIDES_THEME_CSS);
+	const marp = createSlidesMarp();
 	const { html } = marp.render(deck); // must not throw
 
 	for (const layout of SLIDE_LAYOUTS) {
@@ -83,12 +80,56 @@ test('a diagram layout with valid node/edge data renders the deterministic SVG t
 	assert.match(deck, /<svg /);
 	assert.match(deck, /İstek gelir/);
 
-	const marp = new Marp({ math: 'katex' });
-	marp.themeSet.add(SLIDES_THEME_CSS);
-	const { html } = marp.render(deck); // must not throw — raw SVG survives Marp's own markdown-it pass
+	const marp = createSlidesMarp();
+	const { html } = marp.render(deck); // must not throw
 	assert.match(html, /class="diagram"/);
-	assert.match(html, /<svg /);
-	assert.match(html, /İstek gelir/);
+
+	// Regression guard for the real bug found by a live Ollama trial
+	// (2026-09-24, Bulgu 3 ek notu): marp-core's default `html` allowlist has
+	// no svg/rect/text/... entries at all, so WITHOUT createSlidesMarp()'s
+	// merged allowlist the whole thing gets HTML-escaped into visible
+	// "&lt;svg..." text instead of rendering — `/<svg /` alone is not a
+	// strong enough assertion, because marp-core's OWN unrelated bundled
+	// script also contains the literal substring "<svg " elsewhere in the
+	// full page, which let that false pass slip through the first time.
+	assert.doesNotMatch(html, /&lt;svg/, 'diagram SVG was HTML-escaped instead of rendered');
+	// Our exact svg signature (width/height/role/aria-label — see
+	// slides-diagram.ts, no viewBox/marker: both would be lowercased by
+	// marp-core's xss filter and stop working), followed immediately by a
+	// real <rect>, not escaped text.
+	assert.match(html, /<svg width="\d+" height="\d+" role="img" aria-label="diagram"[^>]*>(?:(?!<\/svg>)[\s\S])*<rect /);
+	assert.match(html, /<text[^>]*>İstek gelir<\/text>/);
+	// Every edge's arrowhead is a hand-drawn <polygon>, not an SVG <marker>
+	// (also lowercased into brokenness by the same filter).
+	assert.match(html, /<polygon points="[^"]+" fill="oklch\(76% 0\.17 155\)"\s*\/>/);
+	assert.doesNotMatch(html, /<marker /);
+});
+
+test('two edges sharing the same directed (from, to) pair are offset apart, not drawn on top of each other', () => {
+	// Found by the same live trial: a real TCP-handshake generation produced
+	// two separate n1->n2 edges (SYN, then ACK) alongside a n2->n1 reply —
+	// without a lane offset both n1->n2 lines render at the exact same x,
+	// overlapping completely and hiding one label behind the other.
+	const svg = buildMarpDeck([
+		{
+			layout: 'diagram',
+			heading: 'H',
+			content_markdown: '-',
+			diagram: {
+				nodes: [
+					{ id: 'n1', label: 'A' },
+					{ id: 'n2', label: 'B' }
+				],
+				edges: [
+					{ from: 'n1', to: 'n2', label: 'SYN' },
+					{ from: 'n1', to: 'n2', label: 'ACK' }
+				]
+			}
+		}
+	]);
+	const lineXs = [...svg.matchAll(/<line x1="(\d+)"/g)].map((m) => m[1]);
+	assert.equal(lineXs.length, 2);
+	assert.notEqual(lineXs[0], lineXs[1], 'both n1->n2 edges drew at the same x — they overlap');
 });
 
 test('a diagram layout with no diagram data falls back to content_markdown untouched', () => {

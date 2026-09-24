@@ -1,5 +1,6 @@
-import { SLIDES_THEME_NAME } from './slides-theme';
-import { isRenderableDiagram, renderDiagramSvg, type DiagramSpec } from './slides-diagram';
+import { Marp } from '@marp-team/marp-core';
+import { SLIDES_THEME_NAME, SLIDES_THEME_CSS } from './slides-theme';
+import { isRenderableDiagram, renderDiagramSvg, SLIDE_DIAGRAM_HTML_ALLOWLIST, type DiagramSpec } from './slides-diagram';
 
 /**
  * F13-1/2 (Aşama 9): pulled out of generate-slides.ts into its own module —
@@ -69,4 +70,23 @@ export function buildMarpDeck(slides: DeckSlide[]): string {
 		})
 		.join('\n\n---\n\n');
 	return header + body;
+}
+
+/**
+ * A fresh `Marp` instance, themed and configured — the one place that
+ * constructs one, so generate-slides.ts and every test stay in sync on both
+ * the theme registration and (F13-3, Aşama 11) the custom `html` allowlist
+ * that lets the `diagram` layout's SVG through without being escaped. See
+ * slides-diagram.ts's module doc comment for why `Marp.html`'s own 71-tag
+ * default has no `svg`/`rect`/... entries at all, and why the merge here
+ * must never be replaced with a bare `html: true` (that would stop
+ * filtering EVERY layout's content_markdown, not just this one template).
+ */
+export function createSlidesMarp(): Marp {
+	const marp = new Marp({
+		math: 'katex',
+		html: { ...Marp.html, ...SLIDE_DIAGRAM_HTML_ALLOWLIST }
+	});
+	marp.themeSet.add(SLIDES_THEME_CSS);
+	return marp;
 }

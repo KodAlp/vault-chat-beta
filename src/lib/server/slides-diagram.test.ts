@@ -1,6 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { sanitizeDiagram, isRenderableDiagram, renderDiagramSvg, type DiagramSpec } from './slides-diagram';
+import {
+	sanitizeDiagram,
+	isRenderableDiagram,
+	renderDiagramSvg,
+	SLIDE_DIAGRAM_HTML_ALLOWLIST,
+	type DiagramSpec
+} from './slides-diagram';
 
 test('sanitizeDiagram dedupes node ids, keeping the first occurrence', () => {
 	const spec: DiagramSpec = {
@@ -90,11 +96,14 @@ test('renderDiagramSvg draws a straight <line> for a direct forward edge, a curv
 		]
 	});
 	assert.equal((svg.match(/<line /g) ?? []).length, 1);
-	// Excludes the arrowhead marker's own <path> inside <defs>, which also
-	// starts with "<path " — only an actual curved edge has fill="none".
-	assert.equal((svg.match(/<path [^>]*fill="none"/g) ?? []).length, 1);
+	assert.equal((svg.match(/<path /g) ?? []).length, 1);
 	assert.match(svg, /repeats/);
-	assert.match(svg, /marker-end="url\(#slide-diagram-arrow\)"/);
+	// Arrowheads are hand-drawn <polygon>s (see the module's second design
+	// note — an SVG <marker> needs camelCase attributes that marp-core's xss
+	// filter lowercases into brokenness), one per edge.
+	assert.equal((svg.match(/<polygon /g) ?? []).length, 2);
+	assert.doesNotMatch(svg, /<marker /);
+	assert.doesNotMatch(svg, /viewBox/);
 });
 
 test('renderDiagramSvg escapes HTML-significant characters in labels (data, not markup, from the model)', () => {
@@ -115,6 +124,10 @@ test('renderDiagramSvg truncates an overlong label rather than overflowing the b
 	assert.match(svg, /…/);
 });
 
+function heightOf(svg: string): number {
+	return Number(/height="(\d+)"/.exec(svg)?.[1]);
+}
+
 test('renderDiagramSvg grows taller with more nodes, deterministically (same input -> same output)', () => {
 	const spec: DiagramSpec = { nodes: [{ id: 'a', label: 'One' }, { id: 'b', label: 'Two' }], edges: [] };
 	const first = renderDiagramSvg(spec);
@@ -125,6 +138,34 @@ test('renderDiagramSvg grows taller with more nodes, deterministically (same inp
 		nodes: [...spec.nodes, { id: 'c', label: 'Three' }],
 		edges: []
 	});
-	const heightOf = (svg: string) => Number(/viewBox="0 0 \d+ (\d+)"/.exec(svg)?.[1]);
 	assert.ok(heightOf(taller) > heightOf(first));
+});
+
+test('renderDiagramSvg never exceeds its fixed height budget, even at the schema max of 8 nodes', () => {
+	const eightNodes: DiagramSpec = {
+		nodes: Array.from({ length: 8 }, (_, i) => ({ id: `n${i}`, label: `Adım ${i + 1}` })),
+		edges: []
+	};
+	const svg = renderDiagramSvg(eightNodes);
+	// No viewBox anywhere (see the module doc comment) — the layout shrinks
+	// box height/gap/font to fit a fixed budget instead of relying on the
+	// SVG viewport to scale a taller-than-budget canvas down.
+	assert.doesNotMatch(svg, /viewBox/);
+	assert.ok(heightOf(svg) <= 440, `height ${heightOf(svg)} exceeds the fixed budget`);
+	// All 8 boxes still present, not silently dropped to make room.
+	assert.equal((svg.match(/<rect /g) ?? []).length, 8);
+});
+
+test('SLIDE_DIAGRAM_HTML_ALLOWLIST uses only already-lowercase attribute names', () => {
+	// Regression guard for the real bug (2026-09-24): marp-core's xss filter
+	// lowercases every attribute NAME it lets through. A camelCase entry here
+	// (viewBox, markerWidth, refX, ...) would silently stop working the same
+	// way the first version of this renderer did — this test fails loudly
+	// instead if one ever creeps back in.
+	for (const [tag, attrs] of Object.entries(SLIDE_DIAGRAM_HTML_ALLOWLIST)) {
+		assert.equal(tag, tag.toLowerCase(), `tag ${tag} is not lowercase`);
+		for (const attr of Object.keys(attrs)) {
+			assert.equal(attr, attr.toLowerCase(), `attribute ${attr} on <${tag}> is not lowercase`);
+		}
+	}
 });

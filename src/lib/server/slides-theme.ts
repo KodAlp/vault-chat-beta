@@ -213,7 +213,10 @@ section.quote blockquote {
 /* layout: diagram — F13-3 (Aşama 11): the section centers the deterministic
    inline SVG slides-diagram.ts renders (or, when the model didn't produce a
    valid node/edge structure and generate-slides.ts fell back to plain text,
-   whatever markdown ended up in content_markdown instead). */
+   whatever markdown ended up in content_markdown instead). slides-diagram.ts
+   emits a fixed width/height (never a viewBox — see its module doc comment)
+   and shrinks its own layout to stay under its height budget, so this rule
+   is a defensive upper bound rather than something the SVG relies on to fit. */
 section.diagram {
 	align-items: center;
 	text-align: center;

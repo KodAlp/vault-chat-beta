@@ -1,11 +1,9 @@
-import { Marp } from '@marp-team/marp-core';
 import { chatWithFallback } from './providers/registry';
 import type { ChatMessage } from './providers/types';
 import { retrieve } from './retrieve';
 import { getMessages } from './chats-db';
 import { Slides, buildSlidesJsonSchema, type SlideDiagramT } from './slides-schema';
-import { SLIDES_THEME_CSS } from './slides-theme';
-import { buildMarpDeck } from './slides-deck';
+import { buildMarpDeck, createSlidesMarp } from './slides-deck';
 import { createSlideDeck, type NewSlide } from './study-db';
 import { renderUserSkillsBlock } from './userSkills';
 import type { VaultContext } from './vaults';
@@ -258,14 +256,10 @@ export async function generateSlides(
 	// Rendered ONCE, server-side, at generation time — not per-view, not
 	// client-side. Marpit's pagination logic expects to own the whole
 	// ----delimited document in a single .render() call, not be invoked once
-	// per slide. math:'katex' is explicit (not marp-core's mathjax default)
-	// to match this app's KaTeX-based rendering elsewhere and avoid pulling
-	// in a second math runtime.
-	const marp = new Marp({ math: 'katex' });
-	// F13-2 (Aşama 9): registered fresh on this per-call `marp` instance —
-	// cheap (a themeSet is just a Map, this call parses ~150 lines of CSS
+	// per slide. createSlidesMarp() (slides-deck.ts) is a fresh instance per
+	// call — cheap (a themeSet is just a Map, this parses ~150 lines of CSS
 	// once) and avoids any cross-request module-level mutable state.
-	marp.themeSet.add(SLIDES_THEME_CSS);
+	const marp = createSlidesMarp();
 	const deck = buildMarpDeck(parsed.slides);
 	const { html, css } = marp.render(deck);
 
