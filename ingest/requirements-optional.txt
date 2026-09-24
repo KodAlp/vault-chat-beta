@@ -10,11 +10,16 @@
 # convert.py picks them up automatically once present (ImportError at call
 # time, not a capability flag) — nothing else needs changing.
 
+# Aşama 12: pinned to what this repo was last tested against, same
+# reasoning as requirements.txt. These two pull PyTorch + multi-GB weights,
+# so an unpinned install silently drifting to a new major is the last thing
+# you want here — loosen deliberately if you need a newer feature/CUDA build.
+
 # Default escalation for complex/scanned/math-heavy PDFs. Strong on book-like
 # documents. API used: marker.converters.pdf.PdfConverter (marker-pdf 2.x).
-marker-pdf
+marker-pdf==2.0.0
 
 # Preferred when the document's value is in its tables — best table detection
 # of the three. API used: docling.document_converter.DocumentConverter
 # (docling 2.x). Requires Python 3.10+.
-docling
+docling==2.130.0

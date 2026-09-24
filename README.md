@@ -44,7 +44,7 @@ npm install
 ```
 OLLAMA_URL=http://127.0.0.1:11434
 CHATS_DB_PATH=./data/chats.db
-PUBLIC_VAULT_NAME=First brain(Software based)   # "default" vault'un ilk açılıştaki görünen adı
+PUBLIC_VAULT_NAME=Notlarım   # "default" vault'un ilk açılıştaki görünen adı
 ```
 
 `PUBLIC_VAULT_NAME` yalnızca "default" vault ilk oluşturulurken (bkz.
@@ -52,6 +52,16 @@ PUBLIC_VAULT_NAME=First brain(Software based)   # "default" vault'un ilk açıl�
 çalıştırmalarda etkisi yok. Kaynaklar her zaman uygulamanın kendi
 görüntüleyicisinde açılır; Obsidian yalnızca **Ayarlar → Kütüphane →
 Obsidian'dan İçe Aktar** sırasında devreye girer.
+
+`data/providers.json` bu repoyla birlikte gelen bir **tohum** dosya — yeni
+bir kurulum bulut sağlayıcılardan (DeepSeek, Google AI Studio) bazılarını
+`enabled: true` olarak bulur. Bunları gerçekten kullanmak yine de (a) o
+sağlayıcı için `data/secrets.json`'a bir API anahtarı girmenizi (Ayarlar →
+Sağlayıcılar) ve (b) her sohbette ayrı bir onay kutusunu kabul etmenizi
+gerektirir (bkz. `PRIVACY.md`) — yalnızca `enabled: true` olması hiçbir
+veri göndermez. Bulut sağlayıcıları arayüzde seçenek olarak dahi görmek
+istemiyorsanız, kendi `data/providers.json`'ınızda ilgili girdiyi
+`enabled: false` yapabilirsiniz.
 
 ## Vault'lar (Faz 8)
 
