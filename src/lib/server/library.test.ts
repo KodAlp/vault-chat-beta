@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { renameLibraryEntry } from './library';
+import { renameLibraryEntry, ALLOWED_EXTENSIONS, CODE_EXTENSIONS } from './library';
 import type { VaultContext } from './vaults';
 
 function tmpVault(): VaultContext {
@@ -47,4 +47,15 @@ test('renameLibraryEntry refuses a directory source', () => {
 	fs.mkdirSync(path.join(v.libraryRoot, 'folder'));
 
 	assert.throws(() => renameLibraryEntry(v, 'folder', 'renamed'), /klasörler değil/);
+});
+
+test('CODE_EXTENSIONS never overlaps ALLOWED_EXTENSIONS (doc converter vs. fenced-wrap must stay unambiguous)', () => {
+	for (const ext of CODE_EXTENSIONS) {
+		assert.equal(ALLOWED_EXTENSIONS.has(ext), false, `${ext} is in both sets`);
+	}
+});
+
+test('CODE_EXTENSIONS excludes .html/.htm — those are real documents via ALLOWED_EXTENSIONS', () => {
+	assert.equal(CODE_EXTENSIONS.has('.html'), false);
+	assert.equal(CODE_EXTENSIONS.has('.htm'), false);
 });

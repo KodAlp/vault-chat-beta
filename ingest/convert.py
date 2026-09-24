@@ -41,6 +41,33 @@ PDF_EXT = ".pdf"
 TEX_EXT = ".tex"
 MD_EXT = ".md"
 
+# Kod dosyaları, Seçenek B (rapor §5.2, Aşama 11): "tek dosyalık örnekler
+# için" — a whole-repo import is option D, out of scope here. Extension ->
+# Shiki language id, kept in sync BY HAND with src/lib/markdown.ts's LANGS
+# array (two different language runtimes, no shared module) so a wrapped
+# file actually gets highlighted instead of rendering as a plain block.
+# `.html`/`.htm` are deliberately absent — those already go through
+# MARKITDOWN_EXTS as real documents; a code-file entry here would make the
+# same extension mean two different things depending on which set a caller
+# checked first.
+CODE_EXTENSIONS = {
+    ".js": "javascript",
+    ".ts": "typescript",
+    ".py": "python",
+    ".c": "c",
+    ".h": "c",
+    ".cpp": "cpp",
+    ".hpp": "cpp",
+    ".rs": "rust",
+    ".sh": "bash",
+    ".json": "json",
+    ".css": "css",
+    ".svelte": "svelte",
+    ".sql": "sql",
+    ".asm": "asm",
+    ".s": "asm",
+}
+
 # Heuristic straight from the skill doc: escalate a MarkItDown PDF result
 # that smells broken rather than trusting it.
 SHORT_LINE_RATIO_THRESHOLD = 0.3
@@ -323,6 +350,26 @@ def pandoc_not_installed_message() -> str:
     return "Bu araç kurulu değil: pandoc bir sistem paketi, pip install ile kurulmaz — https://pandoc.org/installing.html"
 
 
+def convert_code_file(path: Path) -> str:
+    """Kod dosyaları, Seçenek B (Aşama 11): the file already IS the content —
+    wrapped as one fenced Markdown block, nothing to convert. No `# filename`
+    heading is added here; main()'s existing title_fallback (from
+    --source-name) already derives a title the same way it does for any
+    other headingless conversion (a raw MarkItDown PDF pass, an already-
+    Markdown upload with no H1), so this doesn't need its own copy of that
+    logic.
+
+    Fence width widens past the longest backtick run already inside the
+    source (rare — a fenced snippet embedded in a docstring/comment) so the
+    wrapper can never be closed early by the file's own content.
+    """
+    lang = CODE_EXTENSIONS[path.suffix.lower()]
+    code = path.read_text(encoding="utf-8", errors="replace")
+    longest_run = max((len(m) for m in re.findall(r"`+", code)), default=0)
+    fence = "`" * max(3, longest_run + 1)
+    return f"{fence}{lang}\n{code}\n{fence}\n"
+
+
 def route_auto(path: Path, page_range: tuple[int, int] | None = None) -> tuple[str, str]:
     """Returns (markdown_text, converted_by). page_range (#37) only ever
     restricts the docling escalation path below — MarkItDown's initial pass
@@ -330,6 +377,9 @@ def route_auto(path: Path, page_range: tuple[int, int] | None = None) -> tuple[s
     partial-converting it too, and MarkItDown has no partial-page mode to
     give it anyway."""
     ext = path.suffix.lower()
+
+    if ext in CODE_EXTENSIONS:
+        return convert_code_file(path), "code-wrap"
 
     if ext == TEX_EXT:
         if shutil.which("pandoc"):

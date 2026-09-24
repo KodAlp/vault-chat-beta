@@ -13,6 +13,7 @@ import {
 	loadImportedSourceHashes,
 	safeBasename,
 	ALLOWED_EXTENSIONS,
+	CODE_EXTENSIONS,
 	MAX_UPLOAD_BYTES
 } from '$lib/server/library';
 import { indexLibraryFile } from '$lib/server/incrementalIndex';
@@ -52,7 +53,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			send({ type: 'progress', stage: 'converting', fileName: safeName });
 
 			const ext = path.extname(safeName).toLowerCase() || '.bin';
-			if (!ALLOWED_EXTENSIONS.has(ext)) {
+			if (!ALLOWED_EXTENSIONS.has(ext) && !CODE_EXTENSIONS.has(ext)) {
 				const item: ImportResultItem = {
 					fileName: safeName,
 					status: 'failed',
