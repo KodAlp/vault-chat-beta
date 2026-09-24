@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import dns from 'node:dns/promises';
 import net from 'node:net';
 import { Agent, fetch as undiciFetch } from 'undici';
+import robotsParser from 'robots-parser';
 import { MAX_UPLOAD_BYTES } from './library';
 
 /** First bytes, not Content-Type — servers routinely send a wrong/missing
@@ -354,4 +355,186 @@ export async function fetchWithCap(url: URL): Promise<Buffer> {
  * PDF it asked for. */
 export function pdfContentTypeMismatch(url: URL, isPdf: boolean): boolean {
 	return /\.pdf(?:[?#]|$)/i.test(url.pathname) && !isPdf;
+}
+
+/** Aşama 10 #4 (isteğe bağlı, cheap win): arXiv's abstract page and its PDF
+ * live at predictable sibling paths — a user pasting the /abs/ page (the
+ * one arXiv actually links from search results and citations) would
+ * otherwise get an HTML abstract-only page imported instead of the paper.
+ * Version suffixes (v1, v2, ...) are preserved as-is; arXiv serves the PDF
+ * at the same version path. No-op for anything that isn't this exact shape
+ * (old-style archive IDs like hep-th/9901001 included — left alone rather
+ * than guessed at). */
+const ARXIV_ABS = /^\/abs\/([\w.-]+)$/;
+
+export function rewriteArxivAbsToPdf(url: URL): URL {
+	if (!/(^|\.)arxiv\.org$/i.test(url.hostname)) return url;
+	const m = ARXIV_ABS.exec(url.pathname);
+	if (!m) return url;
+	const next = new URL(url.href);
+	next.pathname = `/pdf/${m[1]}`;
+	return next;
+}
+
+/**
+ * Aşama 10 #1: OCW-style course sites (and multi-page sites generally)
+ * often list several readings on one page. "List, then let the user
+ * choose" (D2 — this app's hardware budgets one fetch/convert per link
+ * tightly; crawling every linked page automatically would multiply that),
+ * not "fetch everything this page links to". Same-origin only, one page
+ * deep — no recursive crawling, no following links found on THOSE pages.
+ *
+ * Measured against real pages (2026-09-24): MIT OCW's regular course
+ * pages (lecture-notes, readings, ...) are client-rendered — the PDF links
+ * genuinely are not present in the static HTML this function receives, no
+ * regex or parser fix changes that (D1: no headless browser in this
+ * pipeline). Its per-course "Download course materials" page
+ * (.../download/) is the one exception: server-rendered, lists every PDF
+ * on the course with a real href. That's the page this feature is for;
+ * the dialog's help text says so rather than implying it works on any OCW
+ * URL.
+ *
+ * Anchor parsing is a small hand-rolled regex, not a full HTML parser —
+ * consistent with this file's SSRF BlockList/nextRedirectTarget choices:
+ * this only needs href+text out of <a> tags, not a DOM.
+ */
+const ANCHOR_RE = /<a\b[^>]*\bhref\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+const NOISE_TOKEN = /^(pdf|zip|doc|docx|xls|xlsx|ppt|pptx|kb|mb|gb|byte|bytes|download|indir)$/i;
+
+/** Anchor inner text is often just a download-size badge ("pdf 478 kB"),
+ * not a real title — filtered down to tokens that look like actual words
+ * before falling back to the URL's filename (sourceNameFromUrl), which is
+ * usually more descriptive than a size badge even when it isn't pretty. */
+function linkLabel(innerHtml: string, url: URL): string {
+	const raw = innerHtml
+		.replace(/<[^>]+>/g, ' ')
+		.replace(/\s+/g, ' ')
+		.trim();
+	// Kept whole (not rebuilt token-by-token) once it's judged worth
+	// keeping at all — a lone "1" in "Lecture 1 Notes" is part of a real
+	// title, not noise, so filtering per-token would wrongly drop it; only
+	// the ALL-noise/size-badge case ("pdf 478 kB", no qualifying word
+	// anywhere in it) should fall back to the filename.
+	const hasRealWord = raw.split(' ').some((tok) => {
+		const word = tok.replace(/[.,()]/g, '');
+		return word.length >= 3 && !NOISE_TOKEN.test(word) && !/^\d+$/.test(word);
+	});
+	return hasRealWord ? raw : sourceNameFromUrl(url);
+}
+
+export interface DiscoveredPdfLink {
+	url: string;
+	text: string;
+}
+
+export function extractPdfLinks(html: string, baseUrl: URL): DiscoveredPdfLink[] {
+	const seen = new Set<string>();
+	const links: DiscoveredPdfLink[] = [];
+	let m: RegExpExecArray | null;
+	ANCHOR_RE.lastIndex = 0;
+	while ((m = ANCHOR_RE.exec(html))) {
+		const [, hrefRaw, innerHtml] = m;
+		let resolved: URL;
+		try {
+			resolved = new URL(hrefRaw, baseUrl);
+		} catch {
+			continue;
+		}
+		if (resolved.protocol !== 'http:' && resolved.protocol !== 'https:') continue;
+		if (resolved.hostname !== baseUrl.hostname) continue;
+		if (!/\.pdf(?:[?#]|$)/i.test(resolved.pathname)) continue;
+		if (seen.has(resolved.href)) continue;
+		seen.add(resolved.href);
+		links.push({ url: resolved.href, text: linkLabel(innerHtml, resolved) });
+	}
+	return links;
+}
+
+/**
+ * Aşama 10 #3: robots.txt is fetched once per origin per run (cached in
+ * `cache`, keyed by origin) rather than once per link, so a batch of
+ * several links from the same course site doesn't triple its request
+ * count over robots.txt alone. A missing/unreachable robots.txt means "no
+ * restrictions" per the spec — same as every real crawler's behavior — not
+ * a reason to block the import.
+ */
+const defaultRobotsCache = new Map<string, Promise<string | null>>();
+
+export async function fetchRobotsTxt(origin: string, cache: Map<string, Promise<string | null>> = defaultRobotsCache): Promise<string | null> {
+	let pending = cache.get(origin);
+	if (!pending) {
+		pending = fetchWithCap(new URL('/robots.txt', origin))
+			.then((buf) => buf.toString('utf-8'))
+			.catch(() => null);
+		cache.set(origin, pending);
+	}
+	return pending;
+}
+
+export function isAllowedByRobots(url: URL, robotsTxt: string | null, userAgent: string = USER_AGENT): boolean {
+	if (robotsTxt === null) return true;
+	const robots = robotsParser(`${url.origin}/robots.txt`, robotsTxt);
+	// isAllowed() returns `undefined` when robots.txt says nothing usable
+	// about this URL/agent — treated as allowed, same as a missing file.
+	// Only an explicit `false` blocks.
+	return robots.isAllowed(url.href, userAgent) !== false;
+}
+
+/**
+ * Aşama 10 #3 (nezaket): don't fetch the same host back-to-back across a
+ * batch of links without any gap between requests. Registry/clock/sleep
+ * are injectable so tests don't have to actually wait a full second —
+ * default state is shared across a whole process run (same reasoning as
+ * defaultRobotsCache: politeness is a property of THIS app's outgoing
+ * traffic to a host, not of one request).
+ */
+const COURTESY_DELAY_MS = 1000;
+const defaultLastFetchByHost = new Map<string, number>();
+
+export async function politeDelay(
+	hostname: string,
+	registry: Map<string, number> = defaultLastFetchByHost,
+	now: () => number = Date.now,
+	sleep: (ms: number) => Promise<void> = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+): Promise<void> {
+	const last = registry.get(hostname);
+	const elapsed = last === undefined ? Infinity : now() - last;
+	if (elapsed < COURTESY_DELAY_MS) {
+		await sleep(COURTESY_DELAY_MS - elapsed);
+	}
+	registry.set(hostname, now());
+}
+
+const TRANSIENT_ERROR_CODES = new Set(['ECONNRESET', 'ETIMEDOUT', 'ECONNREFUSED', 'EAI_AGAIN', 'UND_ERR_CONNECT_TIMEOUT', 'UND_ERR_SOCKET']);
+
+/** Only a curated set of transport-level failure codes are retried — a 404,
+ * a rejected SSRF check, or a "too large" cap are permanent outcomes that a
+ * retry cannot change, so retrying them would just add latency for a link
+ * that was always going to fail. */
+export function isTransientFetchError(err: unknown): boolean {
+	if (!(err instanceof Error)) return false;
+	const cause = (err as Error & { cause?: unknown }).cause;
+	const code = cause && typeof cause === 'object' && 'code' in cause ? String((cause as { code: unknown }).code) : undefined;
+	return code !== undefined && TRANSIENT_ERROR_CODES.has(code);
+}
+
+/**
+ * Aşama 10 #3 (sınırlı yeniden deneme): one retry, only for the transient
+ * codes above, with a short backoff — not a general-purpose retry loop.
+ * `sleep` is injectable for tests.
+ */
+export async function fetchWithRetry(
+	url: URL,
+	attempts = 2,
+	fetcher: (url: URL) => Promise<Buffer> = fetchWithCap,
+	sleep: (ms: number) => Promise<void> = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+): Promise<Buffer> {
+	for (let attempt = 1; ; attempt++) {
+		try {
+			return await fetcher(url);
+		} catch (err) {
+			if (attempt >= attempts || !isTransientFetchError(err)) throw err;
+			await sleep(1000 * attempt);
+		}
+	}
 }

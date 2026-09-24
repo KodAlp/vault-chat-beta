@@ -14,7 +14,13 @@ import {
 	describeError,
 	nextRedirectTarget,
 	pdfContentTypeMismatch,
-	fetchWithCap
+	fetchWithCap,
+	rewriteArxivAbsToPdf,
+	extractPdfLinks,
+	isAllowedByRobots,
+	politeDelay,
+	isTransientFetchError,
+	fetchWithRetry
 } from './link-import';
 
 test('isPdfBytes recognizes the %PDF- magic signature', () => {
@@ -228,4 +234,139 @@ test('pdfContentTypeMismatch is silent when the bytes match, or the URL never pr
 test('fetchWithCap rejects a loopback/private target before ever sending a request — the SSRF check cannot be routed around by calling it directly', async () => {
 	await assert.rejects(fetchWithCap(new URL('http://127.0.0.1:1/x')), /Yerel\/özel ağ/);
 	await assert.rejects(fetchWithCap(new URL('http://[::ffff:127.0.0.1]:1/x')), /Yerel\/özel ağ/);
+});
+
+test('rewriteArxivAbsToPdf rewrites the abstract page path to the PDF path, preserving the id/version', () => {
+	assert.equal(rewriteArxivAbsToPdf(new URL('https://arxiv.org/abs/1706.03762')).href, 'https://arxiv.org/pdf/1706.03762');
+	assert.equal(rewriteArxivAbsToPdf(new URL('https://arxiv.org/abs/1706.03762v2')).href, 'https://arxiv.org/pdf/1706.03762v2');
+	assert.equal(rewriteArxivAbsToPdf(new URL('https://export.arxiv.org/abs/1706.03762')).href, 'https://export.arxiv.org/pdf/1706.03762');
+});
+
+test('rewriteArxivAbsToPdf leaves non-arXiv hosts and non-/abs/ paths untouched', () => {
+	assert.equal(rewriteArxivAbsToPdf(new URL('https://example.com/abs/1706.03762')).href, 'https://example.com/abs/1706.03762');
+	assert.equal(rewriteArxivAbsToPdf(new URL('https://arxiv.org/pdf/1706.03762')).href, 'https://arxiv.org/pdf/1706.03762');
+	assert.equal(rewriteArxivAbsToPdf(new URL('https://notarxiv.org.evil.example/abs/1')).href, 'https://notarxiv.org.evil.example/abs/1');
+});
+
+// Real shape measured 2026-09-24 against MIT OCW's own "Download course
+// materials" page (the one page of a course site that IS server-rendered —
+// its regular lecture-notes/readings pages are a client-rendered SPA with
+// no static links at all, confirmed against three real course pages).
+test('extractPdfLinks finds same-origin PDF links and prefers real anchor text over a size badge', () => {
+	const html = `
+		<a href="/courses/x/lec01.pdf">Lecture 1 Notes</a>
+		<a href="/courses/x/hash123_final.pdf">pdf 478 kB</a>
+		<a href="https://cdn.example.com/other.pdf">Off-site PDF</a>
+		<a href="/courses/x/readings/">Not a PDF</a>
+	`;
+	const links = extractPdfLinks(html, new URL('https://ocw.example/courses/x/download/'));
+	assert.deepEqual(
+		links.map((l) => l.url),
+		['https://ocw.example/courses/x/lec01.pdf', 'https://ocw.example/courses/x/hash123_final.pdf']
+	);
+	assert.equal(links[0].text, 'Lecture 1 Notes');
+	// "pdf 478 kB" has no token >=3 chars that isn't noise/a number — falls
+	// back to the URL's own filename instead of a useless label.
+	assert.equal(links[1].text, 'hash123_final.pdf');
+});
+
+test('extractPdfLinks dedupes repeated links and ignores malformed hrefs', () => {
+	const html = `
+		<a href="/a.pdf">A</a>
+		<a href="/a.pdf">A again</a>
+		<a href="javascript:alert(1)">evil</a>
+		<a href="not a url at all\x00">broken</a>
+	`;
+	const links = extractPdfLinks(html, new URL('https://example.com/'));
+	assert.deepEqual(
+		links.map((l) => l.url),
+		['https://example.com/a.pdf']
+	);
+});
+
+test('isAllowedByRobots allows everything when robots.txt is missing/unreachable', () => {
+	assert.equal(isAllowedByRobots(new URL('https://example.com/private/x'), null), true);
+});
+
+test('isAllowedByRobots respects Disallow for the matched user-agent', () => {
+	const robotsTxt = ['User-agent: *', 'Disallow: /private/'].join('\n');
+	assert.equal(isAllowedByRobots(new URL('https://example.com/private/x'), robotsTxt), false);
+	assert.equal(isAllowedByRobots(new URL('https://example.com/public/x'), robotsTxt), true);
+});
+
+test('politeDelay waits out the remainder of the courtesy window since the last fetch to the same host, then updates it', async () => {
+	const registry = new Map<string, number>();
+	let clock = 1000;
+	const now = () => clock;
+	const waits: number[] = [];
+	const sleep = async (ms: number) => {
+		waits.push(ms);
+		clock += ms;
+	};
+
+	registry.set('example.com', 1000);
+	clock = 1400; // only 400ms elapsed, courtesy window is 1000ms
+	await politeDelay('example.com', registry, now, sleep);
+	assert.deepEqual(waits, [600]);
+	assert.equal(registry.get('example.com'), 2000);
+});
+
+test('politeDelay does not wait for a host that has never been fetched, or one whose window already elapsed', async () => {
+	const registry = new Map<string, number>();
+	const sleep = async () => {
+		throw new Error('should not sleep');
+	};
+	await politeDelay('never-fetched.example', registry, () => 5000, sleep);
+
+	registry.set('elapsed.example', 0);
+	await politeDelay('elapsed.example', registry, () => 5000, sleep);
+});
+
+test('isTransientFetchError recognizes only the curated transport-level codes', () => {
+	assert.equal(isTransientFetchError(Object.assign(new Error('x'), { cause: { code: 'ECONNRESET' } })), true);
+	assert.equal(isTransientFetchError(Object.assign(new Error('x'), { cause: { code: 'ETIMEDOUT' } })), true);
+	assert.equal(isTransientFetchError(new Error('İstek başarısız: 404')), false);
+	assert.equal(isTransientFetchError(new Error('Yerel/özel ağ adresine erişim reddedildi: x')), false);
+	assert.equal(isTransientFetchError('not an error'), false);
+});
+
+test('fetchWithRetry retries once on a transient error then succeeds, without a real sleep', async () => {
+	let attempt = 0;
+	const flaky = async () => {
+		attempt++;
+		if (attempt === 1) throw Object.assign(new Error('boom'), { cause: { code: 'ECONNRESET' } });
+		return Buffer.from('ok');
+	};
+	const waits: number[] = [];
+	const sleep = async (ms: number) => {
+		waits.push(ms);
+	};
+	const result = await fetchWithRetry(new URL('https://example.com/x'), 2, flaky, sleep);
+	assert.equal(result.toString(), 'ok');
+	assert.equal(attempt, 2);
+	assert.deepEqual(waits, [1000]);
+});
+
+test('fetchWithRetry does not retry a permanent (non-transient) failure', async () => {
+	let attempt = 0;
+	const alwaysNotFound = async () => {
+		attempt++;
+		throw new Error('İstek başarısız: 404');
+	};
+	await assert.rejects(fetchWithRetry(new URL('https://example.com/x'), 3, alwaysNotFound), /404/);
+	assert.equal(attempt, 1);
+});
+
+test('fetchWithRetry gives up after the attempt budget even for a transient error', async () => {
+	let attempt = 0;
+	const alwaysFlaky = async () => {
+		attempt++;
+		throw Object.assign(new Error('boom'), { cause: { code: 'ETIMEDOUT' } });
+	};
+	await assert.rejects(fetchWithRetry(new URL('https://example.com/x'), 2, alwaysFlaky, async () => {}), /boom/);
+	assert.equal(attempt, 2);
+});
+
+test('fetchWithRetry, with its real default fetcher, still rejects an SSRF target immediately', async () => {
+	await assert.rejects(fetchWithRetry(new URL('http://127.0.0.1:1/x')), /Yerel\/özel ağ/);
 });

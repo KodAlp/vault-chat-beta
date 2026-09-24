@@ -282,7 +282,15 @@
 		"statusNeedsReview": "needs review",
 		"statusFailed": "failed",
 		"statusPending": "awaiting confirmation",
-		"importFailed": "Import failed"
+		"importFailed": "Import failed",
+		"scanPageButton": "List PDF links on this page",
+		"scanPageHelp": "Only finds links present in the page's static HTML — content loaded later via JavaScript won't show up. E.g. an MIT OCW course's \"Download course materials\" page works, its regular in-course pages usually don't.",
+		"scanPageUrlPlaceholder": "https://ocw.mit.edu/.../download/",
+		"scanPageStart": "Scan",
+		"scanPageRunning": "Scanning...",
+		"scanPageEmpty": "No PDF links found on this page.",
+		"scanPageError": "Could not scan the page",
+		"scanPageAddSelected": "Add {count} links"
 	},
 
 	"LibraryTree": {
