@@ -3,7 +3,7 @@ import { chatWithFallback } from './providers/registry';
 import type { ChatMessage } from './providers/types';
 import { retrieve } from './retrieve';
 import { getMessages } from './chats-db';
-import { Slides, buildSlidesJsonSchema } from './slides-schema';
+import { Slides, buildSlidesJsonSchema, type SlideDiagramT } from './slides-schema';
 import { SLIDES_THEME_CSS } from './slides-theme';
 import { buildMarpDeck } from './slides-deck';
 import { createSlideDeck, type NewSlide } from './study-db';
@@ -103,7 +103,13 @@ async function callModel(
 	return text;
 }
 
-type ParseResult = { ok: true; slides: NewSlide[] } | { ok: false; error: string };
+/** result.data.slides (zod-validated, carries `diagram`) plus the resolved
+ * source_path — a superset of NewSlide that both createSlideDeck (DB write,
+ * which only reads NewSlide's own fields) and buildMarpDeck (which also
+ * needs `diagram`) can consume without a second mapping pass. */
+type ValidatedSlide = NewSlide & { diagram?: SlideDiagramT };
+
+type ParseResult = { ok: true; slides: ValidatedSlide[] } | { ok: false; error: string };
 
 function parseAndValidate(raw: string, idToPath: Map<string, string>): ParseResult {
 	let json: unknown;
@@ -126,11 +132,12 @@ function parseAndValidate(raw: string, idToPath: Map<string, string>): ParseResu
 	if (result.data.slides.length === 0) {
 		return { ok: false, error: 'Model hiç slayt üretmedi.' };
 	}
-	const slides: NewSlide[] = result.data.slides.map((s) => ({
+	const slides: ValidatedSlide[] = result.data.slides.map((s) => ({
 		layout: s.layout,
 		heading: s.heading,
 		content_markdown: s.content_markdown,
 		notes: s.notes ?? null,
+		diagram: s.diagram,
 		source_path: idToPath.get(s.source_id)!
 	}));
 	return { ok: true, slides };
@@ -157,8 +164,13 @@ gösterilecek, okunacak bir makale değil.`;
     alıntısı olsun, madde işareti YOK.
   - "code": bir kod örneği. Gövde bir Markdown kod bloğu (\`\`\` ile) + en fazla 1-2 açıklama cümlesi
     olsun.
-  - "diagram": bir süreç/ilişki anlatımı; şimdilik gövdeyi kısa madde işaretleriyle yaz (gerçek
-    diyagram çizimi henüz bağlı değil).
+  - "diagram": bir süreç/ilişki anlatımı (adımlar, akış, döngü). content_markdown'u yine de
+    kısa madde işaretleriyle yaz (diyagram üretilemezse gösterilecek yedek budur) AMA ayrıca
+    diagram alanını doldur: diagram.nodes en az 1 en fazla 8 öğe, her biri {id, label} (id kısa
+    bir kod, örn. "n1"; label ekranda görünecek kısa metin, en fazla birkaç kelime). diagram.edges
+    her biri {from, to, label?} — from/to, nodes içindeki bir id olmalı, adımlar arasındaki oku
+    temsil eder (label isteğe bağlı, ok üstünde görünür). nodes dizisini akışın doğal sırasıyla
+    yaz (ilk adım ilk eleman), ardışık adımlar arasına bir kenar ekle.
   - İLK slaytı her zaman "title" yap. Aradan sonra ÇOĞUNLUKLA "bullets" kullan ama konu uygunsa
     "quote"/"two-column"/"code"/"diagram"ı da kullan — bütün sunumu tek düzende yazma.
 - content_markdown'a heading'i TEKRAR YAZMA — heading ayrı bir alan, gövdeye yalnızca o slaytın

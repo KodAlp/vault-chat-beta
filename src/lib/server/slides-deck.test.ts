@@ -57,3 +57,55 @@ test('every SLIDE_LAYOUTS value renders via the real Marp/theme pipeline without
 	assert.equal(katexMatches.length, SLIDE_LAYOUTS.length);
 	assert.doesNotMatch(html, /\$x\^2\$/);
 });
+
+test('a diagram layout with valid node/edge data renders the deterministic SVG through the real Marp pipeline (F13-3)', () => {
+	const deck = buildMarpDeck([
+		{
+			layout: 'diagram',
+			heading: 'Süreç',
+			content_markdown: '- yedek madde listesi (diyagram yoksa gösterilir)',
+			diagram: {
+				nodes: [
+					{ id: 'n1', label: 'İstek gelir' },
+					{ id: 'n2', label: 'İşlenir' },
+					{ id: 'n3', label: 'Yanıt döner' }
+				],
+				edges: [
+					{ from: 'n1', to: 'n2' },
+					{ from: 'n2', to: 'n3', label: 'başarılı' }
+				]
+			}
+		}
+	]);
+	// The rendered SVG replaced content_markdown entirely for this slide —
+	// the fallback bullet text must NOT leak into the deck alongside it.
+	assert.doesNotMatch(deck, /yedek madde listesi/);
+	assert.match(deck, /<svg /);
+	assert.match(deck, /İstek gelir/);
+
+	const marp = new Marp({ math: 'katex' });
+	marp.themeSet.add(SLIDES_THEME_CSS);
+	const { html } = marp.render(deck); // must not throw — raw SVG survives Marp's own markdown-it pass
+	assert.match(html, /class="diagram"/);
+	assert.match(html, /<svg /);
+	assert.match(html, /İstek gelir/);
+});
+
+test('a diagram layout with no diagram data falls back to content_markdown untouched', () => {
+	const deck = buildMarpDeck([{ layout: 'diagram', heading: 'Süreç', content_markdown: '- adım 1\n- adım 2' }]);
+	assert.match(deck, /- adım 1\n- adım 2/);
+	assert.doesNotMatch(deck, /<svg /);
+});
+
+test('a diagram layout with only-invalid edges (unknown ids) falls back to content_markdown, not an empty SVG', () => {
+	const deck = buildMarpDeck([
+		{
+			layout: 'diagram',
+			heading: 'Süreç',
+			content_markdown: '- yedek',
+			diagram: { nodes: [], edges: [{ from: 'ghost1', to: 'ghost2' }] }
+		}
+	]);
+	assert.match(deck, /- yedek/);
+	assert.doesNotMatch(deck, /<svg /);
+});
