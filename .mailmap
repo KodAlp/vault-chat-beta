@@ -1,0 +1,11 @@
+# Maps this repo's commit history to a public-safe identity for display
+# (GitHub, `git log --use-mailmap`, `git shortlog`) — it does NOT rewrite any
+# commit, so hashes and the raw author record are untouched. See
+# docs/yol-2026-09-23.md Aşama 12 for why: the real address below was used
+# for every commit before publish; this repo was never force-pushed/rewritten
+# to remove it, so the mailmap is the only public-facing fix.
+#
+# id+ without the numeric GitHub user id still routes correctly on GitHub in
+# practice; replace with the real numeric id (Settings > Emails) if you want
+# the exact canonical form.
+KodAlp <id+KodAlp@users.noreply.github.com> <190261096+KodAlp@users.noreply.github.com>
