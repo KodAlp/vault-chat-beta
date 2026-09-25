@@ -147,3 +147,69 @@ test('withModelStream releases its lease even when the consumer stops early', as
 	await gate.withModel('b', async () => 'ok');
 	assert.deepEqual(unloadCalls, ['a']);
 });
+
+test('evictAllForExclusiveJob waits for the active lease, then unloads every idle resident model', async () => {
+	const { deps, unloadCalls } = fakeDeps(() => new Set(['chat', 'embed-model']));
+	const gate = createOllamaGate(deps, { mutex: createMutex(), residentModels: ['embed-model'] });
+
+	const chatWork = deferred<string>();
+	const pChat = gate.withModel('chat', () => chatWork.promise);
+	await new Promise((r) => setTimeout(r, 0));
+
+	let evicted = false;
+	const pEvict = gate.evictAllForExclusiveJob().then(() => (evicted = true));
+
+	// The in-flight chat call is never cut off — nothing unloads until it ends.
+	await new Promise((r) => setTimeout(r, 20));
+	assert.equal(evicted, false);
+	assert.deepEqual(unloadCalls, []);
+
+	chatWork.resolve('chat-done');
+	assert.equal(await pChat, 'chat-done');
+	await pEvict;
+	assert.deepEqual([...unloadCalls].sort(), ['chat', 'embed-model']);
+});
+
+test('evictAllForExclusiveJob leaves a model with an open lease loaded', async () => {
+	const { deps, unloadCalls } = fakeDeps(() => new Set(['embed-model', 'stray']));
+	const gate = createOllamaGate(deps, { mutex: createMutex(), residentModels: ['embed-model'] });
+
+	const embedWork = deferred<string>();
+	const pEmbed = gate.withModel('embed-model', () => embedWork.promise);
+	await new Promise((r) => setTimeout(r, 0));
+
+	await gate.evictAllForExclusiveJob();
+	assert.deepEqual(unloadCalls, ['stray']);
+
+	embedWork.resolve('embed-done');
+	assert.equal(await pEmbed, 'embed-done');
+});
+
+test('after evictAllForExclusiveJob, the old model waits behind the job holding the mutex', async () => {
+	const { deps } = fakeDeps(() => new Set());
+	const mutex = createMutex();
+	const gate = createOllamaGate(deps, { mutex, residentModels: [] });
+
+	await gate.withModel('chat', async () => 'warm'); // 'chat' becomes the active model
+
+	const job = deferred();
+	let chatRan = false;
+	const pJob = mutex.run(async () => {
+		await gate.evictAllForExclusiveJob();
+		await job.promise; // the conversion
+	});
+	await new Promise((r) => setTimeout(r, 0));
+
+	// Without eviction this would take the same-model fast path and run now.
+	const pChat = gate.withModel('chat', async () => {
+		chatRan = true;
+		return 'chat-done';
+	});
+	await new Promise((r) => setTimeout(r, 20));
+	assert.equal(chatRan, false);
+
+	job.resolve();
+	await pJob;
+	assert.equal(await pChat, 'chat-done');
+	assert.equal(chatRan, true);
+});

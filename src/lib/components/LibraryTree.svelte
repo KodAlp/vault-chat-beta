@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import type { LibraryNode } from '$lib/types';
 	import UploadDialog from './UploadDialog.svelte';
+	import BatchUploadDialog from './BatchUploadDialog.svelte';
 	import LibraryTreeNode from './LibraryTreeNode.svelte';
 	import { t } from '$lib/i18n/index.svelte';
 
@@ -23,6 +24,7 @@
 
 <div class="library-tree">
 	<UploadDialog onImported={refresh} />
+	<BatchUploadDialog onImported={refresh} />
 
 	{#if loadError}
 		<p class="error" role="alert">{loadError}</p>
