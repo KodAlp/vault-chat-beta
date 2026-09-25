@@ -351,6 +351,26 @@
 		"tooLarge": "File too large — the server refused an upload of this size."
 	},
 
+	"BatchUploadDialog": {
+		"trigger": "+ Upload multiple / folder",
+		"dialogTitle": "Upload Multiple Files / Folder",
+		"dialogDescription": "Pick several files, or a whole folder; files are converted one at a time, and the chat model is unloaded from VRAM before each one. No per-file confirmation — defaults are applied, with a summary at the end.",
+		"pickFilesLabel": "Files (multiple selection)",
+		"pickFolderLabel": "Folder (subfolder structure is kept)",
+		"previewSummary": "{allowed} file(s) will be processed, {skipped} skipped",
+		"start": "Start",
+		"stop": "Stop",
+		"progressHeader": "{current}/{total} — {fileName} — {stage}",
+		"skipJunk": "System/hidden file",
+		"skipTooLarge": "File too large (100MB limit)",
+		"skipUnsupported": "Unsupported file type: {ext}",
+		"statusConverted": "imported",
+		"statusSkipped": "skipped",
+		"statusNeedsReview": "needs review",
+		"statusFailed": "failed",
+		"statusPending": "queued"
+	},
+
 	"SourceTree": {
 		"title": "Sources",
 		"selectAll": "all",

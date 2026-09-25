@@ -6,6 +6,7 @@ import { AppError } from './app-error';
 import { resolvePandocBin } from './pandoc-bin';
 import { resolvePythonBin, defaultPythonDeps } from './python-bin';
 import { dataDir } from './env';
+import { ollamaGate } from './providers/ollama-gate';
 
 function safeDataDir(): string | null {
 	try {
@@ -204,6 +205,12 @@ function runConvert(
  * conversion runs at a time regardless of how many uploads arrive at once.
  * Shares `sharedJobMutex` with Faz 6's Ollama model-swap logic — a model
  * load/unload and a running conversion must never overlap either.
+ *
+ * `exclusiveGpu` (batch import): before this conversion starts, unload every
+ * idle Ollama model so docling has the 6 GB card to itself — measured
+ * (Aşama 7) at roughly 3x slower when qwen3 is resident. A chat request that
+ * arrives meanwhile waits for this one file, not the whole batch: the mutex
+ * is released between files.
  */
 export function enqueueConversion(
 	inPath: string,
@@ -211,7 +218,11 @@ export function enqueueConversion(
 	tool: string,
 	onEvent?: (event: ConvertEvent) => void,
 	sourceName?: string,
-	pages?: string
+	pages?: string,
+	opts: { exclusiveGpu?: boolean } = {}
 ): Promise<ConvertEvent & { type: 'done' }> {
-	return sharedJobMutex.run(() => runConvert(inPath, outDir, tool, onEvent, sourceName, pages));
+	return sharedJobMutex.run(async () => {
+		if (opts.exclusiveGpu) await ollamaGate.evictAllForExclusiveJob();
+		return runConvert(inPath, outDir, tool, onEvent, sourceName, pages);
+	});
 }

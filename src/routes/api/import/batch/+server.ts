@@ -4,6 +4,7 @@ import crypto from 'node:crypto';
 import matter from 'gray-matter';
 import type { RequestHandler } from './$types';
 import { enqueueConversion } from '$lib/server/convertQueue';
+import { relDirToSegments } from '$lib/server/batch-paths';
 import {
 	stagingDir,
 	resolveLibraryPath,
@@ -26,16 +27,31 @@ import type { ImportEvent, ImportResultItem, ImportSummary } from '$lib/types';
 /**
  * Batch upload — no per-file confirm step (would be tedious for N files):
  * defaults are auto-applied (title = converter's H1/filename guess, domain =
- * the folder the user dropped into, level = undergraduate), needs_review
- * carried through from the converter, and the whole thing ends in a
- * pdf2md-style summary. Single-file upload (/api/import) keeps the nicer
- * confirm-dialog flow — see the Faz 5 plan for why the two differ.
+ * the folder the user dropped into, level = form-supplied, default
+ * undergraduate), needs_review carried through from the converter, and the
+ * whole thing ends in a pdf2md-style summary. Single-file upload
+ * (/api/import) keeps the nicer confirm-dialog flow — see the Faz 5 plan for
+ * why the two differ.
+ *
+ * BatchUploadDialog.svelte (multi-file/folder import) now sends ONE file per
+ * request — a sequential client-side loop, not a single multi-file POST —
+ * so the Ollama-eviction win below (exclusiveGpu) applies file-by-file
+ * rather than for a whole batch stuck behind one slow document; `files`
+ * still accepts several entries for backward compat with any other caller.
+ * `relDir` carries the picked folder's subdirectory structure (already
+ * stripped of the folder's own top-level name by the client — that becomes
+ * `domain`); `level` is the study level chosen in the dialog.
  */
 export const POST: RequestHandler = async ({ request }) => {
 	const formData = await request.formData();
 	const domain = (formData.get('domain') as string | null)?.trim() || 'genel';
+	const relDir = (formData.get('relDir') as string | null) ?? '';
+	const levelRaw = (formData.get('level') as string | null) ?? '';
+	const level = levelRaw === 'graduate' || levelRaw === 'phd' ? levelRaw : 'undergraduate';
 	const files = formData.getAll('files').filter((f): f is File => f instanceof File);
 	const v = vaultFromId(formData.get('vault') as string | null);
+	const subSegments = relDirToSegments(relDir);
+	const dir = [domain, ...subSegments].join('/');
 
 	// sseStream, not a bare ReadableStream — same crash this fixed for the
 	// five /api/generate/* routes and for /api/import: an abandoned batch
@@ -96,7 +112,9 @@ export const POST: RequestHandler = async ({ request }) => {
 			fs.writeFileSync(tempIn, fileBytes);
 
 			try {
-				const result = await enqueueConversion(tempIn, workDir, 'auto', undefined, safeName);
+				const result = await enqueueConversion(tempIn, workDir, 'auto', undefined, safeName, undefined, {
+					exclusiveGpu: true
+				});
 				if (!result.outPath) throw new AppError('CONVERSION_EMPTY');
 
 				const raw = fs.readFileSync(result.outPath, 'utf-8');
@@ -107,11 +125,11 @@ export const POST: RequestHandler = async ({ request }) => {
 					...parsed.data,
 					title,
 					domain,
-					level: 'undergraduate'
+					level
 				};
 
-				const filename = `${slugify(v, title, domain)}.md`;
-				const relPath = `${domain}/${filename}`;
+				const filename = `${slugify(v, title, dir)}.md`;
+				const relPath = `${dir}/${filename}`;
 				const destAbs = resolveLibraryPath(v, relPath);
 				fs.mkdirSync(path.dirname(destAbs), { recursive: true });
 				const finalRaw = matter.stringify(parsed.content, frontmatter);

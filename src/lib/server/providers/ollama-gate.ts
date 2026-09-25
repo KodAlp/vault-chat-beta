@@ -13,6 +13,14 @@ export interface OllamaGate {
 	 * so callers (e.g. a future settings page) can show real state instead
 	 * of this gate's ledger, which is a belief, not a fact. */
 	reconcile(): Promise<Set<string>>;
+	/** Frees VRAM for a job that must own the GPU (a docling conversion in a
+	 * batch import): forgets the active model so every later lease on it
+	 * queues behind the shared mutex, waits for leases already open on it to
+	 * finish, then unloads every model Ollama reports resident that has no
+	 * open lease. MUST be called from inside `sharedJobMutex.run()` — it does
+	 * not take the mutex itself (nesting would deadlock), and it is holding
+	 * the mutex that keeps a new chat from reloading the model mid-job. */
+	evictAllForExclusiveJob(): Promise<void>;
 }
 
 interface GateDeps {
@@ -183,7 +191,22 @@ export function createOllamaGate(
 				decRef(model);
 			}
 		},
-		reconcile: deps.reconcile
+		reconcile: deps.reconcile,
+		async evictAllForExclusiveJob(): Promise<void> {
+			// Cleared before waiting, not after: from here on a request for
+			// the old model misses acquireNonResident's fast path and queues
+			// on the mutex this job's caller already holds.
+			const prev = currentModel;
+			currentModel = null;
+			if (prev) await waitForDrain(prev);
+			const residentNow = await deps.reconcile();
+			for (const model of residentNow) {
+				// A resident model (the embedder) can still hold a lease here —
+				// it never queues on the mutex. Leave it loaded rather than
+				// pull it out from under an in-flight call.
+				if (state(model).refCount === 0) await deps.unload(model);
+			}
+		}
 	};
 }
 
