@@ -5,7 +5,4 @@
 # for every commit before publish; this repo was never force-pushed/rewritten
 # to remove it, so the mailmap is the only public-facing fix.
 #
-# id+ without the numeric GitHub user id still routes correctly on GitHub in
-# practice; replace with the real numeric id (Settings > Emails) if you want
-# the exact canonical form.
-KodAlp <id+KodAlp@users.noreply.github.com> <190261096+KodAlp@users.noreply.github.com>
+KodAlp <190261096+KodAlp@users.noreply.github.com> <190261096+KodAlp@users.noreply.github.com>
