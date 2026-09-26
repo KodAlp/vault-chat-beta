@@ -33,6 +33,12 @@
 	let chains = $state<Record<string, string[]>>({});
 	let loadError = $state('');
 
+	function patchProvider(id: string, patch: Partial<ProviderStatus>) {
+		const idx = providers.findIndex((p) => p.id === id);
+		if (idx === -1) return;
+		Object.assign(providers[idx], patch);
+	}
+
 	// Per-provider "which model to use when the fallback chain reaches this
 	// provider without an explicit pin" — see registry.ts's resolveHopModel.
 	// /api/providers/models already tags each option with providerId (Chat.svelte's
@@ -82,7 +88,7 @@
 				body: JSON.stringify({ enabledModels: enabledIds })
 			});
 			if (!res.ok) throw new Error();
-			await refresh(); // the plain picker list (modelsFor) must reflect the new allow-list too
+			await refreshProviderModels(); // the plain picker list (modelsFor) must reflect the new allow-list too
 		} catch {
 			modelManageError[providerId] = t('ProvidersSettingsPage.modelManageSaveError');
 		} finally {
@@ -107,7 +113,7 @@
 	let deleteTargetId = $state<string | null>(null);
 	let deleteTargetLabel = $state('');
 
-	async function refresh() {
+	async function refreshProviders() {
 		try {
 			const [pRes, cRes] = await Promise.all([
 				fetch('/api/providers'),
@@ -119,12 +125,19 @@
 		} catch {
 			loadError = t('ProvidersSettingsPage.loadError');
 		}
+	}
+
+	async function refreshProviderModels() {
 		try {
 			const res = await fetch('/api/providers/models');
 			if (res.ok) providerModels = (await res.json()) as ProviderModelOption[];
 		} catch {
 			// Varsayılan model seçicisi boş kalır — sayfanın geri kalanı çalışır.
 		}
+	}
+
+	async function refresh() {
+		await Promise.all([refreshProviders(), refreshProviderModels()]);
 	}
 
 	async function setDefaultModel(p: ProviderStatus, modelId: string) {
@@ -135,7 +148,7 @@
 				body: JSON.stringify({ defaultModel: modelId || null })
 			});
 			if (!res.ok) throw new Error();
-			await refresh();
+			patchProvider(p.id, { defaultModel: modelId || null });
 		} catch {
 			loadError = t('ProvidersSettingsPage.defaultModelUpdateFailed', { label: p.label });
 		}
@@ -223,11 +236,12 @@
 	}
 
 	async function toggleEnabled(p: ProviderStatus) {
+		const nextEnabled = !p.enabled;
 		try {
 			const res = await fetch(`/api/providers/${encodeURIComponent(p.id)}`, {
 				method: 'PATCH',
 				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ enabled: !p.enabled })
+				body: JSON.stringify({ enabled: nextEnabled })
 			});
 			if (!res.ok) {
 				// The endpoint now rejects disabling Ollama (its own chain
@@ -236,7 +250,8 @@
 				const data = (await res.json().catch(() => null)) as { message?: string } | null;
 				throw new Error(data?.message);
 			}
-			await refresh();
+			patchProvider(p.id, { enabled: nextEnabled });
+			void refreshProviderModels();
 		} catch (err) {
 			loadError = err instanceof Error && err.message ? err.message : t('ProvidersSettingsPage.updateFailed', { label: p.label });
 		}
@@ -257,8 +272,10 @@
 				body: JSON.stringify({ key })
 			});
 			if (!res.ok) throw new Error();
+			const data = (await res.json()) as { keyStatus: 'connected'; mask: string | null };
 			keyEditingId = null;
-			await refresh();
+			patchProvider(p.id, { keyStatus: data.keyStatus, mask: data.mask });
+			void refreshProviderModels();
 		} catch {
 			loadError = t('ProvidersSettingsPage.keySaveFailed', { label: p.label });
 		}
@@ -275,7 +292,8 @@
 		try {
 			const res = await fetch(`/api/providers/${encodeURIComponent(p.id)}/key`, { method: 'DELETE' });
 			if (!res.ok) throw new Error();
-			await refresh();
+			patchProvider(p.id, { keyStatus: 'none', mask: null });
+			void refreshProviderModels();
 		} catch {
 			loadError = t('ProvidersSettingsPage.keyDeleteFailed', { label: p.label });
 		}
@@ -294,7 +312,8 @@
 		}
 	}
 
-	async function saveChain(taskType: string, providerIds: string[]) {
+	async function saveChain(taskType: string, providerIds: string[], previous: string[]) {
+		chains[taskType] = providerIds;
 		try {
 			const res = await fetch('/api/providers/chains', {
 				method: 'PATCH',
@@ -302,32 +321,35 @@
 				body: JSON.stringify({ taskType, providerIds })
 			});
 			if (!res.ok) throw new Error();
-			chains[taskType] = providerIds;
 		} catch {
+			chains[taskType] = previous;
 			loadError = t('ProvidersSettingsPage.chainUpdateFailed', { taskType: TASK_LABELS[taskType] ?? taskType });
 		}
 	}
 
 	function moveInChain(taskType: string, index: number, dir: -1 | 1) {
-		const chain = [...(chains[taskType] ?? [])];
+		const previous = chains[taskType] ?? [];
+		const chain = [...previous];
 		const target = index + dir;
 		if (target < 0 || target >= chain.length) return;
 		[chain[index], chain[target]] = [chain[target], chain[index]];
-		void saveChain(taskType, chain);
+		void saveChain(taskType, chain, previous);
 	}
 
 	function removeFromChain(taskType: string, index: number) {
-		const chain = [...(chains[taskType] ?? [])];
+		const previous = chains[taskType] ?? [];
+		const chain = [...previous];
 		chain.splice(index, 1);
-		void saveChain(taskType, chain);
+		void saveChain(taskType, chain, previous);
 	}
 
 	function addToChain(taskType: string) {
 		const id = addChainSelection[taskType];
 		if (!id) return;
-		const chain = [...(chains[taskType] ?? []), id];
+		const previous = chains[taskType] ?? [];
+		const chain = [...previous, id];
 		addChainSelection[taskType] = '';
-		void saveChain(taskType, chain);
+		void saveChain(taskType, chain, previous);
 	}
 
 	function availableToAdd(taskType: string): ProviderStatus[] {
@@ -582,7 +604,7 @@
 			<div class="flex flex-wrap items-center gap-3 border-b py-2.5">
 				<span class="min-w-[140px] text-sm font-semibold">{TASK_LABELS[taskType]}</span>
 				<div class="flex flex-1 flex-wrap gap-1.5">
-					{#each chains[taskType] ?? [] as providerId, i (providerId + i)}
+					{#each chains[taskType] ?? [] as providerId, i (providerId)}
 						<span class="inline-flex items-center gap-0.5 rounded-full border py-0.5 pr-1.5 pl-2.5 text-xs">
 							{labelFor(providerId)}
 							<button
