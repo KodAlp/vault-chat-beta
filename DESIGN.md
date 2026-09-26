@@ -158,6 +158,31 @@ motion:
   chips/filters.
 - **Empty states**: the particle-vortex / light-beam art direction lives here
   (and only here) — one SVG illustration, Fraunces headline, one action.
+- **Citation ↔ tree highlight**: hovering (after a ~120ms intent delay) or
+  focusing a citation chip lights the cited note in the source tree with the
+  selected-row language (`accent-soft` fill + `hairline-accent` inset rule)
+  and scrolls it into view; a collapsed folder containing it gets only the
+  rule and is never auto-expanded. Transient — it clears on leave. This is the
+  app's one authored motion moment: the answer visibly points at your notes.
+
+## Motion
+
+- **Jobs, in order**: acknowledge an action, make a state change legible,
+  keep continuity. Nothing moves for decoration.
+- **Timing**: enter over `base` (200ms), exit over `fast` (150ms) — exits are
+  always faster. Overlays (dialog, sheet, select, dropdown, tooltip) use the
+  local `animate-in`/`animate-out` utilities in `src/app.css`, which read the
+  tokens rather than each component's own `duration-*` class.
+- **JS-driven motion goes through `src/lib/motion.ts`.** Svelte transitions
+  and `animate:flip` run on the Web Animations API, which the CSS
+  reduced-motion net in `app.css` cannot reach, so every one of them uses
+  `motionFly` / `flipDuration()` / `motionEase` instead of `svelte/transition`
+  directly.
+- **Reduced motion** removes spatial movement (slides, scales, reorders) but
+  keeps opacity and color changes, so every state change stays visible.
+- **Material**: transform, opacity, clip-path, background-color. No blur,
+  filter or looping effects on data surfaces — the GPU is often busy with the
+  local model.
 
 ## Light companion
 
