@@ -64,8 +64,12 @@ export interface ChatMessage {
 	interrupted?: boolean;
 	/** Client-only, never persisted — provider-fallback notices ("deepseek
 	 * unavailable → switched to local model") that arrived while this
-	 * message streamed in. Rendered as a system aside, not assistant prose. */
-	notices?: string[];
+	 * message streamed in. Rendered as a system aside, not assistant prose.
+	 * Structured (code/params), not a plain string, so Message.svelte can
+	 * localize it the same way a StreamEvent 'notice'/'error' is — see
+	 * server-error.ts's localizeError. `message` is the same log-friendly
+	 * fallback text the server sent, used only if `code` fails to resolve. */
+	notices?: { message: string; code?: string; params?: Record<string, string | number> }[];
 	/** Mirrors RetrieveResult.narrowScope for this message's answer — set
 	 * when retrieve() found relevant chunks but a scope filter excluded all
 	 * of them. Drives Message.svelte's "kapsamı genişlet?" suggestion. */
@@ -472,9 +476,21 @@ export interface LibrarySettings {
 export type ImportResultStatus = 'converted' | 'skipped' | 'needs_review' | 'failed' | 'pending';
 
 export interface ImportResultItem {
+	/** Unique per item (server-assigned crypto.randomUUID()) — the list-key a
+	 * result list must use instead of fileName, which collides whenever two
+	 * different files/links share a display name (two `index.md` in
+	 * different folders, the same URL retried). */
+	id: string;
 	fileName: string;
 	status: ImportResultStatus;
+	/** Set to `code` (or left as a human string for a still-unconverted
+	 * call site) — kept for logs/back-compat; the UI should prefer
+	 * `localizeError({ code, params, message: reason })`. */
 	reason?: string;
+	/** Present alongside `reason` once this item's failure has been
+	 * converted to the coded-error scheme (see $lib/errors.ts). */
+	code?: string;
+	params?: Record<string, string | number>;
 	path?: string;
 	/** Only set when status is 'pending' (Aşama 6 #10): the links importer
 	 * now stages each result instead of writing it straight into the

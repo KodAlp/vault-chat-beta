@@ -14,8 +14,27 @@ const DICT: Record<string, string> = {
 	'ServerErrors.NOT_FOUND': '{entity} bulunamadı',
 	'ServerErrors.entity_quiz': 'Sınav',
 	'ServerErrors.PROVIDER_AUTH': '{provider}: API anahtarı geçersiz veya eksik',
-	'ServerErrors.UNKNOWN': 'Beklenmeyen bir hata oluştu'
+	'ServerErrors.UNKNOWN': 'Beklenmeyen bir hata oluştu',
+	'ServerErrors.GEN_REPORT_INVALID': 'Rapor üretilemedi',
+	'ServerErrors.PINNED': '{provider} {reason} → zincir',
+	'ServerErrors.reason_invalid_json': 'Model geçerli JSON döndürmedi',
+	'ServerErrors.reason_disabled': 'devre dışı'
 };
+
+test('a known reason without a template slot is resolved and appended', () => {
+	const result = formatCodedError({ code: 'GEN_REPORT_INVALID', params: { reason: 'invalid_json' } }, fakeTranslate, 'fb');
+	assert.equal(result, 'Rapor üretilemedi — Model geçerli JSON döndürmedi');
+});
+
+test('a known reason with a template slot is interpolated, not appended again', () => {
+	const result = formatCodedError({ code: 'PINNED', params: { provider: 'groq', reason: 'disabled' } }, fakeTranslate, 'fb');
+	assert.equal(result, 'groq devre dışı → zincir');
+});
+
+test('an unknown reason token is still shown rather than dropped', () => {
+	const result = formatCodedError({ code: 'GEN_REPORT_INVALID', params: { reason: 'weird_case' } }, fakeTranslate, 'fb');
+	assert.equal(result, 'Rapor üretilemedi — weird_case');
+});
 
 function fakeTranslate(key: string, params?: ErrorParams): string {
 	const template = DICT[key];
