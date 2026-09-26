@@ -3,6 +3,7 @@
 	import { renderMarkdown } from '$lib/markdown';
 	import { libraryViewerUrl } from '$lib/sourceLink';
 	import { t } from '$lib/i18n/index.svelte';
+	import { readResponseError, localizeError } from '$lib/server-error';
 	import type { CardView, Grade } from '$lib/types';
 	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
@@ -41,6 +42,7 @@
 	type Phase = 'loading' | 'reviewing' | 'grading' | 'done' | 'empty' | 'error';
 
 	let phase = $state<Phase>('loading');
+	let notFound = $state(false);
 	let cards = $state<CardView[]>([]);
 	let currentIndex = $state(0);
 	let revealed = $state(false);
@@ -55,19 +57,32 @@
 	let frontHtml = $state('');
 	let backHtml = $state('');
 
-	onMount(async () => {
+	async function load() {
+		phase = 'loading';
+		notFound = false;
+		errorMessage = '';
 		try {
 			const res = await fetch(fetchUrl);
-			if (!res.ok) throw new Error();
+			if (!res.ok) {
+				if (res.status === 404) {
+					notFound = true;
+				} else {
+					errorMessage = await readResponseError(res);
+				}
+				phase = 'error';
+				return;
+			}
 			const body = (await res.json()) as { cards: CardView[]; deckName?: string };
 			cards = body.cards;
 			if (body.deckName) pageTitle = body.deckName;
 			phase = cards.length === 0 ? 'empty' : 'reviewing';
-		} catch {
-			errorMessage = t('CardsStudyPage.loadError');
+		} catch (err) {
+			errorMessage = localizeError({ message: err instanceof Error ? err.message : undefined });
 			phase = 'error';
 		}
-	});
+	}
+
+	onMount(load);
 
 	$effect(() => {
 		const card = cards[currentIndex];
@@ -115,12 +130,23 @@
 	{#if phase === 'loading'}
 		<p class="status">{t('Common.yukleniyor')}</p>
 	{:else if phase === 'error'}
-		<p class="status error" role="alert">{errorMessage}</p>
+		{#if notFound}
+			<p class="status error" role="alert">{t('CardsStudyPage.notFoundTitle')}</p>
+			<p class="status">{t('CardsStudyPage.notFoundBody')}</p>
+		{:else}
+			<p class="status error" role="alert">{errorMessage}</p>
+			<div class="retry-row">
+				<button type="button" class="retry-btn" onclick={load}>{t('Common.yenidenDene')}</button>
+			</div>
+		{/if}
 	{:else if phase === 'empty'}
+		<h1>{pageTitle}</h1>
 		<p class="status">{emptyMessage ?? t('CardsStudyPage.empty')}</p>
 	{:else if phase === 'done'}
+		<h1>{pageTitle}</h1>
 		<p class="status">{t('CardsStudyPage.done', { count: reviewedCount })}</p>
 	{:else if phase === 'reviewing' || phase === 'grading'}
+		<h1>{pageTitle}</h1>
 		{@const card = cards[currentIndex]}
 		<div class="progress-bar">
 			<div class="progress-fill" style="transform: scaleX({(currentIndex + 1) / cards.length})"></div>
@@ -200,6 +226,39 @@
 		color: var(--color-destructive);
 	}
 
+	.retry-row {
+		display: flex;
+		justify-content: center;
+		margin-top: 1rem;
+	}
+
+	.retry-btn {
+		padding: 0.5rem 1.2rem;
+		border-radius: 8px;
+		border: 1px solid var(--color-border);
+		background: transparent;
+		color: var(--color-foreground);
+		cursor: pointer;
+	}
+
+	.retry-btn:hover {
+		border-color: var(--color-primary);
+		color: var(--color-primary);
+	}
+
+	.retry-btn:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
+	}
+
+	.cards-screen h1 {
+		font-family: var(--font-display);
+		font-weight: 480;
+		letter-spacing: -0.015em;
+		font-size: 1.5rem;
+		margin: 0 0 1.5rem;
+	}
+
 	.progress-bar {
 		height: 6px;
 		background: var(--color-border);
@@ -255,6 +314,8 @@
 		text-decoration: none;
 		color: var(--color-muted-foreground);
 		padding: 0.2rem 0.65rem;
+		overflow-wrap: anywhere;
+		min-width: 0;
 	}
 
 	.chip:hover {

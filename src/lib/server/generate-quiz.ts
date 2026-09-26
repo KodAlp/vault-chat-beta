@@ -16,6 +16,7 @@ import { logAppEvent } from './app-log';
 import { renderUserSkillsBlock } from './userSkills';
 import type { VaultContext } from './vaults';
 import { NoSourcesError } from './generate-errors';
+import { AppError } from './app-error';
 
 export interface GenerateQuizInput {
 	domains?: string[];
@@ -223,7 +224,7 @@ export async function generateQuiz(
 	input = { ...input, composition: clampComposition(input.composition) };
 	const total = input.composition.mc + input.composition.tf + input.composition.open;
 	if (total === 0) {
-		throw new Error('En az bir soru seçilmeli.');
+		throw new AppError('GEN_QUIZ_NO_TYPES');
 	}
 
 	const topicalQuery = await extractTopicalQuery(input.prompt, input.model, input.provider);
@@ -349,7 +350,7 @@ export async function generateQuiz(
 	items = items.map((it, idx) => ({ it, idx })).sort((x, y) => order[x.it.type] - order[y.it.type] || x.idx - y.idx).map((x) => x.it);
 
 	if (items.length === 0) {
-		throw new Error('Sınav üretilemedi: hiçbir batch geçerli soru üretemedi.');
+		throw new AppError('GEN_QUIZ_EMPTY');
 	}
 
 	const title = input.prompt.length > 80 ? `${input.prompt.slice(0, 77)}...` : input.prompt;

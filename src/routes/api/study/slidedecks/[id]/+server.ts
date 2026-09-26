@@ -1,13 +1,14 @@
-import { error, json } from '@sveltejs/kit';
+import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getSlideDeck, getSlides, deleteSlideDeck } from '$lib/server/study-db';
 import { vaultFromUrl, vaultFromId } from '$lib/server/requestVault';
+import { fail } from '$lib/server/app-error';
 import type { SlideDeckView, SlideView } from '$lib/types';
 
 export const GET: RequestHandler = async ({ params, url }) => {
 	const v = vaultFromUrl(url);
 	const deck = getSlideDeck(v, params.id);
-	if (!deck) error(404, 'Sunum bulunamadı');
+	if (!deck) fail('NOT_FOUND', { entity: 'slidedeck' }, 404);
 
 	const slides: SlideView[] = getSlides(v, params.id).map((row) => ({
 		id: row.id,
@@ -32,7 +33,7 @@ export const GET: RequestHandler = async ({ params, url }) => {
 export const DELETE: RequestHandler = async ({ params, request }) => {
 	const body = (await request.json().catch(() => ({}))) as { vault?: string };
 	const v = vaultFromId(body.vault);
-	if (!getSlideDeck(v, params.id)) error(404, 'Sunum bulunamadı');
+	if (!getSlideDeck(v, params.id)) fail('NOT_FOUND', { entity: 'slidedeck' }, 404);
 	deleteSlideDeck(v, params.id);
 	return json({ ok: true });
 };

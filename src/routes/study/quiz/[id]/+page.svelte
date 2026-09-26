@@ -6,6 +6,7 @@
 	import { libraryViewerUrl } from '$lib/sourceLink';
 	import { resolveBackHref } from '$lib/back-link';
 	import { t } from '$lib/i18n/index.svelte';
+	import { readResponseError, localizeError } from '$lib/server-error';
 	import { scoreExcludingFlagged } from '$lib/study-answers';
 	import type { PageProps } from './$types';
 	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
@@ -24,6 +25,7 @@
 	type Phase = 'loading' | 'taking' | 'submitting' | 'results' | 'error';
 
 	let phase = $state<Phase>('loading');
+	let notFound = $state(false);
 	let quiz = $state<QuizView | null>(null);
 	let items = $state<QuizItemView[]>([]);
 	let attemptId = $state('');
@@ -82,7 +84,10 @@
 	);
 	let here = $derived(page.url.pathname + page.url.search);
 
-	onMount(async () => {
+	async function load() {
+		phase = 'loading';
+		notFound = false;
+		errorMessage = '';
 		try {
 			const [quizRes, attemptRes] = await Promise.all([
 				fetch(`/api/study/quizzes/${data.quizId}${quizQuery}`),
@@ -92,7 +97,16 @@
 					body: JSON.stringify({ quizId: data.quizId, vault: data.vaultId })
 				})
 			]);
-			if (!quizRes.ok || !attemptRes.ok) throw new Error();
+			const failed = !quizRes.ok ? quizRes : !attemptRes.ok ? attemptRes : null;
+			if (failed) {
+				if (failed.status === 404) {
+					notFound = true;
+				} else {
+					errorMessage = await readResponseError(failed);
+				}
+				phase = 'error';
+				return;
+			}
 			const quizData = (await quizRes.json()) as { quiz: QuizView; items: QuizItemView[] };
 			const attemptData = (await attemptRes.json()) as { attemptId: string };
 			quiz = quizData.quiz;
@@ -104,11 +118,13 @@
 			} else {
 				phase = 'taking';
 			}
-		} catch {
-			errorMessage = t('QuizStudyPage.loadError');
+		} catch (err) {
+			errorMessage = localizeError({ message: err instanceof Error ? err.message : undefined });
 			phase = 'error';
 		}
-	});
+	}
+
+	onMount(load);
 
 	$effect(() => {
 		const item = items[currentIndex];
@@ -194,9 +210,18 @@
 	{#if phase === 'loading'}
 		<p class="status">{t('Common.yukleniyor')}</p>
 	{:else if phase === 'error'}
-		<p class="status error" role="alert">{errorMessage}</p>
+		{#if notFound}
+			<p class="status error" role="alert">{t('QuizStudyPage.notFoundTitle')}</p>
+			<p class="status">{t('QuizStudyPage.notFoundBody')}</p>
+		{:else}
+			<p class="status error" role="alert">{errorMessage}</p>
+			<div class="retry-row">
+				<button type="button" class="retry-btn" onclick={load}>{t('Common.yenidenDene')}</button>
+			</div>
+		{/if}
 	{:else if phase === 'taking' || phase === 'submitting'}
 		{@const item = items[currentIndex]}
+		<h1>{quiz?.title ?? t('QuizStudyPage.defaultTitle')}</h1>
 		<div class="progress-bar">
 			<div class="progress-fill" style="transform: scaleX({(currentIndex + 1) / items.length})"></div>
 		</div>
@@ -211,6 +236,7 @@
 						<button
 							class="option"
 							class:selected={answers[item.id] === option}
+							aria-pressed={answers[item.id] === option}
 							onclick={() => selectAnswer(option)}
 						>
 							<span class="option-letter">{String.fromCharCode(65 + i)})</span>
@@ -220,10 +246,10 @@
 				</div>
 			{:else if item.type === 'true_false'}
 				<div class="options">
-					<button class="option" class:selected={answers[item.id] === 'true'} onclick={() => selectAnswer('true')}>
+					<button class="option" class:selected={answers[item.id] === 'true'} aria-pressed={answers[item.id] === 'true'} onclick={() => selectAnswer('true')}>
 						{t('QuizStudyPage.true')}
 					</button>
-					<button class="option" class:selected={answers[item.id] === 'false'} onclick={() => selectAnswer('false')}>
+					<button class="option" class:selected={answers[item.id] === 'false'} aria-pressed={answers[item.id] === 'false'} onclick={() => selectAnswer('false')}>
 						{t('QuizStudyPage.false')}
 					</button>
 				</div>
@@ -391,6 +417,31 @@
 		text-align: left;
 		margin: 0 0 1rem;
 		font-size: 0.85rem;
+	}
+
+	.retry-row {
+		display: flex;
+		justify-content: center;
+		margin-top: 1rem;
+	}
+
+	.retry-btn {
+		padding: 0.5rem 1.2rem;
+		border-radius: 8px;
+		border: 1px solid var(--color-border);
+		background: transparent;
+		color: var(--color-foreground);
+		cursor: pointer;
+	}
+
+	.retry-btn:hover {
+		border-color: var(--color-primary);
+		color: var(--color-primary);
+	}
+
+	.retry-btn:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
 	}
 
 	.progress-bar {
@@ -647,6 +698,8 @@
 		border: 1px solid var(--color-border);
 		border-radius: 999px;
 		padding: 0.2rem 0.65rem;
+		overflow-wrap: anywhere;
+		min-width: 0;
 	}
 
 	.source-link:hover {
@@ -662,7 +715,7 @@
 	.score-note {
 		margin: -1rem 0 1.25rem;
 		font-size: 0.8rem;
-		color: var(--color-muted-foreground, #666);
+		color: var(--color-muted-foreground);
 	}
 
 	.flag-row {
@@ -672,7 +725,7 @@
 		gap: 0.6rem;
 		margin-top: 0.5rem;
 		font-size: 0.78rem;
-		color: var(--color-muted-foreground, #666);
+		color: var(--color-muted-foreground);
 	}
 
 	.flag-btn {

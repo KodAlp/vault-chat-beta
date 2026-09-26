@@ -7,6 +7,8 @@ import { createReport, type NewReportSection } from './study-db';
 import { renderUserSkillsBlock } from './userSkills';
 import type { VaultContext } from './vaults';
 import { NoSourcesError } from './generate-errors';
+import { AppError } from './app-error';
+import type { ReasonKey } from '../errors';
 
 export interface GenerateReportInput {
 	domains?: string[];
@@ -101,7 +103,11 @@ async function callModel(
 	return text;
 }
 
-type ParseResult = { ok: true; sections: NewReportSection[] } | { ok: false; error: string };
+// `error` is Turkish because it goes back to the model in the retry prompt;
+// `reason` is what the user sees, localized client-side.
+type ParseResult =
+	| { ok: true; sections: NewReportSection[] }
+	| { ok: false; error: string; reason?: ReasonKey; reasonParams?: Record<string, number> };
 
 /**
  * Report's anti-hallucination check is looser than quiz/cards' "must equal
@@ -121,7 +127,7 @@ function parseAndValidate(raw: string, idToPath: Map<string, string>): ParseResu
 	try {
 		json = JSON.parse(raw);
 	} catch {
-		return { ok: false, error: 'Model geçerli JSON döndürmedi.' };
+		return { ok: false, error: 'Model geçerli JSON döndürmedi.', reason: 'invalid_json' };
 	}
 	const result = ReportSections.safeParse(json);
 	if (!result.success) {
@@ -133,7 +139,9 @@ function parseAndValidate(raw: string, idToPath: Map<string, string>): ParseResu
 	if (badSections.length > 0) {
 		return {
 			ok: false,
-			error: `${badSections.length} bölümün source_ids'i sağlanan kaynak kimlikleriyle eşleşmiyor (uydurma kaynak). Sadece S1, S2, ... gibi verilen kimlikleri kullan.`
+			error: `${badSections.length} bölümün source_ids'i sağlanan kaynak kimlikleriyle eşleşmiyor (uydurma kaynak). Sadece S1, S2, ... gibi verilen kimlikleri kullan.`,
+			reason: 'invented_source_ids',
+			reasonParams: { count: badSections.length }
 		};
 	}
 	// Compared over DISTINCT PATHS, not raw id counts: retrieve returns up to
@@ -148,11 +156,12 @@ function parseAndValidate(raw: string, idToPath: Map<string, string>): ParseResu
 	) {
 		return {
 			ok: false,
-			error: 'Her bölüm TÜM kaynakları aynı anda gösteriyor — her bölüm sadece ilgili olduğu kaynakları listelemeli, tüm kaynakları değil.'
+			error: 'Her bölüm TÜM kaynakları aynı anda gösteriyor — her bölüm sadece ilgili olduğu kaynakları listelemeli, tüm kaynakları değil.',
+			reason: 'report_sources_not_specific'
 		};
 	}
 	if (result.data.sections.length === 0) {
-		return { ok: false, error: 'Model hiç bölüm üretmedi.' };
+		return { ok: false, error: 'Model hiç bölüm üretmedi.', reason: 'report_no_sections' };
 	}
 	// Deduped, not a plain map: two distinct ids legitimately resolve to the
 	// SAME path (again, up to 3 chunks per file). The duplicate used to reach
@@ -255,7 +264,10 @@ export async function generateReport(
 	}
 
 	if (!parsed.ok) {
-		throw new Error(`Rapor üretilemedi: ${parsed.error}`);
+		throw new AppError(
+			'GEN_REPORT_INVALID',
+			parsed.reason ? { reason: parsed.reason, ...parsed.reasonParams } : { detail: parsed.error }
+		);
 	}
 
 	const title = input.prompt.length > 80 ? `${input.prompt.slice(0, 77)}...` : input.prompt;

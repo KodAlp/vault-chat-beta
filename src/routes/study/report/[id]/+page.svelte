@@ -5,6 +5,7 @@
 	import { libraryViewerUrl } from '$lib/sourceLink';
 	import { resolveBackHref } from '$lib/back-link';
 	import { t } from '$lib/i18n/index.svelte';
+	import { readResponseError, localizeError } from '$lib/server-error';
 	import type { PageProps } from './$types';
 	import type { ReportSectionView, ReportView } from '$lib/types';
 	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
@@ -22,6 +23,7 @@
 	type Phase = 'loading' | 'ready' | 'error';
 
 	let phase = $state<Phase>('loading');
+	let notFound = $state(false);
 	let report = $state<ReportView | null>(null);
 	let renderedSections = $state<{ section: ReportSectionView; html: string }[]>([]);
 	let errorMessage = $state('');
@@ -30,10 +32,21 @@
 	// `vault=` param is not the same as an absent one.
 	let reportQuery = $derived(data.vaultId ? `?vault=${encodeURIComponent(data.vaultId)}` : '');
 
-	onMount(async () => {
+	async function load() {
+		phase = 'loading';
+		notFound = false;
+		errorMessage = '';
 		try {
 			const res = await fetch(`/api/study/reports/${data.reportId}${reportQuery}`);
-			if (!res.ok) throw new Error();
+			if (!res.ok) {
+				if (res.status === 404) {
+					notFound = true;
+				} else {
+					errorMessage = await readResponseError(res);
+				}
+				phase = 'error';
+				return;
+			}
 			const body = (await res.json()) as { report: ReportView; sections: ReportSectionView[] };
 			report = body.report;
 			if (body.sections.length === 0) {
@@ -53,11 +66,13 @@
 				}))
 			);
 			phase = 'ready';
-		} catch {
-			errorMessage = t('ReportStudyPage.loadError');
+		} catch (err) {
+			errorMessage = localizeError({ message: err instanceof Error ? err.message : undefined });
 			phase = 'error';
 		}
-	});
+	}
+
+	onMount(load);
 </script>
 
 <svelte:head>
@@ -70,7 +85,15 @@
 	{#if phase === 'loading'}
 		<p class="status">{t('Common.yukleniyor')}</p>
 	{:else if phase === 'error'}
-		<p class="status error" role="alert">{errorMessage}</p>
+		{#if notFound}
+			<p class="status error" role="alert">{t('ReportStudyPage.notFoundTitle')}</p>
+			<p class="status">{t('ReportStudyPage.notFoundBody')}</p>
+		{:else}
+			<p class="status error" role="alert">{errorMessage}</p>
+			<div class="retry-row">
+				<button type="button" class="retry-btn" onclick={load}>{t('Common.yenidenDene')}</button>
+			</div>
+		{/if}
 	{:else if phase === 'ready' && report}
 		<!-- Boundary, not bare markup: phase='ready' is assigned before this
 		     subtree has rendered even once, so a render-time throw here used to
@@ -146,6 +169,31 @@
 		color: var(--color-destructive);
 	}
 
+	.retry-row {
+		display: flex;
+		justify-content: center;
+		margin-top: 1rem;
+	}
+
+	.retry-btn {
+		padding: 0.5rem 1.2rem;
+		border-radius: 8px;
+		border: 1px solid var(--color-border);
+		background: transparent;
+		color: var(--color-foreground);
+		cursor: pointer;
+	}
+
+	.retry-btn:hover {
+		border-color: var(--color-primary);
+		color: var(--color-primary);
+	}
+
+	.retry-btn:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
+	}
+
 	h1 {
 		font-family: var(--font-display);
 		font-weight: 480;
@@ -184,6 +232,8 @@
 		border: 1px solid var(--color-border);
 		border-radius: 999px;
 		padding: 0.2rem 0.65rem;
+		overflow-wrap: anywhere;
+		min-width: 0;
 	}
 
 	.source-link:hover {

@@ -25,7 +25,8 @@
 		stackIndex,
 		onView,
 		onDismiss,
-		onExpandScope
+		onExpandScope,
+		onCancel
 	}: {
 		status:
 			| { phase: 'generating'; stage: string; elapsedMs?: number }
@@ -41,6 +42,11 @@
 		 * status.narrowScope is true, mirroring Message.svelte's own
 		 * "kapsamı genişlet?" CTA for the same underlying distinction. */
 		onExpandScope?: () => void;
+		/** Aborts the in-flight generation this pill represents (the store's
+		 * cancelXGeneration(id)) — only rendered while phase is 'generating'.
+		 * Optional so a caller mid-migration can still render this component
+		 * without wiring cancellation yet. */
+		onCancel?: () => void;
 	} = $props();
 
 	const bottom = $derived(`${1.25 + stackIndex * 3}rem`);
@@ -64,6 +70,17 @@
 				aria-hidden="true"
 			></span>
 			<span>{stageLabels[status.stage] ?? t('GenerationStatusToast.defaultGeneratingLabel')}{status.elapsedMs ? t('GenerationStatusToast.elapsedSuffix', { seconds: Math.round(status.elapsedMs / 1000) }) : ''}</span>
+			{#if onCancel}
+				<button
+					type="button"
+					class="flex shrink-0 border-none bg-transparent p-0 text-inherit focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-2"
+					onclick={onCancel}
+					title={t('GenerationStatusToast.cancel')}
+					aria-label={t('GenerationStatusToast.cancel')}
+				>
+					<XIcon size={15} aria-hidden="true" />
+				</button>
+			{/if}
 		</div>
 	{:else if status.phase === 'done'}
 		<button

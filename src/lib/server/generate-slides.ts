@@ -8,6 +8,8 @@ import { createSlideDeck, type NewSlide } from './study-db';
 import { renderUserSkillsBlock } from './userSkills';
 import type { VaultContext } from './vaults';
 import { NoSourcesError } from './generate-errors';
+import { AppError } from './app-error';
+import type { ReasonKey } from '../errors';
 
 export interface GenerateSlidesInput {
 	domains?: string[];
@@ -107,14 +109,18 @@ async function callModel(
  * needs `diagram`) can consume without a second mapping pass. */
 type ValidatedSlide = NewSlide & { diagram?: SlideDiagramT };
 
-type ParseResult = { ok: true; slides: ValidatedSlide[] } | { ok: false; error: string };
+// `error` is Turkish because it goes back to the model in the retry prompt;
+// `reason` is what the user sees, localized client-side.
+type ParseResult =
+	| { ok: true; slides: ValidatedSlide[] }
+	| { ok: false; error: string; reason?: ReasonKey; reasonParams?: Record<string, number> };
 
 function parseAndValidate(raw: string, idToPath: Map<string, string>): ParseResult {
 	let json: unknown;
 	try {
 		json = JSON.parse(raw);
 	} catch {
-		return { ok: false, error: 'Model geçerli JSON döndürmedi.' };
+		return { ok: false, error: 'Model geçerli JSON döndürmedi.', reason: 'invalid_json' };
 	}
 	const result = Slides.safeParse(json);
 	if (!result.success) {
@@ -124,11 +130,13 @@ function parseAndValidate(raw: string, idToPath: Map<string, string>): ParseResu
 	if (badIds.length > 0) {
 		return {
 			ok: false,
-			error: `${badIds.length} slaytın source_id'si sağlanan kaynak kimlikleriyle eşleşmiyor. Sadece S1, S2, ... gibi verilen kimlikleri kullan.`
+			error: `${badIds.length} slaytın source_id'si sağlanan kaynak kimlikleriyle eşleşmiyor. Sadece S1, S2, ... gibi verilen kimlikleri kullan.`,
+			reason: 'invented_source_ids',
+			reasonParams: { count: badIds.length }
 		};
 	}
 	if (result.data.slides.length === 0) {
-		return { ok: false, error: 'Model hiç slayt üretmedi.' };
+		return { ok: false, error: 'Model hiç slayt üretmedi.', reason: 'slides_no_slides' };
 	}
 	const slides: ValidatedSlide[] = result.data.slides.map((s) => ({
 		layout: s.layout,
@@ -250,7 +258,10 @@ export async function generateSlides(
 	}
 
 	if (!parsed.ok) {
-		throw new Error(`Sunum üretilemedi: ${parsed.error}`);
+		throw new AppError(
+			'GEN_SLIDES_INVALID',
+			parsed.reason ? { reason: parsed.reason, ...parsed.reasonParams } : { detail: parsed.error }
+		);
 	}
 
 	// Rendered ONCE, server-side, at generation time — not per-view, not

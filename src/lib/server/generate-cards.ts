@@ -8,6 +8,7 @@ import { createDeck, type NewCard } from './study-db';
 import { renderUserSkillsBlock } from './userSkills';
 import type { VaultContext } from './vaults';
 import { NoSourcesError } from './generate-errors';
+import { AppError } from './app-error';
 
 export interface GenerateCardsInput {
 	domains?: string[];
@@ -282,7 +283,7 @@ export async function generateCards(
 	}
 
 	if (items.length === 0) {
-		throw new Error('Kartlar üretilemedi: hiçbir batch geçerli kart üretemedi.');
+		throw new AppError('GEN_CARDS_EMPTY');
 	}
 
 	const title = input.prompt.length > 80 ? `${input.prompt.slice(0, 77)}...` : input.prompt;

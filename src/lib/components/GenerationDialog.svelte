@@ -280,9 +280,13 @@
 			{@render extraFields()}
 		{/if}
 
+		{#if disabled}
+			<p class="text-xs text-muted-foreground">{t('GenerationDialog.alreadyGenerating')}</p>
+		{/if}
+
 		<Dialog.Footer>
 			<Button variant="outline" onclick={() => (open = false)}>{t('Common.iptal')}</Button>
-			<Button onclick={generate} disabled={!prompt.trim() || !canGenerate}>{t('GenerationDialog.generate')}</Button>
+			<Button onclick={generate} disabled={!prompt.trim() || !canGenerate || disabled}>{t('GenerationDialog.generate')}</Button>
 		</Dialog.Footer>
 	</Dialog.Content>
 </Dialog.Root>

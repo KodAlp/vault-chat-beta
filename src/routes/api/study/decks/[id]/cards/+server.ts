@@ -1,7 +1,8 @@
-import { error, json } from '@sveltejs/kit';
+import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getDeck, getDeckCards } from '$lib/server/study-db';
 import { vaultFromUrl } from '$lib/server/requestVault';
+import { fail } from '$lib/server/app-error';
 import type { CardView } from '$lib/types';
 
 /** Backs /study/cards/[id] — the previously-unused getDeckCards() (see its
@@ -11,7 +12,7 @@ import type { CardView } from '$lib/types';
 export const GET: RequestHandler = async ({ params, url }) => {
 	const v = vaultFromUrl(url);
 	const deck = getDeck(v, params.id);
-	if (!deck) error(404, 'Deste bulunamadı');
+	if (!deck) fail('NOT_FOUND', { entity: 'deck' }, 404);
 
 	const cards: CardView[] = getDeckCards(v, params.id).map((row) => ({
 		id: row.id,

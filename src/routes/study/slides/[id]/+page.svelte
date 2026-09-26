@@ -4,6 +4,7 @@
 	import { libraryViewerUrl } from '$lib/sourceLink';
 	import { resolveBackHref } from '$lib/back-link';
 	import { t } from '$lib/i18n/index.svelte';
+	import { readResponseError, localizeError } from '$lib/server-error';
 	import type { PageProps } from './$types';
 	import type { SlideDeckView, SlideView } from '$lib/types';
 	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
@@ -21,6 +22,7 @@
 	type Phase = 'loading' | 'ready' | 'error';
 
 	let phase = $state<Phase>('loading');
+	let notFound = $state(false);
 	let deck = $state<SlideDeckView | null>(null);
 	let slides = $state<SlideView[]>([]);
 	/** Each entry is a self-contained srcdoc for one <iframe sandbox="">,
@@ -37,10 +39,21 @@
 	// `vault=` param is not the same as an absent one.
 	let slidesQuery = $derived(data.vaultId ? `?vault=${encodeURIComponent(data.vaultId)}` : '');
 
-	onMount(async () => {
+	async function load() {
+		phase = 'loading';
+		notFound = false;
+		errorMessage = '';
 		try {
 			const res = await fetch(`/api/study/slidedecks/${data.slideDeckId}${slidesQuery}`);
-			if (!res.ok) throw new Error();
+			if (!res.ok) {
+				if (res.status === 404) {
+					notFound = true;
+				} else {
+					errorMessage = await readResponseError(res);
+				}
+				phase = 'error';
+				return;
+			}
 			const body = (await res.json()) as { deck: SlideDeckView; slides: SlideView[] };
 			deck = body.deck;
 			slides = body.slides;
@@ -62,11 +75,13 @@
 				return;
 			}
 			phase = 'ready';
-		} catch {
-			errorMessage = t('SlidesStudyPage.loadError');
+		} catch (err) {
+			errorMessage = localizeError({ message: err instanceof Error ? err.message : undefined });
 			phase = 'error';
 		}
-	});
+	}
+
+	onMount(load);
 
 	function next() {
 		if (currentIndex < slideDocs.length - 1) currentIndex++;
@@ -92,7 +107,15 @@
 	{#if phase === 'loading'}
 		<p class="status">{t('Common.yukleniyor')}</p>
 	{:else if phase === 'error'}
-		<p class="status error" role="alert">{errorMessage}</p>
+		{#if notFound}
+			<p class="status error" role="alert">{t('SlidesStudyPage.notFoundTitle')}</p>
+			<p class="status">{t('SlidesStudyPage.notFoundBody')}</p>
+		{:else}
+			<p class="status error" role="alert">{errorMessage}</p>
+			<div class="retry-row">
+				<button type="button" class="retry-btn" onclick={load}>{t('Common.yenidenDene')}</button>
+			</div>
+		{/if}
 	{:else if phase === 'ready' && deck}
 		<h1>{deck.title}</h1>
 
@@ -169,6 +192,31 @@
 		color: var(--color-destructive);
 	}
 
+	.retry-row {
+		display: flex;
+		justify-content: center;
+		margin-top: 1rem;
+	}
+
+	.retry-btn {
+		padding: 0.5rem 1.2rem;
+		border-radius: 8px;
+		border: 1px solid var(--color-border);
+		background: transparent;
+		color: var(--color-foreground);
+		cursor: pointer;
+	}
+
+	.retry-btn:hover {
+		border-color: var(--color-primary);
+		color: var(--color-primary);
+	}
+
+	.retry-btn:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
+	}
+
 	h1 {
 		font-family: var(--font-display);
 		font-weight: 480;
@@ -230,6 +278,8 @@
 		border: 1px solid var(--color-border);
 		border-radius: 999px;
 		padding: 0.2rem 0.65rem;
+		overflow-wrap: anywhere;
+		min-width: 0;
 	}
 
 	.source-link:hover {

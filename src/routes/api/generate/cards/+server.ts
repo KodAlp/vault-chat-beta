@@ -4,6 +4,7 @@ import { vaultFromId } from '$lib/server/requestVault';
 import { NoSourcesError } from '$lib/server/generate-errors';
 import { logAppEvent } from '$lib/server/app-log';
 import { sseStream } from '$lib/server/sse';
+import { errorPayload } from '$lib/server/app-error';
 import type { CardGenerationEvent, CardGenerationRequest } from '$lib/types';
 
 export const POST: RequestHandler = async ({ request }) => {
@@ -28,21 +29,21 @@ export const POST: RequestHandler = async ({ request }) => {
 				);
 				send({ type: 'done', deckId });
 			} catch (err) {
-				const message = err instanceof Error ? err.message : 'Bilinmeyen hata';
+				const coded = errorPayload(err);
 				if (err instanceof NoSourcesError) {
 					logAppEvent({
 						kind: 'no_sources',
 						generationType: 'cards',
 						model: body.model,
-						message,
+						message: coded.code,
 						reason: err.reason
 					});
 				} else {
-					logAppEvent({ kind: 'generation_error', generationType: 'cards', model: body.model, message });
+					logAppEvent({ kind: 'generation_error', generationType: 'cards', model: body.model, message: coded.code });
 				}
 				send({
 					type: 'error',
-					message,
+					...coded,
 					narrowScope: err instanceof NoSourcesError ? err.narrowScope : undefined
 				});
 			}
