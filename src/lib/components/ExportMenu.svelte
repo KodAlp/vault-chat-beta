@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { onDestroy } from 'svelte';
-	import { fly } from 'svelte/transition';
-	import { cubicOut } from 'svelte/easing';
+	import { motionFly } from '$lib/motion';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import DownloadIcon from '@lucide/svelte/icons/download';
 	import CheckIcon from '@lucide/svelte/icons/check';
@@ -153,7 +152,7 @@
 			class="fixed bottom-5 left-5 z-[200] flex max-w-[min(360px,80vw)] items-center gap-2.5 rounded-full border border-destructive bg-background px-4 py-2.5 text-sm text-destructive break-all"
 			style="box-shadow: 0 2px 8px var(--accent-glow)"
 			role="alert"
-			transition:fly={{ y: 12, duration: 200, easing: cubicOut }}
+			transition:motionFly={{ y: 12 }}
 		>
 			{errorMessage}
 			<button
@@ -181,7 +180,7 @@
 		<div
 			class="fixed bottom-5 left-5 z-[200] flex max-w-[min(360px,80vw)] items-center gap-2.5 rounded-full border bg-background px-4 py-2.5 text-sm break-all"
 			style="box-shadow: 0 2px 8px var(--accent-glow)"
-			transition:fly={{ y: 12, duration: 200, easing: cubicOut }}
+			transition:motionFly={{ y: 12 }}
 		>
 			<CheckIcon size={14} class="shrink-0 text-emerald-600" aria-hidden="true" />
 			{successMessage}

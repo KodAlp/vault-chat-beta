@@ -136,11 +136,17 @@
 /* Universal safety net for prefers-reduced-motion: tokens.css collapses the
    --motion-* variables for everything that reads them, but a few rules use a
    hardcoded duration instead (SourceTree's "jump here" flash, the quiz/cards
-   progress-bar fills) and the vendored bits-ui dialog/dropdown primitives
-   under lib/components/ui/ animate via their own Tailwind animate-in/out
-   utilities, neither of which the token override reaches. !important is the
-   right tool here, not a shortcut: the intent is "override every animated
-   thing, no exceptions," which is exactly what this media query means. */
+   progress-bar fills) and the local animate-in/animate-out utilities defined
+   below (which the vendored bits-ui dialog/dropdown/select/etc. primitives
+   under lib/components/ui/ use for open/close) run as plain CSS @keyframes
+   animations, neither of which the token override reaches. !important is
+   the right tool here, not a shortcut: the intent is "override every
+   animated thing, no exceptions," which is exactly what this media query
+   means. Svelte's own transition:/in:/out: directives (motion.ts's
+   motionFly, animate:flip) are a separate case — they run through
+   element.animate() (the Web Animations API), which this CSS-only net
+   cannot reach, so those are gated in JS instead (motion.ts's
+   prefersReducedMotion()). */
 @media (prefers-reduced-motion: reduce) {
 	*,
 	*::before,
@@ -150,6 +156,98 @@
 		transition-duration: 1ms !important;
 		scroll-behavior: auto !important;
 	}
+}
+
+/* Local replacement for the `tw-animate-css` plugin, which every vendored
+   bits-ui-based primitive under lib/components/ui/ (dialog, alert-dialog,
+   sheet, select, dropdown-menu, hover-card, tooltip) already references via
+   classes like data-open:animate-in / data-closed:fade-out-0 /
+   data-[side=top]:slide-in-from-bottom-2 — but that plugin was never
+   installed, so those classes compiled to nothing and every primitive
+   opened/closed instantly. Defining the same utility names ourselves (as
+   Tailwind v4 @utility rules, no new dependency) makes the existing
+   component classes work without touching lib/components/ui/ at all.
+   Durations come from tokens.css's --motion-* tokens, not the components'
+   own duration-100/duration-200 classes — deliberately: the components'
+   inline durations were written for tw-animate-css's own base duration and
+   were never tuned against this app's motion system, so they're ignored in
+   favor of the same fast/base pair every other animation in the app uses.
+   Exit is faster than enter (fast vs base), matching DESIGN.md's "exit
+   faster than enter." bits-ui's PresenceManager (node_modules/bits-ui/dist/
+   internal/presence-manager.svelte.js + animations-complete.js) waits on
+   node.getAnimations()/animation.finished before actually unmounting a
+   closed primitive, so an animate-out animation here is honored in full,
+   never clipped. */
+@keyframes enter {
+	from {
+		opacity: var(--tw-enter-opacity, 1);
+		transform: translate3d(var(--tw-enter-translate-x, 0), var(--tw-enter-translate-y, 0), 0)
+			scale3d(var(--tw-enter-scale, 1), var(--tw-enter-scale, 1), var(--tw-enter-scale, 1));
+	}
+}
+
+@keyframes exit {
+	to {
+		opacity: var(--tw-exit-opacity, 1);
+		transform: translate3d(var(--tw-exit-translate-x, 0), var(--tw-exit-translate-y, 0), 0)
+			scale3d(var(--tw-exit-scale, 1), var(--tw-exit-scale, 1), var(--tw-exit-scale, 1));
+	}
+}
+
+@utility animate-in {
+	animation: enter var(--motion-base) var(--motion-easing);
+}
+
+@utility animate-out {
+	animation: exit var(--motion-fast) var(--motion-easing) forwards;
+}
+
+@utility fade-in-0 {
+	--tw-enter-opacity: 0;
+}
+
+@utility fade-out-0 {
+	--tw-exit-opacity: 0;
+}
+
+@utility zoom-in-95 {
+	--tw-enter-scale: 0.95;
+}
+
+@utility zoom-out-95 {
+	--tw-exit-scale: 0.95;
+}
+
+@utility slide-in-from-top-* {
+	--tw-enter-translate-y: calc(--value(integer) * var(--spacing) * -1);
+}
+
+@utility slide-in-from-bottom-* {
+	--tw-enter-translate-y: calc(--value(integer) * var(--spacing));
+}
+
+@utility slide-in-from-left-* {
+	--tw-enter-translate-x: calc(--value(integer) * var(--spacing) * -1);
+}
+
+@utility slide-in-from-right-* {
+	--tw-enter-translate-x: calc(--value(integer) * var(--spacing));
+}
+
+@utility slide-out-to-top-* {
+	--tw-exit-translate-y: calc(--value(integer) * var(--spacing) * -1);
+}
+
+@utility slide-out-to-bottom-* {
+	--tw-exit-translate-y: calc(--value(integer) * var(--spacing));
+}
+
+@utility slide-out-to-left-* {
+	--tw-exit-translate-x: calc(--value(integer) * var(--spacing) * -1);
+}
+
+@utility slide-out-to-right-* {
+	--tw-exit-translate-x: calc(--value(integer) * var(--spacing));
 }
 
 html,

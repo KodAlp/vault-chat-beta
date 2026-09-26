@@ -18,6 +18,8 @@
 	import { t, i18n } from '$lib/i18n/index.svelte';
 	import { relativeTime } from '$lib/relative-time';
 	import { readResponseError } from '$lib/server-error';
+	import { flip } from 'svelte/animate';
+	import { flipDuration, motionEase } from '$lib/motion';
 
 	// Stable per-instance id prefix for label/control association (see
 	// craft-floor's accessibility pass) — $props.id() rather than a literal
@@ -612,7 +614,10 @@
 				<span class="min-w-[140px] text-sm font-semibold">{TASK_LABELS[taskType]}</span>
 				<div class="flex flex-1 flex-wrap gap-1.5">
 					{#each chains[taskType] ?? [] as providerId, i (providerId)}
-						<span class="inline-flex items-center gap-0.5 rounded-full border py-0.5 pr-1.5 pl-2.5 text-xs">
+						<span
+							class="inline-flex items-center gap-0.5 rounded-full border py-0.5 pr-1.5 pl-2.5 text-xs"
+							animate:flip={{ duration: flipDuration(), easing: motionEase }}
+						>
 							{labelFor(providerId)}
 							<button
 								type="button"
