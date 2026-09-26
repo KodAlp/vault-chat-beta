@@ -1,7 +1,9 @@
-import { error, json } from '@sveltejs/kit';
+import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { listVaults, createVault, getActiveVaultId, contextFor, needsMcpMigrationPrompt } from '$lib/server/vaults';
 import { countUnindexedFiles } from '$lib/server/retrieve';
+import { AppError, fail, toCodedError } from '$lib/server/app-error';
+import type { ErrorCode } from '$lib/errors';
 
 /**
  * unindexedCount is computed here, not stored on VaultRecord — that type is
@@ -22,11 +24,13 @@ export const GET: RequestHandler = async () => {
 
 export const POST: RequestHandler = async ({ request }) => {
 	const body = (await request.json()) as { name: string };
-	if (!body.name?.trim()) error(400, "'name' gerekli");
+	if (!body.name?.trim()) fail('VALIDATION_REQUIRED', { field: "'name'" });
 	try {
 		const vault = createVault(body.name);
 		return json({ vault });
 	} catch (err) {
-		error(400, err instanceof Error ? err.message : 'Vault oluşturulamadı');
+		if (err instanceof AppError) fail(err.code, err.params, err.status);
+		const coded = toCodedError(err);
+		fail(coded.code as ErrorCode, coded.params, 400);
 	}
 };

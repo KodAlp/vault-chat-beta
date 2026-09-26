@@ -1,4 +1,4 @@
-import { error, json } from '@sveltejs/kit';
+import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { readProvidersFile } from '$lib/server/providers/config-store';
 import { getAdapter } from '$lib/server/providers/registry';
@@ -6,6 +6,7 @@ import { loadCatalog } from '$lib/server/providers/model-catalog';
 import { filterModels } from '$lib/server/providers/model-filter';
 import { modelMaxAgeMonths } from '$lib/server/env';
 import type { ModelListItem } from '$lib/types';
+import { fail } from '$lib/server/app-error';
 
 /**
  * F14-4 — the settings page's "model listesini yönet" section: unlike GET /api/providers/models (which only
@@ -18,7 +19,7 @@ import type { ModelListItem } from '$lib/types';
 export const GET: RequestHandler = async ({ params }) => {
 	const { providers } = readProvidersFile();
 	const p = providers.find((x) => x.id === params.id);
-	if (!p) error(404, 'Bilinmeyen provider');
+	if (!p) fail('NOT_FOUND', { entity: 'provider', detail: params.id }, 404);
 
 	const adapter = await getAdapter(p.id);
 	const models = (await adapter.listModels()).filter((m) => !m.embeddingOnly);

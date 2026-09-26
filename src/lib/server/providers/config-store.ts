@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import { providersPath } from '../env';
+import { AppError } from '../app-error';
 
 /**
  * F14-4 — providers.json is now written more often (a checkbox toggle in the model-management UI writes on
@@ -96,14 +97,14 @@ export function readProvidersFile(): ProvidersFile {
 export function updateProviderEnabled(id: string, enabled: boolean): ProviderConfigEntry {
 	const data = readFile();
 	const entry = data.providers.find((p) => p.id === id);
-	if (!entry) throw new Error(`Bilinmeyen provider: ${id}`);
+	if (!entry) throw new AppError('NOT_FOUND', { entity: 'provider', detail: id }, 404);
 	// registry.ts's chatWithFallback now actually honors this flag (routing
 	// used to ignore it entirely) — disabling Ollama would leave every task
 	// with an empty chain the instant no other provider happens to be
 	// enabled, breaking the "Ollama always works, even offline" guarantee
 	// this app is built around. Mirrors deleteProvider()'s existing
-	// "Ollama kaldırılamaz" guard below.
-	if (id === 'ollama' && !enabled) throw new Error('Ollama devre dışı bırakılamaz');
+	// PROVIDER_OLLAMA_UNDELETABLE guard below.
+	if (id === 'ollama' && !enabled) throw new AppError('PROVIDER_OLLAMA_REQUIRED');
 	entry.enabled = enabled;
 	writeFile(data);
 	return entry;
@@ -112,7 +113,7 @@ export function updateProviderEnabled(id: string, enabled: boolean): ProviderCon
 export function updateProviderDefaultModel(id: string, defaultModel: string | null): void {
 	const data = readFile();
 	const entry = data.providers.find((p) => p.id === id);
-	if (!entry) throw new Error(`Bilinmeyen provider: ${id}`);
+	if (!entry) throw new AppError('NOT_FOUND', { entity: 'provider', detail: id }, 404);
 	if (defaultModel) entry.defaultModel = defaultModel;
 	else delete entry.defaultModel;
 	writeFile(data);
@@ -125,7 +126,7 @@ export function updateProviderDefaultModel(id: string, defaultModel: string | nu
 export function updateEnabledModels(id: string, modelIds: string[] | null): void {
 	const data = readFile();
 	const entry = data.providers.find((p) => p.id === id);
-	if (!entry) throw new Error(`Bilinmeyen provider: ${id}`);
+	if (!entry) throw new AppError('NOT_FOUND', { entity: 'provider', detail: id }, 404);
 	if (modelIds === null) delete entry.enabledModels;
 	else entry.enabledModels = modelIds;
 	writeFile(data);
@@ -152,6 +153,23 @@ export interface NewProviderInput {
 	reasoningDialect: 'think-tags' | 'reasoning_content' | 'none';
 }
 
+/**
+ * Trims and strips trailing slash(es) so openai-compat.ts's
+ * `${baseUrl}/chat/completions` never ends up as a double-slash `//chat/
+ * completions` (a 404 on most OpenAI-compatible APIs) just because the user
+ * pasted a base URL with a trailing `/`. Throws on anything that isn't
+ * `http://`/`https://` — a provider entry with no real scheme would never
+ * successfully connect anyway, and failing at save time (with a specific
+ * reason) beats failing silently at chat time.
+ */
+export function normalizeBaseUrl(raw: string): string {
+	const trimmed = raw.trim().replace(/\/+$/, '');
+	if (!/^https?:\/\//i.test(trimmed)) {
+		throw new AppError('PROVIDER_BASE_URL_INVALID', { url: raw.trim() });
+	}
+	return trimmed;
+}
+
 /** Faz 16A — adds an OpenAI-compatible (or native Anthropic, 16B) provider
  * with a generated id derived from the label, default cloud timeouts, and
  * the provider NOT enabled until the user flips it on (a provider with no
@@ -167,7 +185,7 @@ export function addProvider(input: NewProviderInput): ProviderConfigEntry {
 	const entry: ProviderConfigEntry = {
 		id,
 		label: input.label.trim(),
-		baseUrl: input.baseUrl.trim(),
+		baseUrl: normalizeBaseUrl(input.baseUrl),
 		kind: input.kind,
 		reasoningDialect: input.reasoningDialect,
 		enabled: false,
@@ -181,8 +199,8 @@ export function addProvider(input: NewProviderInput): ProviderConfigEntry {
 export function deleteProvider(id: string): void {
 	const data = readFile();
 	const idx = data.providers.findIndex((p) => p.id === id);
-	if (idx === -1) throw new Error(`Bilinmeyen provider: ${id}`);
-	if (id === 'ollama') throw new Error('Ollama kaldırılamaz');
+	if (idx === -1) throw new AppError('NOT_FOUND', { entity: 'provider', detail: id }, 404);
+	if (id === 'ollama') throw new AppError('PROVIDER_OLLAMA_UNDELETABLE');
 	// Remove the provider from every task chain too — a dangling chain entry
 	// would make chatWithFallback throw "Bilinmeyen provider" at request time.
 	data.providers.splice(idx, 1);

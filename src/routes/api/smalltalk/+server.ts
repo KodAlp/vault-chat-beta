@@ -1,7 +1,8 @@
-import { error, json } from '@sveltejs/kit';
+import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { clearSmallTalk, listSmallTalk, teachSmallTalk } from '$lib/server/smalltalk-runtime';
 import { MAX_PHRASE_CHARS } from '$lib/server/smalltalk-store';
+import { fail } from '$lib/server/app-error';
 
 /** The user's learned small-talk phrases (see smalltalk-gate.ts) — user-level, not per vault. */
 export const GET: RequestHandler = async () => {
@@ -13,12 +14,12 @@ export const GET: RequestHandler = async () => {
 export const POST: RequestHandler = async ({ request }) => {
 	const body = (await request.json().catch(() => null)) as { text?: unknown } | null;
 	const text = typeof body?.text === 'string' ? body.text.trim() : '';
-	if (!text) error(400, 'text gerekli');
+	if (!text) fail('VALIDATION_REQUIRED', { field: 'text' });
 	if (text.length > MAX_PHRASE_CHARS) return json({ ok: true, stored: false });
 	try {
 		return json({ ok: true, stored: await teachSmallTalk(text) });
 	} catch (err) {
-		error(502, err instanceof Error ? err.message : 'Öğrenilemedi');
+		fail('SMALLTALK_LEARN_FAILED', { detail: err instanceof Error ? err.message : String(err) }, 502);
 	}
 };
 

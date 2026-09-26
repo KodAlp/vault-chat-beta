@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { foldToSlug } from './slug';
 import { dataDir } from './env';
+import { AppError } from './app-error';
 
 export interface VaultRecord {
 	id: string;
@@ -178,7 +179,7 @@ export function getActiveVaultId(): string | null {
 export function setActiveVault(id: string): void {
 	const reg = readRegistry();
 	if (!reg.vaults.some((v) => v.id === id)) {
-		throw new Error(`Bilinmeyen vault: ${id}`);
+		throw new AppError('NOT_FOUND', { entity: 'vault', detail: id }, 404);
 	}
 	reg.activeVaultId = id;
 	writeRegistry(reg);
@@ -190,7 +191,7 @@ export function setActiveVault(id: string): void {
  * first open, same as the single-vault code did. */
 export function createVault(name: string): VaultRecord {
 	const trimmed = name.trim();
-	if (!trimmed) throw new Error('Vault adı boş olamaz');
+	if (!trimmed) throw new AppError('VAULT_NAME_EMPTY');
 
 	const reg = readRegistry();
 	// İ6: a vault created into a genuinely empty registry never had implicit
@@ -219,11 +220,11 @@ export function createVault(name: string): VaultRecord {
 
 export function renameVault(id: string, name: string): VaultRecord {
 	const trimmed = name.trim();
-	if (!trimmed) throw new Error('Vault adı boş olamaz');
+	if (!trimmed) throw new AppError('VAULT_NAME_EMPTY');
 
 	const reg = readRegistry();
 	const record = reg.vaults.find((v) => v.id === id);
-	if (!record) throw new Error(`Bilinmeyen vault: ${id}`);
+	if (!record) throw new AppError('NOT_FOUND', { entity: 'vault', detail: id }, 404);
 	record.name = trimmed;
 	writeRegistry(reg);
 	return record;
@@ -233,7 +234,7 @@ export function renameVault(id: string, name: string): VaultRecord {
 export function setVaultMcpExposed(id: string, exposed: boolean): VaultRecord {
 	const reg = readRegistry();
 	const record = reg.vaults.find((v) => v.id === id);
-	if (!record) throw new Error(`Bilinmeyen vault: ${id}`);
+	if (!record) throw new AppError('NOT_FOUND', { entity: 'vault', detail: id }, 404);
 	record.mcpExposed = exposed;
 	writeRegistry(reg);
 	return record;
@@ -280,7 +281,7 @@ export function touchVault(id: string): void {
 export function markVaultSynced(id: string): void {
 	const reg = readRegistry();
 	const record = reg.vaults.find((v) => v.id === id);
-	if (!record) throw new Error(`Bilinmeyen vault: ${id}`);
+	if (!record) throw new AppError('NOT_FOUND', { entity: 'vault', detail: id }, 404);
 	record.lastSyncedAt = new Date().toISOString();
 	writeRegistry(reg);
 }
@@ -299,7 +300,7 @@ export function markVaultSynced(id: string): void {
 export function markVaultUsed(id: string): void {
 	const reg = readRegistry();
 	const record = reg.vaults.find((v) => v.id === id);
-	if (!record) throw new Error(`Bilinmeyen vault: ${id}`);
+	if (!record) throw new AppError('NOT_FOUND', { entity: 'vault', detail: id }, 404);
 	reg.activeVaultId = id;
 	record.lastOpenedAt = new Date().toISOString();
 	writeRegistry(reg);
@@ -314,7 +315,7 @@ export function describeVaultDeletion(
 	countChats: (vaultId: string) => number
 ): { vault: VaultRecord; chatCount: number } {
 	const record = listVaults().find((v) => v.id === id);
-	if (!record) throw new Error(`Bilinmeyen vault: ${id}`);
+	if (!record) throw new AppError('NOT_FOUND', { entity: 'vault', detail: id }, 404);
 	return { vault: record, chatCount: countChats(id) };
 }
 
@@ -335,7 +336,7 @@ export function describeVaultDeletion(
  */
 export function deleteVault(id: string): void {
 	const record = listVaults().find((v) => v.id === id);
-	if (!record) throw new Error(`Bilinmeyen vault: ${id}`);
+	if (!record) throw new AppError('NOT_FOUND', { entity: 'vault', detail: id }, 404);
 
 	fs.rmSync(contextFor(record).dir, { recursive: true, force: true });
 
@@ -353,11 +354,11 @@ export function deleteVault(id: string): void {
 export function resolveVault(id?: string | null): VaultContext {
 	const targetId = id ?? getActiveVaultId();
 	if (!targetId) {
-		throw new Error('Hiç vault yok — önce bir vault oluştur');
+		throw new AppError('VAULT_NONE');
 	}
 	const record = listVaults().find((v) => v.id === targetId);
 	if (!record) {
-		throw new Error(`Bilinmeyen vault: ${targetId}`);
+		throw new AppError('NOT_FOUND', { entity: 'vault', detail: targetId }, 404);
 	}
 	return contextFor(record);
 }

@@ -3,6 +3,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Badge } from '$lib/components/ui/badge';
 	import * as Card from '$lib/components/ui/card';
+	import * as AlertDialog from '$lib/components/ui/alert-dialog';
 	import { t } from '$lib/i18n/index.svelte';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 
@@ -51,8 +52,10 @@
 		}
 	}
 
-	async function clearAll() {
-		if (!confirm(t('SmallTalkSettingsPage.clearConfirm'))) return;
+	let clearConfirmOpen = $state(false);
+
+	async function confirmClearAll() {
+		clearConfirmOpen = false;
 		actionError = '';
 		busy = true;
 		try {
@@ -101,7 +104,7 @@
 			<p class="text-sm text-muted-foreground">{t('SmallTalkSettingsPage.empty')}</p>
 		{:else}
 			<div class="mb-4 flex justify-end">
-				<Button variant="outline" disabled={busy} onclick={clearAll}>{t('SmallTalkSettingsPage.clearAll')}</Button>
+				<Button variant="outline" disabled={busy} onclick={() => (clearConfirmOpen = true)}>{t('SmallTalkSettingsPage.clearAll')}</Button>
 			</div>
 			<div class="flex flex-col gap-2">
 				{#each phrases as p (p.id)}
@@ -130,3 +133,23 @@
 		{/if}
 	{/if}
 </div>
+
+<AlertDialog.Root open={clearConfirmOpen} onOpenChange={(open) => (clearConfirmOpen = open)}>
+	<AlertDialog.Content>
+		<AlertDialog.Header>
+			<AlertDialog.Title>{t('SmallTalkSettingsPage.clearConfirm')}</AlertDialog.Title>
+		</AlertDialog.Header>
+		<AlertDialog.Footer>
+			<AlertDialog.Cancel>{t('Common.vazgec')}</AlertDialog.Cancel>
+			<AlertDialog.Action
+				variant="destructive"
+				onclick={(e) => {
+					e.preventDefault();
+					confirmClearAll();
+				}}
+			>
+				{t('SmallTalkSettingsPage.clearAll')}
+			</AlertDialog.Action>
+		</AlertDialog.Footer>
+	</AlertDialog.Content>
+</AlertDialog.Root>

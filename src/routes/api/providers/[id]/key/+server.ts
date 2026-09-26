@@ -1,19 +1,20 @@
-import { error, json } from '@sveltejs/kit';
+import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { secretStore, maskKey } from '$lib/server/providers/secrets';
 import { readProvidersFile } from '$lib/server/providers/config-store';
 import { invalidateAdapter } from '$lib/server/providers/registry';
+import { fail } from '$lib/server/app-error';
 
 export const POST: RequestHandler = async ({ params, request }) => {
 	const body = (await request.json()) as { key?: string };
-	if (!body.key || !body.key.trim()) error(400, "'key' boş olamaz");
+	if (!body.key || !body.key.trim()) fail('VALIDATION_EMPTY_FIELD', { field: "'key'" });
 
 	// Nothing checked params.id against a real provider before this — a
 	// made-up id would still get written into secrets.json (config-store.ts's
 	// writers all keep providers.json/secrets.json in sync by construction;
 	// this endpoint was the one path that didn't).
 	const known = readProvidersFile().providers.some((p) => p.id === params.id);
-	if (!known) error(404, 'Bilinmeyen provider');
+	if (!known) fail('NOT_FOUND', { entity: 'provider', detail: params.id }, 404);
 
 	await secretStore.set(params.id, body.key.trim());
 	// secrets.json isn't watched by registry.ts's providers.json-mtime cache

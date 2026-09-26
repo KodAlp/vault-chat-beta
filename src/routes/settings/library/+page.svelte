@@ -34,16 +34,35 @@
 		}
 	});
 
-	async function persist() {
+	/**
+	 * `previous` is a snapshot of `settings` taken by the caller BEFORE its
+	 * own optimistic mutation — restored here on failure (network error or a
+	 * non-2xx response, neither of which this used to check) so the UI never
+	 * keeps showing an edit that the server never actually saved. The three
+	 * CSV text inputs are resynced too, or they'd keep echoing the failed
+	 * edit even after `settings` itself rolled back.
+	 */
+	async function persist(previous: LibrarySettings) {
 		try {
-			await fetch('/api/library/settings', {
+			const res = await fetch('/api/library/settings', {
 				method: 'PUT',
 				headers: { 'content-type': 'application/json' },
 				body: JSON.stringify(settings)
 			});
+			if (!res.ok) throw new Error();
 		} catch {
+			settings = previous;
+			allowedLanguagesInput = settings.allowedLanguages.join(', ');
+			hiddenFoldersInput = settings.hiddenFolders.join(', ');
+			flattenFoldersInput = settings.flattenFolders.join(', ');
 			loadError = t('LibrarySettingsPage.saveError');
 		}
+	}
+
+	function persistKeepOriginals(checked: boolean) {
+		const previous = $state.snapshot(settings) as LibrarySettings;
+		settings.keepOriginals = checked;
+		void persist(previous);
 	}
 
 	function parseCsv(input: string): string[] {
@@ -54,22 +73,25 @@
 	}
 
 	function persistAllowedLanguages() {
+		const previous = $state.snapshot(settings) as LibrarySettings;
 		const parsed = parseCsv(allowedLanguagesInput);
 		settings.allowedLanguages = parsed.length ? parsed : ['Türkçe'];
-		void persist();
+		void persist(previous);
 	}
 
 	// Unlike allowedLanguages, these two CAN be legitimately emptied (a vault
 	// with no bookkeeping folders to hide, or one where flattening wiki/
 	// isn't wanted) — no non-empty fallback.
 	function persistHiddenFolders() {
+		const previous = $state.snapshot(settings) as LibrarySettings;
 		settings.hiddenFolders = parseCsv(hiddenFoldersInput);
-		void persist();
+		void persist(previous);
 	}
 
 	function persistFlattenFolders() {
+		const previous = $state.snapshot(settings) as LibrarySettings;
 		settings.flattenFolders = parseCsv(flattenFoldersInput);
-		void persist();
+		void persist(previous);
 	}
 </script>
 
@@ -91,7 +113,7 @@
 
 	<Card.Root class="mb-6">
 		<Card.Header>
-			<Card.Title>{t('LibrarySettingsPage.importObsidianTitle')}</Card.Title>
+			<Card.Title level={2}>{t('LibrarySettingsPage.importObsidianTitle')}</Card.Title>
 			<Card.Description>
 				{t('LibrarySettingsPage.importObsidianDescription')}
 			</Card.Description>
@@ -103,7 +125,7 @@
 
 	<Card.Root class="mb-6">
 		<Card.Header>
-			<Card.Title>{t('LibrarySettingsPage.importLinksTitle')}</Card.Title>
+			<Card.Title level={2}>{t('LibrarySettingsPage.importLinksTitle')}</Card.Title>
 			<Card.Description>
 				{t('LibrarySettingsPage.importLinksDescription')}
 			</Card.Description>
@@ -115,11 +137,11 @@
 
 	<Card.Root class="mb-6">
 		<Card.Header>
-			<Card.Title>{t('LibrarySettingsPage.uploadSettingsTitle')}</Card.Title>
+			<Card.Title level={2}>{t('LibrarySettingsPage.uploadSettingsTitle')}</Card.Title>
 		</Card.Header>
 		<Card.Content class="flex flex-col gap-4">
 			<label class="flex cursor-pointer items-center gap-2 text-sm">
-				<Switch bind:checked={settings.keepOriginals} onCheckedChange={persist} />
+				<Switch checked={settings.keepOriginals} onCheckedChange={persistKeepOriginals} />
 				{t('LibrarySettingsPage.keepOriginals', { path: 'data/library/_meta/originals/' })}
 			</label>
 			<label class="flex flex-col gap-1 text-sm">
@@ -163,7 +185,7 @@
 
 	<Card.Root>
 		<Card.Header>
-			<Card.Title>{t('LibrarySettingsPage.libraryTreeTitle')}</Card.Title>
+			<Card.Title level={2}>{t('LibrarySettingsPage.libraryTreeTitle')}</Card.Title>
 			<Card.Description>
 				{t('LibrarySettingsPage.libraryTreeDescription')}
 			</Card.Description>

@@ -8,6 +8,7 @@
 	import * as Card from '$lib/components/ui/card';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import * as Select from '$lib/components/ui/select';
+	import * as AlertDialog from '$lib/components/ui/alert-dialog';
 	import { t } from '$lib/i18n/index.svelte';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 
@@ -93,8 +94,16 @@
 		}
 	}
 
-	async function remove(n: MemoryNoteView) {
-		if (!confirm(t('MemorySettingsPage.deleteConfirm'))) return;
+	let deleteTarget = $state<MemoryNoteView | null>(null);
+
+	function requestRemove(n: MemoryNoteView) {
+		deleteTarget = n;
+	}
+
+	async function confirmRemove() {
+		const n = deleteTarget;
+		if (!n) return;
+		deleteTarget = null;
 		actionError = '';
 		busy = true;
 		try {
@@ -152,7 +161,7 @@
 							</div>
 							<div class="flex shrink-0 gap-1.5">
 								<Button variant="ghost" size="sm" disabled={busy} onclick={() => openEdit(n)}>{t('MemorySettingsPage.edit')}</Button>
-								<Button variant="ghost" size="sm" disabled={busy} onclick={() => remove(n)}>{t('MemorySettingsPage.delete')}</Button>
+								<Button variant="ghost" size="sm" disabled={busy} onclick={() => requestRemove(n)}>{t('MemorySettingsPage.delete')}</Button>
 							</div>
 						</Card.Content>
 					</Card.Root>
@@ -203,3 +212,25 @@
 		</Dialog.Footer>
 	</Dialog.Content>
 </Dialog.Root>
+
+<AlertDialog.Root open={!!deleteTarget} onOpenChange={(open) => !open && (deleteTarget = null)}>
+	<AlertDialog.Content>
+		{#if deleteTarget}
+			<AlertDialog.Header>
+				<AlertDialog.Title>{t('MemorySettingsPage.deleteConfirm')}</AlertDialog.Title>
+			</AlertDialog.Header>
+			<AlertDialog.Footer>
+				<AlertDialog.Cancel>{t('Common.vazgec')}</AlertDialog.Cancel>
+				<AlertDialog.Action
+					variant="destructive"
+					onclick={(e) => {
+						e.preventDefault();
+						confirmRemove();
+					}}
+				>
+					{t('MemorySettingsPage.delete')}
+				</AlertDialog.Action>
+			</AlertDialog.Footer>
+		{/if}
+	</AlertDialog.Content>
+</AlertDialog.Root>

@@ -1,8 +1,9 @@
-import { error, json } from '@sveltejs/kit';
+import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { addMemory, listMemory } from '$lib/server/memory-runtime';
 import type { MemoryType } from '$lib/server/memory-store';
 import type { MemoryNoteView } from '$lib/types';
+import { fail } from '$lib/server/app-error';
 
 const TYPES: readonly MemoryType[] = ['GLOBAL', 'PERSONAL'];
 
@@ -19,8 +20,8 @@ export const POST: RequestHandler = async ({ request }) => {
 	const body = (await request.json().catch(() => null)) as { type?: unknown; domain?: unknown; value?: unknown } | null;
 	const type = body?.type;
 	const value = typeof body?.value === 'string' ? body.value.trim() : '';
-	if (typeof type !== 'string' || !TYPES.includes(type as MemoryType)) error(400, 'type GLOBAL ya da PERSONAL olmalı');
-	if (!value) error(400, 'value gerekli');
+	if (typeof type !== 'string' || !TYPES.includes(type as MemoryType)) fail('MEMORY_TYPE_INVALID');
+	if (!value) fail('VALIDATION_REQUIRED', { field: 'value' });
 	const domain = typeof body?.domain === 'string' && body.domain.trim() ? body.domain.trim() : null;
 	return json({ note: toView(addMemory({ type: type as MemoryType, domain, value })) });
 };

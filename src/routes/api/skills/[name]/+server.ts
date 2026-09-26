@@ -1,10 +1,12 @@
-import { error, json } from '@sveltejs/kit';
+import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { readSkillRaw, writeSkill, patchSkillFrontmatter, deleteSkill } from '$lib/server/userSkills';
+import { AppError, fail, toCodedError } from '$lib/server/app-error';
+import type { ErrorCode } from '$lib/errors';
 
 export const GET: RequestHandler = async ({ params }) => {
 	const raw = readSkillRaw(params.name);
-	if (raw === undefined) error(404, 'Skill bulunamadı');
+	if (raw === undefined) fail('NOT_FOUND', { entity: 'skill' }, 404);
 	return json({ name: params.name, raw });
 };
 
@@ -13,7 +15,9 @@ export const PUT: RequestHandler = async ({ params, request }) => {
 	try {
 		writeSkill(params.name, body.raw);
 	} catch (err) {
-		error(400, err instanceof Error ? err.message : 'Geçersiz skill dosyası');
+		if (err instanceof AppError) fail(err.code, err.params, err.status);
+		const coded = toCodedError(err);
+		fail(coded.code as ErrorCode, coded.params, 400);
 	}
 	return json({ ok: true });
 };
@@ -25,13 +29,15 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
 	try {
 		patchSkillFrontmatter(params.name, body);
 	} catch (err) {
-		error(400, err instanceof Error ? err.message : 'Geçersiz değer');
+		if (err instanceof AppError) fail(err.code, err.params, err.status);
+		const coded = toCodedError(err);
+		fail(coded.code as ErrorCode, coded.params, 400);
 	}
 	return json({ ok: true });
 };
 
 export const DELETE: RequestHandler = async ({ params }) => {
 	const deleted = deleteSkill(params.name);
-	if (!deleted) error(404, 'Skill bulunamadı');
+	if (!deleted) fail('NOT_FOUND', { entity: 'skill' }, 404);
 	return json({ ok: true });
 };

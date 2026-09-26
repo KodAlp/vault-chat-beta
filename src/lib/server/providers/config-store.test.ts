@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { readProvidersFile, updateEnabledModels, updateProviderDefaultModel, type ProvidersFile } from './config-store';
+import { readProvidersFile, updateEnabledModels, updateProviderDefaultModel, normalizeBaseUrl, addProvider, type ProvidersFile } from './config-store';
+import { AppError } from '../app-error';
 
 const BASE: ProvidersFile = {
 	providers: [{ id: 'groq', label: 'Groq', baseUrl: 'https://api.groq.com/openai/v1', kind: 'openai-compat', reasoningDialect: 'none', enabled: true, timeouts: { connectMs: 5000, firstTokenMs: 30000, idleMs: 30000 } }],
@@ -52,4 +53,43 @@ test('the file on disk survives a write intact (atomic tmp+rename leaves no stra
 	const leftoverTmp = fs.readdirSync(dir).filter((f) => f.endsWith('.tmp'));
 	assert.deepEqual(leftoverTmp, []);
 	assert.equal(readProvidersFile().providers[0].defaultModel, 'llama-3.1-8b');
+});
+
+// normalizeBaseUrl — openai-compat.ts builds `${baseUrl}/chat/completions`,
+// so a trailing slash (or several) left on a saved baseUrl produces a
+// double-slash path that 404s on most OpenAI-compatible APIs.
+test('normalizeBaseUrl strips a single trailing slash', () => {
+	assert.equal(normalizeBaseUrl('https://api.example.com/v1/'), 'https://api.example.com/v1');
+});
+
+test('normalizeBaseUrl strips several trailing slashes', () => {
+	assert.equal(normalizeBaseUrl('https://api.example.com/v1///'), 'https://api.example.com/v1');
+});
+
+test('normalizeBaseUrl trims surrounding whitespace', () => {
+	assert.equal(normalizeBaseUrl('  https://api.example.com/v1  '), 'https://api.example.com/v1');
+});
+
+test('normalizeBaseUrl leaves an already-clean URL unchanged', () => {
+	assert.equal(normalizeBaseUrl('https://api.example.com/v1'), 'https://api.example.com/v1');
+});
+
+test('normalizeBaseUrl throws PROVIDER_BASE_URL_INVALID when the scheme is missing', () => {
+	assert.throws(() => normalizeBaseUrl('api.example.com/v1'), (err: unknown) => {
+		assert.ok(err instanceof AppError);
+		assert.equal(err.code, 'PROVIDER_BASE_URL_INVALID');
+		return true;
+	});
+});
+
+test('addProvider normalizes baseUrl (strips the trailing slash) before saving', () => {
+	useTmpProvidersFile();
+	const entry = addProvider({ label: 'Test Provider', baseUrl: 'https://api.test.com/v1/', kind: 'openai-compat', reasoningDialect: 'none' });
+	assert.equal(entry.baseUrl, 'https://api.test.com/v1');
+	assert.equal(readProvidersFile().providers.find((p) => p.id === entry.id)?.baseUrl, 'https://api.test.com/v1');
+});
+
+test('addProvider rejects a baseUrl with no http(s) scheme', () => {
+	useTmpProvidersFile();
+	assert.throws(() => addProvider({ label: 'Bad', baseUrl: 'ftp://api.test.com', kind: 'openai-compat', reasoningDialect: 'none' }));
 });

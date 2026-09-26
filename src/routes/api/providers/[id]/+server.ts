@@ -1,6 +1,8 @@
-import { error, json } from '@sveltejs/kit';
+import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { updateProviderEnabled, updateProviderDefaultModel, updateEnabledModels } from '$lib/server/providers/config-store';
+import { AppError, fail, toCodedError } from '$lib/server/app-error';
+import type { ErrorCode } from '$lib/errors';
 
 /** F14-4 — enabledModels: string[] sets the manual allow-list (settings page's checkbox management), null
  * clears it back to "uncurated, show everything the filter approves" (see config-store.ts's doc comment on
@@ -8,13 +10,13 @@ import { updateProviderEnabled, updateProviderDefaultModel, updateEnabledModels 
 export const PATCH: RequestHandler = async ({ params, request }) => {
 	const body = (await request.json()) as { enabled?: boolean; defaultModel?: string | null; enabledModels?: string[] | null };
 	if (body.enabled === undefined && body.defaultModel === undefined && body.enabledModels === undefined) {
-		error(400, "'enabled', 'defaultModel' veya 'enabledModels' gerekli");
+		fail('VALIDATION_REQUIRED_ANY', { fields: "'enabled', 'defaultModel', 'enabledModels'" });
 	}
 	if (body.enabled !== undefined && typeof body.enabled !== 'boolean') {
-		error(400, "'enabled' boolean olmalı");
+		fail('VALIDATION_INVALID', { field: "'enabled'" });
 	}
 	if (body.enabledModels !== undefined && body.enabledModels !== null && !Array.isArray(body.enabledModels)) {
-		error(400, "'enabledModels' bir dizi ya da null olmalı");
+		fail('VALIDATION_INVALID', { field: "'enabledModels'" });
 	}
 
 	try {
@@ -29,6 +31,8 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
 		}
 		return json({ id: params.id, enabled: body.enabled, defaultModel: body.defaultModel, enabledModels: body.enabledModels });
 	} catch (err) {
-		error(404, err instanceof Error ? err.message : 'Bilinmeyen provider');
+		if (err instanceof AppError) fail(err.code, err.params, err.status);
+		const coded = toCodedError(err);
+		fail(coded.code as ErrorCode, coded.params, 404);
 	}
 };

@@ -1,6 +1,8 @@
-import { error, json } from '@sveltejs/kit';
+import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getAdapter } from '$lib/server/providers/registry';
+import { AppError, fail, toCodedError } from '$lib/server/app-error';
+import type { ErrorCode } from '$lib/errors';
 
 export const POST: RequestHandler = async ({ params }) => {
 	try {
@@ -8,6 +10,8 @@ export const POST: RequestHandler = async ({ params }) => {
 		const status = await adapter.health();
 		return json({ status });
 	} catch (err) {
-		error(404, err instanceof Error ? err.message : 'Bilinmeyen provider');
+		if (err instanceof AppError) fail(err.code, err.params, err.status);
+		const coded = toCodedError(err);
+		fail(coded.code as ErrorCode, coded.params, 404);
 	}
 };

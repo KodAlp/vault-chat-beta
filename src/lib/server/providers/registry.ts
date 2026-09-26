@@ -10,6 +10,7 @@ import type { ChatRequest, ProviderAdapter, RateLimitSnapshot } from './types';
 import { logAppEvent } from '../app-log';
 import { chatWithFallbackCore, type FallbackEvent } from './chat-fallback';
 import { isProviderConsented as isCloudProviderConsented } from '../provider-consent';
+import { AppError } from '../app-error';
 
 let cachedMtime = -1;
 let cachedConfig: ProvidersFile | null = null;
@@ -32,13 +33,28 @@ function loadConfig(): ProvidersFile {
 		// seeds it at runtime outside the Tauri desktop build. This at
 		// least says which file and why, instead of a bare stat failure.
 		const reason = err instanceof Error ? err.message : String(err);
-		throw new Error(`providers.json okunamadı (${p}): ${reason}`);
+		throw new AppError('PROVIDERS_FILE_UNREADABLE', { detail: `${p}: ${reason}` });
 	}
 	if (cachedConfig && stat.mtimeMs === cachedMtime) return cachedConfig;
 	cachedConfig = readProvidersFile();
 	cachedMtime = stat.mtimeMs;
 	adapters = new Map();
 	return cachedConfig;
+}
+
+/**
+ * config-store.ts's addProvider now normalizes (and rejects) baseUrl at
+ * save time, but a provider saved before that guard existed can still carry
+ * a trailing slash on disk — openai-compat.ts builds
+ * `${baseUrl}/chat/completions`, so an unstripped trailing slash there
+ * becomes `//chat/completions` (a 404 on most APIs). Stripping it here, on
+ * every adapter build, heals an already-saved config without needing a
+ * one-time migration script. Unlike config-store.ts's normalizeBaseUrl,
+ * this never throws — an adapter build is not the place to reject a
+ * years-old config, only to make the best of it.
+ */
+function healBaseUrl(url: string): string {
+	return url.trim().replace(/\/+$/, '');
 }
 
 async function buildAdapter(entry: ProviderConfigEntry): Promise<ProviderAdapter> {
@@ -58,7 +74,7 @@ async function buildAdapter(entry: ProviderConfigEntry): Promise<ProviderAdapter
 	}
 	return new OpenAICompatAdapter({
 		id: entry.id,
-		baseUrl: entry.baseUrl,
+		baseUrl: healBaseUrl(entry.baseUrl),
 		apiKey,
 		reasoningDialect: entry.reasoningDialect,
 		timeouts: entry.timeouts
@@ -71,7 +87,7 @@ export async function getAdapter(providerId: string): Promise<ProviderAdapter> {
 	if (cached) return cached;
 
 	const entry = cachedConfig!.providers.find((p) => p.id === providerId);
-	if (!entry) throw new Error(`Bilinmeyen provider: ${providerId}`);
+	if (!entry) throw new AppError('NOT_FOUND', { entity: 'provider', detail: providerId }, 404);
 	const adapter = await buildAdapter(entry);
 	adapters.set(providerId, adapter);
 	return adapter;

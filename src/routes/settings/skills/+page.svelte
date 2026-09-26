@@ -9,7 +9,9 @@
 	import * as Card from '$lib/components/ui/card';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import * as Select from '$lib/components/ui/select';
+	import * as AlertDialog from '$lib/components/ui/alert-dialog';
 	import { t } from '$lib/i18n/index.svelte';
+	import { localizeError, readResponseError } from '$lib/server-error';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 
 	let SCOPE_LABELS = $derived<Record<UserSkillScope, string>>({
@@ -159,8 +161,7 @@ ${t('SkillsSettingsPage.templateBody')}
 			formData.append('file', file);
 			const res = await fetch('/api/skills/upload-zip', { method: 'POST', body: formData });
 			if (!res.ok) {
-				const body = (await res.json().catch(() => null)) as { message?: string } | null;
-				zipUploadError = body?.message ?? t('Common.kaydedilemedi');
+				zipUploadError = await readResponseError(res);
 				return;
 			}
 			await refresh();
@@ -187,8 +188,7 @@ ${t('SkillsSettingsPage.templateBody')}
 				body: JSON.stringify({ raw: editorRaw })
 			});
 			if (!res.ok) {
-				const body = (await res.json().catch(() => null)) as { message?: string } | null;
-				editorError = body?.message ?? t('Common.kaydedilemedi');
+				editorError = await readResponseError(res);
 				return;
 			}
 			editorOpen = false;
@@ -200,8 +200,16 @@ ${t('SkillsSettingsPage.templateBody')}
 		}
 	}
 
-	async function removeSkill(skill: UserSkillStatus) {
-		if (!confirm(t('SkillsSettingsPage.deleteConfirm', { name: skill.name }))) return;
+	let deleteTarget = $state<UserSkillStatus | null>(null);
+
+	function requestRemove(skill: UserSkillStatus) {
+		deleteTarget = skill;
+	}
+
+	async function confirmRemove() {
+		const skill = deleteTarget;
+		if (!skill) return;
+		deleteTarget = null;
 		try {
 			const res = await fetch(`/api/skills/${encodeURIComponent(skill.name)}`, { method: 'DELETE' });
 			if (!res.ok) throw new Error();
@@ -293,7 +301,7 @@ ${t('SkillsSettingsPage.templateBody')}
 								<Badge variant="outline">{chip}</Badge>
 							{/each}
 							{#if skill.parseError}
-								<Badge variant="destructive" title={skill.parseError}>{t('SkillsSettingsPage.errorBadge')}</Badge>
+								<Badge variant="destructive" title={localizeError({ code: skill.parseError, message: skill.parseError })}>{t('SkillsSettingsPage.errorBadge')}</Badge>
 							{/if}
 							{#if skill.truncated}
 								<Badge class="bg-amber-500/20 text-amber-700 dark:text-amber-400">{t('SkillsSettingsPage.truncatedBadge')}</Badge>
@@ -331,7 +339,7 @@ ${t('SkillsSettingsPage.templateBody')}
 							/>
 						</label>
 						<Button size="sm" variant="outline" onclick={() => openEditor(skill)}>{t('SkillsSettingsPage.edit')}</Button>
-						<Button size="sm" variant="destructive" onclick={() => removeSkill(skill)}>{t('Common.sil')}</Button>
+						<Button size="sm" variant="destructive" onclick={() => requestRemove(skill)}>{t('Common.sil')}</Button>
 					</div>
 				</Card.Content>
 			</Card.Root>
@@ -400,3 +408,25 @@ ${t('SkillsSettingsPage.templateBody')}
 		</Dialog.Footer>
 	</Dialog.Content>
 </Dialog.Root>
+
+<AlertDialog.Root open={!!deleteTarget} onOpenChange={(open) => !open && (deleteTarget = null)}>
+	<AlertDialog.Content>
+		{#if deleteTarget}
+			<AlertDialog.Header>
+				<AlertDialog.Title>{t('SkillsSettingsPage.deleteConfirm', { name: deleteTarget.name })}</AlertDialog.Title>
+			</AlertDialog.Header>
+			<AlertDialog.Footer>
+				<AlertDialog.Cancel>{t('Common.vazgec')}</AlertDialog.Cancel>
+				<AlertDialog.Action
+					variant="destructive"
+					onclick={(e) => {
+						e.preventDefault();
+						confirmRemove();
+					}}
+				>
+					{t('Common.sil')}
+				</AlertDialog.Action>
+			</AlertDialog.Footer>
+		{/if}
+	</AlertDialog.Content>
+</AlertDialog.Root>
