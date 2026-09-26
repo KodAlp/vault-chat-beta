@@ -5,6 +5,7 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { t } from '$lib/i18n/index.svelte';
+	import { localizeError, readResponseError } from '$lib/server-error';
 
 	let open = $state(false);
 	let sourcePath = $state('');
@@ -33,7 +34,8 @@
 				headers: { 'content-type': 'application/json' },
 				body: JSON.stringify({ sourcePath: sourcePath.trim() })
 			});
-			if (!res.ok || !res.body) throw new Error(t('Common.istekBasarisiz', { status: res.status }));
+			if (!res.ok) throw new Error(await readResponseError(res));
+			if (!res.body) throw new Error(t('Common.istekBasarisiz', { status: res.status }));
 
 			const reader = res.body.getReader();
 			const decoder = new TextDecoder();
@@ -58,7 +60,7 @@
 						items = event.summary.items;
 						phase = 'done';
 					} else if (event.type === 'error') {
-						errorMessage = event.message;
+						errorMessage = localizeError(event);
 						phase = 'error';
 					}
 				}
@@ -129,13 +131,13 @@
 				{/each}
 			</div>
 			<div class="flex max-h-[40vh] flex-col gap-1 overflow-y-auto">
-				{#each items.filter((i) => i.status !== 'skipped') as item (item.fileName)}
+				{#each items.filter((i) => i.status !== 'skipped') as item (item.id)}
 					<div class="flex items-center gap-2 border-b py-1 text-sm">
 						<span class="shrink-0 rounded-full px-2 py-0.5 text-[0.68rem] {STATUS_BADGE_CLASS[item.status] ?? ''}">
 							{STATUS_LABELS[item.status] ?? item.status}
 						</span>
 						<span class="overflow-hidden text-ellipsis whitespace-nowrap">{item.fileName}</span>
-						{#if item.reason}<span class="text-xs text-muted-foreground">{item.reason}</span>{/if}
+						{#if item.reason}<span class="text-xs text-muted-foreground">{localizeError({ code: item.code, params: item.params, message: item.reason })}</span>{/if}
 					</div>
 				{/each}
 			</div>

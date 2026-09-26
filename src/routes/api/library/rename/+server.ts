@@ -1,7 +1,9 @@
-import { error, json } from '@sveltejs/kit';
+import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { renameLibraryEntry } from '$lib/server/library';
 import { vaultFromId } from '$lib/server/requestVault';
+import { fail, toCodedError } from '$lib/server/app-error';
+import type { ErrorCode } from '$lib/errors';
 
 export const POST: RequestHandler = async ({ request }) => {
 	const body = (await request.json()) as { oldPath: string; newPath: string; vault?: string };
@@ -9,7 +11,8 @@ export const POST: RequestHandler = async ({ request }) => {
 	try {
 		renameLibraryEntry(v, body.oldPath, body.newPath);
 	} catch (err) {
-		error(400, err instanceof Error ? err.message : 'Yeniden adlandırılamadı');
+		const c = toCodedError(err);
+		fail(c.code as ErrorCode, c.params, 400);
 	}
 	return json({ ok: true });
 };

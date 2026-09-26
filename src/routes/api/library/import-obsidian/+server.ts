@@ -3,6 +3,7 @@ import { importObsidianVault } from '$lib/server/importObsidian';
 import { vaultFromId } from '$lib/server/requestVault';
 import { sseStream } from '$lib/server/sse';
 import { logAppEvent } from '$lib/server/app-log';
+import { errorPayload } from '$lib/server/app-error';
 import type { ObsidianImportEvent } from '$lib/types';
 
 export const POST: RequestHandler = async ({ request }) => {
@@ -20,7 +21,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			const summary = await importObsidianVault(v, body.sourcePath, (item) => send({ type: 'item', item }));
 			send({ type: 'done', summary });
 		} catch (err) {
-			send({ type: 'error', message: err instanceof Error ? err.message : 'Bilinmeyen hata' });
+			send({ type: 'error', ...errorPayload(err) });
 		}
 	}, (message) => logAppEvent({ kind: 'fatal_error', message: `obsidian import stream: ${message}` }));
 };

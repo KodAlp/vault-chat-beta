@@ -2,11 +2,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import matter from 'gray-matter';
-import { error, json } from '@sveltejs/kit';
+import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { stagingDir, resolveLibraryPath, slugify, appendImportLog } from '$lib/server/library';
 import { indexLibraryFile } from '$lib/server/incrementalIndex';
 import { vaultFromId } from '$lib/server/requestVault';
+import { fail } from '$lib/server/app-error';
 
 /** params.id is never checked against resolveLibraryPath-style containment
  * before this — it goes straight into path.join(stagingDir(v), \`${id}.md\`)
@@ -17,15 +18,16 @@ import { vaultFromId } from '$lib/server/requestVault';
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export const POST: RequestHandler = async ({ params, request }) => {
-	if (!UUID_RE.test(params.id)) error(400, 'Geçersiz içe aktarma kimliği');
+	if (!UUID_RE.test(params.id)) fail('VALIDATION_INVALID', { field: 'importId' });
 
 	const body = (await request.json()) as { title: string; domain: string; level: string; vault?: string };
 	const v = vaultFromId(body.vault);
 
 	const stagedPath = path.join(stagingDir(v), `${params.id}.md`);
-	if (!fs.existsSync(stagedPath)) error(404, 'Bekleyen içe aktarma bulunamadı (süresi dolmuş olabilir)');
+	if (!fs.existsSync(stagedPath)) fail('IMPORT_EXPIRED', undefined, 404);
 
-	if (!body.title?.trim() || !body.domain?.trim()) error(400, 'title ve domain gerekli');
+	if (!body.title?.trim()) fail('VALIDATION_REQUIRED', { field: 'title' });
+	if (!body.domain?.trim()) fail('VALIDATION_REQUIRED', { field: 'domain' });
 
 	const raw = fs.readFileSync(stagedPath, 'utf-8');
 	const parsed = matter(raw);
@@ -62,7 +64,7 @@ export const POST: RequestHandler = async ({ params, request }) => {
 			status: 'indekslenmedi',
 			tool: frontmatter.converted_by ?? 'upload'
 		});
-		error(500, `Dosya kaydedildi ama indekslenemedi, staging'e geri alındı: ${err instanceof Error ? err.message : 'bilinmeyen hata'}`);
+		fail('IMPORT_INDEX_FAILED', { detail: err instanceof Error ? err.message : 'bilinmeyen hata' }, 500);
 	}
 
 	appendImportLog(v, {

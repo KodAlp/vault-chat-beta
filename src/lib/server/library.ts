@@ -3,6 +3,7 @@ import path from 'node:path';
 import { removeLibraryFileFromIndex, renameLibraryFileInIndex } from './incrementalIndex';
 import { foldToSlug } from './slug';
 import { resolveLibraryPath, settingsPath } from './library-read';
+import { AppError } from './app-error';
 import type { LibrarySettings } from '$lib/types';
 import type { VaultContext } from './vaults';
 
@@ -102,13 +103,13 @@ export function renameLibraryEntry(v: VaultContext, oldRel: string, newRel: stri
 	const oldAbs = resolveLibraryPath(v, oldRel);
 	const newAbs = resolveLibraryPath(v, newRel);
 	if (!fs.statSync(oldAbs).isFile()) {
-		throw new Error('Sadece dosyalar yeniden adlandırılabilir, klasörler değil');
+		throw new AppError('RENAME_FOLDER_UNSUPPORTED');
 	}
 	// Windows' renameSync refuses to overwrite an existing target (EPERM/
-	// EEXIST) — check explicitly so the route can return a translated
-	// message instead of a raw fs error string.
+	// EEXIST) — check explicitly so the route can return a coded error
+	// instead of a raw fs error string.
 	if (fs.existsSync(newAbs)) {
-		throw new Error('Bu isimde bir dosya zaten var');
+		throw new AppError('FILE_EXISTS');
 	}
 	fs.mkdirSync(path.dirname(newAbs), { recursive: true });
 	fs.renameSync(oldAbs, newAbs);

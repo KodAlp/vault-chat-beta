@@ -13,7 +13,6 @@ import {
 	loadImportedUrls,
 	sourceNameFromUrl,
 	isYoutubeUrl,
-	describeError,
 	fetchWithRetry,
 	pdfContentTypeMismatch,
 	rewriteArxivAbsToPdf,
@@ -25,9 +24,21 @@ import { stagingDir, importLogPath } from '$lib/server/library';
 import { vaultFromId } from '$lib/server/requestVault';
 import { sseStream } from '$lib/server/sse';
 import { logAppEvent } from '$lib/server/app-log';
+import { AppError, fail, toCodedError } from '$lib/server/app-error';
 import type { ImportEvent, ImportResultItem, ImportSummary } from '$lib/types';
 
 const MAX_LINKS_PER_BATCH = 50;
+
+/** Builds a 'failed' ImportResultItem from any caught error — an AppError
+ * thrown deliberately by link-import.ts/convertQueue.ts/youtubeQueue.ts, or
+ * a generic Error (an unwrapped fetch exception, e.g. a TLS failure) that
+ * toCodedError() falls back to classifying as UNKNOWN with the raw message
+ * as `detail`. `reason` is set to the code itself (not human text) — kept
+ * for logs/back-compat; the UI renders via localizeError({code, params}). */
+function failedItem(fileName: string, err: unknown): ImportResultItem {
+	const coded = toCodedError(err);
+	return { id: crypto.randomUUID(), fileName, status: 'failed', code: coded.code, params: coded.params, reason: coded.code };
+}
 
 /**
  * Küçük ilk dilim (Faz 15): PDF linkleri mevcut convert.py'ye, web sayfaları
@@ -49,10 +60,10 @@ export const POST: RequestHandler = async ({ request }) => {
 	const v = vaultFromId(typeof body.vault === 'string' ? body.vault : null);
 
 	if (links.length === 0) {
-		return new Response(JSON.stringify({ error: 'En az bir bağlantı gerekli' }), { status: 400 });
+		fail('LINKS_MIN_ONE');
 	}
 	if (links.length > MAX_LINKS_PER_BATCH) {
-		return new Response(JSON.stringify({ error: `En fazla ${MAX_LINKS_PER_BATCH} bağlantı desteklenir` }), { status: 400 });
+		fail('LINKS_MAX', { max: MAX_LINKS_PER_BATCH });
 	}
 
 	return sseStream<ImportEvent>(async (send) => {
@@ -72,14 +83,14 @@ export const POST: RequestHandler = async ({ request }) => {
 			try {
 				url = rewriteArxivAbsToPdf(validateLinkUrl(rawLink));
 			} catch (err) {
-				const item: ImportResultItem = { fileName: rawLink, status: 'failed', reason: describeError(err, 'Geçersiz bağlantı') };
+				const item = failedItem(rawLink, err);
 				items.push(item);
 				send({ type: 'item', item });
 				continue;
 			}
 
 			if (alreadyImported.has(url.href) || seenInBatch.has(url.href)) {
-				const item: ImportResultItem = { fileName: rawLink, status: 'skipped' };
+				const item: ImportResultItem = { id: crypto.randomUUID(), fileName: rawLink, status: 'skipped' };
 				items.push(item);
 				send({ type: 'item', item });
 				continue;
@@ -96,9 +107,10 @@ export const POST: RequestHandler = async ({ request }) => {
 				fs.mkdirSync(workDir, { recursive: true });
 				try {
 					const result = await enqueueYoutubeTranscript(url.href, workDir);
-					if (!result.outPath) throw new Error('Transkript çıktı üretmedi');
+					if (!result.outPath) throw new AppError('TRANSCRIPT_EMPTY');
 					fs.copyFileSync(result.outPath, path.join(stagingDir(v), `${importId}.md`));
 					const item: ImportResultItem = {
+						id: crypto.randomUUID(),
 						fileName: rawLink,
 						status: 'pending',
 						importId,
@@ -108,7 +120,7 @@ export const POST: RequestHandler = async ({ request }) => {
 					items.push(item);
 					send({ type: 'item', item });
 				} catch (err) {
-					const item: ImportResultItem = { fileName: rawLink, status: 'failed', reason: describeError(err, 'Bilinmeyen hata') };
+					const item = failedItem(rawLink, err);
 					items.push(item);
 					send({ type: 'item', item });
 				} finally {
@@ -120,7 +132,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			try {
 				await assertPublicHost(url);
 			} catch (err) {
-				const item: ImportResultItem = { fileName: rawLink, status: 'failed', reason: describeError(err, 'Geçersiz bağlantı') };
+				const item = failedItem(rawLink, err);
 				items.push(item);
 				send({ type: 'item', item });
 				continue;
@@ -131,7 +143,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			// not once per link.
 			const robotsTxt = await fetchRobotsTxt(url.origin);
 			if (!isAllowedByRobots(url, robotsTxt)) {
-				const item: ImportResultItem = { fileName: rawLink, status: 'failed', reason: 'robots.txt bu sayfayı taramaya izin vermiyor' };
+				const item = failedItem(rawLink, new AppError('LINK_ROBOTS_DISALLOWED', undefined, 403));
 				items.push(item);
 				send({ type: 'item', item });
 				continue;
@@ -144,11 +156,11 @@ export const POST: RequestHandler = async ({ request }) => {
 
 			try {
 				const bytes = await fetchWithRetry(url);
-				if (bytes.length === 0) throw new Error('Boş yanıt');
+				if (bytes.length === 0) throw new AppError('LINK_EMPTY_RESPONSE');
 
 				const isPdf = isPdfBytes(bytes);
 				if (pdfContentTypeMismatch(url, isPdf)) {
-					throw new Error('Bağlantı .pdf ile bitiyor ama gelen içerik PDF değil (muhtemelen hata sayfası/giriş ekranı)');
+					throw new AppError('LINK_PDF_NOT_PDF');
 				}
 				const tempIn = path.join(workDir, isPdf ? 'original.pdf' : 'original.html');
 				fs.writeFileSync(tempIn, bytes);
@@ -156,7 +168,7 @@ export const POST: RequestHandler = async ({ request }) => {
 				const result = isPdf
 					? await enqueueConversion(tempIn, workDir, 'auto', undefined, sourceNameFromUrl(url))
 					: await enqueueWebExtract(tempIn, url.href, workDir);
-				if (!result.outPath) throw new Error('Dönüştürme çıktı üretmedi');
+				if (!result.outPath) throw new AppError('CONVERSION_EMPTY');
 
 				const raw = fs.readFileSync(result.outPath, 'utf-8');
 				const parsed = matter(raw);
@@ -165,6 +177,7 @@ export const POST: RequestHandler = async ({ request }) => {
 				fs.writeFileSync(path.join(stagingDir(v), `${importId}.md`), matter.stringify(parsed.content, frontmatter), 'utf-8');
 
 				const item: ImportResultItem = {
+					id: crypto.randomUUID(),
 					fileName: rawLink,
 					status: 'pending',
 					importId,
@@ -174,7 +187,7 @@ export const POST: RequestHandler = async ({ request }) => {
 				items.push(item);
 				send({ type: 'item', item });
 			} catch (err) {
-				const item: ImportResultItem = { fileName: rawLink, status: 'failed', reason: describeError(err, 'Bilinmeyen hata') };
+				const item = failedItem(rawLink, err);
 				items.push(item);
 				send({ type: 'item', item });
 			} finally {

@@ -7,6 +7,7 @@ import { vaultFromId } from '$lib/server/requestVault';
 import { sseStream } from '$lib/server/sse';
 import { logAppEvent } from '$lib/server/app-log';
 import { YOUTUBE_URL } from '$lib/server/link-import';
+import { AppError, errorPayload } from '$lib/server/app-error';
 import type { ImportEvent } from '$lib/types';
 
 function sseEvent(event: ImportEvent): string {
@@ -20,7 +21,7 @@ export const POST: RequestHandler = async ({ request }) => {
 	const body = (await request.json().catch(() => null)) as { url?: string; vault?: string } | null;
 	const url = body?.url?.trim();
 	if (!url || !YOUTUBE_URL.test(url)) {
-		return new Response(sseEvent({ type: 'error', message: 'Geçerli bir YouTube bağlantısı gerekli' }), {
+		return new Response(sseEvent({ type: 'error', ...errorPayload(new AppError('YOUTUBE_URL_INVALID')) }), {
 			headers: { 'content-type': 'text/event-stream' }
 		});
 	}
@@ -40,7 +41,7 @@ export const POST: RequestHandler = async ({ request }) => {
 				if (event.type === 'progress') send({ type: 'progress', stage: event.stage });
 			});
 
-			if (!result.outPath) throw new Error('Transkript çıktı üretmedi');
+			if (!result.outPath) throw new AppError('TRANSCRIPT_EMPTY');
 
 			const stagedMdPath = path.join(stagingDir(v), `${importId}.md`);
 			fs.copyFileSync(result.outPath, stagedMdPath);
@@ -55,7 +56,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			});
 		} catch (err) {
 			fs.rmSync(workDir, { recursive: true, force: true });
-			send({ type: 'error', message: err instanceof Error ? err.message : 'Bilinmeyen hata' });
+			send({ type: 'error', ...errorPayload(err) });
 		}
 	}, (message) => logAppEvent({ kind: 'fatal_error', message: `youtube import stream: ${message}` }));
 };

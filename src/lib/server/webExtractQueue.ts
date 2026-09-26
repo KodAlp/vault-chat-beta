@@ -3,6 +3,7 @@ import path from 'node:path';
 import readline from 'node:readline';
 import { sharedJobMutex } from './jobMutex';
 import { pythonBin, type ConvertEvent } from './convertQueue';
+import { AppError } from './app-error';
 
 const EXTRACT_WEB_PY = path.resolve(process.cwd(), 'ingest', 'extract_web.py');
 
@@ -55,19 +56,19 @@ function runExtractWeb(
 
 		child.on('error', (err) => {
 			clearTimeout(timer);
-			reject(new Error(`Python başlatılamadı (${bin} kurulu mu?): ${err.message}`));
+			reject(new AppError('PYTHON_SPAWN_FAILED', { detail: err.message }));
 		});
 
 		child.on('exit', (code) => {
 			clearTimeout(timer);
 			if (timedOut) {
-				reject(new Error('Sayfa ayıklama zaman aşımına uğradı'));
+				reject(new AppError('PROCESS_TIMEOUT', { seconds: Math.round(PROCESS_TIMEOUT_MS / 1000) }));
 			} else if (lastDone) {
 				resolve(lastDone);
 			} else if (lastError) {
-				reject(new Error(lastError));
+				reject(new AppError('CONVERSION_FAILED', { detail: lastError }));
 			} else {
-				reject(new Error(`Ayıklama başarısız (exit ${code}): ${stderr.slice(0, 500) || 'bilinmeyen hata'}`));
+				reject(new AppError('CONVERSION_FAILED', { detail: `exit ${code}: ${stderr.slice(0, 500) || 'bilinmeyen hata'}` }));
 			}
 		});
 	});
