@@ -10,6 +10,7 @@ import type {
 	ToolDefinition
 } from './types';
 import { createThinkTagNormalizer, reasoningContentChunk, textChunk } from './normalize';
+import { logAppEvent } from '../app-log';
 
 /**
  * Standard OpenAI wire format — used by every cloud provider plus Ollama's
@@ -441,7 +442,8 @@ export class OpenAICompatAdapter implements ProviderAdapter {
 				caps: { tools: false, reasoning: false },
 				...(typeof m.created === 'number' ? { created: m.created } : {})
 			}));
-		} catch {
+		} catch (err) {
+			logAppEvent({ kind: 'provider_error', provider: this.id, message: `listModels: ${describeNetworkError(err)}` });
 			return [];
 		}
 	}
@@ -454,7 +456,8 @@ export class OpenAICompatAdapter implements ProviderAdapter {
 			});
 			if (res.status === 401 || res.status === 403) return 'auth_error';
 			return res.ok ? 'ok' : 'unreachable';
-		} catch {
+		} catch (err) {
+			logAppEvent({ kind: 'provider_error', provider: this.id, message: `health: ${describeNetworkError(err)}` });
 			return 'unreachable';
 		}
 	}
