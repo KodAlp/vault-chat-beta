@@ -4,6 +4,7 @@
 	import TriangleAlertIcon from '@lucide/svelte/icons/triangle-alert';
 	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
 	import { t } from '$lib/i18n/index.svelte';
+	import { localizeError, readResponseError } from '$lib/server-error';
 	import type { PythonSetupEvent } from '$lib/types';
 
 	/**
@@ -47,7 +48,8 @@
 		logLines = [];
 		try {
 			const res = await fetch('/api/system/python', { method: 'POST' });
-			if (!res.ok || !res.body) throw new Error('İstek başarısız');
+			if (!res.ok) throw new Error(await readResponseError(res));
+			if (!res.body) throw new Error(t('Common.istekBasarisiz', { status: res.status }));
 
 			const reader = res.body.getReader();
 			const decoder = new TextDecoder();
@@ -65,7 +67,7 @@
 					const event = JSON.parse(line.slice(5)) as PythonSetupEvent;
 					if (event.type === 'log') logLines = [...logLines, event.line];
 					else if (event.type === 'error') {
-						logLines = [...logLines, event.message];
+						logLines = [...logLines, localizeError(event)];
 						installFailed = true;
 					} else if (event.type === 'done') ok = event.ok;
 				}
@@ -125,8 +127,8 @@
 		gap: 0.6rem;
 		padding: 0.6rem 1rem;
 		background: var(--ground);
-		border-bottom: 1px solid #d97706;
-		color: #d97706;
+		border-bottom: 1px solid var(--warning);
+		color: var(--warning);
 		font-size: 0.85rem;
 		text-align: center;
 	}
@@ -136,8 +138,8 @@
 		align-items: center;
 		gap: 0.3rem;
 		background: transparent;
-		border: 1px solid #d97706;
-		color: #d97706;
+		border: 1px solid var(--warning);
+		color: var(--warning);
 		border-radius: var(--radius-pill);
 		padding: 0.25rem 0.7rem;
 		font-size: 0.8rem;
@@ -145,7 +147,7 @@
 	}
 
 	.python-banner button:hover:not(:disabled) {
-		background: color-mix(in srgb, #d97706 12%, transparent);
+		background: color-mix(in srgb, var(--warning) 12%, transparent);
 	}
 
 	.python-banner button:disabled {
@@ -170,7 +172,7 @@
 		margin: 0;
 		text-align: left;
 		font-size: 0.75rem;
-		background: color-mix(in srgb, #d97706 8%, transparent);
+		background: color-mix(in srgb, var(--warning) 8%, transparent);
 		border-radius: var(--radius-sm, 4px);
 		padding: 0.4rem 0.6rem;
 		white-space: pre-wrap;

@@ -1,16 +1,21 @@
-import { error, json } from '@sveltejs/kit';
+import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { readLibraryFile, deleteLibraryEntry } from '$lib/server/library';
 import { vaultFromUrl, vaultFromId } from '$lib/server/requestVault';
+import { fail, toCodedError } from '$lib/server/app-error';
+import type { ErrorCode } from '$lib/errors';
 
 export const GET: RequestHandler = async ({ url }) => {
 	const v = vaultFromUrl(url);
 	const path = url.searchParams.get('path');
-	if (!path) error(400, 'path gerekli');
+	if (!path) fail('VALIDATION_REQUIRED', { field: 'path' });
 	try {
 		return json({ path, raw: readLibraryFile(v, path) });
-	} catch (err) {
-		error(404, err instanceof Error ? err.message : 'Dosya bulunamadı');
+	} catch {
+		// Conflates "path resolves outside the library" and "file doesn't
+		// exist" into one 404, same as before — not distinguishing the two
+		// is deliberate (avoids confirming/denying a traversal attempt).
+		fail('NOT_FOUND', { entity: 'file' }, 404);
 	}
 };
 
@@ -20,7 +25,8 @@ export const DELETE: RequestHandler = async ({ request }) => {
 	try {
 		deleteLibraryEntry(v, body.path);
 	} catch (err) {
-		error(400, err instanceof Error ? err.message : 'Silinemedi');
+		const c = toCodedError(err);
+		fail(c.code as ErrorCode, c.params, 400);
 	}
 	return json({ ok: true });
 };

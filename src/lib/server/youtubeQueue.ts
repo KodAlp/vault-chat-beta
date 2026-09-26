@@ -3,6 +3,7 @@ import path from 'node:path';
 import readline from 'node:readline';
 import { pythonBin } from './convertQueue';
 import { sharedJobMutex } from './jobMutex';
+import { AppError } from './app-error';
 
 export type YoutubeEvent =
 	| { type: 'progress'; stage: string }
@@ -66,19 +67,19 @@ function runYoutubeTranscript(
 
 		child.on('error', (err) => {
 			clearTimeout(timer);
-			reject(new Error(`Python başlatılamadı (${bin} kurulu mu?): ${err.message}`));
+			reject(new AppError('PYTHON_SPAWN_FAILED', { detail: err.message }));
 		});
 
 		child.on('exit', (code) => {
 			clearTimeout(timer);
 			if (timedOut) {
-				reject(new Error(`Transkript alma zaman aşımına uğradı (>${PROCESS_TIMEOUT_MS / 1000}s)`));
+				reject(new AppError('PROCESS_TIMEOUT', { seconds: Math.round(PROCESS_TIMEOUT_MS / 1000) }));
 			} else if (lastDone) {
 				resolve(lastDone);
 			} else if (lastError) {
-				reject(new Error(lastError));
+				reject(new AppError('TRANSCRIPT_FAILED', { detail: lastError }));
 			} else {
-				reject(new Error(`Transkript alınamadı (exit ${code}): ${stderr.slice(0, 500) || 'bilinmeyen hata'}`));
+				reject(new AppError('TRANSCRIPT_FAILED', { detail: `exit ${code}: ${stderr.slice(0, 500) || 'bilinmeyen hata'}` }));
 			}
 		});
 	});

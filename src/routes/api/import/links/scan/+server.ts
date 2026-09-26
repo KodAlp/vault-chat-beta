@@ -1,4 +1,4 @@
-import { error, json } from '@sveltejs/kit';
+import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import {
 	validateLinkUrl,
@@ -8,9 +8,10 @@ import {
 	isAllowedByRobots,
 	politeDelay,
 	fetchWithRetry,
-	extractPdfLinks,
-	describeError
+	extractPdfLinks
 } from '$lib/server/link-import';
+import { AppError, fail, toCodedError } from '$lib/server/app-error';
+import type { ErrorCode } from '$lib/errors';
 
 /**
  * Aşama 10 #1: "list this page's PDF links, then let the user choose" —
@@ -25,24 +26,26 @@ import {
 export const POST: RequestHandler = async ({ request }) => {
 	const body = (await request.json()) as { url?: unknown };
 	const raw = typeof body.url === 'string' ? body.url : '';
-	if (!raw.trim()) error(400, 'Bir sayfa adresi gerekli');
+	if (!raw.trim()) fail('VALIDATION_REQUIRED', { field: 'url' });
 
 	let url: URL;
 	try {
 		url = validateLinkUrl(raw);
 	} catch (err) {
-		error(400, describeError(err, 'Geçersiz bağlantı'));
+		const c = toCodedError(err);
+		fail(c.code as ErrorCode, c.params, err instanceof AppError ? err.status : 400);
 	}
 
 	try {
 		await assertPublicHost(url);
 	} catch (err) {
-		error(400, describeError(err, 'Geçersiz bağlantı'));
+		const c = toCodedError(err);
+		fail(c.code as ErrorCode, c.params, err instanceof AppError ? err.status : 400);
 	}
 
 	const robotsTxt = await fetchRobotsTxt(url.origin);
 	if (!isAllowedByRobots(url, robotsTxt)) {
-		error(403, 'robots.txt bu sayfayı taramaya izin vermiyor');
+		fail('LINK_ROBOTS_DISALLOWED', undefined, 403);
 	}
 
 	await politeDelay(url.hostname);
@@ -51,11 +54,12 @@ export const POST: RequestHandler = async ({ request }) => {
 	try {
 		bytes = await fetchWithRetry(url);
 	} catch (err) {
-		error(502, describeError(err, 'Sayfa alınamadı'));
+		const c = toCodedError(err);
+		fail(c.code as ErrorCode, c.params, err instanceof AppError ? err.status : 502);
 	}
 
 	if (isPdfBytes(bytes)) {
-		error(400, 'Bu adres zaten bir PDF — taramaya gerek yok, doğrudan bağlantı listesine ekleyin');
+		fail('LINK_ALREADY_PDF');
 	}
 
 	const html = bytes.toString('utf-8');

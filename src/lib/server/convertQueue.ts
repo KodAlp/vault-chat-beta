@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import readline from 'node:readline';
 import { sharedJobMutex } from './jobMutex';
+import { AppError } from './app-error';
 
 export type ConvertEvent =
 	| { type: 'progress'; stage: string; pageCount?: number; estimatedSeconds?: number }
@@ -190,7 +191,7 @@ function runConvert(
 
 		child.on('error', (err) => {
 			clearTimeout(timer);
-			reject(new Error(`Python başlatılamadı (${bin} kurulu mu?): ${err.message}`));
+			reject(new AppError('PYTHON_SPAWN_FAILED', { detail: err.message }));
 		});
 
 		child.on('exit', (code) => {
@@ -201,13 +202,13 @@ function runConvert(
 				// process finished writing its `done` line just as the timer
 				// fired) and would otherwise report success on a run that was
 				// actually killed for running too long.
-				reject(new Error(`Dönüştürme zaman aşımına uğradı (>${currentTimeoutMs / 1000}s)`));
+				reject(new AppError('PROCESS_TIMEOUT', { seconds: Math.round(currentTimeoutMs / 1000) }));
 			} else if (lastDone) {
 				resolve(lastDone);
 			} else if (lastError) {
-				reject(new Error(lastError));
+				reject(new AppError('CONVERSION_FAILED', { detail: lastError }));
 			} else {
-				reject(new Error(`Dönüştürme başarısız (exit ${code}): ${stderr.slice(0, 500) || 'bilinmeyen hata'}`));
+				reject(new AppError('CONVERSION_FAILED', { detail: `exit ${code}: ${stderr.slice(0, 500) || 'bilinmeyen hata'}` }));
 			}
 		});
 	});

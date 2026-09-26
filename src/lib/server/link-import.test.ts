@@ -22,6 +22,16 @@ import {
 	isTransientFetchError,
 	fetchWithRetry
 } from './link-import';
+import { AppError } from './app-error';
+
+/** These functions were converted (2026-09-26 hardening pass) from throwing
+ * a plain Error with a Turkish message to throwing AppError(code, params) —
+ * see errors.ts/app-error.ts. Assertions below check the code, not message
+ * text, which is now just `${code} ${JSON.stringify(params)}` (see
+ * AppError's constructor) — legible for logs, never shown to a user. */
+function hasCode(code: string) {
+	return (err: unknown) => err instanceof AppError && err.code === code;
+}
 
 test('isPdfBytes recognizes the %PDF- magic signature', () => {
 	assert.equal(isPdfBytes(Buffer.from('%PDF-1.7\n...')), true);
@@ -32,17 +42,17 @@ test('isPdfBytes recognizes the %PDF- magic signature', () => {
 test('validateLinkUrl accepts http/https and rejects everything else', () => {
 	assert.equal(validateLinkUrl('https://example.com/page').href, 'https://example.com/page');
 	assert.equal(validateLinkUrl(' http://example.com ').href, 'http://example.com/');
-	assert.throws(() => validateLinkUrl('not a url'), /Geçersiz bağlantı/);
-	assert.throws(() => validateLinkUrl('file:///etc/passwd'), /Desteklenmeyen protokol/);
-	assert.throws(() => validateLinkUrl('javascript:alert(1)'), /Desteklenmeyen protokol/);
+	assert.throws(() => validateLinkUrl('not a url'), hasCode('LINK_INVALID'));
+	assert.throws(() => validateLinkUrl('file:///etc/passwd'), hasCode('LINK_PROTOCOL_UNSUPPORTED'));
+	assert.throws(() => validateLinkUrl('javascript:alert(1)'), hasCode('LINK_PROTOCOL_UNSUPPORTED'));
 });
 
 test('assertPublicHost rejects a loopback/private literal IP without any DNS lookup', async () => {
-	await assert.rejects(assertPublicHost(new URL('http://127.0.0.1/x')), /Yerel\/özel ağ/);
-	await assert.rejects(assertPublicHost(new URL('http://192.168.1.1/x')), /Yerel\/özel ağ/);
-	await assert.rejects(assertPublicHost(new URL('http://10.0.0.5/x')), /Yerel\/özel ağ/);
-	await assert.rejects(assertPublicHost(new URL('http://169.254.169.254/x')), /Yerel\/özel ağ/);
-	await assert.rejects(assertPublicHost(new URL('http://[::1]/x')), /Yerel\/özel ağ/);
+	await assert.rejects(assertPublicHost(new URL('http://127.0.0.1/x')), hasCode('LINK_PRIVATE_NETWORK'));
+	await assert.rejects(assertPublicHost(new URL('http://192.168.1.1/x')), hasCode('LINK_PRIVATE_NETWORK'));
+	await assert.rejects(assertPublicHost(new URL('http://10.0.0.5/x')), hasCode('LINK_PRIVATE_NETWORK'));
+	await assert.rejects(assertPublicHost(new URL('http://169.254.169.254/x')), hasCode('LINK_PRIVATE_NETWORK'));
+	await assert.rejects(assertPublicHost(new URL('http://[::1]/x')), hasCode('LINK_PRIVATE_NETWORK'));
 });
 
 test('assertPublicHost allows a public literal IP without any DNS lookup', async () => {
@@ -68,7 +78,7 @@ test('assertPublicHost rejects every bypass form from the 2026-09-23 report', as
 		'http://255.255.255.255/x' // IPv4 reserved/broadcast (240.0.0.0/4)
 	];
 	for (const link of bypassed) {
-		await assert.rejects(assertPublicHost(new URL(link)), /Yerel\/özel ağ/, `expected ${link} to be rejected`);
+		await assert.rejects(assertPublicHost(new URL(link)), hasCode('LINK_PRIVATE_NETWORK'), `expected ${link} to be rejected`);
 	}
 });
 
@@ -82,7 +92,7 @@ test('assertPublicHost resolves a hostname and rejects when it points at a priva
 	const resolve6 = async () => {
 		throw Object.assign(new Error('no AAAA'), { code: 'ENODATA' });
 	};
-	await assert.rejects(assertPublicHost(new URL('http://internal.example'), resolve4, resolve6), /Yerel\/özel ağ/);
+	await assert.rejects(assertPublicHost(new URL('http://internal.example'), resolve4, resolve6), hasCode('LINK_PRIVATE_NETWORK'));
 });
 
 test('assertPublicHost resolves a hostname and allows it when the address is public', async () => {
@@ -119,7 +129,7 @@ test('assertPublicHost rejects when the hostname resolves to nothing', async () 
 	const fail = async () => {
 		throw Object.assign(new Error('no record'), { code: 'ENODATA' });
 	};
-	await assert.rejects(assertPublicHost(new URL('http://nonexistent.invalid'), fail, fail), /çözümlenemedi/);
+	await assert.rejects(assertPublicHost(new URL('http://nonexistent.invalid'), fail, fail), hasCode('LINK_DNS_FAILED'));
 });
 
 test('loadImportedUrls returns empty set when the log file does not exist', () => {
@@ -203,20 +213,20 @@ test('nextRedirectTarget resolves an absolute Location to a different host', () 
 });
 
 test('nextRedirectTarget rejects a redirect with no Location header', () => {
-	assert.throws(() => nextRedirectTarget(new URL('https://a.example'), 302, null), /Yönlendirme hedefsiz/);
+	assert.throws(() => nextRedirectTarget(new URL('https://a.example'), 302, null), hasCode('LINK_REDIRECT_INVALID'));
 });
 
 test('nextRedirectTarget rejects an unparseable Location', () => {
 	// "http://[" is invalid IPv6-literal syntax, not just a relative path —
 	// new URL() throws on it even with a base, unlike a merely-odd relative path.
-	assert.throws(() => nextRedirectTarget(new URL('https://a.example'), 302, 'http://['), /Geçersiz yönlendirme hedefi/);
+	assert.throws(() => nextRedirectTarget(new URL('https://a.example'), 302, 'http://['), hasCode('LINK_REDIRECT_INVALID'));
 });
 
 test('nextRedirectTarget rejects a redirect to a non-http(s) scheme', () => {
 	// #S15-style: a 302 to file:/data: must be rejected outright, not
 	// followed and not silently treated as a dead end either.
-	assert.throws(() => nextRedirectTarget(new URL('https://a.example'), 302, 'file:///etc/passwd'), /Desteklenmeyen yönlendirme protokolü/);
-	assert.throws(() => nextRedirectTarget(new URL('https://a.example'), 302, 'javascript:alert(1)'), /Desteklenmeyen yönlendirme protokolü/);
+	assert.throws(() => nextRedirectTarget(new URL('https://a.example'), 302, 'file:///etc/passwd'), hasCode('LINK_REDIRECT_INVALID'));
+	assert.throws(() => nextRedirectTarget(new URL('https://a.example'), 302, 'javascript:alert(1)'), hasCode('LINK_REDIRECT_INVALID'));
 });
 
 test('pdfContentTypeMismatch flags a .pdf URL that did not come back as a real PDF', () => {
@@ -232,8 +242,8 @@ test('pdfContentTypeMismatch is silent when the bytes match, or the URL never pr
 });
 
 test('fetchWithCap rejects a loopback/private target before ever sending a request — the SSRF check cannot be routed around by calling it directly', async () => {
-	await assert.rejects(fetchWithCap(new URL('http://127.0.0.1:1/x')), /Yerel\/özel ağ/);
-	await assert.rejects(fetchWithCap(new URL('http://[::ffff:127.0.0.1]:1/x')), /Yerel\/özel ağ/);
+	await assert.rejects(fetchWithCap(new URL('http://127.0.0.1:1/x')), hasCode('LINK_PRIVATE_NETWORK'));
+	await assert.rejects(fetchWithCap(new URL('http://[::ffff:127.0.0.1]:1/x')), hasCode('LINK_PRIVATE_NETWORK'));
 });
 
 test('rewriteArxivAbsToPdf rewrites the abstract page path to the PDF path, preserving the id/version', () => {
@@ -368,5 +378,5 @@ test('fetchWithRetry gives up after the attempt budget even for a transient erro
 });
 
 test('fetchWithRetry, with its real default fetcher, still rejects an SSRF target immediately', async () => {
-	await assert.rejects(fetchWithRetry(new URL('http://127.0.0.1:1/x')), /Yerel\/özel ağ/);
+	await assert.rejects(fetchWithRetry(new URL('http://127.0.0.1:1/x')), hasCode('LINK_PRIVATE_NETWORK'));
 });

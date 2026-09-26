@@ -17,10 +17,20 @@ import {
 import { vaultFromId } from '$lib/server/requestVault';
 import { sseStream } from '$lib/server/sse';
 import { logAppEvent } from '$lib/server/app-log';
+import { AppError, errorPayload } from '$lib/server/app-error';
 import type { ImportEvent } from '$lib/types';
 
 function sseEvent(event: ImportEvent): string {
 	return `data: ${JSON.stringify(event)}\n\n`;
+}
+
+/** Pre-stream validation failure — no sseStream running yet, so this is a
+ * one-shot SSE-shaped response carrying a single coded error event,
+ * matching the shape every mid-stream error takes (see errorPayload()). */
+function sseErrorResponse(err: unknown): Response {
+	return new Response(sseEvent({ type: 'error', ...errorPayload(err) }), {
+		headers: { 'content-type': 'text/event-stream' }
+	});
 }
 
 /** Single-file upload with a confirm step — see /api/library/import/[id]/confirm.
@@ -29,25 +39,19 @@ export const POST: RequestHandler = async ({ request }) => {
 	const formData = await request.formData();
 	const file = formData.get('file');
 	if (!(file instanceof File)) {
-		return new Response(sseEvent({ type: 'error', message: 'Dosya gerekli' }), {
-			headers: { 'content-type': 'text/event-stream' }
-		});
+		return sseErrorResponse(new AppError('VALIDATION_REQUIRED', { field: 'file' }));
 	}
 
 	const safeName = safeBasename(file.name);
 	const ext = path.extname(safeName).toLowerCase();
 	if (!ALLOWED_EXTENSIONS.has(ext) && !CODE_EXTENSIONS.has(ext)) {
-		return new Response(sseEvent({ type: 'error', message: `Desteklenmeyen dosya türü: ${ext || '(uzantısız)'}` }), {
-			headers: { 'content-type': 'text/event-stream' }
-		});
+		return sseErrorResponse(new AppError('UNSUPPORTED_FILE_TYPE', { ext: ext || '?' }));
 	}
 	// Checked against file.size (from the Web File API, available without
 	// reading the body) before arrayBuffer() ever runs — the whole point is
 	// never buffering an oversized upload into memory in the first place.
 	if (file.size > MAX_UPLOAD_BYTES) {
-		return new Response(sseEvent({ type: 'error', message: 'Dosya çok büyük (100MB sınırı)' }), {
-			headers: { 'content-type': 'text/event-stream' }
-		});
+		return sseErrorResponse(new AppError('FILE_TOO_LARGE', { limitMb: Math.round(MAX_UPLOAD_BYTES / (1024 * 1024)) }));
 	}
 
 	const v = vaultFromId(formData.get('vault') as string | null);
@@ -96,7 +100,7 @@ export const POST: RequestHandler = async ({ request }) => {
 				safeName
 			);
 
-			if (!result.outPath) throw new Error('Dönüştürme çıktı üretmedi');
+			if (!result.outPath) throw new AppError('CONVERSION_EMPTY');
 
 			const stagedMdPath = path.join(stagingDir(v), `${importId}.md`);
 			fs.copyFileSync(result.outPath, stagedMdPath);
@@ -110,7 +114,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			const proposedTitle = (result.frontmatter.title as string) ?? path.parse(safeName).name;
 			const warnings = [...(result.warnings ?? [])];
 			if (alreadyImportedHash) {
-				warnings.push('Bu dosya (aynı içerik) daha önce içe aktarılmış görünüyor — yine de devam edebilirsin.');
+				warnings.push('IMPORT_DUPLICATE_CONTENT');
 			}
 			send({
 				type: 'ready',
@@ -120,7 +124,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			});
 		} catch (err) {
 			fs.rmSync(workDir, { recursive: true, force: true });
-			send({ type: 'error', message: err instanceof Error ? err.message : 'Bilinmeyen hata' });
+			send({ type: 'error', ...errorPayload(err) });
 		}
 	}, (message) => logAppEvent({ kind: 'fatal_error', message: `import stream: ${message}` }));
 };

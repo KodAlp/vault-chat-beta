@@ -4,7 +4,12 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { renameLibraryEntry, ALLOWED_EXTENSIONS, CODE_EXTENSIONS } from './library';
+import { AppError } from './app-error';
 import type { VaultContext } from './vaults';
+
+function hasCode(code: string) {
+	return (err: unknown) => err instanceof AppError && err.code === code;
+}
 
 function tmpVault(): VaultContext {
 	const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'library-test-'));
@@ -35,7 +40,7 @@ test('renameLibraryEntry refuses to overwrite an existing target', () => {
 	fs.writeFileSync(path.join(v.libraryRoot, 'a.md'), 'source');
 	fs.writeFileSync(path.join(v.libraryRoot, 'b.md'), 'already here');
 
-	assert.throws(() => renameLibraryEntry(v, 'a.md', 'b.md'), /zaten var/);
+	assert.throws(() => renameLibraryEntry(v, 'a.md', 'b.md'), hasCode('FILE_EXISTS'));
 
 	// Neither file should have moved — both must survive untouched.
 	assert.equal(fs.readFileSync(path.join(v.libraryRoot, 'a.md'), 'utf-8'), 'source');
@@ -46,7 +51,7 @@ test('renameLibraryEntry refuses a directory source', () => {
 	const v = tmpVault();
 	fs.mkdirSync(path.join(v.libraryRoot, 'folder'));
 
-	assert.throws(() => renameLibraryEntry(v, 'folder', 'renamed'), /klasörler değil/);
+	assert.throws(() => renameLibraryEntry(v, 'folder', 'renamed'), hasCode('RENAME_FOLDER_UNSUPPORTED'));
 });
 
 test('CODE_EXTENSIONS never overlaps ALLOWED_EXTENSIONS (doc converter vs. fenced-wrap must stay unambiguous)', () => {

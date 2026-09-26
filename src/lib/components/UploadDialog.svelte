@@ -5,6 +5,7 @@
 	import * as Select from '$lib/components/ui/select';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { t } from '$lib/i18n/index.svelte';
+	import { localizeError, readResponseError } from '$lib/server-error';
 
 	let { onImported }: { onImported: () => void } = $props();
 
@@ -82,7 +83,8 @@
 			// the status code is all the client gets. Name it instead of
 			// showing a bare "İstek başarısız (413)".
 			if (res.status === 413) throw new Error(t('UploadDialog.tooLarge'));
-			if (!res.ok || !res.body) throw new Error(t('Common.istekBasarisiz', { status: res.status }));
+			if (!res.ok) throw new Error(await readResponseError(res));
+			if (!res.body) throw new Error(t('Common.istekBasarisiz', { status: res.status }));
 
 			const reader = res.body.getReader();
 			const decoder = new TextDecoder();
@@ -108,7 +110,7 @@
 						warnings = event.warnings;
 						phase = 'confirming';
 					} else if (event.type === 'error') {
-						errorMessage = event.message;
+						errorMessage = localizeError(event);
 						phase = 'error';
 					}
 				}
@@ -130,11 +132,11 @@
 			});
 			if (!res.ok) {
 				// #11: a failed-indexing rollback surfaces a specific reason here
-				// (confirm/+server.ts's error(500, ...) body) rather than the
-				// generic "kaydedilemedi" — the user needs to know the file went
-				// back to staging, not just that something failed.
-				const body = await res.json().catch(() => null);
-				throw new Error(typeof body?.message === 'string' ? body.message : t('UploadDialog.saveFailed'));
+				// (confirm/+server.ts's fail('IMPORT_INDEX_FAILED', ...) body)
+				// rather than the generic "kaydedilemedi" — the user needs to
+				// know the file went back to staging, not just that something
+				// failed.
+				throw new Error(await readResponseError(res));
 			}
 			open = false;
 			onImported();
@@ -235,7 +237,9 @@
 				     unreadable paragraph. -->
 				<ul class="list-disc space-y-1 pl-5 text-sm text-destructive">
 					{#each warnings as warning (warning)}
-						<li>{warning}</li>
+						<!-- Our own warnings arrive as codes; converter warnings are
+						     free text and fall through localizeError unchanged. -->
+						<li>{localizeError({ code: warning, message: warning })}</li>
 					{/each}
 				</ul>
 			{/if}

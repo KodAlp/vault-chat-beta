@@ -4,6 +4,11 @@ import net from 'node:net';
 import { Agent, fetch as undiciFetch } from 'undici';
 import robotsParser from 'robots-parser';
 import { MAX_UPLOAD_BYTES } from './library';
+import { AppError } from './app-error';
+
+/** Shared by every FILE_TOO_LARGE site (single upload, batch item, link
+ * fetch cap) so the catalog's {limitMb} always matches the real cap. */
+const MAX_UPLOAD_MB = Math.round(MAX_UPLOAD_BYTES / (1024 * 1024));
 
 /** First bytes, not Content-Type — servers routinely send a wrong/missing
  * header, and the magic signature is what actually determines whether
@@ -35,17 +40,17 @@ export function describeError(err: unknown, fallback: string): string {
 }
 
 /** Rejects anything that isn't a plain http(s) URL — no file:/javascript:/
- * data: etc. Throws a readable Turkish message rather than returning
- * null, so route code can treat it exactly like any other per-link failure. */
+ * data: etc. Throws an AppError rather than returning null, so route code
+ * can treat it exactly like any other per-link failure via toCodedError(). */
 export function validateLinkUrl(raw: string): URL {
 	let url: URL;
 	try {
 		url = new URL(raw.trim());
 	} catch {
-		throw new Error(`Geçersiz bağlantı: ${raw}`);
+		throw new AppError('LINK_INVALID', { url: raw });
 	}
 	if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-		throw new Error(`Desteklenmeyen protokol: ${url.protocol}`);
+		throw new AppError('LINK_PROTOCOL_UNSUPPORTED', { protocol: url.protocol });
 	}
 	return url;
 }
@@ -160,7 +165,7 @@ export async function assertPublicHost(
 	const hostname = url.hostname.replace(/^\[|\]$/g, '');
 	if (net.isIP(hostname)) {
 		if (isBlockedAddress(hostname)) {
-			throw new Error(`Yerel/özel ağ adresine erişim reddedildi: ${hostname}`);
+			throw new AppError('LINK_PRIVATE_NETWORK', { host: hostname });
 		}
 		return [hostname];
 	}
@@ -176,11 +181,11 @@ export async function assertPublicHost(
 		// no AAAA record either
 	}
 	if (addrs.length === 0) {
-		throw new Error(`Alan adı çözümlenemedi: ${hostname}`);
+		throw new AppError('LINK_DNS_FAILED', { host: hostname });
 	}
 	for (const addr of addrs) {
 		if (isBlockedAddress(addr)) {
-			throw new Error(`Yerel/özel ağ adresine erişim reddedildi: ${hostname} (${addr})`);
+			throw new AppError('LINK_PRIVATE_NETWORK', { host: hostname, addr });
 		}
 	}
 	return addrs;
@@ -268,15 +273,15 @@ const USER_AGENT = 'Mozilla/5.0 (compatible; vault-chat-import/1.0)';
  * gets to check). */
 export function nextRedirectTarget(current: URL, status: number, location: string | null): URL | null {
 	if (status < 300 || status >= 400) return null;
-	if (!location) throw new Error(`Yönlendirme hedefsiz (${status})`);
+	if (!location) throw new AppError('LINK_REDIRECT_INVALID', { detail: `no Location header (${status})` });
 	let next: URL;
 	try {
 		next = new URL(location, current);
 	} catch {
-		throw new Error(`Geçersiz yönlendirme hedefi: ${location}`);
+		throw new AppError('LINK_REDIRECT_INVALID', { detail: location });
 	}
 	if (next.protocol !== 'http:' && next.protocol !== 'https:') {
-		throw new Error(`Desteklenmeyen yönlendirme protokolü: ${next.protocol}`);
+		throw new AppError('LINK_REDIRECT_INVALID', { detail: next.protocol });
 	}
 	return next;
 }
@@ -310,9 +315,9 @@ export async function fetchWithCap(url: URL): Promise<Buffer> {
 	let current = url;
 
 	for (let hop = 0; ; hop++) {
-		if (hop > MAX_REDIRECTS) throw new Error(`Çok fazla yönlendirme (>${MAX_REDIRECTS})`);
+		if (hop > MAX_REDIRECTS) throw new AppError('LINK_TOO_MANY_REDIRECTS', { max: MAX_REDIRECTS });
 		const remaining = deadline - Date.now();
-		if (remaining <= 0) throw new Error('İstek zaman aşımına uğradı');
+		if (remaining <= 0) throw new AppError('LINK_TIMEOUT');
 
 		const addrs = await assertPublicHost(current);
 		const res = await undiciFetch(current.href, {
@@ -328,7 +333,7 @@ export async function fetchWithCap(url: URL): Promise<Buffer> {
 			continue;
 		}
 
-		if (!res.ok) throw new Error(`İstek başarısız: ${res.status}`);
+		if (!res.ok) throw new AppError('LINK_HTTP_FAILED', { status: res.status });
 		if (!res.body) return Buffer.alloc(0);
 
 		const reader = res.body.getReader();
@@ -340,7 +345,7 @@ export async function fetchWithCap(url: URL): Promise<Buffer> {
 			total += value.byteLength;
 			if (total > MAX_UPLOAD_BYTES) {
 				await reader.cancel();
-				throw new Error('Dosya çok büyük (100MB sınırı)');
+				throw new AppError('FILE_TOO_LARGE', { limitMb: MAX_UPLOAD_MB });
 			}
 			chunks.push(value);
 		}

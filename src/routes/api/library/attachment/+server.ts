@@ -1,10 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { resolveLibraryPath } from '$lib/server/library-read';
 import { ATTACHMENT_EXT, META_DIR, ATTACHMENTS_SUBDIR, sniffAttachmentContentType } from '$lib/server/attachments';
 import { vaultFromUrl } from '$lib/server/requestVault';
+import { fail } from '$lib/server/app-error';
 
 const ATTACHMENT_PREFIX = `${META_DIR}/${ATTACHMENTS_SUBDIR}/`;
 
@@ -19,31 +19,31 @@ const ATTACHMENT_PREFIX = `${META_DIR}/${ATTACHMENTS_SUBDIR}/`;
 export const GET: RequestHandler = async ({ url }) => {
 	const v = vaultFromUrl(url);
 	const rel = url.searchParams.get('path');
-	if (!rel) error(400, 'path gerekli');
+	if (!rel) fail('VALIDATION_REQUIRED', { field: 'path' });
 
 	let abs: string;
 	try {
 		abs = resolveLibraryPath(v, rel);
 	} catch {
-		error(400, 'Geçersiz yol');
+		fail('PATH_OUTSIDE_LIBRARY');
 	}
 	// resolveLibraryPath already confirmed abs is inside the library root;
 	// this confirms it's specifically inside the attachments subfolder.
 	const relNormalized = rel.replace(/\\/g, '/').replace(/^\/+/, '');
-	if (!relNormalized.startsWith(ATTACHMENT_PREFIX)) error(404, 'Dosya bulunamadı');
+	if (!relNormalized.startsWith(ATTACHMENT_PREFIX)) fail('NOT_FOUND', { entity: 'file' }, 404);
 
 	const ext = path.extname(abs).toLowerCase();
-	if (!ATTACHMENT_EXT.has(ext)) error(404, 'Dosya bulunamadı');
+	if (!ATTACHMENT_EXT.has(ext)) fail('NOT_FOUND', { entity: 'file' }, 404);
 
 	let buf: Buffer;
 	try {
 		buf = fs.readFileSync(abs);
 	} catch {
-		error(404, 'Dosya bulunamadı');
+		fail('NOT_FOUND', { entity: 'file' }, 404);
 	}
 
 	const contentType = sniffAttachmentContentType(ext, buf);
-	if (!contentType) error(415, 'Dosya içeriği beklenen türle uyuşmuyor');
+	if (!contentType) fail('ATTACHMENT_TYPE_MISMATCH', undefined, 415);
 
 	return new Response(new Uint8Array(buf), {
 		headers: {

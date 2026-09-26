@@ -5,6 +5,7 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { t } from '$lib/i18n/index.svelte';
+	import { localizeError, readResponseError } from '$lib/server-error';
 
 	// Optional, unlike UploadDialog's — this dialog lives on the library
 	// settings page next to LibraryTree, which refreshes itself on its own
@@ -73,8 +74,8 @@
 				headers: { 'content-type': 'application/json' },
 				body: JSON.stringify({ url: scanUrl.trim() })
 			});
+			if (!res.ok) throw new Error(await readResponseError(res));
 			const body = await res.json().catch(() => null);
-			if (!res.ok) throw new Error(typeof body?.message === 'string' ? body.message : t('Common.istekBasarisiz', { status: res.status }));
 			scanResults = Array.isArray(body?.links) ? body.links : [];
 			scanSelected = new Set(scanResults.map((l: { url: string }) => l.url));
 			scanPhase = 'done';
@@ -124,7 +125,8 @@
 				headers: { 'content-type': 'application/json' },
 				body: JSON.stringify({ links, domain: domain.trim() || 'genel' })
 			});
-			if (!res.ok || !res.body) throw new Error(t('Common.istekBasarisiz', { status: res.status }));
+			if (!res.ok) throw new Error(await readResponseError(res));
+			if (!res.body) throw new Error(t('Common.istekBasarisiz', { status: res.status }));
 
 			const reader = res.body.getReader();
 			const decoder = new TextDecoder();
@@ -150,7 +152,7 @@
 						items = event.summary?.items ?? items;
 						phase = 'done';
 					} else if (event.type === 'error') {
-						errorMessage = event.message;
+						errorMessage = localizeError(event);
 						phase = 'error';
 					}
 				}
@@ -176,8 +178,7 @@
 				body: JSON.stringify({ title: draft.title.trim(), domain: draft.domain.trim(), level: draft.level })
 			});
 			if (!res.ok) {
-				const body = await res.json().catch(() => null);
-				throw new Error(typeof body?.message === 'string' ? body.message : t('UploadDialog.saveFailed'));
+				throw new Error(await readResponseError(res));
 			}
 			const saved = (await res.json()) as { path: string };
 			replaceItem(item.importId, { ...item, status: 'converted', path: saved.path });
@@ -334,7 +335,7 @@
 							{#if item.warnings && item.warnings.length > 0}
 								<ul class="list-disc space-y-0.5 pl-4 text-xs text-destructive">
 									{#each item.warnings as warning (warning)}
-										<li>{warning}</li>
+										<li>{localizeError({ code: warning, message: warning })}</li>
 									{/each}
 								</ul>
 							{/if}
@@ -349,13 +350,13 @@
 						</div>
 					{/if}
 				{/each}
-				{#each items.filter((i) => i.status !== 'skipped' && i.status !== 'pending') as item (item.fileName)}
+				{#each items.filter((i) => i.status !== 'skipped' && i.status !== 'pending') as item (item.id)}
 					<div class="flex items-center gap-2 border-b py-1 text-sm">
 						<span class="shrink-0 rounded-full px-2 py-0.5 text-[0.68rem] {STATUS_BADGE_CLASS[item.status] ?? ''}">
 							{STATUS_LABELS[item.status] ?? item.status}
 						</span>
 						<span class="overflow-hidden text-ellipsis whitespace-nowrap">{item.fileName}</span>
-						{#if item.reason}<span class="text-xs text-muted-foreground">{item.reason}</span>{/if}
+						{#if item.reason}<span class="text-xs text-muted-foreground">{localizeError({ code: item.code, params: item.params, message: item.reason })}</span>{/if}
 					</div>
 				{/each}
 			</div>

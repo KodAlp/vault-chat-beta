@@ -20,6 +20,7 @@ import { indexLibraryFile } from '$lib/server/incrementalIndex';
 import { vaultFromId } from '$lib/server/requestVault';
 import { sseStream } from '$lib/server/sse';
 import { logAppEvent } from '$lib/server/app-log';
+import { AppError, toCodedError } from '$lib/server/app-error';
 import type { ImportEvent, ImportResultItem, ImportSummary } from '$lib/types';
 
 /**
@@ -55,9 +56,12 @@ export const POST: RequestHandler = async ({ request }) => {
 			const ext = path.extname(safeName).toLowerCase() || '.bin';
 			if (!ALLOWED_EXTENSIONS.has(ext) && !CODE_EXTENSIONS.has(ext)) {
 				const item: ImportResultItem = {
+					id: crypto.randomUUID(),
 					fileName: safeName,
 					status: 'failed',
-					reason: `Desteklenmeyen dosya türü: ${ext || '(uzantısız)'}`
+					code: 'UNSUPPORTED_FILE_TYPE',
+					params: { ext: ext || '?' },
+					reason: 'UNSUPPORTED_FILE_TYPE'
 				};
 				items.push(item);
 				send({ type: 'item', item });
@@ -65,9 +69,12 @@ export const POST: RequestHandler = async ({ request }) => {
 			}
 			if (file.size > MAX_UPLOAD_BYTES) {
 				const item: ImportResultItem = {
+					id: crypto.randomUUID(),
 					fileName: safeName,
 					status: 'failed',
-					reason: 'Dosya çok büyük (100MB sınırı)'
+					code: 'FILE_TOO_LARGE',
+					params: { limitMb: Math.round(MAX_UPLOAD_BYTES / (1024 * 1024)) },
+					reason: 'FILE_TOO_LARGE'
 				};
 				items.push(item);
 				send({ type: 'item', item });
@@ -77,7 +84,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			const fileBytes = Buffer.from(await file.arrayBuffer());
 			const sourceSha256 = crypto.createHash('sha256').update(fileBytes).digest('hex');
 			if (alreadyImported.has(sourceSha256)) {
-				const item: ImportResultItem = { fileName: safeName, status: 'skipped' };
+				const item: ImportResultItem = { id: crypto.randomUUID(), fileName: safeName, status: 'skipped' };
 				items.push(item);
 				send({ type: 'item', item });
 				continue;
@@ -90,7 +97,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
 			try {
 				const result = await enqueueConversion(tempIn, workDir, 'auto', undefined, safeName);
-				if (!result.outPath) throw new Error('Dönüştürme çıktı üretmedi');
+				if (!result.outPath) throw new AppError('CONVERSION_EMPTY');
 
 				const raw = fs.readFileSync(result.outPath, 'utf-8');
 				const parsed = matter(raw);
@@ -121,6 +128,7 @@ export const POST: RequestHandler = async ({ request }) => {
 				});
 
 				const item: ImportResultItem = {
+					id: crypto.randomUUID(),
 					fileName: safeName,
 					status: needsReview ? 'needs_review' : 'converted',
 					path: relPath
@@ -128,10 +136,14 @@ export const POST: RequestHandler = async ({ request }) => {
 				items.push(item);
 				send({ type: 'item', item });
 			} catch (err) {
+				const coded = toCodedError(err);
 				const item: ImportResultItem = {
+					id: crypto.randomUUID(),
 					fileName: safeName,
 					status: 'failed',
-					reason: err instanceof Error ? err.message : 'Bilinmeyen hata'
+					code: coded.code,
+					params: coded.params,
+					reason: coded.code
 				};
 				items.push(item);
 				send({ type: 'item', item });

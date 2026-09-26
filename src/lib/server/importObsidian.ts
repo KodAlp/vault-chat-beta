@@ -5,6 +5,7 @@ import matter from 'gray-matter';
 import { libraryRoot, importLogPath, appendImportLog } from './library';
 import { copyAttachmentIntoLibrary } from './attachments';
 import { indexLibraryFile } from './incrementalIndex';
+import { AppError, toCodedError } from './app-error';
 // Was its own separate list here (missing 'raw', among others): a source
 // folder containing raw/ got copied AND incrementally indexed on import,
 // then silently pruned back out by the next `npm run index --full`, which
@@ -114,7 +115,7 @@ export async function importObsidianVault(
 ): Promise<ImportSummary> {
 	const resolvedSource = path.resolve(sourcePath);
 	if (!fs.existsSync(resolvedSource) || !fs.statSync(resolvedSource).isDirectory()) {
-		throw new Error('Kaynak vault yolu bulunamadı ya da bir klasör değil');
+		throw new AppError('OBSIDIAN_SOURCE_INVALID');
 	}
 
 	const allFiles = walkAll(resolvedSource);
@@ -143,7 +144,7 @@ export async function importObsidianVault(
 		const hash = sha256(raw);
 
 		if (lastKnownHashes.get(rel) === hash) {
-			const item: ImportResultItem = { fileName: rel, status: 'skipped' };
+			const item: ImportResultItem = { id: crypto.randomUUID(), fileName: rel, status: 'skipped' };
 			items.push(item);
 			onProgress?.(item);
 			continue;
@@ -180,14 +181,18 @@ export async function importObsidianVault(
 
 			const status = needsReview ? 'needs_review' : 'converted';
 			appendLog(v, logPath, { sourcePath: rel, sha256: hash, importedAt: new Date().toISOString(), status });
-			const item: ImportResultItem = { fileName: rel, status, path: rel };
+			const item: ImportResultItem = { id: crypto.randomUUID(), fileName: rel, status, path: rel };
 			items.push(item);
 			onProgress?.(item);
 		} catch (err) {
+			const coded = toCodedError(err);
 			const item: ImportResultItem = {
+				id: crypto.randomUUID(),
 				fileName: rel,
 				status: 'failed',
-				reason: err instanceof Error ? err.message : 'Bilinmeyen hata'
+				code: coded.code,
+				params: coded.params,
+				reason: coded.code
 			};
 			items.push(item);
 			onProgress?.(item);

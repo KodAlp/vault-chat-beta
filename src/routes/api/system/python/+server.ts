@@ -5,6 +5,7 @@ import type { RequestHandler } from './$types';
 import { pythonBin } from '$lib/server/convertQueue';
 import { sseStream } from '$lib/server/sse';
 import { logAppEvent } from '$lib/server/app-log';
+import { AppError, errorPayload } from '$lib/server/app-error';
 import type { PythonSetupEvent } from '$lib/types';
 
 /** Same detection primitive as scripts/doctor.mjs's markitdown/yt_dlp check
@@ -39,10 +40,7 @@ export const POST: RequestHandler = async () => {
 	const versionCheck = spawnSync(bin, ['--version']);
 	if (versionCheck.error || versionCheck.status !== 0) {
 		return sseStream<PythonSetupEvent>(async (send) => {
-			send({
-				type: 'error',
-				message: 'Python bulunamadı. Önce https://python.org adresinden Python 3 kur, sonra tekrar dene.'
-			});
+			send({ type: 'error', ...errorPayload(new AppError('PYTHON_NOT_FOUND')) });
 		});
 	}
 
@@ -61,7 +59,7 @@ export const POST: RequestHandler = async () => {
 			child.stderr.on('data', forwardLines);
 
 			child.on('error', (err) => {
-				send({ type: 'error', message: `pip başlatılamadı: ${err.message}` });
+				send({ type: 'error', ...errorPayload(new AppError('PYTHON_SPAWN_FAILED', { detail: err.message })) });
 				resolve();
 			});
 
