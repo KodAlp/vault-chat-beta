@@ -740,5 +740,52 @@
 		"fitToScreen": "Fit to screen",
 		"mapHint": "Click a node's circle to expand/collapse it; click a truncated explanation to see the full text.",
 		"viewFailed": "Couldn't display the mind map: {error}"
+	},
+
+	"ServerErrors": {
+		"UNKNOWN": "An unexpected error occurred",
+		"INTERNAL": "Something went wrong on the server",
+		"ROUTE_NOT_FOUND": "Page not found",
+		"NOT_FOUND": "{entity} not found",
+		"VALIDATION_REQUIRED": "{field} is required",
+		"VALIDATION_INVALID": "{field} is invalid",
+		"REQUEST_FAILED": "Request failed ({status})",
+		"NO_SOURCES": "There aren't enough sources in the library for this scope.",
+		"NO_SOURCES_NARROW": "No sources found in the selected scope — try expanding it.",
+		"PROVIDER_NETWORK": "Couldn't reach {provider}",
+		"PROVIDER_TIMEOUT_CONNECT": "Timed out connecting to {provider}",
+		"PROVIDER_TIMEOUT_FIRST_TOKEN": "{provider} didn't start responding in time",
+		"PROVIDER_TIMEOUT_IDLE": "{provider}'s response stalled (timeout)",
+		"PROVIDER_HTTP_429": "{provider}: rate limit exceeded",
+		"PROVIDER_HTTP_5XX": "{provider} is currently unavailable",
+		"PROVIDER_AUTH": "{provider}: API key is invalid or missing",
+		"PROVIDER_BAD_REQUEST": "{provider} rejected the request",
+		"PROVIDER_CONTEXT_LENGTH": "Context too long for {provider} to process",
+		"PROVIDER_UNKNOWN": "An unknown error occurred with {provider}",
+		"entity_chat": "Chat",
+		"entity_quiz": "Quiz",
+		"entity_card": "Card",
+		"entity_deck": "Deck",
+		"entity_report": "Report",
+		"entity_mindmap": "Mind map",
+		"entity_slidedeck": "Slide deck",
+		"entity_attempt": "Attempt",
+		"entity_question": "Question",
+		"entity_skill": "Skill",
+		"entity_vault": "Vault",
+		"entity_provider": "Provider",
+		"entity_note": "Note",
+		"entity_file": "File",
+		"entity_memory": "Memory note",
+		"entity_record": "Record",
+		"entity_import": "Import"
+	},
+
+	"ErrorPage": {
+		"title": "Something went wrong",
+		"notFoundTitle": "Page not found",
+		"notFoundBody": "The page you're looking for may have moved or never existed.",
+		"home": "Back to home",
+		"back": "Go back"
 	}
 }

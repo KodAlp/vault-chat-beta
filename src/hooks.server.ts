@@ -1,4 +1,4 @@
-import { error, type Handle } from '@sveltejs/kit';
+import { error, type Handle, type HandleServerError } from '@sveltejs/kit';
 import { runVaultMigrationIfNeeded } from '$lib/server/migrateVaults';
 import { logAppEvent } from '$lib/server/app-log';
 
@@ -114,4 +114,26 @@ export const handle: Handle = async ({ event, resolve }) => {
 	}
 
 	return resolve(event);
+};
+
+/**
+ * Phase 1 (hardening) — the last-resort catch for anything that reaches
+ * SvelteKit's own error boundary uncaught: an unhandled exception in
+ * load()/an endpoint, or a 404 for a route that doesn't exist. Whatever this
+ * returns becomes `page.error` on the root +error.svelte (see
+ * src/app.d.ts's App.Error) — always a stable code, never the raw
+ * exception's own (Turkish, unlocalized, possibly sensitive) message.
+ *
+ * 404s are routine navigation, not a bug — logging every one would just
+ * noise up app-log.jsonl for e.g. browser favicon probes. Everything else is
+ * a real failure and gets logged the same way uncaughtException above does.
+ */
+export const handleError: HandleServerError = ({ error: err, status }) => {
+	if (status === 404) {
+		return { message: 'ROUTE_NOT_FOUND', code: 'ROUTE_NOT_FOUND' };
+	}
+
+	const text = err instanceof Error ? (err.stack ?? err.message) : String(err);
+	logAppEvent({ kind: 'fatal_error', message: `handleError: ${text}` });
+	return { message: 'INTERNAL', code: 'INTERNAL' };
 };
