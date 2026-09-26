@@ -1,8 +1,16 @@
 import { ProviderError, type ChatRequest, type Chunk, type ProviderAdapter, type ProviderErrorKind } from './types';
 import { resolveHopModel } from './resolve-hop-model';
 import type { ProviderConfigEntry } from './config-store';
+import { AppError } from '../app-error';
+import type { ErrorParams } from '../../errors';
 
-export type FallbackEvent = Chunk | { type: 'notice'; message: string };
+/** `message` stays a human-readable (Turkish, log-friendly) string — it is
+ * what api/chat/+server.ts's own `logAppEvent({kind:'fallback', ...})` call
+ * records — while `code`/`params` are what the client actually renders
+ * (see server-error.ts's localizeError). Every yield below sets both. */
+export type FallbackEvent =
+	| Chunk
+	| { type: 'notice'; message: string; code?: string; params?: ErrorParams };
 
 /**
  * Everything chatWithFallback needs from the outside world, injected —
@@ -86,14 +94,23 @@ export async function* chatWithFallbackCore(
 	const pinConsented = pinnedProviderId ? deps.isProviderConsented(pinnedProviderId) : false;
 	const pin = pinEnabled && pinConsented ? pinnedProviderId : undefined;
 	if (pinnedProviderId && !pin) {
-		const reason = !pinEnabled ? 'devre dışı' : 'henüz onaylanmadı';
-		const message = `${pinnedProviderId} ${reason} → görev zinciri kullanılıyor`;
+		// `reason` is a code-ish token, not prose — the client resolves it to
+		// localized text itself (Chat.fallbackReason_<reason>) before handing
+		// the whole notice to formatCodedError, same as NOT_FOUND's `entity`.
+		const reason: 'disabled' | 'not_consented' = !pinEnabled ? 'disabled' : 'not_consented';
+		const logReason = reason === 'disabled' ? 'devre dışı' : 'henüz onaylanmadı';
+		const message = `${pinnedProviderId} ${logReason} → görev zinciri kullanılıyor`;
 		deps.logFallback(message, pinnedProviderId);
-		yield { type: 'notice', message };
+		yield {
+			type: 'notice',
+			message,
+			code: 'CHAT_FALLBACK_PINNED_UNAVAILABLE',
+			params: { provider: pinnedProviderId, reason }
+		};
 	}
 	const chain = pin ? [pin] : baseChain;
 	if (chain.length === 0) {
-		throw new Error(`"${taskType}" görev tipi için etkin bir provider zinciri yok`);
+		throw new AppError('CHAT_NO_CHAIN', { taskType });
 	}
 
 	// The earliest REAL failure (a hop that actually ran and errored) — kept
@@ -109,11 +126,16 @@ export async function* chatWithFallbackCore(
 		if (model === null) {
 			// A continuation request is only valid against the provider that wrote the
 			// partial answer; skipping to another one is not an option.
-			if (req.continuation) throw firstError ?? new Error(`"${taskType}" için devam isteği başka sağlayıcıya aktarılamaz`);
+			if (req.continuation) throw firstError ?? new AppError('CHAT_CONTINUATION_UNAVAILABLE', { taskType });
 			const message = `${providerId} için varsayılan model tanımlı değil → atlanıyor`;
 			deps.logFallback(message, providerId);
-			yield { type: 'notice', message };
-			if (isLast) throw firstError ?? new Error(`"${taskType}" için hiçbir sağlayıcıda model çözülemedi`);
+			yield {
+				type: 'notice',
+				message,
+				code: 'CHAT_FALLBACK_NO_DEFAULT_MODEL',
+				params: { provider: providerId }
+			};
+			if (isLast) throw firstError ?? new AppError('CHAT_NO_MODEL_RESOLVED', { taskType });
 			continue;
 		}
 
@@ -145,13 +167,27 @@ export async function* chatWithFallbackCore(
 			if (isLast) throw err;
 
 			const errorKind = err instanceof ProviderError ? err.kind : undefined;
+			const providerLabel = deps.getProviderEntry(providerId)?.label ?? providerId;
 			const nextLabel = deps.getProviderEntry(chain[i + 1])?.label ?? chain[i + 1];
-			const message =
-				errorKind === 'http_429'
-					? `${deps.getProviderEntry(providerId)?.label ?? providerId} hız sınırına takıldı → ${nextLabel}'a geçiliyor`
-					: `${providerId} kullanılamıyor (${errorKind ?? 'error'}) → sıradaki modele geçiliyor`;
-			deps.logFallback(message, providerId, errorKind);
-			yield { type: 'notice', message };
+			if (errorKind === 'http_429') {
+				const message = `${providerLabel} hız sınırına takıldı → ${nextLabel}'a geçiliyor`;
+				deps.logFallback(message, providerId, errorKind);
+				yield {
+					type: 'notice',
+					message,
+					code: 'CHAT_FALLBACK_RATE_LIMITED',
+					params: { from: providerLabel, to: nextLabel }
+				};
+			} else {
+				const message = `${providerId} kullanılamıyor (${errorKind ?? 'error'}) → sıradaki modele geçiliyor`;
+				deps.logFallback(message, providerId, errorKind);
+				yield {
+					type: 'notice',
+					message,
+					code: 'CHAT_FALLBACK_UNAVAILABLE',
+					params: { provider: providerId, kind: errorKind ?? 'error' }
+				};
+			}
 		}
 	}
 }

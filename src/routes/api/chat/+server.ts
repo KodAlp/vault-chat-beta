@@ -1,5 +1,6 @@
-import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
+import { fail, errorPayload } from '$lib/server/app-error';
+import type { ErrorCode, ErrorParams } from '$lib/errors';
 import { retrieve } from '$lib/server/retrieve';
 import { buildRetrievalQuery } from '$lib/server/retrieval-query';
 import { buildPromptMessages } from '$lib/server/prompt';
@@ -83,13 +84,16 @@ const MAX_CORRUPTION_RETRIES = 2;
  * what the tool actually does; this route only orchestrates the hops. */
 const MAX_TOOL_ROUNDTRIPS = 4;
 
-/** Auth failures get a clean, actionable message instead of a raw HTTP body
- * — the provider name + "check your key" is what the user can act on. */
-function chatErrorMessage(err: unknown): string {
-	if (err instanceof ProviderError && err.kind === 'auth') {
-		return `${err.providerId}: API anahtarı geçersiz veya eksik`;
-	}
-	return err instanceof Error ? err.message : 'Bilinmeyen hata';
+/** Every coded chat notice/error this route sends is built through one of
+ * these two — `message` is set to the code itself (errorPayload's own
+ * convention) purely as a legible fallback for a client that only reads
+ * `.message`; the real client path renders via `code`/`params` (see
+ * server-error.ts's localizeError). */
+function noticeEvent(code: ErrorCode, params?: ErrorParams): StreamEvent {
+	return { type: 'notice', message: code, code, params };
+}
+function errorEvent(code: ErrorCode, params?: ErrorParams): StreamEvent {
+	return { type: 'error', message: code, code, params };
 }
 
 export const POST: RequestHandler = async ({ request }) => {
@@ -97,7 +101,7 @@ export const POST: RequestHandler = async ({ request }) => {
 	try {
 		body = (await request.json()) as ChatRequestBody;
 	} catch {
-		error(400, 'Geçersiz istek gövdesi');
+		fail('CHAT_INVALID_BODY', undefined, 400);
 	}
 	const v = vaultFromId(body.vault);
 	const allowedLanguages = getLibrarySettings(v).allowedLanguages;
@@ -107,7 +111,7 @@ export const POST: RequestHandler = async ({ request }) => {
 	// bug or a forged request, and either way must not silently get logged
 	// under the wrong role.
 	if (lastUser && lastUser.role !== 'user') {
-		error(400, 'Son mesaj kullanıcıdan gelmeli');
+		fail('CHAT_LAST_MESSAGE_NOT_USER', undefined, 400);
 	}
 
 	const stream = new ReadableStream({
@@ -272,13 +276,7 @@ export const POST: RequestHandler = async ({ request }) => {
 						finalContent = '';
 						finalThinking = '';
 						send({ type: 'regenerate' });
-						send({
-							type: 'notice',
-							message:
-								retryReason === 'empty'
-									? 'Yanıt boş geldi, yeniden üretiliyor…'
-									: 'Yanıtta bozuk karakterler algılandı, yeniden üretiliyor…'
-						});
+						send(noticeEvent(retryReason === 'empty' ? 'CHAT_EMPTY_ANSWER_RETRY' : 'CHAT_CORRUPTION_RETRY'));
 					}
 
 					// Per-attempt signal, not `flight.signal` directly — abort() is
@@ -451,7 +449,7 @@ export const POST: RequestHandler = async ({ request }) => {
 											pendingResume = plan.seam;
 											resumeKind = bad.kind;
 											resumesUsed++;
-											send({ type: 'notice', message: 'Yanıtta bozuk karakter algılandı, kaldığı yerden devam ediliyor…' });
+											send(noticeEvent('CHAT_CORRUPTION_RESUME'));
 										} else {
 											corrupted = true;
 										}
@@ -466,7 +464,7 @@ export const POST: RequestHandler = async ({ request }) => {
 								} else if (event.type === 'tool_call') {
 									hopToolCalls.push({ id: event.id, name: event.name, arguments: event.arguments });
 								} else if (event.type === 'notice') {
-									send({ type: 'notice', message: event.message });
+									send({ type: 'notice', message: event.message, code: event.code, params: event.params });
 									logAppEvent({ kind: 'fallback', chatId, message: event.message });
 								} else if (event.type === 'usage') {
 									if (isNearCtxLimit(event)) nearCtxLimit = true;
@@ -594,11 +592,7 @@ export const POST: RequestHandler = async ({ request }) => {
 					if (!retryReason || flight.signal.aborted) break;
 					if (attempt >= MAX_CORRUPTION_RETRIES) {
 						if (retryReason === 'corrupted') {
-							send({
-								type: 'notice',
-								message:
-									'Yanıt bozuk karakterler içerebilir (bilinen bir model sorunu) — birkaç deneme sonrası temiz üretilemedi.'
-							});
+							send(noticeEvent('CHAT_CORRUPTION_GAVE_UP'));
 							logAppEvent({ kind: 'chat_error', chatId, message: 'U+FFFD corruption persisted after retries' });
 						} else {
 							// Genuinely empty after every retry — an `error` event, not
@@ -606,7 +600,7 @@ export const POST: RequestHandler = async ({ request }) => {
 							// left the empty assistant bubble on screen right next to
 							// the error text, which is what silently saving it as a
 							// blank message looked like from the user's side.
-							send({ type: 'error', message: 'Model bir yanıt üretmedi, lütfen tekrar deneyin.' });
+							send(errorEvent('CHAT_NO_ANSWER'));
 							logAppEvent({ kind: 'chat_error', chatId, message: 'empty answer persisted after retries' });
 							exhaustedEmpty = true;
 						}
@@ -621,9 +615,17 @@ export const POST: RequestHandler = async ({ request }) => {
 				// User-initiated stop (interrupt button / navigation) — propagates from
 				// the aborted Ollama fetch. Not a real error; say nothing.
 				if (!(err instanceof DOMException && err.name === 'AbortError')) {
-					const message = chatErrorMessage(err);
-					send({ type: 'error', message });
-					logAppEvent({ kind: 'chat_error', chatId, message });
+					// Ollama-not-running is this product's single most likely failure
+					// mode (see ollama.ts's chat() doc comment) — its own actionable
+					// code rather than the generic PROVIDER_NETWORK/PROVIDER_
+					// TIMEOUT_CONNECT sentence.
+					const isOllamaUnreachable =
+						err instanceof ProviderError &&
+						err.providerId === 'ollama' &&
+						(err.kind === 'network' || err.kind === 'timeout_connect');
+					const payload = isOllamaUnreachable ? errorEvent('OLLAMA_UNREACHABLE') : { type: 'error' as const, ...errorPayload(err) };
+					send(payload);
+					logAppEvent({ kind: 'chat_error', chatId, message: err instanceof Error ? err.message : String(err) });
 				}
 			} finally {
 				// First — a pending checkpoint firing after this block starts its
@@ -677,9 +679,9 @@ export const POST: RequestHandler = async ({ request }) => {
 						);
 					}
 				} catch (err) {
-					const message = err instanceof Error ? err.message : 'Bilinmeyen hata';
-					logAppEvent({ kind: 'db_error', chatId, message });
-					send({ type: 'error', message: `Sohbet kaydedilemedi: ${message}` });
+					const detail = err instanceof Error ? err.message : String(err);
+					logAppEvent({ kind: 'db_error', chatId, message: detail });
+					send(errorEvent('CHAT_SAVE_FAILED', { detail }));
 				}
 
 				closed = true;

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, untrack } from 'svelte';
+	import { onDestroy, onMount, untrack } from 'svelte';
 	import type { ChatMessage, ChatRequestBody, ProviderModelOption, StreamEvent } from '$lib/types';
 	import Message from './Message.svelte';
 	import ScopeIndicator from './ScopeIndicator.svelte';
@@ -7,6 +7,7 @@
 	import { settings } from '$lib/settings.svelte';
 	import { parseSelectionKey } from '$lib/model-selection';
 	import { t } from '$lib/i18n/index.svelte';
+	import { localizeError, readResponseError } from '$lib/server-error';
 	import { takePendingMessage } from '$lib/pending-message';
 	import { MAX_PHRASE_CHARS } from '$lib/smalltalk-limits';
 	import ArrowDownIcon from '@lucide/svelte/icons/arrow-down';
@@ -96,6 +97,16 @@
 			// Header selector just shows the current model as a lone option — not fatal.
 		}
 	});
+
+	// Navigating away (or the whole component unmounting for any other reason)
+	// must stop an in-flight stream the same way the chatId-change $effect
+	// below already does — that effect only fires on a same-component
+	// chatId swap; a route change that tears the component down entirely
+	// skipped both the abort AND the server-side flight's own single-flight
+	// cleanup (the fetch just kept running, unread, until it finished on its
+	// own). ask()'s own `finally` (isStreaming=false, clearInterval(timer))
+	// still runs normally off the AbortError this triggers.
+	onDestroy(() => abortController?.abort());
 
 	async function onModelChange(key: string) {
 		const { providerId, modelId } = parseSelectionKey(key);
@@ -200,6 +211,24 @@
 		};
 		const timer = setInterval(flush, FLUSH_INTERVAL_MS);
 
+		// Set once an in-band SSE `error` event arrives (the request itself
+		// succeeded — this is the server telling us the turn failed mid-stream).
+		let sawErrorEvent = false;
+
+		// Nothing usable survived this turn (no visible answer text — thinking-
+		// only or nothing at all) — pop the optimistic user+assistant bubbles
+		// and hand the question back to the composer, so retrying is hitting
+		// Send again, not retyping from memory. Shared by both failure paths
+		// below: a thrown exception (network failure, non-ok response) and an
+		// in-band `error` event the stream sent without throwing.
+		function discardOptimisticTurn() {
+			if (!assistantMessage.content) {
+				messages.pop();
+				messages.pop();
+				input = question;
+			}
+		}
+
 		abortController = new AbortController();
 		try {
 			const requestBody: ChatRequestBody = {
@@ -221,7 +250,7 @@
 				body: JSON.stringify(requestBody),
 				signal: abortController.signal
 			});
-			if (!res.ok || !res.body) throw new Error(t('Common.istekBasarisiz', { status: res.status }));
+			if (!res.ok || !res.body) throw new Error(await readResponseError(res));
 
 			const reader = res.body.getReader();
 			const decoder = new TextDecoder();
@@ -262,9 +291,12 @@
 						assistantMessage.hedges = event.hedges;
 						assistantMessage.nearCtxLimit = event.nearCtxLimit;
 					}
-					else if (event.type === 'error') errorMessage = event.message;
+					else if (event.type === 'error') {
+						errorMessage = localizeError(event);
+						sawErrorEvent = true;
+					}
 					else if (event.type === 'notice') {
-						(assistantMessage.notices ??= []).push(event.message);
+						(assistantMessage.notices ??= []).push({ message: event.message, code: event.code, params: event.params });
 					}
 					else if (event.type === 'toolCall') {
 						(assistantMessage.toolCalls ??= []).push({
@@ -287,6 +319,10 @@
 					else if (event.type === 'chatId') hasChatRow = true;
 				}
 			}
+			// The stream ended normally (no exception) but carried an in-band
+			// `error` event and nothing usable came out of it — same recovery
+			// as the exception path below.
+			if (sawErrorEvent && !assistantMessage.content) discardOptimisticTurn();
 		} catch (err) {
 			// User-initiated stop — keep whatever partial answer already streamed in,
 			// don't show it as an error. Mark it so Message.svelte can show something
@@ -296,17 +332,7 @@
 				assistantMessage.interrupted = true;
 			} else {
 				errorMessage = err instanceof Error ? err.message : t('Common.bilinmeyenHata');
-				if (!assistantMessage.content) {
-					// Nothing ever streamed in (e.g. Ollama unreachable at connect
-					// time) — an empty bubble would just be a second, disconnected
-					// place this same error shows up, and the question is still
-					// visible below in the input rather than lost. Undo the
-					// optimistic push entirely and restore the input so retrying
-					// is hitting Send again, not retyping the question from memory.
-					messages.pop();
-					messages.pop();
-					input = question;
-				}
+				discardOptimisticTurn();
 			}
 		} finally {
 			clearInterval(timer);
@@ -405,6 +431,11 @@
 	});
 
 	function handleKeydown(e: KeyboardEvent) {
+		// An IME composing a candidate (Japanese/Chinese/Korean input, etc.)
+		// fires its own Enter to commit the candidate — that must not also
+		// submit the message. keyCode 229 is the older/Safari signal for the
+		// same state on engines that don't set isComposing.
+		if (e.isComposing || e.keyCode === 229) return;
 		if (e.key === 'Enter' && !e.shiftKey) {
 			e.preventDefault();
 			send();

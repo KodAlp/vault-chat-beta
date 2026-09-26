@@ -146,23 +146,17 @@ export class OllamaAdapter extends OpenAICompatAdapter {
 	}
 
 	/** The gate's lease spans the whole stream, not just the swap moment
-	 * before it — see ollama-gate.ts's doc comment for why that matters. */
+	 * before it — see ollama-gate.ts's doc comment for why that matters.
+	 *
+	 * A network/connect-timeout failure here is rethrown untouched (kind and
+	 * providerId unchanged) rather than reworded — Ollama-not-running is this
+	 * product's single most likely failure mode, but the actionable phrasing
+	 * for it now lives client-side as its own code (api/chat/+server.ts's
+	 * catch block special-cases a ProviderError with providerId 'ollama' and
+	 * kind network/timeout_connect into `OLLAMA_UNREACHABLE`), not baked into
+	 * this adapter's message text. */
 	override async *chat(req: ChatRequest, signal: AbortSignal): AsyncGenerator<Chunk> {
-		try {
-			yield* ollamaGate.withModelStream(req.model, () => this.chatNative(req, signal));
-		} catch (err) {
-			// The base class's connection-refused/hung-server message
-			// ("ollama: ağ hatası — fetch failed") is technically accurate but
-			// not actionable — settings/+page.svelte already has the right
-			// phrasing for this exact failure mode ("Model listesi alınamadı —
-			// Ollama çalışıyor mu?"); the chat path should read the same way,
-			// since Ollama-not-running is this product's single most likely
-			// failure mode, not an edge case.
-			if (err instanceof ProviderError && (err.kind === 'network' || err.kind === 'timeout_connect')) {
-				throw new ProviderError(err.kind, err.providerId, `${err.providerId}: Ollama'ya ulaşılamıyor — Ollama çalışıyor mu?`);
-			}
-			throw err;
-		}
+		yield* ollamaGate.withModelStream(req.model, () => this.chatNative(req, signal));
 	}
 
 	/**
@@ -225,7 +219,7 @@ export class OllamaAdapter extends OpenAICompatAdapter {
 			throw new ProviderError(
 				classifyHttpStatus(res.status, bodyText),
 				this.id,
-				`${this.id}: HTTP ${res.status} — ${bodyText.slice(0, 300)}`
+				`HTTP ${res.status} — ${bodyText.slice(0, 300)}`
 			);
 		}
 

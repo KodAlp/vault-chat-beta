@@ -87,12 +87,15 @@ export class AnthropicAdapter implements ProviderAdapter {
 		return { signal: controller.signal, armTimer, clearTimer, dispose, getTimeoutKind: () => timeoutKind };
 	}
 
+	/** See openai-compat.ts's identical method: `message` carries no `${id}: ...`
+	 * prefix or Turkish wording anymore — toCodedError already supplies
+	 * `{provider}` and the localized sentence. */
 	private toProviderError(err: unknown, externalSignal: AbortSignal, timeoutKind: ProviderErrorKind | null): unknown {
 		if (externalSignal.aborted && !timeoutKind) return err;
 		if (timeoutKind) {
-			return new ProviderError(timeoutKind, this.id, `${this.id}: zaman aşımı (${timeoutKind})`);
+			return new ProviderError(timeoutKind, this.id, timeoutKind);
 		}
-		return new ProviderError('network', this.id, `${this.id}: ağ hatası — ${describeNetworkError(err)}`);
+		return new ProviderError('network', this.id, describeNetworkError(err));
 	}
 
 	private buildBody(req: ChatRequest): Record<string, unknown> {
@@ -170,7 +173,7 @@ export class AnthropicAdapter implements ProviderAdapter {
 			throw new ProviderError(
 				classifyHttpStatus(res.status, bodyText),
 				this.id,
-				`${this.id}: HTTP ${res.status} — ${bodyText.slice(0, 300)}`
+				`HTTP ${res.status} — ${bodyText.slice(0, 300)}`
 			);
 		}
 

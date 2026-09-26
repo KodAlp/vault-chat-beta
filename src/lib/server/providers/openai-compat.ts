@@ -255,15 +255,25 @@ export class OpenAICompatAdapter implements ProviderAdapter {
 		return { signal: controller.signal, armTimer, clearTimer, dispose, getTimeoutKind: () => timeoutKind };
 	}
 
+	/**
+	 * `message` is now just the external detail, with no `${id}: ...` prefix
+	 * or Turkish wording of its own — app-error.ts's toCodedError already
+	 * maps a ProviderError to `PROVIDER_<KIND>` with `{provider: this.id,
+	 * detail: message}`, and ServerErrors.PROVIDER_<KIND> supplies the
+	 * localized sentence around it (see server-error.ts/error-format.ts).
+	 * `message` staying human-readable-but-uncoded is still correct here:
+	 * it is a raw external detail (a timeout kind, a network cause, an HTTP
+	 * body), never a sentence shown on its own.
+	 */
 	protected toProviderError(err: unknown, externalSignal: AbortSignal, timeoutKind: ProviderErrorKind | null): unknown {
 		// A genuine caller-initiated abort (stop button, inflight supersede) is
 		// not a provider failure — rethrow it as-is so callers keep treating
 		// AbortError as "cancelled", exactly like today's ollama.ts does.
 		if (externalSignal.aborted && !timeoutKind) return err;
 		if (timeoutKind) {
-			return new ProviderError(timeoutKind, this.id, `${this.id}: zaman aşımı (${timeoutKind})`);
+			return new ProviderError(timeoutKind, this.id, timeoutKind);
 		}
-		return new ProviderError('network', this.id, `${this.id}: ağ hatası — ${describeNetworkError(err)}`);
+		return new ProviderError('network', this.id, describeNetworkError(err));
 	}
 
 	async *chat(req: ChatRequest, signal: AbortSignal): AsyncGenerator<Chunk> {
@@ -310,7 +320,7 @@ export class OpenAICompatAdapter implements ProviderAdapter {
 			throw new ProviderError(
 				classifyHttpStatus(res.status, bodyText),
 				this.id,
-				`${this.id}: HTTP ${res.status} — ${bodyText.slice(0, 300)}`
+				`HTTP ${res.status} — ${bodyText.slice(0, 300)}`
 			);
 		}
 
