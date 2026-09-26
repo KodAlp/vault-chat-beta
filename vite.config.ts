@@ -23,6 +23,14 @@ export default defineConfig({
 	// ::1), which some Windows setups (VPN/AV breaking IPv6 loopback) can't
 	// reach even though the app is meant to be loopback-only either way.
 	server: {
-		host: '127.0.0.1'
+		host: '127.0.0.1',
+		// data/ is runtime-written state (chats.db, providers.json, vaults.json,
+		// logs, secrets) sitting inside the project root — none of it is ever
+		// imported as a module, but Vite watches it by default, so every API
+		// write was triggering a full browser reload ("page reload
+		// data/providers.json") instead of just the intended API response.
+		watch: {
+			ignored: ['**/data/**']
+		}
 	}
 });
