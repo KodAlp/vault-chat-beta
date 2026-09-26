@@ -7,6 +7,7 @@
 	import ThinkingPanel from './ThinkingPanel.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { t } from '$lib/i18n/index.svelte';
+	import { localizeError } from '$lib/server-error';
 
 	let {
 		message,
@@ -67,8 +68,8 @@
 
 <div class="message {message.role}">
 	{#if message.role === 'assistant' && message.notices?.length}
-		{#each message.notices as notice, i (notice + '#' + i)}
-			<FallbackNotice message={notice} />
+		{#each message.notices as notice, i ((notice.code ?? notice.message) + '#' + i)}
+			<FallbackNotice message={localizeError(notice)} />
 		{/each}
 	{/if}
 	{#if message.role === 'assistant' && message.toolCalls?.length}
@@ -175,6 +176,12 @@
 		font-size: 0.72rem;
 		color: var(--color-muted-foreground);
 		background: var(--color-muted);
+		/* A folder-skill's supporting-file path can be long (nested
+		   directories) — without this, a flex child's default min-width:auto
+		   keeps it from shrinking below its content's natural width, so it
+		   overflowed the message column instead of wrapping. */
+		min-width: 0;
+		overflow-wrap: anywhere;
 	}
 
 	.tool-call-chip.error {

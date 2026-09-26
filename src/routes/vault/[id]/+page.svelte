@@ -125,6 +125,10 @@
 	}
 
 	function handleKeydown(e: KeyboardEvent) {
+		// An IME composing a candidate must not also submit the message — see
+		// Chat.svelte's identical guard. keyCode 229 covers older engines that
+		// don't set isComposing.
+		if (e.isComposing || e.keyCode === 229) return;
 		if (e.key === 'Enter' && !e.shiftKey) {
 			e.preventDefault();
 			start();
@@ -227,7 +231,12 @@
 		>
 			<ArrowLeftIcon size={14} aria-hidden="true" /> {t('VaultChatListPage.backToVaults')}
 		</a>
-		<h1 class="font-display text-lg font-medium">{data.vaultName}</h1>
+		<h1
+			class="min-w-0 flex-1 truncate px-2 text-center font-display text-lg font-medium"
+			title={data.vaultName}
+		>
+			{data.vaultName}
+		</h1>
 		<a
 			href="/settings"
 			title={t('Common.ayarlar')}

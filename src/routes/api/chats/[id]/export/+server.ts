@@ -1,5 +1,5 @@
-import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
+import { fail } from '$lib/server/app-error';
 import { getChat, getMessages, type MessageRow } from '$lib/server/chats-db';
 import type { RetrievedChunk } from '$lib/types';
 
@@ -36,7 +36,7 @@ function toMarkdown(title: string | null, model: string, messages: MessageRow[])
 
 export const GET: RequestHandler = async ({ params, url }) => {
 	const chat = getChat(params.id);
-	if (!chat) error(404, 'Konuşma bulunamadı');
+	if (!chat) fail('NOT_FOUND', { entity: 'chat' }, 404);
 	const messages = getMessages(params.id);
 
 	const format = url.searchParams.get('format') === 'json' ? 'json' : 'md';

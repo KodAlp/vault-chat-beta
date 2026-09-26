@@ -1,5 +1,6 @@
-import { error, redirect } from '@sveltejs/kit';
+import { redirect } from '@sveltejs/kit';
 import { getChat } from '$lib/server/chats-db';
+import { fail } from '$lib/server/app-error';
 import type { PageServerLoad } from './$types';
 
 /** Pre-Faz-9 bookmarks/links pointed at /chat/[id] directly, with no vault
@@ -8,6 +9,6 @@ import type { PageServerLoad } from './$types';
  * instead of needing a second "which vault is this chat in" mechanism. */
 export const load: PageServerLoad = async ({ params }) => {
 	const chat = getChat(params.id);
-	if (!chat) error(404, 'Konuşma bulunamadı');
+	if (!chat) fail('NOT_FOUND', { entity: 'chat' }, 404);
 	redirect(308, `/vault/${chat.vault_id}/chat/${params.id}`);
 };

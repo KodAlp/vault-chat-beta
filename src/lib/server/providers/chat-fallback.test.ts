@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { chatWithFallbackCore, type ChatFallbackDeps } from './chat-fallback';
 import { ProviderError, type ChatRequest, type Chunk, type ProviderAdapter } from './types';
 import type { ProviderConfigEntry } from './config-store';
+import { AppError } from '../app-error';
 
 function req(): ChatRequest {
 	return { model: 'requested-model', messages: [{ role: 'user', content: 'hi' }] };
@@ -215,7 +216,10 @@ test('an all-not-consented chain throws before any adapter is touched', async ()
 			throw new Error('must not be called — nothing is consented');
 		}
 	});
-	await assert.rejects(collect(chatWithFallbackCore(deps, 'chat', req(), new AbortController().signal)), /etkin bir provider zinciri yok/);
+	await assert.rejects(
+		collect(chatWithFallbackCore(deps, 'chat', req(), new AbortController().signal)),
+		(err: unknown) => err instanceof AppError && err.code === 'CHAT_NO_CHAIN' && err.params?.taskType === 'chat'
+	);
 });
 
 test('an all-disabled chain throws before any adapter is touched', async () => {
@@ -227,7 +231,7 @@ test('an all-disabled chain throws before any adapter is touched', async () => {
 	});
 	await assert.rejects(
 		collect(chatWithFallbackCore(deps, 'quiz', req(), new AbortController().signal)),
-		/etkin bir provider zinciri yok/
+		(err: unknown) => err instanceof AppError && err.code === 'CHAT_NO_CHAIN' && err.params?.taskType === 'quiz'
 	);
 });
 
@@ -240,7 +244,12 @@ test('a retryable failure before any text falls back to the next hop, with a not
 	});
 	const events = await collect(chatWithFallbackCore(deps, 'chat', req(), new AbortController().signal));
 	assert.deepEqual(events, [
-		{ type: 'notice', message: 'a kullanılamıyor (timeout_connect) → sıradaki modele geçiliyor' },
+		{
+			type: 'notice',
+			message: 'a kullanılamıyor (timeout_connect) → sıradaki modele geçiliyor',
+			code: 'CHAT_FALLBACK_UNAVAILABLE',
+			params: { provider: 'a', kind: 'timeout_connect' }
+		},
 		{ type: 'text', text: 'recovered' },
 		{ type: 'done' }
 	]);
@@ -311,7 +320,12 @@ test('getAdapter throwing for a deleted/unknown provider falls back instead of c
 	});
 	const events = await collect(chatWithFallbackCore(deps, 'chat', req(), new AbortController().signal));
 	assert.deepEqual(events, [
-		{ type: 'notice', message: 'a kullanılamıyor (error) → sıradaki modele geçiliyor' },
+		{
+			type: 'notice',
+			message: 'a kullanılamıyor (error) → sıradaki modele geçiliyor',
+			code: 'CHAT_FALLBACK_UNAVAILABLE',
+			params: { provider: 'a', kind: 'error' }
+		},
 		{ type: 'text', text: 'ok' },
 		{ type: 'done' }
 	]);

@@ -1,5 +1,6 @@
-import { error, json } from '@sveltejs/kit';
+import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
+import { fail } from '$lib/server/app-error';
 import {
 	getChat,
 	getMessages,
@@ -14,7 +15,7 @@ import type { ChatMessage, RetrievedChunk } from '$lib/types';
 
 export const GET: RequestHandler = async ({ params }) => {
 	const chat = getChat(params.id);
-	if (!chat) error(404, 'Konuşma bulunamadı');
+	if (!chat) fail('NOT_FOUND', { entity: 'chat' }, 404);
 
 	const messages: ChatMessage[] = getMessages(params.id).map((row) => ({
 		id: row.id,
@@ -34,7 +35,7 @@ export const GET: RequestHandler = async ({ params }) => {
  * (Chat.svelte's chatMode) — five independent, optional fields, any subset
  * may be present. */
 export const PATCH: RequestHandler = async ({ params, request }) => {
-	if (!getChat(params.id)) error(404, 'Konuşma bulunamadı');
+	if (!getChat(params.id)) fail('NOT_FOUND', { entity: 'chat' }, 404);
 	const body = (await request.json()) as {
 		model?: string;
 		provider?: string | null;
@@ -49,7 +50,7 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
 		body.title === undefined &&
 		body.mode === undefined
 	) {
-		error(400, "'model', 'provider', 'includedPaths', 'title' veya 'mode' gerekli");
+		fail('CHAT_PATCH_NO_FIELDS', undefined, 400);
 	}
 	if (body.model !== undefined) updateChatModel(params.id, body.model);
 	if (body.provider !== undefined) updateChatProvider(params.id, body.provider);
@@ -67,11 +68,11 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
 };
 
 export const DELETE: RequestHandler = async ({ params }) => {
-	if (!getChat(params.id)) error(404, 'Konuşma bulunamadı');
+	if (!getChat(params.id)) fail('NOT_FOUND', { entity: 'chat' }, 404);
 	try {
 		deleteChat(params.id);
 		return json({ ok: true });
 	} catch (err) {
-		error(400, err instanceof Error ? err.message : 'Sohbet silinemedi');
+		fail('CHAT_DELETE_FAILED', { detail: err instanceof Error ? err.message : String(err) }, 400);
 	}
 };
