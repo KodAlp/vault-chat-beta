@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="static/logo.png" alt="vault-chat logosu" width="160" />
+</p>
+
 # Vault Chat — Kurulum
 
 Yerel, Docker'sız bir SvelteKit sohbet uygulaması. Kasandaki notlar üzerinde
