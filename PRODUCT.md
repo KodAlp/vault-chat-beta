@@ -59,6 +59,11 @@ Ollama ayrıca ve önceden kurulu/çalışır olmalı.
   ama bu, genel geliştirici/öğrenci hedef kitlesi göz önüne alındığında
   kalıcı bir kısıt olarak teyit edilmedi — çok dilli destek gelecekte
   gündeme gelebilir, henüz karar verilmedi.
+- Salt-okunur MCP sunucusu (`npm run mcp`) Claude Code/Desktop ve diğer
+  MCP istemcilerine 4 araç sunuyor: `list_vaults`, `search_library`,
+  `get_note`, `list_sources`. Bu yalnızca bir erişim katmanı — uygulamanın
+  kendi davranışını değiştirmiyor; yazma/üretim araçları
+  (`generate_quiz`, `generate_flashcards`) v1 kapsamı dışında bırakıldı.
 
 ## Brand Commitments
 Ürün adı: "Vault Agent Toolkit" (DESIGN.md'de sabitlendi). Marka kimliği
@@ -66,6 +71,16 @@ DESIGN.md'de tanımlı: koyu gözlemevi sistemi, tek canlı yeşil accent,
 Fraunces/Schibsted Grotesk/IBM Plex Mono üçlü tipografi. Bu, mevcut kod
 tabanındaki varsayılan shadcn görünümünün (bkz. src/app.css) kasıtlı bir
 yeniden tasarım hedefi — henüz uygulanmadı.
+
+Açık kaynak/hukuki olgunluk (PRODUCT.md'nin ilk yazımından sonra teyit
+edildi): MIT Lisansı (Copyright © 2026 Alp Ökmen), kamuya açık repo.
+Yönetişim/hukuki dosyalar mevcut: PRIVACY.md, SECURITY.md (özel GitHub
+Security Advisory ile bildirim, açık issue değil), TERMS.md,
+CODE_OF_CONDUCT.md, CONTRIBUTING.md. CONTRIBUTING.md'nin kendi
+çerçevelemesiyle "küçük, bireysel bir açık kaynak proje" olarak
+konumlandırılıyor — bir şirket/ekip ürünü değil. Bu, gelecekteki metin ve
+iletişimde kurumsal-destek iddiaları veya ekip/şirket dilinden kaçınmayı
+gerektirir.
 
 ## Evidence on Hand
 Dış vaka çalışması/referans/basın yok (henüz harici kullanıcı tabanı yok).
