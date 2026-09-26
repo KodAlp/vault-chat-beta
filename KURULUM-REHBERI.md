@@ -151,6 +151,19 @@ Claude Desktop için `npm run mcp:config` çıktısını
   PDF/doküman içe aktarma için Python" — Python kurulu değil ya da gereken
   paket henüz kurulmamış; uyarıdaki "Şimdi kur" butonu bunu senin yerine
   halleder.
+- **Ayarlar → Sağlayıcılar'da bulut sağlayıcıların (DeepSeek, OpenRouter,
+  Groq, Google AI Studio...) model listesi gelmiyor veya bağlantı testi
+  rastgele başarısız oluyor, ama o adresi tarayıcıda açtığında sorun
+  yok** → antivirüs programın (Kaspersky, ESET, Avast/AVG, Bitdefender,
+  Norton — hepsinde bu özellik var) muhtemelen "şifrelenmiş bağlantıları
+  tara" özelliğini açık tutuyor ve giden bağlantıları kendi sertifikasıyla
+  inceliyor; tarayıcın buna güveniyor ama uygulamanın arka planda kullandığı
+  Node.js güvenmiyor. Çözüm: `certmgr.msc`'yi aç → *Trusted Root
+  Certification Authorities* altında antivirüsünün sertifikasını bul →
+  sağ tık → *All Tasks → Export* → "Base-64 encoded X.509 (.CER)" olarak
+  kaydet. Sonra PowerShell'de uygulamayı başlatmadan önce
+  `$env:NODE_EXTRA_CA_CERTS = "kaydettiğin-dosya-yolu"` yaz (kalıcı olması
+  için Sistem Özellikleri → Ortam Değişkenleri'ne de aynı isimle ekleyebilirsin).
 
 Bu rehberde olmayan bir sorunla karşılaşırsan, uygulamanın kendi log dosyası
 `%APPDATA%\Roaming\app.vaultchat.desktop\launch.log`'da neyin yanlış

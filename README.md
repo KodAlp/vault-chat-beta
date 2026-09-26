@@ -381,3 +381,20 @@ sayılar, metin içeriği yok.
 - **MCP `search_library` sonuç döndürmüyor ama uygulamanın kendi sohbeti
   buluyor** → muhtemelen farklı bir `DATA_DIR`/vault okuyorlar; `list_vaults`
   aracının döndürdüğü `indexed`/`noteCount` alanlarına bak.
+- **Bulut sağlayıcı (DeepSeek/OpenRouter/Groq/Google AI Studio/Mistral)
+  model listesi veya bağlantı testi rastgele başarısız oluyor, tarayıcıda
+  o API adresi sorunsuz açılıyor** → `data/app-log.jsonl`'da o sağlayıcı
+  için `"listModels: ... fetch failed (SELF_SIGNED_CERT_IN_CHAIN)"` gibi bir
+  satır ara. Bu, vault-chat'in kodunda bir hata değil — antivirüsünün
+  (Kaspersky, ESET, Avast/AVG, Bitdefender, Norton vb. hepsinde "şifrelenmiş
+  bağlantıları tara" özelliği var) giden HTTPS bağlantılarını kendi kök
+  sertifikasıyla araya girip incelediği, ama Node.js'in (tarayıcıların
+  aksine) Windows sertifika deposunu kullanmadığı için bu sertifikaya
+  güvenmediği anlamına gelir. Çözüm: `certmgr.msc` → *Trusted Root
+  Certification Authorities* içinden antivirüsünün kök sertifikasını
+  Base-64 `.cer`/`.pem` olarak dışa aktar, sonra `NODE_EXTRA_CA_CERTS`
+  ortam değişkenini o dosyanın yoluna ayarlayıp `npm run dev`'i (veya
+  masaüstü uygulamasını) yeniden başlat. Sertifika doğrulamasını
+  gevşetmek (`NODE_TLS_REJECT_UNAUTHORIZED=0`) **hiçbir zaman** bir çözüm
+  değildir — gerçek bir ortadaki-adam saldırısına karşı korumayı da
+  kaldırır.
