@@ -154,19 +154,25 @@
 		<p class="progress-label">{currentIndex + 1} / {cards.length}</p>
 
 		<div class="card-box">
-			<div class="face front markdown-body">{@html frontHtml}</div>
-			{#if revealed}
-				<hr />
-				<div class="face back markdown-body">{@html backHtml}</div>
-				<span class="chip-group">
-					<a class="chip" href={libraryViewerUrl(card.source_path, vaultId ?? '', here)} title={card.heading_path}>
-						{card.source_path}
-					</a>
-					<a class="chip-icon" href={libraryViewerUrl(card.source_path, vaultId ?? '', here)} title={t('Common.kaynagiAc')} aria-label={t('Common.kaynagiAc')}>
-						<ExternalLinkIcon size={13} aria-hidden="true" />
-					</a>
-					</span>
-				{/if}
+			{#key currentIndex}
+				<div class="card-content">
+					<div class="face front markdown-body">{@html frontHtml}</div>
+					{#if revealed}
+						<div class="answer-reveal">
+							<hr />
+							<div class="face back markdown-body">{@html backHtml}</div>
+							<span class="chip-group">
+								<a class="chip" href={libraryViewerUrl(card.source_path, vaultId ?? '', here)} title={card.heading_path}>
+									{card.source_path}
+								</a>
+								<a class="chip-icon" href={libraryViewerUrl(card.source_path, vaultId ?? '', here)} title={t('Common.kaynagiAc')} aria-label={t('Common.kaynagiAc')}>
+									<ExternalLinkIcon size={13} aria-hidden="true" />
+								</a>
+							</span>
+						</div>
+					{/if}
+				</div>
+			{/key}
 		</div>
 
 		{#if !revealed}
@@ -292,6 +298,39 @@
 
 	.face {
 		line-height: 1.6;
+	}
+
+	/* Advancing to the next card (Task 7b) — enter-only: opacity + a small
+	   translateX, keyed on currentIndex so it replays per card. No exit
+	   animation (the outgoing card is simply gone, not animated away). */
+	.card-content {
+		animation: card-enter var(--motion-base) var(--motion-easing);
+	}
+
+	@keyframes card-enter {
+		from {
+			opacity: 0;
+			transform: translateX(8px);
+		}
+		to {
+			opacity: 1;
+			transform: translateX(0);
+		}
+	}
+
+	/* Revealing the answer (Task 7a) — a top-down uncovering via clip-path,
+	   not a height/layout animation. */
+	.answer-reveal {
+		animation: answer-reveal var(--motion-base) var(--motion-easing);
+	}
+
+	@keyframes answer-reveal {
+		from {
+			clip-path: inset(0 0 100% 0);
+		}
+		to {
+			clip-path: inset(0);
+		}
 	}
 
 	.card-box hr {

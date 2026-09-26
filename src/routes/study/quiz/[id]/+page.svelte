@@ -143,12 +143,25 @@
 		if (item) answers[item.id] = value;
 	}
 
+	// Task 7 — which way the keyed question-enter animation should offset
+	// from: +1 (forward, from next()) slides in from the right (+8px), -1
+	// (backward, from prev()) slides in from the left (-8px). Exposed to
+	// CSS as --nav-dir rather than two mutually-exclusive classes since the
+	// keyframe's translateX only needs the sign flipped, not a second rule.
+	let navDirection = $state<1 | -1>(1);
+
 	function next() {
-		if (currentIndex < items.length - 1) currentIndex++;
+		if (currentIndex < items.length - 1) {
+			navDirection = 1;
+			currentIndex++;
+		}
 	}
 
 	function prev() {
-		if (currentIndex > 0) currentIndex--;
+		if (currentIndex > 0) {
+			navDirection = -1;
+			currentIndex--;
+		}
 	}
 
 	async function finish() {
@@ -227,40 +240,42 @@
 		</div>
 		<p class="progress-label">{currentIndex + 1} / {items.length}</p>
 
-		<div class="question-card">
-			<div class="question markdown-body">{@html questionHtml}</div>
+		{#key currentIndex}
+			<div class="question-card" style="--nav-dir: {navDirection}">
+				<div class="question markdown-body">{@html questionHtml}</div>
 
-			{#if item.type === 'multiple_choice' && item.options}
-				<div class="options">
-					{#each item.options as option, i (option + '#' + i)}
-						<button
-							class="option"
-							class:selected={answers[item.id] === option}
-							aria-pressed={answers[item.id] === option}
-							onclick={() => selectAnswer(option)}
-						>
-							<span class="option-letter">{String.fromCharCode(65 + i)})</span>
-							{@html optionsHtml[i] ?? option}
+				{#if item.type === 'multiple_choice' && item.options}
+					<div class="options">
+						{#each item.options as option, i (option + '#' + i)}
+							<button
+								class="option"
+								class:selected={answers[item.id] === option}
+								aria-pressed={answers[item.id] === option}
+								onclick={() => selectAnswer(option)}
+							>
+								<span class="option-letter">{String.fromCharCode(65 + i)})</span>
+								{@html optionsHtml[i] ?? option}
+							</button>
+						{/each}
+					</div>
+				{:else if item.type === 'true_false'}
+					<div class="options">
+						<button class="option" class:selected={answers[item.id] === 'true'} aria-pressed={answers[item.id] === 'true'} onclick={() => selectAnswer('true')}>
+							{t('QuizStudyPage.true')}
 						</button>
-					{/each}
-				</div>
-			{:else if item.type === 'true_false'}
-				<div class="options">
-					<button class="option" class:selected={answers[item.id] === 'true'} aria-pressed={answers[item.id] === 'true'} onclick={() => selectAnswer('true')}>
-						{t('QuizStudyPage.true')}
-					</button>
-					<button class="option" class:selected={answers[item.id] === 'false'} aria-pressed={answers[item.id] === 'false'} onclick={() => selectAnswer('false')}>
-						{t('QuizStudyPage.false')}
-					</button>
-				</div>
-			{:else}
-				<textarea
-					class="open-answer"
-					bind:value={answers[item.id]}
-					placeholder={t('QuizStudyPage.openAnswerPlaceholder')}
-				></textarea>
-			{/if}
-		</div>
+						<button class="option" class:selected={answers[item.id] === 'false'} aria-pressed={answers[item.id] === 'false'} onclick={() => selectAnswer('false')}>
+							{t('QuizStudyPage.false')}
+						</button>
+					</div>
+				{:else}
+					<textarea
+						class="open-answer"
+						bind:value={answers[item.id]}
+						placeholder={t('QuizStudyPage.openAnswerPlaceholder')}
+					></textarea>
+				{/if}
+			</div>
+		{/key}
 
 		{#if errorMessage}
 			<p class="status error inline" role="alert">{errorMessage}</p>
@@ -277,6 +292,7 @@
 			{/if}
 		</div>
 	{:else if phase === 'results' && result}
+		<div class="results-phase">
 		<h1>{t('QuizStudyPage.resultTitle', { score: Math.round((adjusted?.score ?? result.score) * 100) })}</h1>
 		{#if adjusted && adjusted.excluded > 0}
 			<p class="score-note">{t('QuizStudyPage.scoreExcludingFlagged', { count: adjusted.excluded })}</p>
@@ -359,6 +375,7 @@
 					</div>
 				</div>
 			{/each}
+		</div>
 		</div>
 	{/if}
 	{#snippet failed(error)}
@@ -472,6 +489,36 @@
 		border-radius: 10px;
 		padding: 1.25rem;
 		margin-bottom: 1.5rem;
+		/* Task 7 — keyed on currentIndex (see the {#key} wrapper in markup),
+		   so this replays every time the question changes. --nav-dir (set
+		   inline per-render) is +1 going forward, -1 going back, so the
+		   offset direction actually matches which way the user navigated. */
+		animation: question-enter var(--motion-base) var(--motion-easing);
+	}
+
+	@keyframes question-enter {
+		from {
+			opacity: 0;
+			transform: translateX(calc(var(--nav-dir, 1) * 8px));
+		}
+		to {
+			opacity: 1;
+			transform: translateX(0);
+		}
+	}
+
+	/* Task 7 — the results phase enters with an opacity-only fade. */
+	.results-phase {
+		animation: results-fade-in var(--motion-base) var(--motion-easing);
+	}
+
+	@keyframes results-fade-in {
+		from {
+			opacity: 0;
+		}
+		to {
+			opacity: 1;
+		}
 	}
 
 	.question {
@@ -497,6 +544,10 @@
 		color: var(--color-foreground);
 		cursor: pointer;
 		font-size: 1rem;
+		transition:
+			background-color var(--motion-fast) var(--motion-easing),
+			border-color var(--motion-fast) var(--motion-easing),
+			color var(--motion-fast) var(--motion-easing);
 	}
 
 	.option-letter {

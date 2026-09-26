@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { applyDisplayRules, collectFilePaths, nodeState, toggleNode, toIncludedPaths } from './sourceTree';
+import { applyDisplayRules, collectFilePaths, nodeState, toggleNode, toIncludedPaths, isPathInsideFolder } from './sourceTree';
 import type { LibraryNode } from './types';
 
 const tree: LibraryNode[] = [
@@ -221,4 +221,15 @@ test('the old raw-tree baseline is exactly the bug this guards against', () => {
 	const buggyResult = toIncludedPaths(selected, rawFiles)!;
 	assert.ok(buggyResult.includes('raw/book.md'), 'reproduces the bug: hidden file leaks into the saved scope');
 	assert.equal(buggyResult.length, displayFiles.length + 2 /* raw + _index */ - 1 /* dsa deselected */);
+});
+
+test('isPathInsideFolder matches a direct child and a deeper descendant', () => {
+	assert.equal(isPathInsideFolder('wiki/math/calculus.md', 'wiki/math'), true);
+	assert.equal(isPathInsideFolder('wiki/math/algebra/basics.md', 'wiki/math'), true);
+});
+
+test('isPathInsideFolder rejects the folder itself and a sibling sharing a name prefix', () => {
+	assert.equal(isPathInsideFolder('wiki/math', 'wiki/math'), false);
+	assert.equal(isPathInsideFolder('wiki/mathematics/foo.md', 'wiki/math'), false);
+	assert.equal(isPathInsideFolder('wiki/other/foo.md', 'wiki/math'), false);
 });

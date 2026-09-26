@@ -187,7 +187,7 @@
 		flex: 1;
 		min-height: 0;
 		border-radius: 8px;
-		transition: background-color 0.3s ease;
+		transition: background-color var(--motion-base) var(--motion-easing);
 	}
 
 	.source-tree.flash {
