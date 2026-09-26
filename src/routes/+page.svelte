@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { fly } from 'svelte/transition';
+	import { motionFly } from '$lib/motion';
 	import type { VaultRecord, VaultWithStatus } from '$lib/types';
 	import VaultCard from '$lib/components/VaultCard.svelte';
 	import { Button } from '$lib/components/ui/button';
@@ -70,7 +70,7 @@
 
 	<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
 		{#each vaults as vault, i (vault.id)}
-			<div in:fly={{ y: 8, duration: 200, delay: i * 30 }}>
+			<div in:motionFly={{ y: 8, delay: Math.min(i * 30, 150) }}>
 				<VaultCard {vault} />
 			</div>
 		{/each}

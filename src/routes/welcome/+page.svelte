@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { fly } from 'svelte/transition';
+	import { motionFly, MOTION } from '$lib/motion';
 	import { goto } from '$app/navigation';
 	import { Button } from '$lib/components/ui/button';
 	import { markWelcomeShown } from '$lib/welcome';
@@ -37,18 +37,18 @@
      visible area — on a dark theme (near-black --ground) that reads as a
      totally blank screen with the real content scrolled out of view. -->
 <div class="flex h-full flex-col items-center justify-center gap-4 px-4 text-center">
-	<h1 in:fly={{ y: 12, duration: 150 }} class="font-display text-3xl font-medium">
+	<h1 in:motionFly={{ y: 12, duration: MOTION.fast }} class="font-display text-3xl font-medium">
 		{t('WelcomePage.title')}
 	</h1>
-	<p in:fly={{ y: 12, duration: 150, delay: 40 }} class="max-w-sm text-sm text-muted-foreground">
+	<p in:motionFly={{ y: 12, duration: MOTION.fast, delay: 40 }} class="max-w-sm text-sm text-muted-foreground">
 		{t('WelcomePage.tagline')}
 	</p>
-	<ul in:fly={{ y: 12, duration: 150, delay: 60 }} class="flex max-w-md flex-col gap-2 text-left text-xs text-muted-foreground">
+	<ul in:motionFly={{ y: 12, duration: MOTION.fast, delay: 60 }} class="flex max-w-md flex-col gap-2 text-left text-xs text-muted-foreground">
 		<li>{t('WelcomePage.note1')}</li>
 		<li>{t('WelcomePage.note2')}</li>
 		<li>{t('WelcomePage.note3')}</li>
 	</ul>
-	<div in:fly={{ y: 12, duration: 150, delay: 80 }}>
+	<div in:motionFly={{ y: 12, duration: MOTION.fast, delay: 80 }}>
 		<Button onclick={proceed}>{t('WelcomePage.continue')}</Button>
 	</div>
 </div>

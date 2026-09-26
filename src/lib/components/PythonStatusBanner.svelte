@@ -1,6 +1,5 @@
 <script lang="ts">
-	import { fly } from 'svelte/transition';
-	import { cubicOut } from 'svelte/easing';
+	import { motionFly } from '$lib/motion';
 	import TriangleAlertIcon from '@lucide/svelte/icons/triangle-alert';
 	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
 	import { t } from '$lib/i18n/index.svelte';
@@ -93,7 +92,7 @@
 </script>
 
 {#if status === 'missing' || status === 'no_python'}
-	<div class="python-banner" role="status" transition:fly={{ y: -16, duration: 220, easing: cubicOut }}>
+	<div class="python-banner" role="status" transition:motionFly={{ y: -16 }}>
 		<TriangleAlertIcon size={16} aria-hidden="true" />
 		<span>
 			{status === 'no_python'
