@@ -1,6 +1,8 @@
 <script lang="ts">
 	import type { LibraryNode } from '$lib/types';
-	import { nodeState, nodeMatchesFilter } from '$lib/sourceTree';
+	import { nodeState, nodeMatchesFilter, isPathInsideFolder } from '$lib/sourceTree';
+	import { sourceHighlight } from '$lib/source-highlight.svelte';
+	import { prefersReducedMotion } from '$lib/motion';
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import SourceTreeNode from './SourceTreeNode.svelte';
 	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
@@ -31,6 +33,34 @@
 	// the stored `expanded`, so clearing the filter restores the pre-filter
 	// collapse state exactly as it was.
 	let effectiveExpanded = $derived(filterQuery ? true : expanded);
+
+	// Task 6 — citation → source-tree focal moment. `lit`: this exact file
+	// is the one currently hovered/focused in a chat citation chip.
+	// `containsLit`: this folder is collapsed and the highlighted file is
+	// somewhere underneath it — a quieter cue than `lit` since the folder
+	// itself isn't the cited thing, only its container. Never applied to an
+	// expanded folder: once open, the highlighted file's own row is already
+	// visible and carries `lit` itself.
+	let isLit = $derived(node.type === 'file' && sourceHighlight.path === node.path);
+	let containsLit = $derived(
+		node.type === 'folder' &&
+			!effectiveExpanded &&
+			sourceHighlight.path !== null &&
+			isPathInsideFolder(sourceHighlight.path, node.path)
+	);
+
+	let rowEl: HTMLDivElement | undefined = $state();
+	// Scrolls the row into view only on the transition INTO lit/contains-lit
+	// — not on every re-render while it stays lit (e.g. a sibling toggling
+	// its own checkbox shouldn't re-scroll this row back into place).
+	let wasActive = false;
+	$effect(() => {
+		const active = isLit || containsLit;
+		if (active && !wasActive && rowEl) {
+			rowEl.scrollIntoView({ block: 'nearest', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+		}
+		wasActive = active;
+	});
 
 	function onRowKeydown(e: KeyboardEvent) {
 		if (node.type !== 'folder') return;
@@ -64,6 +94,8 @@
 		{#if node.type === 'folder'}
 			<div
 				class="row folder"
+				class:contains-lit={containsLit}
+				bind:this={rowEl}
 				onclick={() => (expanded = !expanded)}
 				role="button"
 				tabindex="0"
@@ -72,7 +104,7 @@
 				{@render rowContent()}
 			</div>
 		{:else}
-			<div class="row">
+			<div class="row" class:lit={isLit} bind:this={rowEl}>
 				{@render rowContent()}
 			</div>
 		{/if}
@@ -97,6 +129,9 @@
 		gap: 0.4rem;
 		padding: 0.2rem 0.3rem;
 		border-radius: var(--radius-sm);
+		transition:
+			background-color var(--motion-fast) var(--motion-easing),
+			box-shadow var(--motion-fast) var(--motion-easing);
 	}
 
 	.row.folder {
@@ -105,6 +140,25 @@
 
 	.row.folder:hover {
 		background: var(--bubble-assistant);
+	}
+
+	/* Task 6 — citation → source-tree focal moment. `lit` is the exact file a
+	   hovered/focused chat citation chip points at; `contains-lit` is the
+	   quieter cue on a collapsed ancestor folder that the target lives
+	   somewhere underneath it (never a solid green row — DESIGN.md's "one
+	   bright thing per screen"). Both override the base .row transition-
+	   duration to --motion-base so the highlight lights IN slower than it
+	   fades OUT: the moment the class is removed, the element falls back to
+	   .row's own --motion-fast duration for the exit. */
+	.row.lit {
+		background: var(--accent-soft);
+		box-shadow: inset 2px 0 0 var(--hairline-accent);
+		transition-duration: var(--motion-base);
+	}
+
+	.row.contains-lit {
+		box-shadow: inset 2px 0 0 var(--hairline-accent);
+		transition-duration: var(--motion-base);
 	}
 
 	.row:focus-visible {

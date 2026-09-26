@@ -99,7 +99,9 @@
 		>
 	{/if}
 	{#if message.role === 'assistant' && message.sources?.length}
-		<SourceChip sources={message.sources} {vaultId} />
+		<div class="citation-row">
+			<SourceChip sources={message.sources} {vaultId} />
+		</div>
 		{#if onNotRelevant && !streaming}
 			<p class="narrow-scope">
 				{#if message.taughtSmallTalk}
@@ -144,6 +146,21 @@
 	.message.assistant {
 		justify-content: flex-start;
 		flex-direction: column;
+	}
+
+	/* Task 8 — the citation row fades in (opacity only) when it first
+	   appears, marking the moment sources became available for this answer. */
+	.citation-row {
+		animation: citation-fade-in var(--motion-fast) var(--motion-easing);
+	}
+
+	@keyframes citation-fade-in {
+		from {
+			opacity: 0;
+		}
+		to {
+			opacity: 1;
+		}
 	}
 
 	.narrow-scope {

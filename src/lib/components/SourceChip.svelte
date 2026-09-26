@@ -5,8 +5,50 @@
 	import * as HoverCard from '$lib/components/ui/hover-card';
 	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
 	import { t } from '$lib/i18n/index.svelte';
+	import { setHighlight, clearHighlight } from '$lib/source-highlight.svelte';
 
 	let here = $derived(page.url.pathname + page.url.search);
+
+	/**
+	 * Citation → source-tree focal moment (Task 6): hovering/focusing a chip
+	 * lights up that file's row in the left panel's source tree. A single
+	 * shared timer (not one per chip) is enough — only one pointer can be
+	 * hovering at a time, and a fresh pointerenter always clears whatever
+	 * timer came before it, so sweeping across several chips never lets a
+	 * stale ~120ms intent-delay fire for a chip the pointer already left.
+	 */
+	let hoverTimer: ReturnType<typeof setTimeout> | undefined;
+	// The path this component last lit, so unmounting mid-hover (e.g.
+	// navigating away) doesn't leave a stale highlight in the shared store.
+	let litPath: string | null = null;
+
+	function scheduleHighlight(path: string) {
+		clearTimeout(hoverTimer);
+		hoverTimer = setTimeout(() => {
+			litPath = path;
+			setHighlight(path);
+		}, 120);
+	}
+
+	function cancelScheduledHighlight(path: string) {
+		clearTimeout(hoverTimer);
+		hoverTimer = undefined;
+		clearHighlight(path);
+	}
+
+	function focusHighlight(path: string) {
+		clearTimeout(hoverTimer);
+		hoverTimer = undefined;
+		litPath = path;
+		setHighlight(path);
+	}
+
+	$effect(() => {
+		return () => {
+			clearTimeout(hoverTimer);
+			if (litPath) clearHighlight(litPath);
+		};
+	});
 
 	/** Replaces SourceList.svelte — that component deduped on `path +
 	 * heading_path`, so the same source cited from three chunks rendered as
@@ -40,7 +82,14 @@
 			<HoverCard.Root openDelay={200}>
 				<HoverCard.Trigger>
 					{#snippet child({ props })}
-						<span {...props} class="chip-group">
+						<span
+							{...props}
+							class="chip-group"
+							onpointerenter={() => scheduleHighlight(g.path)}
+							onpointerleave={() => cancelScheduledHighlight(g.path)}
+							onfocusin={() => focusHighlight(g.path)}
+							onfocusout={() => cancelScheduledHighlight(g.path)}
+						>
 							<a class="chip" href={libraryViewerUrl(g.path, vaultId, here)}>
 								{g.topic}
 								{#if g.chunks.length > 1}<span class="count">{t('SourceChip.chunkCount', { count: g.chunks.length })}</span>{/if}

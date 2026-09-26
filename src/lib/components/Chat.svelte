@@ -593,6 +593,22 @@
 		   principle applies. Uses the accent-glow token rather than a raw
 		   rgb() value so it still ties into the system. */
 		box-shadow: 0 2px 8px var(--accent-glow);
+		/* Task 8 — enters with opacity + a small scale-up; the button's own
+		   static translateX(-50%) centering must survive the keyframe, so
+		   the keyframe repeats it alongside the scale rather than replacing
+		   the transform outright. */
+		animation: scroll-to-bottom-enter var(--motion-fast) var(--motion-easing);
+	}
+
+	@keyframes scroll-to-bottom-enter {
+		from {
+			opacity: 0;
+			transform: translateX(-50%) scale(0.96);
+		}
+		to {
+			opacity: 1;
+			transform: translateX(-50%) scale(1);
+		}
 	}
 
 	.scroll-to-bottom:focus-visible {

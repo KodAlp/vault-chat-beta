@@ -107,6 +107,20 @@ export function toggleNode(node: LibraryNode, selected: ReadonlySet<string>): Se
 	return next;
 }
 
+/** True when `path` is a descendant of the folder at `folderPath` — a
+ * direct child or any depth further down, never the folder itself and never
+ * a sibling that merely shares a name prefix (e.g. "wiki/mathematics/x.md"
+ * is not inside "wiki/math"). Used by SourceTreeNode's "contains-lit" quiet
+ * highlight: when the citation-highlighted file's row is collapsed away
+ * inside a folder, the nearest visible collapsed ancestor(s) still show
+ * that the target lives somewhere underneath. Both sides are already the
+ * same library-root-relative, forward-slash path form (see
+ * source-highlight.svelte.ts's doc comment), so no normalization step is
+ * needed here. */
+export function isPathInsideFolder(path: string, folderPath: string): boolean {
+	return path.startsWith(`${folderPath}/`);
+}
+
 /** Faz 8's contract: includedPaths === undefined means "all" — never an
  * array listing every single file. Collapses a full selection back down to
  * that canonical "all" form so a chat that starts unscoped stays unscoped
