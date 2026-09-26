@@ -1,7 +1,8 @@
-import { error, json } from '@sveltejs/kit';
+import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { readProvidersFile } from '$lib/server/providers/config-store';
 import { grantProviderConsent, revokeProviderConsent } from '$lib/server/provider-consent';
+import { fail } from '$lib/server/app-error';
 
 /** İ2 (Aşama 8) — the model picker's first-use confirmation (ModelPickerRow,
  * GenerationDialog) POSTs here the moment the user accepts sending chat data
@@ -11,8 +12,8 @@ import { grantProviderConsent, revokeProviderConsent } from '$lib/server/provide
  * bug in that client, not a state worth silently accepting. */
 function assertCloudProvider(id: string): void {
 	const entry = readProvidersFile().providers.find((p) => p.id === id);
-	if (!entry) error(404, `Bilinmeyen provider: ${id}`);
-	if (entry.kind === 'ollama') error(400, 'Ollama için onay gerekmez');
+	if (!entry) fail('NOT_FOUND', { entity: 'provider', detail: id }, 404);
+	if (entry.kind === 'ollama') fail('PROVIDER_CONSENT_NOT_NEEDED');
 }
 
 export const POST: RequestHandler = async ({ params }) => {

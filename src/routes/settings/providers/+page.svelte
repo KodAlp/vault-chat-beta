@@ -17,6 +17,12 @@
 	import { Label } from '$lib/components/ui/label';
 	import { t, i18n } from '$lib/i18n/index.svelte';
 	import { relativeTime } from '$lib/relative-time';
+	import { readResponseError } from '$lib/server-error';
+
+	// Stable per-instance id prefix for label/control association (see
+	// craft-floor's accessibility pass) — $props.id() rather than a literal
+	// string so two instances of this page never collide (SSR/hydration-safe).
+	const uid = $props.id();
 
 	let TASK_LABELS = $derived<Record<string, string>>({
 		chat: t('ProvidersSettingsPage.taskChat'),
@@ -170,15 +176,15 @@
 				})
 			});
 			if (!res.ok) {
-				const data = (await res.json().catch(() => null)) as { error?: string } | null;
-				throw new Error(data?.error ?? t('ProvidersSettingsPage.addProviderFailed'));
+				addError = await readResponseError(res);
+				return;
 			}
 			addLabel = '';
 			addBaseUrl = '';
 			addFormOpen = false;
 			await refresh();
-		} catch (err) {
-			addError = err instanceof Error ? err.message : t('ProvidersSettingsPage.addProviderFailed');
+		} catch {
+			addError = t('ProvidersSettingsPage.addProviderFailed');
 		} finally {
 			adding = false;
 		}
@@ -247,13 +253,13 @@
 				// The endpoint now rejects disabling Ollama (its own chain
 				// guard) — surface that reason instead of a generic failure,
 				// or a Switch flip that silently reverts would look broken.
-				const data = (await res.json().catch(() => null)) as { message?: string } | null;
-				throw new Error(data?.message);
+				loadError = await readResponseError(res);
+				return;
 			}
 			patchProvider(p.id, { enabled: nextEnabled });
 			void refreshProviderModels();
-		} catch (err) {
-			loadError = err instanceof Error && err.message ? err.message : t('ProvidersSettingsPage.updateFailed', { label: p.label });
+		} catch {
+			loadError = t('ProvidersSettingsPage.updateFailed', { label: p.label });
 		}
 	}
 
@@ -397,17 +403,17 @@
 				<Card.Content class="flex flex-col gap-3">
 					<h3 class="text-sm font-semibold">{t('ProvidersSettingsPage.newProviderTitle')}</h3>
 					<div class="flex flex-col gap-1.5">
-						<Label>{t('ProvidersSettingsPage.nameLabel')}</Label>
-						<Input type="text" bind:value={addLabel} placeholder={t('ProvidersSettingsPage.namePlaceholder')} class="max-w-xs" />
+						<Label for="{uid}-name">{t('ProvidersSettingsPage.nameLabel')}</Label>
+						<Input id="{uid}-name" type="text" bind:value={addLabel} placeholder={t('ProvidersSettingsPage.namePlaceholder')} class="max-w-xs" />
 					</div>
 					<div class="flex flex-col gap-1.5">
-						<Label>{t('ProvidersSettingsPage.baseUrlLabel')}</Label>
-						<Input type="text" bind:value={addBaseUrl} placeholder={t('ProvidersSettingsPage.baseUrlPlaceholder')} class="max-w-sm" />
+						<Label for="{uid}-base-url">{t('ProvidersSettingsPage.baseUrlLabel')}</Label>
+						<Input id="{uid}-base-url" type="text" bind:value={addBaseUrl} placeholder={t('ProvidersSettingsPage.baseUrlPlaceholder')} class="max-w-sm" />
 					</div>
 					<div class="flex flex-col gap-1.5">
-						<Label>{t('ProvidersSettingsPage.kindLabel')}</Label>
+						<Label for="{uid}-kind">{t('ProvidersSettingsPage.kindLabel')}</Label>
 						<Select.Root type="single" bind:value={addKind}>
-							<Select.Trigger class="w-44">
+							<Select.Trigger id="{uid}-kind" class="w-44">
 								{addKind === 'openai-compat' ? t('ProvidersSettingsPage.kindOpenAICompat') : t('ProvidersSettingsPage.kindAnthropic')}
 							</Select.Trigger>
 							<Select.Content>
@@ -418,9 +424,9 @@
 					</div>
 					{#if addKind === 'openai-compat'}
 						<div class="flex flex-col gap-1.5">
-							<Label>{t('ProvidersSettingsPage.reasoningDialectLabel')}</Label>
+							<Label for="{uid}-reasoning-dialect">{t('ProvidersSettingsPage.reasoningDialectLabel')}</Label>
 							<Select.Root type="single" bind:value={addReasoningDialect}>
-								<Select.Trigger class="w-44">
+								<Select.Trigger id="{uid}-reasoning-dialect" class="w-44">
 									{addReasoningDialect === 'reasoning_content' ? t('ProvidersSettingsPage.reasoningDialectReasoningContent') : addReasoningDialect === 'think-tags' ? t('ProvidersSettingsPage.reasoningDialectThinkTags') : t('ProvidersSettingsPage.reasoningDialectNone')}
 								</Select.Trigger>
 								<Select.Content>
@@ -464,7 +470,7 @@
 							{/if}
 
 							<div class="mt-2 flex flex-col gap-1">
-								<Label class="text-xs text-muted-foreground">{t('ProvidersSettingsPage.defaultModelLabel')}</Label>
+								<Label for="{uid}-default-model-{p.id}" class="text-xs text-muted-foreground">{t('ProvidersSettingsPage.defaultModelLabel')}</Label>
 								<!-- Sadece bu sağlayıcı başarısız olan BİR ÖNCEKİ sağlayıcının
 								     yerine zincirde denendiğinde kullanılır — açıkça seçilen bir
 								     model asla değiştirilmez. Boş bırakılırsa (model listesi
@@ -477,7 +483,7 @@
 										value={p.defaultModel ?? ''}
 										onValueChange={(v) => setDefaultModel(p, v)}
 									>
-										<Select.Trigger size="sm" class="w-52">
+										<Select.Trigger id="{uid}-default-model-{p.id}" size="sm" class="w-52">
 											{p.defaultModel ?? t('ProvidersSettingsPage.notSelected')}
 										</Select.Trigger>
 										<Select.Content>
@@ -541,6 +547,7 @@
 									<Input
 										type="password"
 										placeholder={t('ProvidersSettingsPage.apiKeyPlaceholder')}
+										aria-label={t('ProvidersSettingsPage.apiKeyPlaceholder')}
 										bind:value={keyDrafts[p.id]}
 										class="h-8 max-w-xs"
 										onkeydown={(e) => e.key === 'Enter' && saveKey(p)}

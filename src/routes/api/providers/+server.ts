@@ -6,6 +6,8 @@ import { getRateLimitInfo } from '$lib/server/providers/registry';
 import { getLastProviderErrors } from '$lib/server/app-log';
 import { EMBED_MODEL } from '$lib/server/embed-config';
 import type { ProviderStatus } from '$lib/types';
+import { AppError, fail, toCodedError } from '$lib/server/app-error';
+import type { ErrorCode } from '$lib/errors';
 
 export const GET: RequestHandler = async () => {
 	const { providers } = readProvidersFile();
@@ -81,7 +83,7 @@ function rateLimitFor(
 export const POST: RequestHandler = async ({ request }) => {
 	const body = (await request.json().catch(() => null)) as Partial<NewProviderInput> | null;
 	if (!body?.label?.trim() || !body?.baseUrl?.trim()) {
-		return json({ error: 'label ve baseUrl gerekli' }, { status: 400 });
+		fail('VALIDATION_REQUIRED_ALL', { fields: "'label', 'baseUrl'" });
 	}
 	const kind = body.kind === 'anthropic' ? 'anthropic' : 'openai-compat';
 	const reasoningDialect =
@@ -92,17 +94,21 @@ export const POST: RequestHandler = async ({ request }) => {
 		const entry = addProvider({ label: body.label, baseUrl: body.baseUrl, kind, reasoningDialect });
 		return json(entry, { status: 201 });
 	} catch (err) {
-		return json({ error: err instanceof Error ? err.message : 'Provider eklenemedi' }, { status: 400 });
+		if (err instanceof AppError) fail(err.code, err.params, err.status);
+		const coded = toCodedError(err);
+		fail(coded.code as ErrorCode, coded.params, 400);
 	}
 };
 
 export const DELETE: RequestHandler = async ({ request }) => {
 	const body = (await request.json().catch(() => null)) as { id?: string } | null;
-	if (!body?.id) return json({ error: 'id gerekli' }, { status: 400 });
+	if (!body?.id) fail('VALIDATION_REQUIRED', { field: 'id' });
 	try {
 		deleteProvider(body.id);
 		return json({ ok: true });
 	} catch (err) {
-		return json({ error: err instanceof Error ? err.message : 'Provider silinemedi' }, { status: 400 });
+		if (err instanceof AppError) fail(err.code, err.params, err.status);
+		const coded = toCodedError(err);
+		fail(coded.code as ErrorCode, coded.params, 400);
 	}
 };

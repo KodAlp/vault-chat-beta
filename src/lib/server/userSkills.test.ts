@@ -26,9 +26,12 @@ const VALID_SKILL = '---\ndescription: test skill\n---\nGövde metni.';
 test('userSkills path safety', async (t) => {
 	await t.test('a name containing a path separator is rejected outright', () => {
 		useTmpSkillsDir();
-		assert.throws(() => writeSkill('../../pwned', VALID_SKILL), /Geçersiz skill adı/);
-		assert.throws(() => writeSkill('..\\..\\pwned', VALID_SKILL), /Geçersiz skill adı/);
-		assert.throws(() => writeSkill('sub/dir', VALID_SKILL), /Geçersiz skill adı/);
+		// AppError's message is the coded-error scheme's code, not the old
+		// Turkish sentence (see app-error.ts's AppError constructor) — this
+		// still asserts the SAME rejection, just via the new shape.
+		assert.throws(() => writeSkill('../../pwned', VALID_SKILL), /SKILL_NAME_INVALID/);
+		assert.throws(() => writeSkill('..\\..\\pwned', VALID_SKILL), /SKILL_NAME_INVALID/);
+		assert.throws(() => writeSkill('sub/dir', VALID_SKILL), /SKILL_NAME_INVALID/);
 	});
 
 	await t.test('the rejected write never touches the filesystem outside skillsDir', () => {
@@ -48,7 +51,7 @@ test('userSkills path safety', async (t) => {
 
 	await t.test('an empty name is rejected', () => {
 		useTmpSkillsDir();
-		assert.throws(() => writeSkill('', VALID_SKILL), /Geçersiz skill adı/);
+		assert.throws(() => writeSkill('', VALID_SKILL), /SKILL_NAME_INVALID/);
 	});
 });
 

@@ -14,10 +14,14 @@
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
 	import { Separator } from '$lib/components/ui/separator';
 	import { t } from '$lib/i18n/index.svelte';
+	import { localizeError, readResponseError } from '$lib/server-error';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 	import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';
 	import DownloadIcon from '@lucide/svelte/icons/download';
 	import TrashIcon from '@lucide/svelte/icons/trash';
+
+	// Stable per-instance id prefix for label/control association.
+	const uid = $props.id();
 
 	let models = $state<OllamaModel[]>([]);
 	let loadError = $state('');
@@ -109,7 +113,16 @@
 				headers: { 'content-type': 'application/json' },
 				body: JSON.stringify({ model: name })
 			});
-			if (!res.ok || !res.body) throw new Error(t('SettingsPage.requestFailed', { status: res.status }));
+			if (!res.ok) {
+				pullError = await readResponseError(res);
+				pullStatus = '';
+				return;
+			}
+			if (!res.body) {
+				pullError = t('SettingsPage.pullFailed');
+				pullStatus = '';
+				return;
+			}
 			const reader = res.body.getReader();
 			const decoder = new TextDecoder();
 			let buffer = '';
@@ -122,20 +135,26 @@
 				for (const part of parts) {
 					const line = part.trim();
 					if (!line.startsWith('data:')) continue;
-					const event = JSON.parse(line.slice(5)) as { type: string; status?: string; error?: string };
+					const event = JSON.parse(line.slice(5)) as {
+						type: string;
+						status?: string;
+						error?: string;
+						code?: string;
+						params?: Record<string, string | number>;
+					};
 					if (event.type === 'progress') pullStatus = event.status ?? t('SettingsPage.downloading');
 					else if (event.type === 'done') {
 						pullStatus = t('SettingsPage.pullDone');
 						pullName = '';
 						await refreshModels();
 					} else if (event.type === 'error') {
-						pullError = event.error ?? t('SettingsPage.pullFailed');
+						pullError = localizeError({ code: event.code, params: event.params, message: event.error });
 						pullStatus = '';
 					}
 				}
 			}
-		} catch (err) {
-			pullError = err instanceof Error ? err.message : t('SettingsPage.pullFailed');
+		} catch {
+			pullError = t('SettingsPage.pullFailed');
 			pullStatus = '';
 		} finally {
 			pulling = false;
@@ -257,7 +276,7 @@
 
 	<Card.Root class="mb-6">
 		<Card.Header>
-			<Card.Title>{t('SettingsPage.themeTitle')}</Card.Title>
+			<Card.Title level={2}>{t('SettingsPage.themeTitle')}</Card.Title>
 		</Card.Header>
 		<Card.Content class="flex gap-5">
 			{#each themeOptions as opt (opt.value)}
@@ -278,7 +297,7 @@
 
 	<Card.Root class="mb-6">
 		<Card.Header>
-			<Card.Title>{t('SettingsPage.languageTitle')}</Card.Title>
+			<Card.Title level={2}>{t('SettingsPage.languageTitle')}</Card.Title>
 		</Card.Header>
 		<Card.Content class="flex gap-5">
 			{#each localeOptions as opt (opt.value)}
@@ -299,7 +318,7 @@
 
 	<Card.Root class="mb-6">
 		<Card.Header>
-			<Card.Title>{t('SettingsPage.modelsTitle')}</Card.Title>
+			<Card.Title level={2}>{t('SettingsPage.modelsTitle')}</Card.Title>
 		</Card.Header>
 		<Card.Content class="flex flex-col gap-4">
 			{#if loadError}
@@ -310,14 +329,14 @@
 			{/if}
 
 			<div class="flex flex-col gap-1.5">
-				<Label>{t('SettingsPage.defaultModel')}</Label>
+				<Label for="{uid}-default-model">{t('SettingsPage.defaultModel')}</Label>
 				<span class="text-xs text-muted-foreground">{t('SettingsPage.defaultModelHint')}</span>
 				<Select.Root
 					type="single"
 					value={selectionKey(settings.defaultProvider, settings.defaultModel)}
 					onValueChange={(v) => setModelSelection('default', v)}
 				>
-					<Select.Trigger class="max-w-xs">{settings.defaultModel}</Select.Trigger>
+					<Select.Trigger id="{uid}-default-model" class="max-w-xs">{settings.defaultModel}</Select.Trigger>
 					<Select.Content>
 						{#each groupedModels as group (group.providerId)}
 							<Select.Group>
@@ -332,14 +351,14 @@
 			</div>
 
 			<div class="flex flex-col gap-1.5">
-				<Label>{t('SettingsPage.fastModel')}</Label>
+				<Label for="{uid}-fast-model">{t('SettingsPage.fastModel')}</Label>
 				<span class="text-xs text-muted-foreground">{t('SettingsPage.fastModelHint')}</span>
 				<Select.Root
 					type="single"
 					value={selectionKey(settings.fastProvider, settings.fastModel)}
 					onValueChange={(v) => setModelSelection('fast', v)}
 				>
-					<Select.Trigger class="max-w-xs">{settings.fastModel}</Select.Trigger>
+					<Select.Trigger id="{uid}-fast-model" class="max-w-xs">{settings.fastModel}</Select.Trigger>
 					<Select.Content>
 						{#each groupedModels as group (group.providerId)}
 							<Select.Group>
@@ -354,14 +373,14 @@
 			</div>
 
 			<div class="flex flex-col gap-1.5">
-				<Label>{t('SettingsPage.reasoningModel')}</Label>
+				<Label for="{uid}-reasoning-model">{t('SettingsPage.reasoningModel')}</Label>
 				<span class="text-xs text-muted-foreground">{t('SettingsPage.reasoningModelHint')}</span>
 				<Select.Root
 					type="single"
 					value={selectionKey(settings.reasoningProvider, settings.reasoningModel)}
 					onValueChange={(v) => setModelSelection('reasoning', v)}
 				>
-					<Select.Trigger class="max-w-xs">{settings.reasoningModel}</Select.Trigger>
+					<Select.Trigger id="{uid}-reasoning-model" class="max-w-xs">{settings.reasoningModel}</Select.Trigger>
 					<Select.Content>
 						{#each groupedModels as group (group.providerId)}
 							<Select.Group>
@@ -406,10 +425,11 @@
 			</div>
 
 			<div class="flex flex-col gap-1.5">
-				<Label>{t('SettingsPage.pullModelLabel')}</Label>
+				<Label for="{uid}-pull-model">{t('SettingsPage.pullModelLabel')}</Label>
 				<span class="text-xs text-muted-foreground">{t('SettingsPage.pullModelHint')}</span>
 				<div class="flex gap-2">
 					<Input
+						id="{uid}-pull-model"
 						type="text"
 						bind:value={pullName}
 						placeholder={t('SettingsPage.modelNamePlaceholder')}
@@ -436,7 +456,7 @@
 
 	<Card.Root class="mb-6">
 		<Card.Header>
-			<Card.Title>{t('SettingsPage.generationTitle')}</Card.Title>
+			<Card.Title level={2}>{t('SettingsPage.generationTitle')}</Card.Title>
 		</Card.Header>
 		<Card.Content>
 			<label class="flex cursor-pointer items-start gap-2.5 text-sm">
@@ -462,7 +482,7 @@
 
 	<Card.Root class="mb-6">
 		<Card.Header>
-			<Card.Title>{t('SettingsPage.welcomeScreenTitle')}</Card.Title>
+			<Card.Title level={2}>{t('SettingsPage.welcomeScreenTitle')}</Card.Title>
 		</Card.Header>
 		<Card.Content>
 			<label class="flex cursor-pointer items-start gap-2.5 text-sm">
@@ -480,22 +500,22 @@
 	{#if runningInTauri}
 		<Card.Root class="mb-6">
 			<Card.Header>
-				<Card.Title>{t('SettingsPage.desktopVaultTitle')}</Card.Title>
+				<Card.Title level={2}>{t('SettingsPage.desktopVaultTitle')}</Card.Title>
 				<Card.Description>
 					{t('SettingsPage.desktopVaultDescription')}
 				</Card.Description>
 			</Card.Header>
 			<Card.Content class="flex flex-col gap-4">
 				<div class="flex flex-col gap-1.5">
-					<Label>{t('SettingsPage.vaultFolder')}</Label>
+					<Label for="{uid}-vault-folder">{t('SettingsPage.vaultFolder')}</Label>
 					<div class="flex gap-2">
-						<Input type="text" readonly value={vaultPath} placeholder={t('SettingsPage.vaultFolderPlaceholder')} class="flex-1" />
+						<Input id="{uid}-vault-folder" type="text" readonly value={vaultPath} placeholder={t('SettingsPage.vaultFolderPlaceholder')} class="flex-1" />
 						<Button type="button" variant="outline" onclick={pickVaultFolder}>{t('SettingsPage.choose')}</Button>
 					</div>
 				</div>
 				<div class="flex flex-col gap-1.5">
-					<Label>{t('SettingsPage.obsidianVaultName')}</Label>
-					<Input type="text" bind:value={vaultName} class="max-w-xs" />
+					<Label for="{uid}-vault-name">{t('SettingsPage.obsidianVaultName')}</Label>
+					<Input id="{uid}-vault-name" type="text" bind:value={vaultName} placeholder={t('SettingsPage.obsidianVaultNamePlaceholder')} class="max-w-xs" />
 				</div>
 				<div>
 					<Button type="button" onclick={saveVaultConfig}>{t('Common.kaydet')}</Button>
@@ -511,7 +531,7 @@
 
 	<Card.Root class="mb-6">
 		<Card.Header>
-			<Card.Title>{t('VaultsSettingsPage.title')}</Card.Title>
+			<Card.Title level={2}>{t('VaultsSettingsPage.title')}</Card.Title>
 			<Card.Description>{t('SettingsPage.vaultsCardDescription')}</Card.Description>
 		</Card.Header>
 		<Card.Content class="flex flex-col gap-3">
@@ -530,7 +550,7 @@
 
 	<Card.Root class="mb-6">
 		<Card.Header>
-			<Card.Title>{t('LibrarySettingsPage.title')}</Card.Title>
+			<Card.Title level={2}>{t('LibrarySettingsPage.title')}</Card.Title>
 			<Card.Description>{t('SettingsPage.libraryCardDescription')}</Card.Description>
 		</Card.Header>
 		<Card.Content>
@@ -542,7 +562,7 @@
 
 	<Card.Root class="mb-6">
 		<Card.Header>
-			<Card.Title>{t('SkillsSettingsPage.title')}</Card.Title>
+			<Card.Title level={2}>{t('SkillsSettingsPage.title')}</Card.Title>
 			<Card.Description>{t('SettingsPage.skillsCardDescription')}</Card.Description>
 		</Card.Header>
 		<Card.Content>
@@ -554,7 +574,7 @@
 
 	<Card.Root>
 		<Card.Header>
-			<Card.Title>{t('ProvidersSettingsPage.title')}</Card.Title>
+			<Card.Title level={2}>{t('ProvidersSettingsPage.title')}</Card.Title>
 			<Card.Description>{t('SettingsPage.providersCardDescription')}</Card.Description>
 		</Card.Header>
 		<Card.Content>
@@ -566,7 +586,7 @@
 
 	<Card.Root>
 		<Card.Header>
-			<Card.Title>{t('SmallTalkSettingsPage.title')}</Card.Title>
+			<Card.Title level={2}>{t('SmallTalkSettingsPage.title')}</Card.Title>
 			<Card.Description>{t('SettingsPage.smallTalkCardDescription')}</Card.Description>
 		</Card.Header>
 		<Card.Content>
@@ -578,7 +598,7 @@
 
 	<Card.Root>
 		<Card.Header>
-			<Card.Title>{t('MemorySettingsPage.title')}</Card.Title>
+			<Card.Title level={2}>{t('MemorySettingsPage.title')}</Card.Title>
 			<Card.Description>{t('SettingsPage.memoryCardDescription')}</Card.Description>
 		</Card.Header>
 		<Card.Content>

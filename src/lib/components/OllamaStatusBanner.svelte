@@ -196,8 +196,8 @@
 	   as "chat is entirely unavailable", so this gets its own softer color
 	   rather than reusing --color-destructive. */
 	.ollama-banner--warning {
-		border-bottom-color: #d97706;
-		color: #d97706;
+		border-bottom-color: var(--warning);
+		color: var(--warning);
 	}
 
 	.ollama-banner code {

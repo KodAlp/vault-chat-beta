@@ -7,6 +7,7 @@
 	import { Input } from '$lib/components/ui/input';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { t } from '$lib/i18n/index.svelte';
+	import { readResponseError } from '$lib/server-error';
 	import SettingsIcon from '@lucide/svelte/icons/settings';
 	import PlusIcon from '@lucide/svelte/icons/plus';
 	import type { PageProps } from './$types';
@@ -30,13 +31,17 @@
 				headers: { 'content-type': 'application/json' },
 				body: JSON.stringify({ name })
 			});
-			if (!res.ok) throw new Error((await res.json().catch(() => null))?.message ?? t('HomePage.createFailed'));
+			if (!res.ok) {
+				createError = await readResponseError(res);
+				creating = false;
+				return;
+			}
 			const { vault } = (await res.json()) as { vault: VaultRecord };
 			// First-ever vault or not, jump straight in — that's the point of
 			// just having created it.
 			goto(`/vault/${vault.id}`);
-		} catch (err) {
-			createError = err instanceof Error ? err.message : t('HomePage.createFailed');
+		} catch {
+			createError = t('HomePage.createFailed');
 			creating = false;
 		}
 	}

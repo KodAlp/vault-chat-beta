@@ -8,15 +8,22 @@
 	import * as Card from '$lib/components/ui/card';
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
 	import { t } from '$lib/i18n/index.svelte';
+	import { readResponseError } from '$lib/server-error';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
+
+	// Stable per-instance id prefix for label/control association.
+	const uid = $props.id();
 
 	let vaults = $state<VaultWithStatus[]>([]);
 	let activeVaultId = $state<string | null>(null);
 	let loadError = $state('');
 	let newVaultName = $state('');
 	let createError = $state('');
+	let creatingVault = $state(false);
 	let renamingId = $state<string | null>(null);
 	let renameValue = $state('');
+	let renameBusy = $state(false);
+	let activateBusyId = $state<string | null>(null);
 	let deleteTarget = $state<{ vault: VaultRecord; chatCount: number } | null>(null);
 	let deleteError = $state('');
 	// İ6 (Aşama 8): the one-time "keep existing vaults open to MCP, or close
@@ -81,27 +88,37 @@
 	async function createVault() {
 		createError = '';
 		const name = newVaultName.trim();
-		if (!name) return;
+		if (!name || creatingVault) return;
+		creatingVault = true;
 		try {
 			const res = await fetch('/api/vaults', {
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
 				body: JSON.stringify({ name })
 			});
-			if (!res.ok) throw new Error((await res.json().catch(() => null))?.message ?? t('VaultsSettingsPage.createFailed'));
+			if (!res.ok) {
+				createError = await readResponseError(res);
+				return;
+			}
 			newVaultName = '';
 			await loadVaults();
-		} catch (err) {
-			createError = err instanceof Error ? err.message : t('VaultsSettingsPage.createFailed');
+		} catch {
+			createError = t('VaultsSettingsPage.createFailed');
+		} finally {
+			creatingVault = false;
 		}
 	}
 
 	async function activate(id: string) {
+		if (activateBusyId) return;
+		activateBusyId = id;
 		try {
 			await fetch(`/api/vaults/${id}/activate`, { method: 'POST' });
 			await loadVaults();
 		} catch {
 			loadError = t('VaultsSettingsPage.activateFailed');
+		} finally {
+			activateBusyId = null;
 		}
 	}
 
@@ -112,7 +129,8 @@
 
 	async function submitRename(id: string) {
 		const name = renameValue.trim();
-		if (!name) return;
+		if (!name || renameBusy) return;
+		renameBusy = true;
 		try {
 			await fetch(`/api/vaults/${id}`, {
 				method: 'PATCH',
@@ -123,6 +141,8 @@
 			await loadVaults();
 		} catch {
 			loadError = t('VaultsSettingsPage.renameFailed');
+		} finally {
+			renameBusy = false;
 		}
 	}
 
@@ -144,11 +164,14 @@
 			const res = await fetch(`/api/vaults/${deleteTarget.vault.id}?confirm=true`, {
 				method: 'DELETE'
 			});
-			if (!res.ok) throw new Error((await res.json().catch(() => null))?.message ?? t('VaultsSettingsPage.deleteFailed'));
+			if (!res.ok) {
+				deleteError = await readResponseError(res);
+				return;
+			}
 			deleteTarget = null;
 			await loadVaults();
-		} catch (err) {
-			deleteError = err instanceof Error ? err.message : t('VaultsSettingsPage.deleteFailed');
+		} catch {
+			deleteError = t('VaultsSettingsPage.deleteFailed');
 		}
 	}
 </script>
@@ -181,7 +204,7 @@
 		     was, or adopt the new closed-by-default posture, once, explicitly. -->
 		<Card.Root class="mb-6 border-primary">
 			<Card.Header>
-				<Card.Title>{t('VaultsSettingsPage.mcpMigrationTitle')}</Card.Title>
+				<Card.Title level={2}>{t('VaultsSettingsPage.mcpMigrationTitle')}</Card.Title>
 			</Card.Header>
 			<Card.Content class="flex flex-col gap-3">
 				<p class="text-sm text-muted-foreground">{t('VaultsSettingsPage.mcpMigrationDescription')}</p>
@@ -199,7 +222,7 @@
 
 	<Card.Root class="mb-6">
 		<Card.Header>
-			<Card.Title>{t('VaultsSettingsPage.existingVaultsTitle')}</Card.Title>
+			<Card.Title level={2}>{t('VaultsSettingsPage.existingVaultsTitle')}</Card.Title>
 		</Card.Header>
 		<Card.Content class="flex flex-col gap-2">
 			{#each vaults as vault (vault.id)}
@@ -210,14 +233,17 @@
 					<div class="flex items-center justify-between gap-3">
 					{#if renamingId === vault.id}
 						<Input
+							id="{uid}-rename-{vault.id}"
 							type="text"
+							aria-label={t('VaultsSettingsPage.rename')}
 							bind:value={renameValue}
 							class="h-8 max-w-[16rem]"
+							disabled={renameBusy}
 							onkeydown={(e) => e.key === 'Enter' && submitRename(vault.id)}
 						/>
 						<div class="flex shrink-0 gap-1.5">
-							<Button size="sm" onclick={() => submitRename(vault.id)}>{t('Common.kaydet')}</Button>
-							<Button size="sm" variant="ghost" onclick={() => (renamingId = null)}>{t('Common.vazgec')}</Button>
+							<Button size="sm" disabled={renameBusy} onclick={() => submitRename(vault.id)}>{t('Common.kaydet')}</Button>
+							<Button size="sm" variant="ghost" disabled={renameBusy} onclick={() => (renamingId = null)}>{t('Common.vazgec')}</Button>
 						</div>
 					{:else}
 						<span class="flex items-center gap-2">
@@ -233,7 +259,7 @@
 						</span>
 						<div class="flex shrink-0 gap-1.5">
 							{#if vault.id !== activeVaultId}
-								<Button size="sm" variant="outline" onclick={() => activate(vault.id)}>
+								<Button size="sm" variant="outline" disabled={activateBusyId === vault.id} onclick={() => activate(vault.id)}>
 									{t('VaultsSettingsPage.activate')}
 								</Button>
 							{/if}
@@ -261,7 +287,7 @@
 
 	<Card.Root>
 		<Card.Header>
-			<Card.Title>{t('VaultsSettingsPage.newVaultTitle')}</Card.Title>
+			<Card.Title level={2}>{t('VaultsSettingsPage.newVaultTitle')}</Card.Title>
 		</Card.Header>
 		<Card.Content>
 			<div class="flex gap-2">
@@ -270,9 +296,10 @@
 					placeholder={t('VaultsSettingsPage.vaultNamePlaceholder')}
 					bind:value={newVaultName}
 					class="max-w-xs"
+					disabled={creatingVault}
 					onkeydown={(e) => e.key === 'Enter' && createVault()}
 				/>
-				<Button onclick={createVault}>{t('VaultsSettingsPage.create')}</Button>
+				<Button onclick={createVault} disabled={!newVaultName.trim() || creatingVault}>{t('VaultsSettingsPage.create')}</Button>
 			</div>
 			{#if createError}
 				<p class="mt-2 text-sm text-destructive">{createError}</p>

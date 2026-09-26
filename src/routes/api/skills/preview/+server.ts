@@ -1,6 +1,7 @@
-import { error, json } from '@sveltejs/kit';
+import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { renderUserSkillsBlock, ALL_SCOPES } from '$lib/server/userSkills';
+import { fail } from '$lib/server/app-error';
 import { coreIntro, DEFAULT_ALLOWED_LANGUAGES, CORE_INVARIANTS } from '$lib/server/prompt';
 import { buildSystemPrompt as buildQuizPrompt } from '$lib/server/generate-quiz';
 import { buildSystemPrompt as buildCardsPrompt } from '$lib/server/generate-cards';
@@ -20,7 +21,7 @@ const PLACEHOLDER_CONTEXT = '(örnek bağlam — gerçek üretimde burada kaynak
 export const GET: RequestHandler = async ({ url }) => {
 	const scope = url.searchParams.get('scope') as UserSkillScope | null;
 	if (!scope || !ALL_SCOPES.includes(scope)) {
-		error(400, `scope şunlardan biri olmalı: ${ALL_SCOPES.join(', ')}`);
+		fail('SKILL_PREVIEW_SCOPE_INVALID', { allowed: ALL_SCOPES.join(', ') });
 	}
 
 	const skillsBlock = await renderUserSkillsBlock(scope);

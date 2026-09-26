@@ -103,13 +103,13 @@ function isSameLoopbackOrigin(origin: string, url: URL): boolean {
  */
 export const handle: Handle = async ({ event, resolve }) => {
 	if (!LOOPBACK_HOSTNAMES.has(event.url.hostname)) {
-		error(403, 'Bu sunucuya sadece yerel makineden erişilebilir.');
+		error(403, { message: 'LOCAL_ONLY', code: 'LOCAL_ONLY' });
 	}
 
 	if (STATE_CHANGING_METHODS.has(event.request.method)) {
 		const origin = event.request.headers.get('origin');
 		if (origin && !isSameLoopbackOrigin(origin, event.url)) {
-			error(403, 'Cross-site istekler engellenir.');
+			error(403, { message: 'CROSS_SITE_BLOCKED', code: 'CROSS_SITE_BLOCKED' });
 		}
 	}
 

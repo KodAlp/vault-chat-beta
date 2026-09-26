@@ -1,11 +1,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { error, json } from '@sveltejs/kit';
+import { json } from '@sveltejs/kit';
 import matter from 'gray-matter';
 import { unzipSync, type UnzipFileInfo } from 'fflate';
 import type { RequestHandler } from './$types';
 import { skillsDir } from '$lib/server/env';
 import { Frontmatter, assertSafeSkillName } from '$lib/server/userSkills';
+import { AppError, fail } from '$lib/server/app-error';
 
 const MAX_ZIP_RAW_BYTES = 20 * 1024 * 1024;
 const MAX_ZIP_ENTRY_COUNT = 500;
@@ -91,13 +92,13 @@ export const POST: RequestHandler = async ({ request }) => {
 	const formData = await request.formData();
 	const file = formData.get('file');
 	if (!(file instanceof File)) {
-		error(400, 'Dosya gerekli');
+		fail('VALIDATION_REQUIRED', { field: 'Dosya' });
 	}
 	if (!file.name.toLowerCase().endsWith('.zip')) {
-		error(400, 'Sadece .zip dosyası kabul edilir');
+		fail('SKILL_ZIP_ONLY');
 	}
 	if (file.size > MAX_ZIP_RAW_BYTES) {
-		error(400, 'Zip dosyası çok büyük (20MB sınırı)');
+		fail('SKILL_ZIP_TOO_LARGE', { limitMb: MAX_ZIP_RAW_BYTES / (1024 * 1024) });
 	}
 
 	const bytes = new Uint8Array(await file.arrayBuffer());
@@ -111,23 +112,24 @@ export const POST: RequestHandler = async ({ request }) => {
 				if (entry.name.endsWith('/')) return false; // directory entry, nothing to extract
 				entryCount++;
 				if (entryCount > MAX_ZIP_ENTRY_COUNT) {
-					throw new Error(`Zip içinde çok fazla dosya var (${MAX_ZIP_ENTRY_COUNT} sınırı)`);
+					throw new AppError('SKILL_ZIP_TOO_MANY_ENTRIES', { max: MAX_ZIP_ENTRY_COUNT });
 				}
 				if (!isSafeZipEntryName(entry.name)) {
-					throw new Error(`Geçersiz dosya yolu: ${entry.name}`);
+					throw new AppError('SKILL_ZIP_ENTRY_PATH_INVALID', { name: entry.name });
 				}
 				if (entry.originalSize > MAX_ZIP_ENTRY_INFLATED_BYTES) {
-					throw new Error(`"${entry.name}" çok büyük (dosya başına 10MB sınırı)`);
+					throw new AppError('SKILL_ZIP_ENTRY_TOO_BIG', { name: entry.name });
 				}
 				totalInflated += entry.originalSize;
 				if (totalInflated > MAX_ZIP_TOTAL_INFLATED_BYTES) {
-					throw new Error('Zip açıldığında toplam boyut sınırı aşılıyor (50MB)');
+					throw new AppError('SKILL_ZIP_TOTAL_TOO_LARGE', { limitMb: MAX_ZIP_TOTAL_INFLATED_BYTES / (1024 * 1024) });
 				}
 				return true;
 			}
 		});
 	} catch (err) {
-		error(400, err instanceof Error ? err.message : 'Zip açılamadı');
+		if (err instanceof AppError) fail(err.code, err.params, err.status);
+		fail('SKILL_ZIP_UNZIP_FAILED', { detail: err instanceof Error ? err.message : String(err) });
 	}
 
 	// Defense in depth: re-verify actual decompressed bytes against the same
@@ -136,7 +138,7 @@ export const POST: RequestHandler = async ({ request }) => {
 	for (const [name, data] of Object.entries(unzipped)) {
 		actualTotal += data.byteLength;
 		if (data.byteLength > MAX_ZIP_ENTRY_INFLATED_BYTES || actualTotal > MAX_ZIP_TOTAL_INFLATED_BYTES) {
-			error(400, `"${name}" beklenenden büyük çıktı — zip reddedildi`);
+			fail('SKILL_ZIP_ENTRY_TOO_BIG', { name });
 		}
 	}
 
@@ -165,12 +167,12 @@ export const POST: RequestHandler = async ({ request }) => {
 		}
 	}
 	if (!skillMdEntry) {
-		error(400, 'SKILL.md bulunamadı — zip kökünde ya da zip içindeki tek bir klasörün kökünde olmalı');
+		fail('SKILL_ZIP_MD_MISSING');
 	}
 	const skillMdRaw = Buffer.from(skillMdEntry[1]).toString('utf-8');
 
 	// matter()'s own parse failure and the Frontmatter schema's validation
-	// failure are handled separately on purpose — error() throws an
+	// failure are handled separately on purpose — fail() throws an
 	// SvelteKit HttpError, not an Error instance, so it must never be issued
 	// from inside a try block that would otherwise swallow it as "err
 	// instanceof Error === false" and replace it with a generic message.
@@ -178,18 +180,24 @@ export const POST: RequestHandler = async ({ request }) => {
 	try {
 		frontmatterData = matter(skillMdRaw).data;
 	} catch (err) {
-		error(400, err instanceof Error ? err.message : 'SKILL.md ayrıştırılamadı');
+		fail('SKILL_ZIP_MD_PARSE_FAILED', { detail: err instanceof Error ? err.message : String(err) });
 	}
 	const result = Frontmatter.safeParse(frontmatterData);
 	if (!result.success) {
-		error(400, result.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; '));
+		fail('SKILL_FRONTMATTER_INVALID', { detail: result.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ') });
 	}
 	const frontmatterName = result.data.name;
 
-	const derivedName = sanitizeSkillFolderName(frontmatterName ?? file.name.replace(/\.zip$/i, ''));
+	let derivedName: string;
+	try {
+		derivedName = sanitizeSkillFolderName(frontmatterName ?? file.name.replace(/\.zip$/i, ''));
+	} catch (err) {
+		if (err instanceof AppError) fail(err.code, err.params, err.status);
+		throw err;
+	}
 	const targetDir = path.join(skillsDir(), derivedName);
 	if (fs.existsSync(targetDir)) {
-		error(409, `"${derivedName}" isminde bir skill zaten var`);
+		fail('SKILL_EXISTS', { name: derivedName }, 409);
 	}
 
 	// Every entry already passed isSafeZipEntryName above; this is a second,
@@ -211,14 +219,15 @@ export const POST: RequestHandler = async ({ request }) => {
 			if (!rel) continue; // the wrapper directory entry itself, if present as its own key
 			const dest = path.join(targetDir, rel);
 			if (dest !== targetDir && !dest.startsWith(targetWithSep)) {
-				throw new Error(`Geçersiz dosya yolu: ${name}`);
+				throw new AppError('SKILL_ZIP_ENTRY_PATH_INVALID', { name });
 			}
 			fs.mkdirSync(path.dirname(dest), { recursive: true });
 			fs.writeFileSync(dest, data);
 		}
 	} catch (err) {
 		fs.rmSync(targetDir, { recursive: true, force: true });
-		error(400, err instanceof Error ? err.message : 'Zip diske yazılamadı');
+		if (err instanceof AppError) fail(err.code, err.params, err.status);
+		fail('SKILL_ZIP_WRITE_FAILED', { detail: err instanceof Error ? err.message : String(err) });
 	}
 
 	return json({ name: derivedName });

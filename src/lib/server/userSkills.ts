@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { skillsDir } from './env';
 import type { UserSkillScope, UserSkillStatus } from '$lib/types';
 import { MAX_SKILL_FILE_CHARS as MAX_FILE_CHARS, MAX_SKILL_TOTAL_CHARS as MAX_TOTAL_CHARS } from '$lib/skill-limits';
+import { AppError } from './app-error';
 
 const SCOPES: UserSkillScope[] = ['chat', 'quiz', 'flashcards', 'mindmap', 'report', 'slides'];
 
@@ -174,7 +175,7 @@ function parseFile(absPath: string): ParsedSkill {
 			priority: 50,
 			charCount: 0,
 			truncated: false,
-			parseError: err instanceof Error ? err.message : 'Dosya okunamadı',
+			parseError: err instanceof Error ? err.message : 'SKILL_FILE_UNREADABLE',
 			body: ''
 		};
 	}
@@ -196,7 +197,7 @@ function parseFile(absPath: string): ParsedSkill {
 			priority: 50,
 			charCount: 0,
 			truncated: false,
-			parseError: err instanceof Error ? err.message : 'Frontmatter ayrıştırılamadı',
+			parseError: err instanceof Error ? err.message : 'SKILL_FRONTMATTER_INVALID',
 			body: ''
 		};
 	}
@@ -263,7 +264,7 @@ function parseFolderSkill(dir: string, skillMdPath: string): ParsedSkill {
 			priority: 50,
 			charCount: 0,
 			truncated: false,
-			parseError: err instanceof Error ? err.message : 'Dosya okunamadı',
+			parseError: err instanceof Error ? err.message : 'SKILL_FILE_UNREADABLE',
 			body: '',
 			isFolder: true,
 			files: []
@@ -287,7 +288,7 @@ function parseFolderSkill(dir: string, skillMdPath: string): ParsedSkill {
 			priority: 50,
 			charCount: 0,
 			truncated: false,
-			parseError: err instanceof Error ? err.message : 'Frontmatter ayrıştırılamadı',
+			parseError: err instanceof Error ? err.message : 'SKILL_FRONTMATTER_INVALID',
 			body: '',
 			isFolder: true,
 			files: []
@@ -527,7 +528,7 @@ export function readSkillRaw(name: string): string | undefined {
  */
 export function assertSafeSkillName(name: string): void {
 	if (!name || /[\\/]/.test(name)) {
-		throw new Error('Geçersiz skill adı');
+		throw new AppError('SKILL_NAME_INVALID');
 	}
 }
 
@@ -536,7 +537,9 @@ export function writeSkill(name: string, raw: string): void {
 	const parsed = matter(raw);
 	const result = Frontmatter.safeParse(parsed.data);
 	if (!result.success) {
-		throw new Error(result.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; '));
+		throw new AppError('SKILL_FRONTMATTER_INVALID', {
+			detail: result.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ')
+		});
 	}
 	const existing = resolvePath(name);
 	const absPath = existing ?? path.join(skillsDir(), `${name}.md`);
@@ -544,7 +547,7 @@ export function writeSkill(name: string, raw: string): void {
 	const root = skillsDir();
 	const withSep = root.endsWith(path.sep) ? root : root + path.sep;
 	if (!absPath.startsWith(withSep)) {
-		throw new Error('Geçersiz skill adı (dizin dışına çıkıyor)');
+		throw new AppError('SKILL_NAME_INVALID');
 	}
 
 	fs.mkdirSync(path.dirname(absPath), { recursive: true });
@@ -561,13 +564,15 @@ export function patchSkillFrontmatter(
 	patch: Partial<{ enabled: boolean; priority: number }>
 ): void {
 	const absPath = resolvePath(name);
-	if (!absPath) throw new Error('Skill bulunamadı');
+	if (!absPath) throw new AppError('NOT_FOUND', { entity: 'skill' }, 404);
 	const raw = fs.readFileSync(absPath, 'utf-8');
 	const parsed = matter(raw);
 	const nextData = { ...parsed.data, ...patch };
 	const result = Frontmatter.safeParse(nextData);
 	if (!result.success) {
-		throw new Error(result.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; '));
+		throw new AppError('SKILL_FRONTMATTER_INVALID', {
+			detail: result.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ')
+		});
 	}
 	const nextRaw = matter.stringify(parsed.content.trim(), nextData);
 	fs.writeFileSync(absPath, nextRaw, 'utf-8');
