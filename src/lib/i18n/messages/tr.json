@@ -740,5 +740,52 @@
 		"fitToScreen": "Ekrana sığdır",
 		"mapHint": "Bir düğümün dairesine tıklayarak aç/kapa; kısaltılmış açıklamaya tıklayarak tamamını gör.",
 		"viewFailed": "Zihin haritası görüntülenemedi: {error}"
+	},
+
+	"ServerErrors": {
+		"UNKNOWN": "Beklenmeyen bir hata oluştu",
+		"INTERNAL": "Sunucuda bir hata oluştu",
+		"ROUTE_NOT_FOUND": "Sayfa bulunamadı",
+		"NOT_FOUND": "{entity} bulunamadı",
+		"VALIDATION_REQUIRED": "{field} gerekli",
+		"VALIDATION_INVALID": "{field} geçersiz",
+		"REQUEST_FAILED": "İstek başarısız ({status})",
+		"NO_SOURCES": "Bu kapsamda kütüphanede yeterli kaynak yok.",
+		"NO_SOURCES_NARROW": "Seçili kapsamda kaynak bulunamadı — kapsamı genişletmeyi deneyin.",
+		"PROVIDER_NETWORK": "{provider} sunucusuna ulaşılamadı",
+		"PROVIDER_TIMEOUT_CONNECT": "{provider} sunucusuna bağlanırken zaman aşımı",
+		"PROVIDER_TIMEOUT_FIRST_TOKEN": "{provider} yanıt vermeye başlamadı (zaman aşımı)",
+		"PROVIDER_TIMEOUT_IDLE": "{provider} yanıtı yarıda durdu (zaman aşımı)",
+		"PROVIDER_HTTP_429": "{provider}: istek sınırı aşıldı",
+		"PROVIDER_HTTP_5XX": "{provider} şu anda hizmet veremiyor",
+		"PROVIDER_AUTH": "{provider}: API anahtarı geçersiz veya eksik",
+		"PROVIDER_BAD_REQUEST": "{provider} isteği reddetti",
+		"PROVIDER_CONTEXT_LENGTH": "Bağlam çok uzun, {provider} işleyemedi",
+		"PROVIDER_UNKNOWN": "{provider} ile ilgili bilinmeyen bir hata oluştu",
+		"entity_chat": "Sohbet",
+		"entity_quiz": "Sınav",
+		"entity_card": "Kart",
+		"entity_deck": "Deste",
+		"entity_report": "Rapor",
+		"entity_mindmap": "Zihin haritası",
+		"entity_slidedeck": "Sunum",
+		"entity_attempt": "Deneme",
+		"entity_question": "Soru",
+		"entity_skill": "Beceri",
+		"entity_vault": "Kasa",
+		"entity_provider": "Sağlayıcı",
+		"entity_note": "Not",
+		"entity_file": "Dosya",
+		"entity_memory": "Bellek notu",
+		"entity_record": "Kayıt",
+		"entity_import": "İçe aktarma"
+	},
+
+	"ErrorPage": {
+		"title": "Bir şeyler ters gitti",
+		"notFoundTitle": "Sayfa bulunamadı",
+		"notFoundBody": "Aradığın sayfa taşınmış ya da hiç var olmamış olabilir.",
+		"home": "Ana sayfaya dön",
+		"back": "Geri dön"
 	}
 }

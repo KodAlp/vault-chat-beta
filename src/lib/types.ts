@@ -155,13 +155,13 @@ export type StreamEvent =
 	 * local model") — see the model-provider skill's fallback policy.
 	 * Rendered via FallbackNotice.svelte (Faz 9 Adım 6); today's
 	 * single-provider chains never actually trigger it in practice. */
-	| { type: 'notice'; message: string }
+	| { type: 'notice'; message: string; code?: string; params?: Record<string, string | number> }
 	/** A folder-skill's supporting file is about to be read via the
 	 * read_skill_file tool — see /api/chat/+server.ts's tool hop-loop. */
 	| { type: 'toolCall'; skill: string; path: string }
 	| { type: 'toolResult'; skill: string; path: string; ok: boolean; error?: string }
 	| { type: 'done'; sources: RetrievedChunk[]; narrowScope?: boolean; smallTalk?: boolean; hedges?: string[]; nearCtxLimit?: boolean }
-	| { type: 'error'; message: string }
+	| { type: 'error'; message: string; code?: string; params?: Record<string, string | number> }
 	/** A U+FFFD (corrupted-output) retry is starting — the client must
 	 * discard whatever partial content/thinking it already rendered for
 	 * this message before further `delta`/`thinking` events arrive, since
@@ -194,7 +194,7 @@ export type QuizGenerationEvent =
 	/** `delivered` < `requested` means the sources did not hold that many DISTINCT questions: the quiz is shorter than asked
 	 * rather than padded with repeats (generate-quiz.ts). Both optional so an older server's event still parses. */
 	| { type: 'done'; quizId: string; requested?: number; delivered?: number }
-	| { type: 'error'; message: string; narrowScope?: boolean };
+	| { type: 'error'; message: string; narrowScope?: boolean; code?: string; params?: Record<string, string | number> };
 
 /** GET /api/study/{quizzes,decks,reports,mindmaps,slidedecks} response
  * item shape (Faz 13) — one per generated-material type, all structurally
@@ -272,7 +272,7 @@ export interface CardGenerationRequest {
 export type CardGenerationEvent =
 	| { type: 'progress'; stage: 'retrieving' | 'generating' | 'validating' | 'retrying'; elapsedMs?: number }
 	| { type: 'done'; deckId: string }
-	| { type: 'error'; message: string; narrowScope?: boolean };
+	| { type: 'error'; message: string; narrowScope?: boolean; code?: string; params?: Record<string, string | number> };
 
 export type Grade = 'again' | 'hard' | 'good' | 'easy';
 
@@ -299,7 +299,7 @@ export interface ReportGenerationRequest {
 export type ReportGenerationEvent =
 	| { type: 'progress'; stage: 'retrieving' | 'generating' | 'validating' | 'retrying'; elapsedMs?: number }
 	| { type: 'done'; reportId: string }
-	| { type: 'error'; message: string; narrowScope?: boolean };
+	| { type: 'error'; message: string; narrowScope?: boolean; code?: string; params?: Record<string, string | number> };
 
 export interface ReportView {
 	id: string;
@@ -333,7 +333,7 @@ export interface MindMapGenerationRequest {
 export type MindMapGenerationEvent =
 	| { type: 'progress'; stage: 'retrieving' | 'generating' | 'validating' | 'retrying'; elapsedMs?: number }
 	| { type: 'done'; mindmapId: string }
-	| { type: 'error'; message: string; narrowScope?: boolean };
+	| { type: 'error'; message: string; narrowScope?: boolean; code?: string; params?: Record<string, string | number> };
 
 export interface MindMapView {
 	id: string;
@@ -371,7 +371,7 @@ export interface SlidesGenerationRequest {
 export type SlidesGenerationEvent =
 	| { type: 'progress'; stage: 'retrieving' | 'generating' | 'validating' | 'retrying'; elapsedMs?: number }
 	| { type: 'done'; slideDeckId: string }
-	| { type: 'error'; message: string; narrowScope?: boolean };
+	| { type: 'error'; message: string; narrowScope?: boolean; code?: string; params?: Record<string, string | number> };
 
 export interface SlideDeckView {
 	id: string;
@@ -499,20 +499,20 @@ export type ImportEvent =
 	| { type: 'ready'; importId: string; proposed: { title: string; domain: string; level: string }; warnings: string[] }
 	| { type: 'item'; item: ImportResultItem }
 	| { type: 'done'; summary?: ImportSummary }
-	| { type: 'error'; message: string };
+	| { type: 'error'; message: string; code?: string; params?: Record<string, string | number> };
 
 /** SSE event shapes streamed by POST /api/library/import-obsidian. */
 export type ObsidianImportEvent =
 	| { type: 'progress'; stage: string; fileName?: string }
 	| { type: 'item'; item: ImportResultItem }
 	| { type: 'done'; summary: ImportSummary }
-	| { type: 'error'; message: string };
+	| { type: 'error'; message: string; code?: string; params?: Record<string, string | number> };
 
 /** SSE event shapes streamed by POST /api/system/python (pip install run). */
 export type PythonSetupEvent =
 	| { type: 'log'; line: string }
 	| { type: 'done'; ok: boolean }
-	| { type: 'error'; message: string };
+	| { type: 'error'; message: string; code?: string; params?: Record<string, string | number> };
 
 /** GET /api/study/errors (F2). Mirrors src/lib/server/learner-errors.ts's WeakSpot/ErrorItem — kept as a separate,
  * client-safe copy the same way LearnerProfile (learner-model.ts) is kept apart from the server's AnswerRow. */
