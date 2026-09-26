@@ -5,6 +5,7 @@
 	import { libraryViewerUrl } from '$lib/sourceLink';
 	import { resolveBackHref } from '$lib/back-link';
 	import { t } from '$lib/i18n/index.svelte';
+	import { readResponseError, localizeError } from '$lib/server-error';
 	import type { PageProps } from './$types';
 	import type { MindMapNodeView, MindMapView } from '$lib/types';
 	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
@@ -25,6 +26,7 @@
 	type Phase = 'loading' | 'ready' | 'error';
 
 	let phase = $state<Phase>('loading');
+	let notFound = $state(false);
 	let mindmap = $state<MindMapView | null>(null);
 	let nodes = $state<MindMapNodeView[]>([]);
 	let errorMessage = $state('');
@@ -52,10 +54,21 @@
 	// `vault=` param is not the same as an absent one.
 	let mindmapQuery = $derived(data.vaultId ? `?vault=${encodeURIComponent(data.vaultId)}` : '');
 
-	onMount(async () => {
+	async function load() {
+		phase = 'loading';
+		notFound = false;
+		errorMessage = '';
 		try {
 			const res = await fetch(`/api/study/mindmaps/${data.mindmapId}${mindmapQuery}`);
-			if (!res.ok) throw new Error();
+			if (!res.ok) {
+				if (res.status === 404) {
+					notFound = true;
+				} else {
+					errorMessage = await readResponseError(res);
+				}
+				phase = 'error';
+				return;
+			}
 			const body = (await res.json()) as { mindmap: MindMapView; nodes: MindMapNodeView[] };
 			mindmap = body.mindmap;
 			nodes = body.nodes;
@@ -99,11 +112,13 @@
 					root
 				) as unknown as MarkmapHandle;
 			}
-		} catch {
-			errorMessage = t('MindmapStudyPage.loadFailed');
+		} catch (err) {
+			errorMessage = localizeError({ message: err instanceof Error ? err.message : undefined });
 			phase = 'error';
 		}
-	});
+	}
+
+	onMount(load);
 
 	/**
 	 * Delegated, because markmap rebuilds node DOM on every render — a handler
@@ -142,7 +157,15 @@
 	{#if phase === 'loading'}
 		<p class="status">{t('Common.yukleniyor')}</p>
 	{:else if phase === 'error'}
-		<p class="status error" role="alert">{errorMessage}</p>
+		{#if notFound}
+			<p class="status error" role="alert">{t('MindmapStudyPage.notFoundTitle')}</p>
+			<p class="status">{t('MindmapStudyPage.notFoundBody')}</p>
+		{:else}
+			<p class="status error" role="alert">{errorMessage}</p>
+			<div class="retry-row">
+				<button type="button" class="retry-btn" onclick={load}>{t('Common.yenidenDene')}</button>
+			</div>
+		{/if}
 	{:else if phase === 'ready' && mindmap}
 		<h1>{mindmap.title}</h1>
 		<!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
@@ -237,6 +260,31 @@
 
 	.status.error {
 		color: var(--color-destructive);
+	}
+
+	.retry-row {
+		display: flex;
+		justify-content: center;
+		margin-top: 1rem;
+	}
+
+	.retry-btn {
+		padding: 0.5rem 1.2rem;
+		border-radius: 8px;
+		border: 1px solid var(--color-border);
+		background: transparent;
+		color: var(--color-foreground);
+		cursor: pointer;
+	}
+
+	.retry-btn:hover {
+		border-color: var(--color-primary);
+		color: var(--color-primary);
+	}
+
+	.retry-btn:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
 	}
 
 	h1 {
@@ -384,6 +432,8 @@
 		border: 1px solid var(--color-border);
 		border-radius: 999px;
 		padding: 0.2rem 0.65rem;
+		overflow-wrap: anywhere;
+		min-width: 0;
 	}
 
 	.source-link:hover {

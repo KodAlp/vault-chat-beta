@@ -12,6 +12,7 @@ import { createMindMap } from './study-db';
 import { renderUserSkillsBlock } from './userSkills';
 import type { VaultContext } from './vaults';
 import { NoSourcesError } from './generate-errors';
+import { AppError } from './app-error';
 import { logAppEvent } from './app-log';
 import { getLibrarySettings } from './library-read';
 import { DEFAULT_ALLOWED_LANGUAGES } from './prompt';
@@ -288,7 +289,10 @@ export async function generateMindMap(
 	}
 
 	if (!parsed.ok) {
-		throw new Error(`Zihin haritası üretilemedi: ${parsed.error}`);
+		throw new AppError(
+			'GEN_MINDMAP_INVALID',
+			parsed.reason ? { reason: parsed.reason, ...parsed.reasonParams } : { detail: parsed.error }
+		);
 	}
 
 	const { rootLabel, rootSummary, nodes, droppedFileNameLabels } = parsed.result;

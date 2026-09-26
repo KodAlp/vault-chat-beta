@@ -1,13 +1,14 @@
-import { error, json } from '@sveltejs/kit';
+import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getMindMap, getMindMapNodes, deleteMindMap } from '$lib/server/study-db';
 import { vaultFromUrl, vaultFromId } from '$lib/server/requestVault';
+import { fail } from '$lib/server/app-error';
 import type { MindMapNodeView, MindMapView } from '$lib/types';
 
 export const GET: RequestHandler = async ({ params, url }) => {
 	const v = vaultFromUrl(url);
 	const mindmap = getMindMap(v, params.id);
-	if (!mindmap) error(404, 'Zihin haritası bulunamadı');
+	if (!mindmap) fail('NOT_FOUND', { entity: 'mindmap' }, 404);
 
 	const nodes: MindMapNodeView[] = getMindMapNodes(v, params.id).map((row) => ({
 		id: row.id,
@@ -29,7 +30,7 @@ export const GET: RequestHandler = async ({ params, url }) => {
 export const DELETE: RequestHandler = async ({ params, request }) => {
 	const body = (await request.json().catch(() => ({}))) as { vault?: string };
 	const v = vaultFromId(body.vault);
-	if (!getMindMap(v, params.id)) error(404, 'Zihin haritası bulunamadı');
+	if (!getMindMap(v, params.id)) fail('NOT_FOUND', { entity: 'mindmap' }, 404);
 	deleteMindMap(v, params.id);
 	return json({ ok: true });
 };

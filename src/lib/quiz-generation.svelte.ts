@@ -1,5 +1,7 @@
 import type { QuizGenerationEvent, QuizGenerationRequest } from './types';
 import type { DistributiveOmit } from './distributive-omit';
+import { runGenerationStream } from './generation-stream';
+import { readResponseError, localizeError } from './server-error';
 
 export type QuizGenerationStatus =
 	| { id: string; vaultId?: string; phase: 'generating'; stage: string; elapsedMs?: number }
@@ -32,6 +34,12 @@ export const quizGeneration = $state<{ items: QuizGenerationStatus[] }>({
 	items: []
 });
 
+/** One AbortController per in-flight generation, keyed by the same
+ * client-generated id as its items entry — lets cancelQuizGeneration(id)
+ * stop the fetch/stream without generation-stream.ts needing to know
+ * anything about this store's id scheme. */
+const controllers = new Map<string, AbortController>();
+
 export async function startQuizGeneration(body: QuizGenerationRequest): Promise<void> {
 	const id = crypto.randomUUID();
 
@@ -52,45 +60,54 @@ export async function startQuizGeneration(body: QuizGenerationRequest): Promise<
 
 	setStatus({ phase: 'generating', stage: 'retrieving' });
 
-	try {
-		const res = await fetch('/api/generate/quiz', {
-			method: 'POST',
-			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify(body)
-		});
-		if (!res.ok || !res.body) throw new Error(`İstek başarısız (${res.status})`);
+	const controller = new AbortController();
+	controllers.set(id, controller);
 
-		const reader = res.body.getReader();
-		const decoder = new TextDecoder();
-		let buffer = '';
-		while (true) {
-			const { done, value } = await reader.read();
-			if (done) break;
-			buffer += decoder.decode(value, { stream: true });
-			const parts = buffer.split('\n\n');
-			buffer = parts.pop() ?? '';
-			for (const part of parts) {
-				const line = part.trim();
-				if (!line.startsWith('data:')) continue;
-				const event = JSON.parse(line.slice(5)) as QuizGenerationEvent;
-				if (event.type === 'progress') {
-					setStatus({ phase: 'generating', stage: event.stage, elapsedMs: event.elapsedMs });
-				} else if (event.type === 'done') {
-					setStatus({ phase: 'done', quizId: event.quizId, requested: event.requested, delivered: event.delivered });
-				} else if (event.type === 'error') {
-					setStatus({ phase: 'error', message: event.message, narrowScope: event.narrowScope });
-				}
+	const result = await runGenerationStream<QuizGenerationEvent>(
+		'/api/generate/quiz',
+		body,
+		controller,
+		(event) => {
+			if (event.type === 'progress') {
+				setStatus({ phase: 'generating', stage: event.stage, elapsedMs: event.elapsedMs });
+			} else if (event.type === 'done') {
+				setStatus({ phase: 'done', quizId: event.quizId, requested: event.requested, delivered: event.delivered });
+			} else if (event.type === 'error') {
+				setStatus({ phase: 'error', message: localizeError(event), narrowScope: event.narrowScope });
 			}
 		}
-	} catch (err) {
+	);
+
+	controllers.delete(id);
+
+	if (result.kind === 'bad-response') {
+		setStatus({ phase: 'error', message: await readResponseError(result.response) });
+	} else if (result.kind === 'fetch-error') {
 		setStatus({
 			phase: 'error',
-			message: err instanceof Error ? err.message : 'Bilinmeyen hata'
+			message: localizeError({ message: result.err instanceof Error ? result.err.message : undefined })
 		});
+	} else if (result.kind === 'stalled') {
+		setStatus({ phase: 'error', message: localizeError({ code: 'GEN_STALLED' }) });
+	} else if (result.kind === 'incomplete') {
+		setStatus({ phase: 'error', message: localizeError({ code: 'GEN_STREAM_ENDED' }) });
 	}
+	// 'cancelled': cancelQuizGeneration() already removed the entry — a
+	// user-initiated cancel must never surface as an error. 'ok': the
+	// stream's own terminal 'done'/'error' event already set the final
+	// status above.
 }
 
 export function dismissQuizGeneration(id: string): void {
 	const idx = quizGeneration.items.findIndex((s) => s.id === id);
 	if (idx !== -1) quizGeneration.items.splice(idx, 1);
+}
+
+/** Cancels an in-flight generation: aborts its fetch/stream and removes its
+ * toast immediately, rather than waiting for the stream loop to unwind and
+ * report back — a user-initiated cancel must never be shown as an error. */
+export function cancelQuizGeneration(id: string): void {
+	controllers.get(id)?.abort();
+	controllers.delete(id);
+	dismissQuizGeneration(id);
 }

@@ -1,7 +1,8 @@
-import { error, json } from '@sveltejs/kit';
+import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getQuizItem, setQuizItemFlagged } from '$lib/server/study-db';
 import { vaultFromId } from '$lib/server/requestVault';
+import { fail } from '$lib/server/app-error';
 
 /**
  * "Bu soru hatalı": the user marks a generated question as faulty (a wrong answer key, an ambiguous or source-specific
@@ -11,10 +12,10 @@ import { vaultFromId } from '$lib/server/requestVault';
  */
 export const PATCH: RequestHandler = async ({ params, request }) => {
 	const body = (await request.json().catch(() => ({}))) as { vault?: string; flagged?: unknown };
-	if (typeof body.flagged !== 'boolean') error(400, 'flagged (boolean) gerekli');
+	if (typeof body.flagged !== 'boolean') fail('VALIDATION_REQUIRED', { field: 'flagged' });
 	const v = vaultFromId(body.vault);
 	const item = getQuizItem(v, params.itemId);
-	if (!item || item.quiz_id !== params.id) error(404, 'Soru bulunamadı');
+	if (!item || item.quiz_id !== params.id) fail('NOT_FOUND', { entity: 'question' }, 404);
 	setQuizItemFlagged(v, item.id, body.flagged);
 	return json({ ok: true, flagged: body.flagged });
 };

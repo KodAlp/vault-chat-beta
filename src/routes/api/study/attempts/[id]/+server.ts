@@ -1,4 +1,4 @@
-import { error, json } from '@sveltejs/kit';
+import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import {
 	getAttempt,
@@ -9,6 +9,7 @@ import {
 import { gradeOpenAnswer } from '$lib/server/grade-open';
 import { isAnswered } from '$lib/study-answers';
 import { vaultFromId } from '$lib/server/requestVault';
+import { fail } from '$lib/server/app-error';
 import type { AttemptResultItem, SubmitAttemptRequest, SubmitAttemptResponse } from '$lib/types';
 
 export const PATCH: RequestHandler = async ({ params, request }) => {
@@ -16,7 +17,7 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
 	const v = vaultFromId(body.vault);
 
 	const attempt = getAttempt(v, params.id);
-	if (!attempt) error(404, 'Deneme bulunamadı');
+	if (!attempt) fail('NOT_FOUND', { entity: 'attempt' }, 404);
 
 	const results: AttemptResultItem[] = [];
 	let correctCount = 0;

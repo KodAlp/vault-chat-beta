@@ -8,11 +8,11 @@
 	import { getCurrentWindow } from '@tauri-apps/api/window';
 	import { settings } from '$lib/settings.svelte';
 	import { welcomeAlreadyShown } from '$lib/welcome';
-	import { quizGeneration, dismissQuizGeneration } from '$lib/quiz-generation.svelte';
-	import { cardGeneration, dismissCardGeneration } from '$lib/card-generation.svelte';
-	import { reportGeneration, dismissReportGeneration } from '$lib/report-generation.svelte';
-	import { mindmapGeneration, dismissMindMapGeneration } from '$lib/mindmap-generation.svelte';
-	import { slidesGeneration, dismissSlidesGeneration } from '$lib/slides-generation.svelte';
+	import { quizGeneration, dismissQuizGeneration, cancelQuizGeneration } from '$lib/quiz-generation.svelte';
+	import { cardGeneration, dismissCardGeneration, cancelCardGeneration } from '$lib/card-generation.svelte';
+	import { reportGeneration, dismissReportGeneration, cancelReportGeneration } from '$lib/report-generation.svelte';
+	import { mindmapGeneration, dismissMindMapGeneration, cancelMindMapGeneration } from '$lib/mindmap-generation.svelte';
+	import { slidesGeneration, dismissSlidesGeneration, cancelSlidesGeneration } from '$lib/slides-generation.svelte';
 	import GenerationStatusToast from '$lib/components/GenerationStatusToast.svelte';
 	import OllamaStatusBanner from '$lib/components/OllamaStatusBanner.svelte';
 	import PythonStatusBanner from '$lib/components/PythonStatusBanner.svelte';
@@ -179,6 +179,7 @@
 			goto(studyUrl(`/study/quiz/${quizId}`, vaultId));
 		}}
 		onDismiss={() => dismissQuizGeneration(status.id)}
+		onCancel={() => cancelQuizGeneration(status.id)}
 		onExpandScope={requestScopeExpand}
 	/>
 {/each}
@@ -197,6 +198,7 @@
 			goto(studyUrl('/study/cards', vaultId));
 		}}
 		onDismiss={() => dismissCardGeneration(status.id)}
+		onCancel={() => cancelCardGeneration(status.id)}
 		onExpandScope={requestScopeExpand}
 	/>
 {/each}
@@ -216,6 +218,7 @@
 			goto(studyUrl(`/study/report/${reportId}`, vaultId));
 		}}
 		onDismiss={() => dismissReportGeneration(status.id)}
+		onCancel={() => cancelReportGeneration(status.id)}
 		onExpandScope={requestScopeExpand}
 	/>
 {/each}
@@ -235,6 +238,7 @@
 			goto(studyUrl(`/study/mindmap/${mindmapId}`, vaultId));
 		}}
 		onDismiss={() => dismissMindMapGeneration(status.id)}
+		onCancel={() => cancelMindMapGeneration(status.id)}
 		onExpandScope={requestScopeExpand}
 	/>
 {/each}
@@ -254,6 +258,7 @@
 			goto(studyUrl(`/study/slides/${slideDeckId}`, vaultId));
 		}}
 		onDismiss={() => dismissSlidesGeneration(status.id)}
+		onCancel={() => cancelSlidesGeneration(status.id)}
 		onExpandScope={requestScopeExpand}
 	/>
 {/each}

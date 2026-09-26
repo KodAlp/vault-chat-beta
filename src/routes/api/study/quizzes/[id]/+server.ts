@@ -1,13 +1,14 @@
-import { error, json } from '@sveltejs/kit';
+import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getQuiz, getQuizItems, deleteQuiz } from '$lib/server/study-db';
 import { vaultFromUrl, vaultFromId } from '$lib/server/requestVault';
+import { fail } from '$lib/server/app-error';
 import type { QuizItemView, QuizView } from '$lib/types';
 
 export const GET: RequestHandler = async ({ params, url }) => {
 	const v = vaultFromUrl(url);
 	const quiz = getQuiz(v, params.id);
-	if (!quiz) error(404, 'Sınav bulunamadı');
+	if (!quiz) fail('NOT_FOUND', { entity: 'quiz' }, 404);
 
 	// No answer/explanation here on purpose — the skill's UI spec is "no answer
 	// reveal until submitted". Those come back from the attempt-submit endpoint.
@@ -30,7 +31,7 @@ export const GET: RequestHandler = async ({ params, url }) => {
 export const DELETE: RequestHandler = async ({ params, request }) => {
 	const body = (await request.json().catch(() => ({}))) as { vault?: string };
 	const v = vaultFromId(body.vault);
-	if (!getQuiz(v, params.id)) error(404, 'Sınav bulunamadı');
+	if (!getQuiz(v, params.id)) fail('NOT_FOUND', { entity: 'quiz' }, 404);
 	deleteQuiz(v, params.id);
 	return json({ ok: true });
 };

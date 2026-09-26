@@ -1,7 +1,8 @@
-import { error, json } from '@sveltejs/kit';
+import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getDeck, deleteDeck } from '$lib/server/study-db';
 import { vaultFromId } from '$lib/server/requestVault';
+import { fail } from '$lib/server/app-error';
 
 /** GET lives at ./cards/+server.ts (deck + its cards together, what the
  * review page actually needs) — this route only adds DELETE, mirroring
@@ -9,7 +10,7 @@ import { vaultFromId } from '$lib/server/requestVault';
 export const DELETE: RequestHandler = async ({ params, request }) => {
 	const body = (await request.json().catch(() => ({}))) as { vault?: string };
 	const v = vaultFromId(body.vault);
-	if (!getDeck(v, params.id)) error(404, 'Deste bulunamadı');
+	if (!getDeck(v, params.id)) fail('NOT_FOUND', { entity: 'deck' }, 404);
 	deleteDeck(v, params.id);
 	return json({ ok: true });
 };

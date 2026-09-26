@@ -1,5 +1,6 @@
 import { MindMapTreeSchema } from './mindmap-schema';
 import type { NewMindMapNode } from './study-db';
+import type { ReasonKey } from '../errors';
 
 /**
  * Pure validation + flattening for a mind-map response, split out of
@@ -27,7 +28,9 @@ export interface MindMapResult {
 
 export type MindMapParseResult =
 	| { ok: true; result: MindMapResult }
-	| { ok: false; error: string };
+	// `error` is Turkish because it goes back to the model in the retry
+	// prompt; `reason` is what the user sees, localized client-side.
+	| { ok: false; error: string; reason?: ReasonKey; reasonParams?: Record<string, number> };
 
 /** Long summaries are trimmed rather than rejected: the JSON Schema cannot
  * enforce string length through llama.cpp's GBNF conversion, and a slightly
@@ -106,7 +109,7 @@ export function parseAndValidateMindMap(
 	try {
 		json = JSON.parse(raw);
 	} catch {
-		return { ok: false, error: 'Model geçerli JSON döndürmedi.' };
+		return { ok: false, error: 'Model geçerli JSON döndürmedi.', reason: 'invalid_json' };
 	}
 	const parsed = MindMapTreeSchema.safeParse(json);
 	if (!parsed.success) {
@@ -127,7 +130,9 @@ export function parseAndValidateMindMap(
 	if (unknownIds.length > 0) {
 		return {
 			ok: false,
-			error: `${unknownIds.length} düğümün source_id'si sağlanan kaynak kimlikleriyle eşleşmiyor. Sadece S1, S2, ... gibi verilen kimlikleri kullan.`
+			error: `${unknownIds.length} düğümün source_id'si sağlanan kaynak kimlikleriyle eşleşmiyor. Sadece S1, S2, ... gibi verilen kimlikleri kullan.`,
+			reason: 'invented_source_ids',
+			reasonParams: { count: unknownIds.length }
 		};
 	}
 
@@ -160,7 +165,9 @@ export function parseAndValidateMindMap(
 	if (nodes.length < MIN_NODES) {
 		return {
 			ok: false,
-			error: `Temizlik sonrası sadece ${nodes.length} düğüm kaldı (en az ${MIN_NODES} gerekli). Düğüm etiketleri dosya adı değil, kavram olmalı.`
+			error: `Temizlik sonrası sadece ${nodes.length} düğüm kaldı (en az ${MIN_NODES} gerekli). Düğüm etiketleri dosya adı değil, kavram olmalı.`,
+			reason: 'mindmap_too_few_nodes',
+			reasonParams: { count: nodes.length, min: MIN_NODES }
 		};
 	}
 
