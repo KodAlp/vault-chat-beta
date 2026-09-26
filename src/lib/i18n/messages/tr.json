@@ -14,7 +14,8 @@
 		"bilinmeyenHata": "Bilinmeyen hata",
 		"buIslemGeriAlinamaz": "Bu işlem geri alınamaz.",
 		"istekBasarisiz": "İstek başarısız ({status})",
-		"kutuphaneYuklenemedi": "Kütüphane yüklenemedi."
+		"kutuphaneYuklenemedi": "Kütüphane yüklenemedi.",
+		"yenidenDene": "Yeniden dene"
 	},
 
 	"ModelPickerRow": {
@@ -98,14 +99,16 @@
 		"generate": "Oluştur",
 		"consentTitle": "Dış sağlayıcıya gönderilsin mi?",
 		"consentDescription": "{provider} yerel değil; bu üretim isteği bu sağlayıcının sunucularına gönderilecek. Onayladığında bu seçim hatırlanır, bir daha sorulmaz.",
-		"consentConfirm": "Onaylıyorum, gönder"
+		"consentConfirm": "Onaylıyorum, gönder",
+		"alreadyGenerating": "Aynı türde bir üretim zaten sürüyor"
 	},
 
 	"GenerationStatusToast": {
 		"defaultGeneratingLabel": "İşleniyor...",
 		"elapsedSuffix": " · {seconds}sn",
 		"expandScope": "Kapsamı genişlet?",
-		"dismiss": "Kapat"
+		"dismiss": "Kapat",
+		"cancel": "İptal et"
 	},
 
 	"QuizDialog": {
@@ -463,7 +466,8 @@
 		"memoryCardDescription": "Sohbette hatırlanmasını istediğin kişisel notlar.",
 		"manageMemory": "Notları yönet",
 		"deleteModelConfirmTitle": "\"{name}\" silinsin mi?",
-		"deleteModelConfirmDescription": "Bu model Ollama'dan kalıcı olarak kaldırılacak. İndirme dosyaları diskten silinir."
+		"deleteModelConfirmDescription": "Bu model Ollama'dan kalıcı olarak kaldırılacak. İndirme dosyaları diskten silinir.",
+		"obsidianVaultNamePlaceholder": "ör. Matematik"
 	},
 
 	"LibrarySettingsPage": {
@@ -684,7 +688,9 @@
 		"gradeAgain": "Tekrar",
 		"gradeHard": "Zor",
 		"gradeGood": "İyi",
-		"gradeEasy": "Kolay"
+		"gradeEasy": "Kolay",
+		"notFoundTitle": "Bu deste artık yok",
+		"notFoundBody": "Silinmiş olabilir."
 	},
 
 	"QuizStudyPage": {
@@ -709,14 +715,18 @@
 		"scoreExcludingFlagged": "{count} hatalı soru hariç",
 		"correctAnswer": "Doğru cevap:",
 		"modelFeedback": "Model değerlendirmesi:",
-		"viewFailed": "Test görüntülenemedi: {error}"
+		"viewFailed": "Test görüntülenemedi: {error}",
+		"notFoundTitle": "Bu sınav artık yok",
+		"notFoundBody": "Silinmiş olabilir."
 	},
 
 	"ReportStudyPage": {
 		"defaultTitle": "Rapor",
 		"loadError": "Rapor yüklenemedi.",
 		"noSections": "Bu raporda bölüm yok.",
-		"viewFailed": "Rapor görüntülenemedi: {error}"
+		"viewFailed": "Rapor görüntülenemedi: {error}",
+		"notFoundTitle": "Bu rapor artık yok",
+		"notFoundBody": "Silinmiş olabilir."
 	},
 
 	"SlidesStudyPage": {
@@ -727,7 +737,9 @@
 		"slideAria": "Slayt {index}",
 		"prev": "‹ Geri",
 		"next": "İleri ›",
-		"viewFailed": "Sunum görüntülenemedi: {error}"
+		"viewFailed": "Sunum görüntülenemedi: {error}",
+		"notFoundTitle": "Bu sunum artık yok",
+		"notFoundBody": "Silinmiş olabilir."
 	},
 
 	"MindmapStudyPage": {
@@ -739,7 +751,9 @@
 		"zoomOut": "Uzaklaştır",
 		"fitToScreen": "Ekrana sığdır",
 		"mapHint": "Bir düğümün dairesine tıklayarak aç/kapa; kısaltılmış açıklamaya tıklayarak tamamını gör.",
-		"viewFailed": "Zihin haritası görüntülenemedi: {error}"
+		"viewFailed": "Zihin haritası görüntülenemedi: {error}",
+		"notFoundTitle": "Bu zihin haritası artık yok",
+		"notFoundBody": "Silinmiş olabilir."
 	},
 
 	"ServerErrors": {
@@ -778,7 +792,105 @@
 		"entity_file": "Dosya",
 		"entity_memory": "Bellek notu",
 		"entity_record": "Kayıt",
-		"entity_import": "İçe aktarma"
+		"entity_import": "İçe aktarma",
+		"VALIDATION_REQUIRED_ALL": "{fields} gerekli",
+		"VALIDATION_REQUIRED_ANY": "{fields} alanlarından en az biri gerekli",
+		"reason_disabled": "devre dışı",
+		"reason_not_consented": "henüz onaylanmadı",
+		"reason_invalid_json": "Model geçerli JSON döndürmedi",
+		"reason_invented_source_ids": "{count} öğe, verilmeyen kaynak kimliklerine atıf yaptı",
+		"reason_report_sources_not_specific": "Her bölüm tüm kaynakları listeledi; bölümler yalnızca ilgili kaynakları göstermeli",
+		"reason_report_no_sections": "Model hiç bölüm üretmedi",
+		"reason_slides_no_slides": "Model hiç slayt üretmedi",
+		"reason_mindmap_too_few_nodes": "Temizlik sonrası sadece {count} düğüm kaldı (en az {min} gerekli)",
+		"CHAT_INVALID_BODY": "Geçersiz istek gövdesi",
+		"CHAT_LAST_MESSAGE_NOT_USER": "Son mesaj kullanıcıdan gelmeli",
+		"CHAT_EMPTY_ANSWER_RETRY": "Yanıt boş geldi, yeniden üretiliyor…",
+		"CHAT_CORRUPTION_RETRY": "Yanıtta bozuk karakterler algılandı, yeniden üretiliyor…",
+		"CHAT_CORRUPTION_RESUME": "Yanıtta bozuk karakter algılandı, kaldığı yerden devam ediliyor…",
+		"CHAT_CORRUPTION_GAVE_UP": "Yanıt bozuk karakterler içerebilir (bilinen bir model sorunu) — birkaç deneme sonrası temiz üretilemedi.",
+		"CHAT_NO_ANSWER": "Model bir yanıt üretmedi, lütfen tekrar deneyin.",
+		"CHAT_SAVE_FAILED": "Sohbet kaydedilemedi",
+		"OLLAMA_UNREACHABLE": "Ollama'ya ulaşılamıyor — Ollama çalışıyor mu?",
+		"CHAT_FALLBACK_PINNED_UNAVAILABLE": "{provider} {reason} → görev zinciri kullanılıyor",
+		"CHAT_FALLBACK_NO_DEFAULT_MODEL": "{provider} için varsayılan model tanımlı değil → atlanıyor",
+		"CHAT_FALLBACK_RATE_LIMITED": "{from} hız sınırına takıldı → {to}'a geçiliyor",
+		"CHAT_FALLBACK_UNAVAILABLE": "{provider} kullanılamıyor ({kind}) → sıradaki modele geçiliyor",
+		"CHAT_NO_CHAIN": "\"{taskType}\" görev tipi için etkin bir provider zinciri yok",
+		"CHAT_CONTINUATION_UNAVAILABLE": "\"{taskType}\" için devam isteği başka sağlayıcıya aktarılamaz",
+		"CHAT_NO_MODEL_RESOLVED": "\"{taskType}\" için hiçbir sağlayıcıda model çözülemedi",
+		"CHAT_DELETE_FAILED": "Sohbet silinemedi",
+		"CHAT_PATCH_NO_FIELDS": "'model', 'provider', 'includedPaths', 'title' veya 'mode' gerekli",
+		"GEN_QUIZ_NO_TYPES": "En az bir soru seçilmeli.",
+		"GEN_QUIZ_EMPTY": "Sınav üretilemedi: hiçbir batch geçerli soru üretemedi.",
+		"GEN_CARDS_EMPTY": "Kartlar üretilemedi: hiçbir batch geçerli kart üretemedi.",
+		"GEN_MINDMAP_INVALID": "Zihin haritası üretilemedi",
+		"GEN_REPORT_INVALID": "Rapor üretilemedi",
+		"GEN_SLIDES_INVALID": "Sunum üretilemedi",
+		"GEN_STALLED": "Üretim yanıt vermeyi durdurdu (zaman aşımı).",
+		"FILE_TOO_LARGE": "Dosya çok büyük ({limitMb}MB sınırı)",
+		"UNSUPPORTED_FILE_TYPE": "Desteklenmeyen dosya türü: {ext}",
+		"CONVERSION_EMPTY": "Dönüştürme çıktı üretmedi",
+		"CONVERSION_FAILED": "Dönüştürme başarısız",
+		"PROCESS_TIMEOUT": "İşlem zaman aşımına uğradı (>{seconds}s)",
+		"PYTHON_NOT_FOUND": "Python bulunamadı. Önce python.org adresinden Python 3 kur, sonra tekrar dene.",
+		"PYTHON_SPAWN_FAILED": "Python başlatılamadı",
+		"TRANSCRIPT_EMPTY": "Transkript çıktı üretmedi",
+		"TRANSCRIPT_FAILED": "Transkript alınamadı",
+		"LINK_INVALID": "Geçersiz bağlantı: {url}",
+		"LINK_PROTOCOL_UNSUPPORTED": "Desteklenmeyen protokol: {protocol}",
+		"LINK_PRIVATE_NETWORK": "Yerel/özel ağ adresine erişim reddedildi: {host}",
+		"LINK_DNS_FAILED": "Alan adı çözümlenemedi: {host}",
+		"LINK_REDIRECT_INVALID": "Yönlendirme hedefi geçersiz",
+		"LINK_TOO_MANY_REDIRECTS": "Çok fazla yönlendirme (>{max})",
+		"LINK_TIMEOUT": "İstek zaman aşımına uğradı",
+		"LINK_HTTP_FAILED": "İstek başarısız ({status})",
+		"LINK_EMPTY_RESPONSE": "Boş yanıt",
+		"LINK_ROBOTS_DISALLOWED": "robots.txt bu sayfayı taramaya izin vermiyor",
+		"LINK_PDF_NOT_PDF": "Bağlantı .pdf ile bitiyor ama gelen içerik PDF değil (muhtemelen hata sayfası/giriş ekranı)",
+		"LINK_ALREADY_PDF": "Bu adres zaten bir PDF — taramaya gerek yok, doğrudan bağlantı listesine ekleyin",
+		"LINKS_MIN_ONE": "En az bir bağlantı gerekli",
+		"LINKS_MAX": "En fazla {max} bağlantı desteklenir",
+		"YOUTUBE_URL_INVALID": "Geçerli bir YouTube bağlantısı gerekli",
+		"PATH_OUTSIDE_LIBRARY": "Geçersiz yol (library dışına çıkıyor)",
+		"RENAME_FOLDER_UNSUPPORTED": "Sadece dosyalar yeniden adlandırılabilir, klasörler değil",
+		"FILE_EXISTS": "Bu isimde bir dosya zaten var",
+		"IMPORT_EXPIRED": "Bekleyen içe aktarma bulunamadı (süresi dolmuş olabilir)",
+		"IMPORT_INDEX_FAILED": "Dosya kaydedildi ama indekslenemedi, staging'e geri alındı",
+		"OBSIDIAN_SOURCE_INVALID": "Kaynak vault yolu bulunamadı ya da bir klasör değil",
+		"ATTACHMENT_TYPE_MISMATCH": "Dosya içeriği beklenen türle uyuşmuyor",
+		"IMPORT_DUPLICATE_CONTENT": "Bu dosya (aynı içerik) daha önce içe aktarılmış görünüyor — yine de devam edebilirsin.",
+		"VAULT_NAME_EMPTY": "Vault adı boş olamaz",
+		"VAULT_NONE": "Hiç vault yok — önce bir vault oluştur",
+		"VAULT_DELETE_CONFIRM_REQUIRED": "Silme onayı gerekli ('confirm=true')",
+		"VAULT_LAST_UNDELETABLE": "Son vault silinemez — uygulama her zaman en az bir vault gerektirir",
+		"PROVIDER_OLLAMA_REQUIRED": "Ollama devre dışı bırakılamaz",
+		"PROVIDER_OLLAMA_UNDELETABLE": "Ollama kaldırılamaz",
+		"PROVIDER_OLLAMA_MISCONFIGURED": "Ollama sağlayıcısı doğru yapılandırılmamış",
+		"PROVIDER_CONSENT_NOT_NEEDED": "Ollama için onay gerekmez",
+		"PROVIDER_BASE_URL_INVALID": "{url} geçerli bir http(s) adresi değil",
+		"PROVIDERS_FILE_UNREADABLE": "providers.json okunamadı",
+		"VALIDATION_EMPTY_FIELD": "{field} boş olamaz",
+		"SKILL_NAME_INVALID": "Geçersiz skill adı",
+		"SKILL_FRONTMATTER_INVALID": "Skill dosyasının başlık bilgisi (frontmatter) geçersiz",
+		"SKILL_FILE_UNREADABLE": "Dosya okunamadı",
+		"SKILL_ZIP_ONLY": "Sadece .zip dosyası kabul edilir",
+		"SKILL_ZIP_TOO_LARGE": "Zip dosyası çok büyük ({limitMb}MB sınırı)",
+		"SKILL_ZIP_UNZIP_FAILED": "Zip açılamadı",
+		"SKILL_ZIP_ENTRY_TOO_BIG": "\"{name}\" beklenenden büyük çıktı — zip reddedildi",
+		"SKILL_ZIP_MD_MISSING": "SKILL.md bulunamadı — zip kökünde ya da zip içindeki tek bir klasörün kökünde olmalı",
+		"SKILL_ZIP_MD_PARSE_FAILED": "SKILL.md ayrıştırılamadı",
+		"SKILL_ZIP_WRITE_FAILED": "Zip diske yazılamadı",
+		"SKILL_EXISTS": "\"{name}\" isminde bir skill zaten var",
+		"SKILL_PREVIEW_SCOPE_INVALID": "scope şunlardan biri olmalı: {allowed}",
+		"MEMORY_TYPE_INVALID": "type GLOBAL ya da PERSONAL olmalı",
+		"SMALLTALK_LEARN_FAILED": "Öğrenilemedi",
+		"LOCAL_ONLY": "Bu sunucuya sadece yerel makineden erişilebilir",
+		"CROSS_SITE_BLOCKED": "Cross-site istekler engellenir",
+		"SKILL_ZIP_TOO_MANY_ENTRIES": "Zip içinde çok fazla dosya var ({max} sınırı)",
+		"SKILL_ZIP_ENTRY_PATH_INVALID": "Geçersiz dosya yolu: {name}",
+		"SKILL_ZIP_TOTAL_TOO_LARGE": "Zip açıldığında toplam boyut sınırı aşılıyor ({limitMb}MB)",
+		"GEN_STREAM_ENDED": "Üretim bir sonuç göndermeden sona erdi."
 	},
 
 	"ErrorPage": {

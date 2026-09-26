@@ -62,3 +62,24 @@ export const ENTITY_KEYS = [
 ] as const;
 
 export type EntityKey = (typeof ENTITY_KEYS)[number];
+
+/**
+ * Machine-readable causes usable as a `{reason}` param on any code. The
+ * client resolves `reason` through `ServerErrors.reason_<name>`: a template
+ * with `{reason}` interpolates it, one without gets it appended like
+ * `detail`. Used where the server has a known cause but the human text for
+ * it must stay out of the wire format (e.g. a validator whose Turkish text
+ * is also fed back to the model in a retry prompt).
+ */
+export const REASON_KEYS = [
+	'disabled',
+	'not_consented',
+	'invalid_json',
+	'invented_source_ids',
+	'report_sources_not_specific',
+	'report_no_sections',
+	'slides_no_slides',
+	'mindmap_too_few_nodes'
+] as const;
+
+export type ReasonKey = (typeof REASON_KEYS)[number];

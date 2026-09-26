@@ -39,12 +39,23 @@ export function formatCodedError(
 			}
 		}
 
+		if (typeof params.reason === 'string') {
+			const reasonKey = 'ServerErrors.reason_' + params.reason;
+			const resolvedReason = translate(reasonKey, params);
+			if (resolvedReason !== reasonKey) {
+				params.reason = resolvedReason;
+			}
+		}
+
 		const key = 'ServerErrors.' + e.code;
-		const translated = translate(key, params);
+		let translated = translate(key, params);
 		if (translated !== key) {
-			const detail = params.detail;
-			if (typeof detail === 'string' && detail.length > 0 && !translated.includes(detail)) {
-				return translated + ' — ' + detail;
+			// Append reason and detail only when the template didn't already
+			// interpolate them, so one param never prints twice.
+			for (const extra of [params.reason, params.detail]) {
+				if (typeof extra === 'string' && extra.length > 0 && !translated.includes(extra)) {
+					translated += ' — ' + extra;
+				}
 			}
 			return translated;
 		}
