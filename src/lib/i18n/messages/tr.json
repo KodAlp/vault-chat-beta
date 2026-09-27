@@ -362,8 +362,9 @@
 	},
 
 	"WelcomePage": {
-		"title": "Vault Agent Toolkit",
-		"tagline": "Notların, tamamen yerel.",
+		"title": "Vault Chat",
+		"tagline": "Lay the eggs for your future.",
+		"details": "Gizlilik ve sorumluluk",
 		"note1": "Varsayılan olarak her şey cihazında kalır — dönüştürme, arama ve yerel (Ollama) sohbet hiçbir yere veri göndermez. Bulut bir sağlayıcı seçersen (ör. Deepseek, Gemini) o sohbetin içeriği o sağlayıcıya gider; bir bağlantı ya da YouTube videosu içe aktarırsan o adrese istek gider.",
 		"note2": "Yapay zekâ çıktısı yanlış ya da eksik olabilir — özellikle sayı, tarih ve alıntılarda. Önemli kararlardan önce doğrula.",
 		"note3": "İçe aktardığın kaynakların (PDF, video, bağlantı) telif/kullanım haklarına sahip olduğundan emin olmak senin sorumluluğun.",

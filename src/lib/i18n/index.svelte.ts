@@ -46,7 +46,10 @@ const MESSAGES: Record<Locale, MessageTree> = { tr: tr as MessageTree, en: en as
 const EMPTY_MARKER = '';
 
 const FALLBACK_LOCALE: Locale = 'tr';
-const STORAGE_KEY = 'vault-chat-locale';
+/** Exported so +layout.ts's migration check can tell "nothing in
+ * localStorage yet" apart from "loadInitial() already read it" without
+ * duplicating the literal string. */
+export const STORAGE_KEY = 'vault-chat-locale';
 
 function isLocale(v: string | null): v is Locale {
 	return v === 'tr' || v === 'en';
@@ -65,6 +68,27 @@ export const i18n = $state<{ locale: Locale }>({ locale: loadInitial() });
 export function persistLocale(): void {
 	if (typeof localStorage === 'undefined') return;
 	localStorage.setItem(STORAGE_KEY, i18n.locale);
+	// Fire-and-forget: the server-side copy (ui-prefs-store.ts) is what
+	// survives the Tauri desktop build's random sidecar port, but a failed
+	// PUT here just means this pick won't survive the next launch — not
+	// worth blocking or surfacing to the user over.
+	if (typeof window !== 'undefined') {
+		fetch('/api/ui-prefs', {
+			method: 'PUT',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ locale: i18n.locale })
+		}).catch((err) => console.warn('ui-prefs locale PUT failed', err));
+	}
+}
+
+/** Applied from +layout.ts's load with the server-persisted copy — validated
+ * the same way loadInitial() validates localStorage, since this is untrusted
+ * network data (the server already sanitizes it too, but never trust twice
+ * removed). */
+export function applyLocale(locale: unknown): void {
+	if (typeof locale === 'string' && isLocale(locale)) {
+		i18n.locale = locale;
+	}
 }
 
 /**
