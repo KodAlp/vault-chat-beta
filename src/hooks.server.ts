@@ -1,6 +1,17 @@
 import { error, type Handle, type HandleServerError } from '@sveltejs/kit';
 import { runVaultMigrationIfNeeded } from '$lib/server/migrateVaults';
 import { logAppEvent } from '$lib/server/app-log';
+import tls from 'node:tls';
+import { installSystemCa } from '$lib/server/system-ca';
+
+// Before any cloud provider call: trust the OS certificate store too, so antivirus / corporate HTTPS
+// inspection doesn't break every provider with SELF_SIGNED_CERT_IN_CHAIN. See system-ca.ts.
+{
+	const ca = installSystemCa(tls, process.env);
+	if (!ca.installed && ca.reason !== 'disabled') {
+		process.stderr.write(`system CA not installed: ${ca.reason}${'detail' in ca && ca.detail ? ` (${ca.detail})` : ''}\n`);
+	}
+}
 
 // Runs once per server process start, before any request is handled —
 // exactly what a one-time "migrate legacy single-library layout to the
