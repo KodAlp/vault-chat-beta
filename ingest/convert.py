@@ -26,6 +26,7 @@ behavior — the staged name — never a crash.
 import argparse
 import hashlib
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -231,9 +232,26 @@ def convert_with_markitdown(path: Path) -> str:
     return text
 
 
+def pandoc_bin() -> str:
+    """Node (src/lib/server/pandoc-bin.ts, via convertQueue.ts) resolves
+    PANDOC_BIN to an absolute pandoc.exe path and sets it on this process's
+    env whenever the server process's own PATH is stale relative to a
+    just-completed winget install — see that module's doc comment for why a
+    bare 'pandoc' PATH lookup can keep failing for the rest of the server's
+    lifetime otherwise. A direct CLI invocation of this script (the
+    source-ingest skill doc's documented contract) sets no such env var, so
+    this falls back to the bare command name, exactly like the old
+    hardcoded "pandoc" did."""
+    return os.environ.get("PANDOC_BIN") or "pandoc"
+
+
+def pandoc_available() -> bool:
+    return shutil.which(pandoc_bin()) is not None
+
+
 def convert_with_pandoc(path: Path) -> str:
     proc = subprocess.run(
-        ["pandoc", "-f", "latex", "-t", "gfm", str(path)],
+        [pandoc_bin(), "-f", "latex", "-t", "gfm", str(path)],
         capture_output=True, text=True, check=True
     )
     return proc.stdout
@@ -382,7 +400,7 @@ def route_auto(path: Path, page_range: tuple[int, int] | None = None) -> tuple[s
         return convert_code_file(path), "code-wrap"
 
     if ext == TEX_EXT:
-        if shutil.which("pandoc"):
+        if pandoc_available():
             return convert_with_pandoc(path), "pandoc"
         raise RuntimeError(pandoc_not_installed_message())
 
@@ -465,7 +483,7 @@ def route_explicit(path: Path, tool: str, page_range: tuple[int, int] | None = N
         if tool == "docling":
             return convert_with_docling(path, page_range=page_range), "docling"
         if tool == "pandoc":
-            if not shutil.which("pandoc"):
+            if not pandoc_available():
                 raise RuntimeError(pandoc_not_installed_message())
             return convert_with_pandoc(path), "pandoc"
     except ImportError:

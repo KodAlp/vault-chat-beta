@@ -952,6 +952,9 @@
 		"installViaWinget": "winget ile kur",
 		"downloadPage": "İndirme sayfası",
 		"installing": "Kuruluyor...",
+		"installSuccess": "Kurulum tamamlandı.",
+		"installSuccessNotDetected": "Kuruldu, ancak uygulama henüz göremiyor; uygulamayı yeniden başlatın.",
+		"showInstallLog": "Kurulum günlüğünü göster",
 		"successTitle": "{name} hazır",
 		"successBody": "Bu sunucu açılışta otomatik başlayacak ve sağlayıcı olarak eklendi.",
 		"modelCheckTitle": "Model kontrolü",
@@ -965,7 +968,6 @@
 		"pythonInstalledLabel": "Python kurulu ({version})",
 		"pythonNotInstalled": "Python kurulu değil.",
 		"installPython": "Python'ı kur (winget)",
-		"restartHint": "PATH güncellemesi için uygulamayı yeniden başlatman gerekebilir.",
 		"moduleListTitle": "Python paketleri",
 		"moduleInstalled": "kurulu",
 		"moduleMissing": "eksik",
@@ -993,6 +995,8 @@
 		"pickModelFile": "Model dosyası seç",
 		"vllmModelLabel": "Model adı",
 		"notLaunchableNote": "Bu sunucu uygulama tarafından başlatılamaz; API sunucusunu kendi arayüzünden açman gerekir.",
-		"invalidPort": "Port 1-65535 aralığında olmalı."
+		"invalidPort": "Port 1-65535 aralığında olmalı.",
+		"saved": "Kaydedildi.",
+		"savedRestartNote": "Kaydedildi. Sunucu çalışıyor; değişiklik bir sonraki başlatmada geçerli olur."
 	}
 }

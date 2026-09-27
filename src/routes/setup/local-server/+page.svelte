@@ -299,6 +299,22 @@
 	 * page (server cards + python + pandoc), so this stops a failure from
 	 * one card's install from appearing to be about a different card. */
 	let wingetErrorId = $state<string | null>(null);
+	/** Which winget id the CURRENT wingetLog/success/still-missing state
+	 * belongs to — unlike wingetBusyId (null once the install finishes),
+	 * this stays set after completion so that card can keep showing what
+	 * happened instead of the log/status just vanishing the moment the
+	 * install finishes (the bug this whole block exists to fix: previously
+	 * nothing here survived past wingetBusyId going back to null). */
+	let wingetLogId = $state<string | null>(null);
+	/** Set once winget itself reports success (including a no-op "already
+	 * installed" run) — shown even when the immediate re-check still can't
+	 * see the result yet (see wingetStillMissingId below). */
+	let wingetSuccessId = $state<string | null>(null);
+	/** Set when a winget install succeeded but this app's own re-check still
+	 * reports the thing as missing — the exact bug this fix targets: a
+	 * winget install can land pandoc.exe somewhere this already-running
+	 * Node process's stale PATH doesn't see until it's restarted. */
+	let wingetStillMissingId = $state<string | null>(null);
 
 	async function refreshWinget() {
 		if (!tauri) return;
@@ -314,6 +330,9 @@
 		wingetLog = [];
 		wingetError = '';
 		wingetErrorId = null;
+		wingetLogId = wingetId;
+		wingetSuccessId = null;
+		wingetStillMissingId = null;
 		const { listen } = await import('@tauri-apps/api/event');
 		const offProgress = await listen<WingetProgressEvent>('winget-progress', (e) => {
 			if (e.payload.id === wingetId) wingetLog = [...wingetLog, e.payload.line];
@@ -321,6 +340,10 @@
 		const offDone = await listen<WingetDoneEvent>('winget-done', () => {});
 		try {
 			await invoke('winget_install', { id: wingetId });
+			// winget exiting 0 covers both "installed" and "already installed,
+			// nothing to upgrade" — both are a success from this wizard's point
+			// of view, so the generic success text below reads fine for either.
+			wingetSuccessId = wingetId;
 			return true;
 		} catch (err) {
 			wingetError = errMessage(err);
@@ -336,7 +359,11 @@
 	async function installServerViaWinget(server: DetectedServer) {
 		if (!server.winget_id) return;
 		const ok = await runWingetInstall(server.winget_id);
-		if (ok) await refreshServers();
+		if (ok) {
+			await refreshServers();
+			const nowVisible = servers.some((s) => s.id === server.id && (s.installed !== null || s.running));
+			if (!nowVisible) wingetStillMissingId = server.winget_id;
+		}
 	}
 
 	// -- Ollama model step ----------------------------------------------------
@@ -426,14 +453,13 @@
 	// -- system check (python / modules / pandoc) ----------------------------
 
 	let pySystem = $state<PythonSystemStatus | null>(null);
-	let pythonRestartHint = $state(false);
 	let pipInstalling = $state(false);
 	let pipLog = $state<string[]>([]);
 	let pipError = $state(false);
 
-	async function refreshPythonStatus() {
+	async function refreshPythonStatus(fresh = false) {
 		try {
-			const res = await fetch('/api/system/python');
+			const res = await fetch(fresh ? '/api/system/python?fresh=1' : '/api/system/python');
 			if (res.ok) pySystem = (await res.json()) as PythonSystemStatus;
 		} catch {
 			// Best-effort informational panel only.
@@ -441,15 +467,15 @@
 	}
 
 	async function installPythonViaWinget() {
-		const wasInstalled = pySystem?.pythonInstalled ?? false;
 		const ok = await runWingetInstall('Python.Python.3.12');
-		await refreshPythonStatus();
-		if (ok && !wasInstalled && !(pySystem?.pythonInstalled ?? false)) pythonRestartHint = true;
+		await refreshPythonStatus(true);
+		if (ok && !(pySystem?.pythonInstalled ?? false)) wingetStillMissingId = 'Python.Python.3.12';
 	}
 
 	async function installPandocViaWinget() {
-		await runWingetInstall('JohnMacFarlane.Pandoc');
-		await refreshPythonStatus();
+		const ok = await runWingetInstall('JohnMacFarlane.Pandoc');
+		await refreshPythonStatus(true);
+		if (ok && !(pySystem?.pandoc ?? false)) wingetStillMissingId = 'JohnMacFarlane.Pandoc';
 	}
 
 	async function installPythonModules() {
@@ -484,7 +510,7 @@
 			pipError = true;
 		} finally {
 			pipInstalling = false;
-			await refreshPythonStatus();
+			await refreshPythonStatus(true);
 		}
 	}
 
@@ -505,6 +531,32 @@
 <svelte:head>
 	<title>{t('LocalServerSetupPage.title')}</title>
 </svelte:head>
+
+{#snippet wingetStatus(id: string)}
+	{#if wingetBusyId === id}
+		{#if wingetLog.length > 0}
+			<pre class="mt-2 max-h-24 overflow-y-auto rounded bg-muted p-2 text-xs whitespace-pre-wrap">{wingetLog.join('\n')}</pre>
+		{/if}
+	{:else if wingetLogId === id}
+		{#if wingetError && wingetErrorId === id}
+			<p class="mt-2 text-sm text-destructive" role="alert">{wingetError}</p>
+		{:else if wingetSuccessId === id}
+			<p class="mt-2 text-sm text-muted-foreground">
+				{wingetStillMissingId === id
+					? t('LocalServerSetupPage.installSuccessNotDetected')
+					: t('LocalServerSetupPage.installSuccess')}
+			</p>
+		{/if}
+		{#if wingetLog.length > 0}
+			<details class="mt-2">
+				<summary class="cursor-pointer text-xs text-muted-foreground select-none">
+					{t('LocalServerSetupPage.showInstallLog')}
+				</summary>
+				<pre class="mt-1 max-h-24 overflow-y-auto rounded bg-muted p-2 text-xs whitespace-pre-wrap">{wingetLog.join('\n')}</pre>
+			</details>
+		{/if}
+	{/if}
+{/snippet}
 
 <div class="mx-auto max-w-2xl px-4 pt-8 pb-16">
 	<div class="mb-6 flex items-baseline justify-between gap-4">
@@ -665,12 +717,8 @@
 								{/if}
 							</div>
 
-							{#if wingetBusyId === server.winget_id}
-								{#if wingetLog.length > 0}
-									<pre class="mt-2 max-h-24 overflow-y-auto rounded bg-muted p-2 text-xs whitespace-pre-wrap">{wingetLog.join('\n')}</pre>
-								{/if}
-							{:else if wingetError && wingetErrorId === server.winget_id}
-								<p class="mt-2 text-sm text-destructive" role="alert">{wingetError}</p>
+							{#if server.winget_id}
+								{@render wingetStatus(server.winget_id)}
 							{/if}
 						</Card.Content>
 					</Card.Root>
@@ -702,15 +750,7 @@
 						{/if}
 					{/if}
 				</div>
-				{#if pythonRestartHint}
-					<p class="text-xs text-muted-foreground">{t('LocalServerSetupPage.restartHint')}</p>
-				{/if}
-				{#if wingetBusyId === 'Python.Python.3.12' && wingetLog.length > 0}
-					<pre class="max-h-24 overflow-y-auto rounded bg-muted p-2 text-xs whitespace-pre-wrap">{wingetLog.join('\n')}</pre>
-				{/if}
-				{#if wingetError && wingetErrorId === 'Python.Python.3.12'}
-					<p class="text-sm text-destructive" role="alert">{wingetError}</p>
-				{/if}
+				{@render wingetStatus('Python.Python.3.12')}
 
 				{#if pySystem.pythonInstalled}
 					<div class="mt-2">
@@ -755,12 +795,7 @@
 						{/if}
 					{/if}
 				</div>
-				{#if wingetBusyId === 'JohnMacFarlane.Pandoc' && wingetLog.length > 0}
-					<pre class="max-h-24 overflow-y-auto rounded bg-muted p-2 text-xs whitespace-pre-wrap">{wingetLog.join('\n')}</pre>
-				{/if}
-				{#if wingetError && wingetErrorId === 'JohnMacFarlane.Pandoc'}
-					<p class="text-sm text-destructive" role="alert">{wingetError}</p>
-				{/if}
+				{@render wingetStatus('JohnMacFarlane.Pandoc')}
 
 				{#if !wingetAvailable}
 					<p class="text-xs text-muted-foreground">{t('LocalServerSetupPage.wingetUnavailableNote')}</p>
