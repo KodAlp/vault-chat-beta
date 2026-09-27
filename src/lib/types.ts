@@ -460,6 +460,13 @@ export interface LibrarySettings {
 	 * $lib/server/prompt.ts'nin coreIntro()'su. Boş bırakılamaz, her zaman en
 	 * az bir dil içerir. */
 	allowedLanguages: string[];
+	/** Sohbet yanıt dili modu. 'match' (varsayılan): son kullanıcı mesajının kendi dili
+	 * belirleyicidir (bkz. $lib/server/response-language.ts'nin decideResponseLanguage'ı) —
+	 * İngilizce bir soru İngilizce, Türkçe bir soru Türkçe cevaplanır, sohbetin önceki dili değil.
+	 * 'fixed': eski davranış, her zaman allowedLanguages[0] (birincil dil) kullanılır — dil
+	 * öğrenme kasaları için (ör. hedef dil Korece olan bir kasada her cevabın Korece kalması
+	 * gerekir, soru hangi dilde sorulursa sorulsun). */
+	responseLanguage: 'match' | 'fixed';
 	/** Kök-seviye klasör adları (library root'a göre) — SourceTree.svelte'de
 	 * hiç gösterilmez VE retrieve.ts'de hiçbir üreticiye/sohbete kaynak
 	 * olarak sunulmaz (bkz. select-chunks.ts'nin excludedPrefixes'i).

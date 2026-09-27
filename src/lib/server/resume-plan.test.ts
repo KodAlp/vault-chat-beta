@@ -43,6 +43,24 @@ test('U+FFFD stays corruption even in a CJK-friendly vault', () => {
 	assert.deepEqual(findCorruption('你好�', ['Chinese']), { index: 2, kind: 'fffd' });
 });
 
+// ---------- isCjkExpected recognizes decideResponseLanguage()'s English names
+//
+// In 'match' response-language mode (see prompt.ts/response-language.ts), the chat route extends
+// the allowedLanguages list handed to findCorruption() with the decided turn's own language name —
+// e.g. franc-min detects a Korean question and decideResponseLanguage names it 'Korean' (via
+// Intl.DisplayNames, English form). isCjkExpected already recognizes the English names
+// 'chinese'/'japanese'/'korean' (see CJK_LANGUAGE_NAMES), so no code change was needed here — this
+// test exists to prove that fact rather than assume it silently breaks later.
+
+test('isCjkExpected recognizes the exact English language names decideResponseLanguage produces for CJK languages', () => {
+	assert.equal(isCjkExpected(['Chinese']), true);
+	assert.equal(isCjkExpected(['Japanese']), true);
+	assert.equal(isCjkExpected(['Korean']), true);
+	assert.equal(findCorruption('你好', ['Türkçe', 'Chinese']), null);
+	assert.equal(findCorruption('こんにちは', ['Türkçe', 'Japanese']), null);
+	assert.equal(findCorruption('안녕', ['Türkçe', 'Korean']), null);
+});
+
 test('when both appear the earlier one wins', () => {
 	assert.deepEqual(findCorruption('ab�你', []), { index: 2, kind: 'fffd' });
 	assert.deepEqual(findCorruption('ab你�', []), { index: 2, kind: 'cjk' });

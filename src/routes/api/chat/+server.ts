@@ -28,6 +28,7 @@ import { detectHallucinationHedges, mergeHedgeMatches } from '$lib/server/halluc
 import { getLibrarySettings } from '$lib/server/library';
 import { hasFetchableFolderSkills } from '$lib/server/userSkills';
 import { READ_SKILL_FILE_TOOL, executeReadSkillFile } from '$lib/server/skillTool';
+import { decideResponseLanguage } from '$lib/server/response-language';
 import type { ChatRequestBody, RetrievedChunk, StreamEvent } from '$lib/types';
 
 function sseEvent(event: StreamEvent): string {
@@ -104,7 +105,9 @@ export const POST: RequestHandler = async ({ request }) => {
 		fail('CHAT_INVALID_BODY', undefined, 400);
 	}
 	const v = vaultFromId(body.vault);
-	const allowedLanguages = getLibrarySettings(v).allowedLanguages;
+	const librarySettings = getLibrarySettings(v);
+	const allowedLanguages = librarySettings.allowedLanguages;
+	const responseLanguage = librarySettings.responseLanguage;
 	const lastUser = body.messages[body.messages.length - 1];
 	// The client sends the whole transcript on every turn — trust the shape,
 	// not who claims to be the last speaker. Anything else is either a client
@@ -113,6 +116,26 @@ export const POST: RequestHandler = async ({ request }) => {
 	if (lastUser && lastUser.role !== 'user') {
 		fail('CHAT_LAST_MESSAGE_NOT_USER', undefined, 400);
 	}
+	// 'match' mode: the leak/corruption detector (findCorruption, resume-plan.ts) must not flag a
+	// CJK answer as corrupted when THIS turn's own detected language is CJK, even if the vault's
+	// configured allowedLanguages never mentions one — buildPromptMessages() computes the same
+	// decision internally to build the directive line (see prompt.ts), this is a second, cheap
+	// (pure, no model call) computation just to extend the corruption detector's expected-language
+	// list. 'fixed' mode never appends a directive, so the detector keeps using allowedLanguages as-is.
+	const languagesForCorruptionCheck =
+		responseLanguage === 'match' && lastUser
+			? [
+					...allowedLanguages,
+					decideResponseLanguage(
+						lastUser.content,
+						body.messages
+							.slice(0, -1)
+							.filter((m) => m.role === 'user')
+							.map((m) => m.content),
+						allowedLanguages.length ? allowedLanguages[0] : 'Türkçe'
+					).englishName
+				]
+			: allowedLanguages;
 
 	const stream = new ReadableStream({
 		async start(controller) {
@@ -257,7 +280,8 @@ export const POST: RequestHandler = async ({ request }) => {
 				// of regenerated (resume-plan.ts) — Ollama + a verified model family only.
 				const resumeSupported = await supportsPrefixResume(body.provider, body.model);
 				const basePromptMessages = await buildPromptMessages(body.messages, sources, allowedLanguages, v, body.mode ?? 'free_chat', {
-					toolsEnabled
+					toolsEnabled,
+					responseLanguage
 				});
 
 				for (let attempt = 0; ; attempt++) {
@@ -369,7 +393,7 @@ export const POST: RequestHandler = async ({ request }) => {
 								body.provider
 							)) {
 								if (event.type === 'reasoning') {
-									const bad = findCorruption(event.text, allowedLanguages);
+									const bad = findCorruption(event.text, languagesForCorruptionCheck);
 									if (bad) {
 										// Thinking text is never resumed (resume-plan.ts planRecovery).
 										logAppEvent({
@@ -410,7 +434,7 @@ export const POST: RequestHandler = async ({ request }) => {
 										text = seam.emit;
 										if (seam.status === 'ok') trimmer = null;
 									}
-									const bad = text ? findCorruption(text, allowedLanguages) : null;
+									const bad = text ? findCorruption(text, languagesForCorruptionCheck) : null;
 									if (bad) {
 										const clean = text.slice(0, bad.index);
 										const displayed = finalContent + clean;

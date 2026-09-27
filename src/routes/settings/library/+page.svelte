@@ -13,6 +13,7 @@
 	let settings = $state<LibrarySettings>({
 		keepOriginals: false,
 		allowedLanguages: ['Türkçe'],
+		responseLanguage: 'match',
 		hiddenFolders: ['raw', 'cards', 'frontier', 'notes'],
 		flattenFolders: ['wiki']
 	});
@@ -62,6 +63,14 @@
 	function persistKeepOriginals(checked: boolean) {
 		const previous = $state.snapshot(settings) as LibrarySettings;
 		settings.keepOriginals = checked;
+		void persist(previous);
+	}
+
+	/** `checked` true means "fixed" (always the primary language) — the Switch's own on/off
+	 * reads naturally as "always" when on, "match the question" when off. */
+	function persistResponseLanguage(checked: boolean) {
+		const previous = $state.snapshot(settings) as LibrarySettings;
+		settings.responseLanguage = checked ? 'fixed' : 'match';
 		void persist(previous);
 	}
 
@@ -156,6 +165,18 @@
 					{t('LibrarySettingsPage.allowedLanguagesHint')}
 				</span>
 			</label>
+			<div class="flex flex-col gap-1 text-sm">
+				{t('LibrarySettingsPage.responseLanguage')}
+				<label class="flex cursor-pointer items-center gap-2">
+					<Switch checked={settings.responseLanguage === 'fixed'} onCheckedChange={persistResponseLanguage} />
+					{settings.responseLanguage === 'fixed'
+						? t('LibrarySettingsPage.responseLanguageFixed')
+						: t('LibrarySettingsPage.responseLanguageMatch')}
+				</label>
+				<span class="text-xs text-muted-foreground">
+					{t('LibrarySettingsPage.responseLanguageHint')}
+				</span>
+			</div>
 			<label class="flex flex-col gap-1 text-sm">
 				{t('LibrarySettingsPage.hiddenFolders')}
 				<Input
