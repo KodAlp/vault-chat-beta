@@ -22,10 +22,22 @@ export interface ProviderConfigEntry {
 	id: string;
 	label: string;
 	baseUrl: string;
-	kind: 'ollama' | 'openai-compat' | 'anthropic';
+	kind: 'ollama' | 'openai-compat' | 'anthropic' | 'azure-openai';
 	reasoningDialect: 'think-tags' | 'reasoning_content' | 'none';
 	enabled: boolean;
 	timeouts: { connectMs: number; firstTokenMs: number; idleMs: number };
+	/**
+	 * Problem A — a local (or local-network) OpenAI-compatible server: LM Studio, llama.cpp server, vLLM,
+	 * LocalAI, Jan, or another machine's Ollama reached through its own /v1 surface. Only meaningful when
+	 * `kind === 'openai-compat'` (Ollama is already local by kind; Anthropic/Azure OpenAI are never local).
+	 * This is the user's own statement that the server never leaves their machine/network — isCloud() below
+	 * reads it to skip the cloud consent dialog and the cloud badge, and the model pickers skip the
+	 * OpenRouter/models.dev catalog filter for it (see model-filter.ts's pickerModels), since a small local
+	 * server's model ids are never going to be in that catalog. Optional so an existing config keeps working
+	 * (see defaultModel's doc comment above for why every new field here must be optional — the Tauri build
+	 * only copies providers.json on first launch).
+	 */
+	local?: boolean;
 	/**
 	 * Which model THIS provider should be asked for when the fallback chain
 	 * reaches it without an explicit choice — a model id is provider-scoped
@@ -45,12 +57,24 @@ export interface ProviderConfigEntry {
 	 * further, it never re-adds a model the filter rejected. Set the first time the user unchecks anything in
 	 * the settings page's "model listesini yönet" section. */
 	enabledModels?: string[];
+	/**
+	 * Problem B — a manual list of model ids to ADD to this provider's pickers, on top of whatever the
+	 * catalog filter + enabledModels narrowing already produce (see model-filter.ts's pickerModels). Exists
+	 * for two cases enabledModels can't cover, because it only ever narrows: a model the catalog doesn't
+	 * know about yet (very new, or a very small provider) and a model the provider's own /models endpoint
+	 * doesn't list at all (e.g. an Azure OpenAI deployment name — Azure's /models surface is not documented
+	 * to list deployments). A pinned id that isn't in the provider's live listModels() result gets a
+	 * conservative placeholder ({ctx: 8192, caps: {tools:false, reasoning:false}}) rather than being dropped.
+	 */
+	pinnedModels?: string[];
 }
 
-/** Cloud providers are OpenAI-compatible except Anthropic — this drives the
- * settings UI's "add provider" form (which fields to show) and the badge. */
-export function isCloud(kind: ProviderConfigEntry['kind']): boolean {
-	return kind !== 'ollama';
+/** Cloud providers are every kind except Ollama (always local) and an openai-compat entry the user has
+ * marked `local: true` (problem A) — this drives the settings UI's "add provider" form, the cloud badge, and
+ * whether the cloud-consent dialog is shown before a model picker switches onto it. Takes the whole entry
+ * (or a pick of it) rather than just `kind` now that locality is no longer implied by kind alone. */
+export function isCloud(entry: Pick<ProviderConfigEntry, 'kind' | 'local'>): boolean {
+	return entry.kind !== 'ollama' && !entry.local;
 }
 
 export interface ProvidersFile {
@@ -132,6 +156,49 @@ export function updateEnabledModels(id: string, modelIds: string[] | null): void
 	writeFile(data);
 }
 
+/**
+ * Problem B's writer — validates as it stores (unlike updateEnabledModels, which trusts the caller): a
+ * non-string, empty/whitespace-only, or absurdly long (>200 chars — well past any real model/deployment id)
+ * entry is silently dropped rather than saved, and duplicates are removed while keeping first-seen order.
+ * `null` clears the field entirely (mirrors updateEnabledModels' null semantics); an empty array is a valid,
+ * intentional "nothing pinned" and is stored as-is, same distinction as enabledModels draws.
+ */
+export function updatePinnedModels(id: string, modelIds: string[] | null): void {
+	const data = readFile();
+	const entry = data.providers.find((p) => p.id === id);
+	if (!entry) throw new AppError('NOT_FOUND', { entity: 'provider', detail: id }, 404);
+	if (modelIds === null) {
+		delete entry.pinnedModels;
+		writeFile(data);
+		return;
+	}
+	const seen = new Set<string>();
+	const cleaned: string[] = [];
+	for (const raw of modelIds) {
+		if (typeof raw !== 'string') continue;
+		const trimmed = raw.trim();
+		if (!trimmed || trimmed.length > 200) continue;
+		if (seen.has(trimmed)) continue;
+		seen.add(trimmed);
+		cleaned.push(trimmed);
+	}
+	entry.pinnedModels = cleaned;
+	writeFile(data);
+}
+
+/** Problem A — lets the settings page toggle `local` on an EXISTING openai-compat provider (the add-form
+ * only sets it at creation time). Silently ignored on any other kind: Ollama is already local by kind,
+ * Anthropic/Azure OpenAI are never local, so there is no state for this to change there. */
+export function updateProviderLocal(id: string, local: boolean): void {
+	const data = readFile();
+	const entry = data.providers.find((p) => p.id === id);
+	if (!entry) throw new AppError('NOT_FOUND', { entity: 'provider', detail: id }, 404);
+	if (entry.kind !== 'openai-compat') return;
+	if (local) entry.local = true;
+	else delete entry.local;
+	writeFile(data);
+}
+
 export function updateChain(taskType: string, providerIds: string[]): void {
 	const data = readFile();
 	data.chains[taskType] = providerIds;
@@ -149,8 +216,10 @@ function slugify(s: string): string {
 export interface NewProviderInput {
 	label: string;
 	baseUrl: string;
-	kind: 'openai-compat' | 'anthropic';
+	kind: 'openai-compat' | 'anthropic' | 'azure-openai';
 	reasoningDialect: 'think-tags' | 'reasoning_content' | 'none';
+	/** Problem A — only honored when `kind === 'openai-compat'`; see ProviderConfigEntry.local's doc comment. */
+	local?: boolean;
 }
 
 /**
@@ -182,6 +251,11 @@ export function addProvider(input: NewProviderInput): ProviderConfigEntry {
 	while (data.providers.some((p) => p.id === id)) {
 		id = `${base}-${n++}`;
 	}
+	// Problem A — a local server gets the same generous timeouts as the ollama entry (see data/providers.json):
+	// a cold-loading LM Studio/llama.cpp/vLLM instance on this machine or the local network can take just as
+	// long to serve its first token as a locally-loaded Ollama model, and a 5s connect / 30s first-token cloud
+	// timeout would abort it long before it ever gets there.
+	const local = input.kind === 'openai-compat' && input.local === true;
 	const entry: ProviderConfigEntry = {
 		id,
 		label: input.label.trim(),
@@ -189,7 +263,10 @@ export function addProvider(input: NewProviderInput): ProviderConfigEntry {
 		kind: input.kind,
 		reasoningDialect: input.reasoningDialect,
 		enabled: false,
-		timeouts: { connectMs: 5000, firstTokenMs: 30000, idleMs: 30000 }
+		timeouts: local
+			? { connectMs: 30000, firstTokenMs: 300000, idleMs: 60000 }
+			: { connectMs: 5000, firstTokenMs: 30000, idleMs: 30000 },
+		...(local ? { local: true } : {})
 	};
 	data.providers.push(entry);
 	writeFile(data);

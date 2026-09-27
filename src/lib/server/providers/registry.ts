@@ -4,6 +4,7 @@ import { providersPath } from '../env';
 import { OllamaAdapter } from './ollama';
 import { OpenAICompatAdapter } from './openai-compat';
 import { AnthropicAdapter } from './anthropic';
+import { AzureOpenAIAdapter } from './azure-openai';
 import { secretStore } from './secrets';
 import { readProvidersFile, type ProviderConfigEntry, type ProvidersFile } from './config-store';
 import type { ChatRequest, ProviderAdapter, RateLimitSnapshot } from './types';
@@ -72,6 +73,15 @@ async function buildAdapter(entry: ProviderConfigEntry): Promise<ProviderAdapter
 			timeouts: entry.timeouts
 		});
 	}
+	if (entry.kind === 'azure-openai') {
+		return new AzureOpenAIAdapter({
+			id: entry.id,
+			baseUrl: healBaseUrl(entry.baseUrl),
+			apiKey,
+			reasoningDialect: entry.reasoningDialect,
+			timeouts: entry.timeouts
+		});
+	}
 	return new OpenAICompatAdapter({
 		id: entry.id,
 		baseUrl: healBaseUrl(entry.baseUrl),
@@ -131,7 +141,8 @@ function isProviderEnabled(providerId: string): boolean {
 }
 
 /** İ2 (Aşama 8): Ollama is always consented (local, nothing leaves the
- * device — the same distinction config-store.ts's isCloud() draws); a
+ * device — the same distinction config-store.ts's isCloud() draws), and so
+ * is problem A's local openai-compat provider for the same reason; a real
  * cloud provider needs an explicit "remember my choice" from the model
  * picker's first-use prompt, tracked in provider-consent.ts. An unknown
  * provider id (already deleted, or never existed) is never consented —
@@ -139,7 +150,7 @@ function isProviderEnabled(providerId: string): boolean {
 function isProviderConsented(providerId: string): boolean {
 	const entry = getProviderEntry(providerId);
 	if (!entry) return false;
-	if (entry.kind === 'ollama') return true;
+	if (entry.kind === 'ollama' || entry.local) return true;
 	return isCloudProviderConsented(providerId);
 }
 

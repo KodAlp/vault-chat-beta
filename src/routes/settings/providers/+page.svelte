@@ -60,9 +60,12 @@
 
 	// F14-4 — "model listesini yönet": lazy per-provider (the catalog fetch/filter this hits is not free),
 	// loaded the first time that provider's <details> is opened, not on page mount.
-	let modelManage = $state<Record<string, { approved: ModelListItem[]; other: ModelListItem[] } | null>>({});
+	// Problem B — `pinned` is the provider's raw pinnedModels list (see the /[id]/models GET's own doc
+	// comment); rendered as its own removable list regardless of whether the id also shows up in approved/other.
+	let modelManage = $state<Record<string, { approved: ModelListItem[]; other: ModelListItem[]; pinned: string[] } | null>>({});
 	let modelManageError = $state<Record<string, string>>({});
 	let modelManageBusy = $state<Record<string, boolean>>({});
+	let pinInputs = $state<Record<string, string>>({});
 
 	async function loadModelManage(providerId: string) {
 		if (modelManage[providerId] !== undefined) return; // already loaded (or loading) once
@@ -70,10 +73,60 @@
 		try {
 			const res = await fetch(`/api/providers/${encodeURIComponent(providerId)}/models`);
 			if (!res.ok) throw new Error();
-			modelManage[providerId] = (await res.json()) as { approved: ModelListItem[]; other: ModelListItem[] };
+			modelManage[providerId] = (await res.json()) as { approved: ModelListItem[]; other: ModelListItem[]; pinned: string[] };
 		} catch {
 			delete modelManage[providerId];
 			modelManageError[providerId] = t('ProvidersSettingsPage.modelManageLoadError');
+		}
+	}
+
+	/** Problem B — "Seçicilere ekle" on an "other" row, or the free-text "model id ekle" input: both funnel
+	 * through here, appending to the provider's pinnedModels (deduped/validated server-side too, see
+	 * config-store.ts's updatePinnedModels). */
+	async function pinModel(providerId: string, modelId: string) {
+		const trimmed = modelId.trim();
+		if (!trimmed) return;
+		const state = modelManage[providerId];
+		if (!state || state.pinned.includes(trimmed)) return;
+		const nextPinned = [...state.pinned, trimmed];
+		modelManageBusy[providerId] = true;
+		modelManageError[providerId] = '';
+		try {
+			const res = await fetch(`/api/providers/${encodeURIComponent(providerId)}`, {
+				method: 'PATCH',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ pinnedModels: nextPinned })
+			});
+			if (!res.ok) throw new Error();
+			state.pinned = nextPinned;
+			pinInputs[providerId] = '';
+			await refreshProviderModels();
+		} catch {
+			modelManageError[providerId] = t('ProvidersSettingsPage.modelManageSaveError');
+		} finally {
+			modelManageBusy[providerId] = false;
+		}
+	}
+
+	async function unpinModel(providerId: string, modelId: string) {
+		const state = modelManage[providerId];
+		if (!state) return;
+		const nextPinned = state.pinned.filter((id) => id !== modelId);
+		modelManageBusy[providerId] = true;
+		modelManageError[providerId] = '';
+		try {
+			const res = await fetch(`/api/providers/${encodeURIComponent(providerId)}`, {
+				method: 'PATCH',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ pinnedModels: nextPinned })
+			});
+			if (!res.ok) throw new Error();
+			state.pinned = nextPinned;
+			await refreshProviderModels();
+		} catch {
+			modelManageError[providerId] = t('ProvidersSettingsPage.modelManageSaveError');
+		} finally {
+			modelManageBusy[providerId] = false;
 		}
 	}
 
@@ -114,8 +167,9 @@
 	let addFormOpen = $state(false);
 	let addLabel = $state('');
 	let addBaseUrl = $state('');
-	let addKind = $state<'openai-compat' | 'anthropic'>('openai-compat');
+	let addKind = $state<'openai-compat' | 'anthropic' | 'azure-openai'>('openai-compat');
 	let addReasoningDialect = $state<'reasoning_content' | 'think-tags' | 'none'>('reasoning_content');
+	let addLocal = $state(false);
 	let addError = $state('');
 	let adding = $state(false);
 	let deleteTargetId = $state<string | null>(null);
@@ -174,7 +228,8 @@
 					label: addLabel.trim(),
 					baseUrl: addBaseUrl.trim(),
 					kind: addKind,
-					reasoningDialect: addReasoningDialect
+					reasoningDialect: addReasoningDialect,
+					local: addKind === 'openai-compat' ? addLocal : false
 				})
 			});
 			if (!res.ok) {
@@ -183,6 +238,7 @@
 			}
 			addLabel = '';
 			addBaseUrl = '';
+			addLocal = false;
 			addFormOpen = false;
 			await refresh();
 		} catch {
@@ -259,6 +315,25 @@
 				return;
 			}
 			patchProvider(p.id, { enabled: nextEnabled });
+			void refreshProviderModels();
+		} catch {
+			loadError = t('ProvidersSettingsPage.updateFailed', { label: p.label });
+		}
+	}
+
+	/** Problem A — toggles ProviderConfigEntry.local on an existing openai-compat provider (no-op server-side
+	 * for any other kind). Flips the cloud/local badge and, since isCloud() now reads this, the cloud-consent
+	 * gate the model pickers apply — refreshing the picker list afterward keeps that in sync immediately. */
+	async function toggleLocal(p: ProviderStatus) {
+		const nextLocal = !p.local;
+		try {
+			const res = await fetch(`/api/providers/${encodeURIComponent(p.id)}`, {
+				method: 'PATCH',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ local: nextLocal })
+			});
+			if (!res.ok) throw new Error();
+			patchProvider(p.id, { local: nextLocal });
 			void refreshProviderModels();
 		} catch {
 			loadError = t('ProvidersSettingsPage.updateFailed', { label: p.label });
@@ -416,11 +491,16 @@
 						<Label for="{uid}-kind">{t('ProvidersSettingsPage.kindLabel')}</Label>
 						<Select.Root type="single" bind:value={addKind}>
 							<Select.Trigger id="{uid}-kind" class="w-44">
-								{addKind === 'openai-compat' ? t('ProvidersSettingsPage.kindOpenAICompat') : t('ProvidersSettingsPage.kindAnthropic')}
+								{addKind === 'openai-compat'
+									? t('ProvidersSettingsPage.kindOpenAICompat')
+									: addKind === 'azure-openai'
+										? t('ProvidersSettingsPage.kindAzureOpenAI')
+										: t('ProvidersSettingsPage.kindAnthropic')}
 							</Select.Trigger>
 							<Select.Content>
 								<Select.Item value="openai-compat" label={t('ProvidersSettingsPage.kindOpenAICompat')}>{t('ProvidersSettingsPage.kindOpenAICompatFull')}</Select.Item>
 								<Select.Item value="anthropic" label={t('ProvidersSettingsPage.kindAnthropic')}>{t('ProvidersSettingsPage.kindAnthropic')}</Select.Item>
+								<Select.Item value="azure-openai" label={t('ProvidersSettingsPage.kindAzureOpenAI')}>{t('ProvidersSettingsPage.kindAzureOpenAI')}</Select.Item>
 							</Select.Content>
 						</Select.Root>
 					</div>
@@ -438,6 +518,16 @@
 								</Select.Content>
 							</Select.Root>
 						</div>
+						<label class="flex cursor-pointer items-start gap-1.5 text-sm">
+							<Checkbox checked={addLocal} onCheckedChange={(v: boolean) => (addLocal = v)} class="mt-0.5" />
+							<span>
+								{t('ProvidersSettingsPage.localCheckboxLabel')}
+								<span class="block text-xs text-muted-foreground">{t('ProvidersSettingsPage.localCheckboxHint')}</span>
+							</span>
+						</label>
+					{/if}
+					{#if addKind === 'azure-openai'}
+						<p class="text-xs text-muted-foreground">{t('ProvidersSettingsPage.azureHint')}</p>
 					{/if}
 					{#if addError}
 						<p class="text-sm text-destructive" role="alert">{addError}</p>
@@ -459,7 +549,7 @@
 						<div class="min-w-[220px] flex-1">
 							<div class="flex flex-wrap items-center gap-1.5">
 								<strong class="text-sm">{p.label}</strong>
-								<Badge variant="outline">{p.kind === 'ollama' ? t('ProvidersSettingsPage.local') : t('ProvidersSettingsPage.cloud')}</Badge>
+								<Badge variant="outline">{p.local ? t('ProvidersSettingsPage.local') : t('ProvidersSettingsPage.cloud')}</Badge>
 								{#if p.needsKey}
 									<Badge variant={p.keyStatus === 'connected' ? 'default' : 'outline'}>
 										{p.keyStatus === 'connected' ? t('ProvidersSettingsPage.keyConnected', { mask: p.mask ?? '' }) : t('ProvidersSettingsPage.keyMissing')}
@@ -508,9 +598,10 @@
 										<p class="text-destructive">{modelManageError[p.id]}</p>
 									{:else if modelManage[p.id] === undefined || modelManage[p.id] === null}
 										<p class="text-muted-foreground">{t('Common.yukleniyor')}</p>
-									{:else if modelManage[p.id]!.approved.length === 0 && modelManage[p.id]!.other.length === 0}
-										<p class="text-muted-foreground">{t('ProvidersSettingsPage.noModelList')}</p>
 									{:else}
+										{#if modelManage[p.id]!.approved.length === 0 && modelManage[p.id]!.other.length === 0}
+											<p class="text-muted-foreground">{t('ProvidersSettingsPage.noModelList')}</p>
+										{/if}
 										{#each modelManage[p.id]!.approved as m (m.id)}
 											<label class="flex cursor-pointer items-center gap-1.5">
 												<Checkbox
@@ -528,18 +619,72 @@
 												</summary>
 												<div class="mt-1 flex flex-col gap-1 pl-2">
 													{#each modelManage[p.id]!.other as m (m.id)}
-														<label class="flex cursor-pointer items-center gap-1.5">
+														<div class="flex items-center gap-1.5">
 															<Checkbox
 																checked={m.enabled}
 																disabled={modelManageBusy[p.id]}
 																onCheckedChange={(v: boolean) => toggleModelEnabled(p.id, m.id, v)}
 															/>
-															{m.id}
-														</label>
+															<span class="flex-1">{m.id}</span>
+															{#if !modelManage[p.id]!.pinned.includes(m.id)}
+																<Button
+																	size="sm"
+																	variant="ghost"
+																	class="h-6 px-1.5 text-xs"
+																	disabled={modelManageBusy[p.id]}
+																	onclick={() => pinModel(p.id, m.id)}
+																>
+																	{t('ProvidersSettingsPage.pinModel')}
+																</Button>
+															{/if}
+														</div>
 													{/each}
 												</div>
 											</details>
 										{/if}
+										<!-- Problem B — pinnedModels: yakalanan (approved/other) listede olsun ya da
+										     olmasın, kullanıcının kendi seçtiği model id'lerinin ayrı, silinebilir
+										     listesi. Kaynak: config-store.ts'nin pinnedModels alanı. -->
+										<div class="mt-2 flex flex-col gap-1 border-t pt-2">
+											<span class="text-muted-foreground">{t('ProvidersSettingsPage.pinnedModelsTitle')}</span>
+											{#if modelManage[p.id]!.pinned.length === 0}
+												<p class="text-muted-foreground">{t('ProvidersSettingsPage.pinnedModelsEmpty')}</p>
+											{:else}
+												{#each modelManage[p.id]!.pinned as modelId (modelId)}
+													<div class="flex items-center gap-1.5">
+														<span class="flex-1">{modelId}</span>
+														<Button
+															size="sm"
+															variant="ghost"
+															class="h-6 px-1.5 text-xs text-destructive hover:text-destructive"
+															disabled={modelManageBusy[p.id]}
+															onclick={() => unpinModel(p.id, modelId)}
+														>
+															{t('ProvidersSettingsPage.unpinModel')}
+														</Button>
+													</div>
+												{/each}
+											{/if}
+											<div class="mt-1 flex gap-1.5">
+												<Input
+													type="text"
+													placeholder={t('ProvidersSettingsPage.pinModelIdPlaceholder')}
+													aria-label={t('ProvidersSettingsPage.pinModelIdPlaceholder')}
+													bind:value={pinInputs[p.id]}
+													class="h-7 max-w-[220px] text-xs"
+													onkeydown={(e) => e.key === 'Enter' && pinModel(p.id, pinInputs[p.id] ?? '')}
+												/>
+												<Button
+													size="sm"
+													variant="outline"
+													class="h-7 px-2 text-xs"
+													disabled={modelManageBusy[p.id] || !(pinInputs[p.id] ?? '').trim()}
+													onclick={() => pinModel(p.id, pinInputs[p.id] ?? '')}
+												>
+													{t('ProvidersSettingsPage.pinModelIdAdd')}
+												</Button>
+											</div>
+										</div>
 									{/if}
 								</div>
 							</details>
@@ -569,6 +714,12 @@
 								<Switch checked={p.enabled} onCheckedChange={() => toggleEnabled(p)} />
 								{t('ProvidersSettingsPage.enabled')}
 							</label>
+							{#if p.kind === 'openai-compat'}
+								<label class="flex cursor-pointer items-center gap-1.5 text-xs" title={t('ProvidersSettingsPage.localCheckboxHint')}>
+									<Switch checked={p.local} onCheckedChange={() => toggleLocal(p)} />
+									{t('ProvidersSettingsPage.localCheckboxLabel')}
+								</label>
+							{/if}
 							{#if p.needsKey}
 								<Button size="sm" variant="outline" onclick={() => openKeyEditor(p)}>
 									{p.keyStatus === 'connected' ? t('ProvidersSettingsPage.changeKey') : t('ProvidersSettingsPage.addKey')}

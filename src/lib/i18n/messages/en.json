@@ -512,6 +512,10 @@
 		"kindOpenAICompat": "OpenAI-compatible",
 		"kindOpenAICompatFull": "OpenAI-compatible (OpenAI, Groq, OpenRouter, ...)",
 		"kindAnthropic": "Anthropic (Claude)",
+		"kindAzureOpenAI": "Azure OpenAI",
+		"azureHint": "Base URL format: https://<resource-name>.openai.azure.com/openai/v1 — the model field is your DEPLOYMENT name; add it under 'Manage model list'.",
+		"localCheckboxLabel": "Local server (on this machine or local network)",
+		"localCheckboxHint": "This is your own statement that data never leaves your network — no cloud consent is asked, and model lists aren't filtered against the cloud catalog.",
 		"reasoningDialectLabel": "Reasoning format",
 		"reasoningDialectReasoningContent": "reasoning_content (DeepSeek, Ollama)",
 		"reasoningDialectThinkTags": "think-tags (Qwen, Gemma inline)",
@@ -571,6 +575,12 @@
 		"modelManageSaveError": "Could not save.",
 		"otherModels": "Other ({count})",
 		"noModelList": "no model list — test the connection",
+		"pinModel": "Add to pickers",
+		"pinnedModelsTitle": "Pinned models",
+		"pinnedModelsEmpty": "no pinned models",
+		"unpinModel": "Remove",
+		"pinModelIdPlaceholder": "add model id",
+		"pinModelIdAdd": "Add",
 		"removeProvider": "Remove"
 	},
 

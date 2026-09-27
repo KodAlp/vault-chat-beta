@@ -31,9 +31,10 @@ function mapToStatus(
 		id: string;
 		label: string;
 		baseUrl: string;
-		kind: 'ollama' | 'openai-compat' | 'anthropic';
+		kind: 'ollama' | 'openai-compat' | 'anthropic' | 'azure-openai';
 		enabled: boolean;
 		defaultModel?: string;
+		local?: boolean;
 	},
 	hasKey: boolean,
 	key: string | null,
@@ -45,6 +46,7 @@ function mapToStatus(
 		kind: p.kind,
 		baseUrl: p.baseUrl,
 		enabled: p.enabled,
+		local: p.kind === 'ollama' || p.local === true,
 		needsKey: p.kind !== 'ollama',
 		keyStatus: hasKey ? 'connected' : 'none',
 		mask: key ? maskKey(key) : null,
@@ -85,13 +87,13 @@ export const POST: RequestHandler = async ({ request }) => {
 	if (!body?.label?.trim() || !body?.baseUrl?.trim()) {
 		fail('VALIDATION_REQUIRED_ALL', { fields: "'label', 'baseUrl'" });
 	}
-	const kind = body.kind === 'anthropic' ? 'anthropic' : 'openai-compat';
+	const kind = body.kind === 'anthropic' || body.kind === 'azure-openai' ? body.kind : 'openai-compat';
 	const reasoningDialect =
 		body.reasoningDialect === 'think-tags' || body.reasoningDialect === 'none'
 			? (body.reasoningDialect as 'think-tags' | 'none')
 			: 'reasoning_content';
 	try {
-		const entry = addProvider({ label: body.label, baseUrl: body.baseUrl, kind, reasoningDialect });
+		const entry = addProvider({ label: body.label, baseUrl: body.baseUrl, kind, reasoningDialect, local: body.local === true });
 		return json(entry, { status: 201 });
 	} catch (err) {
 		if (err instanceof AppError) fail(err.code, err.params, err.status);

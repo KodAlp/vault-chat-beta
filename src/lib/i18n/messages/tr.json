@@ -512,6 +512,10 @@
 		"kindOpenAICompat": "OpenAI-uyumlu",
 		"kindOpenAICompatFull": "OpenAI-uyumlu (OpenAI, Groq, OpenRouter, ...)",
 		"kindAnthropic": "Anthropic (Claude)",
+		"kindAzureOpenAI": "Azure OpenAI",
+		"azureHint": "Base URL biçimi: https://<kaynak-adı>.openai.azure.com/openai/v1 — model alanı sizin DEPLOYMENT adınızdır; 'Model listesini yönet' bölümünden ekleyin.",
+		"localCheckboxLabel": "Yerel sunucu (bu bilgisayarda veya yerel ağda)",
+		"localCheckboxHint": "Bu, verilerin ağınızdan çıkmadığına dair kendi beyanınızdır — bulut onayı istenmez ve model listeleri bulut kataloğuna göre süzülmez.",
 		"reasoningDialectLabel": "Muhakeme formatı",
 		"reasoningDialectReasoningContent": "reasoning_content (DeepSeek, Ollama)",
 		"reasoningDialectThinkTags": "think-tags (Qwen, Gemma inline)",
@@ -571,6 +575,12 @@
 		"modelManageSaveError": "Kaydedilemedi.",
 		"otherModels": "Diğer ({count})",
 		"noModelList": "model listesi yok — bağlantıyı test et",
+		"pinModel": "Seçicilere ekle",
+		"pinnedModelsTitle": "Sabitlenmiş modeller",
+		"pinnedModelsEmpty": "sabitlenmiş model yok",
+		"unpinModel": "Kaldır",
+		"pinModelIdPlaceholder": "model id ekle",
+		"pinModelIdAdd": "Ekle",
 		"removeProvider": "Kaldır"
 	},
 
