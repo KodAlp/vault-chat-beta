@@ -107,6 +107,19 @@ test('getLibrarySettings returns defaults (fail-open) when no settings.json exis
 	assert.deepEqual(settings.hiddenFolders, ['raw', 'cards', 'frontier', 'notes', 'wiki/_index']);
 	assert.deepEqual(settings.flattenFolders, ['wiki']);
 	assert.deepEqual(settings.allowedLanguages, ['Türkçe']);
+	assert.equal(settings.responseLanguage, 'match');
+});
+
+test('getLibrarySettings defaults responseLanguage to "match" for a pre-existing settings.json that predates the field', () => {
+	const v = tmpVault();
+	fs.mkdirSync(path.join(v.libraryRoot, '_meta'), { recursive: true });
+	fs.writeFileSync(
+		path.join(v.libraryRoot, '_meta', 'settings.json'),
+		JSON.stringify({ keepOriginals: true, allowedLanguages: ['Türkçe'], hiddenFolders: [], flattenFolders: [] })
+	);
+	const settings = getLibrarySettings(v);
+	assert.equal(settings.responseLanguage, 'match');
+	assert.equal(settings.keepOriginals, true);
 });
 
 test('getLibrarySettings merges a partial saved file over the defaults', () => {

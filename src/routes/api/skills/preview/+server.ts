@@ -28,7 +28,10 @@ export const GET: RequestHandler = async ({ url }) => {
 
 	let prompt: string;
 	if (scope === 'chat') {
-		prompt = [coreIntro(DEFAULT_ALLOWED_LANGUAGES), skillsBlock, CORE_INVARIANTS].filter(Boolean).join('\n\n');
+		// 'match' is the app-wide default (LibrarySettings.responseLanguage) — this preview has no
+		// real vault context to read a per-vault override from, so it shows the same default a
+		// brand-new vault's chat would actually use.
+		prompt = [coreIntro(DEFAULT_ALLOWED_LANGUAGES, 'match'), skillsBlock, CORE_INVARIANTS].filter(Boolean).join('\n\n');
 	} else if (scope === 'quiz') {
 		prompt = buildQuizPrompt({ mc: 6, tf: 2, open: 2 }, PLACEHOLDER_CONTEXT, skillsBlock);
 	} else if (scope === 'flashcards') {

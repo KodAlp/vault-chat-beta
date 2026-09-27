@@ -46,6 +46,7 @@ export const SETTINGS_CODES = [
 	'SKILL_ZIP_WRITE_FAILED',
 	'SKILL_EXISTS',
 	'SKILL_PREVIEW_SCOPE_INVALID',
+	'LIBRARY_SETTINGS_INVALID_RESPONSE_LANGUAGE',
 
 	// Memory (api/memory/**) — "note not found" reuses the common
 	// NOT_FOUND{entity:'memory'} instead of a dedicated code.

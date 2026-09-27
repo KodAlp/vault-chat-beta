@@ -38,19 +38,32 @@ test('CORE_INVARIANTS is exactly what it was when this test was written', () => 
 	assert.equal(CORE_INVARIANTS, ORIGINAL_CORE_INVARIANTS);
 });
 
-test('coreIntro: single language, no secondary-language note', () => {
-	const out = coreIntro(['Türkçe']);
+test('coreIntro: fixed mode, single language, no secondary-language note', () => {
+	const out = coreIntro(['Türkçe'], 'fixed');
 	assert.match(out, /Her zaman Türkçe dilinde cevap ver\.$/);
 	assert.ok(!out.includes('Gerektiğinde'));
 });
 
-test('coreIntro: extra languages add the secondary-language note', () => {
-	const out = coreIntro(['Türkçe', 'Korece']);
+test('coreIntro: fixed mode, extra languages add the secondary-language note', () => {
+	const out = coreIntro(['Türkçe', 'Korece'], 'fixed');
 	assert.match(out, /Türkçe dilinde cevap ver\. Gerektiğinde şu dillerden kelime\/örnek de kullanabilirsin: Korece\./);
 });
 
 test('coreIntro: an empty list falls back to DEFAULT_ALLOWED_LANGUAGES', () => {
-	assert.equal(coreIntro([]), coreIntro(DEFAULT_ALLOWED_LANGUAGES));
+	assert.equal(coreIntro([], 'fixed'), coreIntro(DEFAULT_ALLOWED_LANGUAGES, 'fixed'));
+	assert.equal(coreIntro([], 'match'), coreIntro(DEFAULT_ALLOWED_LANGUAGES, 'match'));
+});
+
+test('coreIntro: match mode (default) names the last-message rule, not a fixed language rule', () => {
+	const out = coreIntro(['Türkçe']);
+	assert.match(out, /Kullanıcının son mesajı hangi dilde yazılmışsa o dilde cevap ver/);
+	assert.match(out, /Son mesaj dili anlaşılamayacak kadar kısaysa ya da yalnızca kod\/formülden oluşuyorsa Türkçe kullan\./);
+	assert.ok(!out.includes('Her zaman Türkçe dilinde cevap ver.'));
+});
+
+test('coreIntro: match mode still adds the secondary-language note', () => {
+	const out = coreIntro(['Türkçe', 'Korece'], 'match');
+	assert.match(out, /Gerektiğinde şu dillerden kelime\/örnek de kullanabilirsin: Korece\./);
 });
 
 function useEmptySkillsDir(): void {
@@ -71,12 +84,14 @@ test('free_chat, no memory notes, no skills, no chunks: the system prompt is exa
 	delete process.env.CHAT_MEMORY_GATE;
 });
 
-test('the last message carries the <context> block built from the given chunks, above the question', async () => {
+test('fixed mode: the last message carries the <context> block built from the given chunks, above the question, with no directive appended', async () => {
 	process.env.CHAT_MEMORY_GATE = '0';
 	useEmptySkillsDir();
 	const chunk: RetrievedChunk = { path: 'wiki/os/scheduling.md', heading_path: 'A > B', display_text: 'İçerik burada.', topic: 'Scheduling', depth: 'undergrad', domains: ['os'], distance: 0.3 };
 	await withVaultAsync(async (v) => {
-		const messages = await buildPromptMessages([userMessage('Zamanlayıcı nedir?')], [chunk], ['Türkçe'], v, 'free_chat');
+		const messages = await buildPromptMessages([userMessage('Zamanlayıcı nedir?')], [chunk], ['Türkçe'], v, 'free_chat', {
+			responseLanguage: 'fixed'
+		});
 		const last = messages[messages.length - 1];
 		assert.equal(last.role, 'user');
 		assert.match(last.content, /^<context>\n\[Scheduling \| A > B\] \(wiki\/os\/scheduling\.md, depth: undergrad\)\nİçerik burada\.\n<\/context>\n\nZamanlayıcı nedir\?$/);
@@ -84,12 +99,48 @@ test('the last message carries the <context> block built from the given chunks, 
 	delete process.env.CHAT_MEMORY_GATE;
 });
 
-test('no chunks: no <context> block, the question is sent as-is', async () => {
+test('fixed mode: no chunks, no directive: the question is sent as-is', async () => {
 	process.env.CHAT_MEMORY_GATE = '0';
 	useEmptySkillsDir();
 	await withVaultAsync(async (v) => {
-		const messages = await buildPromptMessages([userMessage('Selam')], [], ['Türkçe'], v, 'free_chat');
+		const messages = await buildPromptMessages([userMessage('Selam')], [], ['Türkçe'], v, 'free_chat', {
+			responseLanguage: 'fixed'
+		});
 		assert.equal(messages[messages.length - 1].content, 'Selam');
+	});
+	delete process.env.CHAT_MEMORY_GATE;
+});
+
+test('match mode (default): a directive naming the detected language is appended to the last user message', async () => {
+	process.env.CHAT_MEMORY_GATE = '0';
+	useEmptySkillsDir();
+	await withVaultAsync(async (v) => {
+		const messages = await buildPromptMessages(
+			[userMessage('How does a B-tree keep itself balanced when you insert a lot of new keys into it?')],
+			[],
+			['Türkçe'],
+			v,
+			'free_chat'
+		);
+		const last = messages[messages.length - 1];
+		assert.match(last.content, /\n\n\(Answer in English\.\)$/);
+	});
+	delete process.env.CHAT_MEMORY_GATE;
+});
+
+test('match mode: prior (historical) turns are never retagged — only the final user message gets a directive', async () => {
+	process.env.CHAT_MEMORY_GATE = '0';
+	useEmptySkillsDir();
+	const history: ChatMessage[] = [
+		{ id: '1', role: 'user', content: 'What is a B-tree?' },
+		{ id: '2', role: 'assistant', content: 'A B-tree is a balanced search tree used for indexing...' },
+		{ id: '3', role: 'user', content: 'peki silme işlemini nasıl yönetiyor?' }
+	];
+	await withVaultAsync(async (v) => {
+		const messages = await buildPromptMessages(history, [], ['Türkçe'], v, 'free_chat');
+		const prior = messages.slice(1, -1);
+		for (const m of prior) assert.ok(!m.content.includes('(Answer in'));
+		assert.match(messages[messages.length - 1].content, /\(Answer in Turkish\.\)$/);
 	});
 	delete process.env.CHAT_MEMORY_GATE;
 });
@@ -103,7 +154,7 @@ test('prior turns are carried between the system message and the final question,
 		{ id: '3', role: 'user', content: 'ikinci soru' }
 	];
 	await withVaultAsync(async (v) => {
-		const messages = await buildPromptMessages(history, [], ['Türkçe'], v, 'free_chat');
+		const messages = await buildPromptMessages(history, [], ['Türkçe'], v, 'free_chat', { responseLanguage: 'fixed' });
 		assert.deepEqual(
 			messages.slice(1, -1).map((m) => [m.role, m.content]),
 			[['user', 'ilk soru'], ['assistant', 'ilk cevap']]
