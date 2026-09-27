@@ -265,6 +265,44 @@ interface UsageTotals {
 }
 const usageTotals: UsageTotals = { promptTokens: 0, completionTokens: 0, calls: 0 };
 
+// ---------------------------------------------------------------------------
+// Spend cap. DeepSeek list prices (api-docs.deepseek.com/quick_start/pricing, read 2026-09-27),
+// USD per 1M tokens; off-peak is half of peak. Reasoning tokens are counted as output (the docs
+// don't say they're billed separately — assume the expensive case). When the stream carries no
+// usage event, tokens are estimated from characters at 3 chars/token (conservative for TR/EN).
+// ---------------------------------------------------------------------------
+const PRICES_PEAK: Record<string, { input: number; output: number }> = {
+	'deepseek-v4-pro': { input: 1.32, output: 3.96 },
+	'deepseek-flash': { input: 0.3, output: 1.2 }
+};
+/** Mon-Fri 01:00-04:00 and 06:00-10:00 UTC. */
+function isPeak(at: Date): boolean {
+	const day = at.getUTCDay();
+	if (day === 0 || day === 6) return false;
+	const h = at.getUTCHours();
+	return (h >= 1 && h < 4) || (h >= 6 && h < 10);
+}
+function callCostUsd(promptTokens: number, completionTokens: number, at: Date): number {
+	const peak = PRICES_PEAK[judgeModel] ?? PRICES_PEAK['deepseek-v4-pro'];
+	const f = isPeak(at) ? 1 : 0.5;
+	return ((promptTokens * peak.input + completionTokens * peak.output) / 1e6) * f;
+}
+const maxCostUsd = Number(argValue('--max-cost-usd') ?? '2.10');
+let spentUsd = 0;
+let lastCallUsd = 0;
+let usageEstimated = false;
+let budgetStop = false;
+/** True when the next call (sized like the last one, or 0.03 USD before any call) would pass the cap. */
+function overBudget(): boolean {
+	if (budgetStop) return true;
+	const next = lastCallUsd || 0.03;
+	if (spentUsd + next > maxCostUsd) {
+		budgetStop = true;
+		console.log(`[budget] DURDURULDU: harcanan ~$${spentUsd.toFixed(3)} + sonraki çağrı ~$${next.toFixed(3)} > tavan $${maxCostUsd.toFixed(2)}`);
+	}
+	return budgetStop;
+}
+
 let judgeAdapter: JudgeAdapter | null = null;
 if (needsJudge) {
 	const providers = JSON.parse(fs.readFileSync(providersPath(), 'utf-8')) as {
@@ -291,6 +329,7 @@ if (needsJudge) {
 	judgeAdapter = {
 		async call(prompt: string): Promise<JudgeCallResult> {
 			let content = '';
+			let reasoningChars = 0;
 			let usage: { promptTokens: number; completionTokens: number } | undefined;
 			const controller = new AbortController();
 			for await (const chunk of realAdapter.chat(
@@ -298,9 +337,17 @@ if (needsJudge) {
 				controller.signal
 			)) {
 				if (chunk.type === 'text') content += chunk.text;
+				else if (chunk.type === 'reasoning') reasoningChars += chunk.text.length;
 				else if (chunk.type === 'usage') usage = { promptTokens: chunk.prompt, completionTokens: chunk.completion };
 			}
-			return { content, usage };
+			const billed = usage ?? {
+				promptTokens: Math.ceil(prompt.length / 3),
+				completionTokens: Math.ceil((content.length + reasoningChars) / 3)
+			};
+			if (!usage) usageEstimated = true;
+			lastCallUsd = callCostUsd(billed.promptTokens, billed.completionTokens, new Date());
+			spentUsd += lastCallUsd;
+			return { content, usage: billed };
 		}
 	};
 }
@@ -338,13 +385,17 @@ const judgedRecords: JudgedRecord[] = [];
 if (needsJudge && judgeAdapter) {
 	let done = 0;
 	for (const a of answers) {
+		if (overBudget()) {
+			judgedRecords.push({ answer: a, judgeFailed: true, error: 'bütçe tavanı' });
+			continue;
+		}
 		const outcome = await callJudge(judgeAdapter, toJudgeItem(a));
 		usageTotals.promptTokens += outcome.usage.promptTokens;
 		usageTotals.completionTokens += outcome.usage.completionTokens;
 		usageTotals.calls += outcome.attempts;
 		judgedRecords.push({ answer: a, judgeFailed: outcome.judge_failed, judge: outcome.result, error: outcome.error });
 		done++;
-		console.log(`[judge] ${done}/${answers.length} id=${a.id} ${outcome.judge_failed ? 'JUDGE_FAILED' : `correctness=${outcome.result?.correctness} relevance=${outcome.result?.relevance}`}`);
+		console.log(`[judge] ${done}/${answers.length} id=${a.id} ${outcome.judge_failed ? 'JUDGE_FAILED' : `correctness=${outcome.result?.correctness} relevance=${outcome.result?.relevance}`}  harcanan ~$${spentUsd.toFixed(3)}`);
 	}
 } else {
 	for (const a of answers) judgedRecords.push({ answer: a, judgeFailed: true, error: 'judge devre dışı (--no-judge)' });
@@ -379,6 +430,7 @@ if (needsJudge && judgeAdapter && rejudgeN > 0) {
 	const picked = shuffled.slice(0, Math.min(rejudgeN, shuffled.length));
 	const pairs = [];
 	for (const rec of picked) {
+		if (overBudget()) break;
 		const outcome = await callJudge(judgeAdapter, toJudgeItem(rec.answer));
 		usageTotals.promptTokens += outcome.usage.promptTokens;
 		usageTotals.completionTokens += outcome.usage.completionTokens;
@@ -400,13 +452,16 @@ if (needsJudge && judgeAdapter && rejudgeN > 0) {
 // ---------------------------------------------------------------------------
 
 const FABRICATED_SENTENCE =
-	' Ayrıca, bu konuyla hiçbir kaynakta doğrulanmamış şu uydurma iddiayı da ekleyelim: 1997 yılında bu yöntem Mars\'a gönderilen bir uzay sondasında kullanılmıştır.';
+	// Plausible-sounding and absent from every source — an earlier version announced itself as
+	// "uydurma", which only tested whether the judge can read the word.
+	' Bu yaklaşım ilk kez 1983 yılında IBM Almaden araştırma laboratuvarında patentlenmiş ve 1986\'dan itibaren tüm büyük işletim sistemlerinde varsayılan hâle gelmiştir.';
 
 let sanityReport: ReturnType<typeof computeSanityCheck> | null = null;
 if (needsJudge && judgeAdapter && doSanity) {
 	const candidates = judgedRecords.filter((r) => r.answer.answerable && !r.judgeFailed).slice(0, 3);
 	const pairs = [];
 	for (const rec of candidates) {
+		if (overBudget()) break;
 		const fabricated: AnswerRecord = { ...rec.answer, sut: { ...rec.answer.sut, answer: rec.answer.sut.answer + FABRICATED_SENTENCE } };
 		const outcome = await callJudge(judgeAdapter, toJudgeItem(fabricated));
 		usageTotals.promptTokens += outcome.usage.promptTokens;
@@ -579,7 +634,7 @@ const report = {
 		byLang,
 		selfConsistency,
 		sanity: sanityReport,
-		judgeCost: needsJudge ? { promptTokens: usageTotals.promptTokens, completionTokens: usageTotals.completionTokens, calls: usageTotals.calls } : undefined
+		judgeCost: needsJudge ? { promptTokens: usageTotals.promptTokens, completionTokens: usageTotals.completionTokens, calls: usageTotals.calls, estimatedUsd: spentUsd, maxCostUsd, usageEstimated, budgetStop } : undefined
 	},
 	perf: { indexDbSizeBytes },
 	isolation: { before, after, ok: isolationOk },
@@ -688,6 +743,7 @@ if (needsJudge) {
 	md.push('## Yargıç maliyeti');
 	md.push('');
 	md.push(`Toplam çağrı: ${usageTotals.calls}, prompt token: ${usageTotals.promptTokens}, completion token: ${usageTotals.completionTokens}`);
+	md.push(`Tahmini maliyet: ~$${spentUsd.toFixed(3)} (tavan $${maxCostUsd.toFixed(2)}${usageEstimated ? ', token sayıları karakterden tahmin edildi' : ''}${budgetStop ? ', TAVANDA DURDURULDU' : ''})`);
 	md.push('');
 }
 
