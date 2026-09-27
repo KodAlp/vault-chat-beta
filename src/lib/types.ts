@@ -537,6 +537,29 @@ export type PythonSetupEvent =
 	| { type: 'done'; ok: boolean }
 	| { type: 'error'; message: string; code?: string; params?: Record<string, string | number> };
 
+/** One entry of GET /api/system/python's `modules` array — one per import
+ * name in ingest/requirements.txt (see pythonModules.ts). `name` is the
+ * Python import name (e.g. "py_asciimath"), not the PyPI dist name. */
+export interface PythonModuleStatus {
+	name: string;
+	installed: boolean;
+}
+
+/** Aşama 2b — GET /api/system/python's full response shape. `pythonInstalled`
+ * and `markitdownInstalled` are kept for backward compat with any caller
+ * that only read those two original fields; `modules`/`pandoc`/`pythonVersion`
+ * are additions. `pandoc` is informational only — it's optional tooling
+ * (convert.py degrades gracefully without it) and must never drive
+ * PythonStatusBanner's missing-dependency state the way a missing module
+ * does. */
+export interface PythonSystemStatus {
+	pythonInstalled: boolean;
+	pythonVersion: string | null;
+	markitdownInstalled: boolean;
+	modules: PythonModuleStatus[];
+	pandoc: boolean;
+}
+
 /** GET /api/study/errors (F2). Mirrors src/lib/server/learner-errors.ts's WeakSpot/ErrorItem — kept as a separate,
  * client-safe copy the same way LearnerProfile (learner-model.ts) is kept apart from the server's AnswerRow. */
 export interface WeakSpotView {
@@ -649,4 +672,69 @@ export interface ProviderModelOption {
 	 * user has already granted provider-consent.ts's "remember my choice" —
 	 * see the doc comment on `cloud` above. */
 	consented: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Aşama 2b — Tauri local-server launcher commands (src-tauri/src/launchers.rs
+// and winget.rs). These are the JS-side mirrors of the #[tauri::command]
+// return/serde shapes; the Rust structs have NO `rename_all`, so field names
+// serialize verbatim as snake_case (unlike Tauri's own automatic command
+// ARGUMENT camelCasing — see save_launcher's call sites for that half).
+// ---------------------------------------------------------------------------
+
+/** invoke('detect_local_servers') — one entry per catalog id, always
+ * present regardless of install state. `installed` is the resolved program
+ * path (or a WSL identifier for vllm) when found, else null. `running` is a
+ * loopback HTTP probe on the kind's default port — never influenced by a
+ * launcher's saved (possibly hand-edited) config. `identifiedAs` is set only
+ * when `running` is true, and can legitimately differ from `id` if whatever
+ * is answering on that port isn't actually this kind. */
+export interface DetectedServer {
+	id: string;
+	display_name: string;
+	port: number;
+	launchable: boolean;
+	winget_id: string | null;
+	download_url: string;
+	installed: string | null;
+	running: boolean;
+	identified_as: string | null;
+}
+
+/** invoke('list_launchers') entries / the shape save_launcher's own params
+ * persist — `model_path`/`model` are omitted by serde when unset (never
+ * `null` on the wire), so both come back as `undefined` here, not `null`.
+ * IMPORTANT: unlike `args` (whose save_launcher param is `Option` with
+ * "None = leave unchanged" semantics), `model_path`/`model` are NOT
+ * preserve-if-omitted on the Rust side — save_launcher always overwrites
+ * both to whatever it's given. Any caller that saves other fields (port,
+ * auto_start, args) on an existing launcher must pass its CURRENT
+ * model_path/model back through, or it will silently clear them. */
+export interface LauncherConfig {
+	id: string;
+	program: string;
+	args: string[];
+	port: number;
+	auto_start: boolean;
+	model_path?: string;
+	model?: string;
+}
+
+/** invoke('launcher_status', { id }) result. */
+export type LauncherStatusValue = 'running_ours' | 'running_external' | 'stopped';
+
+/** 'winget-progress' event payload (see winget.rs's WingetProgress). */
+export interface WingetProgressEvent {
+	id: string;
+	line: string;
+}
+
+/** 'winget-done' event payload (see winget.rs's WingetDone — `exitCode` is
+ * the one field on this side of the boundary that DOES get an explicit
+ * `#[serde(rename)]`, hence camelCase here unlike DetectedServer/LauncherConfig
+ * above). */
+export interface WingetDoneEvent {
+	id: string;
+	success: boolean;
+	exitCode: number | null;
 }

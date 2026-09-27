@@ -30,6 +30,17 @@ const FILE_NAME = 'ui-prefs.json';
 export type UiPrefs = {
 	locale?: 'tr' | 'en';
 	settings?: Partial<Settings>;
+	/**
+	 * Aşama 2b — "has this install already been walked through
+	 * /setup/local-server once?" Same random-sidecar-port problem as
+	 * locale/settings above: a localStorage-only flag (see the original
+	 * localServerSetup.ts) reset to unset on every desktop launch, which
+	 * made the once-ever wizard reappear every single time. Top-level, not
+	 * nested under `settings` — it isn't a user-facing preference the
+	 * settings page edits, it's onboarding-completion state, same rank as
+	 * `locale`.
+	 */
+	localServerSetupDone?: boolean;
 };
 
 const THEMES = new Set(['light', 'dark', 'system']);
@@ -50,6 +61,13 @@ function isNonEmptyShortString(v: unknown): v is string {
 
 function sanitizeLocale(raw: unknown): 'tr' | 'en' | undefined {
 	return raw === 'tr' || raw === 'en' ? raw : undefined;
+}
+
+/** Strict boolean only — anything else (a string "true", a number, null) is
+ * dropped rather than coerced, same "wrong runtime shape never survives"
+ * rule the settings BOOLEAN_FIELDS loop below already applies. */
+function sanitizeBoolean(raw: unknown): boolean | undefined {
+	return typeof raw === 'boolean' ? raw : undefined;
 }
 
 /** Drops any key that isn't a known Settings field with the right runtime
@@ -86,12 +104,14 @@ function filePath(): string {
 export function readUiPrefs(): UiPrefs {
 	try {
 		const raw = fs.readFileSync(filePath(), 'utf-8');
-		const parsed = JSON.parse(raw) as { locale?: unknown; settings?: unknown };
+		const parsed = JSON.parse(raw) as { locale?: unknown; settings?: unknown; localServerSetupDone?: unknown };
 		const out: UiPrefs = {};
 		const locale = sanitizeLocale(parsed.locale);
 		if (locale) out.locale = locale;
 		const settings = sanitizeSettings(parsed.settings);
 		if (settings) out.settings = settings;
+		const localServerSetupDone = sanitizeBoolean(parsed.localServerSetupDone);
+		if (localServerSetupDone !== undefined) out.localServerSetupDone = localServerSetupDone;
 		return out;
 	} catch {
 		return {};
@@ -115,10 +135,15 @@ export function writeUiPrefs(patch: UiPrefs): UiPrefs {
 	const settingsPatch = sanitizeSettings(patch.settings);
 	const mergedSettings =
 		settingsPatch || current.settings ? { ...current.settings, ...settingsPatch } : undefined;
+	// `??`, not `||` — sanitizeBoolean(patch...) can legitimately be `false`,
+	// which must win over an existing `true`, not fall through to it the way
+	// `||` would.
+	const localServerSetupDone = sanitizeBoolean(patch.localServerSetupDone) ?? current.localServerSetupDone;
 
 	const next: UiPrefs = {};
 	if (locale) next.locale = locale;
 	if (mergedSettings && Object.keys(mergedSettings).length > 0) next.settings = mergedSettings;
+	if (localServerSetupDone !== undefined) next.localServerSetupDone = localServerSetupDone;
 
 	const p = filePath();
 	const tmp = `${p}.${process.pid}.tmp`;

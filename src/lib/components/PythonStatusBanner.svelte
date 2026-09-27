@@ -4,18 +4,27 @@
 	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
 	import { t } from '$lib/i18n/index.svelte';
 	import { localizeError, readResponseError } from '$lib/server-error';
-	import type { PythonSetupEvent } from '$lib/types';
+	import type { PythonSetupEvent, PythonSystemStatus } from '$lib/types';
 
 	/**
-	 * Only PDF/document/YouTube import depends on Python + markitdown — chat
-	 * and every other feature works without it — so unlike OllamaStatusBanner
-	 * this always renders in the softer amber "warning" style, never the red
-	 * "alert" one, and never polls on an interval: whether Python/markitdown
-	 * are installed doesn't change while the app is sitting open the way
-	 * "Ollama hasn't started yet" does, so a timer would just be wasted
-	 * requests. Rechecked on mount, on visibilitychange (installed it in
-	 * another window, switched back), and right after the install-now
-	 * action finishes.
+	 * Only PDF/document/YouTube import depends on Python + its required
+	 * modules — chat and every other feature works without it — so unlike
+	 * OllamaStatusBanner this always renders in the softer amber "warning"
+	 * style, never the red "alert" one, and never polls on an interval:
+	 * whether Python/its modules are installed doesn't change while the app
+	 * is sitting open the way "Ollama hasn't started yet" does, so a timer
+	 * would just be wasted requests. Rechecked on mount, on
+	 * visibilitychange (installed it in another window, switched back), and
+	 * right after the install-now action finishes.
+	 *
+	 * Aşama 2b: this used to check `markitdownInstalled` alone; it now
+	 * triggers on ANY module in GET /api/system/python's `modules` array
+	 * being missing (markitdown, yt_dlp, trafilatura, py_asciimath, pypdf —
+	 * see ingest/requirements.txt), since a missing yt_dlp/trafilatura/etc
+	 * breaks YouTube/web-link import just as surely as a missing markitdown
+	 * breaks document import. `pandoc` is deliberately excluded — it's
+	 * optional tooling (see PythonSystemStatus's doc comment) and must never
+	 * trigger this banner.
 	 */
 	type Status = 'checking' | 'ok' | 'missing' | 'no_python';
 
@@ -23,6 +32,10 @@
 	let installing = $state(false);
 	let logLines = $state<string[]>([]);
 	let installFailed = $state(false);
+	/** Import names GET /api/system/python reported as not installed —
+	 * used only for the `missing` state's log-free summary text below;
+	 * empty in every other status. */
+	let missingModuleNames = $state<string[]>([]);
 
 	let requestGeneration = 0;
 
@@ -32,9 +45,10 @@
 			const res = await fetch('/api/system/python');
 			if (generation !== requestGeneration) return;
 			if (!res.ok) return;
-			const data = (await res.json()) as { pythonInstalled: boolean; markitdownInstalled: boolean };
+			const data = (await res.json()) as PythonSystemStatus;
+			missingModuleNames = data.modules.filter((m) => !m.installed).map((m) => m.name);
 			if (!data.pythonInstalled) status = 'no_python';
-			else if (!data.markitdownInstalled) status = 'missing';
+			else if (missingModuleNames.length > 0) status = 'missing';
 			else status = 'ok';
 		} catch {
 			// Best-effort — never blocks the app, only powers this banner.
@@ -97,7 +111,7 @@
 		<span>
 			{status === 'no_python'
 				? t('PythonStatusBanner.noPython')
-				: t('PythonStatusBanner.missingMarkitdown')}
+				: t('PythonStatusBanner.missingModules', { modules: missingModuleNames.join(', ') })}
 			{#if status === 'no_python'}
 				<a href="https://python.org" target="_blank" rel="noopener">python.org</a>
 			{/if}

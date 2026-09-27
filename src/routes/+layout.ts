@@ -1,6 +1,7 @@
 import type { LayoutLoad } from './$types';
 import { applyLocale, persistLocale, STORAGE_KEY as LOCALE_STORAGE_KEY } from '$lib/i18n/index.svelte';
 import { applySettings, persistSettings, STORAGE_KEY as SETTINGS_STORAGE_KEY } from '$lib/settings.svelte';
+import { applyLocalServerSetupDone } from '$lib/localServerSetup.svelte';
 
 // markdown.ts uses the browser build of DOMPurify (needs `window`); no SSR benefit
 // for a local-only app, so keep this off everywhere rather than add jsdom.
@@ -30,11 +31,24 @@ export const ssr = false;
 export const load: LayoutLoad = async ({ fetch }) => {
 	try {
 		const res = await fetch('/api/ui-prefs');
+		// Deliberately NOT returning early here for localServerSetup.svelte.ts's
+		// sake: that module's `done` default is `true` (wizard skipped) until
+		// this load either confirms a real value or fails outright — leaving
+		// `!res.ok` an early `return {}` (as it was before) would mean a
+		// non-OK response never applies anything, same as a thrown fetch, so
+		// no behavior change there. It's the *success* path a few lines down
+		// that must always call applyLocalServerSetupDone, even when the field
+		// itself is absent (a fresh install) — see that function's doc comment.
 		if (!res.ok) return {};
-		const prefs = (await res.json()) as { locale?: unknown; settings?: Record<string, unknown> };
+		const prefs = (await res.json()) as {
+			locale?: unknown;
+			settings?: Record<string, unknown>;
+			localServerSetupDone?: unknown;
+		};
 
 		if (prefs.locale !== undefined) applyLocale(prefs.locale);
 		if (prefs.settings !== undefined) applySettings(prefs.settings);
+		applyLocalServerSetupDone(prefs.localServerSetupDone);
 
 		if (
 			prefs.locale === undefined &&
