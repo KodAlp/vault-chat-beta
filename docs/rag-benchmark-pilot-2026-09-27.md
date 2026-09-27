@@ -52,7 +52,11 @@ değil, `data/vaults/default/bench/` altında (gitignore). Bu belge yalnızca to
 | **0.60 (bugün)** | **0/7** | 0/63 | 0.741 |
 
 (7 = 3 cevapsız + 4 selamlaşma.) Reranker skoru ayrımı çok daha net yapıyor: en iyi adayın
-skoru cevapsızlarda p90 ≤ 0.02, cevaplıların p10'u 0.26. Eşik tam sette kalibre edilmeli.
+skoru cevapsızlarda p90 ≤ 0.02, cevaplıların p10'u 0.26. Ama eşik bedelsiz değil: 0.05 eşiği
+cevapsızların 7/7'sini süzer, 3 cevaplanabilir soruyu da düşürür (2'si ambiguous — orada da ideal
+davranış netleştirme istemek — 1'i direct). Eşik tam sette kalibre edilmeli.
+
+Grafikler: `python bench/charts.py` → `~/Desktop/RAG-benchmark-grafikleri/` (7 PNG).
 
 ### Reranker maliyeti (bge-reranker-v2-m3, ölçüldü)
 
