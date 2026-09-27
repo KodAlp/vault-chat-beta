@@ -28,7 +28,8 @@ import { createHash } from 'node:crypto';
 import { resolveVault } from '../src/lib/server/vaults';
 import { dataDir } from '../src/lib/server/env';
 import { getLibrarySettings } from '../src/lib/server/library';
-import { detectReliable } from '../src/lib/server/response-language';
+import { stripForDetection, countLetters } from '../src/lib/server/response-language';
+import { francAll } from 'franc-min';
 import { OpenAICompatAdapter } from '../src/lib/server/providers/openai-compat';
 import { secretStore, maskKey } from '../src/lib/server/providers/secrets';
 import { providersPath } from '../src/lib/server/env';
@@ -324,11 +325,12 @@ if (needsJudge) {
 		baseUrl: entry.baseUrl,
 		apiKey,
 		reasoningDialect: entry.reasoningDialect,
-		timeouts: entry.timeouts
+		// Not the chat's timeouts (connect 5 s): a ~13k-char judge prompt to a reasoning model,
+		// behind the machine's HTTPS-scanning antivirus, routinely needs longer before headers.
+		timeouts: { connectMs: 60_000, firstTokenMs: 300_000, idleMs: 120_000 }
 	});
-	judgeAdapter = {
-		async call(prompt: string): Promise<JudgeCallResult> {
-			let content = '';
+	const streamOnce = async (prompt: string): Promise<JudgeCallResult> => {
+		let content = '';
 			let reasoningChars = 0;
 			let usage: { promptTokens: number; completionTokens: number } | undefined;
 			const controller = new AbortController();
@@ -348,6 +350,24 @@ if (needsJudge) {
 			lastCallUsd = callCostUsd(billed.promptTokens, billed.completionTokens, new Date());
 			spentUsd += lastCallUsd;
 			return { content, usage: billed };
+	};
+	judgeAdapter = {
+		/** Network errors are retried twice with backoff; after that the attempt returns empty
+		 * content, which callJudge treats as an invalid response (-> judge_failed), so one bad
+		 * connection costs one item instead of the whole run. A failed attempt is charged the
+		 * prompt's estimated input cost, in case it was billed before the connection dropped. */
+		async call(prompt: string): Promise<JudgeCallResult> {
+			for (let attempt = 1; attempt <= 3; attempt++) {
+				try {
+					return await streamOnce(prompt);
+				} catch (err) {
+					spentUsd += callCostUsd(Math.ceil(prompt.length / 3), 0, new Date());
+					const message = err instanceof Error ? err.message : String(err);
+					console.log(`[judge] ağ hatası (deneme ${attempt}/3): ${message}`);
+					if (attempt < 3) await new Promise((r) => setTimeout(r, 5000 * attempt));
+				}
+			}
+			return { content: '' };
 		}
 	};
 }
@@ -479,7 +499,14 @@ if (needsJudge && judgeAdapter && doSanity) {
 // ---------------------------------------------------------------------------
 
 const genItems: GenItem[] = judgedRecords.map((r) => {
-	const detection = r.answer.sut.answer ? detectReliable(r.answer.sut.answer) : { reliable: false };
+	// Restricted to the two golden languages: the question is only "Turkish or English?", and
+	// franc-min's full-set margin gate rejected 69/70 long technical answers (mixed terms, code,
+	// LaTeX) as unreliable, leaving the metric at n=1.
+	const answerText = stripForDetection((r.answer.sut.answer ?? '').replace(/<think>[\s\S]*?<\/think>/g, ''));
+	const detection =
+		countLetters(answerText) >= 20
+			? { reliable: true, iso3: francAll(answerText, { only: ['tur', 'eng'], minLength: 1 })[0][0] }
+			: { reliable: false, iso3: undefined };
 	return {
 		id: r.answer.id,
 		type: r.answer.type,
