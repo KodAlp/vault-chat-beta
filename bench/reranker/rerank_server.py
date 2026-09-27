@@ -80,6 +80,12 @@ def main() -> None:
     print(json.dumps({"ready": True, "load_ms": load_ms}), flush=True)
     log(f"bge-reranker-v2-m3 loaded on {device}/{dtype} in {load_ms:.0f} ms (revision {MODEL_REVISION})")
 
+    # The Node client writes UTF-8; on Windows sys.stdin defaults to the ANSI
+    # codepage (cp1254 here), which silently mangled Turkish queries
+    # ("düğüm" -> mojibake) and cost them several logits of relevance.
+    sys.stdin.reconfigure(encoding="utf-8")
+    sys.stdout.reconfigure(encoding="utf-8")
+
     for raw_line in sys.stdin:
         line = raw_line.strip()
         if not line:
