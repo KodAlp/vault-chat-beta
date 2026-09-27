@@ -1,3 +1,5 @@
+mod launchers;
+
 use serde::{Deserialize, Serialize};
 use std::os::windows::io::AsRawHandle;
 use std::os::windows::process::CommandExt;
@@ -674,6 +676,7 @@ pub fn run() {
             job: Mutex::new(None),
             url: Mutex::new(None),
         })
+        .manage(launchers::LauncherState::new())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
@@ -681,7 +684,16 @@ pub fn run() {
             save_vault_config_and_start,
             get_vault_config,
             update_vault_config,
-            write_text_file
+            write_text_file,
+            launchers::detect_local_servers,
+            launchers::list_launchers,
+            launchers::save_launcher,
+            launchers::delete_launcher,
+            launchers::pick_launcher_program,
+            launchers::redetect_launcher_program,
+            launchers::start_launcher,
+            launchers::stop_launcher,
+            launchers::launcher_status
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {
@@ -746,6 +758,15 @@ pub fn run() {
                 });
             }
 
+            // Local-server launcher seed + auto-start (Aşama 1) — spawned as
+            // its own task rather than awaited here, so a slow `where`/WSL
+            // detection pass can never delay this setup() closure returning,
+            // which would in turn delay the sidecar/splash flow above.
+            let launchers_app_handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                launchers::startup(launchers_app_handle).await;
+            });
+
             Ok(())
         })
         .build(tauri::generate_context!())
@@ -762,6 +783,9 @@ pub fn run() {
             // SidecarState when the process exits regardless — explicit
             // drop here isn't needed since CloseHandle-on-exit is automatic,
             // but the child.kill() above is faster for the graceful path.
+            drop(guard);
+
+            launchers::shutdown_all(app_handle);
         }
     });
 }
