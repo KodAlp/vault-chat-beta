@@ -581,9 +581,13 @@ export interface MemoryNoteView {
 export interface ProviderStatus {
 	id: string;
 	label: string;
-	kind: 'ollama' | 'openai-compat' | 'anthropic';
+	kind: 'ollama' | 'openai-compat' | 'anthropic' | 'azure-openai';
 	baseUrl: string;
 	enabled: boolean;
+	/** Problem A — true for Ollama and for an openai-compat provider the user marked "yerel sunucu". Drives
+	 * the settings page's local/cloud badge and whether the "yerel sunucu" checkbox is shown/checked; see
+	 * config-store.ts's isCloud() (`!local` is exactly its local-openai-compat half). */
+	local: boolean;
 	needsKey: boolean;
 	keyStatus: 'connected' | 'none';
 	mask: string | null;

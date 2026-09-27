@@ -1,8 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { filterModels } from './model-filter';
+import { filterModels, pickerModels } from './model-filter';
 import type { Catalog, CatalogEntry } from './model-catalog';
 import type { ModelInfo } from './types';
+import type { ProviderConfigEntry } from './config-store';
 
 const entry = (over: Partial<CatalogEntry> = {}): CatalogEntry => ({
 	textOutput: true, toolCall: false, deprecated: false, releaseDate: Math.floor(Date.now() / 1000), contextLength: 8192, ...over
@@ -77,4 +78,81 @@ test('order is preserved within each bucket', () => {
 	const catalog = catalogFor('groq', { a: entry(), b: entry(), c: entry() });
 	const { approved } = filterModels('groq', [model('c'), model('a'), model('b')], catalog, { maxAgeMonths: 12, now: NOW });
 	assert.deepEqual(approved.map((m) => m.id), ['c', 'a', 'b']);
+});
+
+// pickerModels — problem B (union with pinnedModels) and the per-kind catalog skip (problem A local, ollama, azure-openai).
+
+const providerEntry = (over: Partial<ProviderConfigEntry> = {}): Pick<ProviderConfigEntry, 'id' | 'kind' | 'local' | 'enabledModels' | 'pinnedModels'> => ({
+	id: 'groq',
+	kind: 'openai-compat',
+	...over
+});
+
+test('pickerModels: approved (catalog-filtered) is returned as-is with no enabledModels/pinnedModels set', () => {
+	const catalog = catalogFor('groq', { 'model-a': entry() });
+	const result = pickerModels(providerEntry(), [model('model-a'), model('unknown')], catalog, { maxAgeMonths: 12, now: NOW });
+	assert.deepEqual(result.map((m) => m.id), ['model-a']);
+});
+
+test('pickerModels: enabledModels narrows the approved set (never adds)', () => {
+	const catalog = catalogFor('groq', { 'model-a': entry(), 'model-b': entry() });
+	const result = pickerModels(
+		providerEntry({ enabledModels: ['model-a'] }),
+		[model('model-a'), model('model-b')],
+		catalog,
+		{ maxAgeMonths: 12, now: NOW }
+	);
+	assert.deepEqual(result.map((m) => m.id), ['model-a']);
+});
+
+test('pickerModels: pinnedModels unions in on top of the narrowed approved set, approved first then pinned-only', () => {
+	const catalog = catalogFor('groq', { 'model-a': entry() });
+	const result = pickerModels(
+		providerEntry({ pinnedModels: ['pinned-unknown', 'model-a'] }),
+		[model('model-a'), model('pinned-unknown', { ctx: 4096 })],
+		catalog,
+		{ maxAgeMonths: 12, now: NOW }
+	);
+	// model-a is already approved (stays first); pinned-unknown is appended once, using its live listModels() data.
+	assert.deepEqual(result.map((m) => m.id), ['model-a', 'pinned-unknown']);
+	assert.equal(result.find((m) => m.id === 'pinned-unknown')?.ctx, 4096);
+});
+
+test('pickerModels: a pinned id absent from listModels() gets a conservative placeholder, never dropped', () => {
+	const catalog = catalogFor('groq', {});
+	const result = pickerModels(providerEntry({ pinnedModels: ['deployment-x'] }), [], catalog, { maxAgeMonths: 12, now: NOW });
+	assert.deepEqual(result, [{ id: 'deployment-x', ctx: 8192, caps: { tools: false, reasoning: false } }]);
+});
+
+test('pickerModels: never produces a duplicate id when a model is both approved and pinned', () => {
+	const catalog = catalogFor('groq', { 'model-a': entry() });
+	const result = pickerModels(providerEntry({ pinnedModels: ['model-a'] }), [model('model-a')], catalog, { maxAgeMonths: 12, now: NOW });
+	assert.equal(result.length, 1);
+});
+
+test('pickerModels: ollama skips the catalog filter entirely — every listed model is approved', () => {
+	const catalog = catalogFor('ollama', {});
+	const result = pickerModels(providerEntry({ id: 'ollama', kind: 'ollama' }), [model('qwen3:8b'), model('mystery-local')], catalog, {
+		maxAgeMonths: 12,
+		now: NOW
+	});
+	assert.deepEqual(result.map((m) => m.id), ['qwen3:8b', 'mystery-local']);
+});
+
+test('pickerModels: a problem-A local openai-compat provider skips the catalog filter too', () => {
+	const catalog = catalogFor('groq', {});
+	const result = pickerModels(providerEntry({ local: true }), [model('lmstudio-community/some-gguf')], catalog, {
+		maxAgeMonths: 12,
+		now: NOW
+	});
+	assert.deepEqual(result.map((m) => m.id), ['lmstudio-community/some-gguf']);
+});
+
+test('pickerModels: azure-openai skips the catalog filter too', () => {
+	const catalog = catalogFor('groq', {});
+	const result = pickerModels(providerEntry({ kind: 'azure-openai' }), [model('my-gpt-deployment')], catalog, {
+		maxAgeMonths: 12,
+		now: NOW
+	});
+	assert.deepEqual(result.map((m) => m.id), ['my-gpt-deployment']);
 });
