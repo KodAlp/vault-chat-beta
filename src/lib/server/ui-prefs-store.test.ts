@@ -118,3 +118,31 @@ test('the file on disk survives a write intact (atomic tmp+rename leaves no stra
 	const strays = fs.readdirSync(dir).filter((f) => f.endsWith('.tmp'));
 	assert.deepEqual(strays, []);
 });
+
+test('localServerSetupDone round-trips and survives a locale-only write', () => {
+	useTmpDataDir();
+	writeUiPrefs({ localServerSetupDone: true });
+	assert.deepEqual(readUiPrefs(), { localServerSetupDone: true });
+
+	// A later write that only touches locale must not silently reset the
+	// flag back to unset — same "don't clobber the rest" rule settings
+	// shallow-merging already enforces above.
+	writeUiPrefs({ locale: 'en' });
+	assert.deepEqual(readUiPrefs(), { locale: 'en', localServerSetupDone: true });
+});
+
+test('localServerSetupDone: false explicitly wins over a stored true (not treated as falsy/absent)', () => {
+	useTmpDataDir();
+	writeUiPrefs({ localServerSetupDone: true });
+	writeUiPrefs({ localServerSetupDone: false });
+	assert.deepEqual(readUiPrefs(), { localServerSetupDone: false });
+});
+
+test('a non-boolean localServerSetupDone is dropped, not coerced', () => {
+	useTmpDataDir();
+	writeUiPrefs({
+		// @ts-expect-error — intentionally wrong type, same untrusted-body case.
+		localServerSetupDone: 'true'
+	});
+	assert.deepEqual(readUiPrefs(), {});
+});

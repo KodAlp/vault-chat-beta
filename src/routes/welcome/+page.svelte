@@ -2,8 +2,10 @@
 	import { onMount } from 'svelte';
 	import { motionFly, MOTION } from '$lib/motion';
 	import { goto } from '$app/navigation';
+	import { isTauri } from '@tauri-apps/api/core';
 	import { Button } from '$lib/components/ui/button';
 	import { markWelcomeShown } from '$lib/welcome';
+	import { localServerSetupDone } from '$lib/localServerSetup.svelte';
 	import { t } from '$lib/i18n/index.svelte';
 
 	// Auto-continue keeps this from becoming a click-through chore on every
@@ -19,9 +21,19 @@
 
 	let timer: ReturnType<typeof setTimeout> | undefined;
 
+	// Aşama 2b — the desktop build's very first launch continues into the
+	// local-server setup wizard instead of the app itself; every later
+	// launch (localServerSetupDone() true) and every plain-browser session
+	// (isTauri() false — this page still shows there, but nothing about
+	// local servers is meaningful outside the desktop shell) goes straight
+	// to '/' exactly as before.
 	function proceed() {
 		markWelcomeShown();
-		goto('/', { replaceState: true });
+		if (isTauri() && !localServerSetupDone()) {
+			goto('/setup/local-server', { replaceState: true });
+		} else {
+			goto('/', { replaceState: true });
+		}
 	}
 
 	onMount(() => {

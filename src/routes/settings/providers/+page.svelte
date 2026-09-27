@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import type { ProviderStatus, ProviderModelOption, ModelListItem } from '$lib/types';
+	import { isTauri, invoke } from '@tauri-apps/api/core';
+	import type { ProviderStatus, ProviderModelOption, ModelListItem, DetectedServer } from '$lib/types';
+	import { catalogIdForBaseUrl } from '$lib/localServerMatch';
+	import LauncherPanel from '$lib/components/LauncherPanel.svelte';
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
@@ -198,8 +201,79 @@
 		}
 	}
 
+	// -- Aşama 2b: local-server launcher panels (Tauri only) --------------
+
+	const tauri = isTauri();
+	let localServers = $state<DetectedServer[]>([]);
+	let addLocalProviderBusyId = $state<string | null>(null);
+	let addLocalProviderError = $state<Record<string, string>>({});
+
+	async function refreshLocalServers() {
+		if (!tauri) return;
+		try {
+			localServers = await invoke<DetectedServer[]>('detect_local_servers');
+		} catch {
+			localServers = [];
+		}
+	}
+
+	/** Which catalog id (if any) provider `p` corresponds to — 'ollama' by
+	 * kind, or an openai-compat `local: true` provider whose baseUrl port
+	 * matches a catalog default (see localServerMatch.ts). Drives both the
+	 * inline LauncherPanel on a provider's own card and which catalog
+	 * entries the "Yerel sunucular" section below still needs to list. */
+	function matchedCatalogId(p: ProviderStatus): string | undefined {
+		if (p.id === 'ollama') return 'ollama';
+		if (p.kind === 'openai-compat' && p.local) return catalogIdForBaseUrl(p.baseUrl);
+		return undefined;
+	}
+
+	function localServerMetaFor(catalogId: string): DetectedServer | undefined {
+		return localServers.find((s) => s.id === catalogId);
+	}
+
+	let shownCatalogIds = $derived(
+		new Set(providers.map((p) => matchedCatalogId(p)).filter((id): id is string => !!id))
+	);
+	/** Launchable catalog entries with no provider card already showing
+	 * their LauncherPanel inline — e.g. llama.cpp configured as a launcher
+	 * before the user has added a provider entry for it at all. */
+	let unclaimedLocalServers = $derived(localServers.filter((s) => s.launchable && !shownCatalogIds.has(s.id)));
+
+	/** Same "add + enable a local openai-compat provider" step
+	 * /setup/local-server's ensureProviderForServer does, offered here too
+	 * for a catalog entry the user is managing via "Yerel sunucular" but
+	 * hasn't turned into a provider yet. */
+	async function addProviderForLocalServer(server: DetectedServer) {
+		addLocalProviderBusyId = server.id;
+		addLocalProviderError = { ...addLocalProviderError, [server.id]: '' };
+		try {
+			const baseUrl = `http://127.0.0.1:${server.port}/v1`;
+			const res = await fetch('/api/providers', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ label: server.display_name, baseUrl, kind: 'openai-compat', local: true })
+			});
+			if (!res.ok) throw new Error(await readResponseError(res));
+			const entry = (await res.json()) as { id: string };
+			await fetch(`/api/providers/${encodeURIComponent(entry.id)}`, {
+				method: 'PATCH',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ enabled: true })
+			});
+			await refresh();
+		} catch (err) {
+			addLocalProviderError = {
+				...addLocalProviderError,
+				[server.id]: err instanceof Error ? err.message : String(err)
+			};
+		} finally {
+			addLocalProviderBusyId = null;
+		}
+	}
+
 	async function refresh() {
-		await Promise.all([refreshProviders(), refreshProviderModels()]);
+		await Promise.all([refreshProviders(), refreshProviderModels(), refreshLocalServers()]);
 	}
 
 	async function setDefaultModel(p: ProviderStatus, modelId: string) {
@@ -561,6 +635,13 @@
 								<p class="mt-1 text-xs text-amber-600 dark:text-amber-500">{rateLimitLabel(p)}</p>
 							{/if}
 
+							{#if tauri && matchedCatalogId(p) && localServerMetaFor(matchedCatalogId(p) ?? '')}
+								{@const meta = localServerMetaFor(matchedCatalogId(p) ?? '')}
+								{#if meta}
+									<LauncherPanel serverId={meta.id} displayName={p.label} defaultPort={meta.port} launchable={meta.launchable} />
+								{/if}
+							{/if}
+
 							<div class="mt-2 flex flex-col gap-1">
 								<Label for="{uid}-default-model-{p.id}" class="text-xs text-muted-foreground">{t('ProvidersSettingsPage.defaultModelLabel')}</Label>
 								<!-- Sadece bu sağlayıcı başarısız olan BİR ÖNCEKİ sağlayıcının
@@ -754,6 +835,31 @@
 			{/each}
 		</div>
 	</section>
+
+	{#if tauri && unclaimedLocalServers.length > 0}
+		<section class="mb-8">
+			<h2 class="mb-1 text-base font-semibold">{t('ProvidersSettingsPage.localServersTitle')}</h2>
+			<p class="mb-4 text-sm text-muted-foreground">{t('ProvidersSettingsPage.localServersDescription')}</p>
+			<div class="flex flex-col gap-3">
+				{#each unclaimedLocalServers as server (server.id)}
+					<Card.Root>
+						<Card.Content>
+							<strong class="text-sm">{server.display_name}</strong>
+							<LauncherPanel serverId={server.id} displayName={server.display_name} defaultPort={server.port} launchable={server.launchable} />
+							<div class="mt-2">
+								<Button size="sm" variant="outline" onclick={() => addProviderForLocalServer(server)} disabled={addLocalProviderBusyId === server.id}>
+									{addLocalProviderBusyId === server.id ? t('Common.kaydediliyor') : t('ProvidersSettingsPage.addAsProvider')}
+								</Button>
+							</div>
+							{#if addLocalProviderError[server.id]}
+								<p class="mt-2 text-sm text-destructive" role="alert">{addLocalProviderError[server.id]}</p>
+							{/if}
+						</Card.Content>
+					</Card.Root>
+				{/each}
+			</div>
+		</section>
+	{/if}
 
 	<section>
 		<h2 class="mb-1 text-base font-semibold">{t('ProvidersSettingsPage.chainSectionTitle')}</h2>

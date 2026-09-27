@@ -2,8 +2,9 @@
 	import { motionFly } from '$lib/motion';
 	import TriangleAlertIcon from '@lucide/svelte/icons/triangle-alert';
 	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
+	import { isTauri, invoke } from '@tauri-apps/api/core';
 	import { t } from '$lib/i18n/index.svelte';
-	import type { ProviderStatus } from '$lib/types';
+	import type { LauncherConfig, ProviderStatus } from '$lib/types';
 
 	/**
 	 * App-wide, not per-page: Ollama being down blocks every feature (chat,
@@ -18,6 +19,39 @@
 
 	let status = $state<Status>('checking');
 	let probing = $state(false);
+	/** Aşama 2b — true once we've confirmed (via list_launchers) that a
+	 * program has already been picked/redetected for the 'ollama' launcher
+	 * — only then does start_launcher('ollama') have any chance of
+	 * succeeding (see launchers.rs's save_launcher/start_launcher_by_id doc
+	 * comments: starting requires an existing launcher config). Checked
+	 * once per mount, not on every poll — whether a launcher exists doesn't
+	 * change while this banner is showing. */
+	let hasOllamaLauncher = $state(false);
+	let starting = $state(false);
+
+	async function checkOllamaLauncher() {
+		if (!isTauri()) return;
+		try {
+			const list = await invoke<LauncherConfig[]>('list_launchers');
+			hasOllamaLauncher = list.some((l) => l.id === 'ollama');
+		} catch {
+			hasOllamaLauncher = false;
+		}
+	}
+
+	async function startOllama() {
+		starting = true;
+		try {
+			await invoke('start_launcher', { id: 'ollama' });
+		} catch {
+			// start_launcher's own error (if any) isn't surfaced here — the
+			// recheck below already reflects reality (still unreachable if it
+			// really failed), which is what this banner cares about.
+		} finally {
+			starting = false;
+			await check();
+		}
+	}
 	/** Populated only once Ollama itself answers 'ok' — required model names
 	 * come from the server (providers.json's ollama.defaultModel + embed-
 	 * config.ts's EMBED_MODEL via /api/providers), never hardcoded here, so
@@ -88,6 +122,7 @@
 
 	$effect(() => {
 		check();
+		void checkOllamaLauncher();
 
 		// The exact scenario this exists for: the user starts Ollama *after*
 		// opening the app, then switches back to it — recheck right then
@@ -121,6 +156,11 @@
 				· <code>ollama serve</code>
 			{/if}
 		</span>
+		{#if status === 'unreachable' && hasOllamaLauncher}
+			<button type="button" onclick={startOllama} disabled={starting || probing}>
+				{starting ? t('OllamaStatusBanner.starting') : t('OllamaStatusBanner.startNow')}
+			</button>
+		{/if}
 		<button type="button" onclick={check} disabled={probing}>
 			<RefreshCwIcon size={13} aria-hidden="true" class={probing ? 'animate-spin' : ''} />
 			{probing ? t('OllamaStatusBanner.checking') : t('OllamaStatusBanner.retry')}
