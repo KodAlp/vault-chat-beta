@@ -952,6 +952,9 @@
 		"installViaWinget": "Install with winget",
 		"downloadPage": "Download page",
 		"installing": "Installing...",
+		"installSuccess": "Installation complete.",
+		"installSuccessNotDetected": "Installed, but the app can't see it yet — restart the app.",
+		"showInstallLog": "Show install log",
 		"successTitle": "{name} is ready",
 		"successBody": "This server will start automatically at launch and has been added as a provider.",
 		"modelCheckTitle": "Model check",
@@ -965,7 +968,6 @@
 		"pythonInstalledLabel": "Python is installed ({version})",
 		"pythonNotInstalled": "Python isn't installed.",
 		"installPython": "Install Python (winget)",
-		"restartHint": "You may need to restart the app for the PATH update to take effect.",
 		"moduleListTitle": "Python packages",
 		"moduleInstalled": "installed",
 		"moduleMissing": "missing",
@@ -993,6 +995,8 @@
 		"pickModelFile": "Choose model file",
 		"vllmModelLabel": "Model name",
 		"notLaunchableNote": "This server can't be started by the app; you need to open its own API server from its own interface.",
-		"invalidPort": "Port must be between 1 and 65535."
+		"invalidPort": "Port must be between 1 and 65535.",
+		"saved": "Saved.",
+		"savedRestartNote": "Saved. The server is running; the change takes effect the next time it starts."
 	}
 }

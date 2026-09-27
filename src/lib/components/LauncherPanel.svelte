@@ -49,6 +49,11 @@
 	let status = $state<LauncherStatusValue | 'checking'>('checking');
 	let busy = $state(false);
 	let error = $state('');
+	/** Inline confirmation after a save — this panel is part of the card, not
+	 * a dialog, so nothing closes on save and the user otherwise gets no sign
+	 * that it worked. */
+	let savedNotice = $state<'' | 'saved' | 'savedRestartNote'>('');
+	let savedTimer: ReturnType<typeof setTimeout> | undefined;
 
 	let portDraft = $state('');
 	let argsDraft = $state('');
@@ -97,6 +102,7 @@
 		if (!config) return;
 		busy = true;
 		error = '';
+		savedNotice = '';
 		try {
 			await invoke('save_launcher', {
 				id: serverId,
@@ -107,6 +113,10 @@
 				model: overrides.model !== undefined ? overrides.model : (config.model ?? null)
 			});
 			await loadConfig();
+			// A running server keeps the args/port it was started with.
+			savedNotice = status === 'running_ours' || status === 'running_external' ? 'savedRestartNote' : 'saved';
+			clearTimeout(savedTimer);
+			savedTimer = setTimeout(() => (savedNotice = ''), 4000);
 		} catch (err) {
 			error = errMessage(err);
 		} finally {
@@ -177,15 +187,22 @@
 			error = t('LauncherPanel.invalidPort');
 			return;
 		}
+		// Blur fires on every focus change; only an actual edit is a save.
+		if (n === config?.port) return;
 		void saveLauncher({ port: n });
 	}
 
-	function saveArgs() {
-		const parsed = argsDraft
+	function parseArgsDraft(): string[] {
+		return argsDraft
 			.split('\n')
 			.map((l) => l.trim())
 			.filter((l) => l.length > 0);
-		void saveLauncher({ args: parsed });
+	}
+
+	let argsDirty = $derived(parseArgsDraft().join('\n') !== (config?.args ?? []).join('\n'));
+
+	function saveArgs() {
+		void saveLauncher({ args: parseArgsDraft() });
 	}
 
 	async function pickModelFile() {
@@ -315,7 +332,7 @@
 					bind:value={argsDraft}
 					disabled={busy}
 				></textarea>
-				<Button size="sm" variant="outline" class="w-fit" onclick={saveArgs} disabled={busy}>{t('Common.kaydet')}</Button>
+				<Button size="sm" variant="outline" class="w-fit" onclick={saveArgs} disabled={busy || !argsDirty}>{t('Common.kaydet')}</Button>
 			</div>
 		{/if}
 
@@ -347,6 +364,9 @@
 	{#if error}
 		<p class="text-destructive" role="alert">{error}</p>
 	{/if}
+	<p class="text-muted-foreground" role="status">
+		{savedNotice ? t(`LauncherPanel.${savedNotice}`) : ''}
+	</p>
 
 	{#if !launchable}
 		<p class="text-muted-foreground">{t('LauncherPanel.notLaunchableNote')}</p>

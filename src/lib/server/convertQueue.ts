@@ -5,6 +5,7 @@ import path from 'node:path';
 import readline from 'node:readline';
 import { sharedJobMutex } from './jobMutex';
 import { AppError } from './app-error';
+import { resolvePandocBin } from './pandoc-bin';
 
 export type ConvertEvent =
 	| { type: 'progress'; stage: string; pageCount?: number; estimatedSeconds?: number }
@@ -142,8 +143,16 @@ function runConvert(
 		if (sourceName) args.push('--source-name', sourceName);
 		// #37 — see convert.py's parse_page_range for the "START-END" format.
 		if (pages) args.push('--pages', pages);
+		// convert.py's convert_with_pandoc/pandoc_not_installed_message check
+		// PANDOC_BIN before falling back to a bare 'pandoc' PATH lookup — same
+		// stale-server-PATH bug as pythonBin() above, see pandoc-bin.ts's doc
+		// comment. Only set when actually resolved so an unset PANDOC_BIN
+		// doesn't shadow whatever (if anything) convert.py's own `shutil.which`
+		// fallback would otherwise have found.
+		const pandocBin = resolvePandocBin();
 		const child = spawn(bin, args, {
-			windowsHide: true
+			windowsHide: true,
+			env: pandocBin ? { ...process.env, PANDOC_BIN: pandocBin } : process.env
 		});
 
 		let lastDone: (ConvertEvent & { type: 'done' }) | null = null;
