@@ -362,8 +362,9 @@
 	},
 
 	"WelcomePage": {
-		"title": "Vault Agent Toolkit",
-		"tagline": "Your notes, fully local.",
+		"title": "Vault Chat",
+		"tagline": "Lay the eggs for your future.",
+		"details": "Privacy & responsibility",
 		"note1": "By default everything stays on your device — conversion, search, and local (Ollama) chat never send data anywhere. If you pick a cloud provider (e.g. Deepseek, Gemini), that chat's content goes to that provider; importing a link or YouTube video sends a request to that address.",
 		"note2": "AI output can be wrong or incomplete — especially numbers, dates, and quotes. Verify before relying on it for anything important.",
 		"note3": "You're responsible for making sure you hold the rights to whatever you import (PDFs, videos, links).",

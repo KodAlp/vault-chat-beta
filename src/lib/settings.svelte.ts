@@ -43,7 +43,10 @@ export interface Settings {
 	quizLevelLabels: boolean;
 }
 
-const STORAGE_KEY = 'vault-chat-settings';
+/** Exported so +layout.ts's migration check can tell "nothing in
+ * localStorage yet" apart from "loadInitial() already read it" without
+ * duplicating the literal string. */
+export const STORAGE_KEY = 'vault-chat-settings';
 
 const DEFAULTS: Settings = {
 	theme: 'system',
@@ -74,4 +77,22 @@ export const settings = $state<Settings>(loadInitial());
 export function persistSettings(): void {
 	if (typeof localStorage === 'undefined') return;
 	localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+	// Fire-and-forget: see i18n/index.svelte.ts's persistLocale for why a
+	// failed PUT here is swallowed rather than surfaced.
+	if (typeof window !== 'undefined') {
+		fetch('/api/ui-prefs', {
+			method: 'PUT',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ settings })
+		}).catch((err) => console.warn('ui-prefs settings PUT failed', err));
+	}
+}
+
+/** Applied from +layout.ts's load with the server-persisted copy. Shallow
+ * merge, not replace — a patch only ever carries the fields the server had
+ * sanitized (see ui-prefs-store.ts's sanitizeSettings), so this must not
+ * blow away a field the patch simply doesn't mention. */
+export function applySettings(patch: Partial<Settings> | undefined): void {
+	if (!patch) return;
+	Object.assign(settings, patch);
 }
