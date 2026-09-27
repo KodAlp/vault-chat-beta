@@ -8,6 +8,36 @@ her adımı sırayla uygulaman yeterli.
 > vb.), bunun yerine repo kökündeki **README.md** dosyasına bak — bu rehber
 > sadece paketlenmiş `.exe` kurulumunu anlatıyor.
 
+## 0. Kapalı beta — bağımlılık listesi (önce bunu oku)
+
+Bu sürüm (**0.2.0, kapalı beta**) kurulum dosyası **yalnızca Vault Chat'in
+kendisini** kurar. Aşağıdaki programlar bilgisayarında **ayrıca** bulunmalı;
+kurulum dosyası bunları ne kurar ne de kontrol eder. Her birinin yanında
+tek satırlık `winget` komutu var (Başlat → "cmd" → yapıştır → Enter).
+
+| Bağımlılık | Durum | Sürüm | Kurulum komutu | Yoksa ne olur? |
+|---|---|---|---|---|
+| Windows 10/11 **x64** | Zorunlu | — | — | ARM (Snapdragon vb.) bilgisayarlarda çalışmaz |
+| Microsoft Edge WebView2 | Zorunlu | güncel | Windows 11'de hazır gelir; yoksa kurulum dosyası indirir (**internet gerekir**) | Pencere açılmaz |
+| **Node.js** | Zorunlu | **tam olarak 22.x** (20 ve 24 çalışmaz) | `winget install -e --id OpenJS.NodeJS.22` | Açılışta "Node.js bulunamadı"; yanlış sürümde uygulama açılışta veritabanını açamaz |
+| **Ollama** | Zorunlu | güncel | `winget install -e --id Ollama.Ollama` | Sohbet, test/kart/rapor üretimi ve **not arama** çalışmaz |
+| ↳ `qwen3:8b` modeli | Zorunlu | — | `ollama pull qwen3:8b` (~5 GB) | Sohbet ve üretim çalışmaz |
+| ↳ `bge-m3` modeli | Zorunlu | — | `ollama pull bge-m3` (~1,2 GB) | İçe aktarılan notlar indekslenemez, not arama çalışmaz |
+| Python 3 | İsteğe bağlı | 3.12 önerilir | `winget install -e --id Python.Python.3.12` | **Hiçbir dosya içe aktarılamaz** (PDF, Word, bağlantı, YouTube, hatta .md yükleme) — sohbet çalışır |
+| ↳ Python paketleri | İsteğe bağlı | `ingest\requirements.txt`: markitdown 0.1.6, pypdf 6.14.2, yt-dlp 2026.7.4, trafilatura 2.2.0, py-asciimath 0.3.0 | Uygulamadaki "Şimdi kur" düğmesi ya da Adım 3b | Uygulama yalnız markitdown'u denetler; diğerleri eksikse web sayfası/YouTube içe aktarma hata verir |
+| Pandoc | İsteğe bağlı | güncel | `winget install -e --id JohnMacFarlane.Pandoc` | Yalnız `.tex` (LaTeX) içe aktarma çalışmaz |
+
+**Donanım:** `qwen3:8b` için en az **6 GB ekran kartı belleği** (NVIDIA
+önerilir) ya da bol RAM (ekran kartı yoksa çok yavaş çalışır); modeller için
+**~7 GB boş disk**. İlk model indirmesi ve bulut sağlayıcılar için internet
+gerekir; sonrasında yerel sohbet internetsiz çalışır.
+
+> **Bilinen sınırlar (beta):** Not arama/indeksleme şu an yalnız Ollama ile
+> çalışıyor — Ayarlar'da LM Studio, llama.cpp gibi başka bir yerel sunucu
+> eklesen bile Ollama + `bge-m3` kurulu olmalı. Uygulama Ollama'yı kendisi
+> başlatmıyor; açık değilse uyarı gösterir. İkisi de sonraki sürümde
+> değişecek.
+
 ## 1. Neye ihtiyacın var?
 
 Vault Chat, kasandaki notlar üzerinde çalışan yerel bir yapay zekâ sohbet
@@ -84,7 +114,7 @@ python -m pip install -r requirements.txt
 
 ## 4. Vault Chat'i kur
 
-1. Sana verilen `vault-chat_0.1.0_x64-setup.exe` dosyasını çalıştır.
+1. Sana verilen `vault-chat_0.2.0_x64-setup.exe` dosyasını çalıştır.
 2. Kurulum yönetici izni istemez, kendi kullanıcı klasörüne kurulur —
    "İleri" diyerek ilerlemen yeterli.
 3. Kurulum bitince Vault Chat otomatik açılır (ya da Başlat menüsünden
