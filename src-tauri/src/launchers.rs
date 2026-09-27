@@ -61,6 +61,15 @@ const MODEL_NAME_PLACEHOLDER: &str = "<model>";
 /// `save_launcher` would silently desync the actual `--port <N>` flag the
 /// child is started with from the port `start_launcher_by_id` waits on.
 const PORT_PLACEHOLDER: &str = "<port>";
+/// Substituted with `"127.0.0.1:<port>"` (loopback host + the launcher's
+/// configured port, joined into ONE string) at start time — see
+/// `build_effective_args`. Only used for LocalAI's `--address` flag, which
+/// (unlike every other kind here) takes a single `host:port` argv element
+/// rather than separate `--host`/`--port` flags. Still obeys the same
+/// one-placeholder-one-argv-element rule as `PORT_PLACEHOLDER`: the host part
+/// is a fixed literal we build here, never something read from `cfg`, so
+/// there's no user-controlled string to accidentally split.
+const ADDR_PLACEHOLDER: &str = "<addr>";
 
 /// One entry per local-server kind this app knows how to detect and (when
 /// `launchable`) start/stop itself. Pure data — constructing/reading this
@@ -114,19 +123,25 @@ static CATALOG: &[CatalogEntry] = &[
         stop_args: None,
     },
     CatalogEntry {
-        // `lms` is not installed on the machine this module was built on,
-        // so `lms server start --help` could not be checked to confirm
-        // whether it accepts a `--port` flag. Left as the plain default —
-        // if a user changes this launcher's `port` away from 1234, the
-        // actual `lms server start` invocation will NOT follow it (known
-        // gap, to be closed once `lms`'s real flag can be verified).
+        // Aşama 2a: confirmed via https://lmstudio.ai/docs/cli/server-start
+        // (the "Options" section of `lms server start`) that it takes both
+        // `--port <number>` ("Port to run the server on. If not provided,
+        // uses the last used port") and `--bind <string>` ("Network address
+        // to bind the server to. Use \"0.0.0.0\" to listen on all IPv4
+        // interfaces, or \"127.0.0.1\" (default) for localhost only. Can
+        // also be set via the LMS_SERVER_HOST environment variable.").
+        // `--bind` already defaults to loopback, so pinning it here isn't
+        // strictly required by that default — it's set explicitly anyway,
+        // matching how every other launchable entry in this catalog states
+        // its bind address as a literal argv element rather than leaning on
+        // an upstream default that could change between LM Studio versions.
         id: "lmstudio",
         display_name: "LM Studio",
         port: 1234,
         launchable: true,
         winget_id: Some("ElementLabs.LMStudio"),
         download_url: "https://lmstudio.ai",
-        default_args: &["server", "start"],
+        default_args: &["server", "start", "--bind", "127.0.0.1", "--port", PORT_PLACEHOLDER],
         stop_args: Some(&["server", "stop"]),
     },
     CatalogEntry {
@@ -173,6 +188,18 @@ static CATALOG: &[CatalogEntry] = &[
         stop_args: None,
     },
     CatalogEntry {
+        // Aşama 2a: confirmed directly from LocalAI's own CLI flag
+        // definition (core/cli/run.go in mudler/LocalAI —
+        // https://github.com/mudler/LocalAI/blob/master/core/cli/run.go):
+        // `Address string `env:"LOCALAI_ADDRESS,ADDRESS" default:":8080" ...``
+        // — i.e. `--address` (env `LOCALAI_ADDRESS`/`ADDRESS`) defaults to
+        // `:8080`, a wildcard bind on ALL interfaces, not loopback. That is
+        // exactly the security issue this catalog otherwise avoids for
+        // every other kind (each of which explicitly pins 127.0.0.1), so
+        // `--address` is set explicitly here to `127.0.0.1:<port>` — one
+        // argv element via ADDR_PLACEHOLDER, since `--address` (unlike
+        // `--host`/`--port` on the other kinds) takes a single combined
+        // `host:port` value rather than two separate flags.
         id: "localai",
         display_name: "LocalAI",
         port: 8080,
@@ -183,7 +210,7 @@ static CATALOG: &[CatalogEntry] = &[
         // only a `local-ai` binary directly on PATH is detected.
         winget_id: None,
         download_url: "https://localai.io",
-        default_args: &["run"],
+        default_args: &["run", "--address", ADDR_PLACEHOLDER],
         stop_args: None,
     },
     CatalogEntry {
@@ -218,6 +245,17 @@ static CATALOG: &[CatalogEntry] = &[
 
 fn catalog_entry(id: &str) -> Option<&'static CatalogEntry> {
     CATALOG.iter().find(|e| e.id == id)
+}
+
+/// `(winget_id, download_url)` for every catalog entry that has a winget
+/// package — the single source of truth `winget.rs`'s install allowlist is
+/// built from (plus its own few hardcoded extra ids for things this catalog
+/// doesn't otherwise know about, like Node.js itself). Deriving from
+/// `CATALOG` here, rather than a second hand-maintained list in winget.rs,
+/// means a future catalog change (new entry, retired winget id) can't leave
+/// that allowlist silently stale.
+pub(crate) fn winget_catalog_entries() -> Vec<(&'static str, &'static str)> {
+    CATALOG.iter().filter_map(|e| e.winget_id.map(|id| (id, e.download_url))).collect()
 }
 
 /// Per-launcher persisted config — `app_data_dir/launchers.json` holds a
@@ -869,6 +907,12 @@ fn build_effective_args(entry: &CatalogEntry, cfg: &LauncherConfig) -> Result<Ve
             out.push(m.to_string());
         } else if a == PORT_PLACEHOLDER {
             out.push(cfg.port.to_string());
+        } else if a == ADDR_PLACEHOLDER {
+            // Host part is the fixed literal "127.0.0.1" — see
+            // ADDR_PLACEHOLDER's doc comment — so this is still exactly one
+            // argv element, never a user-controlled string that could
+            // itself contain a stray argument boundary.
+            out.push(format!("127.0.0.1:{}", cfg.port));
         } else {
             out.push(a.clone());
         }
@@ -1771,6 +1815,48 @@ mod tests {
         assert!(args.contains(&"19090".to_string()), "expected substituted port 19090 in {args:?}");
         assert!(!args.contains(&"8080".to_string()), "stale catalog-default port leaked into {args:?}");
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn lmstudio_port_placeholder_is_substituted_and_bind_is_pinned_to_loopback() {
+        let entry = catalog_entry("lmstudio").unwrap();
+        let cfg = LauncherConfig {
+            id: "lmstudio".to_string(),
+            program: r"C:\lms.exe".to_string(),
+            args: entry.default_args.iter().map(|s| s.to_string()).collect(),
+            port: 4321,
+            auto_start: false,
+            model_path: None,
+            model: None,
+        };
+        let args = build_effective_args(entry, &cfg).unwrap();
+        assert!(args.contains(&"--bind".to_string()));
+        assert!(args.contains(&"127.0.0.1".to_string()));
+        assert!(args.contains(&"--port".to_string()));
+        assert!(args.contains(&"4321".to_string()));
+    }
+
+    #[test]
+    fn localai_address_placeholder_is_substituted_as_a_single_host_port_argv_element() {
+        let entry = catalog_entry("localai").unwrap();
+        let cfg = LauncherConfig {
+            id: "localai".to_string(),
+            program: r"C:\local-ai.exe".to_string(),
+            args: entry.default_args.iter().map(|s| s.to_string()).collect(),
+            port: 9090,
+            auto_start: false,
+            model_path: None,
+            model: None,
+        };
+        let args = build_effective_args(entry, &cfg).unwrap();
+        // Must be ONE argv element ("127.0.0.1:9090"), never split into
+        // "127.0.0.1" and "9090" as two separate elements — that would be a
+        // different (broken) command line for `--address`.
+        assert!(args.contains(&"127.0.0.1:9090".to_string()), "expected combined host:port in {args:?}");
+        assert!(!args.contains(&"127.0.0.1".to_string()));
+        assert!(!args.contains(&"9090".to_string()));
+        // Never the LocalAI-default wildcard bind.
+        assert!(!args.iter().any(|a| a.contains(":8080") && !a.starts_with("127.0.0.1")));
     }
 
     #[test]

@@ -1,4 +1,5 @@
 mod launchers;
+mod winget;
 
 use serde::{Deserialize, Serialize};
 use std::os::windows::io::AsRawHandle;
@@ -27,11 +28,156 @@ struct VaultConfig {
     vault_name: String,
 }
 
+/// What the splash page shows a dedicated panel for instead of the generic
+/// error box — `kind` is either `"missing"` (no usable Node binary found or
+/// resolvable one won't even run) or `"wrong_version"` (a Node was found
+/// and runs, but its major doesn't match `required`). `found` is the raw
+/// `node --version` text when one WAS obtained (always `None` for
+/// `"missing"`, always `Some` for `"wrong_version"`).
+#[derive(Serialize, Clone)]
+struct NodeProblem {
+    kind: String,
+    found: Option<String>,
+    required: String,
+}
+
 #[derive(Serialize)]
 struct StartResult {
     #[serde(rename = "needsConfig")]
     needs_config: bool,
     url: Option<String>,
+    // Backward-compatible with the existing `needsConfig`/`url` shape the
+    // splash page already reads — this is simply never present on an older
+    // build's response, and `Option` + skip_serializing_if means an OK
+    // start still serializes to exactly the same two fields as before.
+    #[serde(rename = "nodeProblem", skip_serializing_if = "Option::is_none")]
+    node_problem: Option<NodeProblem>,
+}
+
+/// What `spawn_sidecar` actually accomplished — kept distinct from a plain
+/// `Result<String, String>` because a Node problem is a NORMAL, expected
+/// outcome the splash needs to render its own panel for (see `NodeProblem`),
+/// not a generic failure string dumped into the splash's catch-all error
+/// box. Every other failure path in `spawn_sidecar` (resource dir missing,
+/// server entry file missing, sidecar process itself failed to spawn, port
+/// never opened) still returns a plain `Err(String)` — those really are
+/// "something went wrong we don't have a dedicated UI for."
+enum SidecarOutcome {
+    Started(String),
+    NodeProblem(NodeProblem),
+}
+
+/// The Node major this build's better-sqlite3 native addon was compiled
+/// against — embedded by build.rs (see its own doc comment) from the BUILD
+/// machine's `node --version`, falling back to package.json's declared
+/// `engines.node` lower bound if `node` wasn't runnable there. Compared
+/// against the SIDECAR's own `node --version` in `resolve_and_verify_node`.
+const VAULTCHAT_NODE_MAJOR: &str = env!("VAULTCHAT_NODE_MAJOR");
+
+fn required_node_major() -> u32 {
+    // The literal this build embedded is always digits-only (see build.rs)
+    // — `unwrap_or(22)` here is just an extra layer of never-panic caution,
+    // matching package.json's own declared lower bound as the last-resort
+    // fallback value.
+    VAULTCHAT_NODE_MAJOR.parse().unwrap_or(22)
+}
+
+/// Parses the major version number out of a `node --version`-style string
+/// — `"v22.11.0"` -> `22`, and just as happily `"22.11.0"` (no leading `v`)
+/// -> `22`. Pure, no I/O, so it's unit-tested directly against both real
+/// and garbage input rather than only exercised indirectly through a real
+/// `node --version` call.
+fn parse_node_major_version(version_text: &str) -> Option<u32> {
+    let trimmed = version_text.trim();
+    let no_v = trimmed.strip_prefix('v').unwrap_or(trimmed);
+    let major_str = no_v.split('.').next()?;
+    if major_str.is_empty() {
+        return None;
+    }
+    major_str.parse().ok()
+}
+
+/// Resolves a Node binary via `resolve_node_binary()` and confirms both that
+/// it actually runs and that its major version matches
+/// `required_node_major()` — a mismatched major isn't "might not work",
+/// it's a different Node ABI (NODE_MODULE_VERSION), which fails to even
+/// `require()` better-sqlite3's compiled `.node` file inside the sidecar,
+/// so this gate runs BEFORE the sidecar is ever spawned rather than letting
+/// it crash after the fact with a much less legible native-addon error.
+fn resolve_and_verify_node() -> Result<PathBuf, NodeProblem> {
+    let required = VAULTCHAT_NODE_MAJOR.to_string();
+    let Some(node_bin) = resolve_node_binary() else {
+        return Err(NodeProblem {
+            kind: "missing".to_string(),
+            found: None,
+            required,
+        });
+    };
+
+    let output = Command::new(&node_bin)
+        .arg("--version")
+        .creation_flags(CREATE_NO_WINDOW)
+        .output();
+    let version_text = match output {
+        Ok(out) if out.status.success() => String::from_utf8_lossy(&out.stdout).trim().to_string(),
+        // Exists on disk but won't run (broken install, permissions, a
+        // WindowsApps stub that slipped past resolve_node_binary's own
+        // filter, ...). Same remedy as "missing" from the user's side —
+        // (re)install Node — so it's reported the same way rather than
+        // inventing a third UI state for what's practically identical.
+        _ => {
+            return Err(NodeProblem {
+                kind: "missing".to_string(),
+                found: None,
+                required,
+            })
+        }
+    };
+
+    match parse_node_major_version(&version_text) {
+        Some(major) if major == required_node_major() => Ok(node_bin),
+        Some(_) => Err(NodeProblem {
+            kind: "wrong_version".to_string(),
+            found: Some(version_text),
+            required,
+        }),
+        None => Err(NodeProblem {
+            kind: "missing".to_string(),
+            found: Some(version_text),
+            required,
+        }),
+    }
+}
+
+/// Re-checks Node without touching the sidecar — called from the splash
+/// page right after a winget-driven Node install finishes, before it
+/// retries `check_and_start`. Finds a just-installed Node with NO relaunch
+/// needed: `resolve_node_binary` checks the fixed
+/// `%ProgramFiles%\nodejs\node.exe` location FIRST (see its own doc
+/// comment), which is exactly where Node's official Windows installer (the
+/// one `winget install --id OpenJS.NodeJS.22` runs) places it — unlike a
+/// `where`/PATH-based lookup, which would only see this already-running
+/// process's stale, captured-at-launch PATH and could miss a fresh install
+/// entirely until the app itself restarts.
+#[derive(Serialize)]
+struct NodeStatus {
+    ok: bool,
+    #[serde(rename = "nodeProblem", skip_serializing_if = "Option::is_none")]
+    node_problem: Option<NodeProblem>,
+}
+
+#[tauri::command]
+async fn recheck_node() -> NodeStatus {
+    match resolve_and_verify_node() {
+        Ok(_) => NodeStatus {
+            ok: true,
+            node_problem: None,
+        },
+        Err(problem) => NodeStatus {
+            ok: false,
+            node_problem: Some(problem),
+        },
+    }
 }
 
 /// Holds the spawned Node child (killed explicitly on a *graceful* quit —
@@ -326,7 +472,7 @@ fn hex_encode(bytes: &[u8]) -> String {
     bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
 
-async fn spawn_sidecar(app: &AppHandle, cfg: &VaultConfig) -> Result<String, String> {
+async fn spawn_sidecar(app: &AppHandle, cfg: &VaultConfig) -> Result<SidecarOutcome, String> {
     let state = app.state::<SidecarState>();
     {
         // A second `spawn_sidecar` call (e.g. the splash page's `main()`
@@ -341,46 +487,28 @@ async fn spawn_sidecar(app: &AppHandle, cfg: &VaultConfig) -> Result<String, Str
         if let Some(child) = child_guard.as_mut() {
             if matches!(child.try_wait(), Ok(None)) {
                 if let Some(url) = state.url.lock().unwrap().clone() {
-                    return Ok(url);
+                    return Ok(SidecarOutcome::Started(url));
                 }
             }
         }
     }
 
-    let node_bin = match resolve_node_binary() {
-        Some(p) => p,
-        None => {
-            let msg = "Node.js bulunamadı. Vault Chat masaüstü sürümü sisteminizde kurulu bir Node.js (22+) \
-         gerektirir — https://nodejs.org adresinden kurup tekrar deneyin."
-                .to_string();
-            log_line(app, &msg);
-            return Err(msg);
+    // See resolve_and_verify_node's doc comment — a wrong-major Node is
+    // reported back as a NodeProblem (a normal, UI-visible outcome the
+    // splash renders its own panel for), not as a generic Err(String).
+    let node_bin = match resolve_and_verify_node() {
+        Ok(p) => p,
+        Err(problem) => {
+            log_line(
+                app,
+                &format!(
+                    "node check failed: kind={} found={:?} required={}",
+                    problem.kind, problem.found, problem.required
+                ),
+            );
+            return Ok(SidecarOutcome::NodeProblem(problem));
         }
     };
-
-    match Command::new(&node_bin)
-        .arg("--version")
-        .creation_flags(CREATE_NO_WINDOW)
-        .output()
-    {
-        Ok(out) if out.status.success() => {}
-        Ok(out) => {
-            let msg = format!(
-                "Node.js çalıştırılamadı ({}). Kurulumu doğrulayın.",
-                node_bin.display()
-            );
-            log_line(app, &format!("{msg} stderr={}", String::from_utf8_lossy(&out.stderr)));
-            return Err(msg);
-        }
-        Err(e) => {
-            let msg = format!(
-                "Node.js çalıştırılamadı ({}). Kurulumu doğrulayın.",
-                node_bin.display()
-            );
-            log_line(app, &format!("{msg} ({e})"));
-            return Err(msg);
-        }
-    }
 
     let resource_dir = strip_verbatim_prefix(&app.path().resource_dir().map_err(|e| {
         let msg = format!("resource_dir() başarısız: {e}");
@@ -588,7 +716,7 @@ async fn spawn_sidecar(app: &AppHandle, cfg: &VaultConfig) -> Result<String, Str
     *state.job.lock().unwrap() = job;
     *state.url.lock().unwrap() = Some(url.clone());
 
-    Ok(url)
+    Ok(SidecarOutcome::Started(url))
 }
 
 /// Called once by the splash page on load. Returns immediately if no vault
@@ -600,31 +728,52 @@ async fn check_and_start(app: AppHandle) -> Result<StartResult, String> {
         None => Ok(StartResult {
             needs_config: true,
             url: None,
+            node_problem: None,
         }),
-        Some(cfg) => {
-            let url = spawn_sidecar(&app, &cfg).await?;
-            Ok(StartResult {
+        Some(cfg) => match spawn_sidecar(&app, &cfg).await? {
+            SidecarOutcome::Started(url) => Ok(StartResult {
                 needs_config: false,
                 url: Some(url),
-            })
-        }
+                node_problem: None,
+            }),
+            SidecarOutcome::NodeProblem(problem) => Ok(StartResult {
+                needs_config: false,
+                url: None,
+                node_problem: Some(problem),
+            }),
+        },
     }
 }
 
 /// Called by the splash page's first-run form once the user picks a vault
 /// folder (via @tauri-apps/plugin-dialog on the JS side) and confirms.
+/// Returns the same `StartResult` shape `check_and_start` does (rather than
+/// a bare URL string, as before this stage) so a Node problem hit on THIS
+/// path — a first-run user whose machine has no/wrong-major Node — gets the
+/// exact same dedicated panel instead of the generic error box.
 #[tauri::command]
 async fn save_vault_config_and_start(
     app: AppHandle,
     vault_path: String,
     vault_name: String,
-) -> Result<String, String> {
+) -> Result<StartResult, String> {
     let cfg = VaultConfig {
         vault_path,
         vault_name,
     };
     write_config(&app, &cfg)?;
-    spawn_sidecar(&app, &cfg).await
+    match spawn_sidecar(&app, &cfg).await? {
+        SidecarOutcome::Started(url) => Ok(StartResult {
+            needs_config: false,
+            url: Some(url),
+            node_problem: None,
+        }),
+        SidecarOutcome::NodeProblem(problem) => Ok(StartResult {
+            needs_config: false,
+            url: None,
+            node_problem: Some(problem),
+        }),
+    }
 }
 
 /// Called from the running app's Settings page to change the vault path/
@@ -677,11 +826,13 @@ pub fn run() {
             url: Mutex::new(None),
         })
         .manage(launchers::LauncherState::new())
+        .manage(winget::WingetState::new())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             check_and_start,
             save_vault_config_and_start,
+            recheck_node,
             get_vault_config,
             update_vault_config,
             write_text_file,
@@ -693,7 +844,9 @@ pub fn run() {
             launchers::redetect_launcher_program,
             launchers::start_launcher,
             launchers::stop_launcher,
-            launchers::launcher_status
+            launchers::launcher_status,
+            winget::winget_install,
+            winget::winget_available
         ])
         .setup(|app| {
             if cfg!(debug_assertions) {
@@ -788,6 +941,49 @@ pub fn run() {
             launchers::shutdown_all(app_handle);
         }
     });
+}
+
+#[cfg(test)]
+mod node_version_tests {
+    use super::{parse_node_major_version, required_node_major};
+
+    #[test]
+    fn parses_standard_v_prefixed_version() {
+        assert_eq!(parse_node_major_version("v22.11.0"), Some(22));
+    }
+
+    #[test]
+    fn parses_a_different_major_and_minor() {
+        assert_eq!(parse_node_major_version("v20.1.0"), Some(20));
+    }
+
+    #[test]
+    fn parses_without_a_leading_v() {
+        assert_eq!(parse_node_major_version("22.1.0"), Some(22));
+    }
+
+    #[test]
+    fn trims_surrounding_whitespace_and_trailing_newline() {
+        assert_eq!(parse_node_major_version("  v22.11.0\n"), Some(22));
+    }
+
+    #[test]
+    fn garbage_input_yields_none() {
+        assert_eq!(parse_node_major_version("not a version"), None);
+        assert_eq!(parse_node_major_version(""), None);
+        assert_eq!(parse_node_major_version("v"), None);
+        assert_eq!(parse_node_major_version("."), None);
+    }
+
+    /// This build's own embedded VAULTCHAT_NODE_MAJOR (via build.rs) must
+    /// itself be parseable back into a sane major — otherwise
+    /// required_node_major()'s `unwrap_or(22)` fallback would be silently
+    /// masking a build.rs bug rather than this test catching it directly.
+    #[test]
+    fn required_node_major_is_a_plausible_value() {
+        let major = required_node_major();
+        assert!((16..=99).contains(&major), "implausible required Node major: {major}");
+    }
 }
 
 #[cfg(test)]

@@ -174,6 +174,40 @@
 				padding: 0.75rem;
 				margin-top: 1rem;
 			}
+			.node-panel {
+				text-align: left;
+			}
+			.node-panel .desc {
+				color: var(--muted);
+				font-size: 0.85rem;
+				margin: 0 0 1rem;
+			}
+			.log-area {
+				background: color-mix(in srgb, var(--fg) 6%, transparent);
+				border: 1px solid var(--border);
+				border-radius: 8px;
+				padding: 0.6rem 0.7rem;
+				font-family:
+					ui-monospace,
+					SFMono-Regular,
+					Consolas,
+					monospace;
+				font-size: 0.78rem;
+				max-height: 160px;
+				overflow-y: auto;
+				white-space: pre-wrap;
+				margin: 0 0 0.75rem;
+			}
+			.link-row {
+				text-align: center;
+				margin-top: 0.6rem;
+				font-size: 0.85rem;
+			}
+			.link-row a {
+				color: var(--accent);
+				cursor: pointer;
+				text-decoration: underline;
+			}
 			.hidden {
 				display: none !important;
 			}
@@ -286,6 +320,14 @@
 				<button id="confirm-btn" class="primary" type="button" disabled>Başlat</button>
 			</div>
 
+			<div id="node-panel" class="node-panel hidden">
+				<h1 id="node-panel-title">Node.js 22 gerekli</h1>
+				<p class="desc" id="node-panel-desc"></p>
+				<div id="node-log" class="log-area hidden"></div>
+				<button id="node-install-btn" class="primary" type="button">winget ile kur</button>
+				<div class="link-row"><a id="node-download-link" href="#">İndirme sayfası</a></div>
+			</div>
+
 			<div id="error-box" class="error hidden"></div>
 		</div>
 
@@ -299,6 +341,20 @@
 			const nameInput = document.getElementById('vault-name');
 			const pickBtn = document.getElementById('pick-btn');
 			const confirmBtn = document.getElementById('confirm-btn');
+			const nodePanelEl = document.getElementById('node-panel');
+			const nodePanelTitleEl = document.getElementById('node-panel-title');
+			const nodePanelDescEl = document.getElementById('node-panel-desc');
+			const nodeLogEl = document.getElementById('node-log');
+			const nodeInstallBtn = document.getElementById('node-install-btn');
+			const nodeDownloadLink = document.getElementById('node-download-link');
+
+			// The Node.js winget package id this splash page is ever allowed to
+			// ask for — must be one of winget.rs's allowlisted ids (it is: see
+			// winget.rs's EXTRA_ALLOWLISTED_PACKAGES). Never derived from
+			// anything the backend hands back, so there's no path from a
+			// NodeProblem payload to an arbitrary winget id reaching invoke().
+			const NODE_WINGET_ID = 'OpenJS.NodeJS.22';
+			const NODE_DOWNLOAD_URL = 'https://nodejs.org/en/download';
 
 			const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -314,9 +370,54 @@
 
 			function showError(message) {
 				loadingEl.classList.add('hidden');
+				setupEl.classList.add('hidden');
+				nodePanelEl.classList.add('hidden');
 				stageEl.classList.add('stopped');
 				errorEl.textContent = message;
 				errorEl.classList.remove('hidden');
+			}
+
+			// Shown instead of the generic error box when check_and_start /
+			// save_vault_config_and_start report a nodeProblem — a missing or
+			// wrong-major Node install, which (unlike most other startup
+			// failures) this page can offer a one-click fix for via winget.
+			async function showNodeProblem(problem) {
+				loadingEl.classList.add('hidden');
+				setupEl.classList.add('hidden');
+				errorEl.classList.add('hidden');
+				stageEl.classList.add('stopped');
+				nodeLogEl.classList.add('hidden');
+				nodeLogEl.textContent = '';
+
+				nodePanelTitleEl.textContent =
+					problem.kind === 'wrong_version'
+						? `Node.js sürümü uyumsuz: bulunan ${problem.found ?? 'bilinmeyen sürüm'}, gereken ${problem.required}`
+						: 'Node.js 22 gerekli';
+				nodePanelDescEl.textContent =
+					'Vault Chat masaüstü sürümünün yerel sunucusu Node.js üzerinde çalışır; farklı bir ana sürüm, ' +
+					'veritabanı modülünün (better-sqlite3) yüklenmesini bozar. Devam etmek için Node.js ' +
+					`${problem.required} sürümü gerekiyor.` +
+					// winget's Node MSI installs into the same Program Files\nodejs
+					// folder, so on a machine that already has another major this
+					// replaces it for every other tool that uses Node too.
+					(problem.kind === 'wrong_version'
+						? ' Uyarı: kurulum, bilgisayardaki mevcut Node.js sürümünün yerini alabilir; ' +
+							'başka projelerde farklı bir sürüm kullanıyorsanız nvm gibi bir sürüm yöneticisi tercih edin.'
+						: '');
+
+				nodeInstallBtn.disabled = false;
+				nodePanelEl.classList.remove('hidden');
+
+				// Only offer the one-click install when winget itself is
+				// reachable — otherwise hide it and leave just the manual
+				// download link, per this stage's spec.
+				let wingetOk = false;
+				try {
+					wingetOk = await window.__TAURI__.core.invoke('winget_available');
+				} catch (err) {
+					wingetOk = false;
+				}
+				nodeInstallBtn.classList.toggle('hidden', !wingetOk);
 			}
 
 			// Belt-and-suspenders: this splash page has no devtools access on a
@@ -359,7 +460,9 @@
 					// animation gets to play out even when check_and_start resolves
 					// almost instantly (fast machines / warm cache).
 					const [result] = await Promise.all([invoke('check_and_start'), delay(900)]);
-					if (result.needsConfig) {
+					if (result.nodeProblem) {
+						await showNodeProblem(result.nodeProblem);
+					} else if (result.needsConfig) {
 						loadingEl.classList.add('hidden');
 						setupEl.classList.remove('hidden');
 					} else {
@@ -392,14 +495,96 @@
 				loadingEl.classList.remove('hidden');
 				loadingStatusEl.textContent = 'Sunucu başlatılıyor...';
 				try {
-					const url = await invoke('save_vault_config_and_start', {
+					const result = await invoke('save_vault_config_and_start', {
 						vaultPath: pathInput.value,
 						vaultName: nameInput.value
 					});
-					navigate(url);
+					if (result.nodeProblem) {
+						await showNodeProblem(result.nodeProblem);
+					} else {
+						navigate(result.url);
+					}
 				} catch (err) {
 					showError(String(err));
 				}
+			});
+
+			nodeDownloadLink.addEventListener('click', async (e) => {
+				e.preventDefault();
+				try {
+					await window.__TAURI__.core.invoke('plugin:opener|open_url', { url: NODE_DOWNLOAD_URL });
+				} catch (err) {
+					showError(String(err));
+				}
+			});
+
+			nodeInstallBtn.addEventListener('click', async () => {
+				const { invoke } = window.__TAURI__.core;
+				nodeInstallBtn.disabled = true;
+				nodeLogEl.textContent = '';
+				nodeLogEl.classList.remove('hidden');
+
+				const appendLine = (line) => {
+					nodeLogEl.textContent += line + '\n';
+					nodeLogEl.scrollTop = nodeLogEl.scrollHeight;
+				};
+
+				// Live progress while winget runs — see winget.rs's
+				// `winget-progress` event (payload: { id, line }, already
+				// cleaned of spinner/progress-bar control characters on the
+				// Rust side). Filtered by id defensively, even though only one
+				// install can be in flight at a time (winget.rs's single-flight
+				// guard), in case a stray event from an unrelated id ever
+				// arrives here.
+				let unlisten = null;
+				try {
+					unlisten = await window.__TAURI__.event.listen('winget-progress', (event) => {
+						if (event.payload && event.payload.id === NODE_WINGET_ID) {
+							appendLine(event.payload.line);
+						}
+					});
+				} catch (err) {
+					// Event listening unavailable for some reason — installation
+					// still proceeds; the log area just stays quiet until done.
+				}
+
+				let installedOk = false;
+				try {
+					await invoke('winget_install', { id: NODE_WINGET_ID });
+					installedOk = true;
+				} catch (err) {
+					appendLine(`Hata: ${String(err)}`);
+				}
+
+				if (unlisten) unlisten();
+
+				if (installedOk) {
+					appendLine('Kurulum tamamlandı, Node.js yeniden kontrol ediliyor...');
+					try {
+						// resolve_node_binary() (lib.rs) checks the fixed
+						// %ProgramFiles%\nodejs\node.exe location FIRST — exactly
+						// where Node's official Windows installer just placed it
+						// — so this finds the fresh install without needing to
+						// relaunch the app for a refreshed PATH.
+						const status = await invoke('recheck_node');
+						if (status.ok) {
+							stageEl.classList.remove('stopped');
+							nodePanelEl.classList.add('hidden');
+							loadingEl.classList.remove('hidden');
+							loadingStatusEl.textContent = 'Sunucu başlatılıyor...';
+							await main();
+							return;
+						}
+						appendLine('Kurulumdan sonra Node.js hâlâ doğrulanamadı.');
+						if (status.nodeProblem) {
+							await showNodeProblem(status.nodeProblem);
+						}
+					} catch (err) {
+						appendLine(`Hata: ${String(err)}`);
+					}
+				}
+
+				nodeInstallBtn.disabled = false;
 			});
 
 			main();
