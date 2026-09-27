@@ -30,6 +30,11 @@ import { dataDir } from '../src/lib/server/env';
 import { getLibrarySettings } from '../src/lib/server/library';
 import { stripForDetection, countLetters } from '../src/lib/server/response-language';
 import { francAll } from 'franc-min';
+import tls from 'node:tls';
+import { installSystemCa } from '../src/lib/server/system-ca';
+
+// Same as the app's hooks.server.ts: antivirus/proxy HTTPS inspection needs the OS roots (was NODE_OPTIONS=--use-system-ca).
+installSystemCa(tls, process.env);
 import { OpenAICompatAdapter } from '../src/lib/server/providers/openai-compat';
 import { secretStore, maskKey } from '../src/lib/server/providers/secrets';
 import { providersPath } from '../src/lib/server/env';
