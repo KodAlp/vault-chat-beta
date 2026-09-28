@@ -908,6 +908,7 @@
 		"SMALLTALK_LEARN_FAILED": "Öğrenilemedi",
 		"LOCAL_ONLY": "Bu sunucuya sadece yerel makineden erişilebilir",
 		"CROSS_SITE_BLOCKED": "Cross-site istekler engellenir",
+		"SESSION_REQUIRED": "Bu oturum artık geçerli değil — lütfen uygulamayı yeniden başlatın",
 		"SKILL_ZIP_TOO_MANY_ENTRIES": "Zip içinde çok fazla dosya var ({max} sınırı)",
 		"SKILL_ZIP_ENTRY_PATH_INVALID": "Geçersiz dosya yolu: {name}",
 		"SKILL_ZIP_TOTAL_TOO_LARGE": "Zip açıldığında toplam boyut sınırı aşılıyor ({limitMb}MB)",

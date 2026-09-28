@@ -7,7 +7,7 @@
 //
 // Also invoked automatically (no args) by the server on startup when
 // data/vaults.json is missing — see src/hooks.server.ts.
-import { existsSync, mkdirSync, renameSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 
@@ -87,9 +87,14 @@ function moveDir(src, dest) {
 	} catch (err) {
 		if ((err.status ?? 0) >= 8) throw err;
 	}
-	execFileSync('powershell', ['-NoProfile', '-Command', `Remove-Item -Path "${src}" -Recurse -Force`], {
-		stdio: 'inherit'
-	});
+	// Güvenlik sertleştirme — this used to shell out to
+	// `powershell -Command "Remove-Item -Path "${src}" ..."`, string-interpolating
+	// a filesystem path straight into a PowerShell command line: a path
+	// containing a `"` or `$(...)` (a legitimate character in a Windows
+	// filename) would break out of the quoted string and run arbitrary
+	// PowerShell. fs.rmSync is the same recursive-force delete with no shell
+	// involved at all, so there's nothing left to inject into.
+	rmSync(src, { recursive: true, force: true });
 }
 
 function moveFileWithWal(srcBase, destBase) {

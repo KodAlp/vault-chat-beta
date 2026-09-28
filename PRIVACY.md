@@ -4,17 +4,28 @@ Bu belge, Vault Chat'in verilerinizle gerçekte ne yaptığını anlatır — ko
 
 ## Özet
 
-Vault Chat **yerel-öncelikli** çalışır: kasanız (notlarınız), sohbet geçmişiniz, arama indeksiniz ve ayarlarınız yalnızca kendi bilgisayarınızdaki `data/` klasöründe tutulur. Hiçbir telemetri, analitik ya da kullanım izleme kodu yoktur (kod tabanında arandı, yok). Uygulamanın kendisi hiçbir sunucuya "eve telefon etmez".
+Vault Chat **yerel-öncelikli** çalışır: kasanız (notlarınız), sohbet geçmişiniz, arama indeksiniz ve ayarlarınız yalnızca kendi bilgisayarınızdaki veri klasöründe tutulur. Hiçbir telemetri, analitik ya da kullanım izleme kodu yoktur (kod tabanında arandı, yok). Uygulamanın kendisi hiçbir sunucuya "eve telefon etmez".
 
 ## Verileriniz nerede duruyor
 
-- **Kasa/kütüphane içeriği** — `data/vaults/<kasa-id>/library/` (ya da eski tek-kasa kurulumda `data/library/`).
-- **Sohbet geçmişi** — `data/chats.db` (SQLite).
-- **Arama indeksi** (embedding + tam metin) — `data/vault-index.db` (SQLite + sqlite-vec).
-- **Sınav/kart/rapor/slayt gibi üretilen çalışma materyalleri** — `data/study.db`.
-- **Ayarlar, sağlayıcı listesi, kasa kaydı** — `data/*.json` (API anahtarları `data/secrets.json`'da, ayrı, şifrelenmiş şekilde tutulur — Tauri masaüstü sürümünde işletim sisteminin kendi anahtar deposu (DPAPI) üzerinden).
+Veri klasörü (aşağıda `<veri>`):
 
-Hiçbiri bu repoya commit'lenmez (`.gitignore`), hiçbiri sizin izniniz olmadan ağ üzerinden başka bir yere gönderilmez.
+- **Masaüstü uygulaması (Windows installer):** `%APPDATA%\app.vaultchat.desktop\`
+- **Kaynak koddan çalıştırma (`npm run dev`):** reponun `data/` klasörü
+
+İçerik:
+
+- **Kasa/kütüphane içeriği** — `<veri>/vaults/<kasa-id>/library/`.
+- **Arama indeksi** (embedding + tam metin) — kasa başına `<veri>/vaults/<kasa-id>/index.db` (SQLite + sqlite-vec).
+- **Sınav/kart/rapor/slayt gibi üretilen çalışma materyalleri** — kasa başına `<veri>/vaults/<kasa-id>/study.db`.
+- **Sohbet geçmişi ve hafıza** — `<veri>/chats.db` (SQLite).
+- **Ayarlar, sağlayıcı listesi, kasa kaydı, başlatıcılar** — `<veri>/*.json`.
+- **API anahtarları** — `<veri>/secrets.json`, ayrı ve şifreli (masaüstü sürümünde Windows DPAPI ile korunan bir anahtarla AES-256-GCM).
+- **Hata günlükleri** — `<veri>/app-log.jsonl`, `<veri>/mcp-log.jsonl`: yalnızca metadata (hata kodu, süre, yol), not/sohbet içeriği değil.
+
+**Şifreleme notu:** API anahtarları dışındaki veriler (notlar, sohbetler, çalışma materyalleri, indeks) diskte **düz metin** durur — bu, notlarınızı zaten düz Markdown olarak tutan yerel-öncelikli bir aracın bilinçli tercihi. Bilgisayarınızı başkalarıyla paylaşıyorsanız disk şifrelemesi (BitLocker) kullanmanız önerilir.
+
+Hiçbiri bu repoya commit'lenmez (`.gitignore`), hiçbiri sizin izniniz olmadan ağ üzerinden başka bir yere gönderilmez. Uygulamanın yerel sunucusu yalnızca `127.0.0.1` adresini dinler; masaüstü sürümünde her açılışta üretilen bir oturum anahtarı olmadan isteklere yanıt vermez.
 
 ## Ağ üzerinden giden veri — tam liste
 
@@ -26,7 +37,11 @@ Uygulama yalnızca şu durumlarda dış ağa istek atar, başka hiçbir zaman:
 4. **Kaynak içe aktarma (link/YouTube)** — siz açıkça bir URL yapıştırıp "içe aktar" dediğinizde, o tek adrese (ve YouTube altyazı API'sine) istek gider. SSRF sertleştirmesi (özel/yerel IP aralıklarına, DNS-rebinding'e karşı engelleme) her istekte devrede. YouTube/harici link içe aktarmadan önce ayrı bir hak-beyanı onay kutusu gösterilir (İ4/İ5).
 5. **MCP (Model Context Protocol) sunucusu** — yalnızca siz Claude Code/Desktop gibi bir MCP istemcisini elle bağlarsanız çalışır; bir kasa varsayılan olarak **kapalı**dır (İ6, `mcpExposed: false`), yalnızca siz Ayarlar'dan açtığınız kasalar dışarıdan görülebilir/okunabilir.
 
-Bunların dışında (docling/marker gibi isteğe bağlı ağır dönüştürücüler dahil) her şey tamamen yerelde çalışır.
+6. **Kurulum sihirbazı (winget)** — Ayarlar'daki kurulum düğmesine basıp çıkan onay penceresini kabul ettiğinizde, Windows'un kendi paket yöneticisi `winget` izin listesindeki paketi (Ollama, Node.js, Python, Pandoc vb.) Microsoft'un winget kaynaklarından indirir. Uygulama sizin adınıza hiçbir veri göndermez; indirme winget'in kendi davranışıdır.
+7. **Yerel sunucu algılama** — Ollama/LM Studio gibi yerel model sunucularının çalışıp çalışmadığını anlamak için yalnızca bu bilgisayardaki `127.0.0.1` portlarına bağlanmayı dener; dış ağa çıkmaz.
+8. **İsteğe bağlı dönüştürücüler (docling/marker)** — kurmayı seçerseniz, ilk çalıştırmada kendi model ağırlıklarını Hugging Face'ten indirir. Belgelerinizin içeriği gönderilmez; dönüştürme yerelde yapılır.
+
+Bunların dışında her şey tamamen yerelde çalışır.
 
 ## Üçüncü taraf içerik ve hak sorumluluğu
 
@@ -40,4 +55,4 @@ Bu bir bireysel/açık kaynak proje — resmi bir "veri koruma görevlisi" yok. 
 
 # Privacy (EN summary)
 
-Vault Chat is **local-first**: your vault content, chat history, search index and settings live only in `data/` on your own machine. There is no telemetry or analytics code anywhere in the codebase. The app only ever talks to the network for: (1) your local Ollama instance, (2) a cloud model provider you explicitly opted into (with its own consent dialog, revocable), (3) the public OpenRouter/models.dev model-listing catalogs (no personal data, 24h cache) when you open a provider's model picker, (4) a URL/YouTube link you explicitly paste to import (SSRF-hardened, with its own copyright-acknowledgment checkbox), and (5) an MCP client you explicitly connect, against a vault you explicitly opened for that. Nothing else ever leaves your machine.
+Vault Chat is **local-first**: your vault content, chat history, search index and settings live only in the data folder on your own machine (`%APPDATA%\app.vaultchat.desktop\` for the desktop app, `data/` when run from source). API keys are encrypted (AES-256-GCM, key protected by Windows DPAPI); everything else — notes, chats, study material, index — is stored as plain text, so use disk encryption on a shared computer. There is no telemetry or analytics code anywhere in the codebase. The app only ever talks to the network for: (1) your local Ollama instance, (2) a cloud model provider you explicitly opted into (with its own consent dialog, revocable), (3) the public OpenRouter/models.dev model-listing catalogs (no personal data, 24h cache) when you open a provider's model picker, (4) a URL/YouTube link you explicitly paste to import (SSRF-hardened, with its own copyright-acknowledgment checkbox), (5) an MCP client you explicitly connect, against a vault you explicitly opened for that, (6) a winget package install you confirm in the setup wizard, (7) probing `127.0.0.1` ports to detect local model servers (never leaves the machine), and (8) optional converters (docling/marker) downloading their own model weights from Hugging Face on first use. Nothing else ever leaves your machine.

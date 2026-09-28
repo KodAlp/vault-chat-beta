@@ -61,7 +61,16 @@ export interface AppLogRecord {
 		| 'memory_error'
 		/** computeReviewBlock (review-mode.ts, F6) failed and fell back to no review block —
 		 * same posture, `message` only. */
-		| 'review_error';
+		| 'review_error'
+		/** Güvenlik sertleştirme — hooks.server.ts's `handle` rejected a request:
+		 * LOCAL_ONLY (bad Host), CROSS_SITE_BLOCKED (bad Origin) or SESSION_REQUIRED
+		 * (missing/wrong vc_session). `code`/`method`/`path`/`origin` only — see
+		 * those fields' own doc comments for exactly what they carry and, just as
+		 * importantly, what they deliberately leave out (no query string, no
+		 * cookie/header values, no token). Rate-capped in hooks.server.ts itself
+		 * (a local port scanner must not be able to grow this file unboundedly
+		 * between size-based rotations — see rotateIfNeeded above). */
+		| 'security_block';
 	chatId?: string;
 	provider?: string;
 	model?: string;
@@ -138,6 +147,24 @@ export interface AppLogRecord {
 	gatePhraseId?: number;
 	gateOverridden?: boolean;
 	smallTalkAction?: 'learned' | 'taught' | 'confirmed_question' | 'error';
+	/** security_block only — the stable error code that was returned
+	 * ('LOCAL_ONLY' | 'CROSS_SITE_BLOCKED' | 'SESSION_REQUIRED'). Kept as a
+	 * loose string (not ErrorCode) for the same reason errorKind is: this
+	 * module doesn't otherwise import from the isomorphic errors registry. */
+	code?: string;
+	/** security_block only — event.request.method. */
+	method?: string;
+	/** security_block only — event.url.pathname ONLY, never the full URL: the
+	 * query string is exactly where a vc_session token or other sensitive
+	 * value would end up if this ever logged it, so it never gets the
+	 * chance. */
+	path?: string;
+	/** security_block only — the request's Origin header, or its Host header
+	 * when there was no Origin (e.g. a plain GET navigation, which browsers
+	 * don't attach an Origin to). Whichever it is names where the request
+	 * SAYS it came from, which is exactly the signal worth keeping for a
+	 * rejected request — never a cookie or header VALUE. */
+	origin?: string;
 	message: string;
 }
 

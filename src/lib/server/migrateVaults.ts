@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, renameSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 
@@ -31,9 +31,17 @@ function moveDir(src: string | undefined, dest: string): void {
 		const status = (err as { status?: number }).status ?? 0;
 		if (status >= 8) throw err;
 	}
-	execFileSync('powershell', ['-NoProfile', '-Command', `Remove-Item -Path "${src}" -Recurse -Force`], {
-		stdio: 'ignore'
-	});
+	// Güvenlik sertleştirme — this used to shell out to
+	// `powershell -Command "Remove-Item -Path "${src}" ..."`, string-interpolating
+	// a filesystem path straight into a PowerShell command line. `src` here is
+	// always DATA_DIR/vaults-registry-derived (never raw user input over HTTP),
+	// but a path containing a `"` or `$(...)` — a legitimate character on
+	// Windows filenames, and reachable if a vault ever lived under a user
+	// profile folder with unusual characters — would have broken out of the
+	// quoted string and run arbitrary PowerShell. fs.rmSync is the same
+	// recursive-force delete with no shell involved at all, so there's nothing
+	// left to inject into.
+	rmSync(src, { recursive: true, force: true });
 }
 
 function moveFileWithWal(srcBase: string, destBase: string): void {

@@ -35,6 +35,20 @@ Bu proje (MIT lisanslı, bkz. `LICENSE`) aşağıdaki açık kaynak bağımlıl�
 | `undici` | MIT |
 | `zod` | MIT |
 
+## Rust (masaüstü kabuğu, `src-tauri/Cargo.toml`)
+
+| Crate | Lisans |
+|---|---|
+| `tauri`, `tauri-build`, `tauri-plugin-dialog`, `tauri-plugin-log`, `tauri-plugin-opener` | Apache-2.0 OR MIT |
+| `serde`, `serde_json`, `log`, `getrandom`, `windows`, `win32job` | MIT OR Apache-2.0 |
+| `tokio` | MIT |
+
+**Geçişli crate'ler (`cargo metadata`, 2026-09-28):** MPL-2.0 lisanslı olanlar `cssparser`, `cssparser-macros`, `selectors`, `dtoa-short` (Tauri'nin HTML işleme zinciri) ve `option-ext`. MPL-2.0 dosya bazlı zayıf copyleft'tir: bu crate'ler değiştirilmeden kullanıldığı sürece uygulamanın kendi kodu için bir yükümlülük doğurmaz. `r-efi` çoklu lisanslıdır (MIT OR Apache-2.0 OR LGPL); MIT seçeneği kullanılır. GPL/AGPL yok.
+
+## Dağıtım notu (installer)
+
+NSIS installer'ı, `dist-server/` altında sidecar'ın üretim `node_modules` klasörünü de taşır. MIT/BSD/ISC lisansları, lisans metninin dağıtımla birlikte verilmesini ister; bu metinler her paketin kendi `node_modules/<paket>/LICENSE` dosyasında installer'la birlikte gelir. Tam liste `npx license-checker --production` ile üretilebilir.
+
 ## Python (`ingest/requirements.txt`)
 
 | Paket | Lisans |
@@ -52,8 +66,10 @@ Yalnızca kullanıcı matematik-yoğun/taranmış PDF dönüştürme için elle 
 
 | Paket | Lisans |
 |---|---|
-| `marker-pdf` | Apache-2.0 |
+| `marker-pdf` | Kod: Apache-2.0 · **Model ağırlıkları: değiştirilmiş AI Pubs Open RAIL-M** (aşağıya bakın) |
 | `docling` | MIT |
+
+**⚠️ marker model ağırlıkları ticari kısıtlıdır.** Ağırlıklar ilk kullanımda indirilir; bu repoda ya da installer'da yoktur. Lisansları araştırma, kişisel kullanım ve yıllık geliri/fonu 5 milyon doların altındaki girişimler için ücretsizdir; bunun ötesindeki ticari kullanım Datalab'dan ayrı lisans gerektirir (bkz. https://github.com/datalab-to/marker). Vault Chat marker'ı varsayılan olarak kurmaz; kurmaya karar veren kullanıcı bu koşulları kabul etmiş olur.
 
 **PyMuPDF kullanılmıyor** — hiçbir yerde import edilmiyor (Aşama 1'de kod incelemesiyle kapatılan bir karar, Aşama 12'de tekrar doğrulandı). Kullanılsaydı AGPL/ticari çift lisans riski olurdu; proje bunu bilinçli olarak dışarıda tutuyor.
 

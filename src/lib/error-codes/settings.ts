@@ -56,10 +56,11 @@ export const SETTINGS_CODES = [
 	// NOT_FOUND{entity:'record'} instead of a dedicated code.
 	'SMALLTALK_LEARN_FAILED',
 
-	// hooks.server.ts's loopback-only / cross-site gate (the app's only
-	// access-control layer — see that file's own doc comments).
+	// hooks.server.ts's loopback-only / cross-site / session-token gates (the
+	// app's only access-control layer — see that file's own doc comments).
 	'LOCAL_ONLY',
 	'CROSS_SITE_BLOCKED',
+	'SESSION_REQUIRED',
 	'SKILL_FILE_UNREADABLE',
 	'SKILL_ZIP_TOO_MANY_ENTRIES',
 	'SKILL_ZIP_ENTRY_PATH_INVALID',

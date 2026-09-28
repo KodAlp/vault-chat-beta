@@ -1,9 +1,9 @@
 [package]
 name = "app"
 version = "0.2.0"
-description = "A Tauri App"
-authors = ["you"]
-license = ""
+description = "Vault Chat — local-first RAG study assistant (desktop shell)"
+authors = ["KodAlp"]
+license = "MIT"
 repository = ""
 edition = "2021"
 rust-version = "1.77.2"

@@ -88,11 +88,16 @@
 			const { text, filename } = await fetchExport(format);
 
 			if (isTauri()) {
-				const { save } = await import('@tauri-apps/plugin-dialog');
-				const path = await save({
-					title: t('ExportMenu.saveDialogTitle'),
-					defaultPath: filename,
-					filters: [{ name: format === 'md' ? 'Markdown' : 'JSON', extensions: [format] }]
+				// save_text_file opens the native save dialog itself, on the Rust
+				// side, and only then writes `text` to whatever path the user
+				// picked there — see src-tauri/src/lib.rs. The JS side never
+				// receives or chooses a filesystem path; it only suggests a
+				// starting filename, which is why there's no
+				// `@tauri-apps/plugin-dialog` import here anymore.
+				const path: string | null = await invoke('save_text_file', {
+					suggestedName: filename,
+					extension: format,
+					contents: text
 				});
 				// null means the user dismissed the picker — an ordinary outcome,
 				// so it gets a neutral notice rather than an error.
@@ -100,8 +105,6 @@
 					showSuccess(t('ExportMenu.saveCancelled'));
 					return;
 				}
-				// write_text_file, not tauri-plugin-fs: see src-tauri/src/lib.rs.
-				await invoke('write_text_file', { path, contents: text });
 				showSuccess(t('ExportMenu.savedTo', { path }));
 				return;
 			}
@@ -109,7 +112,7 @@
 			browserDownload(text, filename);
 			showSuccess(t('ExportMenu.downloaded', { filename }));
 		} catch (err) {
-			// write_text_file (src-tauri/src/lib.rs) rejects with a plain
+			// save_text_file (src-tauri/src/lib.rs) rejects with a plain
 			// String, not a JS Error, so the real OS-level reason must be
 			// read as a string too — otherwise it's silently discarded and
 			// every desktop failure shows the same generic message.

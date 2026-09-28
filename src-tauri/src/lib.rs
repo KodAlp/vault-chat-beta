@@ -20,6 +20,7 @@ use std::time::Duration;
 use tauri::menu::{MenuBuilder, MenuItemBuilder};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Manager, RunEvent};
+use tauri_plugin_dialog::DialogExt;
 use win32job::Job;
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -200,8 +201,23 @@ struct SidecarState {
     /// `spawn_sidecar` recognize "I'm already up" and hand back the same
     /// URL instead of spawning a second node.exe (see the guard at the top
     /// of that function for why a second spawn is actively dangerous, not
-    /// just wasteful).
+    /// just wasteful). Deliberately the PLAIN `http://127.0.0.1:{port}` URL,
+    /// never the one-time `?vc_session=` variant — see spawn_sidecar's
+    /// session-token doc comment for why reusing that query value here
+    /// would be both unnecessary (the webview's cookie already carries the
+    /// session by the time anything reads this again) and wrong (handing
+    /// the same token out on a second navigation defeats "one-time").
     url: Mutex<Option<String>>,
+    /// The remote origin (`http://127.0.0.1:{port}`) a runtime IPC
+    /// capability has already been granted for, if any — see the capability
+    /// registration at the end of `spawn_sidecar`. Guards against
+    /// re-registering the SAME origin if `spawn_sidecar` is ever entered a
+    /// second time while `state.child`/`state.url` still describe a live
+    /// process (shouldn't happen given the early-return guard at the top of
+    /// that function, but this is a cheap, purely defensive second layer —
+    /// `add_capability` itself is additive/idempotent-safe to call again
+    /// with a new origin after a real respawn on a different port).
+    capability_origin: Mutex<Option<String>>,
 }
 
 /// Always-on (not debug_assertions-gated) diagnostic log — a packaged
@@ -346,7 +362,20 @@ fn strip_verbatim_prefix(path: &Path) -> PathBuf {
 /// ERR_CONNECTION_REFUSED even though a TCP-only check had already reported
 /// the port open moments earlier. Issue a real HTTP round-trip instead so
 /// "ready" means the server actually answered a request.
-fn http_probe_ok(port: u16) -> bool {
+///
+/// `session_token`, when given, is sent as an `x-vc-session` header — the
+/// alternative the Node sidecar accepts to its normal session cookie (see
+/// spawn_sidecar's `VC_SESSION_TOKEN` contract). This probe runs BEFORE any
+/// browser navigation has ever happened, so there is no cookie yet; without
+/// this header a sidecar that gates every route (not just app routes) on a
+/// valid session would answer this plain `GET /` with a 401/redirect rather
+/// than the `HTTP/` status line this function is waiting for, and startup
+/// would time out even though the server is actually up. Callers probing
+/// some OTHER local server (launchers.rs, for unrelated local-LLM servers
+/// like Ollama/LM Studio) pass `None` — sending our own sidecar's session
+/// token to a third-party process would make no sense and reveal it
+/// pointlessly.
+fn http_probe_ok(port: u16, session_token: Option<&str>) -> bool {
     use std::io::{Read, Write};
     let Ok(mut stream) = std::net::TcpStream::connect(("127.0.0.1", port)) else {
         return false;
@@ -354,10 +383,12 @@ fn http_probe_ok(port: u16) -> bool {
     if stream.set_read_timeout(Some(Duration::from_millis(500))).is_err() {
         return false;
     }
-    if stream
-        .write_all(b"GET / HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n")
-        .is_err()
-    {
+    let mut request = String::from("GET / HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n");
+    if let Some(token) = session_token {
+        request.push_str(&format!("x-vc-session: {token}\r\n"));
+    }
+    request.push_str("\r\n");
+    if stream.write_all(request.as_bytes()).is_err() {
         return false;
     }
     let mut buf = [0u8; 16];
@@ -378,8 +409,9 @@ fn parse_listening_port(line: &str) -> Option<u16> {
 /// stdout drain thread's `parse_listening_port`), then additionally confirms
 /// it with a real HTTP round-trip — belt and suspenders: the "Listening on"
 /// line alone proves the OS-level bind succeeded, `http_probe_ok` catches
-/// the rarer case of a crash in the instant right after.
-async fn wait_for_sidecar_ready(port_rx: std::sync::mpsc::Receiver<u16>, timeout: Duration) -> Option<u16> {
+/// the rarer case of a crash in the instant right after. `session_token` is
+/// forwarded to `http_probe_ok` — see that function's doc comment.
+async fn wait_for_sidecar_ready(port_rx: std::sync::mpsc::Receiver<u16>, timeout: Duration, session_token: &str) -> Option<u16> {
     let start = std::time::Instant::now();
     let mut port: Option<u16> = None;
     while start.elapsed() < timeout {
@@ -389,7 +421,7 @@ async fn wait_for_sidecar_ready(port_rx: std::sync::mpsc::Receiver<u16>, timeout
             }
         }
         if let Some(p) = port {
-            if http_probe_ok(p) {
+            if http_probe_ok(p, Some(session_token)) {
                 return Some(p);
             }
         }
@@ -470,6 +502,50 @@ fn dpapi_get_or_create_secrets_key(app_data_dir: &Path) -> Result<[u8; 32], Stri
 
 fn hex_encode(bytes: &[u8]) -> String {
     bytes.iter().map(|b| format!("{b:02x}")).collect()
+}
+
+/// The runtime IPC capability granted to the sidecar's own origin (see
+/// `spawn_sidecar`'s registration of it) — pulled out as its own function
+/// so the ACL regression test below (`ipc_acl_tests`) exercises the EXACT
+/// same permission list production code grants, rather than a hand-copied
+/// second list that could silently drift out of sync with it.
+///
+/// `CapabilityBuilder::remote` takes a URLPattern (see tauri-utils's
+/// `RemoteUrlPattern::from_str`); passing the bare origin with no path
+/// segment is sufficient — that parser fills a missing/empty/`"/"`
+/// pathname in with `"*"` itself, so this already matches `/`,
+/// `/?vc_session=...`, `/settings`, etc. without needing an explicit
+/// trailing `/*`.
+///
+/// Least privilege: ONLY the commands pages under `src/` actually call —
+/// NOT `check_and_start` / `save_vault_config_and_start` / `recheck_node`,
+/// which only the splash page (a local origin, covered by
+/// `capabilities/default.json` instead) ever invokes. Every `"allow-*"`
+/// identifier here comes from the app ACL manifest build.rs's
+/// `AppManifest::commands(&[...])` generates — see that file's doc comment
+/// for why an app manifest had to exist at all before any of this could be
+/// granted to a remote origin.
+fn sidecar_remote_capability(url: String) -> tauri::ipc::CapabilityBuilder {
+    tauri::ipc::CapabilityBuilder::new("sidecar-remote")
+        .window("main")
+        .remote(url)
+        .permission("core:default")
+        .permission("core:event:default")
+        .permission("dialog:default")
+        .permission("opener:default")
+        .permission("allow-winget-install")
+        .permission("allow-winget-available")
+        .permission("allow-get-vault-config")
+        .permission("allow-update-vault-config")
+        .permission("allow-save-text-file")
+        .permission("allow-detect-local-servers")
+        .permission("allow-list-launchers")
+        .permission("allow-save-launcher")
+        .permission("allow-pick-launcher-program")
+        .permission("allow-redetect-launcher-program")
+        .permission("allow-start-launcher")
+        .permission("allow-stop-launcher")
+        .permission("allow-launcher-status")
 }
 
 async fn spawn_sidecar(app: &AppHandle, cfg: &VaultConfig) -> Result<SidecarOutcome, String> {
@@ -577,6 +653,30 @@ async fn spawn_sidecar(app: &AppHandle, cfg: &VaultConfig) -> Result<SidecarOutc
         }
     }
 
+    // Per-launch session token: the sidecar is reachable over plain HTTP on
+    // loopback, which any OTHER local process (not just this app) can also
+    // connect to — the token is what lets Node's hooks.server.ts tell "the
+    // window Tauri itself just navigated here" apart from some unrelated
+    // process probing the same port. Generated fresh on every real spawn
+    // (never persisted to disk, unlike the DPAPI secrets key above), handed
+    // to Node via env, and round-tripped back to this window as the `?vc_
+    // session=` query param on the FIRST url it's told to navigate to — see
+    // this function's `url_with_token` below. Node is expected to read that
+    // param, set an HttpOnly cookie from it, and 303-redirect to the
+    // token-free URL so the token itself never lingers in the webview's own
+    // navigation/session-restore history. Unlike the DPAPI key, a failure
+    // here is NOT treated as best-effort: without a token the sidecar would
+    // either have to run unauthenticated (defeats the point) or reject the
+    // very first request this app makes to it, so a getrandom failure aborts
+    // the spawn instead of silently starting an unusable sidecar.
+    let mut session_token_bytes = [0u8; 32];
+    getrandom::getrandom(&mut session_token_bytes).map_err(|e| {
+        let msg = format!("oturum anahtarı üretilemedi: {e}");
+        log_line(app, &msg);
+        msg
+    })?;
+    let session_token = hex_encode(&session_token_bytes);
+
     // DATA_DIR replaces the old LIBRARY_PATH/INDEX_DB_PATH/STUDY_DB_PATH trio
     // (Faz 8) — vaults.ts derives every vault's paths from DATA_DIR/vaults/<id>/
     // itself now, migrating automatically on first launch after the upgrade
@@ -601,6 +701,12 @@ async fn spawn_sidecar(app: &AppHandle, cfg: &VaultConfig) -> Result<SidecarOutc
         .env("SECRETS_PATH", app_data_dir.join("secrets.json"))
         .env("PROVIDERS_PATH", &providers_path)
         .env("SKILLS_DIR", &skills_dir)
+        // See the session-token doc comment above — Node's hooks.server.ts
+        // accepts either this exact value as an `x-vc-session` header (used
+        // by this file's own readiness probe below, before any cookie
+        // exists) or the HttpOnly cookie it sets from the URL's query param
+        // on first navigation.
+        .env("VC_SESSION_TOKEN", &session_token)
         // adapter-node caps request bodies at 512 KB unless told otherwise
         // (its files/handler.js: `parse_as_bytes(env('BODY_SIZE_LIMIT',
         // '512K'))`), so every source upload over that size came back 413
@@ -677,7 +783,7 @@ async fn spawn_sidecar(app: &AppHandle, cfg: &VaultConfig) -> Result<SidecarOutc
         });
     }
 
-    let port = match wait_for_sidecar_ready(port_rx, Duration::from_secs(15)).await {
+    let port = match wait_for_sidecar_ready(port_rx, Duration::from_secs(15), &session_token).await {
         Some(p) => p,
         None => {
             let _ = child.kill();
@@ -712,11 +818,47 @@ async fn spawn_sidecar(app: &AppHandle, cfg: &VaultConfig) -> Result<SidecarOutc
     };
 
     let url = format!("http://127.0.0.1:{port}");
+
+    // Grants IPC access (core commands + the specific custom app commands
+    // listed below, each requiring its own "allow-*" ACL permission — see
+    // build.rs's `AppManifest::commands` doc comment for why that's
+    // required at all) to exactly THIS sidecar's origin, for exactly this
+    // launch. Static `capabilities/default.json` used to carry a
+    // `"remote": {"urls": ["http://127.0.0.1:*"]}}` block instead, which
+    // granted the same IPC surface to ANY page on ANY loopback port — since
+    // `PORT=0` means the sidecar's actual port is only known here, at
+    // runtime, a wildcard was the only way a static capability file could
+    // have covered it at all.
+    {
+        let mut cap_origin = state.capability_origin.lock().unwrap();
+        if cap_origin.as_deref() != Some(url.as_str()) {
+            let capability = sidecar_remote_capability(url.clone());
+            if let Err(e) = app.add_capability(capability) {
+                // Not treated as fatal: the sidecar itself is already up and
+                // working (core commands like window/event/dialog/opener
+                // still come from the LOCAL capability the splash page
+                // loaded with, which is never revoked), this only means the
+                // page won't be able to reach custom app commands over IPC
+                // — logged loudly since that's a real functional gap, not a
+                // security one.
+                log_line(app, &format!("add_capability(sidecar-remote) failed (non-fatal): {e}"));
+            } else {
+                *cap_origin = Some(url.clone());
+            }
+        }
+    }
+
     *state.child.lock().unwrap() = Some(child);
     *state.job.lock().unwrap() = job;
     *state.url.lock().unwrap() = Some(url.clone());
 
-    Ok(SidecarOutcome::Started(url))
+    // The one-time token rides ONLY on the url handed back from an ACTUAL
+    // spawn (this return), never on `state.url` (see that field's doc
+    // comment) — Node reads `?vc_session=`, sets an HttpOnly cookie from it,
+    // and 303-redirects to the token-free `url` so the token itself never
+    // ends up in the webview's navigation history.
+    let url_with_token = format!("{url}/?vc_session={session_token}");
+    Ok(SidecarOutcome::Started(url_with_token))
 }
 
 /// Called once by the splash page on load. Returns immediately if no vault
@@ -800,21 +942,77 @@ async fn update_vault_config(
     )
 }
 
-/// Writes a chat export to a path the user just picked in the dialog plugin's
-/// save() prompt.
+/// Reduces a caller-supplied suggested filename to just its file-name
+/// component — e.g. `"../../secrets/notes.md"` -> `"notes.md"`. Used by
+/// `save_text_file` before ever handing the string to the dialog's
+/// `set_file_name()`: that string only ever seeds the SAVE DIALOG's default
+/// filename box (the user still explicitly confirms/edits it and picks the
+/// real destination folder), so this isn't closing an actual path-escape —
+/// there is none, the dialog owns the destination — but it does stop a
+/// crafted suggestion from pre-filling the box with something that reads as
+/// a path instead of a plain filename. Falls back to a fixed default rather
+/// than an empty string so the dialog never opens with a blank name.
+fn sanitize_suggested_name(name: &str) -> String {
+    Path::new(name)
+        .file_name()
+        .map(|s| s.to_string_lossy().to_string())
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| "export".to_string())
+}
+
+/// Opens the native "Save As" dialog itself (Rust side) and writes `contents`
+/// to whatever path the user picks — replaces the old `write_text_file`,
+/// which took a raw destination `path` string straight from the webview's
+/// `invoke()` call. That command's doc comment assumed the path could only
+/// ever arrive there via the frontend's own `@tauri-apps/plugin-dialog`
+/// `save()` picker, but nothing in the IPC layer enforced that: ANY script
+/// running in the webview (not just ExportMenu's own code) could call
+/// `invoke('write_text_file', { path: 'C:\\Users\\...\\anything', contents })`
+/// directly and overwrite any file the current user can write to. Doing the
+/// picker round-trip in Rust instead (same pattern as launchers.rs's
+/// `pick_launcher_program`/`blocking_pick_file`) means the destination is
+/// always a path the user just chose in a native OS dialog, never a string
+/// the caller supplies — the webview only ever gets to suggest a starting
+/// filename and content, not a destination.
 ///
-/// A dedicated command rather than tauri-plugin-fs: the app only ever needs to
-/// write one text file to one user-chosen path, and the fs plugin would add a
-/// crate plus a permission scope for a capability far wider than that. This
-/// matches the existing get_vault_config/update_vault_config commands, and
-/// std::fs is already in the dependency graph.
+/// `extension` is validated to be exactly `"md"` or `"json"` — the only two
+/// formats ExportMenu ever exports — so the file-type filter itself can't
+/// become another caller-controlled string. `suggested_name` is reduced to
+/// its bare file-name component first (see `sanitize_suggested_name`).
 ///
-/// The path is not validated against a scope on purpose — it comes from the
-/// OS save dialog, so it is a location the user explicitly chose in a native
-/// picker, not something the page can decide on its own.
+/// Returns `Ok(None)` when the user dismisses the dialog without choosing a
+/// location (an ordinary outcome — matches the old
+/// `@tauri-apps/plugin-dialog` `save()` contract the frontend already
+/// handles) and `Ok(Some(path))` with the path actually written to.
 #[tauri::command]
-async fn write_text_file(path: String, contents: String) -> Result<(), String> {
-    std::fs::write(&path, contents).map_err(|e| format!("{path}: {e}"))
+async fn save_text_file(
+    app: AppHandle,
+    suggested_name: String,
+    extension: String,
+    contents: String,
+) -> Result<Option<String>, String> {
+    if extension != "md" && extension != "json" {
+        return Err(format!("Desteklenmeyen dosya uzantısı: {extension}"));
+    }
+    let filter_name = if extension == "md" { "Markdown" } else { "JSON" };
+    let file_name = sanitize_suggested_name(&suggested_name);
+
+    let picked = tauri::async_runtime::spawn_blocking(move || {
+        app.dialog()
+            .file()
+            .set_file_name(&file_name)
+            .add_filter(filter_name, &[extension.as_str()])
+            .blocking_save_file()
+    })
+    .await
+    .map_err(|e| format!("kaydetme görevi başarısız: {e}"))?;
+
+    let Some(file_path) = picked else {
+        return Ok(None);
+    };
+    let path = file_path.into_path().map_err(|e| format!("seçilen yol çözümlenemedi: {e}"))?;
+    std::fs::write(&path, contents).map_err(|e| format!("{}: {e}", path.display()))?;
+    Ok(Some(path.to_string_lossy().to_string()))
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -824,6 +1022,7 @@ pub fn run() {
             child: Mutex::new(None),
             job: Mutex::new(None),
             url: Mutex::new(None),
+            capability_origin: Mutex::new(None),
         })
         .manage(launchers::LauncherState::new())
         .manage(winget::WingetState::new())
@@ -835,7 +1034,7 @@ pub fn run() {
             recheck_node,
             get_vault_config,
             update_vault_config,
-            write_text_file,
+            save_text_file,
             launchers::detect_local_servers,
             launchers::list_launchers,
             launchers::save_launcher,
