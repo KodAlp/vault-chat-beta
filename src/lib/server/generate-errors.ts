@@ -8,6 +8,24 @@
  * handling already makes (see Message.svelte).
  */
 import type { RetrieveResult } from '$lib/types';
+import { AppError } from './app-error';
+
+/**
+ * Aşama 3a — every generate-*.ts calls this right after retrieve(), before
+ * its own `chunks.length === 0` / NoSourcesError check: retrieve() now runs
+ * the FTS keyword fallback whenever embeddingIssue is set, REGARDLESS of
+ * whether the caller asked for it (see retrieve.ts's wantsFallback), which
+ * means `retrieved.chunks` can be non-empty here even though vector search
+ * never ran. The five generators must never cite an un-vetted keyword hit —
+ * NoSourcesError's whole point is "cite only what vector search actually
+ * found" — so this fails loudly with a coded error instead of silently
+ * falling through to the normal chunks.length===0 check (which a non-empty
+ * keyword result would skip past).
+ */
+export function assertNoEmbeddingIssue(result: RetrieveResult): void {
+	if (result.embeddingIssue === 'mismatch') throw new AppError('EMBEDDING_MISMATCH');
+	if (result.embeddingIssue === 'unavailable') throw new AppError('EMBEDDING_UNAVAILABLE');
+}
 
 export class NoSourcesError extends Error {
 	narrowScope: boolean;

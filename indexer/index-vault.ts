@@ -4,13 +4,31 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import matter from 'gray-matter';
 import Database from 'better-sqlite3';
-import { openDb, listKnownFiles, deleteFile, upsertFile, setPrerequisites, type FileRow } from './db';
+import { openDb, listKnownFiles, deleteFile, upsertFile, setPrerequisites, readIndexEmbedding, type FileRow, type IndexEmbeddingMeta } from './db';
 import { buildSlugIndex, findCycles, parsePrerequisites, resolvePrerequisites } from './prerequisites';
 import { hasKeywordIndex } from '../src/lib/server/keyword-search';
 import { chunkMarkdown, normalizeLevel, HARD_MAX_CHARS } from './chunk';
-import { embedDocuments } from './embed';
+import { embedTexts } from '../src/lib/server/embeddings';
+import { DOC_PREFIX } from '../src/lib/server/embed-config';
+import { getEmbeddingConfig } from '../src/lib/server/providers/config-store';
 import { resolveIndexerVault } from './paths';
 import { walkMarkdownFiles as walk } from './walk-md';
+
+/**
+ * Aşama 3a (embedding-bagimsizligi): replaces indexer/embed.ts +
+ * indexer/ollama-client.ts (both deleted) — the CLI now reads the same
+ * providers.json embedding config the app does (config-store.ts, which uses
+ * env.ts's process.env accessors, exactly like this CLI already does for
+ * DATA_DIR/PROVIDERS_PATH — see env.ts's own doc comment) and calls the same
+ * embeddings.ts module the app uses, instead of a second hand-rolled Ollama
+ * client that only ever supported Ollama.
+ */
+async function embedDocuments(texts: string[]): Promise<number[][]> {
+	return embedTexts(
+		texts.map((t) => `${DOC_PREFIX}${t}`),
+		{ purpose: 'document' }
+	);
+}
 
 try {
 	process.loadEnvFile();
@@ -141,11 +159,39 @@ async function main() {
 	// at all only when the DB already exists, and never one that can migrate
 	// anything — same pattern the --prereqs branch above already uses.
 	const dbExistedBeforeThisRun = fs.existsSync(DB_PATH);
+	const embeddingConfig = getEmbeddingConfig();
+	const embeddingMeta: IndexEmbeddingMeta = {
+		provider: embeddingConfig.providerId,
+		model: embeddingConfig.model,
+		dims: embeddingConfig.dims
+	};
 	const db = isDryRun
 		? dbExistedBeforeThisRun
 			? new Database(DB_PATH, { readonly: true })
 			: null
-		: openDb(DB_PATH);
+		: openDb(DB_PATH, embeddingMeta);
+
+	// Aşama 3a: after `--full` this is trivially true (openDb() just recorded
+	// embeddingMeta into a brand-new index_meta). On a plain incremental run
+	// against an EXISTING index built under a different config, refuse the
+	// whole run up front rather than embedding some files under one vector
+	// space and leaving others under another — the fix is `--full`, which
+	// deletes and rebuilds the vec0 table at the new dimension.
+	if (db && !isFull) {
+		const existing = readIndexEmbedding(db);
+		if (
+			existing.provider !== embeddingMeta.provider ||
+			existing.model !== embeddingMeta.model ||
+			existing.dims !== embeddingMeta.dims
+		) {
+			console.error(
+				`Bu vault "${existing.provider}/${existing.model}/${existing.dims}" ile indekslenmiş, ama ayarlanan embedding "${embeddingMeta.provider}/${embeddingMeta.model}/${embeddingMeta.dims}" — önce "npm run index -- --vault ${vault.id} --full" ile yeniden indeksle.`
+			);
+			db.close();
+			process.exit(1);
+		}
+	}
+
 	const known = db ? listKnownFiles(db) : new Map<string, FileRow>();
 	const seen = new Set<string>();
 

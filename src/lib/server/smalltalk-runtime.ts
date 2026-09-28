@@ -1,5 +1,5 @@
-import { embed } from './ollama';
-import { EMBED_MODEL, QUERY_PREFIX } from './embed-config';
+import { embedTexts, embeddingKey } from './embeddings';
+import { QUERY_PREFIX } from './embed-config';
 import { getChatsDb } from './chats-db';
 import { logAppEvent } from './app-log';
 import * as store from './smalltalk-store';
@@ -18,8 +18,9 @@ import type { RetrieveResult } from '$lib/types';
  * never the message text (app-log.ts's content rule).
  */
 
-// Same call as retrieve()'s query embedding: CPU-only so bge-m3 never evicts the chat model.
-const embedFn: store.EmbedFn = (texts) => embed(texts.map((t) => `${QUERY_PREFIX}${t}`), EMBED_MODEL, { cpuOnly: true });
+// Same call as retrieve()'s query embedding: CPU-only (on the Ollama path) so the embedding model
+// never evicts the chat model — see embeddings.ts's EmbedTextsOptions.purpose.
+const embedFn: store.EmbedFn = (texts) => embedTexts(texts.map((t) => `${QUERY_PREFIX}${t}`), { purpose: 'query' });
 
 let readyFor: string | null = null;
 
@@ -38,19 +39,20 @@ export function checkSmallTalk(vector: number[], bestDistance: number | undefine
 	if (!smallTalkGateEnabled(process.env.CHAT_SMALLTALK_GATE)) return null;
 	try {
 		const db = getChatsDb();
-		if (readyFor !== EMBED_MODEL) {
-			if (!store.isReady(db, EMBED_MODEL)) {
+		const key = embeddingKey();
+		if (readyFor !== key) {
+			if (!store.isReady(db, key)) {
 				void store
-					.ensureReady(db, embedFn, EMBED_MODEL)
+					.ensureReady(db, embedFn, key)
 					.then(() => {
-						readyFor = EMBED_MODEL;
+						readyFor = key;
 					})
 					.catch((err) => logError('tohumlama', err));
 				return null;
 			}
-			readyFor = EMBED_MODEL;
+			readyFor = key;
 		}
-		return decideSmallTalk(vector, bestDistance, store.loadPhrases(db, EMBED_MODEL));
+		return decideSmallTalk(vector, bestDistance, store.loadPhrases(db, key));
 	} catch (err) {
 		logError('karar', err);
 		return null;
@@ -62,7 +64,7 @@ export async function learnFromMessage(text: string, source: 'auto' | 'user'): P
 	const clean = text.trim();
 	if (!clean || clean.length > store.MAX_PHRASE_CHARS) return null;
 	const [vec] = await embedFn([clean]);
-	return store.learn(getChatsDb(), EMBED_MODEL, clean, vec, source);
+	return store.learn(getChatsDb(), embeddingKey(), clean, vec, source);
 }
 
 /**
@@ -81,7 +83,7 @@ export function afterSmallTalkGate(gate: NonNullable<RetrieveResult['gate']>, te
 			const blockId = gate.phraseSource && gate.phraseSource !== 'seed' ? gate.phraseId : undefined;
 			void embedFn([text.trim()])
 				.then(([vec]) => {
-					store.confirmQuestion(db, EMBED_MODEL, text, vec, blockId);
+					store.confirmQuestion(db, embeddingKey(), text, vec, blockId);
 					logAppEvent({ kind: 'smalltalk', message: 'soru olarak onaylandı', smallTalkAction: 'confirmed_question', gatePhraseId: blockId });
 				})
 				.catch((err) => logError('soru onayı', err));

@@ -11,7 +11,7 @@ import {
 import { createMindMap } from './study-db';
 import { renderUserSkillsBlock } from './userSkills';
 import type { VaultContext } from './vaults';
-import { NoSourcesError } from './generate-errors';
+import { NoSourcesError, assertNoEmbeddingIssue } from './generate-errors';
 import { AppError } from './app-error';
 import { logAppEvent } from './app-log';
 import { getLibrarySettings } from './library-read';
@@ -199,11 +199,13 @@ export async function generateMindMap(
 	// FILES rather than more chunks of the same one. That is exactly what the
 	// "relate at least two sources" rule in parseAndValidate needs in order to
 	// be satisfiable, and why maps used to collapse onto a single note.
-	const { chunks, narrowScope, reason } = await retrieve(v, query, {
+	const retrieved = await retrieve(v, query, {
 		domains: input.domains,
 		includedPaths: input.includedPaths,
 		k: 16
 	});
+	assertNoEmbeddingIssue(retrieved);
+	const { chunks, narrowScope, reason } = retrieved;
 	if (chunks.length === 0) {
 		throw new NoSourcesError(narrowScope, reason);
 	}

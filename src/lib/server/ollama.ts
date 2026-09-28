@@ -8,6 +8,15 @@ import { ollamaGate } from './providers/ollama-gate';
  * is the only thing left in this file; chat/model-listing moved to
  * providers/ollama.ts.
  *
+ * Aşama 3a (embedding-bagimsizligi): this is now a low-level, Ollama-only
+ * implementation detail called through embeddings.ts's embedTexts() — the
+ * single embed path every other caller (retrieve.ts, incrementalIndex.ts,
+ * smalltalk-runtime.ts, the CLI indexer) uses, which resolves whichever
+ * provider is actually configured (ollama, or an openai-compat endpoint) and
+ * only reaches this function at all when that provider is Ollama. Kept here
+ * rather than folded into embeddings.ts because it has its own focused test
+ * file (ollama.test.ts) and no other Ollama-specific logic belongs there.
+ *
  * Uses env.ts's process.env accessor, not $env/dynamic/private — this is
  * the one module on the MCP server's (mcp/) read path (via retrieve.ts),
  * which runs outside Vite and can't resolve $env. See the mcp-server skill.

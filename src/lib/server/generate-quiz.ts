@@ -15,7 +15,7 @@ import { chunkSupportsApplication } from './chunk-signals';
 import { logAppEvent } from './app-log';
 import { renderUserSkillsBlock } from './userSkills';
 import type { VaultContext } from './vaults';
-import { NoSourcesError } from './generate-errors';
+import { NoSourcesError, assertNoEmbeddingIssue } from './generate-errors';
 import { AppError } from './app-error';
 
 export interface GenerateQuizInput {
@@ -245,6 +245,7 @@ export async function generateQuiz(
 		includedPaths: input.includedPaths,
 		k: QUIZ_CANDIDATES
 	});
+	assertNoEmbeddingIssue(retrieved);
 	if (retrieved.chunks.length === 0) {
 		throw new NoSourcesError(retrieved.narrowScope, retrieved.reason);
 	}

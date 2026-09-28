@@ -1,8 +1,10 @@
 import { existsSync } from 'node:fs';
 import Database from 'better-sqlite3';
 import * as sqliteVec from 'sqlite-vec';
-import { embed } from './ollama';
-import { EMBED_MODEL, QUERY_PREFIX } from './embed-config';
+import { embedTexts } from './embeddings';
+import { QUERY_PREFIX } from './embed-config';
+import { getEmbeddingConfig } from './providers/config-store';
+import { AppError } from './app-error';
 import { selectChunks, type CandidateChunk } from './select-chunks';
 import { getLibrarySettings } from './library-read';
 import type { RetrieveResult } from '$lib/types';
@@ -13,6 +15,13 @@ import { hasKeywordIndex, keywordSearch } from './keyword-search';
 import type { GateDecision } from './smalltalk-gate';
 import { normalizeLevel } from '../../../indexer/chunk';
 import { walkMarkdownFiles } from '../../../indexer/walk-md';
+import { readIndexEmbedding } from '../../../indexer/db';
+
+/** EMBEDDING_* AppError codes embedTexts() throws that retrieve() treats as
+ * "vector search is unavailable right now" rather than a hard failure — see
+ * RetrieveResult.embeddingIssue's doc comment. Any other AppError (or a
+ * non-AppError throw) is a real bug and propagates as before. */
+const EMBEDDING_ISSUE_CODES = new Set(['EMBEDDING_UNAVAILABLE', 'EMBEDDING_CONSENT_REQUIRED', 'EMBEDDING_DIMS_MISMATCH']);
 
 /** True once `npm run index` has been run for this vault at least once —
  * a direct existsSync check, not list_vaults's `total > 0 ||
@@ -149,23 +158,55 @@ export async function retrieve(
 	const k = opts.k ?? DEFAULT_K;
 	const overfetch = opts.includedPaths?.length ? SCOPED_OVERFETCH_FACTOR : OVERFETCH_FACTOR;
 
-	// cpuOnly: see ollama.ts embed() — keeps bge-m3 out of VRAM so it does not
-	// evict the chat model on every turn.
-	const [vector] = await embed([`${QUERY_PREFIX}${query}`], EMBED_MODEL, { cpuOnly: true });
-	const queryBlob = Buffer.from(new Float32Array(vector).buffer);
+	const config = getEmbeddingConfig();
+	const indexMeta = readIndexEmbedding(database);
+	const metaMismatch =
+		indexMeta.provider !== config.providerId || indexMeta.model !== config.model || indexMeta.dims !== config.dims;
 
-	const matches = database
-		.prepare(
-			`SELECT chunk_id, distance FROM vec_chunks WHERE embedding MATCH ? AND k = ? ORDER BY distance`
-		)
-		.all(queryBlob, k * overfetch) as { chunk_id: number; distance: number }[];
+	// Aşama 3a: a config/index mismatch or a failed embed call means vector
+	// search cannot run at all this turn — `vector` stays null and every block
+	// below that needs it (KNN, the small-talk gate) is skipped, falling
+	// through to the keyword-only path near the bottom of this function
+	// regardless of opts.keywordFallback (see its own comment there).
+	let vector: number[] | null = null;
+	let embeddingIssue: RetrieveResult['embeddingIssue'];
+	if (metaMismatch) {
+		embeddingIssue = 'mismatch';
+		logAppEvent({
+			kind: 'embedding_issue',
+			message: `dizin ${indexMeta.provider}/${indexMeta.model}/${indexMeta.dims} ile oluşturulmuş, ayar ${config.providerId}/${config.model}/${config.dims}`,
+			reason: 'mismatch'
+		});
+	} else {
+		try {
+			// cpuOnly: see ollama.ts embed() — keeps the embedding model out of
+			// VRAM on the Ollama path so it does not evict the chat model.
+			[vector] = await embedTexts([`${QUERY_PREFIX}${query}`], { purpose: 'query' });
+		} catch (err) {
+			if (err instanceof AppError && EMBEDDING_ISSUE_CODES.has(err.code)) {
+				embeddingIssue = 'unavailable';
+				logAppEvent({ kind: 'embedding_issue', message: err.message, reason: 'unavailable' });
+			} else {
+				throw err;
+			}
+		}
+	}
+
+	const matches =
+		vector === null
+			? []
+			: (database
+					.prepare(`SELECT chunk_id, distance FROM vec_chunks WHERE embedding MATCH ? AND k = ? ORDER BY distance`)
+					.all(Buffer.from(new Float32Array(vector).buffer), k * overfetch) as { chunk_id: number; distance: number }[]);
 
 	const bestDistance = matches[0]?.distance;
 
 	// Small talk gets no sources at all. This runs on the vector computed above, so it costs a few
-	// dot products, not another model call.
+	// dot products, not another model call. Skipped entirely when there is no vector (embeddingIssue
+	// set): the gate cannot judge a message it has no embedding for, and a message that isn't small
+	// talk must still be able to reach the keyword fallback below, not silently get zero sources.
 	let gateInfo: RetrieveResult['gate'];
-	const verdict = opts.smallTalkGate?.(vector, bestDistance) ?? null;
+	const verdict = vector !== null ? (opts.smallTalkGate?.(vector, bestDistance) ?? null) : null;
 	if (verdict?.smallTalk) {
 		const info = { via: verdict.via, phraseId: verdict.phraseId, phraseSource: verdict.phraseSource, sim: verdict.sim };
 		if (!opts.forceSources) {
@@ -209,16 +250,23 @@ export async function retrieve(
 	const vectorResult: RetrieveResult =
 		matches.length === 0
 			? { chunks: [], narrowScope: false, reason: 'no-embedding-match' }
-			: selectChunks(candidates, { ...opts, excludedPrefixes, k });
+			: selectChunks(candidates, { ...opts, excludedPrefixes, k, distanceThreshold: config.distanceThreshold });
 	vectorResult.bestDistance = bestDistance;
 	if (gateInfo) vectorResult.gate = gateInfo;
+	if (embeddingIssue) vectorResult.embeddingIssue = embeddingIssue;
 
 	// Only "the vector search found nothing usable". 'scope' is deliberately
 	// excluded: it means relevant content exists outside the user's chosen scope,
 	// which the UI answers with "kapsamı genişlet?" — a keyword hit must not
-	// paper over that.
+	// paper over that. `embeddingIssue` forces the fallback regardless of
+	// opts.keywordFallback (Aşama 3a) — vector search genuinely could not run
+	// this turn, which is not a caller opt-in decision the way "try keyword
+	// after an empty vector result" is; every caller (chat AND the five
+	// generate-*.ts) gets a chance at keyword results, and generate-*.ts is
+	// responsible for checking embeddingIssue itself before trusting them
+	// (see RetrieveResult.embeddingIssue's doc comment).
 	const wantsFallback =
-		opts.keywordFallback === true &&
+		(opts.keywordFallback === true || embeddingIssue !== undefined) &&
 		vectorResult.chunks.length === 0 &&
 		(vectorResult.reason === 'filtered' || vectorResult.reason === 'no-embedding-match');
 	if (!wantsFallback || !hasKeywordIndex(database)) return vectorResult;
@@ -238,7 +286,7 @@ export async function retrieve(
 		const c = toCandidate(hit.chunkId, 1, 'keyword');
 		if (c) keywordCandidates.push(c);
 	}
-	const found = selectChunks(keywordCandidates, { ...opts, excludedPrefixes, k });
+	const found = selectChunks(keywordCandidates, { ...opts, excludedPrefixes, k, distanceThreshold: config.distanceThreshold });
 	logAppEvent({
 		kind: 'retrieval_fallback',
 		message: `anahtar kelime yedeği (and): ${hits.length} isabet, ${found.chunks.length} kullanılabilir`,
@@ -247,7 +295,15 @@ export async function retrieve(
 		hits: hits.length,
 		chunks: found.chunks.length
 	});
-	if (found.chunks.length > 0) return { ...found, keyword: true, bestDistance, ...(gateInfo ? { gate: gateInfo } : {}) };
+	if (found.chunks.length > 0) {
+		return {
+			...found,
+			keyword: true,
+			bestDistance,
+			...(gateInfo ? { gate: gateInfo } : {}),
+			...(embeddingIssue ? { embeddingIssue } : {})
+		};
+	}
 	return vectorResult;
 }
 

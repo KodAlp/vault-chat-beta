@@ -2,7 +2,7 @@ import Database from 'better-sqlite3';
 import * as sqliteVec from 'sqlite-vec';
 import path from 'node:path';
 import fs from 'node:fs';
-import { EMBED_DIMS } from '../src/lib/server/embed-config';
+import { EMBED_DIMS, EMBED_MODEL } from '../src/lib/server/embed-config';
 import { ensureColumns } from '../src/lib/server/sqlite-schema';
 
 export interface FileRow {
@@ -24,8 +24,40 @@ export interface ChunkInsert {
 	display_text: string;
 }
 
-/** Opens (or creates) the index DB with WAL on, so the app can read while this writes. */
-export function openDb(dbPath: string): Database.Database {
+/**
+ * Aşama 3a (embedding-bagimsizligi) — which provider/model/dims this
+ * particular index's vectors were built with, recorded in `index_meta` so a
+ * later config change (providers/config-store.ts's embedding block) can be
+ * detected instead of silently comparing incompatible vectors. `provider` is
+ * a provider id from providers.json (e.g. 'ollama'), not a display label.
+ */
+export interface IndexEmbeddingMeta {
+	provider: string;
+	model: string;
+	dims: number;
+}
+
+/** What every index built before this feature existed is assumed to be —
+ * the exact ollama/bge-m3/1024 triple embed-config.ts hardcoded, since that
+ * is genuinely what wrote every such index's vectors. readIndexEmbedding()
+ * below is the only place this is used as a fallback; the raw reader
+ * (readIndexEmbeddingMeta) returns null instead, so a caller that needs to
+ * tell "recorded" from "assumed" apart still can. */
+export const LEGACY_INDEX_EMBEDDING: IndexEmbeddingMeta = { provider: 'ollama', model: EMBED_MODEL, dims: EMBED_DIMS };
+
+/** Opens (or creates) the index DB with WAL on, so the app can read while this
+ * writes. `embedding`, when given, is the config this write is happening
+ * under (getEmbeddingConfig(), src/lib/server/providers/config-store.ts) —
+ * it sizes a FRESHLY created vec_chunks table's dimension and is recorded
+ * into index_meta at that same moment. Omitted (every existing caller before
+ * this feature, and this file's own tests): a brand-new DB gets
+ * LEGACY_INDEX_EMBEDDING, which is also the assumption an ALREADY-existing
+ * index (created before index_meta existed) is read back as — see
+ * readIndexEmbedding(). An index that already has a vec_chunks table is
+ * never resized or re-tagged here regardless of `embedding`: the dimension
+ * is baked into that table's DDL and changing it for real requires deleting
+ * the DB and rebuilding (`npm run index -- --full`), never a silent rewrite. */
+export function openDb(dbPath: string, embedding?: IndexEmbeddingMeta): Database.Database {
 	fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 	const db = new Database(dbPath);
 	db.pragma('journal_mode = WAL');
@@ -62,14 +94,80 @@ export function openDb(dbPath: string): Database.Database {
 	// relevance — silently breaking retrieve.ts's DISTANCE_THRESHOLD (always
 	// calibrated for cosine, ~0.55) so retrieval returned empty for nearly
 	// every query without ever raising an error.
+	//
+	// Aşama 3a: the dimension used to always be EMBED_DIMS (the hardcoded
+	// bge-m3 constant); it is now the caller's configured `embedding.dims`
+	// when given, falling back to EMBED_DIMS for every caller that predates
+	// this feature (this file's own tests, and any openDb() call sites not
+	// yet passing a config). `vecTableExisted` is checked BEFORE this exec —
+	// CREATE ... IF NOT EXISTS is silently a no-op on an already-existing
+	// table, dimension mismatch or not, so this is the one chance to know
+	// whether the table (and therefore index_meta) is being created fresh.
+	const vecTableExisted = db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'vec_chunks'").get() !== undefined;
+	const dims = embedding?.dims ?? EMBED_DIMS;
 	db.exec(`
 		CREATE VIRTUAL TABLE IF NOT EXISTS vec_chunks USING vec0(
 			chunk_id INTEGER PRIMARY KEY,
-			embedding FLOAT[${EMBED_DIMS}] distance_metric=cosine
+			embedding FLOAT[${dims}] distance_metric=cosine
 		);
 	`);
+	db.exec(`
+		CREATE TABLE IF NOT EXISTS index_meta (
+			key TEXT PRIMARY KEY,
+			value TEXT NOT NULL
+		);
+	`);
+	// Only ever written at the moment vec_chunks is FIRST created — a real
+	// mismatch on a table that already existed must be visible to
+	// readIndexEmbedding()'s callers (incrementalIndex.ts's refusal,
+	// retrieve.ts's fallback), never quietly overwritten to match whatever
+	// config happens to be active on this particular open.
+	if (!vecTableExisted) writeIndexEmbeddingMeta(db, embedding ?? LEGACY_INDEX_EMBEDDING);
 	if (ensureFts(db)) ftsEnabled.add(db);
 	return db;
+}
+
+/** Records which provider/model/dims this index's vectors were built with.
+ * Only ever called by openDb() at the moment vec_chunks is first created
+ * (see its doc comment) — exported separately so a test can also call it
+ * directly against a hand-built DB without going through a full openDb(). */
+export function writeIndexEmbeddingMeta(db: Database.Database, embedding: IndexEmbeddingMeta): void {
+	const upsert = db.prepare(
+		'INSERT INTO index_meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value'
+	);
+	upsert.run('embed_provider', embedding.provider);
+	upsert.run('embed_model', embedding.model);
+	upsert.run('embed_dims', String(embedding.dims));
+}
+
+/** Raw read: null when index_meta doesn't exist at all (a read-only handle
+ * on an index built before this feature — that connection can never create
+ * the table itself, so this must degrade gracefully, not throw) or is
+ * present but incomplete. Most callers want readIndexEmbedding() below
+ * instead, which fills in the legacy assumption; this one exists for a
+ * caller that needs to tell "genuinely recorded" apart from "assumed". */
+export function readIndexEmbeddingMeta(db: Database.Database): IndexEmbeddingMeta | null {
+	const hasTable = db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'index_meta'").get() !== undefined;
+	if (!hasTable) return null;
+	const rows = db.prepare('SELECT key, value FROM index_meta').all() as { key: string; value: string }[];
+	const byKey = new Map(rows.map((r) => [r.key, r.value]));
+	const provider = byKey.get('embed_provider');
+	const model = byKey.get('embed_model');
+	const dimsRaw = byKey.get('embed_dims');
+	if (!provider || !model || !dimsRaw) return null;
+	const dims = Number(dimsRaw);
+	return Number.isFinite(dims) ? { provider, model, dims } : null;
+}
+
+/** What every caller outside this file should actually use: the recorded
+ * meta, or LEGACY_INDEX_EMBEDDING when there is none — an index with no
+ * index_meta table/rows was necessarily built before this feature existed,
+ * which means ollama/bge-m3/1024 (see that constant's doc comment), never
+ * "unknown". retrieve.ts calls this on its read-only connection; readonly
+ * SQLite handles can SELECT from a table that already exists but can never
+ * CREATE one, which is exactly why this never tries to. */
+export function readIndexEmbedding(db: Database.Database): IndexEmbeddingMeta {
+	return readIndexEmbeddingMeta(db) ?? LEGACY_INDEX_EMBEDDING;
 }
 
 /** Handles for which the keyword index exists and must be kept in step with

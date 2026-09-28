@@ -24,6 +24,12 @@ import { normalizeLevel } from '../../../indexer/chunk';
  * (see the generators' source_id validation), never invent a path.
  *
  * Changing EMBED_MODEL invalidates this number; re-measure before touching it.
+ *
+ * Aşama 3a: this is now only the FALLBACK — providers/config-store.ts's
+ * embedding.distanceThreshold, when the user has set one, wins (selectChunks'
+ * `opts.distanceThreshold` below). Absent config (the default ollama/bge-m3
+ * pair, or an install that predates this field) keeps using exactly this
+ * measured value, unchanged.
  */
 const DISTANCE_THRESHOLD = 0.6;
 const MAX_CHUNKS_PER_FILE = 3;
@@ -77,15 +83,21 @@ export function selectChunks(
 		includedPaths?: string[];
 		excludedPrefixes?: string[];
 		k?: number;
+		/** providers/config-store.ts's embedding.distanceThreshold — see this
+		 * file's own doc comment on DISTANCE_THRESHOLD above for why an unset
+		 * value falls back to that measured constant instead of some other
+		 * default. */
+		distanceThreshold?: number;
 	} = {}
 ): RetrieveResult {
 	const k = opts.k ?? DEFAULT_K;
+	const threshold = opts.distanceThreshold ?? DISTANCE_THRESHOLD;
 	const perFileCount = new Map<string, number>();
 	const results: RetrievedChunk[] = [];
 	let sawInThresholdOutOfScope = false;
 
 	for (const c of candidates) {
-		if (c.via !== 'keyword' && c.distance > DISTANCE_THRESHOLD) continue;
+		if (c.via !== 'keyword' && c.distance > threshold) continue;
 
 		// Checked before includedPaths and unconditionally (not gated on
 		// includedPaths being set): a hidden folder must disappear from

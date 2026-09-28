@@ -290,6 +290,7 @@
 						assistantMessage.smallTalk = event.smallTalk;
 						assistantMessage.hedges = event.hedges;
 						assistantMessage.nearCtxLimit = event.nearCtxLimit;
+						assistantMessage.embeddingIssue = event.embeddingIssue;
 					}
 					else if (event.type === 'error') {
 						errorMessage = localizeError(event);

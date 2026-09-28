@@ -12,12 +12,22 @@ import {
 	normalizeBaseUrl,
 	addProvider,
 	isCloud,
+	getEmbeddingConfig,
+	setEmbeddingConfig,
 	type ProvidersFile
 } from './config-store';
 import { AppError } from '../app-error';
+import { grantProviderConsent } from '../provider-consent';
+import { EMBED_MODEL, EMBED_DIMS } from '../embed-config';
 
 const BASE: ProvidersFile = {
-	providers: [{ id: 'groq', label: 'Groq', baseUrl: 'https://api.groq.com/openai/v1', kind: 'openai-compat', reasoningDialect: 'none', enabled: true, timeouts: { connectMs: 5000, firstTokenMs: 30000, idleMs: 30000 } }],
+	providers: [
+		{ id: 'groq', label: 'Groq', baseUrl: 'https://api.groq.com/openai/v1', kind: 'openai-compat', reasoningDialect: 'none', enabled: true, timeouts: { connectMs: 5000, firstTokenMs: 30000, idleMs: 30000 } },
+		{ id: 'ollama', label: 'Ollama', baseUrl: 'http://127.0.0.1:11434/v1', kind: 'ollama', reasoningDialect: 'think-tags', enabled: true, timeouts: { connectMs: 5000, firstTokenMs: 120000, idleMs: 30000 } },
+		{ id: 'claude', label: 'Claude', baseUrl: 'https://api.anthropic.com/v1', kind: 'anthropic', reasoningDialect: 'none', enabled: true, timeouts: { connectMs: 5000, firstTokenMs: 30000, idleMs: 30000 } },
+		{ id: 'disabled-compat', label: 'Disabled', baseUrl: 'https://api.example.com/v1', kind: 'openai-compat', reasoningDialect: 'none', enabled: false, timeouts: { connectMs: 5000, firstTokenMs: 30000, idleMs: 30000 } },
+		{ id: 'local-compat', label: 'LM Studio', baseUrl: 'http://127.0.0.1:1234/v1', kind: 'openai-compat', reasoningDialect: 'none', enabled: true, local: true, timeouts: { connectMs: 30000, firstTokenMs: 300000, idleMs: 60000 } }
+	],
 	chains: { chat: ['groq'] }
 };
 
@@ -26,6 +36,9 @@ function useTmpProvidersFile(): void {
 	const p = path.join(dir, 'providers.json');
 	fs.writeFileSync(p, JSON.stringify(BASE, null, 2) + '\n', 'utf-8');
 	process.env.PROVIDERS_PATH = p;
+	// Embedding tests grant/check consent (provider-consent.ts) — a fresh
+	// path per test so one test's grant never leaks into the next.
+	process.env.PROVIDER_CONSENT_PATH = path.join(dir, 'provider-consent.json');
 }
 
 test('updateEnabledModels sets the allow-list and it round-trips through a fresh read', () => {
@@ -217,4 +230,92 @@ test('updatePinnedModels with an empty array is stored as an empty array, not de
 test('updatePinnedModels on an unknown provider id throws', () => {
 	useTmpProvidersFile();
 	assert.throws(() => updatePinnedModels('no-such-provider', ['x']));
+});
+
+// Aşama 3a — getEmbeddingConfig()/setEmbeddingConfig()
+
+test('getEmbeddingConfig defaults to ollama/bge-m3/EMBED_DIMS when providers.json has no embedding block', () => {
+	useTmpProvidersFile();
+	assert.deepEqual(getEmbeddingConfig(), { providerId: 'ollama', model: EMBED_MODEL, dims: EMBED_DIMS });
+});
+
+test('setEmbeddingConfig saves a valid config and getEmbeddingConfig reads it back', () => {
+	useTmpProvidersFile();
+	setEmbeddingConfig({ providerId: 'ollama', model: 'bge-m3', dims: 1024 });
+	assert.deepEqual(getEmbeddingConfig(), { providerId: 'ollama', model: 'bge-m3', dims: 1024 });
+});
+
+test('setEmbeddingConfig stores an explicit distanceThreshold', () => {
+	useTmpProvidersFile();
+	setEmbeddingConfig({ providerId: 'ollama', model: 'bge-m3', dims: 1024, distanceThreshold: 0.5 });
+	assert.equal(getEmbeddingConfig().distanceThreshold, 0.5);
+});
+
+test('setEmbeddingConfig on a local openai-compat provider needs no consent', () => {
+	useTmpProvidersFile();
+	assert.doesNotThrow(() => setEmbeddingConfig({ providerId: 'local-compat', model: 'a-model', dims: 768 }));
+});
+
+test('setEmbeddingConfig on an unknown provider id throws NOT_FOUND', () => {
+	useTmpProvidersFile();
+	assert.throws(() => setEmbeddingConfig({ providerId: 'no-such-provider', model: 'x', dims: 8 }), (err: unknown) => {
+		assert.ok(err instanceof AppError);
+		assert.equal(err.code, 'NOT_FOUND');
+		return true;
+	});
+});
+
+test('setEmbeddingConfig on a disabled provider throws EMBEDDING_PROVIDER_DISABLED', () => {
+	useTmpProvidersFile();
+	assert.throws(() => setEmbeddingConfig({ providerId: 'disabled-compat', model: 'x', dims: 8 }), (err: unknown) => {
+		assert.ok(err instanceof AppError);
+		assert.equal(err.code, 'EMBEDDING_PROVIDER_DISABLED');
+		return true;
+	});
+});
+
+test('setEmbeddingConfig on a kind with no embeddings adapter throws EMBEDDING_PROVIDER_KIND_UNSUPPORTED', () => {
+	useTmpProvidersFile();
+	assert.throws(() => setEmbeddingConfig({ providerId: 'claude', model: 'x', dims: 8 }), (err: unknown) => {
+		assert.ok(err instanceof AppError);
+		assert.equal(err.code, 'EMBEDDING_PROVIDER_KIND_UNSUPPORTED');
+		return true;
+	});
+});
+
+test('setEmbeddingConfig rejects a non-positive-integer dims', () => {
+	useTmpProvidersFile();
+	for (const bad of [0, -1, 1.5]) {
+		assert.throws(() => setEmbeddingConfig({ providerId: 'ollama', model: 'x', dims: bad }), (err: unknown) => {
+			assert.ok(err instanceof AppError);
+			assert.equal(err.code, 'EMBEDDING_DIMS_INVALID');
+			return true;
+		});
+	}
+});
+
+test('setEmbeddingConfig rejects a non-positive distanceThreshold', () => {
+	useTmpProvidersFile();
+	assert.throws(() => setEmbeddingConfig({ providerId: 'ollama', model: 'x', dims: 8, distanceThreshold: 0 }), (err: unknown) => {
+		assert.ok(err instanceof AppError);
+		assert.equal(err.code, 'VALIDATION_INVALID');
+		return true;
+	});
+});
+
+test('setEmbeddingConfig on a cloud provider with no consent throws EMBEDDING_CONSENT_REQUIRED', () => {
+	useTmpProvidersFile();
+	// groq is openai-compat with no `local: true` — isCloud() says it needs consent.
+	assert.throws(() => setEmbeddingConfig({ providerId: 'groq', model: 'a-model', dims: 768, distanceThreshold: undefined }), (err: unknown) => {
+		assert.ok(err instanceof AppError);
+		assert.equal(err.code, 'EMBEDDING_CONSENT_REQUIRED');
+		return true;
+	});
+});
+
+test('setEmbeddingConfig on a cloud provider succeeds once consent is granted', () => {
+	useTmpProvidersFile();
+	grantProviderConsent('groq');
+	assert.doesNotThrow(() => setEmbeddingConfig({ providerId: 'groq', model: 'a-model', dims: 768 }));
+	assert.equal(getEmbeddingConfig().providerId, 'groq');
 });

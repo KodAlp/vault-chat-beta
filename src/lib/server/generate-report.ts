@@ -6,7 +6,7 @@ import { ReportSections, buildReportSectionsJsonSchema } from './report-schema';
 import { createReport, type NewReportSection } from './study-db';
 import { renderUserSkillsBlock } from './userSkills';
 import type { VaultContext } from './vaults';
-import { NoSourcesError } from './generate-errors';
+import { NoSourcesError, assertNoEmbeddingIssue } from './generate-errors';
 import { AppError } from './app-error';
 import type { ReasonKey } from '../errors';
 
@@ -219,11 +219,13 @@ export async function generateReport(
 		}
 	}
 
-	const { chunks, narrowScope, reason } = await retrieve(v, query, {
+	const retrieved = await retrieve(v, query, {
 		domains: input.domains,
 		includedPaths: input.includedPaths,
 		k: 12
 	});
+	assertNoEmbeddingIssue(retrieved);
+	const { chunks, narrowScope, reason } = retrieved;
 	if (chunks.length === 0) {
 		throw new NoSourcesError(narrowScope, reason);
 	}
