@@ -897,6 +897,8 @@
 		"EMBEDDING_DIMS_MISMATCH": "Embedding boyutu beklenenden farklı",
 		"EMBEDDING_UNAVAILABLE": "Embedding sağlayıcısına ulaşılamadı",
 		"EMBEDDING_MISMATCH": "Dizin farklı bir embedding modeliyle oluşturulmuş — yeniden indeksleme gerekiyor",
+		"REINDEX_IN_PROGRESS": "Bu vault zaten yeniden indeksleniyor",
+		"REINDEX_INDEX_LOCKED": "Dizin dosyası başka bir işlem tarafından kilitli (MCP istemcilerini kapatıp tekrar dene) — eski dizin korundu",
 		"VALIDATION_EMPTY_FIELD": "{field} boş olamaz",
 		"SKILL_NAME_INVALID": "Geçersiz skill adı",
 		"SKILL_FRONTMATTER_INVALID": "Skill dosyasının başlık bilgisi (frontmatter) geçersiz",

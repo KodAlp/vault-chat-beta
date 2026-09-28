@@ -23,6 +23,32 @@ import { readIndexEmbedding } from '../../../indexer/db';
  * non-AppError throw) is a real bug and propagates as before. */
 const EMBEDDING_ISSUE_CODES = new Set(['EMBEDDING_UNAVAILABLE', 'EMBEDDING_CONSENT_REQUIRED', 'EMBEDDING_DIMS_MISMATCH']);
 
+/**
+ * Aşama 3b — rate-limits the 'embedding_issue' app-log line. Before this, a
+ * persisting mismatch/outage wrote one line per chat turn for as long as it
+ * lasted — every one identical, burying the one useful signal ("this
+ * started"/"this changed") in noise well before app-log.jsonl's own
+ * size-based rotation ever kicked in.
+ *
+ * Keyed by vault id -> the last signature logged for it (a plain string
+ * identifying the (index meta, config) pair for a mismatch, or the error
+ * code for an 'unavailable'). A genuinely different situation for that
+ * vault — a different mismatch pair, or the reason flipping between
+ * mismatch/unavailable — logs immediately, since the signature changes. The
+ * SAME exact situation logs once per process: if it recovers and then
+ * recurs identically later in the same process's lifetime, that is treated
+ * as "still the same known problem", not a new one worth a fresh line — a
+ * process restart (which clears this Map) is itself a natural point to log
+ * once more if the problem is still there.
+ */
+const lastLoggedEmbeddingIssue = new Map<string, string>();
+
+function logEmbeddingIssueOnce(vaultId: string, signature: string, message: string, reason: 'mismatch' | 'unavailable'): void {
+	if (lastLoggedEmbeddingIssue.get(vaultId) === signature) return;
+	lastLoggedEmbeddingIssue.set(vaultId, signature);
+	logAppEvent({ kind: 'embedding_issue', message, reason });
+}
+
 /** True once `npm run index` has been run for this vault at least once —
  * a direct existsSync check, not list_vaults's `total > 0 ||
  * listDomains().length > 0` heuristic (which cannot tell "never indexed"
@@ -172,11 +198,13 @@ export async function retrieve(
 	let embeddingIssue: RetrieveResult['embeddingIssue'];
 	if (metaMismatch) {
 		embeddingIssue = 'mismatch';
-		logAppEvent({
-			kind: 'embedding_issue',
-			message: `dizin ${indexMeta.provider}/${indexMeta.model}/${indexMeta.dims} ile oluşturulmuş, ayar ${config.providerId}/${config.model}/${config.dims}`,
-			reason: 'mismatch'
-		});
+		const pairSignature = `mismatch:${indexMeta.provider}/${indexMeta.model}/${indexMeta.dims}=>${config.providerId}/${config.model}/${config.dims}`;
+		logEmbeddingIssueOnce(
+			v.id,
+			pairSignature,
+			`dizin ${indexMeta.provider}/${indexMeta.model}/${indexMeta.dims} ile oluşturulmuş, ayar ${config.providerId}/${config.model}/${config.dims}`,
+			'mismatch'
+		);
 	} else {
 		try {
 			// cpuOnly: see ollama.ts embed() — keeps the embedding model out of
@@ -185,7 +213,7 @@ export async function retrieve(
 		} catch (err) {
 			if (err instanceof AppError && EMBEDDING_ISSUE_CODES.has(err.code)) {
 				embeddingIssue = 'unavailable';
-				logAppEvent({ kind: 'embedding_issue', message: err.message, reason: 'unavailable' });
+				logEmbeddingIssueOnce(v.id, `unavailable:${err.code}`, err.message, 'unavailable');
 			} else {
 				throw err;
 			}

@@ -897,6 +897,8 @@
 		"EMBEDDING_DIMS_MISMATCH": "The embedding dimension differs from what was expected",
 		"EMBEDDING_UNAVAILABLE": "Couldn't reach the embedding provider",
 		"EMBEDDING_MISMATCH": "The index was built with a different embedding model — reindexing is required",
+		"REINDEX_IN_PROGRESS": "This vault is already being reindexed",
+		"REINDEX_INDEX_LOCKED": "The index file is locked by another process (close any MCP clients and try again) — the old index was kept",
 		"VALIDATION_EMPTY_FIELD": "{field} can't be empty",
 		"SKILL_NAME_INVALID": "Invalid skill name",
 		"SKILL_FRONTMATTER_INVALID": "The skill file's frontmatter is invalid",
