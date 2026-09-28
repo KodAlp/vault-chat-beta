@@ -14,6 +14,7 @@
 	import { mindmapGeneration, dismissMindMapGeneration, cancelMindMapGeneration } from '$lib/mindmap-generation.svelte';
 	import { slidesGeneration, dismissSlidesGeneration, cancelSlidesGeneration } from '$lib/slides-generation.svelte';
 	import GenerationStatusToast from '$lib/components/GenerationStatusToast.svelte';
+	import ReindexDialog from '$lib/components/ReindexDialog.svelte';
 	import OllamaStatusBanner from '$lib/components/OllamaStatusBanner.svelte';
 	import PythonStatusBanner from '$lib/components/PythonStatusBanner.svelte';
 	import { requestScopeExpand } from '$lib/scope-expand.svelte';
@@ -21,6 +22,18 @@
 	import { t } from '$lib/i18n/index.svelte';
 
 	let { children } = $props();
+
+	// Aşama 3c — one shared reindex dialog for every generation toast's
+	// "Yeniden indeksle" action (EMBEDDING_MISMATCH); each store's status
+	// entry already carries `vaultId`, so this just needs somewhere to open
+	// against.
+	let reindexVaultId = $state<string | null>(null);
+	let reindexOpen = $state(false);
+	function openReindex(vaultId: string | undefined) {
+		if (!vaultId) return;
+		reindexVaultId = vaultId;
+		reindexOpen = true;
+	}
 
 	// $derived, not a plain const — a bare object literal would call t() once
 	// at module/component init and freeze at whatever locale was active then,
@@ -181,6 +194,7 @@
 		onDismiss={() => dismissQuizGeneration(status.id)}
 		onCancel={() => cancelQuizGeneration(status.id)}
 		onExpandScope={requestScopeExpand}
+		onReindex={() => openReindex(status.vaultId)}
 	/>
 {/each}
 
@@ -200,6 +214,7 @@
 		onDismiss={() => dismissCardGeneration(status.id)}
 		onCancel={() => cancelCardGeneration(status.id)}
 		onExpandScope={requestScopeExpand}
+		onReindex={() => openReindex(status.vaultId)}
 	/>
 {/each}
 
@@ -220,6 +235,7 @@
 		onDismiss={() => dismissReportGeneration(status.id)}
 		onCancel={() => cancelReportGeneration(status.id)}
 		onExpandScope={requestScopeExpand}
+		onReindex={() => openReindex(status.vaultId)}
 	/>
 {/each}
 
@@ -240,6 +256,7 @@
 		onDismiss={() => dismissMindMapGeneration(status.id)}
 		onCancel={() => cancelMindMapGeneration(status.id)}
 		onExpandScope={requestScopeExpand}
+		onReindex={() => openReindex(status.vaultId)}
 	/>
 {/each}
 
@@ -260,8 +277,13 @@
 		onDismiss={() => dismissSlidesGeneration(status.id)}
 		onCancel={() => cancelSlidesGeneration(status.id)}
 		onExpandScope={requestScopeExpand}
+		onReindex={() => openReindex(status.vaultId)}
 	/>
 {/each}
+
+{#if reindexVaultId}
+	<ReindexDialog vaultId={reindexVaultId} bind:open={reindexOpen} />
+{/if}
 
 <style>
 	.app-shell {

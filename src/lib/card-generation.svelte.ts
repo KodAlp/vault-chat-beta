@@ -6,7 +6,7 @@ import { readResponseError, localizeError } from './server-error';
 export type CardGenerationStatus =
 	| { id: string; vaultId?: string; phase: 'generating'; stage: string; elapsedMs?: number }
 	| { id: string; vaultId?: string; phase: 'done'; deckId: string }
-	| { id: string; vaultId?: string; phase: 'error'; message: string; narrowScope?: boolean };
+	| { id: string; vaultId?: string; phase: 'error'; message: string; narrowScope?: boolean; embeddingMismatch?: boolean };
 
 /**
  * Module-level $state, not component-local — same reasoning as
@@ -64,7 +64,7 @@ export async function startCardGeneration(body: CardGenerationRequest): Promise<
 			} else if (event.type === 'done') {
 				setStatus({ phase: 'done', deckId: event.deckId });
 			} else if (event.type === 'error') {
-				setStatus({ phase: 'error', message: localizeError(event), narrowScope: event.narrowScope });
+				setStatus({ phase: 'error', message: localizeError(event), narrowScope: event.narrowScope, embeddingMismatch: event.code === 'EMBEDDING_MISMATCH' });
 			}
 		}
 	);

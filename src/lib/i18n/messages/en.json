@@ -49,7 +49,10 @@
 		"taught": "Learned: messages like this will get no sources next time.",
 		"hedgeBadgeTitle": "Hedging phrases: {hedges}",
 		"hedgeBadge": "⚠ {count} hedge phrase",
-		"nearCtxLimit": "This chat is close to the context limit; part of the prompt sent to the model may have been cut, so this answer may have been generated with incomplete context."
+		"nearCtxLimit": "This chat is close to the context limit; part of the prompt sent to the model may have been cut, so this answer may have been generated with incomplete context.",
+		"embeddingMismatch": "The index was built with a different embedding model; this answer was given using keyword search.",
+		"embeddingUnavailable": "Couldn't reach the embedding service; this answer was given using keyword search.",
+		"reindexNow": "Reindex now"
 	},
 
 	"ChatBubble": {
@@ -107,6 +110,7 @@
 		"defaultGeneratingLabel": "Working...",
 		"elapsedSuffix": " · {seconds}s",
 		"expandScope": "Expand scope?",
+		"reindexNow": "Reindex now",
 		"dismiss": "Dismiss",
 		"cancel": "Cancel"
 	},
@@ -590,6 +594,33 @@
 		"removeProvider": "Remove"
 	},
 
+	"EmbeddingSettingsCard": {
+		"title": "Embedding model",
+		"description": "The embedding provider and model vault search uses. Changing it requires rebuilding existing vault indexes.",
+		"loadError": "Couldn't load the embedding config.",
+		"saveFailed": "Couldn't save.",
+		"testFailed": "Couldn't test.",
+		"providerLabel": "Provider",
+		"selectProvider": "Select a provider",
+		"noProviders": "No enabled ollama or openai-compat provider — enable one above first.",
+		"modelLabel": "Model",
+		"modelPlaceholder": "model name",
+		"noOllamaModels": "Couldn't fetch Ollama's installed model list — type the model name by hand.",
+		"dimsLabel": "Dimension (dims)",
+		"testButton": "Test",
+		"testing": "Testing...",
+		"thresholdLabel": "Distance threshold (optional)",
+		"thresholdPlaceholder": "e.g. 0.6",
+		"thresholdUncalibrated": "The threshold was measured for bge-m3; it isn't calibrated for another model.",
+		"cloudWarning": "{provider} is a cloud provider — ALL of your vault's text will be sent to it during indexing. You'll be asked to confirm before saving.",
+		"saved": "Saved.",
+		"reindexNeeded": "The embedding model changed — existing vault indexes are now incompatible. Chat falls back to keyword search until you reindex.",
+		"reindexNow": "Reindex now",
+		"consentTitle": "Send to an external provider?",
+		"consentDescription": "{provider} isn't local; your entire vault's text will be sent to its servers during indexing. Confirming remembers this choice — you won't be asked again.",
+		"consentConfirm": "I agree, send it"
+	},
+
 	"SmallTalkSettingsPage": {
 		"title": "Small-talk phrases",
 		"intro": "Greetings, slang and test messages get no sources. This lists what you taught and what was learned automatically; built-in examples appear only if switched off. Delete anything learned by mistake.",
@@ -688,7 +719,10 @@
 		"deleteConfirmNoChats": "Its library, search index, and chat history (none) will be permanently deleted. This action cannot be undone.",
 		"remove": "Remove",
 		"unindexedBadge": "{count} file(s) unindexed",
-		"unindexedTitle": "This vault has unindexed files — chat and Claude can't see them yet. Run npm run index -- --vault {id} from the repo.",
+		"unindexedTitle": "This vault has unindexed files — chat and Claude can't see them yet. Reindex to fix it.",
+		"embeddingMismatchBadge": "Index out of date",
+		"embeddingMismatchTitle": "This vault's index was built with a different embedding model — chat falls back to keyword search. Reindex to fix it.",
+		"reindex": "Reindex",
 		"mcpExposedLabel": "Open to external AI clients (MCP)",
 		"mcpToggleFailed": "Couldn't change that.",
 		"mcpMigrationTitle": "Vaults are now closed to MCP clients by default",
@@ -696,6 +730,20 @@
 		"mcpMigrationKeepOpen": "Keep them all open",
 		"mcpMigrationCloseAll": "Close them all (recommended)",
 		"mcpMigrationFailed": "Couldn't change that."
+	},
+
+	"ReindexDialog": {
+		"title": "Reindexing vault",
+		"runningDescription": "Every file in this vault is being reprocessed with the current embedding. Chat keeps working from the old index while this runs.",
+		"progressLabel": "Indexing progress",
+		"progressCount": "{done} / {total} files",
+		"starting": "Starting...",
+		"doneSummary": "Done: {files} files, {chunks} chunks, {seconds}s.",
+		"cancelledSummary": "Cancelled — the old index was left as it was.",
+		"stalled": "Indexing seems to be stuck.",
+		"networkError": "Connection error.",
+		"incomplete": "The stream ended unexpectedly.",
+		"retry": "Retry"
 	},
 
 	"CardsStudyPage": {
@@ -898,7 +946,7 @@
 		"EMBEDDING_UNAVAILABLE": "Couldn't reach the embedding provider",
 		"EMBEDDING_MISMATCH": "The index was built with a different embedding model — reindexing is required",
 		"REINDEX_IN_PROGRESS": "This vault is already being reindexed",
-		"REINDEX_INDEX_LOCKED": "The index file is locked by another process (close any MCP clients and try again) — the old index was kept",
+		"REINDEX_INDEX_LOCKED": "The index file is locked by another process — close MCP clients like Claude Desktop/Code and try again. The old index was kept, nothing was lost.",
 		"VALIDATION_EMPTY_FIELD": "{field} can't be empty",
 		"SKILL_NAME_INVALID": "Invalid skill name",
 		"SKILL_FRONTMATTER_INVALID": "The skill file's frontmatter is invalid",

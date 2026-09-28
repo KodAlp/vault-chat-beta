@@ -17,9 +17,14 @@
 				<Badge
 					variant="outline"
 					class="mt-1 w-fit"
-					title={t('VaultsSettingsPage.unindexedTitle', { id: vault.id })}
+					title={t('VaultsSettingsPage.unindexedTitle')}
 				>
 					{t('VaultsSettingsPage.unindexedBadge', { count: vault.unindexedCount })}
+				</Badge>
+			{/if}
+			{#if vault.embeddingMismatch}
+				<Badge variant="outline" class="mt-1 w-fit" title={t('VaultsSettingsPage.embeddingMismatchTitle')}>
+					{t('VaultsSettingsPage.embeddingMismatchBadge')}
 				</Badge>
 			{/if}
 		</Card.Header>

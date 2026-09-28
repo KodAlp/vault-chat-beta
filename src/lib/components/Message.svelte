@@ -15,7 +15,8 @@
 		streaming = false,
 		onExpandScope,
 		onForceSources,
-		onNotRelevant
+		onNotRelevant,
+		onReindex
 	}: {
 		message: ChatMessage;
 		vaultId: string;
@@ -25,6 +26,10 @@
 		onForceSources?: () => void;
 		/** Offered under a sourced answer to a short message: teaches the gate it was small talk. */
 		onNotRelevant?: () => void;
+		/** Aşama 3c — offered when message.embeddingIssue === 'mismatch': opens
+		 * Chat.svelte's ReindexDialog for the current vault. Not offered for
+		 * 'unavailable' — reindexing can't fix a provider that's down. */
+		onReindex?: () => void;
 	} = $props();
 	let html = $state('');
 
@@ -130,6 +135,14 @@
 	{/if}
 	{#if message.role === 'assistant' && message.nearCtxLimit && !streaming}
 		<p class="narrow-scope">{t('Message.nearCtxLimit')}</p>
+	{/if}
+	{#if message.role === 'assistant' && message.embeddingIssue && !streaming}
+		<p class="narrow-scope">
+			{message.embeddingIssue === 'mismatch' ? t('Message.embeddingMismatch') : t('Message.embeddingUnavailable')}
+			{#if message.embeddingIssue === 'mismatch' && onReindex}
+				<Button variant="link" class="h-auto p-0 text-xs" onclick={onReindex}>{t('Message.reindexNow')}</Button>
+			{/if}
+		</p>
 	{/if}
 </div>
 
