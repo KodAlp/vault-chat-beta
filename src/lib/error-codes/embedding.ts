@@ -29,5 +29,15 @@ export const EMBEDDING_CODES = [
 	// current config: vectors would not be comparable, so vector search is
 	// skipped (retrieve) or the write is refused (incrementalIndex) rather
 	// than silently corrupting the index.
-	'EMBEDDING_MISMATCH'
+	'EMBEDDING_MISMATCH',
+
+	// Aşama 3b — reindex.ts / POST /api/vaults/[id]/reindex.
+	// A second reindex (or an incremental write — incrementalIndex.ts checks
+	// the same lock) was attempted for a vault that's already being rebuilt.
+	'REINDEX_IN_PROGRESS',
+	// The rebuild finished, but swapIndexIntoPlace() could not rename the new
+	// index over the old one after retrying — almost always another process
+	// (the MCP server) still has index.db open. The OLD index is guaranteed
+	// intact; the freshly built one was discarded and must be rebuilt.
+	'REINDEX_INDEX_LOCKED'
 ] as const;

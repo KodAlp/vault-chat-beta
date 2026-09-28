@@ -7,6 +7,7 @@ import { embedTexts } from './embeddings';
 import { DOC_PREFIX } from './embed-config';
 import { getEmbeddingConfig } from './providers/config-store';
 import { AppError } from './app-error';
+import { isReindexing } from './reindex';
 import type { VaultContext } from './vaults';
 
 /** Mirrors indexer/index-vault.ts's own batching call — embedTexts() already
@@ -34,6 +35,14 @@ function metaMatches(a: IndexEmbeddingMeta, b: IndexEmbeddingMeta): boolean {
  * waiting for a full `npm run index` pass over the whole library.
  */
 export async function indexLibraryFile(v: VaultContext, absPath: string, relPath: string): Promise<void> {
+	// Aşama 3b: a reindex (POST /api/vaults/[id]/reindex, reindex.ts) builds a
+	// brand-new index.db in a temp file and then swaps it over this vault's
+	// real one — a write landing here mid-rebuild would go into the OLD file
+	// right before it's replaced (silently lost) or race the swap itself.
+	// Refuse outright rather than queue: the user is actively waiting on the
+	// reindex, and a lost upload is worse than having to retry it once done.
+	if (isReindexing(v.id)) throw new AppError('REINDEX_IN_PROGRESS', undefined, 409);
+
 	const raw = fs.readFileSync(absPath, 'utf-8');
 	const { frontmatter, chunks } = chunkMarkdown(raw);
 	if (chunks.length === 0) return;
@@ -49,8 +58,8 @@ export async function indexLibraryFile(v: VaultContext, absPath: string, relPath
 		// would either fail at the SQLite level (dimension mismatch) or,
 		// worse, "succeed" while mixing two incompatible vector spaces in one
 		// table. The user must run a full reindex (`npm run index -- --vault
-		// <id> --full`, or the app's own reindex action once Aşama 3b ships)
-		// before this config can take effect for this vault.
+		// <id> --full`, or the app's own POST /api/vaults/[id]/reindex, Aşama
+		// 3b) before this config can take effect for this vault.
 		const existing = readIndexEmbedding(db);
 		if (!metaMatches(existing, embeddingMeta)) {
 			throw new AppError('EMBEDDING_MISMATCH', {
@@ -84,6 +93,7 @@ export async function indexLibraryFile(v: VaultContext, absPath: string, relPath
 }
 
 export function removeLibraryFileFromIndex(v: VaultContext, relPath: string): void {
+	if (isReindexing(v.id)) throw new AppError('REINDEX_IN_PROGRESS', undefined, 409);
 	const db = openDb(v.indexDbPath);
 	try {
 		deleteFile(db, relPath);
@@ -93,6 +103,7 @@ export function removeLibraryFileFromIndex(v: VaultContext, relPath: string): vo
 }
 
 export function renameLibraryFileInIndex(v: VaultContext, oldRelPath: string, newRelPath: string): void {
+	if (isReindexing(v.id)) throw new AppError('REINDEX_IN_PROGRESS', undefined, 409);
 	const db = openDb(v.indexDbPath);
 	try {
 		renameFileInIndex(db, oldRelPath, newRelPath);

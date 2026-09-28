@@ -574,6 +574,21 @@ export type PythonSetupEvent =
 	| { type: 'done'; ok: boolean }
 	| { type: 'error'; message: string; code?: string; params?: Record<string, string | number> };
 
+/**
+ * Aşama 3b — SSE event shapes streamed by POST /api/vaults/[id]/reindex (a
+ * full, in-process rebuild of that vault's index under the currently
+ * configured embedding — see src/lib/server/reindex.ts). 'cancelled' is
+ * distinct from 'error': a user-requested cancel (DELETE on the same route,
+ * or the client disconnecting) is not a failure, same posture as the chat
+ * route's own AbortError handling.
+ */
+export type ReindexEvent =
+	| { type: 'start'; total: number }
+	| { type: 'progress'; done: number; total: number; path: string }
+	| { type: 'done'; files: number; chunks: number; ms: number }
+	| { type: 'cancelled' }
+	| { type: 'error'; message: string; code?: string; params?: Record<string, string | number> };
+
 /** One entry of GET /api/system/python's `modules` array — one per import
  * name in ingest/requirements.txt (see pythonModules.ts). `name` is the
  * Python import name (e.g. "py_asciimath"), not the PyPI dist name. */
