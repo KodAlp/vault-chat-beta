@@ -4,7 +4,7 @@ import { addProvider, deleteProvider, readProvidersFile, type NewProviderInput }
 import { secretStore, maskKey } from '$lib/server/providers/secrets';
 import { getRateLimitInfo } from '$lib/server/providers/registry';
 import { getLastProviderErrors } from '$lib/server/app-log';
-import { EMBED_MODEL } from '$lib/server/embed-config';
+import { getEmbeddingConfig } from '$lib/server/providers/config-store';
 import type { ProviderStatus } from '$lib/types';
 import { AppError, fail, toCodedError } from '$lib/server/app-error';
 import type { ErrorCode } from '$lib/errors';
@@ -13,13 +13,17 @@ export const GET: RequestHandler = async () => {
 	const { providers } = readProvidersFile();
 	const connectedIds = new Set(await secretStore.list());
 	const lastErrors = getLastProviderErrors();
+	// Aşama 3c — which provider actually does embedding is now a config
+	// choice (GET/PUT /api/embedding), not always 'ollama' — see
+	// mapToStatus's embedModel field below.
+	const embeddingConfig = getEmbeddingConfig();
 
 	const status: ProviderStatus[] = await Promise.all(
 		providers.map(async (p) => {
 			const needsKey = p.kind !== 'ollama';
 			const hasKey = needsKey && connectedIds.has(p.id);
 			const key = hasKey ? await secretStore.get(p.id) : null;
-			return mapToStatus(p, hasKey, key, lastErrors[p.id]);
+			return mapToStatus(p, hasKey, key, lastErrors[p.id], embeddingConfig);
 		})
 	);
 
@@ -38,7 +42,8 @@ function mapToStatus(
 	},
 	hasKey: boolean,
 	key: string | null,
-	lastError: { ts: string; kind: string } | undefined
+	lastError: { ts: string; kind: string } | undefined,
+	embeddingConfig: { providerId: string; model: string }
 ): ProviderStatus {
 	return {
 		id: p.id,
@@ -51,10 +56,11 @@ function mapToStatus(
 		keyStatus: hasKey ? 'connected' : 'none',
 		mask: key ? maskKey(key) : null,
 		defaultModel: p.defaultModel ?? null,
-		// Embedding always runs through Ollama regardless of which provider
-		// handles chat — attached only to the ollama entry, not a per-
-		// provider concept, so every other kind gets null.
-		embedModel: p.kind === 'ollama' ? EMBED_MODEL : null,
+		// Aşama 3c — attached to whichever provider is actually CONFIGURED for
+		// embedding (getEmbeddingConfig().providerId), not hardcoded to
+		// 'ollama': embedding can now be an openai-compat provider instead.
+		// Every other provider gets null.
+		embedModel: p.id === embeddingConfig.providerId ? embeddingConfig.model : null,
 		rateLimit: rateLimitFor(p.id, lastError)
 	};
 }

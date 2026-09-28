@@ -49,7 +49,10 @@
 		"taught": "Öğrenildi: bu tür mesajlara bir dahaki sefere kaynak eklenmeyecek.",
 		"hedgeBadgeTitle": "Belirsizlik ifadeleri: {hedges}",
 		"hedgeBadge": "⚠ {count} belirsizlik ifadesi",
-		"nearCtxLimit": "Bu sohbet bağlam sınırına yaklaştı; modele giden promptun bir kısmı kesilmiş olabilir, bu cevap eksik bağlamla üretilmiş olabilir."
+		"nearCtxLimit": "Bu sohbet bağlam sınırına yaklaştı; modele giden promptun bir kısmı kesilmiş olabilir, bu cevap eksik bağlamla üretilmiş olabilir.",
+		"embeddingMismatch": "İndeks farklı bir embedding modeliyle oluşturulmuş; bu yanıt anahtar kelime aramasıyla verildi.",
+		"embeddingUnavailable": "Embedding servisine ulaşılamadı; bu yanıt anahtar kelime aramasıyla verildi.",
+		"reindexNow": "Yeniden indeksle"
 	},
 
 	"ChatBubble": {
@@ -107,6 +110,7 @@
 		"defaultGeneratingLabel": "İşleniyor...",
 		"elapsedSuffix": " · {seconds}sn",
 		"expandScope": "Kapsamı genişlet?",
+		"reindexNow": "Yeniden indeksle",
 		"dismiss": "Kapat",
 		"cancel": "İptal et"
 	},
@@ -590,6 +594,33 @@
 		"removeProvider": "Kaldır"
 	},
 
+	"EmbeddingSettingsCard": {
+		"title": "Embedding modeli",
+		"description": "Kasa aramasının kullandığı embedding sağlayıcısı ve modeli. Değiştirmek, mevcut vault indekslerinin yeniden oluşturulmasını gerektirir.",
+		"loadError": "Embedding ayarı alınamadı.",
+		"saveFailed": "Kaydedilemedi.",
+		"testFailed": "Test edilemedi.",
+		"providerLabel": "Sağlayıcı",
+		"selectProvider": "Sağlayıcı seç",
+		"noProviders": "Etkin ollama veya openai-compat sağlayıcı yok — önce yukarıdan bir sağlayıcı etkinleştir.",
+		"modelLabel": "Model",
+		"modelPlaceholder": "model adı",
+		"noOllamaModels": "Ollama'da kurulu model listesi alınamadı — model adını elle yaz.",
+		"dimsLabel": "Boyut (dims)",
+		"testButton": "Test et",
+		"testing": "Test ediliyor...",
+		"thresholdLabel": "Mesafe eşiği (opsiyonel)",
+		"thresholdPlaceholder": "örn. 0.6",
+		"thresholdUncalibrated": "Eşik bge-m3 için ölçüldü; başka modelde kalibre edilmedi.",
+		"cloudWarning": "{provider} bulut sağlayıcı — indeksleme sırasında kasandaki TÜM metin bu sağlayıcıya gönderilecek. Kaydetmeden önce onayın istenecek.",
+		"saved": "Kaydedildi.",
+		"reindexNeeded": "Embedding modeli değişti — mevcut vault indeksleri artık uyumsuz. Sohbet anahtar kelime aramasına düşer, yeniden indeksleyene kadar.",
+		"reindexNow": "Şimdi yeniden indeksle",
+		"consentTitle": "Dış sağlayıcıya gönderilsin mi?",
+		"consentDescription": "{provider} yerel değil; kasandaki tüm metin indeksleme sırasında bu sağlayıcının sunucularına gönderilecek. Onayladığında bu seçim hatırlanır, bir daha sorulmaz.",
+		"consentConfirm": "Onaylıyorum, gönder"
+	},
+
 	"SmallTalkSettingsPage": {
 		"title": "Sohbet ifadeleri",
 		"intro": "Selamlaşma, argo ya da deneme mesajlarında kaynak aranmaz. Bu liste senin öğrettiklerini ve otomatik öğrenilenleri gösterir; yerleşik örnekler yalnızca kapatılmışsa görünür. Yanlış öğrenileni silebilirsin.",
@@ -688,7 +719,10 @@
 		"deleteConfirmNoChats": "Kütüphanesi, arama indeksi ve sohbet geçmişi (yok) kalıcı olarak silinecek. Bu işlem geri alınamaz.",
 		"remove": "Kaldır",
 		"unindexedBadge": "{count} dosya indekslenmemiş",
-		"unindexedTitle": "Bu vault'ta indekslenmemiş dosya var — sohbet ve Claude bunları göremez. Kaynak klasöründe npm run index -- --vault {id} çalıştır.",
+		"unindexedTitle": "Bu vault'ta indekslenmemiş dosya var — sohbet ve Claude bunları göremez. Yeniden indeksle ile giderebilirsin.",
+		"embeddingMismatchBadge": "İndeks güncel değil",
+		"embeddingMismatchTitle": "Bu vault'un indeksi farklı bir embedding modeliyle oluşturulmuş — sohbet anahtar kelime aramasına düşer. Yeniden indeksle ile düzelt.",
+		"reindex": "Yeniden indeksle",
 		"mcpExposedLabel": "Dış yapay zekâ istemcilerine aç (MCP)",
 		"mcpToggleFailed": "Değiştirilemedi.",
 		"mcpMigrationTitle": "Vault'lar artık MCP istemcilerine varsayılan olarak kapalı",
@@ -696,6 +730,20 @@
 		"mcpMigrationKeepOpen": "Hepsini açık tut",
 		"mcpMigrationCloseAll": "Hepsini kapat (önerilen)",
 		"mcpMigrationFailed": "Değiştirilemedi."
+	},
+
+	"ReindexDialog": {
+		"title": "Vault yeniden indeksleniyor",
+		"runningDescription": "Bu vault'un tüm dosyaları güncel embedding ile yeniden işleniyor. Sohbet bu sırada eski indeksle çalışmaya devam eder.",
+		"progressLabel": "İndeksleme ilerlemesi",
+		"progressCount": "{done} / {total} dosya",
+		"starting": "Başlatılıyor...",
+		"doneSummary": "Tamamlandı: {files} dosya, {chunks} parça, {seconds} sn.",
+		"cancelledSummary": "İptal edildi — eski indeks olduğu gibi kaldı.",
+		"stalled": "İndeksleme yanıt vermiyor gibi görünüyor.",
+		"networkError": "Bağlantı hatası.",
+		"incomplete": "Akış beklenmedik şekilde sona erdi.",
+		"retry": "Tekrar dene"
 	},
 
 	"CardsStudyPage": {
@@ -898,7 +946,7 @@
 		"EMBEDDING_UNAVAILABLE": "Embedding sağlayıcısına ulaşılamadı",
 		"EMBEDDING_MISMATCH": "Dizin farklı bir embedding modeliyle oluşturulmuş — yeniden indeksleme gerekiyor",
 		"REINDEX_IN_PROGRESS": "Bu vault zaten yeniden indeksleniyor",
-		"REINDEX_INDEX_LOCKED": "Dizin dosyası başka bir işlem tarafından kilitli (MCP istemcilerini kapatıp tekrar dene) — eski dizin korundu",
+		"REINDEX_INDEX_LOCKED": "Dizin dosyası başka bir işlem tarafından kilitli — Claude Desktop/Code gibi MCP istemcilerini kapatıp tekrar dene. Eski dizin korundu, hiçbir şey kaybolmadı.",
 		"VALIDATION_EMPTY_FIELD": "{field} boş olamaz",
 		"SKILL_NAME_INVALID": "Geçersiz skill adı",
 		"SKILL_FRONTMATTER_INVALID": "Skill dosyasının başlık bilgisi (frontmatter) geçersiz",

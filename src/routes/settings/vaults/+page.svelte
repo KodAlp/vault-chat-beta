@@ -7,9 +7,11 @@
 	import { Switch } from '$lib/components/ui/switch';
 	import * as Card from '$lib/components/ui/card';
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
+	import ReindexDialog from '$lib/components/ReindexDialog.svelte';
 	import { t } from '$lib/i18n/index.svelte';
 	import { readResponseError } from '$lib/server-error';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
+	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
 
 	// Stable per-instance id prefix for label/control association.
 	const uid = $props.id();
@@ -26,6 +28,11 @@
 	let activateBusyId = $state<string | null>(null);
 	let deleteTarget = $state<{ vault: VaultRecord; chatCount: number } | null>(null);
 	let deleteError = $state('');
+	// Aşama 3c — the in-app reindex action, replacing "run npm run index"
+	// instructions in this desktop/app context. One dialog for the page;
+	// reindexTargetId picks which vault it's currently aimed at.
+	let reindexTargetId = $state<string | null>(null);
+	let reindexOpen = $state(false);
 	// İ6 (Aşama 8): the one-time "keep existing vaults open to MCP, or close
 	// them?" prompt — see vaults.ts's RegistryFile doc comment. Hidden once
 	// answered, whichever way; never shown again after that.
@@ -252,8 +259,13 @@
 								<Badge variant="secondary">{t('VaultsSettingsPage.active')}</Badge>
 							{/if}
 							{#if vault.unindexedCount > 0}
-								<Badge variant="outline" title={t('VaultsSettingsPage.unindexedTitle', { id: vault.id })}>
+								<Badge variant="outline" title={t('VaultsSettingsPage.unindexedTitle')}>
 									{t('VaultsSettingsPage.unindexedBadge', { count: vault.unindexedCount })}
+								</Badge>
+							{/if}
+							{#if vault.embeddingMismatch}
+								<Badge variant="outline" title={t('VaultsSettingsPage.embeddingMismatchTitle')}>
+									{t('VaultsSettingsPage.embeddingMismatchBadge')}
 								</Badge>
 							{/if}
 						</span>
@@ -261,6 +273,19 @@
 							{#if vault.id !== activeVaultId}
 								<Button size="sm" variant="outline" disabled={activateBusyId === vault.id} onclick={() => activate(vault.id)}>
 									{t('VaultsSettingsPage.activate')}
+								</Button>
+							{/if}
+							{#if vault.unindexedCount > 0 || vault.embeddingMismatch}
+								<Button
+									size="sm"
+									variant="outline"
+									onclick={() => {
+										reindexTargetId = vault.id;
+										reindexOpen = true;
+									}}
+								>
+									<RefreshCwIcon size={13} aria-hidden="true" />
+									{t('VaultsSettingsPage.reindex')}
 								</Button>
 							{/if}
 							<Button size="sm" variant="ghost" onclick={() => startRename(vault)}>
@@ -337,3 +362,7 @@
 		{/if}
 	</AlertDialog.Content>
 </AlertDialog.Root>
+
+{#if reindexTargetId}
+	<ReindexDialog vaultId={reindexTargetId} bind:open={reindexOpen} onDone={loadVaults} />
+{/if}

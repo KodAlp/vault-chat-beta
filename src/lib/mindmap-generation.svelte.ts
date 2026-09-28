@@ -6,7 +6,7 @@ import { readResponseError, localizeError } from './server-error';
 export type MindMapGenerationStatus =
 	| { id: string; vaultId?: string; phase: 'generating'; stage: string; elapsedMs?: number }
 	| { id: string; vaultId?: string; phase: 'done'; mindmapId: string }
-	| { id: string; vaultId?: string; phase: 'error'; message: string; narrowScope?: boolean };
+	| { id: string; vaultId?: string; phase: 'error'; message: string; narrowScope?: boolean; embeddingMismatch?: boolean };
 
 /** Array of entries, not a single `status` slot (Faz 13) — see
  * quiz-generation.svelte.ts's doc comment for the full rationale. */
@@ -51,7 +51,7 @@ export async function startMindMapGeneration(body: MindMapGenerationRequest): Pr
 			} else if (event.type === 'done') {
 				setStatus({ phase: 'done', mindmapId: event.mindmapId });
 			} else if (event.type === 'error') {
-				setStatus({ phase: 'error', message: localizeError(event), narrowScope: event.narrowScope });
+				setStatus({ phase: 'error', message: localizeError(event), narrowScope: event.narrowScope, embeddingMismatch: event.code === 'EMBEDDING_MISMATCH' });
 			}
 		}
 	);

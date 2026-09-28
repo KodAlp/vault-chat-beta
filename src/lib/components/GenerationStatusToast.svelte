@@ -25,12 +25,13 @@
 		onView,
 		onDismiss,
 		onExpandScope,
-		onCancel
+		onCancel,
+		onReindex
 	}: {
 		status:
 			| { phase: 'generating'; stage: string; elapsedMs?: number }
 			| { phase: 'done' }
-			| { phase: 'error'; message: string; narrowScope?: boolean };
+			| { phase: 'error'; message: string; narrowScope?: boolean; embeddingMismatch?: boolean };
 		stageLabels: Record<string, string>;
 		doneMessage: string;
 		errorPrefix: string;
@@ -46,6 +47,11 @@
 		 * Optional so a caller mid-migration can still render this component
 		 * without wiring cancellation yet. */
 		onCancel?: () => void;
+		/** Aşama 3c — only rendered when status.embeddingMismatch is true
+		 * (the server's EMBEDDING_MISMATCH, generate-errors.ts's
+		 * assertNoEmbeddingIssue): opens +layout.svelte's shared ReindexDialog
+		 * for this generation's vault. */
+		onReindex?: () => void;
 	} = $props();
 
 </script>
@@ -120,6 +126,15 @@
 						}}
 					>
 						{t('GenerationStatusToast.expandScope')}
+					</button>
+				{/if}
+				{#if status.embeddingMismatch && onReindex}
+					<button
+						type="button"
+						class="shrink-0 whitespace-nowrap border-none bg-transparent p-0 text-inherit underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-2"
+						onclick={onReindex}
+					>
+						{t('GenerationStatusToast.reindexNow')}
 					</button>
 				{/if}
 				<button

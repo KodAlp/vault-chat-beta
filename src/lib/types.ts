@@ -479,6 +479,36 @@ export interface VaultRecord {
  * this existed, identical to a vault with nothing new (E2). */
 export interface VaultWithStatus extends VaultRecord {
 	unindexedCount: number;
+	/** Aşama 3c — true when this vault's index was built under a different
+	 * embedding provider/model/dims than the one currently configured
+	 * (providers/config-store.ts's `embedding` block, GET /api/embedding).
+	 * Vector search is skipped for this vault (retrieve.ts) until it's
+	 * reindexed — see retrieve.ts's checkEmbeddingMismatch(). False for a
+	 * vault that has never been indexed at all (nothing to compare against;
+	 * that case is unindexedCount's job, not this one's). */
+	embeddingMismatch: boolean;
+	/** Present only when embeddingMismatch is true — what the index actually
+	 * has vs. what's configured now, for the tooltip/banner message. */
+	embeddingMismatchDetail?: {
+		indexProvider: string;
+		indexModel: string;
+		indexDims: number;
+		configProvider: string;
+		configModel: string;
+		configDims: number;
+	};
+}
+
+/**
+ * Aşama 3c — client-facing mirror of providers/config-store.ts's
+ * EmbeddingConfig (server-only module, not importable from client code) —
+ * the shape GET/PUT /api/embedding exchange.
+ */
+export interface EmbeddingConfig {
+	providerId: string;
+	model: string;
+	dims: number;
+	distanceThreshold?: number;
 }
 
 export interface LibraryNode {
@@ -671,13 +701,15 @@ export interface ProviderStatus {
 	 * unset, so this provider gets skipped rather than asked for a wrong
 	 * model on that path. */
 	defaultModel: string | null;
-	/** Only set on the 'ollama' entry — embedding always runs through Ollama
-	 * regardless of which provider handles chat, so this isn't a per-
-	 * provider concept. Sourced from embed-config.ts's EMBED_MODEL so a
-	 * client-side "is the required model pulled?" check never hardcodes a
-	 * model name that could drift from the real one (see
-	 * KURULUM-REHBERI.md's nomic-embed-text/bge-m3 mixup this is meant to
-	 * prevent from recurring). */
+	/** Aşama 3c — set on whichever provider is actually CONFIGURED for
+	 * embedding right now (GET /api/embedding, providers/config-store.ts's
+	 * `embedding` block), not hardcoded to 'ollama' any more: embedding can
+	 * be a local/cloud openai-compat provider instead. Every other provider
+	 * gets null. Still what OllamaStatusBanner's "is the required model
+	 * pulled?" check reads when embedding happens to be on Ollama — never
+	 * hardcodes a model name that could drift from the real one (see
+	 * KURULUM-REHBERI.md's nomic-embed-text/bge-m3 mixup this originally
+	 * existed to prevent). */
 	embedModel: string | null;
 	/** 'live' = read straight off this provider's own rate-limit response
 	 * headers (Groq/Mistral send these on every response — see

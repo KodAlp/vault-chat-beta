@@ -1,6 +1,6 @@
 import { redirect } from '@sveltejs/kit';
 import { listVaults, getActiveVaultId, contextFor } from '$lib/server/vaults';
-import { countUnindexedFiles } from '$lib/server/retrieve';
+import { countUnindexedFiles, checkEmbeddingMismatch } from '$lib/server/retrieve';
 import type { PageServerLoad } from './$types';
 
 /**
@@ -25,5 +25,11 @@ export const load: PageServerLoad = async ({ url }) => {
 
 	// unindexedCount, not stored on VaultRecord (see api/vaults/+server.ts's
 	// doc comment) — the vault picker's cards show it via VaultCard.svelte.
-	return { vaults: vaults.map((v) => ({ ...v, unindexedCount: countUnindexedFiles(contextFor(v)) })) };
+	// embeddingMismatch (Aşama 3c) is the same kind of computed status.
+	return {
+		vaults: vaults.map((v) => {
+			const ctx = contextFor(v);
+			return { ...v, unindexedCount: countUnindexedFiles(ctx), embeddingMismatch: checkEmbeddingMismatch(ctx).mismatch };
+		})
+	};
 };

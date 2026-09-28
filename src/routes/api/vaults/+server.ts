@@ -1,9 +1,10 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { listVaults, createVault, getActiveVaultId, contextFor, needsMcpMigrationPrompt } from '$lib/server/vaults';
-import { countUnindexedFiles } from '$lib/server/retrieve';
+import { countUnindexedFiles, checkEmbeddingMismatch } from '$lib/server/retrieve';
 import { AppError, fail, toCodedError } from '$lib/server/app-error';
 import type { ErrorCode } from '$lib/errors';
+import type { VaultWithStatus } from '$lib/types';
 
 /**
  * unindexedCount is computed here, not stored on VaultRecord — that type is
@@ -13,9 +14,35 @@ import type { ErrorCode } from '$lib/errors';
  * without a following `npm run index` looked, from the app's UI, identical
  * to a vault with nothing new — VaultCard.svelte's own comment called this
  * "out of scope" before this field existed anywhere on the backend.
+ *
+ * Aşama 3c — `embeddingMismatch` is the same kind of computed, non-persisted
+ * status: whether this vault's index was built under a different embedding
+ * than what's currently configured (checkEmbeddingMismatch, retrieve.ts).
+ * `embeddingMismatchDetail` is only attached when true, so the common case
+ * costs nothing extra on the wire.
  */
 export const GET: RequestHandler = async () => {
-	const vaults = listVaults().map((v) => ({ ...v, unindexedCount: countUnindexedFiles(contextFor(v)) }));
+	const vaults: VaultWithStatus[] = listVaults().map((v) => {
+		const ctx = contextFor(v);
+		const embedding = checkEmbeddingMismatch(ctx);
+		return {
+			...v,
+			unindexedCount: countUnindexedFiles(ctx),
+			embeddingMismatch: embedding.mismatch,
+			...(embedding.mismatch && embedding.index
+				? {
+						embeddingMismatchDetail: {
+							indexProvider: embedding.index.provider,
+							indexModel: embedding.index.model,
+							indexDims: embedding.index.dims,
+							configProvider: embedding.config.provider,
+							configModel: embedding.config.model,
+							configDims: embedding.config.dims
+						}
+					}
+				: {})
+		};
+	});
 	// İ6: whether the one-time "keep existing vaults open to MCP, or close
 	// them?" prompt still needs answering — see vaults.ts's RegistryFile doc
 	// comment for why this can't just silently default.

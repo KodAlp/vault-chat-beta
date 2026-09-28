@@ -18,6 +18,7 @@
 	import PlusIcon from '@lucide/svelte/icons/plus';
 	import TrashIcon from '@lucide/svelte/icons/trash';
 	import { Label } from '$lib/components/ui/label';
+	import EmbeddingSettingsCard from '$lib/components/EmbeddingSettingsCard.svelte';
 	import { t, i18n } from '$lib/i18n/index.svelte';
 	import { relativeTime } from '$lib/relative-time';
 	import { readResponseError } from '$lib/server-error';
@@ -835,6 +836,12 @@
 			{/each}
 		</div>
 	</section>
+
+	<!-- Aşama 3c — depends on the provider list above (its own provider
+	     select is "enabled ollama/openai-compat providers" from `providers`),
+	     so it sits right after that section rather than before it or on a
+	     separate page. See the component's own doc comment. -->
+	<EmbeddingSettingsCard {providers} />
 
 	{#if tauri && unclaimedLocalServers.length > 0}
 		<section class="mb-8">

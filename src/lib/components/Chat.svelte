@@ -4,6 +4,7 @@
 	import Message from './Message.svelte';
 	import ScopeIndicator from './ScopeIndicator.svelte';
 	import ModelPickerRow from './ModelPickerRow.svelte';
+	import ReindexDialog from './ReindexDialog.svelte';
 	import { settings } from '$lib/settings.svelte';
 	import { parseSelectionKey } from '$lib/model-selection';
 	import { t } from '$lib/i18n/index.svelte';
@@ -39,6 +40,11 @@
 	const STICK_THRESHOLD_PX = 80;
 
 	let messages = $state<ChatMessage[]>([]);
+	// Aşama 3c — opened by a message's "Yeniden indeksle" action (embeddingIssue
+	// === 'mismatch', see Message.svelte); one dialog instance for the whole
+	// chat rather than one per message, since only one reindex can run at a
+	// time for this vault anyway (reindex.ts's per-vault lock).
+	let reindexDialogOpen = $state(false);
 	let input = $state('');
 	let thinkMode = $state(false);
 	let isStreaming = $state(false);
@@ -486,6 +492,7 @@
 					{onExpandScope}
 					onForceSources={message.smallTalk ? () => retryWithSources(i) : undefined}
 					onNotRelevant={message.sources?.length && canTeach(i) ? () => teachNotRelevant(i) : undefined}
+					onReindex={message.embeddingIssue === 'mismatch' ? () => (reindexDialogOpen = true) : undefined}
 				/>
 			{/each}
 		</div>
@@ -534,6 +541,8 @@
 		{/if}
 	</footer>
 </div>
+
+<ReindexDialog vaultId={vaultId} bind:open={reindexDialogOpen} />
 
 <style>
 	.chat {

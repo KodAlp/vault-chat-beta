@@ -136,6 +136,34 @@ export function closeVaultIndexDb(vaultId: string): void {
 	dbCache.delete(vaultId);
 }
 
+export interface EmbeddingMismatchInfo {
+	mismatch: boolean;
+	/** Absent when the vault has never been indexed at all — there is
+	 * nothing recorded to compare the config against yet (unindexedCount is
+	 * the signal for that state, not this). */
+	index?: { provider: string; model: string; dims: number };
+	config: { provider: string; model: string; dims: number };
+}
+
+/**
+ * Aşama 3c — GET /api/vaults' per-vault `embeddingMismatch` field reads
+ * this: same comparison retrieve() itself makes (index_meta vs
+ * getEmbeddingConfig()) on the same cached read-only connection getDb()
+ * already maintains, so checking status for every vault on the vaults page
+ * costs no extra file handles or queries beyond what retrieve() would touch
+ * anyway on that vault's next chat turn.
+ */
+export function checkEmbeddingMismatch(v: VaultContext): EmbeddingMismatchInfo {
+	const config = getEmbeddingConfig();
+	const configInfo = { provider: config.providerId, model: config.model, dims: config.dims };
+	const database = getDb(v);
+	if (!database) return { mismatch: false, config: configInfo };
+	const indexMeta = readIndexEmbedding(database);
+	const mismatch =
+		indexMeta.provider !== config.providerId || indexMeta.model !== config.model || indexMeta.dims !== config.dims;
+	return { mismatch, index: indexMeta, config: configInfo };
+}
+
 interface ChunkRow {
 	id: number;
 	heading_path: string;

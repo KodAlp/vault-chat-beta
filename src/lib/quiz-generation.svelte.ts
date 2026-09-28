@@ -6,7 +6,7 @@ import { readResponseError, localizeError } from './server-error';
 export type QuizGenerationStatus =
 	| { id: string; vaultId?: string; phase: 'generating'; stage: string; elapsedMs?: number }
 	| { id: string; vaultId?: string; phase: 'done'; quizId: string; requested?: number; delivered?: number }
-	| { id: string; vaultId?: string; phase: 'error'; message: string; narrowScope?: boolean };
+	| { id: string; vaultId?: string; phase: 'error'; message: string; narrowScope?: boolean; embeddingMismatch?: boolean };
 
 /**
  * Module-level $state, not component-local — generation must survive the
@@ -73,7 +73,7 @@ export async function startQuizGeneration(body: QuizGenerationRequest): Promise<
 			} else if (event.type === 'done') {
 				setStatus({ phase: 'done', quizId: event.quizId, requested: event.requested, delivered: event.delivered });
 			} else if (event.type === 'error') {
-				setStatus({ phase: 'error', message: localizeError(event), narrowScope: event.narrowScope });
+				setStatus({ phase: 'error', message: localizeError(event), narrowScope: event.narrowScope, embeddingMismatch: event.code === 'EMBEDDING_MISMATCH' });
 			}
 		}
 	);
