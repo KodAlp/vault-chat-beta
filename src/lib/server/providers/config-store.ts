@@ -1,6 +1,8 @@
 import fs from 'node:fs';
 import { providersPath } from '../env';
 import { AppError } from '../app-error';
+import { EMBED_MODEL, EMBED_DIMS } from '../embed-config';
+import { isProviderConsented } from '../provider-consent';
 
 /**
  * F14-4 — providers.json is now written more often (a checkbox toggle in the model-management UI writes on
@@ -77,9 +79,53 @@ export function isCloud(entry: Pick<ProviderConfigEntry, 'kind' | 'local'>): boo
 	return entry.kind !== 'ollama' && !entry.local;
 }
 
+/**
+ * Aşama 3a (embedding-bagimsizligi) — which provider/model builds the vault
+ * index and embeds queries, now a config choice instead of the hardcoded
+ * ollama/bge-m3 pair in embed-config.ts. Absent from providers.json entirely
+ * means "never configured" — getEmbeddingConfig() below is the only place
+ * that fills in the default, so every other reader (embeddings.ts,
+ * retrieve.ts, incrementalIndex.ts, the CLI indexer) sees a concrete value
+ * and never has to know what the fallback is.
+ *
+ * `dims` is stored explicitly rather than derived from a model-name lookup
+ * table: an openai-compat endpoint's dimension isn't knowable from its model
+ * id alone (unlike bge-m3, a cloud embedding model's dimension is a fact
+ * about that specific deployment) — measureEmbeddingDims() (embeddings.ts)
+ * is how the settings UI is meant to fill this in via one real embed call,
+ * not a guess.
+ *
+ * `distanceThreshold` is optional on purpose: absent means "use
+ * select-chunks.ts's own DISTANCE_THRESHOLD constant", which is the value
+ * actually measured against bge-m3's real cosine-distance distribution (see
+ * that file's doc comment) — a config written before this field existed, or
+ * one that never touched it, keeps using exactly that measurement instead of
+ * silently adopting some other default that was never verified against this
+ * vault's corpus.
+ */
+export interface EmbeddingConfig {
+	providerId: string;
+	model: string;
+	dims: number;
+	distanceThreshold?: number;
+}
+
+/** getEmbeddingConfig()'s fallback when providers.json has no `embedding`
+ * block at all — the exact pair embed-config.ts hardcoded before this
+ * feature existed, so an upgraded install keeps indexing/retrieving
+ * identically until the user explicitly changes it in settings. */
+const DEFAULT_EMBEDDING_CONFIG: EmbeddingConfig = { providerId: 'ollama', model: EMBED_MODEL, dims: EMBED_DIMS };
+
+/** Provider kinds embeddings.ts actually knows how to call — 'anthropic' and
+ * 'azure-openai' have no embeddings adapter in this phase (see the plan's
+ * scope note); validating this here, not just in embeddings.ts, means a bad
+ * choice is rejected at save time instead of failing every retrieval later. */
+const EMBEDDING_CAPABLE_KINDS: ReadonlySet<ProviderConfigEntry['kind']> = new Set(['ollama', 'openai-compat']);
+
 export interface ProvidersFile {
 	providers: ProviderConfigEntry[];
 	chains: Record<string, string[]>;
+	embedding?: EmbeddingConfig;
 }
 
 function readFile(): ProvidersFile {
@@ -202,6 +248,54 @@ export function updateProviderLocal(id: string, local: boolean): void {
 export function updateChain(taskType: string, providerIds: string[]): void {
 	const data = readFile();
 	data.chains[taskType] = providerIds;
+	writeFile(data);
+}
+
+/** The embedding config in effect right now — DEFAULT_EMBEDDING_CONFIG when
+ * providers.json has never set one. Every caller (embeddings.ts, retrieve.ts,
+ * incrementalIndex.ts, the CLI indexer, ollama-gate.ts's resident-model set)
+ * reads through this rather than checking for the field's presence itself. */
+export function getEmbeddingConfig(): EmbeddingConfig {
+	return readFile().embedding ?? DEFAULT_EMBEDDING_CONFIG;
+}
+
+/**
+ * Validates before writing, unlike updateEnabledModels/updatePinnedModels
+ * (which trust the settings UI's own input restrictions) — a bad embedding
+ * config doesn't just look wrong in a list, it silently breaks every future
+ * retrieval/index write (see EMBEDDING_MISMATCH in retrieve.ts/
+ * incrementalIndex.ts), so rejecting it at save time is the only point where
+ * a clear, coded reason is still cheap to give.
+ *
+ * Consent is checked here too (not just embeddings.ts's runtime path,
+ * per-call) so the settings UI gets an immediate, specific
+ * EMBEDDING_CONSENT_REQUIRED at save time instead of the config silently
+ * saving and only failing on the next chat message.
+ */
+export function setEmbeddingConfig(cfg: EmbeddingConfig): void {
+	const data = readFile();
+	const entry = data.providers.find((p) => p.id === cfg.providerId);
+	if (!entry) throw new AppError('NOT_FOUND', { entity: 'provider', detail: cfg.providerId }, 404);
+	if (!entry.enabled) throw new AppError('EMBEDDING_PROVIDER_DISABLED', { provider: cfg.providerId });
+	if (!EMBEDDING_CAPABLE_KINDS.has(entry.kind)) {
+		throw new AppError('EMBEDDING_PROVIDER_KIND_UNSUPPORTED', { provider: cfg.providerId });
+	}
+	if (!cfg.model || !cfg.model.trim()) throw new AppError('VALIDATION_REQUIRED', { field: 'model' });
+	if (!Number.isInteger(cfg.dims) || cfg.dims <= 0) {
+		throw new AppError('EMBEDDING_DIMS_INVALID', { detail: String(cfg.dims) });
+	}
+	if (cfg.distanceThreshold !== undefined && (!Number.isFinite(cfg.distanceThreshold) || cfg.distanceThreshold <= 0)) {
+		throw new AppError('VALIDATION_INVALID', { field: 'distanceThreshold' });
+	}
+	if (isCloud(entry) && !isProviderConsented(cfg.providerId)) {
+		throw new AppError('EMBEDDING_CONSENT_REQUIRED', { provider: cfg.providerId });
+	}
+	data.embedding = {
+		providerId: cfg.providerId,
+		model: cfg.model.trim(),
+		dims: cfg.dims,
+		...(cfg.distanceThreshold !== undefined ? { distanceThreshold: cfg.distanceThreshold } : {})
+	};
 	writeFile(data);
 }
 

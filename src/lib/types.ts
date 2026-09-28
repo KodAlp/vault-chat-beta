@@ -51,6 +51,23 @@ export interface RetrieveResult {
 	 * passed the filters — logging only (app-log.ts 'retrieval'). Absent when KNN
 	 * returned nothing. */
 	bestDistance?: number;
+	/**
+	 * Aşama 3a — set when retrieve() could not run vector search at all against
+	 * the currently configured embedding provider/model: 'mismatch' means the
+	 * index's recorded embedding (index_meta) differs from the config (a
+	 * reindex is required before vectors are comparable again); 'unavailable'
+	 * means embedTexts() itself threw (consent missing, network/HTTP failure,
+	 * or a returned vector's dimension didn't match). In both cases `chunks`
+	 * may still be non-empty — the FTS keyword fallback runs regardless of
+	 * `keywordFallback` when this is set — but a caller that must never cite an
+	 * un-vetted keyword hit (the five generate-*.ts, per NoSourcesError's own
+	 * "cite only what vector search actually found" rule) checks this FIRST
+	 * and fails with a coded EMBEDDING_MISMATCH/EMBEDDING_UNAVAILABLE error
+	 * instead of using `chunks`. The chat route is the one caller that
+	 * continues with the FTS results anyway, surfacing this on the client
+	 * payload instead (see StreamEvent's 'done' variant).
+	 */
+	embeddingIssue?: 'mismatch' | 'unavailable';
 }
 
 export type ChatRole = 'user' | 'assistant';
@@ -85,6 +102,13 @@ export interface ChatMessage {
 	/** F8 — true when some model call this turn came close to the context window (see history-limits.ts /
 	 * env.ts's serveCtxOverride). Client-only, never persisted — same footing as narrowScope/smallTalk. */
 	nearCtxLimit?: boolean;
+	/** Mirrors RetrieveResult.embeddingIssue for this message's answer — see
+	 * StreamEvent's 'done' variant. Client-only, never persisted, same footing
+	 * as narrowScope/smallTalk/nearCtxLimit above (a reload loses the banner,
+	 * not the answer, which already reflects whatever sources were actually
+	 * used). No UI reads this yet (Aşama 3c) — the field just carries the
+	 * signal through so that phase doesn't need another server round-trip. */
+	embeddingIssue?: 'mismatch' | 'unavailable';
 	/** Client-only, never persisted — same footing as `notices` above: a
 	 * folder-skill's supporting file the model fetched mid-turn via the
 	 * read_skill_file tool. A page reload loses this "📄 read" chip, but the
@@ -164,7 +188,20 @@ export type StreamEvent =
 	 * read_skill_file tool — see /api/chat/+server.ts's tool hop-loop. */
 	| { type: 'toolCall'; skill: string; path: string }
 	| { type: 'toolResult'; skill: string; path: string; ok: boolean; error?: string }
-	| { type: 'done'; sources: RetrievedChunk[]; narrowScope?: boolean; smallTalk?: boolean; hedges?: string[]; nearCtxLimit?: boolean }
+	| {
+			type: 'done';
+			sources: RetrievedChunk[];
+			narrowScope?: boolean;
+			smallTalk?: boolean;
+			hedges?: string[];
+			nearCtxLimit?: boolean;
+			/** Mirrors RetrieveResult.embeddingIssue — set when this answer's sources
+			 * (if any) came from the FTS keyword fallback because vector search
+			 * couldn't run (index/config mismatch, or the embedding provider was
+			 * unavailable), so the client can show a banner instead of presenting
+			 * them as normal semantic matches. See ChatMessage.embeddingIssue. */
+			embeddingIssue?: 'mismatch' | 'unavailable';
+	  }
 	| { type: 'error'; message: string; code?: string; params?: Record<string, string | number> }
 	/** A U+FFFD (corrupted-output) retry is starting — the client must
 	 * discard whatever partial content/thinking it already rendered for

@@ -4,7 +4,18 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import Database from 'better-sqlite3';
-import { deleteFile, openDb, renameFileInIndex, syncFts, upsertFile, type FileRow } from './db';
+import {
+	deleteFile,
+	openDb,
+	renameFileInIndex,
+	syncFts,
+	upsertFile,
+	readIndexEmbedding,
+	readIndexEmbeddingMeta,
+	writeIndexEmbeddingMeta,
+	LEGACY_INDEX_EMBEDDING,
+	type FileRow
+} from './db';
 import { EMBED_DIMS } from '../src/lib/server/embed-config';
 import { hasKeywordIndex, keywordSearch } from '../src/lib/server/keyword-search';
 
@@ -147,6 +158,48 @@ test('a failed upsert rolls the keyword rows back with the rest', () => {
 	assert.equal(count(db, 'files'), 0);
 	assert.equal(count(db, 'chunks'), 0);
 	assert.equal(count(db, 'chunks_fts'), 0);
+	db.close();
+});
+
+// Aşama 3a — index_meta (embedding provenance)
+
+test('a fresh index (no embedding config given) records the legacy assumption', () => {
+	const db = openDb(tmpDbPath());
+	assert.deepEqual(readIndexEmbedding(db), LEGACY_INDEX_EMBEDDING);
+	assert.deepEqual(readIndexEmbeddingMeta(db), LEGACY_INDEX_EMBEDDING);
+	db.close();
+});
+
+test('a fresh index records the embedding config it was created with', () => {
+	const db = openDb(tmpDbPath(), { provider: 'deepseek', model: 'embed-1', dims: 768 });
+	assert.deepEqual(readIndexEmbedding(db), { provider: 'deepseek', model: 'embed-1', dims: 768 });
+	db.close();
+});
+
+test('re-opening an existing index never overwrites its recorded meta, even with a different config passed in', () => {
+	const p = tmpDbPath();
+	let db = openDb(p, { provider: 'ollama', model: 'bge-m3', dims: 1024 });
+	db.close();
+	db = openDb(p, { provider: 'deepseek', model: 'embed-1', dims: 768 }); // a later, different config
+	assert.deepEqual(readIndexEmbedding(db), { provider: 'ollama', model: 'bge-m3', dims: 1024 });
+	db.close();
+});
+
+test('readIndexEmbeddingMeta returns null on a connection with no index_meta table at all (a legacy index read-only)', () => {
+	const p = tmpDbPath();
+	let db = openDb(p);
+	db.exec('DROP TABLE index_meta'); // what an index built before this feature looks like
+	db.close();
+	const ro = new Database(p, { readonly: true });
+	assert.equal(readIndexEmbeddingMeta(ro), null);
+	assert.deepEqual(readIndexEmbedding(ro), LEGACY_INDEX_EMBEDDING, 'readIndexEmbedding falls back instead of throwing');
+	ro.close();
+});
+
+test('writeIndexEmbeddingMeta can be called directly and readIndexEmbeddingMeta reads it back exactly', () => {
+	const db = openDb(tmpDbPath());
+	writeIndexEmbeddingMeta(db, { provider: 'openai-lmstudio', model: 'nomic-embed-text-v1.5', dims: 384 });
+	assert.deepEqual(readIndexEmbeddingMeta(db), { provider: 'openai-lmstudio', model: 'nomic-embed-text-v1.5', dims: 384 });
 	db.close();
 });
 

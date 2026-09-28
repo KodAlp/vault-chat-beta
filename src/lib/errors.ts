@@ -15,13 +15,15 @@ import { CHAT_CODES } from './error-codes/chat';
 import { GENERATION_CODES } from './error-codes/generation';
 import { IMPORT_CODES } from './error-codes/import';
 import { SETTINGS_CODES } from './error-codes/settings';
+import { EMBEDDING_CODES } from './error-codes/embedding';
 
 export const ALL_ERROR_CODES = [
 	...COMMON_CODES,
 	...CHAT_CODES,
 	...GENERATION_CODES,
 	...IMPORT_CODES,
-	...SETTINGS_CODES
+	...SETTINGS_CODES,
+	...EMBEDDING_CODES
 ] as const;
 
 export type ErrorCode = (typeof ALL_ERROR_CODES)[number];

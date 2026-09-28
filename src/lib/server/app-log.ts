@@ -70,7 +70,14 @@ export interface AppLogRecord {
 		 * cookie/header values, no token). Rate-capped in hooks.server.ts itself
 		 * (a local port scanner must not be able to grow this file unboundedly
 		 * between size-based rotations — see rotateIfNeeded above). */
-		| 'security_block';
+		| 'security_block'
+		/** Aşama 3a — retrieve() skipped vector search entirely: either the
+		 * index's recorded embedding (index_meta) differs from the currently
+		 * configured provider/model/dims (`reason: 'mismatch'`), or embedTexts()
+		 * itself threw (`reason: 'unavailable'` — consent/network/dims-mismatch
+		 * at the provider). `message` carries the raw AppError detail for
+		 * 'unavailable'; never the query text (this file's content rule). */
+		| 'embedding_issue';
 	chatId?: string;
 	provider?: string;
 	model?: string;

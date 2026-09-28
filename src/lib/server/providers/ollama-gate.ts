@@ -1,6 +1,6 @@
 import { ollamaUrl } from '../env';
 import { sharedJobMutex, type JobMutex } from '../jobMutex';
-import { EMBED_MODEL } from '../embed-config';
+import { getEmbeddingConfig } from './config-store';
 
 export interface OllamaGate {
 	/** Runs `fn` while holding a lease on `model` — for one-shot calls
@@ -86,9 +86,20 @@ interface ModelState {
  */
 export function createOllamaGate(
 	deps: GateDeps = { unload: nativeUnload, reconcile: nativeReconcile },
-	opts: { residentModels?: Iterable<string>; mutex?: JobMutex } = {}
+	opts: { residentModels?: Iterable<string> | (() => Iterable<string>); mutex?: JobMutex } = {}
 ): OllamaGate {
-	const resident = new Set(opts.residentModels ?? ['nomic-embed-text']);
+	// A function, not a frozen Set, for the real singleton below: the
+	// configured embedding model/provider can change at runtime (a settings
+	// PUT to /api/embedding), and a Set captured once at process start would
+	// go stale the moment it did — see the singleton's own doc comment.
+	// Tests still pass a plain array literal, which this treats as a
+	// constant iterable exactly like before.
+	const residentSource = opts.residentModels ?? ['nomic-embed-text'];
+	function isResident(model: string): boolean {
+		const iterable = typeof residentSource === 'function' ? residentSource() : residentSource;
+		for (const m of iterable) if (m === model) return true;
+		return false;
+	}
 	const mutex = opts.mutex ?? sharedJobMutex;
 	const states = new Map<string, ModelState>();
 	let currentModel: string | null = null;
@@ -149,7 +160,7 @@ export function createOllamaGate(
 	}
 
 	async function acquire(model: string): Promise<void> {
-		if (resident.has(model)) {
+		if (isResident(model)) {
 			incRef(model);
 			return;
 		}
@@ -178,9 +189,14 @@ export function createOllamaGate(
 }
 
 /** The one shared instance — mirrors jobMutex.ts's sharedJobMutex singleton.
- * residentModels is passed explicitly (rather than relying on
- * createOllamaGate()'s own default) so it tracks EMBED_MODEL — left as the
- * stale 'nomic-embed-text' default here after commit b9d1be7 switched
- * embeddings to bge-m3, which meant embed() lost its "resident, never
- * swaps" exception and started competing for the model-swap lock. */
-export const ollamaGate: OllamaGate = createOllamaGate(undefined, { residentModels: [EMBED_MODEL] });
+ * residentModels is a function, not a fixed array, so this always reflects
+ * WHATEVER model is currently configured for embedding (getEmbeddingConfig(),
+ * providers/config-store.ts) rather than a name frozen at process start —
+ * before Aşama 3a this was the EMBED_MODEL constant, which meant a user who
+ * changed the embedding model at runtime would silently lose the
+ * never-swaps exception for the new model (and keep it, wrongly, for the
+ * old one) until the process restarted. A provider that isn't 'ollama' has
+ * no Ollama model to keep resident, so this only ever matters when it is. */
+export const ollamaGate: OllamaGate = createOllamaGate(undefined, {
+	residentModels: () => [getEmbeddingConfig().model]
+});

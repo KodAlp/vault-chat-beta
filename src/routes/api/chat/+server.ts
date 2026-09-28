@@ -157,6 +157,11 @@ export const POST: RequestHandler = async ({ request }) => {
 			let sources: RetrievedChunk[] = [];
 			let narrowScope = false;
 			let smallTalk = false;
+			// Asama 3a - mirrors RetrieveResult.embeddingIssue for this turns
+			// retrieval; sources may still be non-empty (the FTS keyword
+			// fallback) even when this is set, unlike the five generators, which
+			// refuse instead (see generate-errors.ts assertNoEmbeddingIssue).
+			let embeddingIssue: 'mismatch' | 'unavailable' | undefined;
 			let finalContent = '';
 			let finalThinking = '';
 			// F8 — true once any model call this turn (across retries/tool-hops) came close to the context
@@ -253,6 +258,7 @@ export const POST: RequestHandler = async ({ request }) => {
 					sources = result.chunks;
 					narrowScope = result.narrowScope;
 					smallTalk = result.smallTalk === true;
+					embeddingIssue = result.embeddingIssue;
 					logAppEvent({
 						kind: 'retrieval',
 						chatId,
@@ -633,7 +639,15 @@ export const POST: RequestHandler = async ({ request }) => {
 				}
 				if (!exhaustedEmpty) {
 					const hedges = computeHedges();
-					send({ type: 'done', sources, narrowScope, smallTalk: smallTalk || undefined, hedges: hedges.length ? hedges : undefined, nearCtxLimit: nearCtxLimit || undefined });
+					send({
+						type: 'done',
+						sources,
+						narrowScope,
+						smallTalk: smallTalk || undefined,
+						hedges: hedges.length ? hedges : undefined,
+						nearCtxLimit: nearCtxLimit || undefined,
+						embeddingIssue
+					});
 				}
 			} catch (err) {
 				// User-initiated stop (interrupt button / navigation) — propagates from
