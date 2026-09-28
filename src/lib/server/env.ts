@@ -129,3 +129,31 @@ export function modelMaxAgeMonths(): number {
 export function secretsKeyHex(): string | undefined {
 	return nonEmpty(process.env.SECRETS_KEY_HEX);
 }
+
+/**
+ * Güvenlik sertleştirme — the packaged desktop build's per-launch session
+ * token. spawn_sidecar() (src-tauri/src/lib.rs) generates a fresh 64-hex-char
+ * token on every launch and hands it through this env var, the same way it
+ * hands secretsKeyHex() through SECRETS_KEY_HEX — the sidecar has no other
+ * channel from the Rust side. The webview's first navigation is
+ * `http://127.0.0.1:{port}/?vc_session={token}`; hooks.server.ts's `handle`
+ * turns that into a session cookie (see session-gate.ts) so every later
+ * request from the SAME webview is recognized without the token sitting in
+ * the address bar or browser history forever.
+ *
+ * Absent under plain `npm run dev`, `npm test`, and the MCP server (tsx,
+ * never spawned by Rust) — hooks.server.ts must behave EXACTLY as before
+ * this feature existed in that case: no cookie, no redirect, no 401, no
+ * change at all. Read via nonEmpty() like every other accessor here (so a
+ * literal empty string counts as "not configured"), but — unlike
+ * chatRetrievalK() etc. — hooks.server.ts reads this ONCE at module load
+ * into a top-level constant rather than per-request: the value cannot
+ * change for the lifetime of this process (Rust sets it once, before spawn,
+ * never afterwards), and re-reading process.env on every single request
+ * (including every static asset) would be pure waste. Kept as a function
+ * here anyway, matching this module's own contract, so a test can still
+ * simulate "set" vs "unset" by mutating process.env before calling it.
+ */
+export function sessionToken(): string | undefined {
+	return nonEmpty(process.env.VC_SESSION_TOKEN);
+}

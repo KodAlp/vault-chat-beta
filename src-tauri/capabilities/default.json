@@ -9,9 +9,22 @@
     "core:default",
     "core:event:default",
     "dialog:default",
-    "opener:default"
-  ],
-  "remote": {
-    "urls": ["http://127.0.0.1:*"]
-  }
+    "opener:default",
+    "allow-check-and-start",
+    "allow-save-vault-config-and-start",
+    "allow-recheck-node",
+    "allow-winget-install",
+    "allow-winget-available",
+    "allow-get-vault-config",
+    "allow-update-vault-config",
+    "allow-save-text-file",
+    "allow-detect-local-servers",
+    "allow-list-launchers",
+    "allow-save-launcher",
+    "allow-pick-launcher-program",
+    "allow-redetect-launcher-program",
+    "allow-start-launcher",
+    "allow-stop-launcher",
+    "allow-launcher-status"
+  ]
 }

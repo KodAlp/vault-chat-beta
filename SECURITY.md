@@ -35,4 +35,4 @@ Bunlar reddedilmiş öneriler değil, ölçülüp bilinçli olarak ertelenmiş k
 
 ## Desteklenen sürümler
 
-Bu proje henüz sürüm etiketlemesi (semver release) yapmıyor — `main` dalının en güncel hali destekleniyor.
+Güvenlik düzeltmeleri yalnızca en son yayımlanan sürüme (şu an 0.2.x beta) ve `main` dalına yapılır. Eski sürümler için yama çıkarılmaz; lütfen güncelleyin.

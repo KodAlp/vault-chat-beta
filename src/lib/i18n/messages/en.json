@@ -908,6 +908,7 @@
 		"SMALLTALK_LEARN_FAILED": "Couldn't learn this",
 		"LOCAL_ONLY": "This server can only be accessed from the local machine",
 		"CROSS_SITE_BLOCKED": "Cross-site requests are blocked",
+		"SESSION_REQUIRED": "This session is no longer valid — please restart the app",
 		"SKILL_ZIP_TOO_MANY_ENTRIES": "The zip contains too many files ({max} limit)",
 		"SKILL_ZIP_ENTRY_PATH_INVALID": "Invalid file path: {name}",
 		"SKILL_ZIP_TOTAL_TOO_LARGE": "The zip exceeds the total size limit once extracted ({limitMb}MB)",

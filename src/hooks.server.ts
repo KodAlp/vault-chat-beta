@@ -1,6 +1,8 @@
-import { error, type Handle, type HandleServerError } from '@sveltejs/kit';
+import { error, redirect, type Handle, type HandleServerError, type RequestEvent } from '@sveltejs/kit';
 import { runVaultMigrationIfNeeded } from '$lib/server/migrateVaults';
 import { logAppEvent } from '$lib/server/app-log';
+import { sessionToken } from '$lib/server/env';
+import { decideSessionGate } from '$lib/server/session-gate';
 import tls from 'node:tls';
 import { installSystemCa } from '$lib/server/system-ca';
 
@@ -85,6 +87,64 @@ function isSameLoopbackOrigin(origin: string, url: URL): boolean {
 }
 
 /**
+ * Güvenlik sertleştirme — read once, at module load, not per request. Unlike
+ * this module's other env-derived values, VC_SESSION_TOKEN cannot change for
+ * the life of this process: Rust generates it once and sets it before
+ * spawning the sidecar, never afterwards (see env.ts's sessionToken() for
+ * the full contract and why it's still a function there). Re-reading
+ * process.env on every single request — including every static asset —
+ * would be pure waste for a value that is, by construction, immutable this
+ * run. `undefined` here (plain `npm run dev`, `npm test`, MCP) means the
+ * whole gate below is skipped, byte-for-byte the same as before this
+ * feature existed.
+ */
+const SESSION_TOKEN = sessionToken();
+const SESSION_COOKIE = 'vc_session';
+
+/**
+ * Flood guard for the 'security_block' app-log entries below — see
+ * app-log.ts's own doc comment on that kind. A port scanner or a curious
+ * neighbor process hammering this loopback server with bad Origins/Hosts/
+ * tokens would otherwise write one line per rejected request forever;
+ * app-log.jsonl already rotates at MAX_BYTES (app-log.ts), but rotation
+ * alone still lets a flood churn through rotations and bury any OTHER
+ * signal that landed in the same window. A plain fixed-window counter (not
+ * a sliding one) is enough here — this is a courtesy cap on noise, not a
+ * security control in itself; the requests are still rejected either way.
+ */
+const SECURITY_BLOCK_LOG_CAP = 20;
+const SECURITY_BLOCK_LOG_WINDOW_MS = 60_000;
+let securityBlockWindowStart = 0;
+let securityBlockCountInWindow = 0;
+
+/**
+ * Logs one hooks.server.ts rejection to app-log.jsonl, rate-capped. Metadata
+ * only, per app-log.ts's content rule: the stable `code`, the method, the
+ * pathname WITHOUT its query string (a vc_session token, if one were ever
+ * mistakenly appended by a caller, lives exactly there), and whichever of
+ * Origin/Host named where the request claimed to come from. Never the
+ * token, never a cookie/header value, never the full URL.
+ */
+function logSecurityBlock(code: string, event: RequestEvent): void {
+	const now = Date.now();
+	if (now - securityBlockWindowStart >= SECURITY_BLOCK_LOG_WINDOW_MS) {
+		securityBlockWindowStart = now;
+		securityBlockCountInWindow = 0;
+	}
+	securityBlockCountInWindow += 1;
+	if (securityBlockCountInWindow > SECURITY_BLOCK_LOG_CAP) return;
+
+	logAppEvent({
+		kind: 'security_block',
+		code,
+		method: event.request.method,
+		path: event.url.pathname,
+		origin: event.request.headers.get('origin') ?? event.request.headers.get('host') ?? undefined,
+		message: `security_block: ${code}`
+	});
+}
+
+/**
  * This app has no auth layer at all — every /api/** route trusts whoever can
  * reach it, on the assumption that "reach it" means the local machine's own
  * user. That assumption breaks two ways a browser can hit it without the
@@ -111,15 +171,84 @@ function isSameLoopbackOrigin(origin: string, url: URL): boolean {
  *    was not initiated by a page this app served, regardless of content
  *    type. No Origin at all (curl, MCP, server-to-server) is let through —
  *    same posture SvelteKit's own csrf_check_origin takes.
+ *
+ * Güvenlik sertleştirme adds a THIRD check, after the loopback Host check
+ * above: the packaged desktop build's per-launch session token (see
+ * session-gate.ts and env.ts's sessionToken()). LOCAL_ONLY/CROSS_SITE_BLOCKED
+ * defend against a browser being tricked into reaching this server at all;
+ * the session token defends against something that already legitimately
+ * reached it — another local process or user account on the same machine —
+ * being trusted just because it's loopback. Skipped entirely when no token
+ * is configured (plain `npm run dev`, `npm test`, MCP), so this is strictly
+ * additive: nothing about the two checks above changes.
+ *
+ * Applied to EVERY request, not just page navigations/API calls — deliberately
+ * including GET and static assets under /_app/. Two reasons this is the
+ * right call rather than an allowlisted exemption:
+ * 1. The cookie is cheap and present on every request from the SAME webview
+ *    that a real user is using: after the one-time redirect below, the
+ *    browser attaches `vc_session` automatically to literally everything it
+ *    fetches for this origin, assets included. Exempting assets buys no
+ *    real performance and only adds a route allowlist to keep in sync.
+ * 2. Exempting /_app/ would hand an unauthenticated local process a working
+ *    probe: it could fetch a known immutable asset path with no token at
+ *    all and get a 200 (revealing the build exists, and on a Vite build,
+ *    its content-hashed filenames) where every other path 401s. Checking
+ *    everything uniformly means "no valid session" looks the same
+ *    everywhere.
  */
 export const handle: Handle = async ({ event, resolve }) => {
 	if (!LOOPBACK_HOSTNAMES.has(event.url.hostname)) {
+		logSecurityBlock('LOCAL_ONLY', event);
 		error(403, { message: 'LOCAL_ONLY', code: 'LOCAL_ONLY' });
+	}
+
+	if (SESSION_TOKEN) {
+		const decision = decideSessionGate({
+			token: SESSION_TOKEN,
+			queryToken: event.url.searchParams.get('vc_session'),
+			cookieToken: event.cookies.get(SESSION_COOKIE) ?? null,
+			headerToken: event.request.headers.get('x-vc-session'),
+			pathname: event.url.pathname,
+			searchParams: event.url.searchParams
+		});
+
+		if (decision.kind === 'redirect') {
+			// Session cookie: httpOnly (never readable by page JS — this app has
+			// no legitimate reason for client code to see the token), sameSite
+			// 'lax', NOT 'strict': the first navigation comes from the splash
+			// page on the tauri:// origin, i.e. cross-site, and a browser never
+			// sends a Strict cookie on any hop of a cross-site-initiated
+			// navigation chain — so the 303 below landed on `/` WITHOUT the
+			// cookie it had just set and every packaged launch 401'd (seen live
+			// 2026-09-28, app-log.jsonl: SESSION_REQUIRED on GET / right after
+			// each spawn). Lax is still withheld on cross-site subresource and
+			// POST requests, CROSS_SITE_BLOCKED below still guards state-changing
+			// methods, and the cookie lives only in the app's own WebView2
+			// profile — no other browser ever holds it. secure: false (this server is
+			// plain http:// on loopback — 'secure' cookies are dropped outright
+			// over http), no maxAge/expires so it's a SESSION cookie, gone the
+			// moment the webview process ends, matching the token's own lifetime
+			// (a fresh one is minted every launch).
+			event.cookies.set(SESSION_COOKIE, SESSION_TOKEN, {
+				path: '/',
+				httpOnly: true,
+				sameSite: 'lax',
+				secure: false
+			});
+			redirect(303, decision.location);
+		}
+
+		if (decision.kind === 'reject') {
+			logSecurityBlock('SESSION_REQUIRED', event);
+			error(401, { message: 'SESSION_REQUIRED', code: 'SESSION_REQUIRED' });
+		}
 	}
 
 	if (STATE_CHANGING_METHODS.has(event.request.method)) {
 		const origin = event.request.headers.get('origin');
 		if (origin && !isSameLoopbackOrigin(origin, event.url)) {
+			logSecurityBlock('CROSS_SITE_BLOCKED', event);
 			error(403, { message: 'CROSS_SITE_BLOCKED', code: 'CROSS_SITE_BLOCKED' });
 		}
 	}

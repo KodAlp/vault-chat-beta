@@ -749,7 +749,7 @@ fn detect_one(entry: &CatalogEntry) -> DetectedServer {
     // — never any other host, and never taken from a launcher's saved
     // config (a hand-edited launchers.json can't make this probe hit
     // anything other than 127.0.0.1).
-    let running = http_probe_ok(entry.port);
+    let running = http_probe_ok(entry.port, None);
     let identified_as = if running { classify(&probe_paths(entry.port)).map(Kind::as_str).map(str::to_string) } else { None };
     DetectedServer {
         id: entry.id.to_string(),
@@ -1148,7 +1148,7 @@ async fn start_launcher_by_id(app: &AppHandle, id: &str) -> Result<(), String> {
     // Never start a second instance, never touch a user-started server:
     // if the port already answers, hand back success without spawning
     // anything, and don't record it as one of ours.
-    if http_probe_ok(cfg.port) {
+    if http_probe_ok(cfg.port, None) {
         log_line(app, &format!("start_launcher({id}): port {} already answering, treating as external", cfg.port));
         return Ok(());
     }
@@ -1184,7 +1184,7 @@ async fn start_launcher_by_id(app: &AppHandle, id: &str) -> Result<(), String> {
                 return Err(format!("{} hata ile kapandı ({status}).\n{tail}", entry.display_name));
             }
         }
-        if http_probe_ok(cfg.port) {
+        if http_probe_ok(cfg.port, None) {
             break true;
         }
         if start.elapsed() > Duration::from_secs(20) {
@@ -1300,7 +1300,7 @@ pub(crate) async fn launcher_status(app: AppHandle, id: String) -> Result<String
     let launchers = read_launchers(&app)?;
     let port = launchers.iter().find(|l| l.id == id).map(|l| l.port).unwrap_or(entry.port);
 
-    if !http_probe_ok(port) {
+    if !http_probe_ok(port, None) {
         return Ok("stopped".to_string());
     }
     let ours = {
