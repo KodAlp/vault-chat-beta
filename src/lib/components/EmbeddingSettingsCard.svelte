@@ -43,7 +43,7 @@
 	let draftProviderId = $state('');
 	let draftModel = $state('');
 	let draftDims = $state<number | null>(null);
-	let draftThreshold = $state('');
+	let draftThreshold = $state<string | number | null>('');
 
 	let ollamaModels = $state<{ name: string }[]>([]);
 
@@ -182,7 +182,10 @@
 		saved = false;
 		showReindexOffer = false;
 		const previous = config;
-		const parsedThreshold = draftThreshold.trim() ? Number(draftThreshold) : undefined;
+		// bind:value on a type="number" input yields a number (or null when
+		// cleared), not the string this state started as — normalize first.
+		const rawThreshold = String(draftThreshold ?? '').trim();
+		const parsedThreshold = rawThreshold ? Number(rawThreshold) : undefined;
 		try {
 			const res = await fetch('/api/embedding', {
 				method: 'PUT',
