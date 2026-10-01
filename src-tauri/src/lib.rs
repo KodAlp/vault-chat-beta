@@ -1,27 +1,24 @@
 mod launchers;
+mod platform;
+// winget is a Windows-only package manager; other platforms get a stub with
+// the same Tauri command names/signatures (so build.rs's ACL manifest and the
+// capability files stay identical on every OS).
+#[cfg(windows)]
+mod winget;
+#[cfg(not(windows))]
+#[path = "winget_unsupported.rs"]
 mod winget;
 
+use platform::ProcessGuard;
 use serde::{Deserialize, Serialize};
-use std::os::windows::io::AsRawHandle;
-use std::os::windows::process::CommandExt;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
-
-/// Passed via `Command::creation_flags` for every child we spawn (node.exe
-/// is a console-subsystem binary) — without it, Windows gives the child its
-/// own visible console window even though app.exe itself is a GUI-subsystem
-/// process (`windows_subsystem = "windows"` in main.rs only hides app.exe's
-/// own console, not a child's). The sidecar is long-lived, so that window
-/// would sit open — visibly, unclosably from the user's side — for the
-/// entire session.
-const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tauri::menu::{MenuBuilder, MenuItemBuilder};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Manager, RunEvent};
 use tauri_plugin_dialog::DialogExt;
-use win32job::Job;
 
 #[derive(Serialize, Deserialize, Clone)]
 struct VaultConfig {
@@ -115,10 +112,10 @@ fn resolve_and_verify_node() -> Result<PathBuf, NodeProblem> {
         });
     };
 
-    let output = Command::new(&node_bin)
-        .arg("--version")
-        .creation_flags(CREATE_NO_WINDOW)
-        .output();
+    let mut version_cmd = Command::new(&node_bin);
+    version_cmd.arg("--version");
+    platform::no_window(&mut version_cmd);
+    let output = version_cmd.output();
     let version_text = match output {
         Ok(out) if out.status.success() => String::from_utf8_lossy(&out.stdout).trim().to_string(),
         // Exists on disk but won't run (broken install, permissions, a
@@ -181,22 +178,24 @@ async fn recheck_node() -> NodeStatus {
     }
 }
 
-/// Holds the spawned Node child (killed explicitly on a *graceful* quit —
-/// Windows' `Child::kill()` maps to TerminateProcess, not a catchable
+/// Holds the spawned Node child (stopped explicitly on a *graceful* quit —
+/// on Windows `Child::kill()` maps to TerminateProcess, not a catchable
 /// signal, so the sidecar's own SIGTERM handling in adapter-node's
-/// build/index.js is unreachable from here) and the Windows Job Object it's
-/// assigned to (handles the *abnormal* exit case: a force-kill or crash of
-/// `app.exe` closes all of its handles, including the job's — and since
-/// `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE` is set on it, Windows itself
-/// terminates every process still assigned to the job as part of that
-/// handle cleanup, entirely below the level `TerminateProcess` bypasses.
-/// No user-space code runs for that path; the job just has to still be
-/// alive, i.e. not dropped early, which is why it's kept here rather than
-/// as a local in `spawn_sidecar`). Confirmed directly before this fix:
-/// `taskkill /F` on the parent left the sidecar's PID running.
+/// build/index.js is unreachable from there; on Unix `ProcessGuard` sends
+/// SIGTERM first, which adapter-node does handle) and the `ProcessGuard`
+/// that owns its process tree (handles the *abnormal* exit case. Windows: a
+/// force-kill or crash of `app.exe` closes all of its handles, including the
+/// Job Object's — and since `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE` is set on
+/// it, Windows itself terminates every process still assigned to the job as
+/// part of that handle cleanup, entirely below the level `TerminateProcess`
+/// bypasses. No user-space code runs for that path; the job just has to
+/// still be alive, i.e. not dropped early, which is why it's kept here
+/// rather than as a local in `spawn_sidecar`. Confirmed directly before this
+/// fix: `taskkill /F` on the parent left the sidecar's PID running. Linux:
+/// `PR_SET_PDEATHSIG`; macOS: no crash-time protection, see platform.rs).
 struct SidecarState {
     child: Mutex<Option<Child>>,
-    job: Mutex<Option<Job>>,
+    guard: Mutex<Option<ProcessGuard>>,
     /// The URL of the currently-running sidecar, if any — lets
     /// `spawn_sidecar` recognize "I'm already up" and hand back the same
     /// URL instead of spawning a second node.exe (see the guard at the top
@@ -300,16 +299,18 @@ fn write_config(app: &AppHandle, cfg: &VaultConfig) -> Result<(), String> {
 /// redirector: `where node` can return a path that "exists" as a redirector
 /// stub but isn't a real Node install, so every candidate is validated with
 /// both a filesystem check and excluding WindowsApps paths.
+#[cfg(windows)]
 fn resolve_node_binary() -> Option<PathBuf> {
+    let node_exe = platform::exe_name("node");
     let mut candidates: Vec<PathBuf> = Vec::new();
     if let Ok(p) = std::env::var("ProgramFiles") {
-        candidates.push(PathBuf::from(p).join("nodejs").join("node.exe"));
+        candidates.push(PathBuf::from(p).join("nodejs").join(&node_exe));
     }
     if let Ok(p) = std::env::var("ProgramFiles(x86)") {
-        candidates.push(PathBuf::from(p).join("nodejs").join("node.exe"));
+        candidates.push(PathBuf::from(p).join("nodejs").join(&node_exe));
     }
     if let Ok(p) = std::env::var("NVM_SYMLINK") {
-        candidates.push(PathBuf::from(p).join("node.exe"));
+        candidates.push(PathBuf::from(p).join(&node_exe));
     }
     if let Some(found) = candidates.into_iter().find(|c| c.exists()) {
         return Some(found);
@@ -320,11 +321,10 @@ fn resolve_node_binary() -> Option<PathBuf> {
     // candidate is still validated to exist on disk and isn't a Windows
     // Store App Execution Alias redirector stub (mirrors convertQueue.ts's
     // resolvePythonBin() caution about the same redirector).
-    let output = Command::new("where")
-        .arg("node")
-        .creation_flags(CREATE_NO_WINDOW)
-        .output()
-        .ok()?;
+    let mut where_cmd = Command::new("where");
+    where_cmd.arg("node");
+    platform::no_window(&mut where_cmd);
+    let output = where_cmd.output().ok()?;
     if !output.status.success() {
         return None;
     }
@@ -334,6 +334,42 @@ fn resolve_node_binary() -> Option<PathBuf> {
         .filter(|l| !l.to_lowercase().contains("windowsapps"))
         .map(PathBuf::from)
         .find(|p| p.exists())
+}
+
+/// Resolve a working `node` binary on Linux/macOS: `$PATH` first, then the
+/// usual install locations (system package, Homebrew, Volta, nvm, fnm) —
+/// a GUI-launched app often inherits a minimal PATH that misses the latter.
+/// The caller (`resolve_and_verify_node`) still verifies that the binary
+/// runs and has the required major version.
+// TODO(L3): import the login shell's PATH (macOS Finder / Linux desktop
+// launchers start us with a stripped-down environment) before this lookup.
+#[cfg(unix)]
+fn resolve_node_binary() -> Option<PathBuf> {
+    let node = platform::exe_name("node");
+    if let Some(found) = platform::find_in_path(&node) {
+        return Some(found);
+    }
+
+    let mut candidates: Vec<PathBuf> =
+        ["/usr/local/bin", "/usr/bin", "/opt/homebrew/bin"].iter().map(|dir| Path::new(dir).join(&node)).collect();
+    if let Some(home) = platform::home_dir() {
+        candidates.push(home.join(".volta").join("bin").join(&node));
+        let major = required_node_major();
+        // nvm: ~/.nvm/versions/node/v<major>.x.y/bin/node
+        if let Some(dir) = platform::highest_version_dir(&home.join(".nvm").join("versions").join("node"), major) {
+            candidates.push(dir.join("bin").join(&node));
+        }
+        // fnm: ~/.local/share/fnm (Linux) or ~/Library/Application Support/fnm (macOS)
+        for base in [
+            home.join(".local").join("share").join("fnm").join("node-versions"),
+            home.join("Library").join("Application Support").join("fnm").join("node-versions"),
+        ] {
+            if let Some(dir) = platform::highest_version_dir(&base, major) {
+                candidates.push(dir.join("installation").join("bin").join(&node));
+            }
+        }
+    }
+    candidates.into_iter().find(|c| platform::is_executable_file(c))
 }
 
 /// Tauri's `resource_dir()`/`app_data_dir()` resolve via `canonicalize()`
@@ -430,7 +466,9 @@ async fn wait_for_sidecar_ready(port_rx: std::sync::mpsc::Receiver<u16>, timeout
     None
 }
 
-/// DPAPI-protected symmetric key for encrypting `secrets.json` at rest —
+/// DPAPI-protected symmetric key for encrypting `secrets.json` at rest
+/// (Windows only; other platforms currently hand Node no key and it uses its
+/// plaintext fallback — see the TODO(L2) at the call site in `spawn_sidecar`) —
 /// see providers/secrets.ts's DpapiEncryptedSecretStore, the Node side of
 /// this. Node is a separate sidecar process, not the webview, so it has no
 /// access to Tauri's own IPC — the only channel is the raw key handed
@@ -446,6 +484,7 @@ async fn wait_for_sidecar_ready(port_rx: std::sync::mpsc::Receiver<u16>, timeout
 /// Never a hard failure by design — spawn_sidecar treats any `Err` here as
 /// "skip the env var", which just means Node falls back to the plaintext
 /// store for that launch instead of blocking the whole app from starting.
+#[cfg(windows)]
 fn dpapi_get_or_create_secrets_key(app_data_dir: &Path) -> Result<[u8; 32], String> {
     use windows::Win32::Foundation::{LocalFree, HLOCAL};
     use windows::Win32::Security::Cryptography::{
@@ -554,9 +593,10 @@ async fn spawn_sidecar(app: &AppHandle, cfg: &VaultConfig) -> Result<SidecarOutc
         // A second `spawn_sidecar` call (e.g. the splash page's `main()`
         // re-running after a webview reload) must not spawn a duplicate
         // node.exe: the state-storage at the end of this function
-        // unconditionally overwrites `state.job`, and the OLD Job has
-        // `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE` set — dropping it there would
-        // make the kernel silently terminate the OLD (still-healthy) child.
+        // unconditionally overwrites `state.guard`, and dropping the OLD
+        // ProcessGuard kills the OLD process tree (Windows: its Job has
+        // `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE` set, so the kernel silently
+        // terminates the still-healthy child; Unix: SIGKILL to its group).
         // If one is already running, hand back its URL instead of spawning
         // a second one.
         let mut child_guard = state.child.lock().unwrap();
@@ -626,6 +666,7 @@ async fn spawn_sidecar(app: &AppHandle, cfg: &VaultConfig) -> Result<SidecarOutc
     // problem must not block the whole app from starting. On failure Node
     // just gets no SECRETS_KEY_HEX and falls back to its plaintext store —
     // same behavior as before this feature existed, not a regression.
+    #[cfg(windows)]
     let secrets_key_hex = match dpapi_get_or_create_secrets_key(&app_data_dir) {
         Ok(key) => Some(hex_encode(&key)),
         Err(e) => {
@@ -633,6 +674,11 @@ async fn spawn_sidecar(app: &AppHandle, cfg: &VaultConfig) -> Result<SidecarOutc
             None
         }
     };
+    // TODO(L2): Linux (Secret Service / keyring) and macOS (Keychain) key
+    // storage. Until then Node gets no SECRETS_KEY_HEX here and keeps using
+    // its existing plaintext secrets store on these platforms.
+    #[cfg(not(windows))]
+    let secrets_key_hex: Option<String> = None;
 
     // providers.json must live in app_data_dir (writable by a standard
     // user), not the resource dir (server_dir/data) — that one sits under
@@ -721,11 +767,12 @@ async fn spawn_sidecar(app: &AppHandle, cfg: &VaultConfig) -> Result<SidecarOutc
     if let Some(key_hex) = &secrets_key_hex {
         cmd.env("SECRETS_KEY_HEX", key_hex);
     }
-    let child = cmd
-        .creation_flags(CREATE_NO_WINDOW)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn();
+    cmd.stdout(Stdio::piped()).stderr(Stdio::piped());
+    platform::no_window(&mut cmd);
+    // Unix: own session/process group (+ PDEATHSIG on Linux) so the whole
+    // tree can be signalled as a unit. No-op on Windows.
+    ProcessGuard::prepare(&mut cmd);
+    let child = cmd.spawn();
 
     let mut child = match child {
         Ok(c) => c,
@@ -782,37 +829,26 @@ async fn spawn_sidecar(app: &AppHandle, cfg: &VaultConfig) -> Result<SidecarOutc
         });
     }
 
-    let port = match wait_for_sidecar_ready(port_rx, Duration::from_secs(15), &session_token).await {
-        Some(p) => p,
-        None => {
-            let _ = child.kill();
-            let stderr_text = stderr_tail.lock().map(|t| t.clone()).unwrap_or_default();
-            log_line(app, &format!("port never opened; child stderr: {stderr_text}"));
-            return Err(format!("Sunucu 15 saniye içinde başlamadı.\n{stderr_text}"));
+    // Best-effort: a guard failure must not fail the whole spawn — the
+    // sidecar is already running, this only affects cleanup on an abnormal
+    // exit, which is a narrower gap than not spawning at all. Attached right
+    // after spawn (not after readiness) so the timeout path below can also
+    // take the whole process tree down.
+    let mut guard = match ProcessGuard::attach(&child) {
+        Ok(g) => Some(g),
+        Err(e) => {
+            log_line(app, &format!("process guard attach failed (non-fatal): {e}"));
+            None
         }
     };
 
-    // Best-effort: a Job Object failure must not fail the whole spawn — the
-    // sidecar is already up and working, this only affects cleanup on an
-    // abnormal exit, which is a narrower gap than not spawning at all.
-    let job = match Job::create() {
-        Ok(job) => {
-            let assign_result = job.query_extended_limit_info().and_then(|mut info| {
-                info.limit_kill_on_job_close();
-                job.set_extended_limit_info(&info)?;
-                job.assign_process(child.as_raw_handle() as isize)
-            });
-            match assign_result {
-                Ok(()) => Some(job),
-                Err(e) => {
-                    log_line(app, &format!("Job Object assign failed (non-fatal): {e}"));
-                    None
-                }
-            }
-        }
-        Err(e) => {
-            log_line(app, &format!("Job Object create failed (non-fatal): {e}"));
-            None
+    let port = match wait_for_sidecar_ready(port_rx, Duration::from_secs(15), &session_token).await {
+        Some(p) => p,
+        None => {
+            ProcessGuard::stop_or_kill(guard.take(), &mut child);
+            let stderr_text = stderr_tail.lock().map(|t| t.clone()).unwrap_or_default();
+            log_line(app, &format!("port never opened; child stderr: {stderr_text}"));
+            return Err(format!("Sunucu 15 saniye içinde başlamadı.\n{stderr_text}"));
         }
     };
 
@@ -848,7 +884,7 @@ async fn spawn_sidecar(app: &AppHandle, cfg: &VaultConfig) -> Result<SidecarOutc
     }
 
     *state.child.lock().unwrap() = Some(child);
-    *state.job.lock().unwrap() = job;
+    *state.guard.lock().unwrap() = guard;
     *state.url.lock().unwrap() = Some(url.clone());
 
     // The one-time token rides ONLY on the url handed back from an ACTUAL
@@ -1019,7 +1055,7 @@ pub fn run() {
     let app = tauri::Builder::default()
         .manage(SidecarState {
             child: Mutex::new(None),
-            job: Mutex::new(None),
+            guard: Mutex::new(None),
             url: Mutex::new(None),
             capability_origin: Mutex::new(None),
         })
@@ -1126,15 +1162,16 @@ pub fn run() {
     app.run(|app_handle, event| {
         if let RunEvent::ExitRequested { .. } = event {
             let state = app_handle.state::<SidecarState>();
-            let mut guard = state.child.lock().unwrap();
-            if let Some(mut child) = guard.take() {
-                let _ = child.kill();
+            let mut child_slot = state.child.lock().unwrap();
+            let process_guard = state.guard.lock().unwrap().take();
+            if let Some(mut child) = child_slot.take() {
+                // Windows: Child::kill() + dropping the Job (tree kill).
+                // Unix: SIGTERM to the sidecar's process group first
+                // (adapter-node shuts down gracefully on it), then SIGKILL
+                // if it hasn't exited after ~3s.
+                ProcessGuard::stop_or_kill(process_guard, &mut child);
             }
-            // The Job (if assignment succeeded) is dropped along with
-            // SidecarState when the process exits regardless — explicit
-            // drop here isn't needed since CloseHandle-on-exit is automatic,
-            // but the child.kill() above is faster for the graceful path.
-            drop(guard);
+            drop(child_slot);
 
             launchers::shutdown_all(app_handle);
         }
@@ -1184,7 +1221,7 @@ mod node_version_tests {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, windows))]
 mod dpapi_tests {
     use super::dpapi_get_or_create_secrets_key;
     use std::path::PathBuf;

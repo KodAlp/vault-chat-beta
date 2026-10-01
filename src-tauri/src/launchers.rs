@@ -3,19 +3,21 @@
 //! This module gives the Rust/Tauri side (and ONLY this side — see the
 //! module-level security note below) the ability to:
 //!   - detect whether a known local-LLM-server kind (Ollama, LM Studio,
-//!     llama.cpp, Jan, LocalAI, vLLM-via-WSL) is installed and/or already
-//!     running on its default port,
+//!     llama.cpp, Jan, LocalAI, vLLM — via WSL on Windows, the native binary
+//!     on Linux) is installed and/or already running on its default port,
 //!   - persist a small per-kind "launcher" config (program path + argv +
 //!     port + auto_start + optional model reference) in
 //!     `app_data_dir/launchers.json`,
-//!   - start/stop a launcher as a child process we own and track, mirroring
-//!     the Job Object + CREATE_NO_WINDOW pattern `spawn_sidecar` in lib.rs
-//!     already uses for the Node sidecar.
+//!   - start/stop a launcher as a child process we own and track, using the
+//!     same `platform::ProcessGuard` (Windows Job Object / Unix process
+//!     group) + `platform::no_window` pattern `spawn_sidecar` in lib.rs uses
+//!     for the Node sidecar.
 //!
 //! SECURITY BOUNDARY: the Node sidecar has no API into anything in this
 //! module. `program` (the exe path Command::new() is given) can only ever
 //! come from (a) our own detection logic below, resolving fixed
-//! well-known install locations or `where`/`wsl -e which`, or (b) a native
+//! well-known install locations or `where`/`wsl -e which` (Windows) / a PATH
+//! scan (Unix), or (b) a native
 //! file-picker dialog opened from RUST via tauri-plugin-dialog's Rust API
 //! (see `pick_launcher_program`) — never from a raw string the webview (or,
 //! transitively, anything the Node sidecar could feed the webview) hands
@@ -25,8 +27,10 @@
 //! string-joined command line, ever.
 //!
 //! `args` is normally webview-settable (via `save_launcher`) — EXCEPT for
-//! `vllm`, whose `program` is `wsl.exe`: if its args were configurable, a
-//! caller could set them to something like `["-e","sh","-c","..."]` and get
+//! `vllm`, whose `program` is `wsl.exe` on Windows (and the `vllm` binary
+//! itself on Linux): if its args were configurable, a caller could set them
+//! to something like `["-e","sh","-c","..."]` (or, for the native binary,
+//! any flag that makes vllm load/execute attacker-chosen code) and get
 //! arbitrary code execution through us, which breaks the very boundary this
 //! module exists to hold (the Node sidecar serves the webview, so this
 //! would transitively let the sidecar cause process execution). So
@@ -38,17 +42,15 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::io::{Read, Write};
 use std::net::TcpStream;
-use std::os::windows::io::AsRawHandle;
-use std::os::windows::process::CommandExt;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 use tauri::{AppHandle, Manager};
 use tauri_plugin_dialog::DialogExt;
-use win32job::Job;
 
-use crate::{http_probe_ok, log_line, CREATE_NO_WINDOW};
+use crate::platform::{self, ProcessGuard};
+use crate::{http_probe_ok, log_line};
 
 /// Placeholder argv tokens substituted at start time — see
 /// `build_effective_args`. Kept as single argv elements throughout (never
@@ -106,6 +108,26 @@ struct CatalogEntry {
     /// way we can ask it to exit.
     stop_args: Option<&'static [&'static str]>,
 }
+
+/// vLLM's argv, per platform. SECURITY: this is the ONLY entry whose `args`
+/// are locked (see the module doc comment) — the locked shape differs only
+/// in how the real `vllm` binary is reached.
+///
+/// Windows: `program` is wsl.exe, so the real server is `wsl.exe -e vllm
+/// serve ...` — a WSL-side process wrapped by wsl.exe on the Windows side.
+#[cfg(windows)]
+const VLLM_DEFAULT_ARGS: &[&str] =
+    &["-e", "vllm", "serve", MODEL_NAME_PLACEHOLDER, "--host", "127.0.0.1", "--port", PORT_PLACEHOLDER];
+/// Unix: `program` is the `vllm` binary itself, so there is no `-e vllm`
+/// prefix (and nothing like it may ever be accepted).
+#[cfg(not(windows))]
+const VLLM_DEFAULT_ARGS: &[&str] =
+    &["serve", MODEL_NAME_PLACEHOLDER, "--host", "127.0.0.1", "--port", PORT_PLACEHOLDER];
+
+#[cfg(windows)]
+const VLLM_DISPLAY_NAME: &str = "vLLM (WSL)";
+#[cfg(not(windows))]
+const VLLM_DISPLAY_NAME: &str = "vLLM";
 
 static CATALOG: &[CatalogEntry] = &[
     CatalogEntry {
@@ -215,30 +237,23 @@ static CATALOG: &[CatalogEntry] = &[
     },
     CatalogEntry {
         id: "vllm",
-        display_name: "vLLM (WSL)",
+        display_name: VLLM_DISPLAY_NAME,
         port: 8000,
         launchable: true,
         winget_id: None,
         download_url: "https://docs.vllm.ai",
-        // `program` for this entry is wsl.exe itself (see
+        // `program` for this entry is wsl.exe itself on Windows (see
         // `detect_installed_path`'s "vllm" arm) — `-e vllm serve ...` runs
         // the real server as a WSL-side process wrapped by wsl.exe on the
         // Windows side. See `shutdown_all`'s doc comment for why "stops on
-        // exit" isn't guaranteed for this one.
+        // exit" isn't guaranteed for that variant. On Linux `program` is the
+        // native `vllm` binary and its process group is stopped like any
+        // other launcher's. See `VLLM_DEFAULT_ARGS`.
         //
         // SECURITY: this is the ONLY entry whose `args` are locked — see
         // the module doc comment. Never add a webview-settable `args` path
         // for this id.
-        default_args: &[
-            "-e",
-            "vllm",
-            "serve",
-            MODEL_NAME_PLACEHOLDER,
-            "--host",
-            "127.0.0.1",
-            "--port",
-            PORT_PLACEHOLDER,
-        ],
+        default_args: VLLM_DEFAULT_ARGS,
         stop_args: None,
     },
 ];
@@ -254,6 +269,7 @@ fn catalog_entry(id: &str) -> Option<&'static CatalogEntry> {
 /// `CATALOG` here, rather than a second hand-maintained list in winget.rs,
 /// means a future catalog change (new entry, retired winget id) can't leave
 /// that allowlist silently stale.
+#[cfg(windows)]
 pub(crate) fn winget_catalog_entries() -> Vec<(&'static str, &'static str)> {
     CATALOG.iter().filter_map(|e| e.winget_id.map(|id| (id, e.download_url))).collect()
 }
@@ -294,10 +310,11 @@ pub(crate) struct DetectedServer {
 /// it cleanly.
 struct OwnedProc {
     child: Child,
-    /// Kill-on-close Job Object — see `create_job_for`. `None` only when
-    /// Job Object setup itself failed (logged, non-fatal); the child still
-    /// runs and is still tracked.
-    job: Option<Job>,
+    /// Owns the child's whole process tree (Windows kill-on-close Job
+    /// Object / Unix process group) — see `platform::ProcessGuard`. `None`
+    /// only when guard setup itself failed (logged, non-fatal); the child
+    /// still runs and is still tracked.
+    guard: Option<ProcessGuard>,
     /// (program, args) to run to ask this launcher to shut down gracefully
     /// — currently only set for LM Studio. `None` means a plain
     /// `child.kill()` (+ Job kill-on-close for the whole tree) is enough.
@@ -308,6 +325,21 @@ struct OwnedProc {
     /// still ours even though `child.try_wait()` no longer returns
     /// `Ok(None)`.
     detached: bool,
+}
+
+impl OwnedProc {
+    /// Stops the child and its process tree (blocking: on Unix up to ~3s of
+    /// SIGTERM grace before SIGKILL) — callers on an async task run this via
+    /// `spawn_blocking`.
+    fn terminate(mut self) {
+        ProcessGuard::stop_or_kill(self.guard.take(), &mut self.child);
+    }
+}
+
+/// Blocking-pool wrapper around `ProcessGuard::stop_or_kill` for a child that
+/// is not (yet) in `LauncherState`.
+async fn terminate_blocking(mut child: Child, guard: Option<ProcessGuard>) {
+    let _ = tauri::async_runtime::spawn_blocking(move || ProcessGuard::stop_or_kill(guard, &mut child)).await;
 }
 
 /// Managed state: every process this app itself spawned via `start_launcher`
@@ -322,7 +354,7 @@ pub(crate) struct LauncherState {
     /// concurrent start attempts for the same id (e.g. auto-start at
     /// startup racing a user clicking "Start") both see the port closed and
     /// both spawn, with the second `procs.insert` silently overwriting —
-    /// and thereby dropping the kill-on-close Job of — the first, healthy
+    /// and thereby dropping the process-tree guard of — the first, healthy
     /// child.
     starting: Mutex<HashSet<String>>,
 }
@@ -454,12 +486,12 @@ fn write_launchers_atomic(path: &Path, launchers: &[LauncherConfig]) -> Result<(
 
 /// Generalizes `resolve_node_binary`'s `where` + WindowsApps-stub-filtering
 /// caution to an arbitrary binary name.
+#[cfg(windows)]
 fn resolve_via_where(exe_name: &str) -> Option<PathBuf> {
-    let output = Command::new("where")
-        .arg(exe_name)
-        .creation_flags(CREATE_NO_WINDOW)
-        .output()
-        .ok()?;
+    let mut where_cmd = Command::new("where");
+    where_cmd.arg(exe_name);
+    platform::no_window(&mut where_cmd);
+    let output = where_cmd.output().ok()?;
     if !output.status.success() {
         return None;
     }
@@ -468,6 +500,7 @@ fn resolve_via_where(exe_name: &str) -> Option<PathBuf> {
 
 /// Expands `%VAR%` references (REG_EXPAND_SZ values) from the process env.
 /// Unknown variables are left as-is.
+#[cfg(windows)]
 fn expand_env_refs(s: &str) -> String {
     let mut out = String::new();
     let mut rest = s;
@@ -499,6 +532,7 @@ fn expand_env_refs(s: &str) -> String {
 
 /// Pulls the data of a `reg query <key> /v Path` reply
 /// (`    Path    REG_EXPAND_SZ    C:\a;C:\b`).
+#[cfg(windows)]
 fn parse_reg_path_value(stdout: &str) -> Option<String> {
     for line in stdout.lines() {
         let t = line.trim();
@@ -517,12 +551,12 @@ fn parse_reg_path_value(stdout: &str) -> Option<String> {
     None
 }
 
+#[cfg(windows)]
 fn read_registry_path(key: &str) -> Option<String> {
-    let output = Command::new("reg")
-        .args(["query", key, "/v", "Path"])
-        .creation_flags(CREATE_NO_WINDOW)
-        .output()
-        .ok()?;
+    let mut reg_cmd = Command::new("reg");
+    reg_cmd.args(["query", key, "/v", "Path"]);
+    platform::no_window(&mut reg_cmd);
+    let output = reg_cmd.output().ok()?;
     if !output.status.success() {
         return None;
     }
@@ -533,6 +567,7 @@ fn read_registry_path(key: &str) -> Option<String> {
 /// from the registry. A running app keeps the PATH it started with, so
 /// anything a winget install added since launch is invisible to plain
 /// `where` until restart.
+#[cfg(windows)]
 fn fresh_registry_path() -> Option<String> {
     let machine = read_registry_path(r"HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment");
     let user = read_registry_path(r"HKCU\Environment");
@@ -544,6 +579,7 @@ fn fresh_registry_path() -> Option<String> {
     }
 }
 
+#[cfg(windows)]
 fn parse_where_output(stdout: &str) -> Option<PathBuf> {
     stdout
         .lines()
@@ -555,6 +591,7 @@ fn parse_where_output(stdout: &str) -> Option<PathBuf> {
 
 /// Searches `dir` for `exe_name` at the top level and up to `max_depth`
 /// sub-directory levels below it (bounded; no unbounded recursion).
+#[cfg(windows)]
 fn find_exe_bounded(dir: &Path, exe_name: &str, max_depth: u32) -> Option<PathBuf> {
     let direct = dir.join(exe_name);
     if direct.is_file() {
@@ -577,6 +614,7 @@ fn find_exe_bounded(dir: &Path, exe_name: &str, max_depth: u32) -> Option<PathBu
 /// package's exe: `<winget_base>\Links\<exe>` (shim), then
 /// `<winget_base>\Packages\<winget_id>_*\` (top level + two levels deep).
 /// `winget_base` is `%LOCALAPPDATA%\Microsoft\WinGet`.
+#[cfg(windows)]
 fn find_in_winget_dirs(winget_base: &Path, winget_id: &str, exe_name: &str) -> Option<PathBuf> {
     let link = winget_base.join("Links").join(exe_name);
     if link.is_file() {
@@ -596,6 +634,7 @@ fn find_in_winget_dirs(winget_base: &Path, winget_id: &str, exe_name: &str) -> O
     pkg_dirs.into_iter().find_map(|d| find_exe_bounded(&d, exe_name, 2))
 }
 
+#[cfg(windows)]
 fn winget_id_for_catalog(id: &str) -> Option<&'static str> {
     CATALOG.iter().find(|e| e.id == id).and_then(|e| e.winget_id)
 }
@@ -604,12 +643,16 @@ fn winget_id_for_catalog(id: &str) -> Option<&'static str> {
 /// registry, then winget's own install dirs. The latter two cover a
 /// just-finished winget install that this process's stale PATH can't see.
 /// Not cached: every detection pass re-runs this.
+#[cfg(windows)]
 fn resolve_binary(catalog_id: &str, exe_name: &str) -> Option<PathBuf> {
     if let Some(p) = resolve_via_where(exe_name) {
         return Some(p);
     }
     if let Some(fresh) = fresh_registry_path() {
-        if let Ok(out) = Command::new("where").arg(exe_name).env("PATH", fresh).creation_flags(CREATE_NO_WINDOW).output() {
+        let mut where_cmd = Command::new("where");
+        where_cmd.arg(exe_name).env("PATH", fresh);
+        platform::no_window(&mut where_cmd);
+        if let Ok(out) = where_cmd.output() {
             if out.status.success() {
                 if let Some(p) = parse_where_output(&String::from_utf8_lossy(&out.stdout)) {
                     return Some(p);
@@ -623,6 +666,7 @@ fn resolve_binary(catalog_id: &str, exe_name: &str) -> Option<PathBuf> {
     find_in_winget_dirs(&base, winget_id, &format!("{exe_name}.exe"))
 }
 
+#[cfg(windows)]
 fn resolve_wsl_exe() -> Option<PathBuf> {
     if let Ok(sysroot) = std::env::var("SystemRoot") {
         let p = PathBuf::from(sysroot).join("System32").join("wsl.exe");
@@ -639,15 +683,13 @@ fn resolve_wsl_exe() -> Option<PathBuf> {
 /// (not something inside the WSL filesystem) — that's what `program` is set
 /// to for a vLLM launcher, since wsl.exe is the actual Windows-side process
 /// we spawn.
+#[cfg(windows)]
 fn detect_vllm_wsl() -> Option<PathBuf> {
     let wsl_path = resolve_wsl_exe()?;
-    let mut child = Command::new(&wsl_path)
-        .args(["-e", "which", "vllm"])
-        .creation_flags(CREATE_NO_WINDOW)
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .spawn()
-        .ok()?;
+    let mut wsl_cmd = Command::new(&wsl_path);
+    wsl_cmd.args(["-e", "which", "vllm"]).stdout(Stdio::null()).stderr(Stdio::null());
+    platform::no_window(&mut wsl_cmd);
+    let mut child = wsl_cmd.spawn().ok()?;
     let start = Instant::now();
     loop {
         match child.try_wait() {
@@ -668,6 +710,7 @@ fn detect_vllm_wsl() -> Option<PathBuf> {
 /// ends in either a fixed-location `.exists()` check or `resolve_via_where`
 /// (which itself checks existence + filters WindowsApps stubs) — never a
 /// bare "the command name is probably on PATH" assumption.
+#[cfg(windows)]
 fn detect_installed_path(id: &str) -> Option<PathBuf> {
     match id {
         "ollama" => {
@@ -701,6 +744,64 @@ fn detect_installed_path(id: &str) -> Option<PathBuf> {
         }
         "localai" => resolve_binary("localai", "local-ai"),
         "vllm" => detect_vllm_wsl(),
+        _ => None,
+    }
+}
+
+/// First of `paths` that is an existing executable file.
+#[cfg(unix)]
+fn first_executable(paths: &[&str]) -> Option<PathBuf> {
+    paths.iter().map(PathBuf::from).find(|p| platform::is_executable_file(p))
+}
+
+/// Extra Ollama locations that only exist on macOS (the .app bundle).
+#[cfg(target_os = "macos")]
+const OLLAMA_EXTRA_PATHS: &[&str] = &["/Applications/Ollama.app/Contents/Resources/ollama"];
+#[cfg(all(unix, not(target_os = "macos")))]
+const OLLAMA_EXTRA_PATHS: &[&str] = &[];
+
+/// Jan is a GUI app: macOS has a fixed bundle path; on Linux it is usually an
+/// AppImage somewhere arbitrary, so nothing is auto-detected there (the user
+/// picks it with the file picker).
+#[cfg(target_os = "macos")]
+fn detect_jan() -> Option<PathBuf> {
+    first_executable(&["/Applications/Jan.app/Contents/MacOS/Jan"])
+}
+#[cfg(all(unix, not(target_os = "macos")))]
+fn detect_jan() -> Option<PathBuf> {
+    None
+}
+
+/// vLLM runs natively on Linux (`vllm` on PATH). macOS: not supported.
+#[cfg(target_os = "linux")]
+fn detect_vllm_native() -> Option<PathBuf> {
+    platform::find_in_path("vllm")
+}
+#[cfg(all(unix, not(target_os = "linux")))]
+fn detect_vllm_native() -> Option<PathBuf> {
+    None
+}
+
+/// Linux/macOS counterpart of the Windows `detect_installed_path`: a PATH
+/// scan plus the well-known install locations — every hit is an existing
+/// file with an exec bit.
+// TODO(L3): a GUI-launched app inherits a minimal PATH; importing the login
+// shell's PATH would let `find_in_path` see user-local installs too.
+#[cfg(unix)]
+fn detect_installed_path(id: &str) -> Option<PathBuf> {
+    match id {
+        "ollama" => platform::find_in_path("ollama")
+            .or_else(|| first_executable(&["/usr/local/bin/ollama", "/usr/bin/ollama", "/opt/homebrew/bin/ollama"]))
+            .or_else(|| first_executable(OLLAMA_EXTRA_PATHS)),
+        "lmstudio" => platform::home_dir()
+            .map(|h| h.join(".lmstudio").join("bin").join("lms"))
+            .filter(|p| platform::is_executable_file(p))
+            .or_else(|| platform::find_in_path("lms")),
+        "llamacpp" | "llamacpp-embed" => platform::find_in_path("llama-server")
+            .or_else(|| first_executable(&["/opt/homebrew/bin/llama-server", "/usr/local/bin/llama-server"])),
+        "jan" => detect_jan(),
+        "localai" => platform::find_in_path("local-ai"),
+        "vllm" => detect_vllm_native(),
         _ => None,
     }
 }
@@ -937,6 +1038,7 @@ pub(crate) async fn detect_local_servers(_app: AppHandle) -> Result<Vec<Detected
 // Validation (SECURITY — see the module doc comment)
 // ---------------------------------------------------------------------------
 
+#[cfg(windows)]
 fn validate_program_path(path: &Path) -> Result<(), String> {
     let ext_ok = path.extension().map(|e| e.eq_ignore_ascii_case("exe")).unwrap_or(false);
     if !ext_ok {
@@ -948,6 +1050,22 @@ fn validate_program_path(path: &Path) -> Result<(), String> {
     Ok(())
 }
 
+/// Unix: there is no extension convention, so the rule is "an absolute path
+/// to an existing regular file with an exec bit".
+#[cfg(unix)]
+fn validate_program_path(path: &Path) -> Result<(), String> {
+    if !path.is_absolute() {
+        return Err("Program mutlak bir yol olmalı.".to_string());
+    }
+    if !path.exists() {
+        return Err(format!("Program bulunamadı: {}", path.display()));
+    }
+    if !platform::is_executable_file(path) {
+        return Err(format!("Program çalıştırılabilir bir dosya olmalı (exec izni yok): {}", path.display()));
+    }
+    Ok(())
+}
+
 fn validate_args(args: &[String]) -> Result<(), String> {
     if args.iter().any(|a| a.contains('\0')) {
         return Err("Argümanlar NUL karakteri içeremez.".to_string());
@@ -955,7 +1073,8 @@ fn validate_args(args: &[String]) -> Result<(), String> {
     Ok(())
 }
 
-/// SECURITY: `vllm`'s `program` is `wsl.exe` (see the module doc comment) —
+/// SECURITY: `vllm`'s `program` is `wsl.exe` on Windows / the `vllm` binary on
+/// Linux (see the module doc comment) —
 /// `save_launcher` must never accept a caller-supplied `args` override for
 /// it, full stop. `validate_launcher_config` enforces the matching rule at
 /// spawn time (args must equal the catalog default exactly), closing the
@@ -1022,10 +1141,12 @@ fn validate_launcher_config(entry: &CatalogEntry, cfg: &LauncherConfig) -> Resul
     validate_program_path(Path::new(&cfg.program))?;
     validate_args(&cfg.args)?;
     validate_port(cfg.port)?;
-    // SECURITY: vLLM's `program` is wsl.exe — see the module doc comment.
-    // Even a launchers.json hand-edited to look otherwise-valid (right
-    // extension, existing file, no NUL bytes) must not be allowed to spawn
-    // wsl.exe with anything other than the catalog's own fixed argv.
+    // SECURITY: vLLM's `program` is wsl.exe (Windows) / the vllm binary
+    // (Linux) — see the module doc comment. Even a launchers.json
+    // hand-edited to look otherwise-valid (right extension / exec bit,
+    // existing file, no NUL bytes) must not be allowed to spawn it with
+    // anything other than the catalog's own fixed argv (the per-OS
+    // `VLLM_DEFAULT_ARGS`; the other OS's shape does not match).
     if entry.id == "vllm" && !args_match_catalog_default(&cfg.args, entry.default_args) {
         return Err("vLLM launcher argümanları kataloğun sabit komut satırıyla eşleşmiyor; reddedildi.".to_string());
     }
@@ -1170,7 +1291,8 @@ fn upsert_launcher_program(app: &AppHandle, entry: &CatalogEntry, program: &str)
     write_launchers_atomic(&path, &list)
 }
 
-/// Opens a native "choose an .exe" file picker via tauri-plugin-dialog's
+/// Opens a native "choose a program" file picker (Windows: filtered to
+/// .exe; Unix: unfiltered, validated afterwards for the exec bit) via tauri-plugin-dialog's
 /// Rust API — never a path the webview supplies directly (see the module
 /// doc comment). `blocking_pick_file` blocks its calling thread until the
 /// user closes the dialog, so it's run on the async runtime's blocking pool
@@ -1181,7 +1303,10 @@ pub(crate) async fn pick_launcher_program(app: AppHandle, id: String) -> Result<
 
     let app_for_dialog = app.clone();
     let picked = tauri::async_runtime::spawn_blocking(move || {
-        app_for_dialog.dialog().file().add_filter("Çalıştırılabilir", &["exe"]).blocking_pick_file()
+        let dialog = app_for_dialog.dialog().file();
+        #[cfg(windows)]
+        let dialog = dialog.add_filter("Çalıştırılabilir", &["exe"]);
+        dialog.blocking_pick_file()
     })
     .await
     .map_err(|e| format!("dosya seçme görevi başarısız: {e}"))?;
@@ -1219,33 +1344,6 @@ pub(crate) async fn redetect_launcher_program(app: AppHandle, id: String) -> Res
 // ---------------------------------------------------------------------------
 // Commands: start/stop/status
 // ---------------------------------------------------------------------------
-
-fn create_job_for(app: &AppHandle, child: &Child, id: &str) -> Option<Job> {
-    // Best-effort, matching spawn_sidecar's Job Object setup exactly: a
-    // failure here must not fail the whole start — it only narrows the
-    // cleanup guarantee on an abnormal exit, which is better than not
-    // starting at all.
-    match Job::create() {
-        Ok(job) => {
-            let assign = job.query_extended_limit_info().and_then(|mut info| {
-                info.limit_kill_on_job_close();
-                job.set_extended_limit_info(&info)?;
-                job.assign_process(child.as_raw_handle() as isize)
-            });
-            match assign {
-                Ok(()) => Some(job),
-                Err(e) => {
-                    log_line(app, &format!("Job Object assign failed for launcher {id} (non-fatal): {e}"));
-                    None
-                }
-            }
-        }
-        Err(e) => {
-            log_line(app, &format!("Job Object create failed for launcher {id} (non-fatal): {e}"));
-            None
-        }
-    }
-}
 
 /// Last couple KB of a launcher's log file, for inline error messages when a
 /// start attempt fails — mirrors spawn_sidecar's `stderr_tail` but read back
@@ -1312,7 +1410,10 @@ async fn start_launcher_by_id(app: &AppHandle, id: &str) -> Result<(), String> {
     let err_file = out_file.try_clone().map_err(|e| format!("günlük dosyası kopyalanamadı: {e}"))?;
 
     let mut command = Command::new(&cfg.program);
-    command.args(&args).creation_flags(CREATE_NO_WINDOW).stdout(Stdio::from(out_file)).stderr(Stdio::from(err_file));
+    command.args(&args).stdout(Stdio::from(out_file)).stderr(Stdio::from(err_file));
+    platform::no_window(&mut command);
+    // Unix: own session/process group (+ PDEATHSIG on Linux); no-op on Windows.
+    ProcessGuard::prepare(&mut command);
     // Ollama has no `--port`/`--host` flag of its own — see the catalog
     // entry's doc comment. This is the one place `cfg.port` reaches Ollama
     // at all, so without it, changing `port` via `save_launcher` would
@@ -1322,7 +1423,16 @@ async fn start_launcher_by_id(app: &AppHandle, id: &str) -> Result<(), String> {
     }
     let mut child = command.spawn().map_err(|e| format!("{} başlatılamadı: {e}", entry.display_name))?;
 
-    let job = create_job_for(app, &child, id);
+    // Best-effort, matching spawn_sidecar's guard setup exactly: a failure
+    // here must not fail the whole start — it only narrows the cleanup
+    // guarantee on an abnormal exit, which is better than not starting at all.
+    let mut guard = match ProcessGuard::attach(&child) {
+        Ok(g) => Some(g),
+        Err(e) => {
+            log_line(app, &format!("process guard attach failed for launcher {id} (non-fatal): {e}"));
+            None
+        }
+    };
 
     let start = Instant::now();
     let ready = loop {
@@ -1345,7 +1455,7 @@ async fn start_launcher_by_id(app: &AppHandle, id: &str) -> Result<(), String> {
         tokio::time::sleep(Duration::from_millis(200)).await;
     };
     if !ready {
-        let _ = child.kill();
+        terminate_blocking(child, guard.take()).await;
         let tail = read_log_tail(&log_path);
         return Err(format!(
             "{} 20 saniye içinde port {} üzerinde yanıt vermedi.\n{tail}",
@@ -1363,15 +1473,16 @@ async fn start_launcher_by_id(app: &AppHandle, id: &str) -> Result<(), String> {
         // point at a time) plus the port-probe gate earlier in this same
         // function — but never overwrite a still-alive OwnedProc's insert
         // slot under any circumstance, since that would drop its
-        // kill-on-close Job and have the kernel kill a healthy process.
+        // process-tree guard and have it kill a healthy process.
         if let Some(existing) = procs.get_mut(id) {
             if matches!(existing.child.try_wait(), Ok(None)) {
                 log_line(app, &format!("start_launcher({id}): a live OwnedProc unexpectedly already exists, refusing to overwrite it"));
-                let _ = child.kill();
+                // Sync on purpose: the `procs` lock is held, so no `.await` here.
+                ProcessGuard::stop_or_kill(guard.take(), &mut child);
                 return Err(format!("{} için zaten çalışan bir örnek izleniyor.", entry.display_name));
             }
         }
-        procs.insert(id.to_string(), OwnedProc { child, job, stop, detached });
+        procs.insert(id.to_string(), OwnedProc { child, guard, stop, detached });
     }
     Ok(())
 }
@@ -1384,15 +1495,13 @@ pub(crate) async fn start_launcher(app: AppHandle, id: String) -> Result<(), Str
 /// Runs a graceful-stop command (LM Studio's `lms server stop`) with a hard
 /// ~5s timeout — spawn + poll `try_wait`, kill on timeout, exactly like
 /// `detect_vllm_wsl`'s pattern. Best-effort: any failure here is logged,
-/// never propagated, since the caller still falls through to `child.kill()`
-/// + dropping the Job either way.
+/// never propagated, since the caller still falls through to stopping the
+/// child's process tree either way.
 fn run_stop_command(app: &AppHandle, id: &str, program: &str, args: &[String]) {
-    let child = Command::new(program)
-        .args(args)
-        .creation_flags(CREATE_NO_WINDOW)
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .spawn();
+    let mut stop_cmd = Command::new(program);
+    stop_cmd.args(args).stdout(Stdio::null()).stderr(Stdio::null());
+    platform::no_window(&mut stop_cmd);
+    let child = stop_cmd.spawn();
     let mut child = match child {
         Ok(c) => c,
         Err(e) => {
@@ -1430,7 +1539,7 @@ pub(crate) async fn stop_launcher(app: AppHandle, id: String) -> Result<(), Stri
         let removed = state.procs.lock().unwrap().remove(&id);
         removed
     };
-    let Some(mut owned) = owned else {
+    let Some(owned) = owned else {
         return Err("Bu sunucuyu biz başlatmadık; sadece kendi başlattığımız sunucular durdurulabilir.".to_string());
     };
 
@@ -1441,8 +1550,11 @@ pub(crate) async fn stop_launcher(app: AppHandle, id: String) -> Result<(), Stri
             .await
             .map_err(|e| format!("durdurma komutu görevi başarısız: {e}"))?;
     }
-    let _ = owned.child.kill();
-    drop(owned.job); // kill-on-close terminates the whole tree, if it was assigned.
+    // Windows: child.kill() + dropping the Job (kill-on-close terminates the
+    // whole tree). Unix: SIGTERM to the process group, SIGKILL after ~3s.
+    tauri::async_runtime::spawn_blocking(move || owned.terminate())
+        .await
+        .map_err(|e| format!("durdurma görevi başarısız: {e}"))?;
     Ok(())
 }
 
@@ -1552,24 +1664,26 @@ pub(crate) fn shutdown_all(app: &AppHandle) {
         let drained = state.procs.lock().unwrap().drain().collect();
         drained
     };
-    for (id, mut proc) in owned {
+    for (id, proc) in owned {
         if let Some((program, args)) = proc.stop.clone() {
             log_line(app, &format!("shutdown: running stop command for launcher {id}"));
             run_stop_command(app, &id, &program, &args);
         }
-        let _ = proc.child.kill();
-        // `proc` (and its Job, if assignment succeeded) is dropped here at
-        // the end of the loop body — JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE then
-        // terminates the whole process tree (e.g. Ollama's runner
-        // subprocesses), not just the one child handle killed above.
+        // Stops the whole process tree (e.g. Ollama's runner subprocesses),
+        // not just the direct child: Windows via the Job Object's
+        // JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE, Unix by signalling the process
+        // group (SIGTERM, then SIGKILL after ~3s).
+        proc.terminate();
         //
-        // vLLM (WSL) caveat: `proc.child` for a vLLM launcher is wsl.exe's
+        // vLLM (WSL, Windows) caveat: `proc.child` for a vLLM launcher is wsl.exe's
         // own wrapper process on the Windows side, not the real `vllm`
         // process running inside the WSL VM. Killing wsl.exe does not
         // reliably stop that inner process — it isn't part of any Windows
         // Job Object, and WSL gives no guarantee that terminating the
         // Windows-side wrapper propagates into the Linux-side process tree.
-        // "Stops on exit" is therefore NOT guaranteed for this one kind.
+        // "Stops on exit" is therefore NOT guaranteed for this one kind. (The
+        // native Linux vllm binary has no such gap — it is in our process
+        // group.)
     }
 }
 
@@ -1581,6 +1695,7 @@ mod tests {
 
     // -- winget install-dir fallback -------------------------------------
 
+    #[cfg(windows)]
     fn tmp_base(tag: &str) -> PathBuf {
         let d = std::env::temp_dir().join(format!("vc-winget-{tag}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&d);
@@ -1588,11 +1703,13 @@ mod tests {
         d
     }
 
+    #[cfg(windows)]
     fn touch(p: &Path) {
         std::fs::create_dir_all(p.parent().unwrap()).unwrap();
         std::fs::write(p, b"x").unwrap();
     }
 
+    #[cfg(windows)]
     #[test]
     fn winget_finds_exe_at_package_top_level() {
         let base = tmp_base("top");
@@ -1602,6 +1719,7 @@ mod tests {
         let _ = std::fs::remove_dir_all(&base);
     }
 
+    #[cfg(windows)]
     #[test]
     fn winget_finds_exe_nested_but_not_too_deep() {
         let base = tmp_base("nested");
@@ -1617,6 +1735,7 @@ mod tests {
         let _ = std::fs::remove_dir_all(&base2);
     }
 
+    #[cfg(windows)]
     #[test]
     fn winget_id_prefix_must_be_followed_by_underscore() {
         let base = tmp_base("prefix");
@@ -1625,6 +1744,7 @@ mod tests {
         let _ = std::fs::remove_dir_all(&base);
     }
 
+    #[cfg(windows)]
     #[test]
     fn winget_links_shim_is_found() {
         let base = tmp_base("links");
@@ -1634,6 +1754,7 @@ mod tests {
         let _ = std::fs::remove_dir_all(&base);
     }
 
+    #[cfg(windows)]
     #[test]
     fn winget_missing_dirs_yield_none() {
         let base = tmp_base("empty");
@@ -1641,6 +1762,7 @@ mod tests {
         let _ = std::fs::remove_dir_all(&base);
     }
 
+    #[cfg(windows)]
     #[test]
     fn registry_path_parsing_and_expansion() {
         let out = "\r\nHKEY_CURRENT_USER\\Environment\r\n    Path    REG_EXPAND_SZ    %USERPROFILE%\\bin;C:\\x\r\n\r\n";
@@ -1650,6 +1772,7 @@ mod tests {
         assert_eq!(expand_env_refs("%VC_TEST_VAR%\\a;%NOPE_VC%;50%"), "C:\\val\\a;%NOPE_VC%;50%");
     }
 
+    #[cfg(windows)]
     #[test]
     fn winget_ids_resolve_from_catalog() {
         assert_eq!(winget_id_for_catalog("llamacpp"), Some("ggml.llamacpp"));
@@ -1764,6 +1887,7 @@ mod tests {
         assert!(catalog_entry("totally-made-up").is_none());
     }
 
+    #[cfg(windows)]
     #[test]
     fn non_exe_program_is_rejected() {
         let dir = std::env::temp_dir().join(format!("vault-chat-launchers-test-{}", std::process::id()));
@@ -1775,9 +1899,60 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
     }
 
+    #[cfg(windows)]
     #[test]
     fn missing_program_is_rejected_even_with_exe_extension() {
         let missing = std::env::temp_dir().join("vault-chat-does-not-exist.exe");
+        let err = validate_program_path(&missing).unwrap_err();
+        assert!(err.contains("bulunamadı"));
+    }
+
+    #[cfg(unix)]
+    fn temp_file_with_mode(tag: &str, mode: u32) -> PathBuf {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = std::env::temp_dir().join(format!("vault-chat-launchers-exec-test-{tag}-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let p = dir.join("a-program");
+        std::fs::write(&p, b"#!/bin/sh\n").unwrap();
+        std::fs::set_permissions(&p, std::fs::Permissions::from_mode(mode)).unwrap();
+        p
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn program_without_exec_bit_is_rejected() {
+        let p = temp_file_with_mode("noexec", 0o644);
+        let err = validate_program_path(&p).unwrap_err();
+        assert!(err.contains("exec"), "unexpected error: {err}");
+        let _ = std::fs::remove_dir_all(p.parent().unwrap());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn program_with_exec_bit_is_accepted() {
+        let p = temp_file_with_mode("exec", 0o755);
+        assert!(validate_program_path(&p).is_ok());
+        let _ = std::fs::remove_dir_all(p.parent().unwrap());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn relative_program_path_is_rejected() {
+        let err = validate_program_path(Path::new("some/relative/program")).unwrap_err();
+        assert!(err.contains("mutlak"));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn directory_is_not_a_valid_program() {
+        let err = validate_program_path(&std::env::temp_dir()).unwrap_err();
+        assert!(err.contains("çalıştırılabilir"));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn missing_absolute_program_is_rejected() {
+        let missing = std::env::temp_dir().join("vault-chat-does-not-exist-program");
         let err = validate_program_path(&missing).unwrap_err();
         assert!(err.contains("bulunamadı"));
     }
@@ -1868,7 +2043,56 @@ mod tests {
         std::fs::create_dir_all(&dir).unwrap();
         let p = dir.join(name);
         std::fs::write(&p, b"fake exe").unwrap();
+        // Unix validates the exec bit instead of a `.exe` extension.
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&p, std::fs::Permissions::from_mode(0o755)).unwrap();
+        }
         p
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn vllm_default_args_run_through_wsl() {
+        let entry = catalog_entry("vllm").unwrap();
+        assert_eq!(&entry.default_args[..3], &["-e", "vllm", "serve"]);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn vllm_default_args_are_the_native_binary_shape() {
+        let entry = catalog_entry("vllm").unwrap();
+        assert_eq!(entry.default_args, &["serve", MODEL_NAME_PLACEHOLDER, "--host", "127.0.0.1", "--port", PORT_PLACEHOLDER]);
+        assert!(!entry.default_args.contains(&"-e"), "the WSL `-e vllm` prefix must not exist on Unix");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn unix_vllm_launcher_rejects_the_wsl_shaped_args() {
+        let entry = catalog_entry("vllm").unwrap();
+        let program = temp_fake_exe("vllm-native");
+        let mut cfg = LauncherConfig {
+            id: "vllm".to_string(),
+            program: program.to_string_lossy().to_string(),
+            args: ["-e", "vllm", "serve", MODEL_NAME_PLACEHOLDER, "--host", "127.0.0.1", "--port", PORT_PLACEHOLDER]
+                .iter()
+                .map(|s| s.to_string())
+                .collect(),
+            port: 8000,
+            auto_start: false,
+            model_path: None,
+            model: Some("meta-llama/Llama-3-8B".to_string()),
+        };
+        assert!(validate_launcher_config(entry, &cfg).unwrap_err().contains("vLLM"));
+        // An extra trailing flag on the otherwise-correct shape is rejected too.
+        cfg.args = entry.default_args.iter().map(|s| s.to_string()).collect();
+        cfg.args.push("--trust-remote-code".to_string());
+        assert!(validate_launcher_config(entry, &cfg).is_err());
+        // The exact locked shape passes.
+        cfg.args.pop();
+        assert!(validate_launcher_config(entry, &cfg).is_ok());
+        let _ = std::fs::remove_dir_all(program.parent().unwrap());
     }
 
     #[test]

@@ -1,5 +1,8 @@
 //! Aşama 2a — `winget install <id>` as a Tauri command, security-reviewed.
 //!
+//! Windows only — lib.rs swaps in `winget_unsupported.rs` (same command
+//! names/signatures) on other platforms.
+//!
 //! SECURITY BOUNDARY: exactly like `launchers.rs` (see its module doc
 //! comment), this module gives the webview a very narrow capability, never
 //! an arbitrary-process-execution one. `winget_install` takes a single
@@ -13,7 +16,6 @@
 //! fixed `Vec<String>` this module owns — the webview cannot influence it at
 //! all.
 use serde::Serialize;
-use std::os::windows::process::CommandExt;
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
@@ -21,7 +23,7 @@ use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons};
 
-use crate::{log_line, CREATE_NO_WINDOW};
+use crate::{log_line, platform};
 
 /// Package ids this command will install, beyond what `launchers.rs`'s own
 /// CATALOG already lists (see `is_allowlisted`) — things Aşama 2a's Node
@@ -91,7 +93,10 @@ fn resolve_winget_exe() -> Option<PathBuf> {
     // Fallback for the (rare) machine where the alias itself is missing or
     // disabled in Settings > Apps > Advanced app settings > App execution
     // aliases, but winget is still reachable some other way on PATH.
-    let output = Command::new("where").arg("winget").creation_flags(CREATE_NO_WINDOW).output().ok()?;
+    let mut where_cmd = Command::new("where");
+    where_cmd.arg("winget");
+    platform::no_window(&mut where_cmd);
+    let output = where_cmd.output().ok()?;
     if !output.status.success() {
         return None;
     }
@@ -366,7 +371,8 @@ pub(crate) async fn winget_install(app: AppHandle, id: String) -> Result<(), Str
     ];
 
     let mut command = Command::new(&winget_path);
-    command.args(&args).creation_flags(CREATE_NO_WINDOW).stdout(Stdio::piped()).stderr(Stdio::piped());
+    command.args(&args).stdout(Stdio::piped()).stderr(Stdio::piped());
+    platform::no_window(&mut command);
     let mut child: Child = command.spawn().map_err(|e| format!("winget başlatılamadı: {e}"))?;
 
     let stdout_handle = child.stdout.take().map(|stdout| {

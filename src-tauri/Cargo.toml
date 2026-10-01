@@ -31,6 +31,14 @@ tauri-plugin-dialog = "2"
 # markdown.ts's link_open override for the frontend half.
 tauri-plugin-opener = "2"
 tokio = { version = "1", features = ["time"] }
+# CSPRNG for the key's initial 32 bytes — a well-audited, minimal crate
+# beats hand-written FFI to BCryptGenRandom/RtlGenRandom for something this
+# security-sensitive (a subtly wrong ABI call here would be silent, not a
+# compile error).
+getrandom = "0.2"
+
+# Windows-only: Job Objects (kill-on-close process trees) and DPAPI.
+[target.'cfg(windows)'.dependencies]
 win32job = "2"
 # DPAPI (CryptProtectData/CryptUnprotectData) for at-rest encryption of the
 # sidecar's secrets-key blob — see spawn_sidecar()'s
@@ -40,8 +48,7 @@ win32job = "2"
 # here creates two incompatible copies of types like HLOCAL, which fails to
 # compile even though both are nominally "the windows crate".
 windows = { version = "0.61", features = ["Win32_Security_Cryptography", "Win32_Foundation"] }
-# CSPRNG for the key's initial 32 bytes — a well-audited, minimal crate
-# beats hand-written FFI to BCryptGenRandom/RtlGenRandom for something this
-# security-sensitive (a subtly wrong ABI call here would be silent, not a
-# compile error).
-getrandom = "0.2"
+
+# POSIX: setsid/prctl/kill for process-group cleanup (see src/platform.rs).
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
