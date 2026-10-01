@@ -6,7 +6,8 @@ her adımı sırayla uygulaman yeterli.
 
 > Zaten geliştirici olarak kaynak koddan çalıştıracaksan (`npm run dev`
 > vb.), bunun yerine repo kökündeki **README.md** dosyasına bak — bu rehber
-> sadece paketlenmiş `.exe` kurulumunu anlatıyor.
+> paketlenmiş kurulumu anlatıyor: adımların ana akışı Windows `.exe` içindir;
+> **macOS** ve **Linux** için kısa bölümler 7b'de (yeni, beta).
 
 ## 0. Kapalı beta — bağımlılık listesi (önce bunu oku)
 
@@ -193,6 +194,89 @@ claude mcp add --scope user vault-chat -- node "<repo yolun>\mcp\launch.mjs"
 Claude Desktop için `npm run mcp:config` çıktısını
 `%APPDATA%\Claude\claude_desktop_config.json`'a ekle. Ayrıntı: `README.md`'nin
 "MCP Sunucusu" bölümü.
+
+## 7b. macOS ve Linux (yeni, beta)
+
+> **Beta uyarısı:** macOS ve Linux paketleri yeni. CI'da derleniyor ama
+> **henüz gerçek bir Mac'te ya da Linux makinesinde denenmedi**; Windows kadar
+> olgun değil. macOS paketi **imzasız** ve Apple noter onayından geçmedi.
+> macOS için adım adım deneme listesi: `docs/macos-deneme-listesi.md`.
+
+Ortak noktalar (Windows'taki gibi): Node.js 22 ayrıca kurulu olmalı, bir model
+kaynağı gerekir (Ollama önerilir — https://ollama.com), kurulum sihirbazı (Adım 5)
+aynı şekilde açılır. Fark: sihirbaz macOS/Linux'ta `winget` gibi bir komutu
+senin yerine çalıştırmaz; yalnızca hangi komutu çalıştıracağını gösterir.
+
+### macOS
+
+1. Hangi dosya? Apple menüsü → **Bu Mac Hakkında**: "Çip: Apple M…" ise
+   `vault-chat-macos-arm64`, "İşlemci: Intel" ise `vault-chat-macos-x64`.
+   macOS 11 ya da daha yenisi gerekir.
+2. `.dmg` dosyasını aç, `vault-chat`'i **Applications** klasörüne sürükle.
+3. **Gatekeeper:** uygulama imzasız olduğu için ilk açılışta macOS engelleyebilir
+   ("geliştirici doğrulanamadı" / "hasarlı"). Finder'da uygulamaya **sağ tık →
+   Aç → Aç** de. Yine açılmazsa Terminal'de:
+   ```
+   xattr -dr com.apple.quarantine /Applications/vault-chat.app
+   ```
+   sonra tekrar aç.
+4. **Node.js 22:** Terminal'de `node --version` yaz; `v22.` ile başlamıyorsa
+   https://nodejs.org'dan 22 yükleyicisini kur ya da `brew install node@22`
+   (nvm/fnm/Volta ile kurulu Node da bulunur).
+5. **Anahtar Zinciri (Keychain) sorusu:** ilk açılışta ya da Ayarlar →
+   Sağlayıcılar'da macOS "vault-chat, anahtar zincirinizdeki gizli bilgileri
+   kullanmak istiyor" diye sorabilir — **Her Zaman İzin Ver**'i seç. API
+   anahtarlarının şifreleme anahtarı Anahtar Zinciri'nde (`app.vaultchat.desktop`
+   / `secrets-key`) saklanır.
+6. **Python (isteğe bağlı):** PDF/doküman içe aktarma için Python 3.10+ gerekir
+   (`brew install python@3.12`). Uygulamadaki **"Şimdi kur"** düğmesi sistem
+   Python'una dokunmaz; veri klasöründe uygulamaya ait bir ortam (`python-venv`)
+   kurup paketleri oraya yükler. Pandoc (yalnız `.tex` için) isteğe bağlıdır
+   (`brew install pandoc`).
+
+### Linux
+
+1. Paketi seç: **`.deb`** (Debian/Ubuntu) ya da **`.AppImage`** (diğer
+   dağıtımlar).
+   - `.deb`: `sudo apt install ./<indirdiğin-dosya>.deb` — `libwebkit2gtk-4.1-0`,
+     `libgtk-3-0`, `libayatana-appindicator3-1` ve `libsecret-1-0` bağımlılıkları
+     kendiliğinden çekilir.
+   - `.AppImage`: `chmod +x <dosya>.AppImage` ile çalıştırılabilir yap, çift
+     tıkla ya da `./<dosya>.AppImage` ile aç.
+2. **Node.js 22:** `node --version` `v22.` ile başlamalı. https://nodejs.org,
+   nvm/fnm/Volta ya da dağıtımının paket yöneticisiyle kur. (Uygulama GUI'den
+   açıldığında kabuğunun PATH'ini devralmaz; Node'u oturum kabuğunun PATH'inde,
+   `/usr/local/bin`'de, `/usr/bin`'de, nvm/fnm/Volta klasörlerinde arar.)
+3. **API anahtarları:** şifreleme anahtarı Secret Service'te (GNOME Keyring ya da
+   KWallet) saklanır; masaüstü oturumunda anahtarlığın kilidini açman istenebilir.
+   Sistemde böyle bir servis yoksa anahtarlar şifrelenmeden (yalnızca senin
+   okuyabileceğin bir dosyada) saklanır ve Ayarlar → Sağlayıcılar'da sarı bir
+   uyarı görürsün — GNOME Keyring/KWallet kurup uygulamayı yeniden başlatırsan
+   şifrelenir.
+4. **Python (isteğe bağlı):** Python 3.10+ gerekir. Debian/Ubuntu'da
+   `sudo apt install python3 python3-venv` — **`python3-venv` olmadan** "Şimdi
+   kur" düğmesi ortamı oluşturamaz. Düğme, macOS'taki gibi veri klasöründe
+   uygulamaya ait bir ortam (`python-venv`) kurar.
+
+### Verilerin ve günlüğün yeri
+
+| | Veri klasörü |
+|---|---|
+| Windows | `%APPDATA%\app.vaultchat.desktop\` |
+| macOS | `~/Library/Application Support/app.vaultchat.desktop/` |
+| Linux | `~/.local/share/app.vaultchat.desktop/` |
+
+Bir şey ters giderse bu klasördeki `launch.log` dosyası ipucu verir.
+
+**Anahtar zinciri kilitliyse (kırmızı uyarı):** Ayarlar → Sağlayıcılar'da "kayıtlı
+API anahtarlarının kilidi açılamıyor" uyarısı çıkarsa önce anahtar zincirinin
+kilidini açıp uygulamayı yeniden başlat. Olmazsa **"Kayıtlı API anahtarlarını
+sıfırla"** düğmesi eski dosyayı silmeden `secrets.json.locked-<tarih>` adıyla
+yedekler ve uygulamayı yeniden başlatır; API anahtarlarını yeniden girmen gerekir.
+
+**Kapanış (macOS):** uygulamayı Cmd+Q ile kapat. macOS'ta uygulama çökerse ya da
+zorla sonlandırılırsa arka plandaki `node` süreci kalabilir (Linux'ta çekirdek bunu
+temizler); Etkinlik Monitörü'nden `node`'u sonlandırabilirsin.
 
 ## Sorun giderme
 
