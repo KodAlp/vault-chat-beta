@@ -78,7 +78,35 @@ jobs:
           rm -rf dist-server
 
       - name: Bundle
+        if: runner.os != 'macOS'
         run: npx tauri build
+
+      # macOS: Tauri's bundle_dmg.sh drives Finder via AppleScript to lay out the dmg window, which
+      # intermittently times out / hits "hdiutil: Resource busy" on headless GitHub runners (macos-x64
+      # passed and then failed on the same code). Build only the .app with Tauri, then make a plain
+      # compressed dmg with hdiutil (no Finder scripting), retrying a busy hdiutil.
+      - name: Bundle (macOS app + dmg)
+        if: runner.os == 'macOS'
+        run: |
+          npx tauri build --bundles app
+          APP_DIR=src-tauri/target/release/bundle/macos
+          DMG_DIR=src-tauri/target/release/bundle/dmg
+          VERSION=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          ARCH=$(uname -m | sed 's/x86_64/x64/')
+          mkdir -p "$DMG_DIR"
+          DMG="$DMG_DIR/vault-chat_${VERSION}_${ARCH}.dmg"
+          # Staging folder = what the user sees when the dmg opens: the app + a drag-to-install link.
+          STAGE=$(mktemp -d)
+          cp -R "$APP_DIR/vault-chat.app" "$STAGE/"
+          ln -s /Applications "$STAGE/Applications"
+          for attempt in 1 2 3; do
+            if hdiutil create -volname vault-chat -srcfolder "$STAGE" -ov -format UDZO "$DMG"; then
+              break
+            fi
+            if [ "$attempt" = 3 ]; then exit 1; fi
+            echo "hdiutil failed (attempt $attempt), retrying in 10s"; sleep 10
+          done
+          ls -la "$DMG_DIR"
 
       - uses: actions/upload-artifact@v4
         with:
