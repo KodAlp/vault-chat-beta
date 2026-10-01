@@ -339,11 +339,10 @@ fn resolve_node_binary() -> Option<PathBuf> {
 
 /// Resolve a working `node` binary on Linux/macOS: `$PATH` first, then the
 /// usual install locations (system package, Homebrew, Volta, nvm, fnm) —
-/// a GUI-launched app often inherits a minimal PATH that misses the latter.
+/// a GUI-launched app often inherits a minimal PATH that misses the latter
+/// (`find_in_path` therefore also searches the login shell's PATH).
 /// The caller (`resolve_and_verify_node`) still verifies that the binary
 /// runs and has the required major version.
-// TODO(L3): import the login shell's PATH (macOS Finder / Linux desktop
-// launchers start us with a stripped-down environment) before this lookup.
 #[cfg(unix)]
 fn resolve_node_binary() -> Option<PathBuf> {
     let node = platform::exe_name("node");
@@ -742,6 +741,13 @@ async fn spawn_sidecar(app: &AppHandle, cfg: &VaultConfig) -> Result<SidecarOutc
     cmd.env("SECRETS_PROTECTION", secrets_protection.env_value());
     if let Some(key_hex) = secrets_protection.key_hex() {
         cmd.env("SECRETS_KEY_HEX", key_hex);
+    }
+    // Unix: give the sidecar the same PATH we resolved Node with, so its own
+    // python/pandoc/ollama lookups work when launched from Finder/a desktop file.
+    #[cfg(unix)]
+    {
+        log_line(app, &platform::search_path_summary());
+        cmd.env("PATH", platform::effective_search_path());
     }
     cmd.stdout(Stdio::piped()).stderr(Stdio::piped());
     platform::no_window(&mut cmd);

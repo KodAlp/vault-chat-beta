@@ -785,8 +785,8 @@ fn detect_vllm_native() -> Option<PathBuf> {
 /// Linux/macOS counterpart of the Windows `detect_installed_path`: a PATH
 /// scan plus the well-known install locations — every hit is an existing
 /// file with an exec bit.
-// TODO(L3): a GUI-launched app inherits a minimal PATH; importing the login
-// shell's PATH would let `find_in_path` see user-local installs too.
+// `find_in_path` searches the login shell's PATH too, so user-local installs
+// are seen even when the app was started from Finder / a desktop launcher.
 #[cfg(unix)]
 fn detect_installed_path(id: &str) -> Option<PathBuf> {
     match id {
@@ -1412,6 +1412,9 @@ async fn start_launcher_by_id(app: &AppHandle, id: &str) -> Result<(), String> {
     let mut command = Command::new(&cfg.program);
     command.args(&args).stdout(Stdio::from(out_file)).stderr(Stdio::from(err_file));
     platform::no_window(&mut command);
+    // Unix: servers may exec helpers found via PATH; give them the full one.
+    #[cfg(unix)]
+    command.env("PATH", platform::effective_search_path());
     // Unix: own session/process group (+ PDEATHSIG on Linux); no-op on Windows.
     ProcessGuard::prepare(&mut command);
     // Ollama has no `--port`/`--host` flag of its own — see the catalog
