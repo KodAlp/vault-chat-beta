@@ -117,6 +117,12 @@ test('vault registry', async (t) => {
 		setActiveVault(first.id);
 
 		const before = listVaults().find((v) => v.id === second.id)!.lastOpenedAt;
+		// A fast machine can create and mark within one millisecond (seen on a Linux CI runner): wait for
+		// the clock to move so "lastOpenedAt changed" is a real assertion, not a timing coin flip.
+		const t0 = Date.now();
+		while (Date.now() === t0) {
+			/* spin ≤1 ms */
+		}
 		markVaultUsed(second.id);
 
 		assert.equal(getActiveVaultId(), second.id);

@@ -148,13 +148,18 @@ function listSupportingFiles(dir: string): string[] {
 }
 
 interface CacheEntry {
-	mtimeMs: number;
+	/** statSig() of the file when parsed: mtime alone misses a rewrite inside one timestamp tick. */
+	sig: string;
 	parsed: ParsedSkill;
 }
 
 /** Path → cached parse, invalidated by mtime — cheap stat beats a watcher for
  * a folder this small, per the skill doc's explicit guidance. */
 const cache = new Map<string, CacheEntry>();
+
+function statSig(stat: fs.Stats): string {
+	return `${stat.mtimeMs}|${stat.ctimeMs}|${stat.size}`;
+}
 
 function parseFile(absPath: string): ParsedSkill {
 	const root = skillsDir();
@@ -341,17 +346,17 @@ function parseAll(): ParsedSkill[] {
 		if (entry.kind === 'file') {
 			const stat = fs.statSync(entry.absPath);
 			const cached = cache.get(entry.absPath);
-			if (cached && cached.mtimeMs === stat.mtimeMs) return cached.parsed;
+			if (cached && cached.sig === statSig(stat)) return cached.parsed;
 			const parsed = parseFile(entry.absPath);
-			cache.set(entry.absPath, { mtimeMs: stat.mtimeMs, parsed });
+			cache.set(entry.absPath, { sig: statSig(stat), parsed });
 			return parsed;
 		}
 		const stat = fs.statSync(entry.skillMdPath);
 		const cached = cache.get(entry.skillMdPath);
 		const base =
-			cached && cached.mtimeMs === stat.mtimeMs ? cached.parsed : parseFolderSkill(entry.dir, entry.skillMdPath);
-		if (!cached || cached.mtimeMs !== stat.mtimeMs) {
-			cache.set(entry.skillMdPath, { mtimeMs: stat.mtimeMs, parsed: base });
+			cached && cached.sig === statSig(stat) ? cached.parsed : parseFolderSkill(entry.dir, entry.skillMdPath);
+		if (!cached || cached.sig !== statSig(stat)) {
+			cache.set(entry.skillMdPath, { sig: statSig(stat), parsed: base });
 		}
 		// files always recomputed fresh, never taken from the cached parse —
 		// see listSupportingFiles()'s doc comment.
