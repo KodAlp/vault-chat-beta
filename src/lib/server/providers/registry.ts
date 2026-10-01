@@ -13,7 +13,7 @@ import { chatWithFallbackCore, type FallbackEvent } from './chat-fallback';
 import { isProviderConsented as isCloudProviderConsented } from '../provider-consent';
 import { AppError } from '../app-error';
 
-let cachedMtime = -1;
+let cachedSignature = '';
 let cachedConfig: ProvidersFile | null = null;
 let adapters = new Map<string, ProviderAdapter>();
 
@@ -36,9 +36,13 @@ function loadConfig(): ProvidersFile {
 		const reason = err instanceof Error ? err.message : String(err);
 		throw new AppError('PROVIDERS_FILE_UNREADABLE', { detail: `${p}: ${reason}` });
 	}
-	if (cachedConfig && stat.mtimeMs === cachedMtime) return cachedConfig;
+	// Path + mtime + ctime + size, not mtime alone: two writes inside one timestamp tick (coarse on some
+	// Linux filesystems), or a different PROVIDERS_PATH whose file happens to share the mtime, must not
+	// serve the previous config.
+	const signature = `${p}|${stat.mtimeMs}|${stat.ctimeMs}|${stat.size}`;
+	if (cachedConfig && signature === cachedSignature) return cachedConfig;
 	cachedConfig = readProvidersFile();
-	cachedMtime = stat.mtimeMs;
+	cachedSignature = signature;
 	adapters = new Map();
 	return cachedConfig;
 }
