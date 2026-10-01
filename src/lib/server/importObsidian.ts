@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import matter from 'gray-matter';
@@ -15,6 +16,20 @@ import { AppError, toCodedError } from './app-error';
 import { EXCLUDED_DIRS } from '../../../indexer/excluded-dirs';
 import type { ImportResultItem, ImportSummary } from '$lib/types';
 import type { VaultContext } from './vaults';
+
+/** Wikilink/attachment index key. macOS (HFS+/APFS-via-some-tools) can hand back NFD filenames while the
+ * [[links]] typed in a note are NFC, so both sides are NFC-normalized before comparing. */
+export function indexKey(name: string): string {
+	return name.normalize('NFC').toLowerCase();
+}
+
+/** A leading ~ or ~/ (also ~) in a user-typed source path means the home directory. */
+export function expandHome(p: string, home: string = os.homedir()): string {
+	const t = p.trim();
+	if (t === '~') return home;
+	if (t.startsWith('~/') || t.startsWith('~\\')) return path.join(home, t.slice(2));
+	return p;
+}
 
 function sha256(content: string): string {
 	return crypto.createHash('sha256').update(content).digest('hex');
@@ -64,11 +79,11 @@ function appendLog(v: VaultContext, _logPath: string, entry: LogEntry): void {
 /** [[Note]] / [[Note|alias]] / [[Note#heading]] -> relative .md link, resolved
  * against a basename index built from the same walk (case-insensitive,
  * first match wins — ambiguous duplicate names are an accepted edge case). */
-function rewriteWikilinks(content: string, currentRel: string, mdIndex: Map<string, string>): string {
+export function rewriteWikilinks(content: string, currentRel: string, mdIndex: Map<string, string>): string {
 	return content.replace(
 		/\[\[([^\]|#]+)(#[^\]|]+)?(\|([^\]]+))?\]\]/g,
 		(_match, target: string, _heading: string | undefined, _aliasGroup: string | undefined, alias: string | undefined) => {
-			const key = target.trim().toLowerCase();
+			const key = indexKey(target.trim());
 			const targetRel = mdIndex.get(key);
 			const label = alias ?? target.trim();
 			if (!targetRel) return label;
@@ -97,7 +112,7 @@ function rewriteEmbeds(
 ): string {
 	return content.replace(/!\[\[([^\]]+)\]\]/g, (match, target: string) => {
 		const base = target.trim();
-		const srcRel = attachmentIndex.get(base.toLowerCase());
+		const srcRel = attachmentIndex.get(indexKey(base));
 		if (!srcRel) return match;
 		const destRel = copyAttachmentIntoLibrary(v, path.join(sourceRoot, srcRel), base);
 		if (!destRel) return match;
@@ -113,7 +128,7 @@ export async function importObsidianVault(
 	sourcePath: string,
 	onProgress?: (item: ImportResultItem) => void
 ): Promise<ImportSummary> {
-	const resolvedSource = path.resolve(sourcePath);
+	const resolvedSource = path.resolve(expandHome(sourcePath));
 	if (!fs.existsSync(resolvedSource) || !fs.statSync(resolvedSource).isDirectory()) {
 		throw new AppError('OBSIDIAN_SOURCE_INVALID');
 	}
@@ -122,13 +137,14 @@ export async function importObsidianVault(
 	const mdFiles = allFiles.filter((f) => f.endsWith('.md'));
 	const mdIndex = new Map<string, string>();
 	for (const rel of mdFiles) {
-		const key = path.basename(rel, '.md').toLowerCase();
+		const key = indexKey(path.basename(rel, '.md'));
 		if (!mdIndex.has(key)) mdIndex.set(key, rel);
 	}
 	const attachmentIndex = new Map<string, string>();
 	for (const rel of allFiles) {
-		if (!rel.endsWith('.md') && !attachmentIndex.has(path.basename(rel).toLowerCase())) {
-			attachmentIndex.set(path.basename(rel).toLowerCase(), rel);
+		const key = indexKey(path.basename(rel));
+		if (!rel.endsWith('.md') && !attachmentIndex.has(key)) {
+			attachmentIndex.set(key, rel);
 		}
 	}
 

@@ -316,3 +316,33 @@ test('a transient failure (unavailable) keeps the strict AND: one missing term r
 		restore();
 	}
 });
+
+test('a reindex that swaps index.db by rename is picked up by the next retrieve (no stale cached connection)', async (t) => {
+	const vault = setup({ provider: 'ollama', model: 'old-model', dims: 3 });
+	setEmbeddingConfig({ providerId: 'ollama', model: 'bge-m3', dims: 3 }); // mismatch -> keyword path, no network
+	const first = await retrieve(vault, QUERY, {});
+	assert.equal(first.chunks.length, 1);
+	const none = await retrieve(vault, 'mergesort divide conquer', {});
+	assert.equal(none.chunks.length, 0);
+
+	const fresh = path.join(vault.dir, 'index.new.db');
+	const db = openDb(fresh, { provider: 'ollama', model: 'old-model', dims: 3 });
+	upsertFile(
+		db,
+		{ path: 'b.md', sha256: 'y', mtime: 2, topic: 'Mergesort', depth: 'undergrad', domains_json: '["algorithms"]', prerequisites_json: '[]' },
+		[{ insert: { path: 'b.md', heading_path: 'Mergesort', display_text: 'mergesort divide conquer merge halves' }, embedding: [1, 0, 0] }]
+	);
+	db.close();
+	try {
+		fs.renameSync(fresh, vault.indexDbPath);
+	} catch (err) {
+		if (process.platform === 'win32') {
+			t.skip('Windows refuses to rename over an open index.db (REINDEX_INDEX_LOCKED path)');
+			return;
+		}
+		throw err;
+	}
+	const after = await retrieve(vault, 'mergesort divide conquer', {});
+	assert.equal(after.chunks.length, 1);
+	assert.equal(after.chunks[0].path, 'b.md');
+});

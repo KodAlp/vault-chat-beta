@@ -2,7 +2,7 @@
  * Trust the operating system's certificate store in addition to Node's bundled one.
  *
  * Why: antivirus HTTPS scanning (measured on this project's dev machine: Kaspersky) and corporate
- * proxies re-sign TLS traffic with a root that is installed in the Windows store — browsers trust it,
+ * proxies re-sign TLS traffic with a root that is installed in the operating system's store (Windows certificate store, macOS Keychain, the OpenSSL/system bundle on Linux) — browsers trust it,
  * Node's bundled list does not. Every cloud provider call then fails with SELF_SIGNED_CERT_IN_CHAIN
  * (seen in data/app-log.jsonl for openrouter/groq/deepseek). Verification stays ON: this only adds the
  * OS roots the rest of the machine already trusts, the same thing `node --use-system-ca` does.

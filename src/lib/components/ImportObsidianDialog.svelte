@@ -5,6 +5,7 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { t } from '$lib/i18n/index.svelte';
+	import { serverPlatform } from '$lib/serverPlatform.svelte';
 	import { localizeError, readResponseError } from '$lib/server-error';
 
 	let open = $state(false);
@@ -112,7 +113,13 @@
 		{#if phase === 'idle'}
 			<label class="flex flex-col gap-1 text-sm">
 				{t('ImportObsidianDialog.sourcePathLabel')}
-				<Input type="text" bind:value={sourcePath} placeholder={t('ImportObsidianDialog.sourcePathPlaceholder')} />
+				<Input type="text" bind:value={sourcePath} placeholder={t(
+					serverPlatform() === 'darwin'
+						? 'ImportObsidianDialog.sourcePathPlaceholderMac'
+						: serverPlatform() === 'linux'
+							? 'ImportObsidianDialog.sourcePathPlaceholderLinux'
+							: 'ImportObsidianDialog.sourcePathPlaceholder'
+				)} />
 			</label>
 			<Dialog.Footer>
 				<Button variant="outline" onclick={() => (open = false)}>{t('Common.iptal')}</Button>

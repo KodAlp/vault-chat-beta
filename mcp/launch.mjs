@@ -38,7 +38,9 @@ if (printConfig) {
 	const block = {
 		mcpServers: {
 			'vault-chat': {
-				command: 'node',
+				// Absolute path of the node running this script: Claude Desktop on macOS starts MCP servers with
+				// the GUI PATH, which doesn't include Homebrew/nvm/fnm node, so a bare "node" isn't found there.
+				command: process.execPath,
 				args: [fileURLToPath(new URL('./launch.mjs', import.meta.url))],
 				env: { DATA_DIR: process.env.DATA_DIR }
 			}

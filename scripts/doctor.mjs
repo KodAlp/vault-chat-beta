@@ -20,6 +20,13 @@ const root = process.cwd();
 let failures = 0;
 let warnings = 0;
 
+/** Per-platform answer to "what do I install so a native module can compile". */
+function nativeBuildToolsHint() {
+	if (process.platform === 'win32') return 'Visual Studio Build Tools (C++ workload).';
+	if (process.platform === 'darwin') return 'Xcode komut satırı araçları ("xcode-select --install").';
+	return 'build-essential (g++, make) ve python3 paketleri (dağıtımının paket yöneticisiyle).';
+}
+
 function ok(label) {
 	console.log(`  OK   ${label}`);
 }
@@ -80,7 +87,7 @@ console.log('\nNative modüller');
 	} catch (err) {
 		fail(
 			`better-sqlite3 yüklenemedi: ${err instanceof Error ? err.message : err}`,
-			'npm install çalıştırın; internet erişimi prebuild-install\'ın hazır binary indirmesi için gerekli. Yine de başarısız olursa Visual Studio Build Tools (C++ workload) + Python 3 kurulu olmalı.'
+			'npm install çalıştırın; internet erişimi prebuild-install\'ın hazır binary indirmesi için gerekli. Yine de başarısız olursa derleme araçları + Python 3 kurulu olmalı: ' + nativeBuildToolsHint()
 		);
 	}
 

@@ -23,6 +23,8 @@
 	 * calling into `@tauri-apps/api/core` — nothing here throws outside Tauri.
 	 */
 	import { onMount } from 'svelte';
+	import { installHint, showWingetNote } from '$lib/install-hints';
+	import { serverPlatform } from '$lib/serverPlatform.svelte';
 	import { goto } from '$app/navigation';
 	import { isTauri, invoke } from '@tauri-apps/api/core';
 	import { Button } from '$lib/components/ui/button';
@@ -703,6 +705,17 @@
 	<title>{t('LocalServerSetupPage.title')}</title>
 </svelte:head>
 
+{#snippet platformHint(tool: string)}
+	{@const hint = installHint(serverPlatform(), tool)}
+	{#if hint.kind === 'brew'}
+		<p class="mt-1 text-xs text-muted-foreground">
+			{t('LocalServerSetupPage.brewHint', { command: hint.command })}
+		</p>
+	{:else if hint.kind === 'package-manager'}
+		<p class="mt-1 text-xs text-muted-foreground">{t('LocalServerSetupPage.packageManagerHint')}</p>
+	{/if}
+{/snippet}
+
 {#snippet wingetStatus(id: string)}
 	{#if wingetBusyId === id}
 		{#if wingetLog.length > 0}
@@ -959,6 +972,7 @@
 							{#if server.winget_id}
 								{@render wingetStatus(server.winget_id)}
 							{/if}
+							{@render platformHint(server.id)}
 						</Card.Content>
 					</Card.Root>
 				{/each}
@@ -990,6 +1004,9 @@
 					{/if}
 				</div>
 				{@render wingetStatus('Python.Python.3.12')}
+				{#if !pySystem.pythonInstalled}
+					{@render platformHint('python')}
+				{/if}
 
 				{#if pySystem.pythonInstalled}
 					<div class="mt-2">
@@ -1035,8 +1052,11 @@
 					{/if}
 				</div>
 				{@render wingetStatus('JohnMacFarlane.Pandoc')}
+				{#if !pySystem.pandoc}
+					{@render platformHint('pandoc')}
+				{/if}
 
-				{#if !wingetAvailable}
+				{#if !wingetAvailable && showWingetNote(serverPlatform())}
 					<p class="text-xs text-muted-foreground">{t('LocalServerSetupPage.wingetUnavailableNote')}</p>
 				{/if}
 			</div>
