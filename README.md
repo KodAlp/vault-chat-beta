@@ -17,7 +17,7 @@ gizlilik/güvenlik/kullanım koşulları için `PRIVACY.md`/`SECURITY.md`/
 
 ## Ön koşullar
 
-1. **Node.js 22+** (zaten kurulu: `node --version`).
+1. **Node.js 22** (`>=22 <23`; 20 ve 24 çalışmaz — kurulu sürümü `node --version` ile gör).
 2. **Bir sohbet modeli kaynağı** — **Ollama önerilir** (https://ollama.com), ama
    zorunlu değil. Şunlardan biri yeter:
    - Ollama,
@@ -176,19 +176,29 @@ geçmen gerekir.
 
 Aynı sunucuyu tarayıcı yerine yerel bir pencerede çalıştıran, Electron
 kullanmayan bir paket. Ön koşullar tarayıcı akışıyla birebir aynı — **Node.js
-22+ kurulu olmalı; sohbet için bir model kaynağı (önerilen: Ollama, ya da başka
+22 kurulu olmalı; sohbet için bir model kaynağı (önerilen: Ollama, ya da başka
 bir yerel sunucu / bulut sağlayıcı) gerekir**, hiçbiri pakete gömülmez.
 
 ```bash
 npm run desktop:dev      # canlı Vite dev sunucusuna karşı native pencere, HMR çalışır
-npm run desktop:build    # gerçek NSIS kurulum dosyası üretir
+npm run desktop:build    # çalıştığın işletim sisteminin paketini üretir
 ```
 
-`desktop:build` çıktısı: `src-tauri/target/release/bundle/nsis/vault-chat_<sürüm>_x64-setup.exe`.
+Windows'ta `desktop:build` çıktısı: `src-tauri/target/release/bundle/nsis/vault-chat_<sürüm>_x64-setup.exe`
+(NSIS kurulum dosyası). Linux ve macOS paketleri aynı komutla, kendi işletim
+sisteminde üretilir (çapraz derleme yok); hedefler `src-tauri/tauri.linux.conf.json`
+(`deb`, `appimage`) ve `src-tauri/tauri.macos.conf.json`'da (`app`, `dmg`) — bkz.
+aşağıdaki "Linux ve macOS (yeni, beta)" bölümü. Hazır paketler için GitHub
+Actions'taki `desktop` iş akışı dört hedefi (Windows x64, Linux x64, macOS arm64,
+macOS x64) derleyip her biri için `vault-chat-<hedef>` adlı bir artifact yükler
+(`.github/workflows/desktop.yml`; artifact'lar 7 gün saklanır).
+
+Windows kurulum konumu ve veri klasörü:
 Kurulum kullanıcı bazlı (yönetici gerektirmez), `%LOCALAPPDATA%\vault-chat\`
 altına gider. Uygulama verisi (sohbet geçmişi, vault registry, her vault'un
-kütüphanesi/indeksi, `config.json`) `%APPDATA%\Roaming\app.vaultchat.desktop\`
-altında tutulur — `data/` klasöründen tamamen ayrı, tarayıcı akışıyla
+kütüphanesi/indeksi, `config.json`) Windows'ta `%APPDATA%\Roaming\app.vaultchat.desktop\`
+(macOS: `~/Library/Application Support/app.vaultchat.desktop/`, Linux:
+`~/.local/share/app.vaultchat.desktop/`) altında tutulur — `data/` klasöründen tamamen ayrı, tarayıcı akışıyla
 paylaşılmaz. Vault registry buradaki `DATA_DIR`'e göre çözülür (sidecar'ın
 kendi ortam değişkeni, kullanıcının görmediği); `config.json`'daki tek
 `vault_path`/`vault_name` çifti ise ayrı bir şey — ilk kurulan **"default"**
@@ -204,7 +214,7 @@ ve sonraki açılışlarda tekrar sorulmaz. Bu adı sonradan değiştirmek için
 başlatmada etkili olur, çalışan sunucuyu yeniden başlatmaz).
 
 `node build/index.js`'i doğrudan çağırdığından, kalıcı kullanım akışının
-gerektirdiği her şey (Node 22+, `.env` değil ortam değişkenleri) burada da
+gerektirdiği her şey (Node 22, `.env` değil ortam değişkenleri) burada da
 geçerli — bkz. yukarıdaki not.
 
 ## Başka bir Windows makinesinde çalıştırma
@@ -235,10 +245,11 @@ Dikkat edilecek noktalar:
   `better-sqlite3`'ün native binary'si Node 22'nin ABI'sine derli — hata ancak
   ilk veritabanı erişiminde çıkar. `npm run doctor` bunu kurulumdan hemen
   sonra yakalar.
-- **`data/secrets.json` taşınmaz.** Masaüstü paketinde Windows DPAPI ile
-  şifrelenir, DPAPI anahtarı kullanıcı/makine profiline bağlıdır — başka bir
-  makineye/kullanıcıya kopyalanan bir `secrets.json` sessizce "anahtar yok"
-  gibi davranır. Bulut sağlayıcı (DeepSeek/Gemini/Groq/...) API anahtarlarını
+- **`secrets.json` taşınmaz.** Masaüstü paketinde AES-256-GCM ile
+  şifrelenir; şifreleme anahtarı işletim sisteminin deposundadır (Windows
+  DPAPI, macOS Keychain, Linux Secret Service) ve kullanıcı/makine profiline
+  bağlıdır — başka bir makineye/kullanıcıya kopyalanan bir `secrets.json`
+  çözülemez, "anahtar yok" gibi davranır. Bulut sağlayıcı (DeepSeek/Gemini/Groq/...) API anahtarlarını
   hedef makinede Ayarlar → Sağlayıcılar'dan yeniden gir.
 - **Vault içerikleri elle taşınır.** `data/vaults.json` kendi yollarını her
   okumada yeniden türettiği için taşınabilir, ama her vault'un asıl içeriği
@@ -252,6 +263,84 @@ Dikkat edilecek noktalar:
   yukarıdaki tablo). Eksikse uygulama artık `/api/system/python` üzerinden
   bunu algılayıp turuncu bir banner'da "Şimdi kur" butonuyla
   `pip install -r ingest/requirements.txt`'i senin yerine çalıştırır.
+
+## Linux ve macOS (yeni, beta)
+
+> **Uyarı:** Linux ve macOS paketleri yeni. CI'da derleniyor ama **henüz gerçek
+> bir Linux/macOS makinesinde denenmedi**; macOS paketi ayrıca **imzasız ve
+> noter onaysız (notarize edilmemiş)**. Windows kadar olgun değil — sorun
+> görürsen veri klasöründeki `launch.log`'u (aşağıda) ekleyerek bildir. macOS
+> için adım adım deneme listesi: [`docs/macos-deneme-listesi.md`](docs/macos-deneme-listesi.md).
+
+Desteklenen paket biçimleri (CI'da derlenir; bkz. "Masaüstü (Tauri)"):
+
+| Platform | Paket | Not |
+|---|---|---|
+| Linux x64 | `.deb`, `.AppImage` | `.deb` şu paketlere bağlıdır: `libwebkit2gtk-4.1-0`, `libgtk-3-0`, `libayatana-appindicator3-1`, `libsecret-1-0` (`src-tauri/tauri.linux.conf.json`) |
+| macOS (Apple Silicon ve Intel) | `vault-chat.app` + `.dmg`, imzasız | macOS 11.0 ve üstü (`minimumSystemVersion`) |
+
+Kaynaktan derlemek için Linux'ta (CI'daki Ubuntu 22.04 paket listesi):
+```bash
+sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev \
+  librsvg2-dev patchelf libsecret-1-dev libdbus-1-dev
+npm install && npm run desktop:build
+```
+
+| Bileşen | Zorunlu mu | Linux / macOS'ta nasıl kurulur |
+|---|---|---|
+| Node.js 22.x (`>=22 <23`) | Evet — pakete gömülü değil | https://nodejs.org, Homebrew (`brew install node@22`), nvm/fnm/Volta veya dağıtımın paket yöneticisi |
+| Model kaynağı (Ollama önerilir, başka yerel sunucu ya da bulut sağlayıcı) | Sohbet için bir tanesi | Elle — https://ollama.com |
+| Python **3.10+** | Hayır — yalnızca PDF/doküman/YouTube içe aktarma için | macOS: `brew install python@3.12`; Linux: dağıtımın paket yöneticisi (Debian/Ubuntu'da `sudo apt install python3 python3-venv`) |
+| pandoc | Hayır — yalnızca `.tex` dönüştürme için | Homebrew ya da dağıtımın paket yöneticisi |
+
+Bilmen gerekenler:
+- **Node nasıl bulunur?** GUI'den açılan uygulama kabuğunun PATH'ini
+  devralmaz. Bu yüzden `node` önce PATH'te (oturum/login kabuğunun PATH'i dahil)
+  ve sonra bilinen konumlarda aranır: `/usr/local/bin`, `/usr/bin`,
+  `/opt/homebrew/bin`, `~/.volta/bin`, nvm (`~/.nvm/versions/node`) ve fnm
+  sürüm klasörleri (`src-tauri/src/platform.rs`, `src-tauri/src/lib.rs`'teki
+  `resolve_node_binary`). Bulunan Node'un ana sürümü 22 değilse uygulama
+  açılışta uyarır.
+- **Python "Şimdi kur"** macOS/Linux'ta sistem Python'una `pip install` yapmaz
+  (Debian/Homebrew "externally managed" korumasına takılır). Bunun yerine veri
+  klasöründe uygulamaya ait bir sanal ortam (`python-venv`) oluşturup paketleri
+  oraya kurar (`src/routes/api/system/python/+server.ts`,
+  `src/lib/server/python-bin.ts`). Debian/Ubuntu'da `python3-venv` paketi
+  yoksa ortam oluşturulamaz ve uygulama bunu söyler. macOS'ta Komut Satırı
+  Araçları (CLT) kurulu değilse `/usr/bin/python3` yer tutucusu atlanır
+  (kurulum penceresi tetiklenmesin diye). `PYTHON_BIN` ortam değişkeniyle belirli
+  bir yorumlayıcı da verilebilir.
+- **winget yalnızca Windows'ta.** macOS/Linux'ta uygulama paket yöneticisini
+  kendisi çalıştırmaz; Homebrew / dağıtım paket yöneticisi komutlarını sen
+  çalıştırırsın.
+- **API anahtarları** işletim sisteminin deposuyla korunur: macOS'ta
+  Anahtar Zinciri (servis `app.vaultchat.desktop`, hesap `secrets-key`;
+  ilk açılışta bir izin sorusu çıkabilir — "Her Zaman İzin Ver"), Linux'ta
+  Secret Service (GNOME Keyring / KWallet). Linux'ta bu servis yoksa anahtarlar
+  şifrelenmeden (`0600` izinli dosyada) saklanır ve Ayarlar → Sağlayıcılar'da
+  bir uyarı görürsün; GNOME Keyring veya KWallet kurup uygulamayı yeniden
+  başlatınca şifrelenir. Anahtar var ama okunamıyorsa ("kilitli") hiçbir şey
+  yeniden üretilmez; **Ayarlar → Sağlayıcılar → "Kayıtlı API anahtarlarını
+  sıfırla"** eski dosyayı `secrets.json.locked-<tarih>` olarak yedekleyip
+  uygulamayı yeniden başlatır. Ayrıntı: `SECURITY.md`.
+- **Arka plan süreçleri:** Linux'ta uygulama çökse bile işletim sistemi çekirdeği Node
+  sunucusuna `SIGTERM` gönderir (`PR_SET_PDEATHSIG`). macOS'ta böyle bir
+  güvence yok: yalnızca normal çıkışta (Cmd+Q) sunucu süreci temizlenir;
+  uygulama çökerse ya da zorla sonlandırılırsa `node` süreci arkada kalabilir.
+- **Günlük dosyası:** açılış sorunlarında `launch.log` — macOS:
+  `~/Library/Application Support/app.vaultchat.desktop/launch.log`, Linux:
+  `~/.local/share/app.vaultchat.desktop/launch.log`.
+
+### macOS: imzasız uygulamayı açma (Gatekeeper)
+
+Uygulama Apple tarafından imzalanmadığı ve noter onayından geçmediği için
+macOS ilk açılışta engeller ("geliştirici doğrulanamadı" ya da "hasarlı").
+`.dmg`'den `vault-chat`'i **Applications**'a sürükle, sonra Finder'da uygulamaya
+**sağ tık → Aç → Aç** de. Yine açılmazsa karantina işaretini kaldır:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/vault-chat.app
+```
 
 ## MCP Sunucusu (Faz 10)
 
