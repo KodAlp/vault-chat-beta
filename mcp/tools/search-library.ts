@@ -3,6 +3,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { retrieve, vaultIsIndexed } from '../../src/lib/server/retrieve';
 import { withVault } from '../vault-scope';
 import { logCall } from '../log';
+import { AppError } from '../../src/lib/server/app-error';
 import { toolErrorResult, ToolError } from '../errors';
 
 const SNIPPET_MAX_CHARS = 600;
@@ -59,8 +60,11 @@ export function registerSearchLibrary(server: McpServer): void {
 							k
 						});
 					} catch (err) {
+						// Provider-neutral: the embedding provider may be any server (or none — keyword-only mode
+						// never throws here), so name the underlying error code instead of guessing a cause.
+						const code = err instanceof AppError ? err.code : 'ERROR';
 						const message = err instanceof Error ? err.message : String(err);
-						throw new ToolError('OLLAMA_UNAVAILABLE', `Ollama'ya ulaşılamadı: ${message}`);
+						throw new ToolError('RETRIEVAL_FAILED', `Arama başarısız (${code}): ${message}`);
 					}
 					return { vaultId: v.id, result: r };
 				});

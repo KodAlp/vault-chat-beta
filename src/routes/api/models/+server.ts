@@ -1,6 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getAdapter } from '$lib/server/providers/registry';
+import { getOllamaProviderId } from '$lib/server/providers/config-store';
 import { OllamaAdapter } from '$lib/server/providers/ollama';
 import { sseStream } from '$lib/server/sse';
 import { logAppEvent } from '$lib/server/app-log';
@@ -9,15 +10,19 @@ import type { ErrorCode, ErrorParams } from '$lib/errors';
 
 type PullEvent = { type: string; status?: string; error?: string; code?: string; params?: ErrorParams };
 
+/** Aşama 4d: the first enabled ollama-kind provider (preferring id 'ollama') — no longer a hardcoded id, and
+ * no Ollama provider at all is just "not configured", not a crash. */
 async function getOllamaAdapter(): Promise<OllamaAdapter> {
-	const adapter = await getAdapter('ollama');
+	const id = getOllamaProviderId();
+	if (!id) throw new AppError('PROVIDER_OLLAMA_MISCONFIGURED');
+	const adapter = await getAdapter(id);
 	if (!(adapter instanceof OllamaAdapter)) throw new AppError('PROVIDER_OLLAMA_MISCONFIGURED');
 	return adapter;
 }
 
 export const GET: RequestHandler = async () => {
 	try {
-		// Only Ollama is enabled today; native listing carries size/modified_at
+		// Native listing carries size/modified_at
 		// that the cross-provider ModelInfo shape doesn't (see ollama.ts) —
 		// response shape unchanged from the client's perspective.
 		const adapter = await getOllamaAdapter();

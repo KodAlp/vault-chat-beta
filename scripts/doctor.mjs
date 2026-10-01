@@ -1,12 +1,10 @@
 // "Am I ready to run this?" preflight — one command, plain `node` (no tsx),
 // so it works even before `npm install` has fully succeeded. Every check
-// that could drift from the actual code (required models, providers.json
-// location) reads that code/config directly instead of hardcoding a
-// duplicate value — see the embed-model regex-extraction below for why:
-// KURULUM-REHBERI.md itself drifted from embed-config.ts's real EMBED_MODEL
-// once already (nomic-embed-text vs bge-m3), and this check exists so that
-// class of bug is caught by a command instead of by a user's failed
-// `npm run index`.
+// that could drift from the actual code (which models are required, where
+// providers.json lives) reads the config directly instead of hardcoding a
+// duplicate value. No provider is required on its own (Aşama 4d): only the
+// chat chain's head and the embedding provider are checked, and an unreachable
+// local server that is neither is not a failure.
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
@@ -104,8 +102,7 @@ console.log('\nNative modüller');
 
 // --- providers.json ----------------------------------------------------------
 console.log('\nYapılandırma');
-let requiredChatModel = null;
-let ollamaUrl = nonEmpty(process.env.OLLAMA_URL) ?? 'http://127.0.0.1:11434';
+let providersConfig = null;
 {
 	const dataDir = path.resolve(root, nonEmpty(process.env.DATA_DIR) ?? 'data');
 	const providersPath = nonEmpty(process.env.PROVIDERS_PATH) ?? path.join(dataDir, 'providers.json');
@@ -120,9 +117,7 @@ let ollamaUrl = nonEmpty(process.env.OLLAMA_URL) ?? 'http://127.0.0.1:11434';
 			// in this source file.
 			let raw = readFileSync(providersPath, 'utf-8');
 			if (raw.charCodeAt(0) === 0xfeff) raw = raw.slice(1);
-			const parsed = JSON.parse(raw);
-			const ollamaEntry = parsed.providers?.find((p) => p.id === 'ollama');
-			requiredChatModel = ollamaEntry?.defaultModel ?? null;
+			providersConfig = JSON.parse(raw);
 			ok(`data/providers.json okunabiliyor (${providersPath})`);
 		} catch (err) {
 			fail(`data/providers.json geçersiz JSON: ${err instanceof Error ? err.message : err}`);
@@ -130,43 +125,32 @@ let ollamaUrl = nonEmpty(process.env.OLLAMA_URL) ?? 'http://127.0.0.1:11434';
 	}
 }
 
-// EMBED_MODEL'i embed-config.ts'in KENDİSİNDEN oku (regex ile) — bu değeri
-// burada tekrar hardcode etmek, KURULUM-REHBERI.md'nin bir kez düştüğü aynı
-// hataya (kodla dokümanın ayrışması) doctor.mjs'i de düşürür.
-let requiredEmbedModel = null;
-{
-	const embedConfigPath = path.join(root, 'src', 'lib', 'server', 'embed-config.ts');
-	try {
-		const text = readFileSync(embedConfigPath, 'utf-8');
-		const match = text.match(/export const EMBED_MODEL\s*=\s*'([^']+)'/);
-		if (match) {
-			requiredEmbedModel = match[1];
-		} else {
-			warn(`EMBED_MODEL, ${embedConfigPath} içinde bulunamadı (dosya formatı değişmiş olabilir)`);
+// --- Sağlayıcılar -------------------------------------------------------------
+// Hiçbir sağlayıcı tek başına zorunlu değil: yalnızca sohbet zincirinin başındaki sağlayıcı ve (varsa)
+// embedding sağlayıcısı gerçekten kullanılır, yalnızca onların erişilebilirliği hata sayılır. Zincirde
+// olmayan bir Ollama (ya da başka bir yerel sunucu) çalışmıyorsa bu bir sorun değildir.
+console.log('\nSağlayıcılar');
+if (providersConfig) {
+	const providers = providersConfig.providers ?? [];
+	const byId = new Map(providers.map((p) => [p.id, p]));
+	const isLocal = (p) => p.kind === 'ollama' || p.local === true;
+
+	/** Yerel bir sağlayıcıya ulaşılabiliyor mu; Ollama ise kurulu model adlarını da döndürür. */
+	async function probeLocal(p) {
+		const base = String(p.baseUrl).replace(/\/+$/, '');
+		const url = p.kind === 'ollama' ? `${base}/api/tags` : `${base}/models`;
+		try {
+			const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+			if (!res.ok) throw new Error(`HTTP ${res.status}`);
+			const data = await res.json();
+			const names = p.kind === 'ollama' ? (data.models ?? []).map((m) => m.name) : (data.data ?? []).map((m) => m.id);
+			return { reachable: true, names, error: null };
+		} catch (err) {
+			return { reachable: false, names: [], error: err instanceof Error ? err.message : String(err) };
 		}
-	} catch {
-		warn(`${embedConfigPath} okunamadı — embedding modeli kontrolü atlanıyor`);
-	}
-}
-
-// --- Ollama --------------------------------------------------------------
-console.log('\nOllama');
-{
-	let installed = [];
-	try {
-		const res = await fetch(`${ollamaUrl}/api/tags`, { signal: AbortSignal.timeout(5000) });
-		if (!res.ok) throw new Error(`HTTP ${res.status}`);
-		const data = await res.json();
-		installed = (data.models ?? []).map((m) => m.name);
-		ok(`Ollama çalışıyor (${ollamaUrl})`);
-	} catch (err) {
-		fail(
-			`Ollama'ya ulaşılamadı (${ollamaUrl}): ${err instanceof Error ? err.message : err}`,
-			'"ollama serve" çalıştırın (veya Ollama uygulamasını başlatın) — https://ollama.com'
-		);
 	}
 
-	function modelInstalled(wanted) {
+	function modelInstalled(installed, wanted) {
 		const [wantedBase, wantedTag] = wanted.split(':');
 		return installed.some((name) => {
 			const [base, tag] = name.split(':');
@@ -175,15 +159,65 @@ console.log('\nOllama');
 		});
 	}
 
-	if (installed.length > 0) {
-		if (requiredChatModel) {
-			if (modelInstalled(requiredChatModel)) ok(`Sohbet modeli çekili: ${requiredChatModel}`);
-			else fail(`Sohbet modeli çekili değil: ${requiredChatModel}`, `ollama pull ${requiredChatModel}`);
+	function startHint(p) {
+		return p.kind === 'ollama'
+			? '"ollama serve" çalıştırın (veya Ollama uygulamasını başlatın) — https://ollama.com'
+			: `${p.label ?? p.id} sunucusunu başlatın`;
+	}
+
+	// Sohbet: zincirin başındaki etkin sağlayıcı
+	const chatHeadId = (providersConfig.chains?.chat ?? []).find((id) => byId.get(id)?.enabled);
+	const chatHead = chatHeadId ? byId.get(chatHeadId) : null;
+	if (!chatHead) {
+		warn('Sohbet zinciri boş — kurulum tamamlanmamış, sohbet henüz yanıt veremez', 'Uygulamayı açıp kurulum sihirbazını çalıştırın (/setup/local-server) ya da Ayarlar > Sağlayıcılar\'dan bir sağlayıcı ekleyin.');
+	} else if (!isLocal(chatHead)) {
+		ok(`Sohbet sağlayıcısı: ${chatHead.label ?? chatHead.id} (bulut — erişilebilirlik burada kontrol edilmez)`);
+	} else {
+		const probe = await probeLocal(chatHead);
+		if (!probe.reachable) {
+			fail(`Sohbet sağlayıcısına ulaşılamadı: ${chatHead.label ?? chatHead.id} (${chatHead.baseUrl}): ${probe.error}`, startHint(chatHead));
+		} else {
+			ok(`Sohbet sağlayıcısı çalışıyor: ${chatHead.label ?? chatHead.id} (${chatHead.baseUrl})`);
+			// Kurulu model listesi yalnızca Ollama'da adıyla karşılaştırılabilir (varsayılan model etiketli).
+			if (chatHead.kind === 'ollama' && chatHead.defaultModel) {
+				if (modelInstalled(probe.names, chatHead.defaultModel)) ok(`Sohbet modeli çekili: ${chatHead.defaultModel}`);
+				else fail(`Sohbet modeli çekili değil: ${chatHead.defaultModel}`, `ollama pull ${chatHead.defaultModel}`);
+			}
 		}
-		if (requiredEmbedModel) {
-			if (modelInstalled(requiredEmbedModel)) ok(`Embedding modeli çekili: ${requiredEmbedModel}`);
-			else fail(`Embedding modeli çekili değil: ${requiredEmbedModel}`, `ollama pull ${requiredEmbedModel}`);
+	}
+
+	// Embedding: açık bir blok, ya da (blok hiç yoksa) bir ollama girdisi varsa eski varsayılan; aksi halde
+	// "yalnızca anahtar kelime araması" (null).
+	const hasEmbeddingKey = Object.prototype.hasOwnProperty.call(providersConfig, 'embedding');
+	const embedding = providersConfig.embedding;
+	if (embedding === null || (!hasEmbeddingKey && !byId.has('ollama'))) {
+		ok('Embedding: yok — yalnızca anahtar kelime araması (bilgi)');
+	} else {
+		const embedProvider = embedding ? byId.get(embedding.providerId) : byId.get('ollama');
+		const modelLabel = embedding ? embedding.model : 'Ollama varsayılan gömme modeli (ayar yok)';
+		if (!embedProvider) {
+			fail(`Embedding sağlayıcısı providers.json'da yok: ${embedding?.providerId}`, 'Ayarlar > Sağlayıcılar\'dan başka bir embedding sağlayıcısı seçin ya da yalnızca anahtar kelime aramasına geçin.');
+		} else if (!isLocal(embedProvider)) {
+			ok(`Embedding: ${embedProvider.label ?? embedProvider.id} / ${modelLabel} (bulut — erişilebilirlik burada kontrol edilmez)`);
+		} else {
+			const probe = await probeLocal(embedProvider);
+			if (!probe.reachable) {
+				fail(`Embedding sağlayıcısına ulaşılamadı: ${embedProvider.label ?? embedProvider.id} (${embedProvider.baseUrl}): ${probe.error}`, startHint(embedProvider));
+			} else {
+				ok(`Embedding sağlayıcısı çalışıyor: ${embedProvider.label ?? embedProvider.id} / ${modelLabel}`);
+				if (embedding && embedProvider.kind === 'ollama') {
+					if (modelInstalled(probe.names, embedding.model)) ok(`Embedding modeli çekili: ${embedding.model}`);
+					else fail(`Embedding modeli çekili değil: ${embedding.model}`, `ollama pull ${embedding.model}`);
+				}
+			}
 		}
+	}
+
+	// Zincirde / embedding'de olmayan yerel sağlayıcılar: yalnızca bilgi
+	const used = new Set([chatHead?.id, embedding ? embedding.providerId : (hasEmbeddingKey ? null : 'ollama')]);
+	for (const p of providers.filter((x) => x.enabled && isLocal(x) && !used.has(x.id))) {
+		const probe = await probeLocal(p);
+		ok(`${p.label ?? p.id}: ${probe.reachable ? 'çalışıyor' : 'çalışmıyor'} (kullanılmıyor — sorun değil)`);
 	}
 }
 

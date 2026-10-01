@@ -148,6 +148,17 @@ export function getOllamaBaseUrl(): string {
 	return DEFAULT_OLLAMA_BASE_URL;
 }
 
+/** The provider the Ollama-only features use (model list/pull/delete in Settings, /api/models): the first
+ * ENABLED ollama-kind entry, preferring the one with id 'ollama'. Null when there is none. */
+export function getOllamaProviderId(): string | null {
+	try {
+		const enabled = readFile().providers.filter((p) => p.kind === 'ollama' && p.enabled);
+		return (enabled.find((p) => p.id === 'ollama') ?? enabled[0])?.id ?? null;
+	} catch {
+		return null;
+	}
+}
+
 /** Provider kinds embeddings.ts actually knows how to call — 'anthropic' and
  * 'azure-openai' have no embeddings adapter in this phase (see the plan's
  * scope note); validating this here, not just in embeddings.ts, means a bad
@@ -390,7 +401,9 @@ function slugify(s: string): string {
 export interface NewProviderInput {
 	label: string;
 	baseUrl: string;
-	kind: 'openai-compat' | 'anthropic' | 'azure-openai';
+	/** 'ollama' (Aşama 4d) lets a deleted Ollama provider be added back; its baseUrl is the native one
+	 * (http://127.0.0.1:11434, no /v1). */
+	kind: 'ollama' | 'openai-compat' | 'anthropic' | 'azure-openai';
 	reasoningDialect: 'think-tags' | 'reasoning_content' | 'none';
 	/** Problem A — only honored when `kind === 'openai-compat'`; see ProviderConfigEntry.local's doc comment. */
 	local?: boolean;
@@ -430,14 +443,16 @@ export function addProvider(input: NewProviderInput): ProviderConfigEntry {
 	// long to serve its first token as a locally-loaded Ollama model, and a 5s connect / 30s first-token cloud
 	// timeout would abort it long before it ever gets there.
 	const local = input.kind === 'openai-compat' && input.local === true;
+	// An Ollama entry is local by kind and gets the same generous timeouts and dialect as the shipped one.
+	const isOllama = input.kind === 'ollama';
 	const entry: ProviderConfigEntry = {
 		id,
 		label: input.label.trim(),
 		baseUrl: normalizeBaseUrl(input.baseUrl),
 		kind: input.kind,
-		reasoningDialect: input.reasoningDialect,
+		reasoningDialect: isOllama ? 'reasoning_content' : input.reasoningDialect,
 		enabled: false,
-		timeouts: local
+		timeouts: local || isOllama
 			? { connectMs: 30000, firstTokenMs: 300000, idleMs: 60000 }
 			: { connectMs: 5000, firstTokenMs: 30000, idleMs: 30000 },
 		...(local ? { local: true } : {})

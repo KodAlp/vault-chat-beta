@@ -377,7 +377,7 @@
 	let pullLog = $state<string[]>([]);
 	let pullError = $state('');
 
-	/** Same base+tag matching rule as OllamaStatusBanner.modelInstalled. */
+	/** Same base+tag matching rule as LocalServerBanner.modelInstalled. */
 	const modelInstalled = modelListed;
 
 	/** What the Ollama step offers to download when nothing usable is installed (and no default model is

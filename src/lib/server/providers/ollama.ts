@@ -104,7 +104,7 @@ export class OllamaAdapter extends OpenAICompatAdapter {
 	 * product's single most likely failure mode, but the actionable phrasing
 	 * for it now lives client-side as its own code (api/chat/+server.ts's
 	 * catch block special-cases a ProviderError with providerId 'ollama' and
-	 * kind network/timeout_connect into `OLLAMA_UNREACHABLE`), not baked into
+	 * kind network/timeout_connect into `LOCAL_SERVER_UNREACHABLE`), not baked into
 	 * this adapter's message text. */
 	override async *chat(req: ChatRequest, signal: AbortSignal): AsyncGenerator<Chunk> {
 		yield* ollamaGate.withModelStream(req.model, () => this.chatNative(req, signal));

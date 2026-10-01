@@ -717,7 +717,7 @@ export interface ProviderStatus {
 	 * embedding right now (GET /api/embedding, providers/config-store.ts's
 	 * `embedding` block), not hardcoded to 'ollama' any more: embedding can
 	 * be a local/cloud openai-compat provider instead. Every other provider
-	 * gets null. Still what OllamaStatusBanner's "is the required model
+	 * gets null. Still what LocalServerBanner's "is the required model
 	 * pulled?" check reads when embedding happens to be on Ollama — never
 	 * hardcodes a model name that could drift from the real one (see
 	 * KURULUM-REHBERI.md's nomic-embed-text/bge-m3 mixup this originally

@@ -238,17 +238,20 @@
 		"slidesErrorPrefix": "Sunum oluşturulamadı: "
 	},
 
-	"OllamaStatusBanner": {
-		"authError": "Ollama kimlik doğrulama hatası verdi.",
-		"unreachable": "Yerel sunucu (Ollama) çalışmıyor — sohbet ve çalışma materyali üretimi şu anda kullanılamıyor.",
-		"installHint": "Kurulu değilse:",
+	"LocalServerBanner": {
+		"setupNotFinished": "Kurulum tamamlanmamış — henüz bir sohbet modeli ayarlı değil.",
+		"openWizard": "Kurulum sihirbazını aç",
+		"openProviders": "Sağlayıcı ayarları",
+		"authError": "{label} kimlik doğrulama hatası döndürdü.",
+		"unreachable": "Yerel sunucu {label} çalışmıyor — sohbet ve çalışma materyali üretimi şu an kullanılamıyor.",
+		"installHint": "Henüz kurulu değil:",
 		"checking": "Kontrol ediliyor...",
-		"retry": "Yeniden dene",
+		"retry": "Tekrar dene",
 		"startNow": "Başlat",
 		"starting": "Başlatılıyor...",
-		"missingModels": "Gerekli model(ler) çekili değil: {models}.",
-		"pullFromSettings": "Ayarlar'dan indirin",
-		"orRunPull": "veya terminalde çalıştırın:"
+		"missingModels": "Gerekli model(ler) indirilmemiş: {models}.",
+		"pullFromSettings": "Ayarlar’dan indir",
+		"orRunPull": "veya şunu çalıştır:"
 	},
 
 	"PythonStatusBanner": {
@@ -467,7 +470,7 @@
 		"manageLibrary": "Kütüphaneyi yönet",
 		"skillsCardDescription": "Sohbet, test ve bilgi kartı üretimini kişiselleştir.",
 		"manageSkills": "Skill'leri yönet",
-		"providersCardDescription": "Ollama ve bulut sağlayıcıları (DeepSeek, ...), API anahtarları, görev zincirleri.",
+		"providersCardDescription": "Yerel sunucular ve bulut sağlayıcıları (DeepSeek, ...), API anahtarları, görev zincirleri.",
 		"manageProviders": "Sağlayıcıları yönet",
 		"smallTalkCardDescription": "Selamlaşma ve sohbet cümlelerinde kaynak aranmaması için öğrenilen ifadeler.",
 		"manageSmallTalk": "Öğrenilen ifadeleri yönet",
@@ -507,7 +510,7 @@
 
 	"ProvidersSettingsPage": {
 		"title": "Model Sağlayıcıları",
-		"intro": "Yerel Ollama'yı ve isteğe bağlı bulut sağlayıcıları (DeepSeek, OpenAI, ...) yönet. Anahtarlar sunucuda {path} içinde kalır, hiçbir zaman tarayıcıya gönderilmez.",
+		"intro": "Yerel sunucularını (Ollama, LM Studio, llama.cpp, ...) ve isteğe bağlı bulut sağlayıcıları (DeepSeek, OpenAI, ...) yönet. Anahtarlar sunucuda {path} içinde kalır, hiçbir zaman tarayıcıya gönderilmez.",
 		"loadError": "Sağlayıcı listesi alınamadı.",
 		"localServersTitle": "Yerel sunucular",
 		"localServersDescription": "Kurulu ama henüz sağlayıcı olarak eklenmemiş yerel sunucular — buradan başlatıp durdurabilir, ayarlarını değiştirebilir ve sağlayıcı olarak ekleyebilirsin.",
@@ -523,6 +526,8 @@
 		"kindOpenAICompat": "OpenAI-uyumlu",
 		"kindOpenAICompatFull": "OpenAI-uyumlu (OpenAI, Groq, OpenRouter, ...)",
 		"kindAnthropic": "Anthropic (Claude)",
+		"kindOllama": "Ollama (yerel)",
+		"runWizardAgain": "Kurulum sihirbazını yeniden çalıştır",
 		"kindAzureOpenAI": "Azure OpenAI",
 		"azureHint": "Base URL biçimi: https://<kaynak-adı>.openai.azure.com/openai/v1 — model alanı sizin DEPLOYMENT adınızdır; 'Model listesini yönet' bölümünden ekleyin.",
 		"localCheckboxLabel": "Yerel sunucu (bu bilgisayarda veya yerel ağda)",
@@ -884,7 +889,7 @@
 		"CHAT_CORRUPTION_GAVE_UP": "Yanıt bozuk karakterler içerebilir (bilinen bir model sorunu) — birkaç deneme sonrası temiz üretilemedi.",
 		"CHAT_NO_ANSWER": "Model bir yanıt üretmedi, lütfen tekrar deneyin.",
 		"CHAT_SAVE_FAILED": "Sohbet kaydedilemedi",
-		"OLLAMA_UNREACHABLE": "Ollama'ya ulaşılamıyor — Ollama çalışıyor mu?",
+		"LOCAL_SERVER_UNREACHABLE": "{provider} sağlayıcısına ulaşılamıyor — yerel sunucu çalışıyor mu?",
 		"CHAT_FALLBACK_PINNED_UNAVAILABLE": "{provider} {reason} → görev zinciri kullanılıyor",
 		"CHAT_FALLBACK_NO_DEFAULT_MODEL": "{provider} için varsayılan model tanımlı değil → atlanıyor",
 		"CHAT_FALLBACK_RATE_LIMITED": "{from} hız sınırına takıldı → {to}'a geçiliyor",
@@ -937,7 +942,7 @@
 		"VAULT_NONE": "Hiç vault yok — önce bir vault oluştur",
 		"VAULT_DELETE_CONFIRM_REQUIRED": "Silme onayı gerekli ('confirm=true')",
 		"VAULT_LAST_UNDELETABLE": "Son vault silinemez — uygulama her zaman en az bir vault gerektirir",
-		"PROVIDER_OLLAMA_MISCONFIGURED": "Ollama sağlayıcısı doğru yapılandırılmamış",
+		"PROVIDER_OLLAMA_MISCONFIGURED": "Etkin bir Ollama sağlayıcısı ayarlı değil",
 		"PROVIDER_CONSENT_NOT_NEEDED": "Ollama için onay gerekmez",
 		"PROVIDER_BASE_URL_INVALID": "{url} geçerli bir http(s) adresi değil",
 		"PROVIDERS_FILE_UNREADABLE": "providers.json okunamadı",
