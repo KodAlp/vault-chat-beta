@@ -52,3 +52,16 @@ windows = { version = "0.61", features = ["Win32_Security_Cryptography", "Win32_
 # POSIX: setsid/prctl/kill for process-group cleanup (see src/platform.rs).
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
+
+# L2 — OS-level storage for the secrets-encryption key (see src/secrets_key.rs).
+# keyring 3.x, feature names verified against the crate's own Cargo.toml:
+#   apple-native        -> macOS Keychain (security-framework)
+#   sync-secret-service -> Linux Secret Service over D-Bus (dbus-secret-service)
+#   crypto-rust         -> pure-Rust session encryption for the Secret Service
+#                          transport (no OpenSSL dependency)
+# Deliberately NOT linux-native (kernel keyutils): it does not survive a reboot.
+[target.'cfg(target_os = "macos")'.dependencies]
+keyring = { version = "3.6", default-features = false, features = ["apple-native"] }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+keyring = { version = "3.6", default-features = false, features = ["sync-secret-service", "crypto-rust"] }

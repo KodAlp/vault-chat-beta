@@ -126,6 +126,16 @@ export function secretsKeyHex(): string | undefined {
 	return nonEmpty(process.env.SECRETS_KEY_HEX);
 }
 
+/** L2 — what spawn_sidecar() (src-tauri/src/secrets_key.rs) found when it asked
+ * the OS for the secrets-encryption key: 'encrypted' (SECRETS_KEY_HEX is set),
+ * 'unavailable' (this system has no secure key storage at all — plaintext is
+ * allowed) or 'locked' (a key exists but could not be read right now — refuse
+ * to touch secrets.json). Absent under plain dev/test runs, where secrets.ts
+ * falls back to "valid SECRETS_KEY_HEX -> encrypted, otherwise plaintext". */
+export function secretsProtection(): string | undefined {
+	return nonEmpty(process.env.SECRETS_PROTECTION);
+}
+
 /**
  * Güvenlik sertleştirme — the packaged desktop build's per-launch session
  * token. spawn_sidecar() (src-tauri/src/lib.rs) generates a fresh 64-hex-char
