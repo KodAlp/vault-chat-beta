@@ -23,6 +23,8 @@ becomes source_file frontmatter and the title fallback when the document has
 no usable title of its own. Callers that omit it get the old (worse)
 behavior — the staged name — never a crash.
 """
+from __future__ import annotations
+
 import argparse
 import hashlib
 import json

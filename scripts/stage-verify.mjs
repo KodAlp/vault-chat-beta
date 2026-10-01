@@ -48,12 +48,15 @@ export function validateDefaultProviders(parsed) {
  * Checks what stage-server.mjs actually staged:
  *  - dist-server/data/providers.json is byte-identical to providers.default.json (the working-copy
  *    data/providers.json — with whatever keys/picks a developer set — must not be what ships);
- *  - dist-server/data/ holds nothing but providers.json.
+ *  - dist-server/data/ holds nothing but providers.json;
+ *  - dist-server/build/index.js (the server entry) and dist-server/ingest/convert.py (document import) exist.
  * "stagedProviders" / "defaultProviders" are Buffers (or null when missing); "stagedDataEntries" the names
  * directly under dist-server/data/. Returns problem strings; empty array = OK.
  */
-export function verifyStagedData({ stagedProviders, defaultProviders, stagedDataEntries }) {
+export function verifyStagedData({ stagedProviders, defaultProviders, stagedDataEntries, stagedBuildIndexExists, stagedConvertPyExists }) {
 	const problems = [];
+	if (!stagedBuildIndexExists) problems.push('dist-server/build/index.js bulunamadı');
+	if (!stagedConvertPyExists) problems.push('dist-server/ingest/convert.py bulunamadı');
 	if (!defaultProviders) problems.push('data/providers.default.json bulunamadı');
 	if (!stagedProviders) problems.push('dist-server/data/providers.json bulunamadı');
 	if (stagedProviders && defaultProviders && !Buffer.from(stagedProviders).equals(Buffer.from(defaultProviders))) {

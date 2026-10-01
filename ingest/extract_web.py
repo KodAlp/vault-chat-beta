@@ -14,6 +14,8 @@ double the network cost and reintroduce the SSRF/size checks Node already
 applied. --url is passed through only so trafilatura can resolve relative
 links/canonical metadata during extraction.
 """
+from __future__ import annotations
+
 import argparse
 import json
 import sys

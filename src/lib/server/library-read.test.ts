@@ -36,7 +36,7 @@ test('resolveLibraryPath rejects a deeper unix-style parent escape', () => {
 	assert.throws(() => resolveLibraryPath(v, 'math/../../outside.md'));
 });
 
-test('resolveLibraryPath rejects a Windows-style backslash parent escape', () => {
+test('resolveLibraryPath rejects a Windows-style backslash parent escape', { skip: process.platform !== 'win32' ? 'backslash is a literal filename character, not a separator, on POSIX' : false }, () => {
 	const v = tmpVault();
 	assert.throws(() => resolveLibraryPath(v, '..\\outside.md'));
 });

@@ -37,6 +37,8 @@ MIT OCW's own HTML pages (checked directly, three real course pages) carry
 no math markup at all -- their math-heavy content lives in linked PDFs,
 which is what Aşama 10 #1 (PDF link listing) is for, not this module.
 """
+from __future__ import annotations
+
 import re
 
 import lxml.html

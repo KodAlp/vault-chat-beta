@@ -21,15 +21,15 @@ test('honours PANDOC_BIN when it points at a real file', () => {
 });
 
 test('ignores a stale PANDOC_BIN that does not exist and keeps searching', () => {
-	const exists = (p: string) => p === path.join('C:\\Windows\\system32', 'pandoc.exe');
+	const exists = (p: string) => p === path.win32.join('C:\\Windows\\system32', 'pandoc.exe');
 	const bin = resolvePandocBin(winEnv({ PANDOC_BIN: 'D:\\gone\\pandoc.exe' }), exists, 'win32');
-	assert.equal(bin, path.join('C:\\Windows\\system32', 'pandoc.exe'));
+	assert.equal(bin, path.win32.join('C:\\Windows\\system32', 'pandoc.exe'));
 });
 
 test('finds pandoc.exe on PATH', () => {
-	const exists = (p: string) => p === path.join('C:\\Windows\\system32', 'pandoc.exe');
+	const exists = (p: string) => p === path.win32.join('C:\\Windows\\system32', 'pandoc.exe');
 	const bin = resolvePandocBin(winEnv(), exists, 'win32');
-	assert.equal(bin, path.join('C:\\Windows\\system32', 'pandoc.exe'));
+	assert.equal(bin, path.win32.join('C:\\Windows\\system32', 'pandoc.exe'));
 });
 
 test('skips a WindowsApps PATH entry rather than matching a redirector shim there', () => {
@@ -39,14 +39,14 @@ test('skips a WindowsApps PATH entry rather than matching a redirector shim ther
 });
 
 test('falls back to the winget default install location (%LOCALAPPDATA%\\Pandoc) when PATH has nothing', () => {
-	const expected = path.join('C:\\Users\\Alp\\AppData\\Local', 'Pandoc', 'pandoc.exe');
+	const expected = path.win32.join('C:\\Users\\Alp\\AppData\\Local', 'Pandoc', 'pandoc.exe');
 	const exists = (p: string) => p === expected;
 	const bin = resolvePandocBin(winEnv(), exists, 'win32');
 	assert.equal(bin, expected);
 });
 
 test('falls back to %ProgramFiles%\\Pandoc when neither PATH nor %LOCALAPPDATA% has it', () => {
-	const expected = path.join('C:\\Program Files', 'Pandoc', 'pandoc.exe');
+	const expected = path.win32.join('C:\\Program Files', 'Pandoc', 'pandoc.exe');
 	const exists = (p: string) => p === expected;
 	const bin = resolvePandocBin(winEnv(), exists, 'win32');
 	assert.equal(bin, expected);

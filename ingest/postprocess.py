@@ -3,6 +3,8 @@ handed back to the Node caller. Kept independent of any one converter so
 MarkItDown today and Marker/Docling later (see requirements.txt) all go
 through the exact same normalization step.
 """
+from __future__ import annotations
+
 import html
 import re
 from datetime import date
