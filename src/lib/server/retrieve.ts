@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { existsSync, statSync } from 'node:fs';
 import Database from 'better-sqlite3';
 import * as sqliteVec from 'sqlite-vec';
 import { embedTexts } from './embeddings';
@@ -97,7 +97,31 @@ const OVERFETCH_FACTOR = 3;
  * vault-registry skill. */
 const SCOPED_OVERFETCH_FACTOR = 20;
 
-const dbCache = new Map<string, Database.Database>();
+interface CachedDb {
+	db: Database.Database;
+	/** Identity of the index file this connection was opened on. */
+	ino: number;
+	dev: number;
+	mtimeMs: number;
+	size: number;
+}
+
+const dbCache = new Map<string, CachedDb>();
+
+/** True when the file at the path is no longer the one the connection was opened on. On POSIX a
+ * reindex renames a fresh index.db over the old one (reindex.ts) and a cached connection would keep
+ * reading the unlinked inode forever; Windows refuses that swap while open, so there it never
+ * triggers. ino is 0 on some Windows filesystems, so mtime/size then stand in for identity. */
+function indexFileChanged(p: string, c: CachedDb): boolean {
+	let st: ReturnType<typeof statSync>;
+	try {
+		st = statSync(p);
+	} catch {
+		return true;
+	}
+	if (c.ino !== 0 || st.ino !== 0) return st.ino !== c.ino || st.dev !== c.dev;
+	return st.mtimeMs !== c.mtimeMs || st.size !== c.size;
+}
 
 /**
  * Thin read-only wrapper over the DB that indexer/db.ts owns and writes.
@@ -109,8 +133,16 @@ const dbCache = new Map<string, Database.Database>();
  * (`npm run index` not yet run) — a routine state now that Faz 9 lets
  * users create a vault and land straight on its empty chat screen. */
 function getDb(v: VaultContext): Database.Database | null {
-	let db = dbCache.get(v.id);
-	if (db) return db;
+	const cached = dbCache.get(v.id);
+	if (cached) {
+		if (!indexFileChanged(v.indexDbPath, cached)) return cached.db;
+		try {
+			cached.db.close();
+		} catch {
+			// already closed
+		}
+		dbCache.delete(v.id);
+	}
 	if (!existsSync(v.indexDbPath)) return null;
 	const instance = new Database(v.indexDbPath, { readonly: true, fileMustExist: true });
 	// sqliteVec.load() failing must not leave an open handle uncached — same
@@ -123,7 +155,8 @@ function getDb(v: VaultContext): Database.Database | null {
 		logAppEvent({ kind: 'db_error', message: `index.db init başarısız (${v.id}): ${message}` });
 		throw err;
 	}
-	dbCache.set(v.id, instance);
+	const st = statSync(v.indexDbPath);
+	dbCache.set(v.id, { db: instance, ino: st.ino, dev: st.dev, mtimeMs: st.mtimeMs, size: st.size });
 	return instance;
 }
 
@@ -132,9 +165,9 @@ function getDb(v: VaultContext): Database.Database | null {
  * one open connection per vault for the process lifetime. See
  * vaults.ts's deleteVault. No-op if this vault was never queried. */
 export function closeVaultIndexDb(vaultId: string): void {
-	const db = dbCache.get(vaultId);
-	if (!db) return;
-	db.close();
+	const entry = dbCache.get(vaultId);
+	if (!entry) return;
+	entry.db.close();
 	dbCache.delete(vaultId);
 }
 

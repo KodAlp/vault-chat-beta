@@ -270,6 +270,8 @@
 		"dialogDescription": "Tek yönlü kopya — kaynak vault'una asla yazılmaz. Değişmemiş notlar yeniden içe aktarmada atlanır.",
 		"sourcePathLabel": "Kaynak vault yolu",
 		"sourcePathPlaceholder": "örn. C:\\Kullanıcılar\\...\\MyVault",
+		"sourcePathPlaceholderMac": "örn. ~/Documents/MyVault",
+		"sourcePathPlaceholderLinux": "örn. ~/MyVault",
 		"start": "Başlat",
 		"scanning": "Taranıyor...",
 		"processingFile": "İşleniyor: {fileName}",
@@ -1072,7 +1074,9 @@
 		"installModules": "Eksik paketleri kur",
 		"pandocLabel": "Pandoc (isteğe bağlı)",
 		"installPandoc": "Pandoc'u kur (winget)",
-		"wingetUnavailableNote": "winget bulunamadı; elle kurman gerekiyor."
+		"wingetUnavailableNote": "winget bulunamadı; elle kurman gerekiyor.",
+		"brewHint": "Homebrew ile: {command}",
+		"packageManagerHint": "Dağıtımının paket yöneticisiyle kurabilir ya da indirme sayfasını kullanabilirsin."
 	},
 
 	"LauncherPanel": {

@@ -270,6 +270,8 @@
 		"dialogDescription": "One-way copy — the source vault is never written to. Unchanged notes are skipped on re-import.",
 		"sourcePathLabel": "Source vault path",
 		"sourcePathPlaceholder": "e.g. C:\\Users\\...\\MyVault",
+		"sourcePathPlaceholderMac": "e.g. ~/Documents/MyVault",
+		"sourcePathPlaceholderLinux": "e.g. ~/MyVault",
 		"start": "Start",
 		"scanning": "Scanning...",
 		"processingFile": "Processing: {fileName}",
@@ -1072,7 +1074,9 @@
 		"installModules": "Install missing packages",
 		"pandocLabel": "Pandoc (optional)",
 		"installPandoc": "Install Pandoc (winget)",
-		"wingetUnavailableNote": "winget wasn't found; you'll need to install it manually."
+		"wingetUnavailableNote": "winget wasn't found; you'll need to install it manually.",
+		"brewHint": "With Homebrew: {command}",
+		"packageManagerHint": "Install it with your distribution's package manager, or use the download page."
 	},
 
 	"LauncherPanel": {

@@ -1,5 +1,5 @@
 {
-	"_comment": "Placeholder paths — do not paste this file as-is. Run `npm run mcp:config` from vault-chat/ to print a ready-to-use block with your own absolute paths resolved.",
+	"_comment": "Placeholder paths — do not paste this file as-is. Run `npm run mcp:config` from vault-chat/ to print a ready-to-use block with your own absolute paths resolved (including the absolute path of your node binary — GUI apps such as Claude Desktop on macOS don't see Homebrew/nvm node on PATH, so a bare "node" below may not start).",
 	"mcpServers": {
 		"vault-chat": {
 			"command": "node",
