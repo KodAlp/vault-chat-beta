@@ -108,6 +108,9 @@ export async function* chatWithFallbackCore(
 			params: { provider: pinnedProviderId, reason }
 		};
 	}
+	// A dropped pin leaves hop 0 on the chain head with a req.model that belonged to the pinned provider —
+	// see resolveHopModel's requestedModelApplies.
+	const pinDropped = Boolean(pinnedProviderId) && !pin;
 	const chain = pin ? [pin] : baseChain;
 	if (chain.length === 0) {
 		throw new AppError('CHAT_NO_CHAIN', { taskType });
@@ -121,7 +124,7 @@ export async function* chatWithFallbackCore(
 	for (let i = 0; i < chain.length; i++) {
 		const providerId = chain[i];
 		const isLast = i === chain.length - 1;
-		const model = resolveHopModel(i, deps.getProviderEntry(providerId), req.model);
+		const model = resolveHopModel(i, deps.getProviderEntry(providerId), req.model, !pinDropped);
 
 		if (model === null) {
 			// A continuation request is only valid against the provider that wrote the
@@ -139,7 +142,7 @@ export async function* chatWithFallbackCore(
 			continue;
 		}
 
-		const hopReq = i === 0 ? req : { ...req, model };
+		const hopReq = i === 0 && !pinDropped ? req : { ...req, model };
 		let sawText = false;
 		try {
 			// getAdapter() inside the try, not above it: a pinned-but-since-

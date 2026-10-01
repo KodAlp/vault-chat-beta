@@ -14,12 +14,19 @@ import type { ProviderConfigEntry } from './config-store';
  * importable from a plain `node:test` run — registry.ts pulls in
  * `$env/dynamic/private`, which only resolves inside SvelteKit/Vite. See
  * registry.test.ts.
+ *
+ * `requestedModelApplies` (default true) is false when the caller's pin was
+ * dropped (disabled / not consented / deleted): then `requestedModel` names a
+ * model of the provider the user pinned (e.g. `qwen3:8b`), not of hop 0's
+ * provider (the chain head), so hop 0 must resolve like any other hop — its
+ * own defaultModel, or `null` to be skipped.
  */
 export function resolveHopModel(
 	hopIndex: number,
 	entry: ProviderConfigEntry | undefined,
-	requestedModel: string
+	requestedModel: string,
+	requestedModelApplies = true
 ): string | null {
-	if (hopIndex === 0) return requestedModel;
+	if (hopIndex === 0 && requestedModelApplies) return requestedModel;
 	return entry?.defaultModel ?? null;
 }

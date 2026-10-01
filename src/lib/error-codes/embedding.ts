@@ -24,6 +24,10 @@ export const EMBEDDING_CODES = [
 	'EMBEDDING_DIMS_MISMATCH',
 	// embedTexts() — network/HTTP failure reaching the configured provider.
 	'EMBEDDING_UNAVAILABLE',
+	// Aşama 4a — no embedding provider configured (FTS-only mode): thrown by
+	// embedTexts()/embeddingKey() when called with no config. Retrieval and the
+	// generators do NOT raise it: they run on keyword search in FTS-only mode.
+	'EMBEDDING_NOT_CONFIGURED',
 	// retrieve()/incrementalIndex.ts — the index's recorded embedding
 	// (index_meta, or the legacy bge-m3/1024 assumption) differs from the
 	// current config: vectors would not be comparable, so vector search is

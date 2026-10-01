@@ -6,7 +6,7 @@ import path from 'node:path';
 import { indexLibraryFile } from './incrementalIndex';
 import { setEmbeddingConfig, type ProvidersFile } from './providers/config-store';
 import { AppError } from './app-error';
-import { openDb } from '../../../indexer/db';
+import { openDb, readIndexEmbedding } from '../../../indexer/db';
 import type { VaultContext } from './vaults';
 
 const OLLAMA: ProvidersFile['providers'][number] = {
@@ -111,5 +111,81 @@ test('indexLibraryFile succeeds when the config matches the index (including the
 		await assert.doesNotReject(() => indexLibraryFile(vault, notePath, 'note.md'));
 	} finally {
 		restore();
+	}
+});
+
+// Aşama 4a — FTS-only mode: no embedding configured.
+function hasVecTable(db: ReturnType<typeof openDb>): boolean {
+	return db.prepare("SELECT 1 FROM sqlite_master WHERE name = 'vec_chunks'").get() !== undefined;
+}
+
+function noFetchAllowed() {
+	const real = globalThis.fetch;
+	const state = { called: false };
+	globalThis.fetch = (async () => {
+		state.called = true;
+		throw new Error('no network call expected in FTS-only mode');
+	}) as typeof fetch;
+	return { state, restore: () => (globalThis.fetch = real) };
+}
+
+test('indexLibraryFile in FTS-only mode writes chunks + keyword data, no vec table, meta none, and never embeds', async () => {
+	const { vault, notePath } = setup();
+	setEmbeddingConfig(null);
+	const { state, restore } = noFetchAllowed();
+	try {
+		await indexLibraryFile(vault, notePath, 'note.md');
+		assert.equal(state.called, false);
+		const db = openDb(vault.indexDbPath);
+		try {
+			assert.equal((db.prepare('SELECT count(*) AS n FROM chunks').get() as { n: number }).n, 1);
+			assert.equal((db.prepare('SELECT count(*) AS n FROM chunks_fts').get() as { n: number }).n, 1);
+			assert.equal(hasVecTable(db), false);
+			assert.deepEqual(readIndexEmbedding(db), { provider: 'none', model: 'none', dims: 0 });
+		} finally {
+			db.close();
+		}
+	} finally {
+		restore();
+	}
+});
+
+test('after FTS-only indexing, picking an embedding provider makes the next write refuse with EMBEDDING_MISMATCH (reindex needed)', async () => {
+	const { vault, notePath } = setup();
+	setEmbeddingConfig(null);
+	const { restore } = noFetchAllowed();
+	try {
+		await indexLibraryFile(vault, notePath, 'note.md');
+	} finally {
+		restore();
+	}
+	setEmbeddingConfig({ providerId: 'ollama', model: 'bge-m3', dims: 4 });
+	const restoreEmbed = fakeEmbedFetch(4);
+	try {
+		await assert.rejects(
+			() => indexLibraryFile(vault, notePath, 'note.md'),
+			(err: unknown) => err instanceof AppError && err.code === 'EMBEDDING_MISMATCH'
+		);
+	} finally {
+		restoreEmbed();
+	}
+});
+
+test('FTS-only write into an index that still holds vectors stops the index claiming vectors (meta becomes none)', async () => {
+	const { vault, notePath } = setup();
+	openDb(vault.indexDbPath, { provider: 'ollama', model: 'bge-m3', dims: 4 }).close();
+	setEmbeddingConfig(null);
+	const { restore } = noFetchAllowed();
+	try {
+		await indexLibraryFile(vault, notePath, 'note.md');
+	} finally {
+		restore();
+	}
+	const db = openDb(vault.indexDbPath);
+	try {
+		assert.deepEqual(readIndexEmbedding(db), { provider: 'none', model: 'none', dims: 0 });
+		assert.equal((db.prepare('SELECT count(*) AS n FROM chunks').get() as { n: number }).n, 1);
+	} finally {
+		db.close();
 	}
 });

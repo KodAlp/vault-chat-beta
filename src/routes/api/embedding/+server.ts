@@ -12,6 +12,11 @@ import type { ErrorCode } from '$lib/errors';
  * cloud provider) and never partially applies a bad config: a validation
  * failure leaves the previously saved embedding block untouched.
  *
+ * Aşama 4a — GET returns `null` in FTS-only mode (no embedding provider
+ * configured), and PUT `{ "providerId": null }` switches to that mode
+ * explicitly (the index is then no longer vector-compatible, which the
+ * normal mismatch flow reports once a provider is chosen again).
+ *
  * No UI reads this yet (Aşama 3c) — this route exists now so the backend
  * contract is settled before that phase writes the settings card against it.
  */
@@ -20,7 +25,11 @@ export const GET: RequestHandler = async () => {
 };
 
 export const PUT: RequestHandler = async ({ request }) => {
-	const body = (await request.json().catch(() => null)) as Partial<EmbeddingConfig> | null;
+	const body = (await request.json().catch(() => null)) as (Partial<Omit<EmbeddingConfig, 'providerId'>> & { providerId?: string | null }) | null;
+	if (body && body.providerId === null) {
+		setEmbeddingConfig(null);
+		return json(getEmbeddingConfig());
+	}
 	if (!body?.providerId) fail('VALIDATION_REQUIRED', { field: 'providerId' });
 	if (!body?.model) fail('VALIDATION_REQUIRED', { field: 'model' });
 	if (body?.dims === undefined || body.dims === null) fail('VALIDATION_REQUIRED', { field: 'dims' });

@@ -21,8 +21,6 @@ export const SETTINGS_CODES = [
 	// Providers (api/providers/**, server/providers/config-store.ts,
 	// registry.ts) — "unknown provider" reuses the common
 	// NOT_FOUND{entity:'provider',detail:id} instead of a dedicated code.
-	'PROVIDER_OLLAMA_REQUIRED',
-	'PROVIDER_OLLAMA_UNDELETABLE',
 	'PROVIDER_OLLAMA_MISCONFIGURED',
 	'PROVIDER_CONSENT_NOT_NEEDED',
 	'PROVIDER_BASE_URL_INVALID',

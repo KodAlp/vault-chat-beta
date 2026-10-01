@@ -1,4 +1,3 @@
-import { ollamaUrl } from './env';
 import { ollamaGate } from './providers/ollama-gate';
 
 /**
@@ -37,15 +36,17 @@ import { ollamaGate } from './providers/ollama-gate';
  * identical to the GPU ones (cosine >= 0.999999 over 16 queries).
  */
 export interface EmbedOptions {
+	/** The Ollama provider entry's baseUrl (providers.json) — passed in by embeddings.ts, never read from env. */
+	baseUrl: string;
 	/** Run the embedding model on the CPU only. Meant for per-query embedding,
 	 * where the tiny input makes CPU cost negligible; leave it off for bulk
 	 * indexing (incrementalIndex.ts), where GPU throughput matters. */
 	cpuOnly?: boolean;
 }
 
-export async function embed(texts: string[], model: string, opts: EmbedOptions = {}): Promise<number[][]> {
+export async function embed(texts: string[], model: string, opts: EmbedOptions): Promise<number[][]> {
 	return ollamaGate.withModel(model, async () => {
-		const res = await fetch(`${ollamaUrl()}/api/embed`, {
+		const res = await fetch(`${opts.baseUrl.trim().replace(/\/+$/, '')}/api/embed`, {
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify({ model, input: texts, ...(opts.cpuOnly ? { options: { num_gpu: 0 } } : {}) })

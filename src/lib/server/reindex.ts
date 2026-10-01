@@ -185,7 +185,10 @@ export async function reindexVault(v: VaultContext, opts: ReindexOptions = {}): 
 	for (const suf of SUFFIXES) rmQuiet(`${tempPath}${suf}`);
 
 	const config = getEmbeddingConfig();
-	const embeddingMeta: IndexEmbeddingMeta = { provider: config.providerId, model: config.model, dims: config.dims };
+	// null config = FTS-only rebuild (Aşama 4a): the new index gets chunks + keyword data, no vec table.
+	const embeddingMeta: IndexEmbeddingMeta | null = config
+		? { provider: config.providerId, model: config.model, dims: config.dims }
+		: null;
 
 	let db: Database.Database | null = null;
 	try {

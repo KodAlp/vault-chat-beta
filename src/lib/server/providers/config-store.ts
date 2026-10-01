@@ -84,9 +84,14 @@ export function isCloud(entry: Pick<ProviderConfigEntry, 'kind' | 'local'>): boo
  * index and embeds queries, now a config choice instead of the hardcoded
  * ollama/bge-m3 pair in embed-config.ts. Absent from providers.json entirely
  * means "never configured" — getEmbeddingConfig() below is the only place
- * that fills in the default, so every other reader (embeddings.ts,
- * retrieve.ts, incrementalIndex.ts, the CLI indexer) sees a concrete value
- * and never has to know what the fallback is.
+ * that fills in the default (legacy ollama/bge-m3 when an 'ollama' provider
+ * entry exists, otherwise null).
+ *
+ * Aşama 4a — `embedding: null` (explicit in the file, or the resolved result
+ * when nothing is configured and there is no ollama entry) is FTS-only mode:
+ * no embedding provider at all, the index holds chunks + keyword (FTS5)
+ * data only and retrieval is keyword search. Every reader of
+ * getEmbeddingConfig() must handle null.
  *
  * `dims` is stored explicitly rather than derived from a model-name lookup
  * table: an openai-compat endpoint's dimension isn't knowable from its model
@@ -111,10 +116,29 @@ export interface EmbeddingConfig {
 }
 
 /** getEmbeddingConfig()'s fallback when providers.json has no `embedding`
- * block at all — the exact pair embed-config.ts hardcoded before this
- * feature existed, so an upgraded install keeps indexing/retrieving
- * identically until the user explicitly changes it in settings. */
+ * key at all AND an 'ollama' provider entry exists — the exact pair
+ * embed-config.ts hardcoded before this feature existed, so an upgraded
+ * install keeps indexing/retrieving identically until the user explicitly
+ * changes it in settings. */
 const DEFAULT_EMBEDDING_CONFIG: EmbeddingConfig = { providerId: 'ollama', model: EMBED_MODEL, dims: EMBED_DIMS };
+
+/** Where an Ollama provider is assumed to listen when providers.json has no ollama-kind entry at all
+ * (nothing to read a baseUrl from). */
+export const DEFAULT_OLLAMA_BASE_URL = 'http://127.0.0.1:11434';
+
+/** The configured Ollama provider's baseUrl (the entry with id 'ollama', else the first ollama-kind entry),
+ * trailing slashes stripped. Used by ollama-gate.ts's native /api/ps and unload calls, which have no
+ * provider entry in hand. Never throws — an unreadable providers.json degrades to the default. */
+export function getOllamaBaseUrl(): string {
+	try {
+		const { providers } = readFile();
+		const entry = providers.find((p) => p.id === 'ollama' && p.kind === 'ollama') ?? providers.find((p) => p.kind === 'ollama');
+		if (entry?.baseUrl) return entry.baseUrl.trim().replace(/\/+$/, '');
+	} catch {
+		// fall through to the default
+	}
+	return DEFAULT_OLLAMA_BASE_URL;
+}
 
 /** Provider kinds embeddings.ts actually knows how to call — 'anthropic' and
  * 'azure-openai' have no embeddings adapter in this phase (see the plan's
@@ -125,7 +149,8 @@ const EMBEDDING_CAPABLE_KINDS: ReadonlySet<ProviderConfigEntry['kind']> = new Se
 export interface ProvidersFile {
 	providers: ProviderConfigEntry[];
 	chains: Record<string, string[]>;
-	embedding?: EmbeddingConfig;
+	/** Absent = "never configured" (see getEmbeddingConfig); null = explicitly FTS-only. */
+	embedding?: EmbeddingConfig | null;
 }
 
 function readFile(): ProvidersFile {
@@ -168,13 +193,7 @@ export function updateProviderEnabled(id: string, enabled: boolean): ProviderCon
 	const data = readFile();
 	const entry = data.providers.find((p) => p.id === id);
 	if (!entry) throw new AppError('NOT_FOUND', { entity: 'provider', detail: id }, 404);
-	// registry.ts's chatWithFallback now actually honors this flag (routing
-	// used to ignore it entirely) — disabling Ollama would leave every task
-	// with an empty chain the instant no other provider happens to be
-	// enabled, breaking the "Ollama always works, even offline" guarantee
-	// this app is built around. Mirrors deleteProvider()'s existing
-	// PROVIDER_OLLAMA_UNDELETABLE guard below.
-	if (id === 'ollama' && !enabled) throw new AppError('PROVIDER_OLLAMA_REQUIRED');
+	// Ollama is an ordinary provider now (no longer a mandatory one): it may be disabled like any other.
 	entry.enabled = enabled;
 	writeFile(data);
 	return entry;
@@ -251,12 +270,20 @@ export function updateChain(taskType: string, providerIds: string[]): void {
 	writeFile(data);
 }
 
-/** The embedding config in effect right now — DEFAULT_EMBEDDING_CONFIG when
- * providers.json has never set one. Every caller (embeddings.ts, retrieve.ts,
- * incrementalIndex.ts, the CLI indexer, ollama-gate.ts's resident-model set)
- * reads through this rather than checking for the field's presence itself. */
-export function getEmbeddingConfig(): EmbeddingConfig {
-	return readFile().embedding ?? DEFAULT_EMBEDDING_CONFIG;
+function resolveEmbeddingConfig(data: ProvidersFile): EmbeddingConfig | null {
+	if (data.embedding === null) return null;
+	if (data.embedding) return data.embedding;
+	return data.providers.some((p) => p.id === 'ollama') ? DEFAULT_EMBEDDING_CONFIG : null;
+}
+
+/** The embedding config in effect right now: the explicit `embedding` block
+ * if there is one, else DEFAULT_EMBEDDING_CONFIG when an 'ollama' entry
+ * exists (legacy installs), else null = FTS-only mode. Every caller
+ * (embeddings.ts, retrieve.ts, incrementalIndex.ts, the CLI indexer,
+ * ollama-gate.ts's resident-model set) reads through this rather than
+ * checking for the field's presence itself, and must handle null. */
+export function getEmbeddingConfig(): EmbeddingConfig | null {
+	return resolveEmbeddingConfig(readFile());
 }
 
 /**
@@ -272,8 +299,14 @@ export function getEmbeddingConfig(): EmbeddingConfig {
  * EMBEDDING_CONSENT_REQUIRED at save time instead of the config silently
  * saving and only failing on the next chat message.
  */
-export function setEmbeddingConfig(cfg: EmbeddingConfig): void {
+export function setEmbeddingConfig(cfg: EmbeddingConfig | null): void {
 	const data = readFile();
+	if (cfg === null) {
+		// Explicit FTS-only mode — stored as null (not deleted) so the legacy ollama default does not come back.
+		data.embedding = null;
+		writeFile(data);
+		return;
+	}
 	const entry = data.providers.find((p) => p.id === cfg.providerId);
 	if (!entry) throw new AppError('NOT_FOUND', { entity: 'provider', detail: cfg.providerId }, 404);
 	if (!entry.enabled) throw new AppError('EMBEDDING_PROVIDER_DISABLED', { provider: cfg.providerId });
@@ -371,7 +404,9 @@ export function deleteProvider(id: string): void {
 	const data = readFile();
 	const idx = data.providers.findIndex((p) => p.id === id);
 	if (idx === -1) throw new AppError('NOT_FOUND', { entity: 'provider', detail: id }, 404);
-	if (id === 'ollama') throw new AppError('PROVIDER_OLLAMA_UNDELETABLE');
+	// Deleting the provider that does embedding leaves no embedder: explicit FTS-only mode (null, not
+	// "absent" — absent would re-apply the legacy ollama default for a config that still lists ollama).
+	if (resolveEmbeddingConfig(data)?.providerId === id) data.embedding = null;
 	// Remove the provider from every task chain too — a dangling chain entry
 	// would make chatWithFallback throw "Bilinmeyen provider" at request time.
 	data.providers.splice(idx, 1);

@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
-import { openDb, upsertFile, deleteFile, renameFileInIndex, readIndexEmbedding, type FileRow, type IndexEmbeddingMeta } from '../../../indexer/db';
+import { openDb, upsertFile, deleteFile, renameFileInIndex, readIndexEmbedding, markIndexFtsOnly, embeddingMismatches, type FileRow, type IndexEmbeddingMeta } from '../../../indexer/db';
 import { chunkMarkdown, normalizeLevel } from '../../../indexer/chunk';
 import { parsePrerequisites } from '../../../indexer/prerequisites';
 import { embedTexts } from './embeddings';
@@ -25,10 +25,6 @@ function sha256(content: string): string {
 	return crypto.createHash('sha256').update(content).digest('hex');
 }
 
-function metaMatches(a: IndexEmbeddingMeta, b: IndexEmbeddingMeta): boolean {
-	return a.provider === b.provider && a.model === b.model && a.dims === b.dims;
-}
-
 /**
  * Indexes (or re-indexes) a single library file immediately — used by the
  * upload/import flows so a new document is retrievable right away, without
@@ -48,7 +44,10 @@ export async function indexLibraryFile(v: VaultContext, absPath: string, relPath
 	if (chunks.length === 0) return;
 
 	const config = getEmbeddingConfig();
-	const embeddingMeta: IndexEmbeddingMeta = { provider: config.providerId, model: config.model, dims: config.dims };
+	// null config = FTS-only mode (Aşama 4a): chunks + keyword data are written, vectors are not.
+	const embeddingMeta: IndexEmbeddingMeta | null = config
+		? { provider: config.providerId, model: config.model, dims: config.dims }
+		: null;
 	const db = openDb(v.indexDbPath, embeddingMeta);
 	try {
 		// Aşama 3a: refuse to write vectors from the CURRENT config into an
@@ -61,13 +60,16 @@ export async function indexLibraryFile(v: VaultContext, absPath: string, relPath
 		// <id> --full`, or the app's own POST /api/vaults/[id]/reindex, Aşama
 		// 3b) before this config can take effect for this vault.
 		const existing = readIndexEmbedding(db);
-		if (!metaMatches(existing, embeddingMeta)) {
+		if (embeddingMeta && embeddingMismatches(existing, config)) {
 			throw new AppError('EMBEDDING_MISMATCH', {
 				detail: `index: ${existing.provider}/${existing.model}/${existing.dims} != config: ${embeddingMeta.provider}/${embeddingMeta.model}/${embeddingMeta.dims}`
 			});
 		}
 
-		const embeddings = await embedDocuments(chunks.map((c) => c.embedText));
+		// FTS-only: never refuse and never embed. If the index still claims real vectors, stop claiming it
+		// once a chunk is written without one (see markIndexFtsOnly).
+		const embeddings = embeddingMeta ? await embedDocuments(chunks.map((c) => c.embedText)) : null;
+		if (!embeddingMeta) markIndexFtsOnly(db);
 		const fileRow: FileRow = {
 			path: relPath,
 			sha256: sha256(raw),
@@ -84,7 +86,7 @@ export async function indexLibraryFile(v: VaultContext, absPath: string, relPath
 			fileRow,
 			chunks.map((c, i) => ({
 				insert: { path: relPath, heading_path: c.headingPath, display_text: c.displayText },
-				embedding: embeddings[i]
+				embedding: embeddings ? embeddings[i] : null
 			}))
 		);
 	} finally {

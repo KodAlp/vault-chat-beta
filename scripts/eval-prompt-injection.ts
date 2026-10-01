@@ -20,7 +20,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { buildPromptMessages, CORE_INVARIANTS } from '../src/lib/server/prompt';
 import { closeVaultStudyDb } from '../src/lib/server/study-db';
-import { ollamaUrl } from '../src/lib/server/env';
+const ollamaUrl = (): string => process.env.OLLAMA_URL ?? 'http://127.0.0.1:11434';
 import type { VaultContext } from '../src/lib/server/vaults';
 import type { ChatMessage, RetrievedChunk } from '../src/lib/types';
 

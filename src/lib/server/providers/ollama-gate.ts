@@ -1,6 +1,5 @@
-import { ollamaUrl } from '../env';
 import { sharedJobMutex, type JobMutex } from '../jobMutex';
-import { getEmbeddingConfig } from './config-store';
+import { getEmbeddingConfig, getOllamaBaseUrl } from './config-store';
 
 export interface OllamaGate {
 	/** Runs `fn` while holding a lease on `model` — for one-shot calls
@@ -27,7 +26,7 @@ interface GateDeps {
 const NATIVE_CALL_TIMEOUT_MS = 5000;
 
 async function nativeUnload(model: string): Promise<void> {
-	await fetch(`${ollamaUrl()}/api/chat`, {
+	await fetch(`${getOllamaBaseUrl()}/api/chat`, {
 		method: 'POST',
 		headers: { 'content-type': 'application/json' },
 		body: JSON.stringify({ model, messages: [], keep_alive: 0 }),
@@ -39,7 +38,7 @@ async function nativeUnload(model: string): Promise<void> {
 
 async function nativeReconcile(): Promise<Set<string>> {
 	try {
-		const res = await fetch(`${ollamaUrl()}/api/ps`, { signal: AbortSignal.timeout(NATIVE_CALL_TIMEOUT_MS) });
+		const res = await fetch(`${getOllamaBaseUrl()}/api/ps`, { signal: AbortSignal.timeout(NATIVE_CALL_TIMEOUT_MS) });
 		if (!res.ok) return new Set();
 		const data = (await res.json()) as { models?: { name: string }[] };
 		return new Set((data.models ?? []).map((m) => m.name));
@@ -198,5 +197,9 @@ export function createOllamaGate(
  * old one) until the process restarted. A provider that isn't 'ollama' has
  * no Ollama model to keep resident, so this only ever matters when it is. */
 export const ollamaGate: OllamaGate = createOllamaGate(undefined, {
-	residentModels: () => [getEmbeddingConfig().model]
+	// FTS-only mode (null config) has no embedding model to keep resident.
+	residentModels: () => {
+		const cfg = getEmbeddingConfig();
+		return cfg ? [cfg.model] : [];
+	}
 });

@@ -11,6 +11,10 @@ import {
 	updateProviderLocal,
 	normalizeBaseUrl,
 	addProvider,
+	deleteProvider,
+	updateProviderEnabled,
+	updateChain,
+	getOllamaBaseUrl,
 	isCloud,
 	getEmbeddingConfig,
 	setEmbeddingConfig,
@@ -248,7 +252,7 @@ test('setEmbeddingConfig saves a valid config and getEmbeddingConfig reads it ba
 test('setEmbeddingConfig stores an explicit distanceThreshold', () => {
 	useTmpProvidersFile();
 	setEmbeddingConfig({ providerId: 'ollama', model: 'bge-m3', dims: 1024, distanceThreshold: 0.5 });
-	assert.equal(getEmbeddingConfig().distanceThreshold, 0.5);
+	assert.equal(getEmbeddingConfig()?.distanceThreshold, 0.5);
 });
 
 test('setEmbeddingConfig on a local openai-compat provider needs no consent', () => {
@@ -317,5 +321,83 @@ test('setEmbeddingConfig on a cloud provider succeeds once consent is granted', 
 	useTmpProvidersFile();
 	grantProviderConsent('groq');
 	assert.doesNotThrow(() => setEmbeddingConfig({ providerId: 'groq', model: 'a-model', dims: 768 }));
-	assert.equal(getEmbeddingConfig().providerId, 'groq');
+	assert.equal(getEmbeddingConfig()?.providerId, 'groq');
+});
+
+// Aşama 4a — Ollama is an ordinary provider now: no disable/delete guards, and embedding can be absent (FTS-only).
+function writeProviders(data: ProvidersFile): void {
+	fs.writeFileSync(process.env.PROVIDERS_PATH!, JSON.stringify(data, null, 2) + '\n', 'utf-8');
+}
+
+test('Ollama can be disabled (no PROVIDER_OLLAMA_REQUIRED guard any more)', () => {
+	useTmpProvidersFile();
+	assert.doesNotThrow(() => updateProviderEnabled('ollama', false));
+	assert.equal(readProvidersFile().providers.find((p) => p.id === 'ollama')?.enabled, false);
+});
+
+test('Ollama can be deleted (no PROVIDER_OLLAMA_UNDELETABLE guard any more) and leaves every chain', () => {
+	useTmpProvidersFile();
+	updateChain('chat', ['groq', 'ollama']);
+	updateChain('title', ['ollama']);
+	assert.doesNotThrow(() => deleteProvider('ollama'));
+	const data = readProvidersFile();
+	assert.equal(data.providers.some((p) => p.id === 'ollama'), false);
+	assert.deepEqual(data.chains.chat, ['groq']);
+	assert.deepEqual(data.chains.title, []);
+});
+
+test('deleting the implicit-default embedding provider (ollama, no embedding block) switches to FTS-only', () => {
+	useTmpProvidersFile();
+	assert.equal(getEmbeddingConfig()?.providerId, 'ollama');
+	deleteProvider('ollama');
+	assert.equal(getEmbeddingConfig(), null);
+});
+
+test('deleting the explicitly configured embedding provider sets embedding to null, not back to the ollama default', () => {
+	useTmpProvidersFile();
+	setEmbeddingConfig({ providerId: 'local-compat', model: 'a-model', dims: 768 });
+	deleteProvider('local-compat');
+	const data = readProvidersFile();
+	assert.equal(data.embedding, null);
+	assert.equal(getEmbeddingConfig(), null, 'an ollama entry still exists, but the explicit null wins over the legacy default');
+});
+
+test('deleting an unrelated provider leaves the embedding config alone', () => {
+	useTmpProvidersFile();
+	setEmbeddingConfig({ providerId: 'local-compat', model: 'a-model', dims: 768 });
+	deleteProvider('groq');
+	assert.equal(getEmbeddingConfig()?.providerId, 'local-compat');
+});
+
+test('getEmbeddingConfig is null when providers.json has no embedding block and no ollama entry', () => {
+	useTmpProvidersFile();
+	writeProviders({ ...BASE, providers: BASE.providers.filter((p) => p.id !== 'ollama') });
+	assert.equal(getEmbeddingConfig(), null);
+});
+
+test('an explicit embedding: null stays null even though an ollama entry exists', () => {
+	useTmpProvidersFile();
+	writeProviders({ ...BASE, embedding: null });
+	assert.equal(getEmbeddingConfig(), null);
+});
+
+test('setEmbeddingConfig(null) stores explicit FTS-only mode and a later real config replaces it', () => {
+	useTmpProvidersFile();
+	setEmbeddingConfig(null);
+	assert.equal(getEmbeddingConfig(), null);
+	assert.equal(readProvidersFile().embedding, null);
+	setEmbeddingConfig({ providerId: 'ollama', model: 'bge-m3', dims: 1024 });
+	assert.equal(getEmbeddingConfig()?.providerId, 'ollama');
+});
+
+test('getOllamaBaseUrl reads the ollama entry baseUrl (trailing slash stripped) and defaults when there is none', () => {
+	useTmpProvidersFile();
+	const withCustom: ProvidersFile = {
+		...BASE,
+		providers: BASE.providers.map((p) => (p.id === 'ollama' ? { ...p, baseUrl: 'http://192.168.1.5:11434/' } : p))
+	};
+	writeProviders(withCustom);
+	assert.equal(getOllamaBaseUrl(), 'http://192.168.1.5:11434');
+	writeProviders({ ...BASE, providers: BASE.providers.filter((p) => p.kind !== 'ollama') });
+	assert.equal(getOllamaBaseUrl(), 'http://127.0.0.1:11434');
 });

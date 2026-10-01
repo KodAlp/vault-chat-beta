@@ -14,6 +14,10 @@ import {
 	readIndexEmbeddingMeta,
 	writeIndexEmbeddingMeta,
 	LEGACY_INDEX_EMBEDDING,
+	FTS_ONLY_INDEX_EMBEDDING,
+	isFtsOnlyIndex,
+	embeddingMismatches,
+	markIndexFtsOnly,
 	type FileRow
 } from './db';
 import { EMBED_DIMS } from '../src/lib/server/embed-config';
@@ -212,4 +216,56 @@ test('keywordSearch never throws on a malformed expression or a bad limit', () =
 	assert.deepEqual(keywordSearch(db, '"some"', -1), []);
 	assert.equal(keywordSearch(db, '"some"', 5).length, 1);
 	db.close();
+});
+
+// Aşama 4a — FTS-only index (no embedding provider configured)
+const hasVecTable = (db: Database.Database) => db.prepare("SELECT 1 FROM sqlite_master WHERE name = 'vec_chunks'").get() !== undefined;
+const ftsChunk = (p: string, heading: string, text: string) => ({ insert: { path: p, heading_path: heading, display_text: text }, embedding: null });
+
+test('openDb(path, null) creates an FTS-only index: no vec_chunks table, meta recorded as none', () => {
+	const db = openDb(tmpDbPath(), null);
+	assert.equal(hasVecTable(db), false);
+	assert.deepEqual(readIndexEmbedding(db), FTS_ONLY_INDEX_EMBEDDING);
+	assert.equal(isFtsOnlyIndex(readIndexEmbedding(db)), true);
+	assert.equal(hasKeywordIndex(db), true);
+	db.close();
+});
+
+test('an FTS-only index accepts null-embedding upserts, finds them by keyword, and deletes without a vec table', () => {
+	const db = openDb(tmpDbPath(), null);
+	upsertFile(db, file('a.md'), [ftsChunk('a.md', 'Sorting', 'quicksort partition pivot')]);
+	assert.equal(count(db, 'chunks'), 1);
+	assert.equal(find(db, 'quicksort').length, 1);
+	deleteFile(db, 'a.md');
+	assert.equal(count(db, 'chunks'), 0);
+	assert.equal(count(db, 'chunks_fts'), 0);
+	db.close();
+});
+
+test('reopening an FTS-only index without an embedding (or with a real one) neither creates vec_chunks nor re-tags it as legacy', () => {
+	const p = tmpDbPath();
+	openDb(p, null).close();
+	for (const embedding of [undefined, { provider: 'ollama', model: 'bge-m3', dims: 4 }]) {
+		const db = openDb(p, embedding);
+		assert.equal(hasVecTable(db), false);
+		assert.deepEqual(readIndexEmbedding(db), FTS_ONLY_INDEX_EMBEDDING);
+		db.close();
+	}
+});
+
+test('openDb(path, null) on an index that already has vectors leaves its recorded meta alone; markIndexFtsOnly then retags it', () => {
+	const p = tmpDbPath();
+	openDb(p, { provider: 'ollama', model: 'bge-m3', dims: 4 }).close();
+	const db = openDb(p, null);
+	assert.deepEqual(readIndexEmbedding(db), { provider: 'ollama', model: 'bge-m3', dims: 4 });
+	markIndexFtsOnly(db);
+	assert.deepEqual(readIndexEmbedding(db), FTS_ONLY_INDEX_EMBEDDING);
+	db.close();
+});
+
+test('embeddingMismatches: a null config never mismatches; a real config mismatches an FTS-only index', () => {
+	assert.equal(embeddingMismatches(FTS_ONLY_INDEX_EMBEDDING, null), false);
+	assert.equal(embeddingMismatches({ provider: 'ollama', model: 'm', dims: 4 }, null), false);
+	assert.equal(embeddingMismatches(FTS_ONLY_INDEX_EMBEDDING, { providerId: 'ollama', model: 'bge-m3', dims: 1024 }), true);
+	assert.equal(embeddingMismatches({ provider: 'ollama', model: 'bge-m3', dims: 4 }, { providerId: 'ollama', model: 'bge-m3', dims: 4 }), false);
 });

@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import matter from 'gray-matter';
 import Database from 'better-sqlite3';
-import { openDb, listKnownFiles, setPrerequisites, readIndexEmbedding, type FileRow, type IndexEmbeddingMeta } from './db';
+import { openDb, listKnownFiles, setPrerequisites, readIndexEmbedding, embeddingMismatches, type FileRow, type IndexEmbeddingMeta } from './db';
 import { buildSlugIndex, findCycles, parsePrerequisites, resolvePrerequisites } from './prerequisites';
 import { hasKeywordIndex } from '../src/lib/server/keyword-search';
 import { rebuildIndex } from './rebuild';
@@ -119,11 +119,10 @@ async function main() {
 	// anything — same pattern the --prereqs branch above already uses.
 	const dbExistedBeforeThisRun = fs.existsSync(DB_PATH);
 	const embeddingConfig = getEmbeddingConfig();
-	const embeddingMeta: IndexEmbeddingMeta = {
-		provider: embeddingConfig.providerId,
-		model: embeddingConfig.model,
-		dims: embeddingConfig.dims
-	};
+	// null config = FTS-only mode (Aşama 4a): chunks + keyword data only, no vectors.
+	const embeddingMeta: IndexEmbeddingMeta | null = embeddingConfig
+		? { provider: embeddingConfig.providerId, model: embeddingConfig.model, dims: embeddingConfig.dims }
+		: null;
 	const db = isDryRun
 		? dbExistedBeforeThisRun
 			? new Database(DB_PATH, { readonly: true })
@@ -136,13 +135,9 @@ async function main() {
 	// whole run up front rather than embedding some files under one vector
 	// space and leaving others under another — the fix is `--full`, which
 	// deletes and rebuilds the vec0 table at the new dimension.
-	if (db && !isFull) {
+	if (db && !isFull && embeddingMeta) {
 		const existing = readIndexEmbedding(db);
-		if (
-			existing.provider !== embeddingMeta.provider ||
-			existing.model !== embeddingMeta.model ||
-			existing.dims !== embeddingMeta.dims
-		) {
+		if (embeddingMismatches(existing, embeddingConfig)) {
 			console.error(
 				`Bu vault "${existing.provider}/${existing.model}/${existing.dims}" ile indekslenmiş, ama ayarlanan embedding "${embeddingMeta.provider}/${embeddingMeta.model}/${embeddingMeta.dims}" — önce "npm run index -- --vault ${vault.id} --full" ile yeniden indeksle.`
 			);

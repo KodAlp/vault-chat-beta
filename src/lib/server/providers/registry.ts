@@ -1,5 +1,4 @@
 import fs from 'node:fs';
-import { env } from '$env/dynamic/private';
 import { providersPath } from '../env';
 import { OllamaAdapter } from './ollama';
 import { OpenAICompatAdapter } from './openai-compat';
@@ -60,10 +59,8 @@ function healBaseUrl(url: string): string {
 
 async function buildAdapter(entry: ProviderConfigEntry): Promise<ProviderAdapter> {
 	if (entry.kind === 'ollama') {
-		// OLLAMA_URL env stays the live override point (matches the existing
-		// .env-driven customization apps already relies on) — providers.json's
-		// baseUrl is the default when it's unset.
-		return new OllamaAdapter(entry.id, env.OLLAMA_URL ?? entry.baseUrl, entry.timeouts);
+		// providers.json's baseUrl is the only source (the OLLAMA_URL env override is gone).
+		return new OllamaAdapter(entry.id, entry.baseUrl, entry.timeouts);
 	}
 	const apiKey = await secretStore.get(entry.id);
 	if (entry.kind === 'anthropic') {

@@ -14,7 +14,7 @@ import fs from 'node:fs';
  * process.env.DATA_DIR and then does `await import('./server.ts')` would
  * otherwise lose to a constant this module captured at its own load time.
  *
- * DATA_DIR/OLLAMA_URL were the first two migrated here (Faz 10's MCP path).
+ * DATA_DIR (and the since-removed OLLAMA_URL) were the first migrated here (Faz 10's MCP path).
  * Faz 11 adds CHATS_DB_PATH/SKILLS_DIR/PROVIDERS_PATH/SECRETS_PATH — not
  * because MCP needs them, but because their old per-module defaults
  * (`path.join('data', '...')`, cwd-relative) silently diverged from
@@ -37,10 +37,6 @@ export function dataDir(): string {
 	const root = raw ? path.resolve(process.cwd(), raw) : path.resolve(process.cwd(), 'data');
 	fs.mkdirSync(root, { recursive: true });
 	return root;
-}
-
-export function ollamaUrl(): string {
-	return nonEmpty(process.env.OLLAMA_URL) ?? 'http://127.0.0.1:11434';
 }
 
 /** Overrides the context window requested from Ollama (options.num_ctx) for
