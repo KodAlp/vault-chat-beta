@@ -7,8 +7,8 @@
 //
 // Also invoked automatically (no args) by the server on startup when
 // data/vaults.json is missing — see src/hooks.server.ts.
-import { existsSync, mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
-import { execFileSync } from 'node:child_process';
+import { cpSync, existsSync, mkdirSync, readdirSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 
 const isDryRun = process.argv.includes('--dry-run');
@@ -60,13 +60,55 @@ if (isDryRun) {
 
 mkdirSync(vaultDir, { recursive: true });
 
+/** Relative path (posix separators) -> size for every file under dir. */
+function listTree(dir) {
+	const out = new Map();
+	const walk = (cur, rel) => {
+		for (const entry of readdirSync(cur, { withFileTypes: true })) {
+			const abs = path.join(cur, entry.name);
+			const r = rel ? `${rel}/${entry.name}` : entry.name;
+			if (entry.isDirectory()) walk(abs, r);
+			else out.set(r, statSync(abs).size);
+		}
+	};
+	walk(dir, '');
+	return out;
+}
+
+function diffTrees(src, dest) {
+	const problems = [];
+	for (const [rel, size] of src) {
+		if (!dest.has(rel)) problems.push(`eksik: ${rel}`);
+		else if (dest.get(rel) !== size) problems.push(`boyut farklı: ${rel}`);
+	}
+	for (const rel of dest.keys()) if (!src.has(rel)) problems.push(`fazla: ${rel}`);
+	return problems;
+}
+
+function copyTree(src, dest) {
+	if (process.platform === 'win32') {
+		const r = spawnSync('robocopy', [src, dest, '/E', '/NFL', '/NDL', '/NJH', '/NJS', '/NC', '/NS'], {
+			stdio: 'inherit'
+		});
+		// 0-7 = success; >=8 = failure; null status (spawn failed, e.g. ENOENT) = failure too.
+		if (r.error || r.status === null || r.status >= 8) {
+			throw new Error(`robocopy başarısız (status=${r.status}${r.error ? `, ${r.error.message}` : ''})`);
+		}
+		return;
+	}
+	cpSync(src, dest, { recursive: true, errorOnExist: true, force: false });
+}
+
 /**
  * Same-disk fs.renameSync is a single atomic rename, not the recursive
  * directory walk that cpSync/rmSync hit Windows-specific EIO/EBUSY
  * failures on for this repo's non-ASCII path (documented in Faz 7 and the
- * vault-registry skill) — so it's tried first. The robocopy/PowerShell
- * fallback only exists for the unlikely case renameSync itself fails (e.g.
- * a cross-device move if DATA_DIR ever points at a different drive).
+ * vault-registry skill) — so it's tried first. The copy fallback (robocopy
+ * on Windows, fs.cpSync elsewhere) only exists for the case renameSync itself
+ * fails (e.g. EXDEV when DATA_DIR is on a different filesystem). The copy is
+ * verified (same relative files + sizes) BEFORE the source is deleted; on any
+ * failure the source is left intact and the script aborts. Mirrors
+ * src/lib/server/moveDirSafe.ts (kept as a copy: this script runs standalone).
  */
 function moveDir(src, dest) {
 	if (!src || !existsSync(src)) {
@@ -77,23 +119,21 @@ function moveDir(src, dest) {
 		renameSync(src, dest);
 		return;
 	} catch (err) {
-		console.warn(`renameSync başarısız (${err.message}), robocopy'ye düşülüyor...`);
+		console.warn(`renameSync başarısız (${err.message}), kopyalamaya düşülüyor...`);
 	}
 	mkdirSync(dest, { recursive: true });
 	try {
-		execFileSync('robocopy', [src, dest, '/E', '/NFL', '/NDL', '/NJH', '/NJS', '/NC', '/NS'], {
-			stdio: 'inherit'
-		});
+		copyTree(src, dest);
 	} catch (err) {
-		if ((err.status ?? 0) >= 8) throw err;
+		throw new Error(`[MIGRATE_COPY_FAILED] ${src} -> ${dest} kopyalanamadı; kaynak silinmedi: ${err.message}`);
 	}
-	// Güvenlik sertleştirme — this used to shell out to
-	// `powershell -Command "Remove-Item -Path "${src}" ..."`, string-interpolating
-	// a filesystem path straight into a PowerShell command line: a path
-	// containing a `"` or `$(...)` (a legitimate character in a Windows
-	// filename) would break out of the quoted string and run arbitrary
-	// PowerShell. fs.rmSync is the same recursive-force delete with no shell
-	// involved at all, so there's nothing left to inject into.
+	const problems = diffTrees(listTree(src), listTree(dest));
+	if (problems.length > 0) {
+		throw new Error(
+			`[MIGRATE_COPY_VERIFY_FAILED] kopya kaynakla eşleşmiyor (${problems.slice(0, 5).join('; ')}); kaynak silinmedi`
+		);
+	}
+	// fs.rmSync, no shell involved (replaced an injectable PowerShell Remove-Item).
 	rmSync(src, { recursive: true, force: true });
 }
 

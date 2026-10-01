@@ -4,8 +4,8 @@
 // build` directly) so the packaged app never ships vite/typescript/
 // svelte-check/tsx/@tauri-apps/cli — `npm ci --omit=dev` inside a *copy* of
 // package.json, not the real node_modules, is what achieves that.
-import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync } from 'node:fs';
-import { execFileSync } from 'node:child_process';
+import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs';
+import { execFileSync, spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { verifyStagedData } from './stage-verify.mjs';
 
@@ -39,6 +39,12 @@ function sleepSync(ms) {
  * process exit code claims.
  */
 function removeStageDirOrThrow() {
+	if (process.platform !== 'win32') {
+		// The PowerShell workaround below is for a Windows non-ASCII path bug; elsewhere plain fs is reliable.
+		rmSync(stageDir, { recursive: true, force: true });
+		if (existsSync(stageDir)) throw new Error(`dist-server/ klasörü temizlenemedi: ${stageDir}`);
+		return;
+	}
 	for (let attempt = 1; attempt <= 2; attempt++) {
 		if (!existsSync(stageDir)) return;
 		try {
@@ -67,31 +73,37 @@ function removeStageDirOrThrow() {
 removeStageDirOrThrow();
 mkdirSync(stageDir, { recursive: true });
 
-function copyDirWindows(src, dest, excludeDirs = []) {
+function copyDir(src, dest, excludeDirs = []) {
+	if (process.platform !== 'win32') {
+		// Equivalent of robocopy /E /XD <names>: copy everything, skipping directories with those names at any depth.
+		cpSync(src, dest, {
+			recursive: true,
+			filter: (s) => !(excludeDirs.includes(path.basename(s)) && statSync(s).isDirectory())
+		});
+		return;
+	}
 	mkdirSync(dest, { recursive: true });
 	// robocopy's exit codes 0-7 are all "success" (bit flags for what
 	// changed); only >=8 is a real failure, hence the manual check instead
-	// of relying on execFileSync's default zero-exit-code assumption.
+	// of relying on execFileSync's default zero-exit-code assumption. A null
+	// status means robocopy never ran (spawn failure) — that is a failure too,
+	// never "nothing to do".
 	const xd = excludeDirs.length > 0 ? ['/XD', ...excludeDirs] : [];
-	try {
-		execFileSync(
-			'robocopy',
-			[src, dest, '/E', '/NFL', '/NDL', '/NJH', '/NJS', '/NC', '/NS', ...xd],
-			{ stdio: 'inherit' }
-		);
-	} catch (err) {
-		const code = err.status ?? 0;
-		if (code >= 8) throw err;
+	const r = spawnSync('robocopy', [src, dest, '/E', '/NFL', '/NDL', '/NJH', '/NJS', '/NC', '/NS', ...xd], {
+		stdio: 'inherit'
+	});
+	if (r.error || r.status === null || r.status >= 8) {
+		throw new Error(`robocopy başarısız (status=${r.status}${r.error ? `, ${r.error.message}` : ''}): ${src}`);
 	}
 }
 
-copyDirWindows(path.join(root, 'build'), path.join(stageDir, 'build'));
+copyDir(path.join(root, 'build'), path.join(stageDir, 'build'));
 // ingest/ (convert.py, youtube_transcript.py, postprocess.py, requirements.txt)
 // was never staged here — convertQueue.ts/youtubeQueue.ts resolve their
 // scripts as path.resolve(process.cwd(), 'ingest', ...), and the packaged
 // sidecar's cwd IS server_dir (dist-server), so document/YouTube import
 // silently failed in the installed desktop app even with Python installed.
-copyDirWindows(path.join(root, 'ingest'), path.join(stageDir, 'ingest'), ['__pycache__', '.venv']);
+copyDir(path.join(root, 'ingest'), path.join(stageDir, 'ingest'), ['__pycache__', '.venv']);
 copyFileSync(path.join(root, 'package.json'), path.join(stageDir, 'package.json'));
 copyFileSync(path.join(root, 'package-lock.json'), path.join(stageDir, 'package-lock.json'));
 mkdirSync(path.join(stageDir, 'data'), { recursive: true });
@@ -127,7 +139,9 @@ const readIfExists = (p) => (existsSync(p) ? readFileSync(p) : null);
 const stagedProblems = verifyStagedData({
 	stagedProviders: readIfExists(path.join(stageDir, 'data', 'providers.json')),
 	defaultProviders: readIfExists(path.join(root, 'data', 'providers.default.json')),
-	stagedDataEntries: readdirSync(path.join(stageDir, 'data'))
+	stagedDataEntries: readdirSync(path.join(stageDir, 'data')),
+	stagedBuildIndexExists: existsSync(path.join(stageDir, 'build', 'index.js')),
+	stagedConvertPyExists: existsSync(path.join(stageDir, 'ingest', 'convert.py'))
 });
 if (stagedProblems.length > 0) {
 	console.error('Sahneleme doğrulaması başarısız:');

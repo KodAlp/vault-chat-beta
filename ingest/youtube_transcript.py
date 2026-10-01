@@ -15,6 +15,8 @@ never downloads video or audio, never runs local transcription. A video
 with no captions in any requested language is reported as a clean error,
 not a fallback to something heavier.
 """
+from __future__ import annotations
+
 import argparse
 import json
 import re
