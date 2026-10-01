@@ -5,7 +5,7 @@ import Database from 'better-sqlite3';
 import * as sqliteVec from 'sqlite-vec';
 import { retrieve } from '../../src/lib/server/retrieve';
 import { buildRetrievalQuery } from '../../src/lib/server/retrieval-query';
-import { buildFtsQuery, type FtsMode } from '../../src/lib/server/keyword-query';
+import { buildFtsQuery, extractTerms, type FtsMode } from '../../src/lib/server/keyword-query';
 import { keywordSearch } from '../../src/lib/server/keyword-search';
 import { getLibrarySettings } from '../../src/lib/server/library-read';
 // Dev-tooling default only — the app itself reads the Ollama provider's baseUrl from providers.json.
@@ -620,6 +620,61 @@ async function hybridRerankQxPipeline(ctx: PipelineContext, item: QueryItem): Pr
 	};
 }
 
+// ---------------------------------------------------------------------------
+// Keyword-only (FTS-only mode) experiments — Aşama 4 açık madde 1
+// ---------------------------------------------------------------------------
+
+/** Structural prefix stem: no word list, language-independent. 'fixed' keeps the
+ * first n chars, 'ratio' keeps ceil(len*r) chars; never below minLen, short terms untouched. */
+function stemTerm(term: string, how: { kind: 'fixed'; n: number } | { kind: 'ratio'; r: number }, minLen = 4): string {
+	const keep = how.kind === 'fixed' ? how.n : Math.ceil(term.length * how.r);
+	const k = Math.max(minLen, keep);
+	return term.length > k ? term.slice(0, k) : term;
+}
+
+function keywordOnlyPipeline(opts: { stem?: { kind: 'fixed'; n: number } | { kind: 'ratio'; r: number }; minCoverage?: number; minCoTerms?: number; maxDf?: number }): PipelineFn {
+	return async (ctx, item) => {
+		const t0 = Date.now();
+		let terms = extractTerms(item.question);
+		if (opts.maxDf) {
+			const n = (ctx.db.prepare('SELECT count(*) AS n FROM chunks_fts').get() as { n: number }).n;
+			const dfStmt = ctx.db.prepare('SELECT count(*) AS n FROM chunks_fts WHERE chunks_fts MATCH ?');
+			terms = terms.filter((t) => (dfStmt.get(`"${t}"`) as { n: number }).n / n < opts.maxDf!);
+			if (opts.minCoTerms && terms.length < opts.minCoTerms) return { ranked: [], timings: { ftsMs: 0, totalMs: Date.now() - t0 } };
+		}
+		const stems = [...new Set(terms.map((t) => (opts.stem ? stemTerm(t, opts.stem) : t)))];
+		if (stems.length === 0) return { ranked: [], timings: { ftsMs: 0, totalMs: Date.now() - t0 } };
+		const termExpr = (t: string) => `"${t.replace(/"/g, '""')}"${opts.stem ? '*' : ''}`;
+		const expr = stems.map(termExpr).join(' OR ');
+		const lookup = makeChunkLookup(ctx.db);
+		const tf = Date.now();
+		const hits = keywordSearch(ctx.db, expr, ctx.poolSize);
+		// Per-term match sets, asked of FTS itself so the check uses the index's own tokenizer
+		// (porter + unicode61 remove_diacritics) instead of an approximation of it.
+		const matchedTerms = new Map<number, number>();
+		if ((opts.minCoverage || opts.minCoTerms) && hits.length > 0) {
+			const ids = hits.map((h) => h.chunkId);
+			const placeholders = ids.map(() => '?').join(',');
+			const stmt = ctx.db.prepare(`SELECT rowid AS id FROM chunks_fts WHERE chunks_fts MATCH ? AND rowid IN (${placeholders})`);
+			for (const t of stems) {
+				for (const r of stmt.all(termExpr(t), ...ids) as { id: number }[]) matchedTerms.set(r.id, (matchedTerms.get(r.id) ?? 0) + 1);
+			}
+		}
+		const ftsMs = Date.now() - tf;
+		const ranked: RankedItem[] = [];
+		for (const h of hits) {
+			const c = lookup(h.chunkId);
+			if (!c || isHiddenPath(c.path, ctx.excludedPrefixes)) continue;
+			const m = matchedTerms.get(h.chunkId) ?? 0;
+			if (opts.minCoverage && m / stems.length < opts.minCoverage) continue;
+			if (opts.minCoTerms && m < opts.minCoTerms) continue;
+			ranked.push({ anchor: chunkAnchor(c), path: c.path, heading_path: c.heading_path, score: -h.score, via: 'kw' });
+			if (ranked.length === 10) break;
+		}
+		return { ranked, timings: { ftsMs, totalMs: Date.now() - t0 } };
+	};
+}
+
 export const VARIANT_NAMES = [
 	'prod',
 	'prod+kw',
@@ -628,7 +683,15 @@ export const VARIANT_NAMES = [
 	'hybrid',
 	'vector+rerank',
 	'hybrid+rerank',
-	'hybrid+rerank+qx'
+	'hybrid+rerank+qx',
+	'kw-p5',
+	'kw-p70',
+	'kw-cov30',
+	'kw-p5-cov30',
+	'kw-p5-cov50',
+	'kw-co2',
+	'kw-co2-df5',
+	'kw-co2-df2'
 ] as const;
 
 export type VariantName = (typeof VARIANT_NAMES)[number];
@@ -641,7 +704,15 @@ export const PIPELINES: Record<VariantName, PipelineFn> = {
 	hybrid: hybridPipeline,
 	'vector+rerank': vectorRerankPipeline,
 	'hybrid+rerank': hybridRerankPipeline,
-	'hybrid+rerank+qx': hybridRerankQxPipeline
+	'hybrid+rerank+qx': hybridRerankQxPipeline,
+	'kw-p5': keywordOnlyPipeline({ stem: { kind: 'fixed', n: 5 } }),
+	'kw-p70': keywordOnlyPipeline({ stem: { kind: 'ratio', r: 0.7 } }),
+	'kw-cov30': keywordOnlyPipeline({ minCoverage: 0.3 }),
+	'kw-p5-cov30': keywordOnlyPipeline({ stem: { kind: 'fixed', n: 5 }, minCoverage: 0.3 }),
+	'kw-p5-cov50': keywordOnlyPipeline({ stem: { kind: 'fixed', n: 5 }, minCoverage: 0.5 }),
+	'kw-co2': keywordOnlyPipeline({ minCoTerms: 2 }),
+	'kw-co2-df5': keywordOnlyPipeline({ minCoTerms: 2, maxDf: 0.05 }),
+	'kw-co2-df2': keywordOnlyPipeline({ minCoTerms: 2, maxDf: 0.02 })
 };
 
 /** Which variants call into ctx.reranker — run-retrieval.ts uses this to
