@@ -14,6 +14,7 @@ import {
 	deleteProvider,
 	updateProviderEnabled,
 	updateChain,
+	updateModelCaps,
 	getOllamaBaseUrl,
 	isCloud,
 	getEmbeddingConfig,
@@ -400,4 +401,39 @@ test('getOllamaBaseUrl reads the ollama entry baseUrl (trailing slash stripped) 
 	assert.equal(getOllamaBaseUrl(), 'http://192.168.1.5:11434');
 	writeProviders({ ...BASE, providers: BASE.providers.filter((p) => p.kind !== 'ollama') });
 	assert.equal(getOllamaBaseUrl(), 'http://127.0.0.1:11434');
+});
+
+// Aşama 4b — modelCaps override setter.
+test('updateModelCaps stores an override and it round-trips through a fresh read', () => {
+	useTmpProvidersFile();
+	updateModelCaps('local-compat', 'qwen/qwen3-8b', { tools: false, reasoning: true });
+	assert.deepEqual(readProvidersFile().providers.find((p) => p.id === 'local-compat')?.modelCaps, { 'qwen/qwen3-8b': { tools: false, reasoning: true } });
+});
+
+test('updateModelCaps merges per model, keeps only boolean flags, and replaces a model\'s earlier override', () => {
+	useTmpProvidersFile();
+	updateModelCaps('local-compat', 'a', { tools: true });
+	updateModelCaps('local-compat', 'b', { reasoning: true });
+	updateModelCaps('local-compat', 'a', { reasoning: false, tools: 'yes' as unknown as boolean });
+	assert.deepEqual(readProvidersFile().providers.find((p) => p.id === 'local-compat')?.modelCaps, { a: { reasoning: false }, b: { reasoning: true } });
+});
+
+test('updateModelCaps(null) / an empty override clears the model, and an emptied map is removed from the entry', () => {
+	useTmpProvidersFile();
+	updateModelCaps('local-compat', 'a', { tools: true });
+	updateModelCaps('local-compat', 'a', null);
+	assert.equal('modelCaps' in readProvidersFile().providers.find((p) => p.id === 'local-compat')!, false);
+	updateModelCaps('local-compat', 'a', { tools: true });
+	updateModelCaps('local-compat', 'a', {});
+	assert.equal('modelCaps' in readProvidersFile().providers.find((p) => p.id === 'local-compat')!, false);
+});
+
+test('updateModelCaps rejects an unknown provider and an empty or oversized model id; other writers keep modelCaps intact', () => {
+	useTmpProvidersFile();
+	assert.throws(() => updateModelCaps('nope', 'a', { tools: true }));
+	assert.throws(() => updateModelCaps('local-compat', '  ', { tools: true }));
+	assert.throws(() => updateModelCaps('local-compat', 'x'.repeat(201), { tools: true }));
+	updateModelCaps('local-compat', 'a', { tools: true });
+	updateProviderDefaultModel('local-compat', 'a');
+	assert.deepEqual(readProvidersFile().providers.find((p) => p.id === 'local-compat')?.modelCaps, { a: { tools: true } });
 });

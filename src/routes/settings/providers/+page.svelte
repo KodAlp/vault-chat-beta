@@ -161,6 +161,33 @@
 		}
 	}
 
+	/** Aşama 4b — writes one capability flag of one model's override (providers.json modelCaps). The toggles
+	 * show the EFFECTIVE value (family table default or an earlier override); flipping one stores an explicit
+	 * override for that flag, which wins over the table. */
+	async function setModelCap(providerId: string, modelId: string, key: 'tools' | 'reasoning', value: boolean) {
+		const state = modelManage[providerId];
+		if (!state) return;
+		const item = [...state.approved, ...state.other].find((m) => m.id === modelId);
+		if (!item) return;
+		item.caps = { ...item.caps, [key]: value };
+		item.capsOverride = { ...item.capsOverride, [key]: value };
+		modelManageBusy[providerId] = true;
+		modelManageError[providerId] = '';
+		try {
+			const res = await fetch(`/api/providers/${encodeURIComponent(providerId)}`, {
+				method: 'PATCH',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ modelCaps: { modelId, caps: item.capsOverride } })
+			});
+			if (!res.ok) throw new Error();
+			await refreshProviderModels();
+		} catch {
+			modelManageError[providerId] = t('ProvidersSettingsPage.modelManageSaveError');
+		} finally {
+			modelManageBusy[providerId] = false;
+		}
+	}
+
 	let keyDrafts = $state<Record<string, string>>({});
 	let keyEditingId = $state<string | null>(null);
 	let testResults = $state<Record<string, string>>({});
@@ -684,14 +711,34 @@
 											<p class="text-muted-foreground">{t('ProvidersSettingsPage.noModelList')}</p>
 										{/if}
 										{#each modelManage[p.id]!.approved as m (m.id)}
-											<label class="flex cursor-pointer items-center gap-1.5">
-												<Checkbox
-													checked={m.enabled}
-													disabled={modelManageBusy[p.id]}
-													onCheckedChange={(v: boolean) => toggleModelEnabled(p.id, m.id, v)}
-												/>
-												{m.id}
-											</label>
+											<div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+												<label class="flex cursor-pointer items-center gap-1.5">
+													<Checkbox
+														checked={m.enabled}
+														disabled={modelManageBusy[p.id]}
+														onCheckedChange={(v: boolean) => toggleModelEnabled(p.id, m.id, v)}
+													/>
+													{m.id}
+												</label>
+												{#if m.enabled}
+													<label class="flex cursor-pointer items-center gap-1 text-muted-foreground" title={t('ProvidersSettingsPage.capToolsHint')}>
+														<Checkbox
+															checked={m.caps.tools}
+															disabled={modelManageBusy[p.id]}
+															onCheckedChange={(v: boolean) => setModelCap(p.id, m.id, 'tools', v)}
+														/>
+														{t('ProvidersSettingsPage.capTools')}
+													</label>
+													<label class="flex cursor-pointer items-center gap-1 text-muted-foreground" title={t('ProvidersSettingsPage.capReasoningHint')}>
+														<Checkbox
+															checked={m.caps.reasoning}
+															disabled={modelManageBusy[p.id]}
+															onCheckedChange={(v: boolean) => setModelCap(p.id, m.id, 'reasoning', v)}
+														/>
+														{t('ProvidersSettingsPage.capReasoning')}
+													</label>
+												{/if}
+											</div>
 										{/each}
 										{#if modelManage[p.id]!.other.length > 0}
 											<details class="mt-1">

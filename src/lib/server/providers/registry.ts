@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import { providersPath } from '../env';
 import { OllamaAdapter } from './ollama';
 import { OpenAICompatAdapter } from './openai-compat';
+import { capsFor } from './model-caps';
 import { AnthropicAdapter } from './anthropic';
 import { AzureOpenAIAdapter } from './azure-openai';
 import { secretStore } from './secrets';
@@ -60,7 +61,7 @@ function healBaseUrl(url: string): string {
 async function buildAdapter(entry: ProviderConfigEntry): Promise<ProviderAdapter> {
 	if (entry.kind === 'ollama') {
 		// providers.json's baseUrl is the only source (the OLLAMA_URL env override is gone).
-		return new OllamaAdapter(entry.id, entry.baseUrl, entry.timeouts);
+		return new OllamaAdapter(entry.id, entry.baseUrl, entry.timeouts, entry.modelCaps);
 	}
 	const apiKey = await secretStore.get(entry.id);
 	if (entry.kind === 'anthropic') {
@@ -84,7 +85,9 @@ async function buildAdapter(entry: ProviderConfigEntry): Promise<ProviderAdapter
 		baseUrl: healBaseUrl(entry.baseUrl),
 		apiKey,
 		reasoningDialect: entry.reasoningDialect,
-		timeouts: entry.timeouts
+		timeouts: entry.timeouts,
+		local: entry.local === true,
+		modelCaps: entry.modelCaps
 	});
 }
 
@@ -163,14 +166,13 @@ export type { FallbackEvent };
 
 /**
  * The chat route's single gating check for whether it's safe to attach
- * tools to a request: only OllamaAdapter actually implements tool-calling
- * today (see ollama.ts's capsFor — a pure, synchronous lookup, no network
- * call). Every other adapter (cloud OpenAI-compat, Anthropic) has no
- * tool_calls wiring exercised in its wire-format mapping yet, so this
- * fails closed to {tools:false} for them rather than risk a false
- * positive — see the folder-skill plan's "v1 is effectively Ollama-only"
- * scoping note. Never throws; any resolution failure (unknown provider,
- * disk read error) is just "no tools available", same as a real false.
+ * tools to a request. Aşama 4b: no longer Ollama-only — for every provider kind
+ * it is model-caps.ts's family table (ids normalized across Ollama / llama.cpp /
+ * LM Studio / vLLM / OpenRouter spellings) with the provider entry's per-model
+ * `modelCaps` override on top. An unknown model with no override is still
+ * {tools:false, reasoning:false} (fail closed). A pure, synchronous lookup, no
+ * network call. Never throws; any resolution failure (unknown provider, disk
+ * read error) is just "no tools available", same as a real false.
  */
 export async function modelCaps(
 	pinnedProviderId: string | undefined,
@@ -179,9 +181,9 @@ export async function modelCaps(
 	try {
 		const providerId = chatProviderId(pinnedProviderId);
 		if (!providerId) return { tools: false, reasoning: false };
-		const adapter = await getAdapter(providerId);
-		if (adapter instanceof OllamaAdapter) return adapter.capsFor(model);
-		return { tools: false, reasoning: false };
+		const entry = loadConfig().providers.find((p) => p.id === providerId);
+		if (!entry) return { tools: false, reasoning: false };
+		return capsFor(model, entry.modelCaps?.[model]);
 	} catch {
 		return { tools: false, reasoning: false };
 	}

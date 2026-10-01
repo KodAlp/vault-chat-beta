@@ -3,73 +3,23 @@ import { ProviderError, type ChatRequest, type ChatMessage, type Chunk, type Mod
 import { ollamaGate } from './ollama-gate';
 import { parseOllamaDone, type OllamaDoneLine } from './ollama-usage';
 import { serveCtxOverride } from '../env';
+import { capsFor as tableCapsFor, lookupFamily, modelInfoFor, type ModelCapsOverride } from './model-caps';
 
 /** /api/chat's NDJSON stream is newline-delimited, same as the base class's
  * SSE line splitting — a plain regex literal here (openai-compat.ts's own
  * split, for reference) rather than a string, to sidestep quoting. */
 const NEWLINE_RE = /\n/;
 
-/** Conservative defaults for unknown models; known families get better
- * numbers so the settings UI (later) can show real context/capability
- * info instead of guessing. */
-interface FamilyInfo {
-	ctx: number;
-	caps: { tools: boolean; reasoning: boolean };
-	/** What chat() actually requests via options.num_ctx — see chat()'s doc
-	 * comment. Defaults to `ctx` when omitted (a model with no reason to
-	 * cap below its real max). */
-	serveCtx?: number;
-	/** See ModelInfo.embeddingOnly — marks a family as unusable for chat. */
-	embeddingOnly?: boolean;
-	/** The family was VERIFIED to continue a partial answer from a trailing
-	 * assistant message (see resume-plan.ts for what was measured). Set only
-	 * for families that were actually tried; default is no resume. */
-	prefixResume?: boolean;
-}
-const MODEL_FAMILY_TABLE: Record<string, FamilyInfo> = {
-	// 40960 is qwen3:8b's real max. serveCtx is what we actually ask Ollama to
-	// allocate, and on a 6 GB card it is a VRAM decision, not a headroom one.
-	//
-	// Measured 2026-09-20, RTX 4050 Laptop 6 GB, Ollama 0.32.5, qwen3:8b Q4_K_M
-	// (Ollama budgets ~4.5 GiB of the card; the weights alone exceed that, so
-	// 100% GPU is unreachable at ANY num_ctx — the question is how many layers
-	// the KV cache leaves room for):
-	//   16384, f16 KV        → 20/37 layers on GPU, 54% GPU,  7.2 tok/s decode
-	//   16384, FA + q8_0 KV  → 23/37 layers,        62% GPU,  9.0 tok/s
-	//    8192, FA + q8_0 KV  →                      70% GPU, 12.4 tok/s
-	//    6144, FA + q8_0 KV  →                      70% GPU, 12.5 tok/s  (no gain over 8192)
-	//    4096, FA + q8_0 KV  →                      73% GPU, 13.3 tok/s  (too tight, see below)
-	// 8192 is the knee: everything below it buys <8% decode speed but risks
-	// silent front-truncation of the system prompt (the failure that created
-	// this table — 2 of 6 turns lost at Ollama's 4096 default). It only holds if
-	// the prompt stays well under 8192; api/chat/+server.ts's CHAT_K keeps the
-	// retrieved <context> small enough, and the llm_timing app-log records
-	// nearCtxLimit so a violation is visible rather than silent.
-	qwen3: { ctx: 40960, serveCtx: 8192, caps: { tools: true, reasoning: true }, prefixResume: true },
-	'nomic-embed-text': { ctx: 2048, caps: { tools: false, reasoning: false }, embeddingOnly: true },
-	// EMBED_MODEL (embed-config.ts) — Ollama's /api/tags lists it right next
-	// to chat models with no way to tell them apart otherwise, and picking
-	// it in a chat/generation model selector silently fails (no chat
-	// template). See the bge-m3 bug report this table entry fixes.
-	'bge-m3': { ctx: 8192, caps: { tools: false, reasoning: false }, embeddingOnly: true }
-};
-const DEFAULT_MODEL_INFO = { ctx: 8192, caps: { tools: false, reasoning: false } };
 const DEFAULT_SERVE_CTX = 8192;
-
-function modelInfoFor(name: string): ModelInfo {
-	const family = Object.keys(MODEL_FAMILY_TABLE).find((f) => name.startsWith(f));
-	const info = family ? MODEL_FAMILY_TABLE[family] : DEFAULT_MODEL_INFO;
-	return { id: name, ...info };
-}
 
 function serveCtxFor(name: string): number {
 	// OLLAMA_SERVE_CTX (env.ts) wins over the table: the table's numbers were
 	// measured for qwen3:8b Q4_K_M, and a smaller quantization frees VRAM the
-	// table knows nothing about.
+	// table knows nothing about. serveCtx is an Ollama num_ctx concern only, which is why it is read here
+	// and not from model-caps.ts's shared helpers.
 	const override = serveCtxOverride();
 	if (override !== undefined) return override;
-	const family = Object.keys(MODEL_FAMILY_TABLE).find((f) => name.startsWith(f));
-	const info = family ? MODEL_FAMILY_TABLE[family] : undefined;
+	const info = lookupFamily(name);
 	return info?.serveCtx ?? info?.ctx ?? DEFAULT_SERVE_CTX;
 }
 
@@ -113,8 +63,9 @@ function toOllamaWireTools(tools: ToolDefinition[]): unknown[] {
  */
 export class OllamaAdapter extends OpenAICompatAdapter {
 	private nativeBaseUrl: string;
+	private modelCapsOverride: Record<string, ModelCapsOverride> | undefined;
 
-	constructor(id: string, nativeBaseUrl: string, timeouts: Timeouts) {
+	constructor(id: string, nativeBaseUrl: string, timeouts: Timeouts, modelCaps?: Record<string, ModelCapsOverride>) {
 		super({
 			id,
 			baseUrl: `${nativeBaseUrl.replace(/\/$/, '')}/v1`,
@@ -129,20 +80,20 @@ export class OllamaAdapter extends OpenAICompatAdapter {
 			timeouts
 		});
 		this.nativeBaseUrl = nativeBaseUrl.replace(/\/$/, '');
+		this.modelCapsOverride = modelCaps;
 	}
 
-	/** Synchronous, no network call — modelInfoFor() is a pure lookup against
-	 * MODEL_FAMILY_TABLE. Lets the chat route decide whether to attach tools
+	/** Synchronous, no network call — a pure lookup against model-caps.ts's table plus the provider's
+	 * per-model override. Lets the chat route decide whether to attach tools
 	 * to a request without an extra /api/tags round trip per message. */
 	capsFor(model: string): { tools: boolean; reasoning: boolean } {
-		return modelInfoFor(model).caps;
+		return tableCapsFor(model, this.modelCapsOverride?.[model]);
 	}
 
 	/** Whether a partial assistant answer can be continued for this model — a
 	 * pure lookup like capsFor. False for every family that was not verified. */
 	supportsPrefixResume(model: string): boolean {
-		const family = Object.keys(MODEL_FAMILY_TABLE).find((f) => model.startsWith(f));
-		return family ? MODEL_FAMILY_TABLE[family].prefixResume === true : false;
+		return lookupFamily(model)?.prefixResume === true;
 	}
 
 	/** The gate's lease spans the whole stream, not just the swap moment
@@ -306,7 +257,7 @@ export class OllamaAdapter extends OpenAICompatAdapter {
 	 * waiting forever, since openai-compat.ts's three-tier timeout only
 	 * covers the /v1 chat surface, not these native endpoints. */
 	async listModels(): Promise<ModelInfo[]> {
-		return (await this.listNativeModels()).map((m) => modelInfoFor(m.name));
+		return (await this.listNativeModels()).map((m) => modelInfoFor(m.name, this.modelCapsOverride?.[m.name]));
 	}
 
 	/** Full native /api/tags response, for callers (the settings model

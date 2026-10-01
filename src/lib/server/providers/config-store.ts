@@ -3,6 +3,7 @@ import { providersPath } from '../env';
 import { AppError } from '../app-error';
 import { EMBED_MODEL, EMBED_DIMS } from '../embed-config';
 import { isProviderConsented } from '../provider-consent';
+import type { ModelCapsOverride } from './model-caps';
 
 /**
  * F14-4 — providers.json is now written more often (a checkbox toggle in the model-management UI writes on
@@ -69,6 +70,13 @@ export interface ProviderConfigEntry {
 	 * conservative placeholder ({ctx: 8192, caps: {tools:false, reasoning:false}}) rather than being dropped.
 	 */
 	pinnedModels?: string[];
+	/**
+	 * Aşama 4b — per-model override of the capability flags model-caps.ts's table would otherwise decide
+	 * (tool-calling, reasoning), keyed by the model id exactly as the provider lists it. A flag that is
+	 * absent falls through to the table; the override wins flag by flag. Optional for the same reason every
+	 * field here is (an existing providers.json never gains new fields on its own).
+	 */
+	modelCaps?: Record<string, ModelCapsOverride>;
 }
 
 /** Cloud providers are every kind except Ollama (always local) and an openai-compat entry the user has
@@ -248,6 +256,32 @@ export function updatePinnedModels(id: string, modelIds: string[] | null): void 
 		cleaned.push(trimmed);
 	}
 	entry.pinnedModels = cleaned;
+	writeFile(data);
+}
+
+/**
+ * Aşama 4b — sets (or, with `caps === null`, clears) one model's capability override. Validates as it
+ * stores: the model id must be a non-empty string of at most 200 chars, and only boolean `tools` /
+ * `reasoning` keys are kept (anything else is dropped); an override left with no flags is removed, and an
+ * emptied `modelCaps` map is deleted from the entry, so a cleared state round-trips as "never set".
+ */
+export function updateModelCaps(id: string, modelId: string, caps: ModelCapsOverride | null): void {
+	const data = readFile();
+	const entry = data.providers.find((p) => p.id === id);
+	if (!entry) throw new AppError('NOT_FOUND', { entity: 'provider', detail: id }, 404);
+	const key = typeof modelId === 'string' ? modelId.trim() : '';
+	if (!key || key.length > 200) throw new AppError('VALIDATION_INVALID', { field: 'modelId' });
+	const clean: ModelCapsOverride = {};
+	if (caps && typeof caps.tools === 'boolean') clean.tools = caps.tools;
+	if (caps && typeof caps.reasoning === 'boolean') clean.reasoning = caps.reasoning;
+	if (Object.keys(clean).length === 0) {
+		if (entry.modelCaps) {
+			delete entry.modelCaps[key];
+			if (Object.keys(entry.modelCaps).length === 0) delete entry.modelCaps;
+		}
+	} else {
+		entry.modelCaps = { ...(entry.modelCaps ?? {}), [key]: clean };
+	}
 	writeFile(data);
 }
 
