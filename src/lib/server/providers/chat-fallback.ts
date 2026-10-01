@@ -109,8 +109,11 @@ export async function* chatWithFallbackCore(
 		};
 	}
 	// A dropped pin leaves hop 0 on the chain head with a req.model that belonged to the pinned provider —
-	// see resolveHopModel's requestedModelApplies.
-	const pinDropped = Boolean(pinnedProviderId) && !pin;
+	// see resolveHopModel's requestedModelApplies. An EMPTY req.model (Aşama 4c: a fresh install's client
+	// settings are blank, the caller sends no model) is the same situation: nothing was chosen, so hop 0
+	// asks its own provider for its defaultModel.
+	const modelRequested = req.model !== undefined && req.model !== null && req.model !== '';
+	const pinDropped = (Boolean(pinnedProviderId) && !pin) || !modelRequested;
 	const chain = pin ? [pin] : baseChain;
 	if (chain.length === 0) {
 		throw new AppError('CHAT_NO_CHAIN', { taskType });

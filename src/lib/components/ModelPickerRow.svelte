@@ -109,7 +109,7 @@
 			onchange={handleModelSelect}
 		>
 			{#if !modelOptions.some((m) => m.providerId === activeProvider && m.id === activeModel)}
-				<option value={selectionKey(activeProvider, activeModel)}>{activeModel}</option>
+				<option value={selectionKey(activeProvider, activeModel)}>{activeModel || t('ModelPickerRow.autoModel')}</option>
 			{/if}
 			{#each modelOptions as m (m.providerId + '/' + m.id)}
 				<option value={selectionKey(m.providerId, m.id)}>{m.providerLabel} · {m.id}</option>

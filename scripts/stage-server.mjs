@@ -4,9 +4,10 @@
 // build` directly) so the packaged app never ships vite/typescript/
 // svelte-check/tsx/@tauri-apps/cli — `npm ci --omit=dev` inside a *copy* of
 // package.json, not the real node_modules, is what achieves that.
-import { copyFileSync, existsSync, mkdirSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
+import { verifyStagedData } from './stage-verify.mjs';
 
 const root = process.cwd();
 const stageDir = path.join(root, 'dist-server');
@@ -94,7 +95,12 @@ copyDirWindows(path.join(root, 'ingest'), path.join(stageDir, 'ingest'), ['__pyc
 copyFileSync(path.join(root, 'package.json'), path.join(stageDir, 'package.json'));
 copyFileSync(path.join(root, 'package-lock.json'), path.join(stageDir, 'package-lock.json'));
 mkdirSync(path.join(stageDir, 'data'), { recursive: true });
-copyFileSync(path.join(root, 'data', 'providers.json'), path.join(stageDir, 'data', 'providers.json'));
+// Ship the DEFAULT config (data/providers.default.json), never the working copy's data/providers.json —
+// that one is the developer's own (enabled cloud providers, personal model picks, chains, embedding
+// choice). src-tauri/src/lib.rs seeds the user's app-data providers.json from this staged copy on first
+// launch only. verifyStagedData() below proves it landed byte-identical and that nothing else from
+// data/ came along.
+copyFileSync(path.join(root, 'data', 'providers.default.json'), path.join(stageDir, 'data', 'providers.json'));
 
 console.log('Installing production-only dependencies in dist-server/...');
 /**
@@ -116,5 +122,17 @@ console.log('Installing production-only dependencies in dist-server/...');
  */
 execFileSync('npm', ['ci', '--omit=dev', '--ignore-scripts'], { cwd: stageDir, stdio: 'inherit', shell: true });
 execFileSync('npm', ['rebuild', 'better-sqlite3'], { cwd: stageDir, stdio: 'inherit', shell: true });
+
+const readIfExists = (p) => (existsSync(p) ? readFileSync(p) : null);
+const stagedProblems = verifyStagedData({
+	stagedProviders: readIfExists(path.join(stageDir, 'data', 'providers.json')),
+	defaultProviders: readIfExists(path.join(root, 'data', 'providers.default.json')),
+	stagedDataEntries: readdirSync(path.join(stageDir, 'data'))
+});
+if (stagedProblems.length > 0) {
+	console.error('Sahneleme doğrulaması başarısız:');
+	for (const problem of stagedProblems) console.error('  - ' + problem);
+	process.exit(1);
+}
 
 console.log('dist-server/ staged.');

@@ -84,7 +84,10 @@ function sanitizeSettings(raw: unknown): Partial<Settings> | undefined {
 		out.theme = src.theme as Settings['theme'];
 	}
 	for (const key of STRING_FIELDS) {
-		if (isNonEmptyShortString(src[key])) out[key] = src[key] as string;
+		// Aşama 4c: '' is a real value here ("no model/provider chosen — use the task chain"), and it must
+		// survive the merge in writeUiPrefs: dropping it would let an older saved pin (e.g. a provider that
+		// was just deleted) come back on the next load instead of staying cleared.
+		if (typeof src[key] === 'string' && (src[key] as string).length <= MAX_STRING_LEN) out[key] = src[key] as string;
 	}
 	for (const key of BOOLEAN_FIELDS) {
 		if (typeof src[key] === 'boolean') out[key] = src[key] as boolean;

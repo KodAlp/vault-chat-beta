@@ -11,8 +11,7 @@ export interface Settings {
 	 * "deepseek-chat" wasn't just an unusual Ollama tag — it always routed
 	 * through providers.json's task chain (always `["ollama"]` today)
 	 * regardless of which provider the model actually came from. Defaults
-	 * to 'ollama', matching every pre-existing installation's only
-	 * enabled provider — see registry.ts's chatWithFallback pinnedProviderId.
+	 * to '' (no pin, task chain) — see registry.ts's chatWithFallback pinnedProviderId.
 	 */
 	defaultProvider: string;
 	fastProvider: string;
@@ -50,12 +49,14 @@ export const STORAGE_KEY = 'vault-chat-settings';
 
 const DEFAULTS: Settings = {
 	theme: 'system',
-	defaultModel: 'qwen3:8b',
-	fastModel: 'qwen3:8b',
-	reasoningModel: 'qwen3:8b',
-	defaultProvider: 'ollama',
-	fastProvider: 'ollama',
-	reasoningProvider: 'ollama',
+	// Aşama 4c: blank = "no choice made" — the client sends no model/provider and the server uses the first
+	// provider of the task chain with ITS defaultModel (the first-run wizard, or Settings, fills these in).
+	defaultModel: '',
+	fastModel: '',
+	reasoningModel: '',
+	defaultProvider: '',
+	fastProvider: '',
+	reasoningProvider: '',
 	allowConcurrentGeneration: false,
 	showWelcomeScreen: true,
 	quizLevelLabels: false

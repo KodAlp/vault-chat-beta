@@ -25,7 +25,11 @@ export const GET: RequestHandler = async ({ params }) => {
 	if (!p) fail('NOT_FOUND', { entity: 'provider', detail: params.id }, 404);
 
 	const adapter = await getAdapter(p.id);
-	const models = (await adapter.listModels()).filter((m) => !m.embeddingOnly);
+	const listed = await adapter.listModels();
+	const models = listed.filter((m) => !m.embeddingOnly);
+	// Aşama 4c: the embedding-only models the picker lists above hide — the first-run wizard offers them as
+	// the vault's embedding model (shared model-caps.ts decides what counts as embedding-only).
+	const embedding = listed.filter((m) => m.embeddingOnly).map((m) => m.id);
 
 	const { approved, other } = skipsCatalog(p)
 		? { approved: models, other: [] }
@@ -41,5 +45,5 @@ export const GET: RequestHandler = async ({ params }) => {
 		...(p.modelCaps?.[m.id] ? { capsOverride: p.modelCaps[m.id] } : {})
 	});
 
-	return json({ approved: approved.map(toItem), other: other.map(toItem), pinned: p.pinnedModels ?? [] });
+	return json({ approved: approved.map(toItem), other: other.map(toItem), pinned: p.pinnedModels ?? [], embedding });
 };
