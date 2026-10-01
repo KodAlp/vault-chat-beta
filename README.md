@@ -5,7 +5,10 @@
 # Vault Chat — Kurulum
 
 Yerel, Docker'sız bir SvelteKit sohbet uygulaması. Kasandaki notlar üzerinde
-RAG yapar, Ollama'daki modellerle konuşur. Tek Node süreci, `localhost`'a bağlı.
+RAG yapar; yerel bir model sunucusuyla (Ollama önerilir ama zorunlu değil —
+LM Studio, llama.cpp, vLLM, Jan gibi herhangi bir OpenAI uyumlu sunucu da olur)
+ya da isteğe bağlı bir bulut sağlayıcıyla konuşur. Tek Node süreci,
+`localhost`'a bağlı.
 
 Bu proje kişisel bir öğrenme aracı olarak başladı, artık açık kaynak
 (MIT — bkz. `LICENSE`). Katkıda bulunmak isterseniz `CONTRIBUTING.md`'ye,
@@ -15,23 +18,39 @@ gizlilik/güvenlik/kullanım koşulları için `PRIVACY.md`/`SECURITY.md`/
 ## Ön koşullar
 
 1. **Node.js 22+** (zaten kurulu: `node --version`).
-2. **Ollama** kurulu ve çalışıyor olmalı: https://ollama.com
-   ```bash
-   ollama serve
-   ```
-3. Gerekli modelleri çek:
-   ```bash
-   ollama pull qwen3:8b
-   ollama pull bge-m3
-   # isteğe bağlı, derin oturumlar için:
-   ollama pull qwen3:30b-a3b
-   ```
-   `bge-m3` embedding modeli — `nomic-embed-text` DEĞİL (`src/lib/server/embed-config.ts`'teki
-   `EMBED_MODEL`). Türkçe sorgularda bge-m3 ölçülebilir şekilde daha iyi sonuç veriyor
-   (gerekçe embed-config.ts'in kendi yorumunda). Yanlış modeli çekersen `npm run index`
-   "model not found" ile patlar ve hiçbir kaynak bulunamaz.
+2. **Bir sohbet modeli kaynağı** — **Ollama önerilir** (https://ollama.com), ama
+   zorunlu değil. Şunlardan biri yeter:
+   - Ollama,
+   - OpenAI uyumlu başka bir yerel sunucu: llama.cpp, LM Studio, vLLM, Jan,
+     LocalAI,
+   - bir bulut sağlayıcı (DeepSeek, Google AI Studio, OpenRouter...; isteğe bağlı,
+     varsayılan kapalı, bkz. `PRIVACY.md`).
 
-Bu üç maddeyi elle kontrol etmek yerine tek komutla doğrulamak için:
+   Hiçbiri kurulu değilse sohbet çalışmaz: uygulama "Kurulum tamamlanmadı"
+   uyarısı gösterir.
+3. **Embedding (arama) modeli — isteğe bağlı.** Embedding destekleyen herhangi
+   bir sağlayıcı olur; hiç seçmezsen arama yalnızca anahtar kelimeyle (FTS)
+   çalışır, anlamsal arama kapalı olur. Ollama kullanıyorsan önerilen model
+   `bge-m3` — `nomic-embed-text` DEĞİL (`src/lib/server/embed-config.ts`'teki
+   `EMBED_MODEL`; Türkçe sorgularda ölçülebilir şekilde daha iyi sonuç veriyor,
+   gerekçe embed-config.ts'in kendi yorumunda). Embedding yapılandırdığın bir
+   modeli sunucuda çekmezsen `npm run index` "model not found" ile patlar.
+
+**Ana yol: kurulum sihirbazı.** İlk açılışta (masaüstü paketinde) ya da
+tarayıcıda `/setup/local-server` adresinden, ayrıca **Ayarlar → Sağlayıcılar**
+sayfasındaki "Kurulum sihirbazını yeniden çalıştır" bağlantısından açılır ve üç
+adımda ilerler: (1) yerel sunucuyu bul/kur, (2) sohbet modelini seç, (3)
+embedding modelini seç **ya da "yalnızca anahtar kelime araması"nı** seç. Elle
+yapmak istersen Ollama için:
+```bash
+ollama serve
+ollama pull qwen3:8b      # önerilen sohbet modeli
+ollama pull bge-m3        # önerilen embedding modeli (isteğe bağlı)
+# isteğe bağlı, derin oturumlar için:
+ollama pull qwen3:30b-a3b
+```
+
+Bu maddeleri elle kontrol etmek yerine tek komutla doğrulamak için:
 ```bash
 npm run doctor
 ```
@@ -46,10 +65,13 @@ npm install
 `.env` dosyası zaten `.env.example`'dan oluşturuldu. Gerekirse aç ve kontrol et:
 
 ```
-OLLAMA_URL=http://127.0.0.1:11434
 CHATS_DB_PATH=./data/chats.db
 PUBLIC_VAULT_NAME=Notlarım   # "default" vault'un ilk açılıştaki görünen adı
 ```
+
+`OLLAMA_URL` artık okunmuyor: Ollama'nın (ve diğer sunucuların) adresi
+Ayarlar → Sağlayıcılar'dan, yani `providers.json`'daki `baseUrl` alanından
+ayarlanır.
 
 `PUBLIC_VAULT_NAME` yalnızca "default" vault ilk oluşturulurken (bkz.
 `migrateVaults.ts`) varsayılan görünen ad olarak okunur — sonraki
@@ -65,7 +87,10 @@ Sağlayıcılar) ve (b) her sohbette ayrı bir onay kutusunu kabul etmenizi
 gerektirir (bkz. `PRIVACY.md`) — yalnızca `enabled: true` olması hiçbir
 veri göndermez. Bulut sağlayıcıları arayüzde seçenek olarak dahi görmek
 istemiyorsanız, kendi `data/providers.json`'ınızda ilgili girdiyi
-`enabled: false` yapabilirsiniz.
+`enabled: false` yapabilirsiniz. Paketli masaüstü sürümü ise bu dosyayı değil,
+temiz bir varsayılan olan `data/providers.default.json`'ı tohum olarak
+kullanır: tüm bulut sağlayıcılar kapalı, görev zincirleri boş, embedding yok
+(yalnızca anahtar kelime araması) — kurulum sihirbazı bunları doldurur.
 
 ## Vault'lar (Faz 8)
 
@@ -105,7 +130,9 @@ npm run index
 
 Bu, aktif vault'un kütüphanesindeki tüm `.md` dosyalarını tarar,
 frontmatter'ı olmayanları uyarı ile atlar, geri kalanını parçalayıp
-`bge-m3` ile gömer ve o vault'un `index.db`'sine yazar. sha256
+yapılandırılmış embedding modeliyle (önerilen: `bge-m3`) gömer ve o vault'un
+`index.db`'sine yazar. Embedding yapılandırılmamışsa (yalnızca anahtar kelime
+modu) vektör adımı atlanır; parçalar ve anahtar kelime (FTS) verisi yine yazılır. sha256
 tabanlı artımlı çalışır — değişmeyen dosyaları atlar, `pdf2md.py` ile aynı mantık.
 
 Bayraklar:
@@ -149,7 +176,8 @@ geçmen gerekir.
 
 Aynı sunucuyu tarayıcı yerine yerel bir pencerede çalıştıran, Electron
 kullanmayan bir paket. Ön koşullar tarayıcı akışıyla birebir aynı — **Node.js
-22+ ve Ollama kurulu ve çalışıyor olmalı**, hiçbiri pakete gömülmez.
+22+ kurulu olmalı; sohbet için bir model kaynağı (önerilen: Ollama, ya da başka
+bir yerel sunucu / bulut sağlayıcı) gerekir**, hiçbiri pakete gömülmez.
 
 ```bash
 npm run desktop:dev      # canlı Vite dev sunucusuna karşı native pencere, HMR çalışır
@@ -181,15 +209,17 @@ geçerli — bkz. yukarıdaki not.
 
 ## Başka bir Windows makinesinde çalıştırma
 
-Ne installer ne de geliştirici kurulumu Node'u veya Ollama'yı pakete gömüyor —
-her ikisi de hedef makinede **elle** kurulu ve çalışır olmalı. Hedef makinede
-kurulduktan sonra `npm run doctor` (geliştirici akışı) ya da uygulamanın
-kendi "Ollama çalışmıyor" banner'ı (masaüstü paketi) eksik olanı söyler.
+Ne installer ne de geliştirici kurulumu Node'u veya yerel model sunucusunu
+(Ollama gibi) pakete gömüyor — Node hedef makinede **elle** kurulu olmalı, model
+kaynağı da (önerilen Ollama, başka bir yerel sunucu ya da bir bulut sağlayıcı)
+ayrıca ayarlanmalı. Hedef makinede kurulduktan sonra `npm run doctor`
+(geliştirici akışı) ya da uygulamanın kendi "Yerel sunucu … çalışmıyor" /
+"Kurulum tamamlanmadı" banner'ı (masaüstü paketi) eksik olanı söyler.
 
 | Bileşen | Zorunlu mu | Kim kuruyor |
 |---|---|---|
 | Node.js 22.x (`>=22 <23`) | Evet, masaüstü paketinde de | Elle — https://nodejs.org |
-| Ollama + `qwen3:8b` + `bge-m3` | Evet | Elle — https://ollama.com |
+| Ollama + `qwen3:8b` + `bge-m3` | **Önerilen** (başka yerel sunucu ya da bulut sağlayıcı da olur; embedding yoksa yalnızca anahtar kelime araması) | Elle — https://ollama.com, ya da kurulum sihirbazı |
 | WebView2 Runtime | Evet (yalnızca masaüstü paketi) | Otomatik — NSIS installer yoksa internetten indirip kurar |
 | Visual C++ Redistributable | Teknik olarak evet | Genelde Windows 10/11'de zaten var; eksikse elle |
 | Python 3.12+ (kararlı sürüm) | Hayır — yalnızca PDF/doküman/YouTube içe aktarma için | Elle — https://python.org |
@@ -263,13 +293,34 @@ spawn eden istemcilerde `ENOENT` verir.
 Doğrulama:
 
 ```bash
-npm run mcp:smoke   # 4 aracı tek süreçte, gerçek Ollama'ya dokunmadan test eder
+npm run mcp:smoke   # 4 aracı tek süreçte, gerçek bir model sunucusuna dokunmadan test eder
 ```
 
 Sunucu ayaktayken tanı için tek stderr satırı yeterli: `DATA_DIR=... vaults=N`.
 Claude Desktop'ta bu satır `%APPDATA%\Claude\logs\mcp-server-vault-chat.log`'a düşer.
 
+## Sağlayıcılar ve model yetenekleri
+
+Sohbet için hangi sağlayıcının kullanılacağı **Ayarlar → Sağlayıcılar**'da
+(ya da ilk kurulumda sihirbazda) seçilir; Ollama yalnızca bir seçenektir. Bir
+modelin araç çağırma (tools) ve akıl yürütme (reasoning) yeteneği, model
+adından (Ollama `qwen3:8b`, llama.cpp `Qwen3-8B-Q4_K_M.gguf`, LM Studio/vLLM
+`qwen/qwen3-8b` gibi yazımlar aynı aileye eşlenir) tahmin edilir ve her sunucu
+türü için aynı tablodan gelir. Tahmin yanlışsa **Ayarlar → Sağlayıcılar →
+"model listesini yönet"** bölümünde her modelin **Araçlar** ve **Akıl
+yürütme** anahtarı vardır: bunlar tablonun varsayılanını gösterir ve
+değiştirince modele özel bir geçersiz kılma (`providers.json`'daki
+`modelCaps`) yazar. Yerel (`local`) işaretli OpenAI uyumlu sunucularda (llama.cpp,
+LM Studio, vLLM) düşünme kapatıldığında akıl yürüten modeller için isteğe
+`chat_template_kwargs: { enable_thinking: false }` eklenir (qwen3 şablonu);
+bulut sağlayıcılara hiçbir zaman gönderilmez.
+
 ## Küçük GPU'lar için performans ayarları
+
+> Bu bölüm yalnızca model sunucusu olarak **Ollama** kullanıyorsan geçerli
+> (`ollama ps`, `OLLAMA_*` değişkenleri, Modelfile). LM Studio, llama.cpp gibi
+> başka bir sunucuda bağlam penceresi ve GPU katmanı ayarları o sunucunun kendi
+> arayüzünden yapılır.
 
 Yerel model yavaşsa önce şuna bak: bir model yüklüyken `ollama ps` çıktısındaki
 `PROCESSOR` sütunu `100% GPU` mu, yoksa `18%/82% CPU/GPU` gibi bir bölünme mi?
@@ -367,8 +418,18 @@ sayılar, metin içeriği yok.
 ## Sorun giderme
 
 - **Yerel model yavaş** → yukarıdaki "Küçük GPU'lar için performans ayarları".
-- **"Ollama sunucusuna ulaşılamadı"** → `ollama serve` çalışıyor mu, `OLLAMA_URL` doğru mu kontrol et.
-- **Model listesi boş / ModelPicker hata veriyor** → `ollama pull qwen3:8b` çalıştırıldı mı?
+- **"Yerel sunucu … çalışmıyor" uyarısı / "… sağlayıcısına ulaşılamıyor"** → Sohbetin
+  kullandığı yerel sunucu (Ollama, LM Studio, llama.cpp...) açık mı? Ollama için
+  `ollama serve`; adres yanlışsa Ayarlar → Sağlayıcılar'dan o sağlayıcının
+  `baseUrl`'ini düzelt (`OLLAMA_URL` artık okunmuyor).
+- **"Kurulum tamamlanmadı" uyarısı / sohbet yanıt vermiyor** → Sohbet zinciri
+  boş: kurulum sihirbazını (`/setup/local-server`) çalıştır ya da Ayarlar →
+  Sağlayıcılar'dan bir sağlayıcı ekleyip etkinleştir ve varsayılan modelini seç.
+- **Model listesi boş / ModelPicker hata veriyor** → Sunucuda yüklü bir model var
+  mı? (Ollama için `ollama pull qwen3:8b`; LM Studio/llama.cpp'de bir model yükle.)
+- **Arama sonuçları zayıf / yalnızca anahtar kelime çalışıyor** → Embedding
+  yapılandırılmamış olabilir (anlamsal arama kapalı); Ayarlar → Sağlayıcılar'da bir
+  embedding modeli seç, sonra vault'u yeniden indeksle.
 - **Kaynak bulunamıyor / cevaplar alakasız** → `npm run index` çalıştırıldı mı, index güncel mi?
   Ayrıntılı teşhis sırası için `.claude/skills/vault-rag-index/SKILL.md` içindeki
   "Quality debugging checklist" bölümüne bak. Birden fazla vault kullanıyorsan
