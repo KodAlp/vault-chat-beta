@@ -73,6 +73,78 @@ function blankSpan(text: string, start: number, end: number): string {
 }
 
 /**
+ * Display-math/code spans may only START at the beginning of a line. The old
+ * lazy regexes paired ``` and $$ anywhere in the text, so one stray delimiter
+ * mid-line (`IXTT02N450$$` in an HTML table cell, a ``` inside a code line)
+ * shifted the pairing for the rest of the file: prose became "math", real
+ * formulas became prose, and real `##` headings were masked away. Measured on
+ * the real vault: display-math pieces failing KaTeX 2146 -> 168, prose
+ * treated as math 2430 -> 6.
+ *
+ * Rules: a fence opens on a line of <=3 spaces + 3+ backticks/tildes (a
+ * backtick fence's info string may not contain a backtick) and closes only on
+ * a line of the same character, at least as long, with nothing else. A `$$`
+ * block opens on a line starting with `$$` and closes at the first `$$` that
+ * ends a line. An unclosed opener is not a block. `\r` before line ends is
+ * tolerated (CRLF files).
+ */
+export interface AtomicSpan {
+	type: 'code' | 'math';
+	start: number;
+	end: number;
+}
+
+const FENCE_OPEN = /^ {0,3}(`{3,}|~{3,})([^\n]*?)\r?$/;
+const MATH_RE = /^ {0,3}\$\$[\s\S]*?\$\$[ \t\r]*$/my;
+
+export function findAtomicSpans(text: string): AtomicSpan[] {
+	const spans: AtomicSpan[] = [];
+	let pos = 0;
+	while (pos < text.length) {
+		let eol = text.indexOf('\n', pos);
+		if (eol === -1) eol = text.length;
+		const line = text.slice(pos, eol);
+		const next = eol + 1;
+		const open = FENCE_OPEN.exec(line);
+		if (open && !(open[1][0] === '`' && open[2].includes('`'))) {
+			const fence = open[1];
+			const closeRe = new RegExp('^ {0,3}' + (fence[0] === '`' ? '`' : '~') + '{' + fence.length + ',}[ \t]*\r?$');
+			let q = next;
+			let closedAt = -1;
+			while (q <= text.length) {
+				let e = text.indexOf('\n', q);
+				if (e === -1) e = text.length;
+				if (closeRe.test(text.slice(q, e))) {
+					closedAt = e;
+					break;
+				}
+				if (e >= text.length) break;
+				q = e + 1;
+			}
+			if (closedAt !== -1) {
+				let end = closedAt;
+				if (text[end - 1] === '\r') end -= 1;
+				spans.push({ type: 'code', start: pos, end });
+				pos = closedAt + 1;
+				continue;
+			}
+		} else if (/^ {0,3}\$\$/.test(line)) {
+			MATH_RE.lastIndex = pos;
+			const m = MATH_RE.exec(text);
+			if (m) {
+				let end = pos + m[0].length;
+				if (text[end - 1] === '\r') end -= 1;
+				spans.push({ type: 'math', start: pos, end });
+				pos = pos + m[0].length + 1;
+				continue;
+			}
+		}
+		pos = next;
+	}
+	return spans;
+}
+
+/**
  * A copy of `content` with fenced code and $$ blocks blanked out, for the
  * heading scan below to search without matching inside them.
  *
@@ -83,27 +155,87 @@ function blankSpan(text: string, start: number, end: number): string {
  */
 function maskAtomicBlocksForHeadingScan(content: string): string {
 	let masked = content;
-	const re = /```[\s\S]*?```|\$\$[\s\S]*?\$\$/;
-	let match: RegExpMatchArray | null;
-	while ((match = masked.match(re))) {
-		masked = blankSpan(masked, match.index!, match.index! + match[0].length);
-	}
+	for (const span of findAtomicSpans(content)) masked = blankSpan(masked, span.start, span.end);
 	return masked;
 }
 
 /** Pulls out fenced code / $$ blocks as atomic units so paragraph-splitting never lands inside one. */
 function splitAtomicBlocks(body: string): Block[] {
 	const blocks: Block[] = [];
-	const re = /(```[\s\S]*?```|\$\$[\s\S]*?\$\$)/g;
 	let last = 0;
-	let match: RegExpExecArray | null;
-	while ((match = re.exec(body))) {
-		if (match.index > last) blocks.push({ type: 'text', raw: body.slice(last, match.index) });
-		blocks.push({ type: match[0].startsWith('```') ? 'code' : 'math', raw: match[0] });
-		last = match.index + match[0].length;
+	for (const span of findAtomicSpans(body)) {
+		if (span.start > last) blocks.push({ type: 'text', raw: body.slice(last, span.start) });
+		blocks.push({ type: span.type, raw: body.slice(span.start, span.end) });
+		last = span.end;
 	}
 	if (last < body.length) blocks.push({ type: 'text', raw: body.slice(last) });
 	return blocks;
+}
+
+/**
+ * Docling's formula model sometimes loops until its token cap, emitting a
+ * one-line display-math block of ~24k chars made of one 1-4 token group
+ * repeated thousands of times (no \end). Measured on 44,978 display blocks:
+ * loops have a periodic run of 3800+, the largest run in any legitimately
+ * rendering block is 31. Structural rule, no word lists.
+ *
+ * Mirrored by DEGENERATE_RUN in ingest/postprocess.py — change both.
+ */
+export const DEGENERATE_RUN = 100;
+const MAX_DEGENERATE_GROUP = 4;
+const DEGENERATE_HEAD_MAX = 500;
+const LATEX_TOKEN = /\\[a-zA-Z]+|\\.|[^\s]/g;
+
+/** Source offset where a back-to-back repeat (>= DEGENERATE_RUN times) of a
+ * 1-4 token group begins, or -1 when the formula is not degenerate. */
+export function findDegenerateRun(latex: string): number {
+	const toks: { t: string; at: number }[] = [];
+	for (const m of latex.matchAll(LATEX_TOKEN)) toks.push({ t: m[0], at: m.index! });
+	let best = -1;
+	for (let g = 1; g <= MAX_DEGENERATE_GROUP; g++) {
+		const need = g * (DEGENERATE_RUN - 1); // consecutive tokens equal to the one g before
+		let runStart = -1;
+		let run = 0;
+		for (let i = 0; i + g < toks.length; i++) {
+			if (toks[i].t === toks[i + g].t) {
+				if (run === 0) runStart = i;
+				run++;
+				if (run >= need) {
+					if (best === -1 || toks[runStart].at < best) best = toks[runStart].at;
+					break;
+				}
+			} else {
+				run = 0;
+			}
+		}
+	}
+	return best;
+}
+
+/** Replacement text for a degenerate formula: a warning blockquote plus the
+ * meaningful head (text before the loop) in a latex fence. */
+export function degenerateMathReplacement(latex: string, runAt: number): string {
+	let head = latex.slice(0, runAt).trim();
+	head = head.replace(/(\s|\\\\)+$/, '');
+	head = head.slice(0, DEGENERATE_HEAD_MAX).replace(/(\s|\\\\)+$/, '').trim();
+	const note = "> ⚠️ Bu formül PDF'ten tam çıkarılamadı (dönüştürücü döngüye girdi) — kaynak sayfaya bakın.";
+	return head ? `${note}\n\n\`\`\`latex\n${head}\n\`\`\`` : note;
+}
+
+/** Replaces every degenerate display-math block in `text` (see findDegenerateRun). */
+export function replaceDegenerateMath(text: string): string {
+	let out = '';
+	let last = 0;
+	for (const span of findAtomicSpans(text)) {
+		if (span.type !== 'math') continue;
+		const raw = text.slice(span.start, span.end);
+		const inner = raw.replace(/^ {0,3}\$\$/, '').replace(/\$\$[ \t\r]*$/, '');
+		const at = findDegenerateRun(inner);
+		if (at === -1) continue;
+		out += text.slice(last, span.start) + degenerateMathReplacement(inner, at);
+		last = span.end;
+	}
+	return last === 0 ? text : out + text.slice(last);
 }
 
 /**
@@ -180,11 +312,15 @@ function splitLinesPreservingWhitespace(body: string, maxChars: number): string[
  * split without the wrapper counting against its own budget. */
 function unwrapAtomicBlock(block: Block): { open: string; body: string; close: string } {
 	if (block.type === 'code') {
-		const m = /^(`{3,}|~{3,})([^\n]*)\n([\s\S]*?)\n?\1[ \t]*$/.exec(block.raw);
+		const m = /^ {0,3}(`{3,}|~{3,})([^\n]*?)\r?\n([\s\S]*?)\r?\n?[ ]{0,3}\1[`~]*[ \t]*\r?$/.exec(block.raw);
 		if (m) return { open: `${m[1]}${m[2]}\n`, body: m[3], close: `\n${m[1]}` };
 		return { open: '', body: block.raw, close: '' }; // malformed fence, shouldn't happen
 	}
-	const inner = block.raw.slice(2, -2).replace(/^\n/, '').replace(/\n$/, '');
+	const inner = block.raw
+		.replace(/^ {0,3}\$\$/, '')
+		.replace(/\$\$[ \t]*$/, '')
+		.replace(/^\r?\n/, '')
+		.replace(/\r?\n$/, '');
 	return { open: '$$\n', body: inner, close: '\n$$' };
 }
 
@@ -281,7 +417,9 @@ function findHeadingPath(topicLabel: string, matches: HeadingMatch[], i: number,
  * never splitting inside fenced code or $$ math blocks (see vault-rag-index skill).
  */
 export function chunkMarkdown(rawFile: string): { frontmatter: Frontmatter; chunks: RawChunk[] } {
-	const { data, content } = matter(rawFile);
+	const { data, content: rawContent } = matter(rawFile);
+	// Index-time repair so already-converted files need no re-conversion.
+	const content = replaceDegenerateMath(rawContent);
 	const frontmatter = data as Frontmatter;
 	const topicLabel = frontmatter.title ?? frontmatter.topic ?? '';
 

@@ -1,6 +1,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { chunkMarkdown, normalizeLevel, HARD_MAX_CHARS } from './chunk';
+import {
+	chunkMarkdown,
+	normalizeLevel,
+	HARD_MAX_CHARS,
+	findAtomicSpans,
+	findDegenerateRun,
+	replaceDegenerateMath,
+	DEGENERATE_RUN
+} from './chunk';
 
 // Regression coverage for the fix described in indexer/chunk.ts's
 // isNavigationOnly doc comment: a `## Sources`/`## Related` section that is
@@ -190,4 +198,102 @@ test('normalizeLevel never throws on a non-string frontmatter value and falls ba
 	assert.equal(normalizeLevel(true), '');
 	assert.equal(normalizeLevel(null), '');
 	assert.equal(normalizeLevel(undefined), '');
+});
+
+// Line-anchored delimiters: a stray `$$` or ``` in the middle of a line must
+// never open or close a block (it used to shift pairing for the rest of the file).
+
+test('a stray inline $$ in a table cell does not shift later display-math blocks', () => {
+	const body =
+		'## Tablo\n\n<table><tr><td>IXTT02N450$$</td></tr></table>\n\nSonra düz bir paragraf burada.\n\n' +
+		'$$\nx = 1\n$$\n\nBir paragraf daha.\n\n$$ y = 2 $$\n';
+	const spans = findAtomicSpans(body);
+	assert.deepEqual(
+		spans.map((s) => [s.type, body.slice(s.start, s.end)]),
+		[
+			['math', '$$\nx = 1\n$$'],
+			['math', '$$ y = 2 $$']
+		]
+	);
+	const { chunks } = chunkMarkdown(fileWith(body));
+	const text = chunks.map((c) => c.displayText).join('\n');
+	assert.ok(text.includes('Sonra düz bir paragraf burada.'));
+	assert.ok(text.includes('Bir paragraf daha.'));
+});
+
+test('a stray ``` inside a code line does not open a fence', () => {
+	const body = '## A\n\nkullan: echo "```" yaz\n\nDüz paragraf.\n\n```c\nint x;\n```\n\n## B\n\nSon.';
+	const spans = findAtomicSpans(body);
+	assert.equal(spans.length, 1);
+	assert.equal(body.slice(spans[0].start, spans[0].end), '```c\nint x;\n```');
+	const { chunks } = chunkMarkdown(fileWith(body));
+	assert.deepEqual(
+		chunks.map((c) => c.headingPath),
+		['Test Note > A', 'Test Note > B']
+	);
+});
+
+test('a ## heading after a stray delimiter is still a section', () => {
+	const body = '## Bir\n\nhücre IXTT02N450$$ bitti\n\n## İki\n\nmetin\n\n## Üç\n\n$$\na\n$$\n';
+	const { chunks } = chunkMarkdown(fileWith(body));
+	assert.deepEqual(
+		chunks.map((c) => c.headingPath),
+		['Test Note > Bir', 'Test Note > İki', 'Test Note > Üç']
+	);
+});
+
+test('CRLF input: blocks are found and headings after them survive', () => {
+	const body = '## Bir\r\n\r\n$$\r\nx = 1\r\n$$\r\n\r\n```py\r\n## yorum\r\nprint(1)\r\n```\r\n\r\n## İki\r\n\r\nmetin\r\n';
+	const spans = findAtomicSpans(body);
+	assert.deepEqual(spans.map((s) => s.type), ['math', 'code']);
+	assert.ok(!body.slice(spans[0].start, spans[0].end).endsWith('\r'));
+	const { chunks } = chunkMarkdown(`---\r\ntitle: "T"\r\n---\r\n\r\n${body}`);
+	assert.deepEqual(chunks.map((c) => c.headingPath), ['T > Bir', 'T > İki']);
+});
+
+test('a 4-backtick fence may contain ``` lines; a tilde fence is only closed by tildes', () => {
+	const body = '````md\n```js\nlet a;\n```\n````\n\n~~~\n```\nstill code\n~~~\n';
+	const spans = findAtomicSpans(body);
+	assert.equal(spans.length, 2);
+	assert.equal(body.slice(spans[0].start, spans[0].end), '````md\n```js\nlet a;\n```\n````');
+	assert.equal(body.slice(spans[1].start, spans[1].end), '~~~\n```\nstill code\n~~~');
+});
+
+test('single-line display math on its own line is one block; inline $$ mid-line is not', () => {
+	assert.equal(findAtomicSpans('$$ x = 1 $$').length, 1);
+	assert.equal(findAtomicSpans('a $$ x $$ b').length, 0);
+	assert.equal(findAtomicSpans('a\n$$ x\ny $$ trailing\n').length, 0);
+});
+
+// Docling formula loops.
+
+const LOOP = '\\begin{array}{l} \\text {for (i = 1;i <   100;i = i + 1) \\{} \\\\ ' + '\\quad '.repeat(3900);
+
+test('findDegenerateRun flags a periodic run and ignores legitimate repetition', () => {
+	assert.ok(findDegenerateRun(LOOP) > 0);
+	assert.equal(findDegenerateRun('a + b + '.repeat(DEGENERATE_RUN / 4) + 'c'), -1);
+	assert.equal(findDegenerateRun('\\begin{pmatrix} ' + '1 & 0 \\\\ '.repeat(30) + '\\end{pmatrix}'), -1);
+	const two = 'x = ' + 'a b '.repeat(DEGENERATE_RUN + 5);
+	assert.equal(findDegenerateRun(two), 4);
+});
+
+test('replaceDegenerateMath keeps the head, drops the loop, and yields at most two chunks', () => {
+	const doc = fileWith(`## Kod\n\nÖnce.\n\n$$${LOOP}$$\n\nSonra.`);
+	const fixed = replaceDegenerateMath(doc);
+	assert.ok(fixed.length < 1500);
+	assert.ok(fixed.includes('> ⚠️ Bu formül PDF\'ten tam çıkarılamadı'));
+	assert.ok(fixed.includes('```latex\n\\begin{array}{l} \\text {for (i = 1;i <   100;i = i + 1) \\{}\n```'));
+	assert.ok(fixed.includes('Önce.') && fixed.includes('Sonra.'));
+	const { chunks } = chunkMarkdown(doc);
+	assert.ok(chunks.length <= 2, `got ${chunks.length} chunks`);
+	assert.ok(chunks.every((c) => c.displayText.length <= HARD_MAX_CHARS));
+});
+
+test('replaceDegenerateMath omits the latex fence when the head is empty and leaves good math alone', () => {
+	const fixed = replaceDegenerateMath('a\n\n$$' + '\\quad '.repeat(500) + '$$\n\nb\n\n$$\nx^2\n$$\n');
+	assert.ok(fixed.includes('kaynak sayfaya bakın.'));
+	assert.ok(!fixed.includes('```latex'));
+	assert.ok(fixed.includes('$$\nx^2\n$$'));
+	const same = 'a\n\n$$\nx^2 + y^2\n$$\n';
+	assert.equal(replaceDegenerateMath(same), same);
 });

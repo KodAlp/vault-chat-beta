@@ -64,6 +64,79 @@ _GLUED_WORDS = re.compile(r"[A-Za-zÇĞİÖŞÜçğıöşü]{15,}")
 HARD_MAX_CHARS = 2048
 
 
+# Docling's formula model sometimes loops until its token cap, emitting a
+# one-line display-math block of ~24k chars made of one 1-4 token group
+# repeated thousands of times. Structural rule, mirrored by DEGENERATE_RUN in
+# indexer/chunk.ts (which also repairs already-converted files at index time) —
+# change both together.
+DEGENERATE_RUN = 100
+_MAX_DEGENERATE_GROUP = 4
+_DEGENERATE_HEAD_MAX = 500
+_LATEX_TOKEN = re.compile(r"\\[a-zA-Z]+|\\.|[^\s]", re.DOTALL)
+DEGENERATE_NOTE = (
+    "> ⚠️ Bu formül PDF'ten tam çıkarılamadı (dönüştürücü döngüye girdi) — "
+    "kaynak sayfaya bakın."
+)
+# Line-anchored, like the chunker: a fence or $$ block only opens at the start
+# of a line. Fences come first so a $$ line inside code is left alone.
+_LINE_FENCE_OR_MATH = re.compile(
+    r"(?P<fence>^ {0,3}(?P<f>`{3,}|~{3,})[^\n`]*\n.*?\n {0,3}(?P=f)[`~]*[ \t\r]*$)"
+    r"|(?P<math>^ {0,3}\$\$.*?\$\$[ \t\r]*$)",
+    re.DOTALL | re.MULTILINE,
+)
+
+
+def find_degenerate_run(latex: str) -> int:
+    """Source offset where a back-to-back repeat (>= DEGENERATE_RUN times) of a
+    1-4 token group begins, or -1 when the formula is not degenerate."""
+    toks = [(m.group(0), m.start()) for m in _LATEX_TOKEN.finditer(latex)]
+    best = -1
+    for g in range(1, _MAX_DEGENERATE_GROUP + 1):
+        need = g * (DEGENERATE_RUN - 1)
+        run = 0
+        run_start = -1
+        for i in range(len(toks) - g):
+            if toks[i][0] == toks[i + g][0]:
+                if run == 0:
+                    run_start = i
+                run += 1
+                if run >= need:
+                    at = toks[run_start][1]
+                    if best == -1 or at < best:
+                        best = at
+                    break
+            else:
+                run = 0
+    return best
+
+
+def degenerate_math_replacement(latex: str, run_at: int) -> str:
+    head = latex[:run_at].strip()
+    head = re.sub(r"(\s|\\\\)+$", "", head)
+    head = re.sub(r"(\s|\\\\)+$", "", head[:_DEGENERATE_HEAD_MAX]).strip()
+    if not head:
+        return DEGENERATE_NOTE
+    return f"{DEGENERATE_NOTE}\n\n```latex\n{head}\n```"
+
+
+def truncate_degenerate_math(text: str) -> str:
+    """Replaces every looping display-math block with a warning note plus the
+    meaningful head (the text before the loop started)."""
+
+    def fix(m: re.Match) -> str:
+        if m.group("math") is None:
+            return m.group(0)
+        raw = m.group("math").rstrip("\r")
+        inner = re.sub(r"^ {0,3}\$\$", "", raw)
+        inner = re.sub(r"\$\$[ \t]*$", "", inner)
+        at = find_degenerate_run(inner)
+        if at == -1:
+            return m.group(0)
+        return degenerate_math_replacement(inner, at)
+
+    return _LINE_FENCE_OR_MATH.sub(fix, text)
+
+
 def _blank(text: str, start: int, end: int) -> str:
     """Replaces a span with spaces, keeping newlines, so offsets stay valid."""
     kept = re.sub(r"[^\n]", " ", text[start:end])
@@ -154,6 +227,10 @@ def quality_warnings(text: str, *, is_pdf: bool) -> list[str]:
                 "heading_path gömülü metnin parçası olduğu için bu doğrudan "
                 "retrieval doğruluğunu düşürür; başlıklar elle düzeltilmeli"
             )
+
+    looped = text.count(DEGENERATE_NOTE)
+    if looped:
+        warnings.append(f"{looped} formül bloğu dönüştürücü döngüsü nedeniyle kısaltıldı")
 
     oversize = 0
     for pattern in (_FENCE, _DISPLAY_MATH):
@@ -277,6 +354,7 @@ def build_frontmatter(title: str, converted_by: str, needs_review: bool) -> dict
 
 def postprocess(text: str, *, title_fallback: str, converted_by: str, needs_review: bool) -> tuple[str, dict]:
     text = normalize_math_delimiters(text)
+    text = truncate_degenerate_math(text)
     text = wrap_bare_math_environments(text)
     text = wrap_alignment_math(text)
     text = strip_html_remnants(text)
