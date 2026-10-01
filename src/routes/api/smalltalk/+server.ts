@@ -1,12 +1,13 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { clearSmallTalk, listSmallTalk, teachSmallTalk } from '$lib/server/smalltalk-runtime';
+import { clearSmallTalk, listSmallTalk, smallTalkGateActive, teachSmallTalk } from '$lib/server/smalltalk-runtime';
 import { MAX_PHRASE_CHARS } from '$lib/server/smalltalk-store';
 import { fail } from '$lib/server/app-error';
 
 /** The user's learned small-talk phrases (see smalltalk-gate.ts) — user-level, not per vault. */
 export const GET: RequestHandler = async () => {
-	return json({ phrases: listSmallTalk() });
+	// gateActive false = the configured embedding model is not the one the gate was calibrated for (or none).
+	return json({ phrases: listSmallTalk(), gateActive: smallTalkGateActive() });
 };
 
 /** "Kaynaklar alakasız": teach that this message is small talk. `stored: false` means it was
@@ -17,7 +18,7 @@ export const POST: RequestHandler = async ({ request }) => {
 	if (!text) fail('VALIDATION_REQUIRED', { field: 'text' });
 	if (text.length > MAX_PHRASE_CHARS) return json({ ok: true, stored: false });
 	try {
-		return json({ ok: true, stored: await teachSmallTalk(text) });
+		return json({ ok: true, stored: await teachSmallTalk(text), gateActive: smallTalkGateActive() });
 	} catch (err) {
 		fail('SMALLTALK_LEARN_FAILED', { detail: err instanceof Error ? err.message : String(err) }, 502);
 	}

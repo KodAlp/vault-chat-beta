@@ -4,7 +4,7 @@ import { QUERY_PREFIX } from './embed-config';
 import { getChatsDb } from './chats-db';
 import { logAppEvent } from './app-log';
 import * as store from './smalltalk-store';
-import { decideSmallTalk, smallTalkGateEnabled, type GateDecision } from './smalltalk-gate';
+import { decideSmallTalk, isGateCalibratedFor, smallTalkGateEnabled, type GateDecision } from './smalltalk-gate';
 import type { RetrieveResult } from '$lib/types';
 
 /**
@@ -24,6 +24,24 @@ import type { RetrieveResult } from '$lib/types';
 const embedFn: store.EmbedFn = (texts) => embedTexts(texts.map((t) => `${QUERY_PREFIX}${t}`), { purpose: 'query' });
 
 let readyFor: string | null = null;
+let notCalibratedLogged: string | null = null;
+
+/**
+ * Whether the gate may run: an embedding model is configured AND it is the family the thresholds
+ * were measured with (bge-m3, 1024 dims — see smalltalk-gate.ts). Anything else = off: checking,
+ * learning and teaching are all no-ops. Logs once per model, not per message.
+ */
+export function smallTalkGateActive(): boolean {
+	const cfg = getEmbeddingConfig();
+	if (cfg === null) return false;
+	if (isGateCalibratedFor(cfg.model, cfg.dims)) return true;
+	const id = `${cfg.providerId}/${cfg.model}/${cfg.dims}`;
+	if (notCalibratedLogged !== id) {
+		notCalibratedLogged = id;
+		logAppEvent({ kind: 'smalltalk', message: `küçük konuşma kapısı kapalı: gömme modeli (${cfg.model}, ${cfg.dims} boyut) eşikleri ölçülen bge-m3 ailesi değil` });
+	}
+	return false;
+}
 
 function logError(action: string, err: unknown): void {
 	const message = err instanceof Error ? err.message : String(err);
@@ -38,8 +56,8 @@ function logError(action: string, err: unknown): void {
  */
 export function checkSmallTalk(vector: number[], bestDistance: number | undefined): GateDecision | null {
 	if (!smallTalkGateEnabled(process.env.CHAT_SMALLTALK_GATE)) return null;
-	// FTS-only mode (no embedding config): the gate has no vectors to judge — no decision.
-	if (getEmbeddingConfig() === null) return null;
+	// FTS-only mode or an embedding model the thresholds were not measured with: no decision.
+	if (!smallTalkGateActive()) return null;
 	try {
 		const db = getChatsDb();
 		const key = embeddingKey();
@@ -66,8 +84,8 @@ export function checkSmallTalk(vector: number[], bestDistance: number | undefine
 export async function learnFromMessage(text: string, source: 'auto' | 'user'): Promise<store.LearnResult | null> {
 	const clean = text.trim();
 	if (!clean || clean.length > store.MAX_PHRASE_CHARS) return null;
-	// Nothing to embed with in FTS-only mode: learning is a silent no-op, not an error.
-	if (getEmbeddingConfig() === null) return null;
+	// Nothing to embed with in FTS-only mode, or the gate is off for this model: a silent no-op, not an error.
+	if (!smallTalkGateActive()) return null;
 	const [vec] = await embedFn([clean]);
 	return store.learn(getChatsDb(), embeddingKey(), clean, vec, source);
 }
@@ -81,7 +99,7 @@ export async function learnFromMessage(text: string, source: 'auto' | 'user'): P
  *    switches off the learned phrase that misfired — never a seed, which one message must not disable.
  */
 export function afterSmallTalkGate(gate: NonNullable<RetrieveResult['gate']>, text: string): void {
-	if (getEmbeddingConfig() === null) return;
+	if (!smallTalkGateActive()) return;
 	try {
 		const db = getChatsDb();
 		if (gate.phraseId !== undefined) store.recordHit(db, gate.phraseId);

@@ -24,12 +24,15 @@
 	let loadError = $state('');
 	let actionError = $state('');
 	let busy = $state(false);
+	let gateActive = $state(true);
 
 	async function load() {
 		try {
 			const res = await fetch('/api/smalltalk');
 			if (!res.ok) throw new Error();
-			phrases = ((await res.json()) as { phrases: Phrase[] }).phrases;
+			const body = (await res.json()) as { phrases: Phrase[]; gateActive?: boolean };
+			phrases = body.phrases;
+			gateActive = body.gateActive !== false;
 			loadError = '';
 		} catch {
 			loadError = t('SmallTalkSettingsPage.loadError');
@@ -92,6 +95,9 @@
 
 	<p class="mb-5 text-sm text-muted-foreground">{t('SmallTalkSettingsPage.intro')}</p>
 
+	{#if loaded && !gateActive}
+		<p class="mb-4 text-sm text-muted-foreground">{t('SmallTalkSettingsPage.gateInactive')}</p>
+	{/if}
 	{#if loadError}
 		<p class="mb-4 text-sm text-destructive">{loadError}</p>
 	{/if}

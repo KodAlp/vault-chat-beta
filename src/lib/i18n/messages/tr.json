@@ -31,6 +31,7 @@
 		"consentConfirm": "Onaylıyorum, gönder"
 	},
 	"Chat": {
+		"smallTalkUnavailable": "Sohbet ifadesi öğrenme, yapılandırılmış gömme modeliyle kullanılamıyor (yalnızca bge-m3 destekleniyor).",
 		"emptyStateTitle": "Kasandaki notlar hakkında bir soru sor",
 		"emptyStateSubtitle": "Cevaplar yalnızca seçtiğin kaynaklara dayanır.",
 		"emptyStateBrowseSources": "Kaynaklara göz at",
@@ -634,6 +635,7 @@
 	"SmallTalkSettingsPage": {
 		"title": "Sohbet ifadeleri",
 		"intro": "Selamlaşma, argo ya da deneme mesajlarında kaynak aranmaz. Bu liste senin öğrettiklerini ve otomatik öğrenilenleri gösterir; yerleşik örnekler yalnızca kapatılmışsa görünür. Yanlış öğrenileni silebilirsin.",
+		"gateInactive": "Bu özellik şu an kapalı: yapılandırılmış gömme modeli, eşiklerin ölçüldüğü bge-m3 değil. Yanlış \"sohbet\" işaretiyle kaynakların sessizce kaybolmaması için kaynaklar her mesajda aranır.",
 		"empty": "Henüz öğrenilmiş bir ifade yok.",
 		"loadError": "İfade listesi alınamadı.",
 		"deleteError": "İfade silinemedi.",

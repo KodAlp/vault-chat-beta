@@ -173,7 +173,15 @@
 				headers: { 'content-type': 'application/json' },
 				body: JSON.stringify({ text: question })
 			});
-			if (res.ok) messages[i].taughtSmallTalk = true;
+			if (res.ok) {
+				const body = (await res.json().catch(() => null)) as { stored?: boolean; gateActive?: boolean } | null;
+				if (body?.gateActive === false) {
+					// The gate is off for this embedding model: nothing was learned, so do not claim it was.
+					errorMessage = t('Chat.smallTalkUnavailable');
+				} else {
+					messages[i].taughtSmallTalk = true;
+				}
+			}
 		} catch {
 			// best effort: the button simply stays, the user can press it again
 		}
