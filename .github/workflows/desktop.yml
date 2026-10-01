@@ -1,0 +1,88 @@
+name: desktop
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [linux-destegi, macos-destegi, main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build (${{ matrix.label }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows-latest, label: windows-x64 }
+          - { os: ubuntu-22.04, label: linux-x64 }
+          - { os: macos-15, label: macos-arm64 }
+          - { os: macos-15-intel, label: macos-x64 }
+    defaults:
+      run:
+        shell: bash
+    env:
+      # AppImage tooling must not need FUSE on hosted runners.
+      APPIMAGE_EXTRACT_AND_RUN: "1"
+      NO_STRIP: "true"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: dtolnay/rust-toolchain@1.97.1
+        with:
+          components: clippy
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "src-tauri -> target"
+
+      - name: Linux system packages
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf libsecret-1-dev libdbus-1-dev
+
+      - run: npm ci
+      - run: npx svelte-kit sync
+      - run: npm test
+      - run: npx svelte-check
+
+      # Only the light, pure-Python deps the ingest tests import (trafilatura -> lxml,
+      # pypdf, py-asciimath); markitdown[all] and yt-dlp are not needed by the tests.
+      - name: Python ingest tests
+        run: |
+          python -m pip install trafilatura==2.2.0 py-asciimath==0.3.0 pypdf==6.14.2
+          cd ingest
+          for t in *_test.py; do echo "== $t"; python "$t"; done
+
+      # build.rs / tauri resources glob needs ../dist-server/**/* to exist before cargo runs.
+      - name: Rust checks
+        run: |
+          mkdir -p dist-server
+          touch dist-server/placeholder.txt
+          cd src-tauri
+          cargo clippy --all-targets -- -D warnings
+          cargo test
+          cd ..
+          rm -rf dist-server
+
+      - name: Bundle
+        run: npx tauri build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vault-chat-${{ matrix.label }}
+          path: src-tauri/target/release/bundle/**
+          if-no-files-found: error
+          retention-days: 7
