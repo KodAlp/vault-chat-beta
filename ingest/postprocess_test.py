@@ -20,7 +20,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from postprocess import (  # noqa: E402
     decode_html_entities,
+    DEGENERATE_NOTE,
+    DEGENERATE_RUN,
     derive_title,
+    find_degenerate_run,
+    truncate_degenerate_math,
     postprocess,
     quality_warnings,
     strip_html_remnants,
@@ -217,6 +221,33 @@ def test_signature() -> None:
     check("needs_review omitted when false", "needs_review" not in frontmatter)
 
 
+def test_degenerate_math():
+    print("degenerate formula loops")
+    loop = "\\begin{array}{l} \\text {for (i = 1;i <   100;i = i + 1) \\{} \\\\ " + "\\quad " * 3900
+    check("loop detected", find_degenerate_run(loop) > 0)
+    check("short repetition is fine", find_degenerate_run("a + b + " * (DEGENERATE_RUN // 4) + "c") == -1)
+    check("legit matrix is fine", find_degenerate_run("\\begin{pmatrix} " + "1 & 0 \\\\ " * 30 + "\\end{pmatrix}") == -1)
+
+    doc = "# T\n\nÖnce.\n\n$$" + loop + "$$\n\nSonra.\n\n$$\nx^2\n$$\n"
+    out = truncate_degenerate_math(doc)
+    check("note present", DEGENERATE_NOTE in out)
+    check("head kept in latex fence", "```latex\n\\begin{array}{l} \\text {for (i = 1;i <   100;i = i + 1) \\{}\n```" in out)
+    check("loop dropped", "\\quad \\quad" not in out and len(out) < 600)
+    check("good math untouched", "$$\nx^2\n$$" in out and "Önce." in out and "Sonra." in out)
+
+    empty = truncate_degenerate_math("a\n\n$$" + "\\quad " * 500 + "$$\n\nb\n")
+    check("no fence when head empty", DEGENERATE_NOTE in empty and "```latex" not in empty)
+
+    inline = "x $$" + "\\quad " * 500 + "$$ y\n"
+    check("inline $$ mid-line never a block", truncate_degenerate_math(inline) == inline)
+    fenced = "```\n$$" + "\\quad " * 500 + "$$\n```\n"
+    check("$$ inside a code fence untouched", truncate_degenerate_math(fenced) == fenced)
+
+    final, _ = postprocess("# T\n\n$$" + loop + "$$\n", title_fallback="x", converted_by="t", needs_review=False)
+    warns = quality_warnings(final, is_pdf=True)
+    check("warning emitted", any("döngüsü nedeniyle kısaltıldı" in w for w in warns))
+
+
 if __name__ == "__main__":
     sys.stdout.reconfigure(encoding="utf-8")
     test_wrapping()
@@ -226,5 +257,6 @@ if __name__ == "__main__":
     test_warnings()
     test_derive_title()
     test_signature()
+    test_degenerate_math()
     print(f"\n{len(failures)} başarısız" if failures else "\nhepsi geçti")
     sys.exit(1 if failures else 0)
