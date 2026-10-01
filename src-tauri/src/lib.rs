@@ -1,5 +1,6 @@
 mod launchers;
 mod platform;
+mod secrets_key;
 // winget is a Windows-only package manager; other platforms get a stub with
 // the same Tauri command names/signatures (so build.rs's ACL manifest and the
 // capability files stay identical on every OS).
@@ -466,79 +467,6 @@ async fn wait_for_sidecar_ready(port_rx: std::sync::mpsc::Receiver<u16>, timeout
     None
 }
 
-/// DPAPI-protected symmetric key for encrypting `secrets.json` at rest
-/// (Windows only; other platforms currently hand Node no key and it uses its
-/// plaintext fallback — see the TODO(L2) at the call site in `spawn_sidecar`) —
-/// see providers/secrets.ts's DpapiEncryptedSecretStore, the Node side of
-/// this. Node is a separate sidecar process, not the webview, so it has no
-/// access to Tauri's own IPC — the only channel is the raw key handed
-/// through spawn_sidecar's env, so everything else (generate once, protect,
-/// persist, unwrap on every later launch) has to happen here.
-///
-/// CryptProtectData with no extra entropy ties the blob to the current
-/// Windows user profile — the right scope for a single-user desktop app,
-/// and the same tradeoff every other DPAPI-backed secret store (browser
-/// saved passwords, etc.) already makes: losing the profile means losing
-/// the key, not a bug to work around.
-///
-/// Never a hard failure by design — spawn_sidecar treats any `Err` here as
-/// "skip the env var", which just means Node falls back to the plaintext
-/// store for that launch instead of blocking the whole app from starting.
-#[cfg(windows)]
-fn dpapi_get_or_create_secrets_key(app_data_dir: &Path) -> Result<[u8; 32], String> {
-    use windows::Win32::Foundation::{LocalFree, HLOCAL};
-    use windows::Win32::Security::Cryptography::{
-        CryptProtectData, CryptUnprotectData, CRYPTPROTECT_UI_FORBIDDEN, CRYPT_INTEGER_BLOB,
-    };
-
-    let key_path = app_data_dir.join("secrets.key");
-
-    if let Ok(mut blob) = std::fs::read(&key_path) {
-        let in_blob = CRYPT_INTEGER_BLOB {
-            cbData: blob.len() as u32,
-            pbData: blob.as_mut_ptr(),
-        };
-        let mut out_blob = CRYPT_INTEGER_BLOB::default();
-        let unprotected = unsafe {
-            CryptUnprotectData(&in_blob, None, None, None, None, CRYPTPROTECT_UI_FORBIDDEN, &mut out_blob)
-        };
-        if unprotected.is_ok() {
-            let out = unsafe { std::slice::from_raw_parts(out_blob.pbData, out_blob.cbData as usize) }.to_vec();
-            unsafe {
-                let _ = LocalFree(Some(HLOCAL(out_blob.pbData as *mut core::ffi::c_void)));
-            }
-            if let Ok(key) = <[u8; 32]>::try_from(out.as_slice()) {
-                return Ok(key);
-            }
-        }
-        // Falls through to regenerate on any read/unwrap failure (corrupt
-        // blob, wrong user) — see this function's doc comment on why that's
-        // the right default rather than a hard error.
-    }
-
-    let mut key = [0u8; 32];
-    getrandom::getrandom(&mut key).map_err(|e| format!("anahtar üretilemedi: {e}"))?;
-
-    let in_blob = CRYPT_INTEGER_BLOB {
-        cbData: key.len() as u32,
-        pbData: key.as_mut_ptr(),
-    };
-    let mut out_blob = CRYPT_INTEGER_BLOB::default();
-    let protected = unsafe {
-        CryptProtectData(&in_blob, None, None, None, None, CRYPTPROTECT_UI_FORBIDDEN, &mut out_blob)
-    };
-    if protected.is_err() {
-        return Err("CryptProtectData başarısız".to_string());
-    }
-    let sealed = unsafe { std::slice::from_raw_parts(out_blob.pbData, out_blob.cbData as usize) }.to_vec();
-    unsafe {
-        let _ = LocalFree(Some(HLOCAL(out_blob.pbData as *mut core::ffi::c_void)));
-    }
-    std::fs::write(&key_path, &sealed).map_err(|e| format!("secrets.key yazılamadı: {e}"))?;
-
-    Ok(key)
-}
-
 fn hex_encode(bytes: &[u8]) -> String {
     bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
@@ -577,6 +505,7 @@ fn sidecar_remote_capability(url: String) -> tauri::ipc::CapabilityBuilder {
         .permission("allow-get-vault-config")
         .permission("allow-update-vault-config")
         .permission("allow-save-text-file")
+        .permission("allow-reset-secrets-storage")
         .permission("allow-detect-local-servers")
         .permission("allow-list-launchers")
         .permission("allow-save-launcher")
@@ -585,6 +514,59 @@ fn sidecar_remote_capability(url: String) -> tauri::ipc::CapabilityBuilder {
         .permission("allow-start-launcher")
         .permission("allow-stop-launcher")
         .permission("allow-launcher-status")
+}
+
+/// Stops the sidecar's process tree and every launcher process. Shared by the
+/// normal exit path and by reset_secrets_storage, because `AppHandle::restart`
+/// exits the process WITHOUT emitting `RunEvent::ExitRequested`.
+fn stop_all_children(app_handle: &AppHandle) {
+    let state = app_handle.state::<SidecarState>();
+    let mut child_slot = state.child.lock().unwrap();
+    let process_guard = state.guard.lock().unwrap().take();
+    if let Some(mut child) = child_slot.take() {
+        // Windows: Child::kill() + dropping the Job (tree kill).
+        // Unix: SIGTERM to the sidecar's process group first
+        // (adapter-node shuts down gracefully on it), then SIGKILL
+        // if it hasn't exited after ~3s.
+        ProcessGuard::stop_or_kill(process_guard, &mut child);
+    }
+    drop(child_slot);
+
+    launchers::shutdown_all(app_handle);
+}
+
+/// User-initiated recovery from a permanently "locked" secrets store (corrupt
+/// DPAPI blob after a Windows password reset, an inaccessible keychain item...):
+/// sets secrets.json aside (renamed to secrets.json.locked-<UTC timestamp>,
+/// never deleted), removes the key (Windows: secrets.key renamed likewise;
+/// macOS/Linux: keyring entry deleted), then restarts the app so the sidecar
+/// comes back with a fresh key resolution. See
+/// secrets_key::reset_secrets_storage_with for the step order and rollback.
+///
+/// The sidecar is stopped BEFORE any file is touched so nothing can write
+/// secrets.json mid-reset. On failure the app keeps running (the sidecar is
+/// gone, so the window needs a manual restart) and the error is returned to
+/// the caller. Only granted to the settings pages' origin — see
+/// sidecar_remote_capability.
+#[tauri::command]
+async fn reset_secrets_storage(app: AppHandle) -> Result<(), String> {
+    let app_data_dir = strip_verbatim_prefix(&app.path().app_data_dir().map_err(|e| format!("app_data_dir() başarısız: {e}"))?);
+    stop_all_children(&app);
+    let timestamp = secrets_key::utc_timestamp_now();
+    let ops = secrets_key::OsResetOps::new(&app_data_dir);
+    let result = tauri::async_runtime::spawn_blocking(move || secrets_key::reset_secrets_storage_with(&ops, &timestamp))
+        .await
+        .map_err(|e| format!("sıfırlama görevi çöktü: {e}"))?;
+    match result {
+        Ok(backup) => {
+            log_line(&app, &format!("secrets storage reset; backup: {backup:?}"));
+            app.restart()
+        }
+        Err(e) => {
+            log_line(&app, &format!("secrets storage reset failed: {e}"));
+            Err(e)
+        }
+    }
 }
 
 async fn spawn_sidecar(app: &AppHandle, cfg: &VaultConfig) -> Result<SidecarOutcome, String> {
@@ -662,23 +644,17 @@ async fn spawn_sidecar(app: &AppHandle, cfg: &VaultConfig) -> Result<SidecarOutc
     })?;
     let skills_dir = app_data_dir.join("skills");
 
-    // Best-effort, matching the providers.json seed below: a key-file
-    // problem must not block the whole app from starting. On failure Node
-    // just gets no SECRETS_KEY_HEX and falls back to its plaintext store —
-    // same behavior as before this feature existed, not a regression.
-    #[cfg(windows)]
-    let secrets_key_hex = match dpapi_get_or_create_secrets_key(&app_data_dir) {
-        Ok(key) => Some(hex_encode(&key)),
-        Err(e) => {
-            log_line(app, &format!("secrets.key DPAPI setup failed (non-fatal, falling back to plaintext secrets): {e}"));
-            None
-        }
-    };
-    // TODO(L2): Linux (Secret Service / keyring) and macOS (Keychain) key
-    // storage. Until then Node gets no SECRETS_KEY_HEX here and keeps using
-    // its existing plaintext secrets store on these platforms.
-    #[cfg(not(windows))]
-    let secrets_key_hex: Option<String> = None;
+    // L2 — see secrets_key.rs for the per-OS key store and the fail-closed
+    // rules. The result is passed on as SECRETS_PROTECTION (+ SECRETS_KEY_HEX
+    // when encrypted); a problem here never blocks startup, but a key that
+    // exists and cannot be read yields "locked" instead of a regenerated key.
+    // Blocking IO (D-Bus / Keychain, possibly an unlock prompt) — keep it off
+    // the async executor thread.
+    let secrets_dir = app_data_dir.clone();
+    let secrets_protection = tauri::async_runtime::spawn_blocking(move || secrets_key::load_secrets_protection(&secrets_dir))
+        .await
+        .unwrap_or(secrets_key::SecretsProtection::Locked);
+    log_line(app, &format!("secrets protection: {}", secrets_protection.env_value()));
 
     // providers.json must live in app_data_dir (writable by a standard
     // user), not the resource dir (server_dir/data) — that one sits under
@@ -704,13 +680,13 @@ async fn spawn_sidecar(app: &AppHandle, cfg: &VaultConfig) -> Result<SidecarOutc
     // connect to — the token is what lets Node's hooks.server.ts tell "the
     // window Tauri itself just navigated here" apart from some unrelated
     // process probing the same port. Generated fresh on every real spawn
-    // (never persisted to disk, unlike the DPAPI secrets key above), handed
+    // (never persisted to disk, unlike the secrets key above), handed
     // to Node via env, and round-tripped back to this window as the `?vc_
     // session=` query param on the FIRST url it's told to navigate to — see
     // this function's `url_with_token` below. Node is expected to read that
     // param, set an HttpOnly cookie from it, and 303-redirect to the
     // token-free URL so the token itself never lingers in the webview's own
-    // navigation/session-restore history. Unlike the DPAPI key, a failure
+    // navigation/session-restore history. Unlike the secrets key, a failure
     // here is NOT treated as best-effort: without a token the sidecar would
     // either have to run unauthenticated (defeats the point) or reject the
     // very first request this app makes to it, so a getrandom failure aborts
@@ -761,10 +737,10 @@ async fn spawn_sidecar(app: &AppHandle, cfg: &VaultConfig) -> Result<SidecarOutc
         // the outer backstop, set high enough that a multi-file batch still
         // fits but an absurd body is still refused.
         .env("BODY_SIZE_LIMIT", "1G");
-    // Only set when DPAPI setup above succeeded — see secrets.ts's
-    // secretsKeyHex(): its absence is a normal, handled case (plaintext
-    // fallback), not an error to work around here.
-    if let Some(key_hex) = &secrets_key_hex {
+    // Always set; SECRETS_KEY_HEX only accompanies "encrypted" — see
+    // secrets.ts's createSecretStore().
+    cmd.env("SECRETS_PROTECTION", secrets_protection.env_value());
+    if let Some(key_hex) = secrets_protection.key_hex() {
         cmd.env("SECRETS_KEY_HEX", key_hex);
     }
     cmd.stdout(Stdio::piped()).stderr(Stdio::piped());
@@ -1070,6 +1046,7 @@ pub fn run() {
             get_vault_config,
             update_vault_config,
             save_text_file,
+            reset_secrets_storage,
             launchers::detect_local_servers,
             launchers::list_launchers,
             launchers::save_launcher,
@@ -1161,19 +1138,7 @@ pub fn run() {
 
     app.run(|app_handle, event| {
         if let RunEvent::ExitRequested { .. } = event {
-            let state = app_handle.state::<SidecarState>();
-            let mut child_slot = state.child.lock().unwrap();
-            let process_guard = state.guard.lock().unwrap().take();
-            if let Some(mut child) = child_slot.take() {
-                // Windows: Child::kill() + dropping the Job (tree kill).
-                // Unix: SIGTERM to the sidecar's process group first
-                // (adapter-node shuts down gracefully on it), then SIGKILL
-                // if it hasn't exited after ~3s.
-                ProcessGuard::stop_or_kill(process_guard, &mut child);
-            }
-            drop(child_slot);
-
-            launchers::shutdown_all(app_handle);
+            stop_all_children(app_handle);
         }
     });
 }
@@ -1218,58 +1183,5 @@ mod node_version_tests {
     fn required_node_major_is_a_plausible_value() {
         let major = required_node_major();
         assert!((16..=99).contains(&major), "implausible required Node major: {major}");
-    }
-}
-
-#[cfg(all(test, windows))]
-mod dpapi_tests {
-    use super::dpapi_get_or_create_secrets_key;
-    use std::path::PathBuf;
-
-    fn tmp_dir(name: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("vault-chat-dpapi-test-{name}-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&dir);
-        std::fs::create_dir_all(&dir).unwrap();
-        dir
-    }
-
-    #[test]
-    fn generates_and_persists_a_32_byte_key() {
-        let dir = tmp_dir("persist");
-        let key1 = dpapi_get_or_create_secrets_key(&dir).expect("first call should succeed");
-        assert_eq!(key1.len(), 32);
-        assert!(dir.join("secrets.key").exists());
-
-        // A second call (simulating the next app launch) must unwrap the
-        // SAME key back out, not silently generate a new one — otherwise
-        // every launch would invalidate the previous launch's encrypted
-        // secrets.json.
-        let key2 = dpapi_get_or_create_secrets_key(&dir).expect("second call should succeed");
-        assert_eq!(key1, key2);
-
-        let _ = std::fs::remove_dir_all(&dir);
-    }
-
-    #[test]
-    fn regenerates_a_usable_key_if_the_blob_is_corrupt() {
-        let dir = tmp_dir("corrupt");
-        std::fs::write(dir.join("secrets.key"), b"not a real DPAPI blob").unwrap();
-        let key = dpapi_get_or_create_secrets_key(&dir).expect("should fall back to regenerating, not error");
-        assert_eq!(key.len(), 32);
-        let _ = std::fs::remove_dir_all(&dir);
-    }
-
-    /// Prints the hex-encoded key for a fresh temp dir so the Node side's
-    /// DpapiEncryptedSecretStore can be exercised against a REAL
-    /// DPAPI-round-tripped key from this same machine/user, not just a
-    /// synthetic test key — run with `cargo test -- --nocapture
-    /// print_key_for_node_interop_check`.
-    #[test]
-    fn print_key_for_node_interop_check() {
-        let dir = tmp_dir("interop");
-        let key = dpapi_get_or_create_secrets_key(&dir).expect("key generation should succeed");
-        let hex: String = key.iter().map(|b| format!("{b:02x}")).collect();
-        println!("SECRETS_KEY_HEX={hex}");
-        let _ = std::fs::remove_dir_all(&dir);
     }
 }

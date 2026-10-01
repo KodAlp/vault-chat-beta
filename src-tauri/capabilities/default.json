@@ -18,6 +18,7 @@
     "allow-get-vault-config",
     "allow-update-vault-config",
     "allow-save-text-file",
+    "allow-reset-secrets-storage",
     "allow-detect-local-servers",
     "allow-list-launchers",
     "allow-save-launcher",

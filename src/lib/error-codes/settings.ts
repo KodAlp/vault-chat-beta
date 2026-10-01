@@ -26,6 +26,11 @@ export const SETTINGS_CODES = [
 	'PROVIDER_BASE_URL_INVALID',
 	'PROVIDERS_FILE_UNREADABLE',
 
+	// L2 — secrets.json cannot be read or written right now: the OS key store
+	// refused/locked the encryption key, or a plaintext store found an
+	// encrypted file (providers/secrets.ts). Nothing is ever overwritten.
+	'SECRETS_LOCKED',
+
 	// Generic "field present but empty" — 'VALIDATION_REQUIRED' already
 	// covers "missing"; this is common.ts's missing counterpart for
 	// "present, trimmed to nothing", used across more than one settings

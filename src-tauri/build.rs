@@ -61,6 +61,7 @@ fn main() {
       "get_vault_config",
       "update_vault_config",
       "save_text_file",
+      "reset_secrets_storage",
       "detect_local_servers",
       "list_launchers",
       "save_launcher",

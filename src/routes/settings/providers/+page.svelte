@@ -368,6 +368,35 @@
 
 	onMount(refresh);
 
+	// L2 — how API keys are stored on this machine (see providers/secrets.ts).
+	// Purely informational: a failed fetch just means no banner.
+	let secretsInfo = $state<{ mode: 'encrypted' | 'plaintext' | 'locked'; platform: string; secretsPath: string } | null>(null);
+	let resetSecretsOpen = $state(false);
+	let resetSecretsError = $state('');
+	let resetSecretsBusy = $state(false);
+
+	/** Locked-store recovery (Tauri only): the Rust command sets secrets.json aside (renamed, never
+	 * deleted), removes the stored key and restarts the app — on success this page is gone before the
+	 * promise settles, so only the failure path is handled here. */
+	async function resetSecretsStorage() {
+		resetSecretsBusy = true;
+		resetSecretsError = '';
+		try {
+			await invoke('reset_secrets_storage');
+		} catch (err) {
+			resetSecretsError = t('ProvidersSettingsPage.secretsResetFailed', { detail: String(err) });
+			resetSecretsBusy = false;
+		}
+	}
+	onMount(async () => {
+		try {
+			const res = await fetch('/api/system/secrets-protection');
+			if (res.ok) secretsInfo = await res.json();
+		} catch {
+			/* no banner */
+		}
+	});
+
 	function labelFor(id: string): string {
 		return providers.find((p) => p.id === id)?.label ?? id;
 	}
@@ -570,6 +599,28 @@
 
 	{#if loadError}
 		<p class="mb-4 text-sm text-destructive" role="alert">{loadError}</p>
+	{/if}
+
+	{#if secretsInfo?.mode === 'locked'}
+		<div class="mb-4 flex flex-col gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive" role="alert">
+			<p>{t('ProvidersSettingsPage.secretsLockedError')}</p>
+			{#if tauri}
+				<div>
+					<Button variant="outline" size="sm" onclick={() => (resetSecretsOpen = true)}>
+						{t('ProvidersSettingsPage.secretsResetButton')}
+					</Button>
+				</div>
+			{:else}
+				<p class="text-xs">{t('ProvidersSettingsPage.secretsResetManual', { path: secretsInfo.secretsPath })}</p>
+			{/if}
+			{#if resetSecretsError}<p class="text-xs">{resetSecretsError}</p>{/if}
+		</div>
+	{:else if secretsInfo?.mode === 'plaintext'}
+		<p class="mb-4 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-400" role="status">
+			{secretsInfo.platform === 'linux'
+				? t('ProvidersSettingsPage.secretsPlaintextWarningLinux')
+				: t('ProvidersSettingsPage.secretsPlaintextWarning')}
+		</p>
 	{/if}
 
 	<section class="mb-8">
@@ -982,6 +1033,35 @@
 		{/each}
 	</section>
 </div>
+
+<AlertDialog.Root
+	open={resetSecretsOpen}
+	onOpenChange={(open) => {
+		if (!resetSecretsBusy) resetSecretsOpen = open;
+	}}
+>
+	<AlertDialog.Content>
+		<AlertDialog.Header>
+			<AlertDialog.Title>{t('ProvidersSettingsPage.secretsResetConfirmTitle')}</AlertDialog.Title>
+			<AlertDialog.Description>
+				{t('ProvidersSettingsPage.secretsResetConfirmDescription', { path: secretsInfo?.secretsPath ?? 'secrets.json' })}
+			</AlertDialog.Description>
+		</AlertDialog.Header>
+		<AlertDialog.Footer>
+			<AlertDialog.Cancel disabled={resetSecretsBusy}>{t('Common.vazgec')}</AlertDialog.Cancel>
+			<AlertDialog.Action
+				variant="destructive"
+				disabled={resetSecretsBusy}
+				onclick={(e) => {
+					e.preventDefault();
+					void resetSecretsStorage();
+				}}
+			>
+				{t('ProvidersSettingsPage.secretsResetConfirmAction')}
+			</AlertDialog.Action>
+		</AlertDialog.Footer>
+	</AlertDialog.Content>
+</AlertDialog.Root>
 
 <AlertDialog.Root
 	open={!!keyDeleteTarget || !!deleteTargetId}

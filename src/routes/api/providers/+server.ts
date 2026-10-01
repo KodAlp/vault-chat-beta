@@ -11,7 +11,14 @@ import type { ErrorCode } from '$lib/errors';
 
 export const GET: RequestHandler = async () => {
 	const { providers } = readProvidersFile();
-	const connectedIds = new Set(await secretStore.list());
+	// A locked secret store (L2) must not take the whole providers page down —
+	// the settings banner explains it; every provider just shows "no key".
+	const connectedIds = new Set(
+		await secretStore.list().catch((err: unknown) => {
+			if (err instanceof AppError && err.code === 'SECRETS_LOCKED') return [] as string[];
+			throw err;
+		})
+	);
 	const lastErrors = getLastProviderErrors();
 	// Aşama 3c — which provider actually does embedding is now a config
 	// choice (GET/PUT /api/embedding), not always 'ollama' — see
