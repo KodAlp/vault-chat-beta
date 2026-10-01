@@ -252,6 +252,11 @@ pub fn home_dir() -> Option<PathBuf> {
 // this scan is compiled there only so its unit tests run on the dev host.
 #[cfg_attr(windows, allow(dead_code))]
 pub fn find_in_path(name: &str) -> Option<PathBuf> {
+    // Unix: a GUI-launched app inherits a stripped-down PATH, so search the
+    // login shell's PATH + well-known dirs as well (see `effective_search_path`).
+    #[cfg(unix)]
+    let path_var = effective_search_path();
+    #[cfg(not(unix))]
     let path_var = std::env::var_os("PATH")?;
     find_in_path_var(name, &path_var)
 }
@@ -291,6 +296,149 @@ pub fn find_in_path_var(name: &str, path_var: &OsStr) -> Option<PathBuf> {
     None
 }
 
+// ---------------------------------------------------------------------------
+// Login-shell PATH (Unix)
+// ---------------------------------------------------------------------------
+
+#[cfg(any(unix, test))]
+const PATH_START_MARKER: &str = "__VC_PATH_START__";
+#[cfg(any(unix, test))]
+const PATH_END_MARKER: &str = "__VC_PATH_END__";
+
+/// Text between the start and end markers of the login shell's output (rc
+/// files may print banners around it). Rejects empty values and anything with
+/// NUL or line breaks — a PATH is a single line.
+#[cfg(any(unix, test))]
+fn extract_marked_path(output: &str) -> Option<String> {
+    let after = &output[output.find(PATH_START_MARKER)? + PATH_START_MARKER.len()..];
+    let value = &after[..after.find(PATH_END_MARKER)?];
+    if value.is_empty() || value.contains(['\0', '\n', '\r']) {
+        return None;
+    }
+    Some(value.to_string())
+}
+
+/// Order-preserving, de-duplicated union of `lists`; empty entries and entries
+/// failing `keep` (existence / absoluteness check) are dropped.
+#[cfg(any(unix, test))]
+fn merge_path_entries(lists: &[Vec<PathBuf>], keep: impl Fn(&Path) -> bool) -> Vec<PathBuf> {
+    let mut out: Vec<PathBuf> = Vec::new();
+    for dir in lists.iter().flatten() {
+        if dir.as_os_str().is_empty() || out.contains(dir) || !keep(dir) {
+            continue;
+        }
+        out.push(dir.clone());
+    }
+    out
+}
+
+#[cfg(unix)]
+mod login_path {
+    use super::*;
+    use std::ffi::{OsStr, OsString};
+    use std::io::Read;
+    use std::process::Stdio;
+    use std::sync::OnceLock;
+    use std::time::{Duration, Instant};
+
+    const LOGIN_SHELL_TIMEOUT: Duration = Duration::from_secs(3);
+    /// Hard cap on what we read from the shell (a banner-happy rc file).
+    const MAX_OUTPUT_BYTES: u64 = 64 * 1024;
+    // Constant command strings: no user/app-controlled data ever enters them.
+    const POSIX_SCRIPT: &str = r#"printf "__VC_PATH_START__%s__VC_PATH_END__" "$PATH""#;
+    const FISH_SCRIPT: &str = r#"printf "__VC_PATH_START__%s__VC_PATH_END__" (string join : $PATH)"#;
+
+    fn pick_shell() -> PathBuf {
+        if let Some(sh) = std::env::var_os("SHELL").map(PathBuf::from) {
+            if sh.is_absolute() && is_executable_file(&sh) {
+                return sh;
+            }
+        }
+        PathBuf::from(if cfg!(target_os = "macos") { "/bin/zsh" } else { "/bin/bash" })
+    }
+
+    fn run_login_shell() -> Option<String> {
+        let shell = pick_shell();
+        let script = if shell.file_name().is_some_and(|n| n == "fish") { FISH_SCRIPT } else { POSIX_SCRIPT };
+        let mut cmd = Command::new(&shell);
+        cmd.arg("-ilc").arg(script).stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::null());
+        ProcessGuard::prepare(&mut cmd);
+        let mut child = cmd.spawn().ok()?;
+        let guard = ProcessGuard::attach(&child).ok();
+        let Some(stdout) = child.stdout.take() else {
+            ProcessGuard::stop_or_kill(guard, &mut child);
+            return None;
+        };
+        let (tx, rx) = std::sync::mpsc::channel::<Vec<u8>>();
+        std::thread::spawn(move || {
+            let mut buf = Vec::new();
+            let _ = stdout.take(MAX_OUTPUT_BYTES).read_to_end(&mut buf);
+            let _ = tx.send(buf);
+        });
+
+        let deadline = Instant::now() + LOGIN_SHELL_TIMEOUT;
+        let finished = loop {
+            match child.try_wait() {
+                Ok(Some(_)) => break true,
+                Ok(None) if Instant::now() < deadline => std::thread::sleep(Duration::from_millis(20)),
+                _ => break false,
+            }
+        };
+        if !finished {
+            let _ = child.kill();
+        }
+        // Dropping the guard SIGKILLs the whole group: background jobs started
+        // by an rc file must not outlive us (or keep the pipe open).
+        drop(guard);
+        let _ = child.wait();
+        if !finished {
+            return None;
+        }
+        let bytes = rx.recv_timeout(Duration::from_millis(500)).ok()?;
+        extract_marked_path(&String::from_utf8_lossy(&bytes))
+    }
+
+    /// The user's login-shell `$PATH` (what a terminal would see), obtained
+    /// once per process; `None` if the shell failed, timed out or printed junk.
+    pub fn login_shell_path() -> Option<String> {
+        static CACHE: OnceLock<Option<String>> = OnceLock::new();
+        CACHE.get_or_init(run_login_shell).clone()
+    }
+
+    const WELL_KNOWN_DIRS: &[&str] =
+        &["/opt/homebrew/bin", "/opt/homebrew/sbin", "/usr/local/bin", "/usr/bin", "/bin", "/usr/sbin", "/sbin"];
+
+    fn build_effective() -> OsString {
+        let split = |v: &OsStr| std::env::split_paths(v).collect::<Vec<_>>();
+        let login = login_shell_path().map(|p| split(OsStr::new(&p))).unwrap_or_default();
+        let process = std::env::var_os("PATH").map(|v| split(&v)).unwrap_or_default();
+        let mut known: Vec<PathBuf> = WELL_KNOWN_DIRS.iter().map(PathBuf::from).collect();
+        if let Some(home) = home_dir() {
+            known.extend([".local/bin", ".volta/bin", ".cargo/bin"].iter().map(|d| home.join(d)));
+        }
+        let merged = merge_path_entries(&[login, process, known], |p| p.is_absolute() && p.is_dir());
+        // Entries come from split_paths, so none can contain the separator.
+        std::env::join_paths(&merged).unwrap_or_else(|_| std::env::var_os("PATH").unwrap_or_default())
+    }
+
+    /// Login-shell PATH entries first, then the process PATH, then well-known
+    /// install dirs; de-duplicated, existing directories only. Cached.
+    pub fn effective_search_path() -> OsString {
+        static CACHE: OnceLock<OsString> = OnceLock::new();
+        CACHE.get_or_init(build_effective).clone()
+    }
+
+    /// One log-safe line (counts only, never the PATH contents).
+    pub fn search_path_summary() -> String {
+        let entries = std::env::split_paths(&effective_search_path()).count();
+        let got = if login_shell_path().is_some() { "obtained" } else { "NOT obtained" };
+        format!("PATH: login shell PATH {got}; effective PATH has {entries} entries")
+    }
+}
+
+#[cfg(unix)]
+pub use login_path::{effective_search_path, search_path_summary};
+
 /// Parses `"v22.11.0"` / `"22.11.0"` into `(major, minor, patch)`.
 #[cfg(unix)]
 fn parse_version_tuple(name: &str) -> Option<(u64, u64, u64)> {
@@ -326,6 +474,24 @@ mod tests {
         let _ = std::fs::remove_dir_all(&d);
         std::fs::create_dir_all(&d).unwrap();
         d
+    }
+
+    #[test]
+    fn extract_marked_path_handles_banners_and_rejects_junk() {
+        assert_eq!(extract_marked_path("hi\n__VC_PATH_START__/a:/b__VC_PATH_END__\nbye").as_deref(), Some("/a:/b"));
+        assert_eq!(extract_marked_path("__VC_PATH_START____VC_PATH_END__"), None);
+        assert_eq!(extract_marked_path("__VC_PATH_START__/a\n/b__VC_PATH_END__"), None);
+        assert_eq!(extract_marked_path("__VC_PATH_START__/a\0b__VC_PATH_END__"), None);
+        assert_eq!(extract_marked_path("__VC_PATH_START__/a"), None);
+        assert_eq!(extract_marked_path("no markers"), None);
+    }
+
+    #[test]
+    fn merge_path_entries_dedups_in_order_and_filters() {
+        let p = PathBuf::from;
+        let lists = vec![vec![p("/a"), p("/b"), p("")], vec![p("/b"), p("/gone"), p("/c")], vec![p("/a"), p("/d")]];
+        let out = merge_path_entries(&lists, |d| d != Path::new("/gone"));
+        assert_eq!(out, vec![p("/a"), p("/b"), p("/c"), p("/d")]);
     }
 
     #[test]
