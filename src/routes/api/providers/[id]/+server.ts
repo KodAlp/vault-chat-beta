@@ -5,7 +5,8 @@ import {
 	updateProviderDefaultModel,
 	updateEnabledModels,
 	updatePinnedModels,
-	updateProviderLocal
+	updateProviderLocal,
+	updateModelCaps
 } from '$lib/server/providers/config-store';
 import { AppError, fail, toCodedError } from '$lib/server/app-error';
 import type { ErrorCode } from '$lib/errors';
@@ -23,15 +24,30 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
 		enabledModels?: string[] | null;
 		pinnedModels?: string[] | null;
 		local?: boolean;
+		/** Aşama 4b — one model's capability override; `caps: null` clears it. */
+		modelCaps?: { modelId: string; caps: { tools?: boolean; reasoning?: boolean } | null };
 	};
 	if (
 		body.enabled === undefined &&
 		body.defaultModel === undefined &&
 		body.enabledModels === undefined &&
 		body.pinnedModels === undefined &&
-		body.local === undefined
+		body.local === undefined &&
+		body.modelCaps === undefined
 	) {
-		fail('VALIDATION_REQUIRED_ANY', { fields: "'enabled', 'defaultModel', 'enabledModels', 'pinnedModels', 'local'" });
+		fail('VALIDATION_REQUIRED_ANY', { fields: "'enabled', 'defaultModel', 'enabledModels', 'pinnedModels', 'local', 'modelCaps'" });
+	}
+	if (body.modelCaps !== undefined) {
+		const mc = body.modelCaps;
+		const capsOk =
+			mc !== null &&
+			typeof mc === 'object' &&
+			typeof mc.modelId === 'string' &&
+			(mc.caps === null ||
+				(typeof mc.caps === 'object' &&
+					(mc.caps.tools === undefined || typeof mc.caps.tools === 'boolean') &&
+					(mc.caps.reasoning === undefined || typeof mc.caps.reasoning === 'boolean')));
+		if (!capsOk) fail('VALIDATION_INVALID', { field: "'modelCaps'" });
 	}
 	if (body.enabled !== undefined && typeof body.enabled !== 'boolean') {
 		fail('VALIDATION_INVALID', { field: "'enabled'" });
@@ -62,13 +78,17 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
 		if (body.local !== undefined) {
 			updateProviderLocal(params.id, body.local);
 		}
+		if (body.modelCaps !== undefined) {
+			updateModelCaps(params.id, body.modelCaps.modelId, body.modelCaps.caps);
+		}
 		return json({
 			id: params.id,
 			enabled: body.enabled,
 			defaultModel: body.defaultModel,
 			enabledModels: body.enabledModels,
 			pinnedModels: body.pinnedModels,
-			local: body.local
+			local: body.local,
+			modelCaps: body.modelCaps
 		});
 	} catch (err) {
 		if (err instanceof AppError) fail(err.code, err.params, err.status);

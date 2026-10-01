@@ -747,6 +747,10 @@ export interface ProviderStatus {
 export interface ModelListItem {
 	id: string;
 	enabled: boolean;
+	/** Aşama 4b — effective capability flags (family table with the provider's override applied). */
+	caps: { tools: boolean; reasoning: boolean };
+	/** Aşama 4b — the user's explicit per-model override, when one is set. */
+	capsOverride?: { tools?: boolean; reasoning?: boolean };
 }
 
 /** GET /api/providers/models response shape — chat header's per-chat

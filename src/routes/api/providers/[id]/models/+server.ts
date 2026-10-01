@@ -32,7 +32,14 @@ export const GET: RequestHandler = async ({ params }) => {
 		: filterModels(p.id, models, await loadCatalog(), { maxAgeMonths: modelMaxAgeMonths() });
 
 	const allowed = p.enabledModels !== undefined ? new Set(p.enabledModels) : null;
-	const toItem = (m: (typeof models)[number]): ModelListItem => ({ id: m.id, enabled: allowed ? allowed.has(m.id) : true });
+	// caps = the EFFECTIVE flags (adapter.listModels already applied table + override); `override` is what the
+	// user explicitly set, so the settings toggles can show both.
+	const toItem = (m: (typeof models)[number]): ModelListItem => ({
+		id: m.id,
+		enabled: allowed ? allowed.has(m.id) : true,
+		caps: m.caps,
+		...(p.modelCaps?.[m.id] ? { capsOverride: p.modelCaps[m.id] } : {})
+	});
 
 	return json({ approved: approved.map(toItem), other: other.map(toItem), pinned: p.pinnedModels ?? [] });
 };

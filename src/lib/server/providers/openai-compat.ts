@@ -11,6 +11,7 @@ import type {
 } from './types';
 import { createThinkTagNormalizer, reasoningContentChunk, textChunk } from './normalize';
 import { logAppEvent } from '../app-log';
+import { capsFor, compatModelExtras, type ModelCapsOverride } from './model-caps';
 
 /**
  * Standard OpenAI wire format — used by every cloud provider plus Ollama's
@@ -60,6 +61,11 @@ export interface OpenAICompatConfig {
 	apiKey?: string | null;
 	reasoningDialect: 'think-tags' | 'reasoning_content' | 'none';
 	timeouts: Timeouts;
+	/** providers.json `local: true` — a server on this machine/network (LM Studio, llama.cpp, vLLM...). Gates
+	 * extraBody()'s chat_template_kwargs below: never sent to a cloud endpoint. */
+	local?: boolean;
+	/** providers.json `modelCaps` — per-model capability overrides, applied on top of model-caps.ts's table. */
+	modelCaps?: Record<string, ModelCapsOverride>;
 }
 
 export function classifyHttpStatus(status: number, bodyText: string): ProviderErrorKind {
@@ -208,7 +214,20 @@ export class OpenAICompatAdapter implements ProviderAdapter {
 	/** Hook for provider-specific extra body fields (e.g. Ollama's
 	 * non-standard `think` flag) — overridable without duplicating the
 	 * whole request/stream/timeout/error-handling machinery in chat(). */
-	protected extraBody(_req: ChatRequest): Record<string, unknown> {
+	protected extraBody(req: ChatRequest): Record<string, unknown> {
+		// Aşama 4b — a local OpenAI-compatible server (llama.cpp, vLLM, LM Studio) has no `think` flag, but
+		// serves a Qwen3-style chat template that takes `enable_thinking` as a template kwarg. Only when the
+		// caller explicitly turned thinking OFF (think === false), only for a model whose caps say it reasons
+		// (an unknown model might reject the unknown field), and never for a cloud entry (a cloud API may
+		// reject or bill an unknown body field). think === true / undefined sends nothing: the template's own
+		// default already thinks.
+		if (
+			this.config.local === true &&
+			req.think === false &&
+			capsFor(req.model, this.config.modelCaps?.[req.model]).reasoning
+		) {
+			return { chat_template_kwargs: { enable_thinking: false } };
+		}
 		return {};
 	}
 
@@ -449,7 +468,9 @@ export class OpenAICompatAdapter implements ProviderAdapter {
 			return (body.data ?? []).map((m) => ({
 				id: m.id,
 				ctx: 8192,
-				caps: { tools: false, reasoning: false },
+				// Aşama 4b: capability flags (and the embedding-only marker) come from the shared
+				// model-caps.ts table + the provider's per-model override, not a blanket false.
+				...compatModelExtras(m.id, this.config.modelCaps?.[m.id]),
 				...(typeof m.created === 'number' ? { created: m.created } : {})
 			}));
 		} catch (err) {
