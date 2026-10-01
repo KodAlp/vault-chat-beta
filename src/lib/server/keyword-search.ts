@@ -40,3 +40,43 @@ export function keywordSearch(db: Database.Database, matchExpr: string, limit: n
 		return [];
 	}
 }
+
+/** How many OR hits are pulled before the co-occurrence filter, so that filtering
+ * does not starve the result when the best BM25 hits only contain one term. */
+const CO_OCCURRENCE_POOL = 50;
+
+/**
+ * FTS-only mode's search: BM25 over an OR expression (keyword-query.ts's
+ * buildCoOccurrenceQuery), keeping only chunks in which at least `minTerms`
+ * DISTINCT terms occur, still in BM25 order. "Does term t occur in chunk c" is
+ * asked of FTS5 itself, one quoted term at a time restricted to the candidate
+ * rowids: the index tokenizer (porter, unicode61, remove_diacritics) is the only
+ * thing that can answer it the way MATCH did, so no substring or token matching
+ * is redone in JS. Never throws, like keywordSearch().
+ */
+export function keywordSearchCoOccurring(
+	db: Database.Database,
+	matchExpr: string,
+	terms: string[],
+	limit: number,
+	minTerms = 2
+): KeywordHit[] {
+	if (!Number.isInteger(limit) || limit < 1) return [];
+	const hits = keywordSearch(db, matchExpr, Math.max(limit, CO_OCCURRENCE_POOL));
+	if (hits.length === 0) return [];
+	try {
+		const ids = hits.map((h) => h.chunkId);
+		const stmt = db.prepare(
+			`SELECT rowid AS id FROM chunks_fts WHERE chunks_fts MATCH ? AND rowid IN (${ids.map(() => '?').join(',')})`
+		);
+		const matched = new Map<number, number>();
+		for (const t of new Set(terms)) {
+			for (const r of stmt.all(`"${t.replace(/"/g, '""')}"`, ...ids) as { id: number }[]) {
+				matched.set(r.id, (matched.get(r.id) ?? 0) + 1);
+			}
+		}
+		return hits.filter((h) => (matched.get(h.chunkId) ?? 0) >= minTerms).slice(0, limit);
+	} catch {
+		return [];
+	}
+}

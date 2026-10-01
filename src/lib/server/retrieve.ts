@@ -10,8 +10,8 @@ import { getLibrarySettings } from './library-read';
 import type { RetrieveResult } from '$lib/types';
 import type { VaultContext } from './vaults';
 import { logAppEvent } from './app-log';
-import { buildFallbackQuery, extractTerms } from './keyword-query';
-import { hasKeywordIndex, keywordSearch } from './keyword-search';
+import { buildCoOccurrenceQuery, buildFallbackQuery, extractTerms } from './keyword-query';
+import { hasKeywordIndex, keywordSearch, keywordSearchCoOccurring, type KeywordHit } from './keyword-search';
 import type { GateDecision } from './smalltalk-gate';
 import { normalizeLevel } from '../../../indexer/chunk';
 import { walkMarkdownFiles } from '../../../indexer/walk-md';
@@ -340,15 +340,29 @@ export async function retrieve(
 			vectorResult.reason === 'embedding-unavailable');
 	if (!wantsFallback || !hasKeywordIndex(database)) return vectorResult;
 
-	// One AND pass over the current message. buildFallbackQuery is null for fewer
-	// than two content terms — a greeting, slang, a follow-up like "neden?" — since
-	// one coincidental word is not evidence (keyword-query.ts has the measurements).
-	// Same filters as the vector path; only the distance threshold is skipped.
+	// One keyword pass over the current message. Both gates are null for fewer than
+	// two content terms — a greeting, slang, a follow-up like "neden?" — since one
+	// coincidental word is not evidence (keyword-query.ts has the measurements).
+	// FTS-only mode (no embedding provider at all) ORs the terms and keeps chunks
+	// holding >= 2 distinct ones ('co2'), because AND matched nothing for natural
+	// questions there; every transient-failure fallback (unavailable / mismatch /
+	// opts.keywordFallback with a working embedder) keeps the stricter AND.
+	// Same filters as the vector path; only the distance threshold is skipped:
+	// keyword candidates carry via 'keyword', which selectChunks exempts from it,
+	// so the co2 path is not dropped by the threshold any more than AND is.
 	const fallbackQuery = opts.keywordQuery ?? query;
-	const expr = buildFallbackQuery(fallbackQuery);
-	if (!expr) return vectorResult;
 	const pool = k * (opts.includedPaths?.length ? SCOPED_OVERFETCH_FACTOR : OVERFETCH_FACTOR);
-	const hits = keywordSearch(database, expr, pool);
+	const mode: 'and' | 'co2' = embeddingIssue === 'fts-only' ? 'co2' : 'and';
+	let hits: KeywordHit[];
+	if (mode === 'co2') {
+		const co = buildCoOccurrenceQuery(fallbackQuery);
+		if (!co) return vectorResult;
+		hits = keywordSearchCoOccurring(database, co.expr, co.terms, pool);
+	} else {
+		const expr = buildFallbackQuery(fallbackQuery);
+		if (!expr) return vectorResult;
+		hits = keywordSearch(database, expr, pool);
+	}
 	const keywordCandidates: CandidateChunk[] = [];
 	for (const hit of hits) {
 		// 1, not a real distance — see RetrievedChunk.distance.
@@ -358,8 +372,8 @@ export async function retrieve(
 	const found = selectChunks(keywordCandidates, { ...opts, excludedPrefixes, k, distanceThreshold: config?.distanceThreshold });
 	logAppEvent({
 		kind: 'retrieval_fallback',
-		message: `anahtar kelime yedeği (and): ${hits.length} isabet, ${found.chunks.length} kullanılabilir`,
-		mode: 'and',
+		message: `anahtar kelime yedeği (${mode}): ${hits.length} isabet, ${found.chunks.length} kullanılabilir`,
+		mode,
 		terms: extractTerms(fallbackQuery).length,
 		hits: hits.length,
 		chunks: found.chunks.length
