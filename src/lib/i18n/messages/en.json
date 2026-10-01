@@ -238,9 +238,12 @@
 		"slidesErrorPrefix": "Couldn't create slides: "
 	},
 
-	"OllamaStatusBanner": {
-		"authError": "Ollama returned an authentication error.",
-		"unreachable": "Local server (Ollama) isn't running — chat and study-material generation are unavailable right now.",
+	"LocalServerBanner": {
+		"setupNotFinished": "Setup isn't finished — no chat model is set up yet.",
+		"openWizard": "Open setup wizard",
+		"openProviders": "Providers settings",
+		"authError": "{label} returned an authentication error.",
+		"unreachable": "Local server {label} isn't running — chat and study-material generation are unavailable right now.",
 		"installHint": "Not installed yet:",
 		"checking": "Checking...",
 		"retry": "Retry",
@@ -467,7 +470,7 @@
 		"manageLibrary": "Manage library",
 		"skillsCardDescription": "Customize chat, quiz, and flashcard generation.",
 		"manageSkills": "Manage skills",
-		"providersCardDescription": "Ollama and cloud providers (DeepSeek, ...), API keys, task chains.",
+		"providersCardDescription": "Local servers and cloud providers (DeepSeek, ...), API keys, task chains.",
 		"manageProviders": "Manage providers",
 		"smallTalkCardDescription": "Phrases learned so greetings and small talk do not trigger a source search.",
 		"manageSmallTalk": "Manage learned phrases",
@@ -507,7 +510,7 @@
 
 	"ProvidersSettingsPage": {
 		"title": "Model Providers",
-		"intro": "Manage the local Ollama and optional cloud providers (DeepSeek, OpenAI, ...). Keys stay on the server in {path} and are never sent to the browser.",
+		"intro": "Manage your local servers (Ollama, LM Studio, llama.cpp, ...) and optional cloud providers (DeepSeek, OpenAI, ...). Keys stay on the server in {path} and are never sent to the browser.",
 		"loadError": "Couldn't load the provider list.",
 		"localServersTitle": "Local servers",
 		"localServersDescription": "Local servers that are installed but not yet added as a provider — start, stop, change their settings, and add them as a provider here.",
@@ -523,6 +526,8 @@
 		"kindOpenAICompat": "OpenAI-compatible",
 		"kindOpenAICompatFull": "OpenAI-compatible (OpenAI, Groq, OpenRouter, ...)",
 		"kindAnthropic": "Anthropic (Claude)",
+		"kindOllama": "Ollama (local)",
+		"runWizardAgain": "Run the setup wizard again",
 		"kindAzureOpenAI": "Azure OpenAI",
 		"azureHint": "Base URL format: https://<resource-name>.openai.azure.com/openai/v1 — the model field is your DEPLOYMENT name; add it under 'Manage model list'.",
 		"localCheckboxLabel": "Local server (on this machine or local network)",
@@ -884,7 +889,7 @@
 		"CHAT_CORRUPTION_GAVE_UP": "The response may contain corrupted characters (a known model issue) — a clean version couldn't be produced after several attempts.",
 		"CHAT_NO_ANSWER": "The model didn't produce a response, please try again.",
 		"CHAT_SAVE_FAILED": "Couldn't save the chat",
-		"OLLAMA_UNREACHABLE": "Can't reach Ollama — is Ollama running?",
+		"LOCAL_SERVER_UNREACHABLE": "Can't reach {provider} — is the local server running?",
 		"CHAT_FALLBACK_PINNED_UNAVAILABLE": "{provider} {reason} → using the task's default chain",
 		"CHAT_FALLBACK_NO_DEFAULT_MODEL": "No default model configured for {provider} → skipping",
 		"CHAT_FALLBACK_RATE_LIMITED": "{from} hit its rate limit → switching to {to}",
@@ -937,7 +942,7 @@
 		"VAULT_NONE": "No vaults yet — create one first",
 		"VAULT_DELETE_CONFIRM_REQUIRED": "Delete confirmation required ('confirm=true')",
 		"VAULT_LAST_UNDELETABLE": "The last vault can't be deleted — the app always needs at least one vault",
-		"PROVIDER_OLLAMA_MISCONFIGURED": "The Ollama provider isn't configured correctly",
+		"PROVIDER_OLLAMA_MISCONFIGURED": "No enabled Ollama provider is configured",
 		"PROVIDER_CONSENT_NOT_NEEDED": "Ollama doesn't need consent",
 		"PROVIDER_BASE_URL_INVALID": "{url} isn't a valid http(s) address",
 		"PROVIDERS_FILE_UNREADABLE": "providers.json couldn't be read",

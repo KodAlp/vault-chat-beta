@@ -15,7 +15,7 @@
 	import { slidesGeneration, dismissSlidesGeneration, cancelSlidesGeneration } from '$lib/slides-generation.svelte';
 	import GenerationStatusToast from '$lib/components/GenerationStatusToast.svelte';
 	import ReindexDialog from '$lib/components/ReindexDialog.svelte';
-	import OllamaStatusBanner from '$lib/components/OllamaStatusBanner.svelte';
+	import LocalServerBanner from '$lib/components/LocalServerBanner.svelte';
 	import PythonStatusBanner from '$lib/components/PythonStatusBanner.svelte';
 	import { requestScopeExpand } from '$lib/scope-expand.svelte';
 	import { handleExternalLinkClick } from '$lib/openExternalLink';
@@ -161,14 +161,14 @@
      them from one place — see openExternalLink.ts's own doc comment. -->
 <svelte:document onclick={handleExternalLinkClick} />
 
-<!-- Column shell, not the banner rendered loose: OllamaStatusBanner used to be
+<!-- Column shell, not the banner rendered loose: LocalServerBanner (formerly OllamaStatusBanner) used to be
      position:fixed at the viewport top, which looked fine on scrolling pages
      but permanently covered the chat route's fixed-height header/icon-rail
      chrome (that route sizes itself to 100% of this wrapper, not the raw
      viewport, precisely so a banner pushing down from here reserves real
      space instead of overlapping it). -->
 <div class="app-shell">
-	<OllamaStatusBanner />
+	<LocalServerBanner />
 	<PythonStatusBanner />
 	<div class="app-content">
 		{@render children()}

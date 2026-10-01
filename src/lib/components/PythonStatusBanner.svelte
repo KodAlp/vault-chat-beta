@@ -9,7 +9,7 @@
 	/**
 	 * Only PDF/document/YouTube import depends on Python + its required
 	 * modules — chat and every other feature works without it — so unlike
-	 * OllamaStatusBanner this always renders in the softer amber "warning"
+	 * LocalServerBanner this always renders in the softer amber "warning"
 	 * style, never the red "alert" one, and never polls on an interval:
 	 * whether Python/its modules are installed doesn't change while the app
 	 * is sitting open the way "Ollama hasn't started yet" does, so a timer

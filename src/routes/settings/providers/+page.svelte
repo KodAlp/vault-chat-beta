@@ -198,7 +198,7 @@
 	let addFormOpen = $state(false);
 	let addLabel = $state('');
 	let addBaseUrl = $state('');
-	let addKind = $state<'openai-compat' | 'anthropic' | 'azure-openai'>('openai-compat');
+	let addKind = $state<'ollama' | 'openai-compat' | 'anthropic' | 'azure-openai'>('openai-compat');
 	let addReasoningDialect = $state<'reasoning_content' | 'think-tags' | 'none'>('reasoning_content');
 	let addLocal = $state(false);
 	let addError = $state('');
@@ -319,7 +319,8 @@
 	}
 
 	async function addProvider() {
-		if (!addLabel.trim() || !addBaseUrl.trim() || adding) return;
+		// An Ollama provider may leave the base URL blank (the server uses the native default).
+		if (!addLabel.trim() || (!addBaseUrl.trim() && addKind !== 'ollama') || adding) return;
 		adding = true;
 		addError = '';
 		try {
@@ -560,8 +561,11 @@
 		<h1 class="font-display text-xl font-medium">{t('ProvidersSettingsPage.title')}</h1>
 	</div>
 
-	<p class="mb-5 text-sm text-muted-foreground">
+	<p class="mb-2 text-sm text-muted-foreground">
 		{t('ProvidersSettingsPage.intro', { path: 'data/secrets.json' })}
+	</p>
+	<p class="mb-5 text-sm">
+		<a href="/setup/local-server" class="text-muted-foreground underline underline-offset-2 hover:text-foreground">{t('ProvidersSettingsPage.runWizardAgain')}</a>
 	</p>
 
 	{#if loadError}
@@ -596,10 +600,13 @@
 									? t('ProvidersSettingsPage.kindOpenAICompat')
 									: addKind === 'azure-openai'
 										? t('ProvidersSettingsPage.kindAzureOpenAI')
-										: t('ProvidersSettingsPage.kindAnthropic')}
+										: addKind === 'ollama'
+											? t('ProvidersSettingsPage.kindOllama')
+											: t('ProvidersSettingsPage.kindAnthropic')}
 							</Select.Trigger>
 							<Select.Content>
 								<Select.Item value="openai-compat" label={t('ProvidersSettingsPage.kindOpenAICompat')}>{t('ProvidersSettingsPage.kindOpenAICompatFull')}</Select.Item>
+								<Select.Item value="ollama" label={t('ProvidersSettingsPage.kindOllama')}>{t('ProvidersSettingsPage.kindOllama')}</Select.Item>
 								<Select.Item value="anthropic" label={t('ProvidersSettingsPage.kindAnthropic')}>{t('ProvidersSettingsPage.kindAnthropic')}</Select.Item>
 								<Select.Item value="azure-openai" label={t('ProvidersSettingsPage.kindAzureOpenAI')}>{t('ProvidersSettingsPage.kindAzureOpenAI')}</Select.Item>
 							</Select.Content>
@@ -634,7 +641,7 @@
 						<p class="text-sm text-destructive" role="alert">{addError}</p>
 					{/if}
 					<div class="flex gap-2">
-						<Button onclick={addProvider} disabled={!addLabel.trim() || !addBaseUrl.trim() || adding}>
+						<Button onclick={addProvider} disabled={!addLabel.trim() || (!addBaseUrl.trim() && addKind !== 'ollama') || adding}>
 							{adding ? t('ProvidersSettingsPage.adding') : t('ProvidersSettingsPage.add')}
 						</Button>
 						<Button variant="ghost" onclick={() => { addFormOpen = false; addError = ''; }}>{t('Common.vazgec')}</Button>
@@ -861,21 +868,19 @@
 							<Button size="sm" variant="outline" onclick={() => testConnection(p)} disabled={testingId === p.id}>
 								{testingId === p.id ? t('ProvidersSettingsPage.testing') : t('ProvidersSettingsPage.testConnection')}
 							</Button>
-							{#if p.id !== 'ollama'}
-								<Button
-									size="sm"
-									variant="ghost"
-									class="text-destructive hover:text-destructive"
-									title={t('ProvidersSettingsPage.removeProviderTitle')}
-									aria-label={t('ProvidersSettingsPage.removeProviderAria', { label: p.label })}
-									onclick={() => {
-										deleteTargetId = p.id;
-										deleteTargetLabel = p.label;
-									}}
-								>
-									<TrashIcon size={14} aria-hidden="true" />
-								</Button>
-							{/if}
+							<Button
+								size="sm"
+								variant="ghost"
+								class="text-destructive hover:text-destructive"
+								title={t('ProvidersSettingsPage.removeProviderTitle')}
+								aria-label={t('ProvidersSettingsPage.removeProviderAria', { label: p.label })}
+								onclick={() => {
+									deleteTargetId = p.id;
+									deleteTargetLabel = p.label;
+								}}
+							>
+								<TrashIcon size={14} aria-hidden="true" />
+							</Button>
 						</div>
 					</Card.Content>
 				</Card.Root>

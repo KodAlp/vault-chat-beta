@@ -16,6 +16,7 @@ import {
 	updateChain,
 	updateModelCaps,
 	getOllamaBaseUrl,
+	getOllamaProviderId,
 	isCloud,
 	getEmbeddingConfig,
 	setEmbeddingConfig,
@@ -461,4 +462,30 @@ test('the shipped providers.default.json resolves to FTS-only (embedding null) e
 	fs.copyFileSync(path.join(process.cwd(), 'data', 'providers.default.json'), process.env.PROVIDERS_PATH!);
 	assert.equal(getEmbeddingConfig(), null);
 	assert.equal(readProvidersFile().providers.some((p) => p.id === 'ollama'), true);
+});
+
+// Aşama 4d — Ollama as an ordinary provider: re-adding it, and finding the one the model manager uses.
+test('addProvider can add an Ollama-kind provider (native base URL, local timeouts, reasoning_content dialect, disabled until enabled)', () => {
+	useTmpProvidersFile();
+	deleteProvider('ollama');
+	const entry = addProvider({ label: 'Ollama', baseUrl: 'http://127.0.0.1:11434/', kind: 'ollama', reasoningDialect: 'none' });
+	assert.equal(entry.id, 'ollama');
+	assert.equal(entry.kind, 'ollama');
+	assert.equal(entry.baseUrl, 'http://127.0.0.1:11434');
+	assert.equal(entry.reasoningDialect, 'reasoning_content');
+	assert.equal(entry.enabled, false);
+	assert.deepEqual(entry.timeouts, { connectMs: 30000, firstTokenMs: 300000, idleMs: 60000 });
+	assert.equal(isCloud(entry), false);
+});
+
+test('getOllamaProviderId: first ENABLED ollama-kind provider, preferring id "ollama"; null when none', () => {
+	useTmpProvidersFile();
+	assert.equal(getOllamaProviderId(), 'ollama');
+	updateProviderEnabled('ollama', false);
+	assert.equal(getOllamaProviderId(), null);
+	const second = addProvider({ label: 'Remote box', baseUrl: 'http://10.0.0.2:11434', kind: 'ollama', reasoningDialect: 'none' });
+	updateProviderEnabled(second.id, true);
+	assert.equal(getOllamaProviderId(), second.id);
+	updateProviderEnabled('ollama', true);
+	assert.equal(getOllamaProviderId(), 'ollama');
 });

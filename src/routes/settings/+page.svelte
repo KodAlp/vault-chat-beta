@@ -23,6 +23,18 @@
 	// Stable per-instance id prefix for label/control association.
 	const uid = $props.id();
 
+	// Aşama 4d: the Ollama model manager (installed list / download / delete) only exists when an ENABLED
+	// ollama-kind provider does — Ollama is an ordinary, optional provider now.
+	let hasOllama = $state(false);
+	async function refreshHasOllama() {
+		try {
+			const res = await fetch('/api/providers');
+			if (res.ok) hasOllama = ((await res.json()) as { kind: string; enabled: boolean }[]).some((p) => p.kind === 'ollama' && p.enabled);
+		} catch {
+			hasOllama = false;
+		}
+	}
+
 	let models = $state<OllamaModel[]>([]);
 	let loadError = $state('');
 	let pullName = $state('');
@@ -214,7 +226,8 @@
 	}
 
 	onMount(async () => {
-		await Promise.all([refreshModels(), refreshProviderModels(), refreshActiveVault()]);
+		await refreshHasOllama();
+		await Promise.all([hasOllama ? refreshModels() : Promise.resolve(), refreshProviderModels(), refreshActiveVault()]);
 
 		if (runningInTauri) {
 			try {
@@ -394,6 +407,7 @@
 				</Select.Root>
 			</div>
 
+			{#if hasOllama}
 			<Separator class="my-1" />
 
 			<div class="flex flex-col gap-1.5">
@@ -451,6 +465,7 @@
 					<p class="text-xs text-destructive" role="alert">{deleteError}</p>
 				{/if}
 			</div>
+			{/if}
 		</Card.Content>
 	</Card.Root>
 

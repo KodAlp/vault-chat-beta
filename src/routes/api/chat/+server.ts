@@ -6,7 +6,9 @@ import { buildRetrievalQuery } from '$lib/server/retrieval-query';
 import { buildPromptMessages } from '$lib/server/prompt';
 import { chatWithFallback, modelCaps, supportsPrefixResume } from '$lib/server/providers/registry';
 import { startFlight, endFlight } from '$lib/server/providers/inflight';
-import { ProviderError, type ChatMessage as ProviderChatMessage } from '$lib/server/providers/types';
+import type { ChatMessage as ProviderChatMessage } from '$lib/server/providers/types';
+import { readProvidersFile } from '$lib/server/providers/config-store';
+import { unreachableLocalServerLabel } from '$lib/server/providers/local-unreachable';
 import {
 	canRetryResume,
 	createSeamTrimmer,
@@ -654,15 +656,20 @@ export const POST: RequestHandler = async ({ request }) => {
 				// User-initiated stop (interrupt button / navigation) — propagates from
 				// the aborted Ollama fetch. Not a real error; say nothing.
 				if (!(err instanceof DOMException && err.name === 'AbortError')) {
-					// Ollama-not-running is this product's single most likely failure
-					// mode (see ollama.ts's chat() doc comment) — its own actionable
-					// code rather than the generic PROVIDER_NETWORK/PROVIDER_
-					// TIMEOUT_CONNECT sentence.
-					const isOllamaUnreachable =
-						err instanceof ProviderError &&
-						err.providerId === 'ollama' &&
-						(err.kind === 'network' || err.kind === 'timeout_connect');
-					const payload = isOllamaUnreachable ? errorEvent('OLLAMA_UNREACHABLE') : { type: 'error' as const, ...errorPayload(err) };
+					// A local server not running (Ollama, LM Studio, llama.cpp ... — any provider that is
+					// local by kind or by its `local` flag) is this product's single most likely failure
+					// mode — its own actionable code, naming the provider, rather than the generic
+					// PROVIDER_NETWORK/PROVIDER_TIMEOUT_CONNECT sentence.
+					let unreachableLabel: string | null = null;
+					try {
+						unreachableLabel = unreachableLocalServerLabel(err, readProvidersFile().providers);
+					} catch {
+						// An unreadable providers.json falls through to the generic error below.
+					}
+					const payload =
+						unreachableLabel !== null
+							? errorEvent('LOCAL_SERVER_UNREACHABLE', { provider: unreachableLabel })
+							: { type: 'error' as const, ...errorPayload(err) };
 					send(payload);
 					logAppEvent({ kind: 'chat_error', chatId, message: err instanceof Error ? err.message : String(err) });
 				}

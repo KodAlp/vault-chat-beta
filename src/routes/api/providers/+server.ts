@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { addProvider, deleteProvider, readProvidersFile, type NewProviderInput } from '$lib/server/providers/config-store';
+import { addProvider, deleteProvider, readProvidersFile, DEFAULT_OLLAMA_BASE_URL, type NewProviderInput } from '$lib/server/providers/config-store';
 import { secretStore, maskKey } from '$lib/server/providers/secrets';
 import { getRateLimitInfo } from '$lib/server/providers/registry';
 import { getLastProviderErrors } from '$lib/server/app-log';
@@ -90,16 +90,19 @@ function rateLimitFor(
 
 export const POST: RequestHandler = async ({ request }) => {
 	const body = (await request.json().catch(() => null)) as Partial<NewProviderInput> | null;
-	if (!body?.label?.trim() || !body?.baseUrl?.trim()) {
+	const kind =
+		body?.kind === 'anthropic' || body?.kind === 'azure-openai' || body?.kind === 'ollama' ? body.kind : 'openai-compat';
+	// An Ollama provider needs no base URL typed in — the native default is used when it is left blank.
+	const baseUrl = body?.baseUrl?.trim() || (kind === 'ollama' ? DEFAULT_OLLAMA_BASE_URL : '');
+	if (!body?.label?.trim() || !baseUrl) {
 		fail('VALIDATION_REQUIRED_ALL', { fields: "'label', 'baseUrl'" });
 	}
-	const kind = body.kind === 'anthropic' || body.kind === 'azure-openai' ? body.kind : 'openai-compat';
 	const reasoningDialect =
 		body.reasoningDialect === 'think-tags' || body.reasoningDialect === 'none'
 			? (body.reasoningDialect as 'think-tags' | 'none')
 			: 'reasoning_content';
 	try {
-		const entry = addProvider({ label: body.label, baseUrl: body.baseUrl, kind, reasoningDialect, local: body.local === true });
+		const entry = addProvider({ label: body.label, baseUrl, kind, reasoningDialect, local: body.local === true });
 		return json(entry, { status: 201 });
 	} catch (err) {
 		if (err instanceof AppError) fail(err.code, err.params, err.status);
