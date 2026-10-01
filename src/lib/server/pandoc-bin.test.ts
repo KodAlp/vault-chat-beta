@@ -57,10 +57,34 @@ test('returns null on Windows when nothing matches anywhere', () => {
 	assert.equal(bin, null);
 });
 
-test('non-Windows: returns the bare command name when found on PATH', () => {
+test('non-Windows: returns the absolute path when found on PATH', () => {
 	const exists = (p: string) => p === '/usr/bin/pandoc';
 	const bin = resolvePandocBin({ PATH: '/usr/bin:/bin' }, exists, 'linux');
-	assert.equal(bin, 'pandoc');
+	assert.equal(bin, '/usr/bin/pandoc');
+});
+
+test('non-Windows: falls back to Homebrew (Apple Silicon) when PATH is minimal', () => {
+	const exists = (p: string) => p === '/opt/homebrew/bin/pandoc';
+	const bin = resolvePandocBin({ PATH: '/usr/bin:/bin:/usr/sbin:/sbin' }, exists, 'darwin');
+	assert.equal(bin, '/opt/homebrew/bin/pandoc');
+});
+
+test('non-Windows: falls back to /usr/local/bin, preferred over /usr/bin', () => {
+	const exists = (p: string) => p === '/usr/local/bin/pandoc' || p === '/usr/bin/pandoc';
+	const bin = resolvePandocBin({ PATH: '/bin' }, exists, 'darwin');
+	assert.equal(bin, '/usr/local/bin/pandoc');
+});
+
+test('non-Windows: falls back to /usr/bin/pandoc with an empty PATH', () => {
+	const exists = (p: string) => p === '/usr/bin/pandoc';
+	const bin = resolvePandocBin({}, exists, 'linux');
+	assert.equal(bin, '/usr/bin/pandoc');
+});
+
+test('non-Windows: PATH hit wins over known locations', () => {
+	const exists = () => true;
+	const bin = resolvePandocBin({ PATH: '/custom/bin' }, exists, 'linux');
+	assert.equal(bin, '/custom/bin/pandoc');
 });
 
 test('non-Windows: returns null when not found on PATH', () => {

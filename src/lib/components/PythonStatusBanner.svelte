@@ -37,6 +37,10 @@
 	 * empty in every other status. */
 	let missingModuleNames = $state<string[]>([]);
 
+	/** Server platform + typed "too old" reason from GET /api/system/python. */
+	let platform = $state('win32');
+	let problemText = $state<string | null>(null);
+
 	let requestGeneration = 0;
 
 	async function check() {
@@ -46,6 +50,8 @@
 			if (generation !== requestGeneration) return;
 			if (!res.ok) return;
 			const data = (await res.json()) as PythonSystemStatus;
+			platform = data.platform ?? 'win32';
+			problemText = data.pythonProblem ? localizeError(data.pythonProblem) : null;
 			missingModuleNames = data.modules.filter((m) => !m.installed).map((m) => m.name);
 			if (!data.pythonInstalled) status = 'no_python';
 			else if (missingModuleNames.length > 0) status = 'missing';
@@ -109,11 +115,18 @@
 	<div class="python-banner" role="status" transition:motionFly={{ y: -16 }}>
 		<TriangleAlertIcon size={16} aria-hidden="true" />
 		<span>
-			{status === 'no_python'
-				? t('PythonStatusBanner.noPython')
-				: t('PythonStatusBanner.missingModules', { modules: missingModuleNames.join(', ') })}
 			{#if status === 'no_python'}
-				<a href="https://python.org" target="_blank" rel="noopener">python.org</a>
+				{#if problemText}{problemText}{' '}{/if}
+				{platform === 'darwin'
+					? t('PythonStatusBanner.noPythonMac')
+					: platform === 'linux'
+						? t('PythonStatusBanner.noPythonLinux')
+						: t('PythonStatusBanner.noPython')}
+				{#if platform !== 'linux'}
+					<a href="https://python.org" target="_blank" rel="noopener">python.org</a>
+				{/if}
+			{:else}
+				{t('PythonStatusBanner.missingModules', { modules: missingModuleNames.join(', ') })}
 			{/if}
 		</span>
 		{#if status === 'missing'}

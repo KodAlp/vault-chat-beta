@@ -224,51 +224,119 @@ if (providersConfig) {
 // --- Opsiyonel: içe aktarma araçları ----------------------------------------
 console.log('\nOpsiyonel (belge/YouTube içe aktarma için)');
 {
-	// convertQueue.ts'teki resolvePythonBin ile aynı mantık, kısaltılmış:
-	// WindowsApps App Execution Alias'ını atla (STATUS_DLL_INIT_FAILED riski),
-	// PATH'i doğrudan tara.
+	// src/lib/server/python-bin.ts ile aynı mantık (bağımsız .mjs olduğu için
+	// kopya — ikisini birlikte güncelleyin). Sıra: PYTHON_BIN, uygulamanın kendi
+	// venv'i, PATH taraması, bilinen konumlar. Windows'ta WindowsApps alias'ı atlanır.
+	const isWin = process.platform === 'win32';
+	const isMac = process.platform === 'darwin';
+	const dataRoot = path.resolve(root, nonEmpty(process.env.DATA_DIR) ?? 'data');
+
+	function pythonCandidates() {
+		const out = [];
+		const pathDirs = (process.env.PATH ?? '').split(path.delimiter).filter(Boolean);
+		if (isWin) {
+			for (const dir of pathDirs) {
+				if (dir.toLowerCase().includes('windowsapps')) continue;
+				const exe = path.join(dir, 'python.exe');
+				if (existsSync(exe)) out.push(exe);
+			}
+			const programsDir = path.join(os.homedir(), 'AppData', 'Local', 'Programs', 'Python');
+			if (existsSync(programsDir)) {
+				const versions = readdirSync(programsDir)
+					.filter((d) => /^Python3\d+$/.test(d))
+					.sort((a, b) => Number(b.slice(6)) - Number(a.slice(6)));
+				for (const v of versions) {
+					const exe = path.join(programsDir, v, 'python.exe');
+					if (existsSync(exe)) out.push(exe);
+				}
+			}
+			return out;
+		}
+		// macOS: /usr/bin/python3 is a shim that opens an "install developer
+		// tools" dialog when CLT is missing — skip it unless CLT/Xcode exists.
+		const devTools = !isMac || existsSync('/Library/Developer/CommandLineTools/usr/bin/python3') || existsSync('/Applications/Xcode.app/Contents/Developer');
+		const push = (exe) => {
+			if (isMac && exe === '/usr/bin/python3' && !devTools) return;
+			if (!out.includes(exe)) out.push(exe);
+		};
+		for (const dir of pathDirs) {
+			const exe = path.posix.join(dir, 'python3');
+			if (existsSync(exe)) push(exe);
+		}
+		const known = ['/opt/homebrew/bin/python3', '/usr/local/bin/python3'];
+		if (isMac) known.push('/Library/Frameworks/Python.framework/Versions/Current/bin/python3');
+		known.push('/usr/bin/python3');
+		for (const exe of known) if (existsSync(exe)) push(exe);
+		return out;
+	}
+
 	function resolvePython() {
 		if (nonEmpty(process.env.PYTHON_BIN)) return process.env.PYTHON_BIN;
-		if (process.platform !== 'win32') return 'python3';
+		const venvPy = isWin
+			? path.join(dataRoot, 'python-venv', 'Scripts', 'python.exe')
+			: path.join(dataRoot, 'python-venv', 'bin', 'python3');
+		if (existsSync(venvPy)) return venvPy;
+		return pythonCandidates()[0] ?? null;
+	}
+
+	function resolvePandoc() {
+		if (nonEmpty(process.env.PANDOC_BIN) && existsSync(process.env.PANDOC_BIN)) return process.env.PANDOC_BIN;
 		const pathDirs = (process.env.PATH ?? '').split(path.delimiter).filter(Boolean);
-		for (const dir of pathDirs) {
-			if (dir.toLowerCase().includes('windowsapps')) continue;
-			const exe = path.join(dir, 'python.exe');
-			if (existsSync(exe)) return exe;
-		}
-		const programsDir = path.join(os.homedir(), 'AppData', 'Local', 'Programs', 'Python');
-		if (existsSync(programsDir)) {
-			const versions = readdirSync(programsDir)
-				.filter((d) => /^Python3\d+$/.test(d))
-				.sort((a, b) => Number(b.slice(6)) - Number(a.slice(6)));
-			for (const v of versions) {
-				const exe = path.join(programsDir, v, 'python.exe');
+		if (isWin) {
+			for (const dir of pathDirs) {
+				if (dir.toLowerCase().includes('windowsapps')) continue;
+				const exe = path.join(dir, 'pandoc.exe');
 				if (existsSync(exe)) return exe;
 			}
+			for (const base of [process.env.LOCALAPPDATA, process.env.ProgramFiles]) {
+				if (!base) continue;
+				const exe = path.join(base, 'Pandoc', 'pandoc.exe');
+				if (existsSync(exe)) return exe;
+			}
+			return null;
+		}
+		for (const dir of pathDirs) {
+			const exe = path.posix.join(dir, 'pandoc');
+			if (existsSync(exe)) return exe;
+		}
+		for (const exe of ['/opt/homebrew/bin/pandoc', '/usr/local/bin/pandoc', '/usr/bin/pandoc']) {
+			if (existsSync(exe)) return exe;
 		}
 		return null;
 	}
 
+	const installHint = isWin
+		? "python.org'dan Python 3.10+ kurun (Microsoft Store sürümü değil), veya PYTHON_BIN ortam değişkenini ayarlayın."
+		: isMac
+			? "brew install python@3.12 (veya python.org), ya da PYTHON_BIN ortam değişkenini ayarlayın."
+			: "Dağıtımın paket yöneticisiyle kurun, örn. sudo apt install python3 python3-venv; veya PYTHON_BIN ayarlayın.";
+
 	const pythonBin = resolvePython();
 	if (!pythonBin) {
-		warn('Python bulunamadı — PDF/doküman/YouTube içe aktarma çalışmaz', 'python.org\'dan Python 3 kurun (Microsoft Store sürümü değil), veya PYTHON_BIN ortam değişkenini ayarlayın.');
+		warn('Python bulunamadı — PDF/doküman/YouTube içe aktarma çalışmaz', installHint);
 	} else {
-		const versionCheck = spawnSync(pythonBin, ['--version'], { encoding: 'utf-8' });
+		const versionCheck = spawnSync(pythonBin, ['--version'], { encoding: 'utf-8', timeout: 5000 });
 		if (versionCheck.error || versionCheck.status !== 0) {
-			warn(`Python çalıştırılamadı (${pythonBin})`, 'python.org\'dan Python 3 kurun.');
+			warn(`Python çalıştırılamadı (${pythonBin})`, installHint);
 		} else {
-			ok(`Python bulundu: ${versionCheck.stdout.trim() || versionCheck.stderr.trim()} (${pythonBin})`);
-			for (const pkg of ['markitdown', 'yt_dlp']) {
-				const check = spawnSync(pythonBin, ['-c', `import ${pkg}`], { encoding: 'utf-8' });
-				if (check.status === 0) ok(`Python paketi kurulu: ${pkg}`);
-				else warn(`Python paketi kurulu değil: ${pkg}`, 'pip install -r ingest/requirements.txt');
+			const versionText = versionCheck.stdout.trim() || versionCheck.stderr.trim();
+			const m = /Python\s+(\d+)\.(\d+)/i.exec(versionText);
+			if (m && (Number(m[1]) < 3 || (Number(m[1]) === 3 && Number(m[2]) < 10))) {
+				warn(`Python çok eski: ${versionText} (${pythonBin}) — 3.10 veya yenisi gerekir`, installHint);
+			} else {
+				ok(`Python bulundu: ${versionText} (${pythonBin})`);
+				for (const pkg of ['markitdown', 'yt_dlp']) {
+					const check = spawnSync(pythonBin, ['-c', `import ${pkg}`], { encoding: 'utf-8', timeout: 30000 });
+					if (check.status === 0) ok(`Python paketi kurulu: ${pkg}`);
+					else warn(`Python paketi kurulu değil: ${pkg}`, 'Uygulamadaki "Şimdi kur" düğmesi (POSIX için uygulamanın kendi venv klasörüne kurar) veya pip install -r ingest/requirements.txt');
+				}
 			}
 		}
 	}
 
-	const pandocCheck = spawnSync(process.platform === 'win32' ? 'where' : 'which', ['pandoc'], { encoding: 'utf-8' });
-	if (pandocCheck.status === 0) ok('pandoc bulundu (.tex dönüştürme için)');
-	else warn('pandoc bulunamadı — yalnızca .tex dosyası içe aktarımını etkiler', 'pandoc.org\'dan kurun (pip değil, sistem paketi)');
+	const pandocPath = resolvePandoc();
+	if (pandocPath) ok(`pandoc bulundu (.tex dönüştürme için): ${pandocPath}`);
+	else warn('pandoc bulunamadı — yalnızca .tex dosyası içe aktarımını etkiler', "pandoc.org'dan kurun (pip değil, sistem paketi; macOS: brew install pandoc)");
 }
 
 // --- Özet ------------------------------------------------------------------

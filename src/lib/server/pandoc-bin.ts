@@ -39,9 +39,16 @@ export function resolvePandocBin(
 	if (env.PANDOC_BIN && existsSync(env.PANDOC_BIN)) return env.PANDOC_BIN;
 
 	if (!isWin) {
+		// A GUI-launched desktop app gets a minimal PATH (macOS:
+		// /usr/bin:/bin:/usr/sbin:/sbin), so after the PATH scan also try the
+		// well-known package-manager locations. Always an absolute path.
 		const pathDirs = (env.PATH ?? '').split(p.delimiter).filter(Boolean);
 		for (const dir of pathDirs) {
-			if (existsSync(p.join(dir, 'pandoc'))) return 'pandoc';
+			const exe = p.join(dir, 'pandoc');
+			if (existsSync(exe)) return exe;
+		}
+		for (const exe of ['/opt/homebrew/bin/pandoc', '/usr/local/bin/pandoc', '/usr/bin/pandoc']) {
+			if (existsSync(exe)) return exe;
 		}
 		return null;
 	}

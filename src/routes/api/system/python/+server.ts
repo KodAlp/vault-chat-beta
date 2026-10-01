@@ -1,9 +1,24 @@
 import fs from 'node:fs';
-import { execFile, spawn, spawnSync } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import path from 'node:path';
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { pythonBin } from '$lib/server/convertQueue';
+import { pythonBin, resetPythonBinCache } from '$lib/server/convertQueue';
+import { dataDir } from '$lib/server/env';
+import {
+	checkPythonVersion,
+	defaultPythonDeps,
+	formatPythonVersion,
+	isPythonVersionSupported,
+	isVenvModuleMissing,
+	parsePythonVersion,
+	pickSupportedPython,
+	pipInstallCommand,
+	systemPythonCandidates,
+	venvCreateCommand,
+	venvDirPath,
+	venvPythonPath
+} from '$lib/server/python-bin';
 import { resolvePandocBin } from '$lib/server/pandoc-bin';
 import { sseStream } from '$lib/server/sse';
 import { logAppEvent } from '$lib/server/app-log';
@@ -24,6 +39,8 @@ const CHECK_TIMEOUT_MS = 5000;
  * was killed, and every module (markitdown included) was reported missing
  * although all were installed. */
 const MODULE_CHECK_TIMEOUT_MS = 30000;
+/** `python -m venv` (with ensurepip) — a few seconds normally, generous cap. */
+const VENV_CREATE_TIMEOUT_MS = 120000;
 
 /** Async, never spawnSync: this endpoint runs on every app load (the Python
  * banner) and the module import check alone takes ~9s on the dev machine —
@@ -73,11 +90,21 @@ async function checkModules(bin: string): Promise<PythonModuleStatus[]> {
 async function computeStatus(): Promise<PythonSystemStatus> {
 	const bin = pythonBin();
 	const [versionCheck, pandoc] = await Promise.all([run(bin, ['--version'], CHECK_TIMEOUT_MS), checkPandocInstalled()]);
-	const pythonInstalled = versionCheck.ok;
+	let pythonInstalled = versionCheck.ok;
 	const pythonVersion = pythonInstalled ? versionCheck.stdout.trim() || versionCheck.stderr.trim() || null : null;
+	// markitdown/docling need Python >= 3.10: an older interpreter counts as
+	// "not installed" for the banner, with a typed reason carrying its version.
+	let pythonProblem: PythonSystemStatus['pythonProblem'] = null;
+	if (pythonInstalled && pythonVersion) {
+		const parsed = parsePythonVersion(pythonVersion);
+		if (parsed && !isPythonVersionSupported(parsed)) {
+			pythonInstalled = false;
+			pythonProblem = { code: 'PYTHON_TOO_OLD', params: { version: formatPythonVersion(parsed) } };
+		}
+	}
 	const modules = pythonInstalled ? await checkModules(bin) : [];
 	const markitdownInstalled = modules.find((m) => m.name === 'markitdown')?.installed ?? false;
-	return { pythonInstalled, pythonVersion, markitdownInstalled, modules, pandoc };
+	return { platform: process.platform, pythonProblem, pythonInstalled, pythonVersion, markitdownInstalled, modules, pandoc };
 }
 
 /** Cached because the check costs ~10s and nothing it measures changes on
@@ -115,7 +142,8 @@ export const GET: RequestHandler = async ({ url }) => {
 	return json(await getStatus(url.searchParams.get('fresh') === '1'));
 };
 
-/** Runs `python -m pip install -r ingest/requirements.txt` and streams its
+/** Runs `python -m pip install -r ingest/requirements.txt` (on POSIX inside
+ * the app-owned venv, created first if missing) and streams its
  * output live — same sseStream shell /api/import uses for the other
  * long-running child process in this app, so a client that navigates away
  * mid-install can't crash the server the way a bare ReadableStream did
@@ -123,17 +151,68 @@ export const GET: RequestHandler = async ({ url }) => {
  * `pip` binary, for the same "don't trust a bare PATH lookup on Windows"
  * reasoning as resolvePythonBin() itself. */
 export const POST: RequestHandler = async () => {
-	const bin = pythonBin();
-	const versionCheck = spawnSync(bin, ['--version']);
-	if (versionCheck.error || versionCheck.status !== 0) {
+	const isWin = process.platform === 'win32';
+	const explicitBin = !!process.env.PYTHON_BIN;
+	let bin = pythonBin();
+	const versionCheck = await checkPythonVersion(bin);
+	if (!versionCheck.ok) {
 		return sseStream<PythonSetupEvent>(async (send) => {
 			send({ type: 'error', ...errorPayload(new AppError('PYTHON_NOT_FOUND')) });
 		});
 	}
+	if (!versionCheck.supported) {
+		const version = formatPythonVersion(versionCheck.version!);
+		return sseStream<PythonSetupEvent>(async (send) => {
+			send({ type: 'error', ...errorPayload(new AppError('PYTHON_TOO_OLD', { version })) });
+		});
+	}
 
 	return sseStream<PythonSetupEvent>(async (send) => {
+		// POSIX: never pip-install into the system interpreter (PEP 668
+		// "externally managed" on Debian/Homebrew, pip often missing). Use an
+		// app-owned venv under the data dir; the resolver then picks it up
+		// automatically. An explicit PYTHON_BIN is the user's choice and is
+		// used as-is, like Windows (which keeps the old direct-pip behavior).
+		if (!isWin && !explicitBin) {
+			const root = dataDir();
+			const venvPy = venvPythonPath(root);
+			if (!fs.existsSync(venvPy)) {
+				const base = await pickSupportedPython(systemPythonCandidates(defaultPythonDeps(root)));
+				if (!base) {
+					send({ type: 'error', ...errorPayload(new AppError('PYTHON_NOT_FOUND')) });
+					return;
+				}
+				if (!base.check.supported) {
+					send({ type: 'error', ...errorPayload(new AppError('PYTHON_TOO_OLD', { version: formatPythonVersion(base.check.version!) })) });
+					return;
+				}
+				const venvDir = venvDirPath(root);
+				send({ type: 'log', line: `python -m venv ${venvDir}` });
+				const cmd = venvCreateCommand(base.bin, venvDir);
+				const created = await run(cmd.bin, cmd.args, VENV_CREATE_TIMEOUT_MS);
+				if (!created.ok || !fs.existsSync(venvPy)) {
+					const output = created.stdout + '\n' + created.stderr;
+					// A failed venv can leave a half-made directory behind (Debian
+					// without python3-venv) that would later look like a usable venv.
+					try {
+						fs.rmSync(venvDir, { recursive: true, force: true });
+					} catch {
+						/* best effort */
+					}
+					const err = isVenvModuleMissing(output)
+						? new AppError('PYTHON_VENV_UNAVAILABLE')
+						: new AppError('PYTHON_SPAWN_FAILED', { detail: output.trim().split(/\r?\n/).pop() ?? '' });
+					send({ type: 'error', ...errorPayload(err) });
+					return;
+				}
+				resetPythonBinCache();
+			}
+			bin = venvPy;
+		}
+
 		await new Promise<void>((resolve) => {
-			const child = spawn(bin, ['-m', 'pip', 'install', '-r', REQUIREMENTS_TXT], {
+			const pip = pipInstallCommand(bin, REQUIREMENTS_TXT);
+			const child = spawn(pip.bin, pip.args, {
 				windowsHide: true
 			});
 
