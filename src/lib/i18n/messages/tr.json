@@ -258,6 +258,8 @@
 	"PythonStatusBanner": {
 		"missingModules": "İçe aktarma için gereken Python paketleri henüz kurulu değil: {modules}",
 		"noPython": "PDF/doküman içe aktarma için Python gerekiyor, ama kurulu değil. Şuradan indir:",
+		"noPythonMac": "PDF/doküman içe aktarma için Python 3.10 veya daha yenisi gerekiyor, ama kurulu değil. brew install python@3.12 komutunu çalıştır ya da şuradan indir:",
+		"noPythonLinux": "PDF/doküman içe aktarma için Python 3.10 veya daha yenisi gerekiyor, ama kurulu değil. Dağıtımının paket yöneticisini kullan, örn. sudo apt install python3 python3-venv",
 		"installNow": "Şimdi kur",
 		"installing": "Kuruluyor..."
 	},
@@ -915,6 +917,8 @@
 		"PROCESS_TIMEOUT": "İşlem zaman aşımına uğradı (>{seconds}s)",
 		"PYTHON_NOT_FOUND": "Python bulunamadı. Önce python.org adresinden Python 3 kur, sonra tekrar dene.",
 		"PYTHON_SPAWN_FAILED": "Python başlatılamadı",
+		"PYTHON_TOO_OLD": "Python {version} çok eski — Python 3.10 veya daha yenisi gerekiyor.",
+		"PYTHON_VENV_UNAVAILABLE": "Python ortamı oluşturulamadı: venv modülü eksik. Debian/Ubuntu: sudo apt install python3-venv",
 		"TRANSCRIPT_EMPTY": "Transkript çıktı üretmedi",
 		"TRANSCRIPT_FAILED": "Transkript alınamadı",
 		"LINK_INVALID": "Geçersiz bağlantı: {url}",

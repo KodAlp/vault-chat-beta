@@ -647,6 +647,10 @@ export interface PythonModuleStatus {
  * PythonStatusBanner's missing-dependency state the way a missing module
  * does. */
 export interface PythonSystemStatus {
+	/** process.platform of the server — the banner words its install hint per OS. */
+	platform: string;
+	/** Set (with pythonInstalled false) when a Python was found but is < 3.10. */
+	pythonProblem: { code: 'PYTHON_TOO_OLD'; params: { version: string } } | null;
 	pythonInstalled: boolean;
 	pythonVersion: string | null;
 	markitdownInstalled: boolean;

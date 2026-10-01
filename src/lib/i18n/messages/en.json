@@ -258,6 +258,8 @@
 	"PythonStatusBanner": {
 		"missingModules": "Import needs Python packages that aren't installed yet: {modules}",
 		"noPython": "PDF/document import needs Python, which isn't installed. Get it from",
+		"noPythonMac": "PDF/document import needs Python 3.10 or newer, which isn't installed. Run brew install python@3.12 or get it from",
+		"noPythonLinux": "PDF/document import needs Python 3.10 or newer, which isn't installed. Use your distribution's package manager, e.g. sudo apt install python3 python3-venv",
 		"installNow": "Install now",
 		"installing": "Installing..."
 	},
@@ -915,6 +917,8 @@
 		"PROCESS_TIMEOUT": "Process timed out (>{seconds}s)",
 		"PYTHON_NOT_FOUND": "Python not found. Install Python 3 from python.org, then try again.",
 		"PYTHON_SPAWN_FAILED": "Couldn't start Python",
+		"PYTHON_TOO_OLD": "Python {version} is too old — Python 3.10 or newer is required.",
+		"PYTHON_VENV_UNAVAILABLE": "Couldn't create the Python environment because the venv module is missing. Debian/Ubuntu: sudo apt install python3-venv",
 		"TRANSCRIPT_EMPTY": "Transcript produced no output",
 		"TRANSCRIPT_FAILED": "Couldn't fetch the transcript",
 		"LINK_INVALID": "Invalid link: {url}",

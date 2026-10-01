@@ -1,11 +1,19 @@
 import { spawn } from 'node:child_process';
-import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import readline from 'node:readline';
 import { sharedJobMutex } from './jobMutex';
 import { AppError } from './app-error';
 import { resolvePandocBin } from './pandoc-bin';
+import { resolvePythonBin, defaultPythonDeps } from './python-bin';
+import { dataDir } from './env';
+
+function safeDataDir(): string | null {
+	try {
+		return dataDir();
+	} catch {
+		return null;
+	}
+}
 
 export type ConvertEvent =
 	| { type: 'progress'; stage: string; pageCount?: number; estimatedSeconds?: number }
@@ -24,44 +32,6 @@ export type ConvertEvent =
  * child_process.spawn does. Fix: never trust a bare PATH lookup here;
  * resolve to a real, absolute interpreter path once, then cache it.
  */
-function resolvePythonBin(): string {
-	if (process.env.PYTHON_BIN) return process.env.PYTHON_BIN;
-	if (process.platform !== 'win32') return 'python3';
-
-	// Scan PATH entries directly instead of shelling out to `where.exe` —
-	// `where`'s redirected stdout comes back in the OS's OEM codepage (e.g.
-	// CP857 on a Turkish locale), not UTF-8, so a non-ASCII path segment (a
-	// username with a Turkish İ, say — this repo's own path is exactly that
-	// case) decodes into a string that *looks* right but isn't byte-identical
-	// to the real path, and fs.existsSync() on it always comes back false.
-	// process.env.PATH is already a correctly-decoded string from Node
-	// itself, so this sidesteps the codepage layer entirely.
-	const pathDirs = (process.env.PATH ?? '').split(path.delimiter).filter(Boolean);
-	for (const dir of pathDirs) {
-		if (dir.toLowerCase().includes('windowsapps')) continue;
-		const exe = path.join(dir, 'python.exe');
-		if (fs.existsSync(exe)) return exe;
-	}
-
-	const programsDir = path.join(os.homedir(), 'AppData', 'Local', 'Programs', 'Python');
-	if (fs.existsSync(programsDir)) {
-		// Numeric sort, not lexicographic: "Python312" < "Python39" as plain
-		// strings (('1' < '9'), which would silently prefer 3.9 over 3.12 —
-		// picking whichever interpreter happens to NOT have markitdown
-		// installed, since pip installs to whichever `python` a shell resolves
-		// to, not necessarily the newest.
-		const versions = fs
-			.readdirSync(programsDir)
-			.filter((d) => /^Python3\d+$/.test(d))
-			.sort((a, b) => Number(b.slice(6)) - Number(a.slice(6)));
-		for (const v of versions) {
-			const exe = path.join(programsDir, v, 'python.exe');
-			if (fs.existsSync(exe)) return exe;
-		}
-	}
-
-	return 'python'; // last resort — no worse than the original behavior
-}
 
 // Lazy + memoized, not resolved at module load — env.ts's own "every
 // accessor is a function" rule (see its doc comment): a caller that sets
@@ -69,11 +39,15 @@ function resolvePythonBin(): string {
 // script) must not lose to a value this module already captured at import
 // time.
 let cachedPythonBin: string | null = null;
+/** Dropped after the app venv is created so the next pythonBin() picks it up. */
+export function resetPythonBinCache(): void {
+	cachedPythonBin = null;
+}
 /** Exported so youtubeQueue.ts's yt-dlp sidecar reuses the exact same
  * Windows path-resolution fixes instead of a second, driftable copy —
  * see resolvePythonBin()'s doc comment for the bugs this avoids. */
 export function pythonBin(): string {
-	if (cachedPythonBin === null) cachedPythonBin = resolvePythonBin();
+	if (cachedPythonBin === null) cachedPythonBin = resolvePythonBin(defaultPythonDeps(safeDataDir()));
 	return cachedPythonBin;
 }
 
