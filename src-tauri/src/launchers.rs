@@ -463,12 +463,164 @@ fn resolve_via_where(exe_name: &str) -> Option<PathBuf> {
     if !output.status.success() {
         return None;
     }
-    String::from_utf8_lossy(&output.stdout)
+    parse_where_output(&String::from_utf8_lossy(&output.stdout))
+}
+
+/// Expands `%VAR%` references (REG_EXPAND_SZ values) from the process env.
+/// Unknown variables are left as-is.
+fn expand_env_refs(s: &str) -> String {
+    let mut out = String::new();
+    let mut rest = s;
+    while let Some(start) = rest.find('%') {
+        out.push_str(&rest[..start]);
+        let after = &rest[start + 1..];
+        match after.find('%') {
+            Some(end) => {
+                let name = &after[..end];
+                match std::env::var(name) {
+                    Ok(v) if !name.is_empty() => out.push_str(&v),
+                    _ => {
+                        out.push('%');
+                        out.push_str(name);
+                        out.push('%');
+                    }
+                }
+                rest = &after[end + 1..];
+            }
+            None => {
+                out.push('%');
+                rest = after;
+            }
+        }
+    }
+    out.push_str(rest);
+    out
+}
+
+/// Pulls the data of a `reg query <key> /v Path` reply
+/// (`    Path    REG_EXPAND_SZ    C:\a;C:\b`).
+fn parse_reg_path_value(stdout: &str) -> Option<String> {
+    for line in stdout.lines() {
+        let t = line.trim();
+        if !t.to_lowercase().starts_with("path") {
+            continue;
+        }
+        for ty in ["REG_EXPAND_SZ", "REG_SZ"] {
+            if let Some(idx) = t.find(ty) {
+                let v = t[idx + ty.len()..].trim();
+                if !v.is_empty() {
+                    return Some(v.to_string());
+                }
+            }
+        }
+    }
+    None
+}
+
+fn read_registry_path(key: &str) -> Option<String> {
+    let output = Command::new("reg")
+        .args(["query", key, "/v", "Path"])
+        .creation_flags(CREATE_NO_WINDOW)
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    parse_reg_path_value(&String::from_utf8_lossy(&output.stdout))
+}
+
+/// PATH as a freshly started process would see it: machine Path + user Path
+/// from the registry. A running app keeps the PATH it started with, so
+/// anything a winget install added since launch is invisible to plain
+/// `where` until restart.
+fn fresh_registry_path() -> Option<String> {
+    let machine = read_registry_path(r"HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment");
+    let user = read_registry_path(r"HKCU\Environment");
+    let parts: Vec<String> = [machine, user].into_iter().flatten().map(|v| expand_env_refs(&v)).collect();
+    if parts.is_empty() {
+        None
+    } else {
+        Some(parts.join(";"))
+    }
+}
+
+fn parse_where_output(stdout: &str) -> Option<PathBuf> {
+    stdout
         .lines()
         .map(str::trim)
         .filter(|l| !l.is_empty() && !l.to_lowercase().contains("windowsapps"))
         .map(PathBuf::from)
         .find(|p| p.exists())
+}
+
+/// Searches `dir` for `exe_name` at the top level and up to `max_depth`
+/// sub-directory levels below it (bounded; no unbounded recursion).
+fn find_exe_bounded(dir: &Path, exe_name: &str, max_depth: u32) -> Option<PathBuf> {
+    let direct = dir.join(exe_name);
+    if direct.is_file() {
+        return Some(direct);
+    }
+    if max_depth == 0 {
+        return None;
+    }
+    let mut subdirs: Vec<PathBuf> = std::fs::read_dir(dir)
+        .ok()?
+        .filter_map(|e| e.ok())
+        .map(|e| e.path())
+        .filter(|p| p.is_dir())
+        .collect();
+    subdirs.sort();
+    subdirs.into_iter().find_map(|d| find_exe_bounded(&d, exe_name, max_depth - 1))
+}
+
+/// Pure (base-directory-parameterised) lookup of where winget puts a
+/// package's exe: `<winget_base>\Links\<exe>` (shim), then
+/// `<winget_base>\Packages\<winget_id>_*\` (top level + two levels deep).
+/// `winget_base` is `%LOCALAPPDATA%\Microsoft\WinGet`.
+fn find_in_winget_dirs(winget_base: &Path, winget_id: &str, exe_name: &str) -> Option<PathBuf> {
+    let link = winget_base.join("Links").join(exe_name);
+    if link.is_file() {
+        return Some(link);
+    }
+    let prefix = format!("{}_", winget_id.to_lowercase());
+    let mut pkg_dirs: Vec<PathBuf> = std::fs::read_dir(winget_base.join("Packages"))
+        .ok()?
+        .filter_map(|e| e.ok())
+        .map(|e| e.path())
+        .filter(|p| {
+            p.is_dir()
+                && p.file_name().map(|n| n.to_string_lossy().to_lowercase().starts_with(&prefix)).unwrap_or(false)
+        })
+        .collect();
+    pkg_dirs.sort();
+    pkg_dirs.into_iter().find_map(|d| find_exe_bounded(&d, exe_name, 2))
+}
+
+fn winget_id_for_catalog(id: &str) -> Option<&'static str> {
+    CATALOG.iter().find(|e| e.id == id).and_then(|e| e.winget_id)
+}
+
+/// `where` on the current PATH, then `where` on a PATH rebuilt from the
+/// registry, then winget's own install dirs. The latter two cover a
+/// just-finished winget install that this process's stale PATH can't see.
+/// Not cached: every detection pass re-runs this.
+fn resolve_binary(catalog_id: &str, exe_name: &str) -> Option<PathBuf> {
+    if let Some(p) = resolve_via_where(exe_name) {
+        return Some(p);
+    }
+    if let Some(fresh) = fresh_registry_path() {
+        if let Ok(out) = Command::new("where").arg(exe_name).env("PATH", fresh).creation_flags(CREATE_NO_WINDOW).output() {
+            if out.status.success() {
+                if let Some(p) = parse_where_output(&String::from_utf8_lossy(&out.stdout)) {
+                    return Some(p);
+                }
+            }
+        }
+    }
+    let winget_id = winget_id_for_catalog(catalog_id)?;
+    let local = std::env::var("LOCALAPPDATA").ok()?;
+    let base = PathBuf::from(local).join("Microsoft").join("WinGet");
+    find_in_winget_dirs(&base, winget_id, &format!("{exe_name}.exe"))
 }
 
 fn resolve_wsl_exe() -> Option<PathBuf> {
@@ -525,7 +677,7 @@ fn detect_installed_path(id: &str) -> Option<PathBuf> {
                     return Some(p);
                 }
             }
-            resolve_via_where("ollama")
+            resolve_binary("ollama", "ollama")
         }
         "lmstudio" => {
             if let Ok(user_profile) = std::env::var("USERPROFILE") {
@@ -534,9 +686,9 @@ fn detect_installed_path(id: &str) -> Option<PathBuf> {
                     return Some(p);
                 }
             }
-            resolve_via_where("lms")
+            resolve_binary("lmstudio", "lms")
         }
-        "llamacpp" | "llamacpp-embed" => resolve_via_where("llama-server"),
+        "llamacpp" | "llamacpp-embed" => resolve_binary(id, "llama-server"),
         "jan" => {
             let local_app_data = std::env::var("LOCALAPPDATA").ok()?;
             for candidate in ["jan", "Jan"] {
@@ -547,7 +699,7 @@ fn detect_installed_path(id: &str) -> Option<PathBuf> {
             }
             None
         }
-        "localai" => resolve_via_where("local-ai"),
+        "localai" => resolve_binary("localai", "local-ai"),
         "vllm" => detect_vllm_wsl(),
         _ => None,
     }
@@ -1426,6 +1578,83 @@ mod tests {
     use super::*;
     use std::io::BufRead;
     use std::net::TcpListener;
+
+    // -- winget install-dir fallback -------------------------------------
+
+    fn tmp_base(tag: &str) -> PathBuf {
+        let d = std::env::temp_dir().join(format!("vc-winget-{tag}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&d);
+        std::fs::create_dir_all(&d).unwrap();
+        d
+    }
+
+    fn touch(p: &Path) {
+        std::fs::create_dir_all(p.parent().unwrap()).unwrap();
+        std::fs::write(p, b"x").unwrap();
+    }
+
+    #[test]
+    fn winget_finds_exe_at_package_top_level() {
+        let base = tmp_base("top");
+        let exe = base.join("Packages").join("ggml.llamacpp_Microsoft.Winget.Source_8wekyb3d8bbwe").join("llama-server.exe");
+        touch(&exe);
+        assert_eq!(find_in_winget_dirs(&base, "ggml.llamacpp", "llama-server.exe"), Some(exe));
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn winget_finds_exe_nested_but_not_too_deep() {
+        let base = tmp_base("nested");
+        let pkg = base.join("Packages").join("ggml.llamacpp_Microsoft.Winget.Source_8wekyb3d8bbwe");
+        let exe = pkg.join("bin").join("llama-server.exe");
+        touch(&exe);
+        assert_eq!(find_in_winget_dirs(&base, "ggml.llamacpp", "llama-server.exe"), Some(exe));
+        let base2 = tmp_base("deep");
+        let deep = base2.join("Packages").join("ggml.llamacpp_x").join("a").join("b").join("c").join("llama-server.exe");
+        touch(&deep);
+        assert_eq!(find_in_winget_dirs(&base2, "ggml.llamacpp", "llama-server.exe"), None);
+        let _ = std::fs::remove_dir_all(&base);
+        let _ = std::fs::remove_dir_all(&base2);
+    }
+
+    #[test]
+    fn winget_id_prefix_must_be_followed_by_underscore() {
+        let base = tmp_base("prefix");
+        touch(&base.join("Packages").join("ggml.llamacppX_Microsoft.Winget.Source_8wekyb3d8bbwe").join("llama-server.exe"));
+        assert_eq!(find_in_winget_dirs(&base, "ggml.llamacpp", "llama-server.exe"), None);
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn winget_links_shim_is_found() {
+        let base = tmp_base("links");
+        let exe = base.join("Links").join("llama-server.exe");
+        touch(&exe);
+        assert_eq!(find_in_winget_dirs(&base, "ggml.llamacpp", "llama-server.exe"), Some(exe));
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn winget_missing_dirs_yield_none() {
+        let base = tmp_base("empty");
+        assert_eq!(find_in_winget_dirs(&base, "ggml.llamacpp", "llama-server.exe"), None);
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn registry_path_parsing_and_expansion() {
+        let out = "\r\nHKEY_CURRENT_USER\\Environment\r\n    Path    REG_EXPAND_SZ    %USERPROFILE%\\bin;C:\\x\r\n\r\n";
+        let v = parse_reg_path_value(out).unwrap();
+        assert!(v.ends_with(";C:\\x"));
+        std::env::set_var("VC_TEST_VAR", "C:\\val");
+        assert_eq!(expand_env_refs("%VC_TEST_VAR%\\a;%NOPE_VC%;50%"), "C:\\val\\a;%NOPE_VC%;50%");
+    }
+
+    #[test]
+    fn winget_ids_resolve_from_catalog() {
+        assert_eq!(winget_id_for_catalog("llamacpp"), Some("ggml.llamacpp"));
+        assert_eq!(winget_id_for_catalog("localai"), None);
+    }
 
     // -- catalog integrity ---------------------------------------------
 
