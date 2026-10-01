@@ -14,6 +14,13 @@
  * retrieve() already computes, so it costs nothing extra) with known small-talk
  * phrases: multilingual seeds plus what this user has said or taught it.
  *
+ * CALIBRATION SCOPE: every threshold below was measured ONLY with the bge-m3 embedding model
+ * (1024 dims). Another model has a different similarity distribution (a nomic or qwen3 model's
+ * unrelated-text cosines sit much higher), and a false "small talk" flag silently removes
+ * grounding. So the gate is active only for that family (isGateCalibratedFor, whichever server
+ * serves it) and OFF for any other embedding model — retrieval then proceeds normally. Using
+ * another model requires re-running the validation below and extending the check.
+ *
  * Measured on the real vault with bge-m3, against 2016 negatives (252 note titles
  * x 8 shapes: bare, "X nedir", "what is X", ..., with and without a greeting
  * prefix) and 95 held-out small-talk messages:
@@ -35,6 +42,26 @@
  * data); the precision numbers are the ones to trust. Do not lower a threshold
  * without re-running that validation.
  */
+
+import { normalizeModelId } from './providers/model-caps';
+
+/** The only embedding family the thresholds below were measured with. */
+export const CALIBRATED_EMBEDDING_FAMILY = 'bge-m3';
+export const CALIBRATED_EMBEDDING_DIMS = 1024;
+
+/**
+ * True when the configured embedding model is the one the gate was calibrated with. Matches the
+ * normalized id (see normalizeModelId: `bge-m3:latest`, `BAAI/bge-m3`, `bge-m3-Q8_0.gguf`,
+ * `C:/models/bge-m3-f16.gguf` all agree) as the family itself or the family followed by `-`
+ * (quantization / tag suffix); other families (`bge-large`, `nomic-embed`, `qwen3-embedding`) and
+ * `bge-m3` rerankers do not match. The dims must also be 1024 as a second guard.
+ */
+export function isGateCalibratedFor(model: string, dims: number): boolean {
+	if (dims !== CALIBRATED_EMBEDDING_DIMS) return false;
+	const n = normalizeModelId(model);
+	if (n.includes('rerank')) return false;
+	return n === CALIBRATED_EMBEDDING_FAMILY || n.startsWith(`${CALIBRATED_EMBEDDING_FAMILY}-`);
+}
 
 /** A seed match also needs the corpus to have nothing close to say: a message
  * whose nearest chunk is this near is probably a question about it. */

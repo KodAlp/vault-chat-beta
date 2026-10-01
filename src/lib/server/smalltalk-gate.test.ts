@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
 	decideSmallTalk,
 	dot,
+	isGateCalibratedFor,
 	normalize,
 	smallTalkGateEnabled,
 	NEGATIVE_SIM,
@@ -98,4 +99,18 @@ test('the kill switch: on by default, off for 0/off/false', () => {
 	assert.equal(smallTalkGateEnabled(''), true);
 	assert.equal(smallTalkGateEnabled('1'), true);
 	for (const off of ['0', 'off', 'OFF', 'false', ' False ']) assert.equal(smallTalkGateEnabled(off), false, off);
+});
+
+test('isGateCalibratedFor: bge-m3 spellings from every server are accepted', () => {
+	for (const m of ['bge-m3', 'bge-m3:latest', 'bge-m3:567m', 'bge-m3-Q8_0.gguf', 'BAAI/bge-m3', 'gpustack/bge-m3-GGUF', String.raw`C:\models\bge-m3-f16.gguf`, 'hf.co/gpustack/bge-m3-GGUF:Q8_0']) {
+		assert.equal(isGateCalibratedFor(m, 1024), true, m);
+	}
+});
+
+test('isGateCalibratedFor: other models, rerankers and wrong dims are rejected', () => {
+	for (const m of ['bge-large', 'bge-large-en-v1.5', 'bge-small-en', 'nomic-embed-text', 'qwen3-embedding:0.6b', 'bge-reranker-v2-m3', 'bge-m3-reranker', 'bge-m3x', 'text-embedding-3-small', '']) {
+		assert.equal(isGateCalibratedFor(m, 1024), false, m);
+	}
+	assert.equal(isGateCalibratedFor('bge-m3', 768), false);
+	assert.equal(isGateCalibratedFor('bge-m3', 0), false);
 });

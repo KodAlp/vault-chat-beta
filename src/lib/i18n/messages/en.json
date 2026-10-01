@@ -31,6 +31,7 @@
 		"consentConfirm": "I agree, send it"
 	},
 	"Chat": {
+		"smallTalkUnavailable": "Small-talk learning is unavailable with the configured embedding model (only bge-m3 is supported).",
 		"emptyStateTitle": "Ask a question about your notes",
 		"emptyStateSubtitle": "Answers are based only on the sources you've selected.",
 		"emptyStateBrowseSources": "Browse sources",
@@ -634,6 +635,7 @@
 	"SmallTalkSettingsPage": {
 		"title": "Small-talk phrases",
 		"intro": "Greetings, slang and test messages get no sources. This lists what you taught and what was learned automatically; built-in examples appear only if switched off. Delete anything learned by mistake.",
+		"gateInactive": "This feature is currently off: the configured embedding model is not bge-m3, the model its thresholds were measured with. To avoid wrongly flagging a question as small talk (which would silently drop sources), sources are searched for every message.",
 		"empty": "Nothing learned yet.",
 		"loadError": "Could not load the phrase list.",
 		"deleteError": "Could not delete the phrase.",
