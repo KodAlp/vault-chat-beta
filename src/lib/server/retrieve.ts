@@ -15,13 +15,15 @@ import { hasKeywordIndex, keywordSearch } from './keyword-search';
 import type { GateDecision } from './smalltalk-gate';
 import { normalizeLevel } from '../../../indexer/chunk';
 import { walkMarkdownFiles } from '../../../indexer/walk-md';
-import { readIndexEmbedding } from '../../../indexer/db';
+import { readIndexEmbedding, embeddingMismatches } from '../../../indexer/db';
 
 /** EMBEDDING_* AppError codes embedTexts() throws that retrieve() treats as
  * "vector search is unavailable right now" rather than a hard failure — see
  * RetrieveResult.embeddingIssue's doc comment. Any other AppError (or a
  * non-AppError throw) is a real bug and propagates as before. */
-const EMBEDDING_ISSUE_CODES = new Set(['EMBEDDING_UNAVAILABLE', 'EMBEDDING_CONSENT_REQUIRED', 'EMBEDDING_DIMS_MISMATCH']);
+// NOT_FOUND: the configured embedding provider id no longer exists in providers.json (deleted/renamed) —
+// embeddings.ts's resolveProviderEntry throws it; for retrieval that is just another "no vectors this turn".
+const EMBEDDING_ISSUE_CODES = new Set(['EMBEDDING_UNAVAILABLE', 'EMBEDDING_CONSENT_REQUIRED', 'EMBEDDING_DIMS_MISMATCH', 'NOT_FOUND']);
 
 /**
  * Aşama 3b — rate-limits the 'embedding_issue' app-log line. Before this, a
@@ -142,7 +144,8 @@ export interface EmbeddingMismatchInfo {
 	 * nothing recorded to compare the config against yet (unindexedCount is
 	 * the signal for that state, not this). */
 	index?: { provider: string; model: string; dims: number };
-	config: { provider: string; model: string; dims: number };
+	/** null in FTS-only mode (no embedding configured) — never a mismatch then. */
+	config: { provider: string; model: string; dims: number } | null;
 }
 
 /**
@@ -155,12 +158,11 @@ export interface EmbeddingMismatchInfo {
  */
 export function checkEmbeddingMismatch(v: VaultContext): EmbeddingMismatchInfo {
 	const config = getEmbeddingConfig();
-	const configInfo = { provider: config.providerId, model: config.model, dims: config.dims };
+	const configInfo = config ? { provider: config.providerId, model: config.model, dims: config.dims } : null;
 	const database = getDb(v);
 	if (!database) return { mismatch: false, config: configInfo };
 	const indexMeta = readIndexEmbedding(database);
-	const mismatch =
-		indexMeta.provider !== config.providerId || indexMeta.model !== config.model || indexMeta.dims !== config.dims;
+	const mismatch = embeddingMismatches(indexMeta, config);
 	return { mismatch, index: indexMeta, config: configInfo };
 }
 
@@ -214,8 +216,7 @@ export async function retrieve(
 
 	const config = getEmbeddingConfig();
 	const indexMeta = readIndexEmbedding(database);
-	const metaMismatch =
-		indexMeta.provider !== config.providerId || indexMeta.model !== config.model || indexMeta.dims !== config.dims;
+	const metaMismatch = embeddingMismatches(indexMeta, config);
 
 	// Aşama 3a: a config/index mismatch or a failed embed call means vector
 	// search cannot run at all this turn — `vector` stays null and every block
@@ -224,7 +225,10 @@ export async function retrieve(
 	// regardless of opts.keywordFallback (see its own comment there).
 	let vector: number[] | null = null;
 	let embeddingIssue: RetrieveResult['embeddingIssue'];
-	if (metaMismatch) {
+	if (config === null) {
+		// FTS-only mode: an expected, configured state — typed, but deliberately NOT logged per query.
+		embeddingIssue = 'fts-only';
+	} else if (metaMismatch) {
 		embeddingIssue = 'mismatch';
 		const pairSignature = `mismatch:${indexMeta.provider}/${indexMeta.model}/${indexMeta.dims}=>${config.providerId}/${config.model}/${config.dims}`;
 		logEmbeddingIssueOnce(
@@ -305,8 +309,14 @@ export async function retrieve(
 	}
 	const vectorResult: RetrieveResult =
 		matches.length === 0
-			? { chunks: [], narrowScope: false, reason: 'no-embedding-match' }
-			: selectChunks(candidates, { ...opts, excludedPrefixes, k, distanceThreshold: config.distanceThreshold });
+			? {
+					chunks: [],
+					narrowScope: false,
+					// vector === null means vector search never ran — say so, rather than the misleading
+					// "ran and matched nothing" ('no-embedding-match').
+					reason: vector === null ? (embeddingIssue === 'fts-only' ? 'fts-only' : 'embedding-unavailable') : 'no-embedding-match'
+				}
+			: selectChunks(candidates, { ...opts, excludedPrefixes, k, distanceThreshold: config?.distanceThreshold });
 	vectorResult.bestDistance = bestDistance;
 	if (gateInfo) vectorResult.gate = gateInfo;
 	if (embeddingIssue) vectorResult.embeddingIssue = embeddingIssue;
@@ -324,7 +334,10 @@ export async function retrieve(
 	const wantsFallback =
 		(opts.keywordFallback === true || embeddingIssue !== undefined) &&
 		vectorResult.chunks.length === 0 &&
-		(vectorResult.reason === 'filtered' || vectorResult.reason === 'no-embedding-match');
+		(vectorResult.reason === 'filtered' ||
+			vectorResult.reason === 'no-embedding-match' ||
+			vectorResult.reason === 'fts-only' ||
+			vectorResult.reason === 'embedding-unavailable');
 	if (!wantsFallback || !hasKeywordIndex(database)) return vectorResult;
 
 	// One AND pass over the current message. buildFallbackQuery is null for fewer
@@ -342,7 +355,7 @@ export async function retrieve(
 		const c = toCandidate(hit.chunkId, 1, 'keyword');
 		if (c) keywordCandidates.push(c);
 	}
-	const found = selectChunks(keywordCandidates, { ...opts, excludedPrefixes, k, distanceThreshold: config.distanceThreshold });
+	const found = selectChunks(keywordCandidates, { ...opts, excludedPrefixes, k, distanceThreshold: config?.distanceThreshold });
 	logAppEvent({
 		kind: 'retrieval_fallback',
 		message: `anahtar kelime yedeği (and): ${hits.length} isabet, ${found.chunks.length} kullanılabilir`,

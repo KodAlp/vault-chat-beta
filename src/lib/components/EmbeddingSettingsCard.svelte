@@ -33,7 +33,10 @@
 
 	let embeddingCapable = $derived(providers.filter((p) => p.enabled && (p.kind === 'ollama' || p.kind === 'openai-compat')));
 
+	// config === null after loading means FTS-only mode (no embedding configured, Aşama 4a) — `loaded`
+	// is what distinguishes that from "still fetching".
 	let config = $state<EmbeddingConfig | null>(null);
+	let loaded = $state(false);
 	let loadError = $state('');
 	let saveError = $state('');
 	let saving = $state(false);
@@ -74,11 +77,14 @@
 		try {
 			const res = await fetch('/api/embedding');
 			if (!res.ok) throw new Error();
-			config = (await res.json()) as EmbeddingConfig;
-			draftProviderId = config.providerId;
-			draftModel = config.model;
-			draftDims = config.dims;
-			draftThreshold = config.distanceThreshold !== undefined ? String(config.distanceThreshold) : '';
+			config = (await res.json()) as EmbeddingConfig | null;
+			if (config) {
+				draftProviderId = config.providerId;
+				draftModel = config.model;
+				draftDims = config.dims;
+				draftThreshold = config.distanceThreshold !== undefined ? String(config.distanceThreshold) : '';
+			}
+			loaded = true;
 		} catch {
 			loadError = t('EmbeddingSettingsCard.loadError');
 		}
@@ -229,7 +235,7 @@
 	<Card.Content class="flex flex-col gap-3">
 		{#if loadError}
 			<p class="text-sm text-destructive" role="alert">{loadError}</p>
-		{:else if !config}
+		{:else if !loaded}
 			<p class="text-sm text-muted-foreground">{t('Common.yukleniyor')}</p>
 		{:else}
 			<div class="flex flex-col gap-1.5">

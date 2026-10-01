@@ -417,3 +417,68 @@ test('a non-retryable failure of a continuation is still thrown as-is', async ()
 	const deps = makeDeps({ getAdapter: async (id) => failingAdapter(id, err) });
 	await assert.rejects(collect(chatWithFallbackCore(deps, 'chat', continuationReq(), new AbortController().signal)), err);
 });
+
+// Aşama 4a — a dropped pin must not leak the pinned provider's model id into the chain head.
+function modelRecordingAdapter(id: string, seen: string[]): ProviderAdapter {
+	return {
+		id,
+		async *chat(r: ChatRequest): AsyncGenerator<Chunk> {
+			seen.push(r.model);
+			yield { type: 'text', text: 'ok' };
+			yield { type: 'done' };
+		},
+		async listModels() {
+			return [];
+		},
+		async health() {
+			return 'ok';
+		}
+	};
+}
+
+test('a dropped pin (disabled): hop 0 is asked for the chain head defaultModel, not the pinned provider req.model', async () => {
+	const seen: string[] = [];
+	const deps = makeDeps({
+		getChain: () => ['a'],
+		isProviderEnabled: (id) => id !== 'z',
+		getAdapter: async (id) => modelRecordingAdapter(id, seen)
+	});
+	await collect(chatWithFallbackCore(deps, 'chat', req(), new AbortController().signal, 'z'));
+	assert.deepEqual(seen, ['a-default-model']);
+});
+
+test('a dropped pin (not consented) behaves the same', async () => {
+	const seen: string[] = [];
+	const deps = makeDeps({
+		getChain: () => ['a'],
+		isProviderConsented: (id) => id !== 'z',
+		getAdapter: async (id) => modelRecordingAdapter(id, seen)
+	});
+	await collect(chatWithFallbackCore(deps, 'chat', req(), new AbortController().signal, 'z'));
+	assert.deepEqual(seen, ['a-default-model']);
+});
+
+test('a dropped pin whose chain head has no defaultModel skips that hop and moves on', async () => {
+	const seen: string[] = [];
+	const deps = makeDeps({
+		isProviderEnabled: (id) => id !== 'z',
+		getProviderEntry: (id) => (id === 'a' ? { ...stubEntry('a'), defaultModel: undefined } : stubEntry(id)),
+		getAdapter: async (id) => modelRecordingAdapter(id, seen)
+	});
+	await collect(chatWithFallbackCore(deps, 'chat', req(), new AbortController().signal, 'z'));
+	assert.deepEqual(seen, ['b-default-model']);
+});
+
+test('a valid pin still sends req.model unchanged to the pinned provider', async () => {
+	const seen: string[] = [];
+	const deps = makeDeps({ getAdapter: async (id) => modelRecordingAdapter(id, seen) });
+	await collect(chatWithFallbackCore(deps, 'chat', req(), new AbortController().signal, 'b'));
+	assert.deepEqual(seen, ['requested-model']);
+});
+
+test('no pin at all still sends req.model unchanged to the chain head', async () => {
+	const seen: string[] = [];
+	const deps = makeDeps({ getAdapter: async (id) => modelRecordingAdapter(id, seen) });
+	await collect(chatWithFallbackCore(deps, 'chat', req(), new AbortController().signal));
+	assert.deepEqual(seen, ['requested-model']);
+});

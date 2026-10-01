@@ -16,11 +16,18 @@ import { AppError } from './app-error';
  * the FTS keyword fallback whenever embeddingIssue is set, REGARDLESS of
  * whether the caller asked for it (see retrieve.ts's wantsFallback), which
  * means `retrieved.chunks` can be non-empty here even though vector search
- * never ran. The five generators must never cite an un-vetted keyword hit —
- * NoSourcesError's whole point is "cite only what vector search actually
- * found" — so this fails loudly with a coded error instead of silently
- * falling through to the normal chunks.length===0 check (which a non-empty
- * keyword result would skip past).
+ * never ran.
+ *
+ * Two kinds of "vector search did not run", treated differently on purpose:
+ *  - 'mismatch' / 'unavailable' are UNEXPECTED failures (the index and config
+ *    disagree, or the provider is down). The generators must not quietly
+ *    degrade to un-vetted keyword hits, so this fails loudly with a coded
+ *    error instead of falling through to the normal chunks.length===0 check
+ *    (which a non-empty keyword result would skip past).
+ *  - 'fts-only' (Aşama 4a) is a DELIBERATE configuration: the user chose to
+ *    run without an embedding provider, so keyword hits are the only
+ *    retrieval there is. The generators proceed with them (and still raise
+ *    NoSourcesError when the keyword search finds nothing).
  */
 export function assertNoEmbeddingIssue(result: RetrieveResult): void {
 	if (result.embeddingIssue === 'mismatch') throw new AppError('EMBEDDING_MISMATCH');

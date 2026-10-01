@@ -94,7 +94,7 @@ import path from 'node:path';
 import { franc } from 'franc-min';
 import { buildPromptMessages } from '../src/lib/server/prompt';
 import { closeVaultStudyDb } from '../src/lib/server/study-db';
-import { ollamaUrl } from '../src/lib/server/env';
+const ollamaUrl = (): string => process.env.OLLAMA_URL ?? 'http://127.0.0.1:11434';
 import type { VaultContext } from '../src/lib/server/vaults';
 import type { ChatMessage, RetrievedChunk } from '../src/lib/types';
 import type { ChatMessage as ProviderChatMessage } from '../src/lib/server/providers/types';

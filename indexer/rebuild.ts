@@ -3,12 +3,13 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import matter from 'gray-matter';
 import Database from 'better-sqlite3';
-import { listKnownFiles, deleteFile, upsertFile, type FileRow } from './db';
+import { listKnownFiles, deleteFile, upsertFile, markIndexFtsOnly, type FileRow } from './db';
 import { chunkMarkdown, normalizeLevel, HARD_MAX_CHARS } from './chunk';
 import { parsePrerequisites } from './prerequisites';
 import { walkMarkdownFiles as walk } from './walk-md';
 import { embedTexts } from '../src/lib/server/embeddings';
 import { DOC_PREFIX } from '../src/lib/server/embed-config';
+import { getEmbeddingConfig } from '../src/lib/server/providers/config-store';
 
 /**
  * Aşama 3b (embedding-bagimsizligi) — the walk/hash/chunk/embed/upsert loop
@@ -115,6 +116,12 @@ export async function rebuildIndex(db: Database.Database | null, libraryRoot: st
 	const { dryRun = false, onProgress, signal, onInfo = () => {}, onWarn = () => {} } = opts;
 	const startedAt = Date.now();
 
+	// Aşama 4a: no embedding configured (FTS-only mode) — chunks and keyword data are still written, the
+	// embed call and vec_chunks are skipped. An existing vectored index written to this way stops being
+	// recorded as vectored (markIndexFtsOnly), so choosing a provider later triggers the mismatch/reindex flow.
+	const ftsOnly = getEmbeddingConfig() === null;
+	if (ftsOnly && db && !dryRun) markIndexFtsOnly(db);
+
 	const known = db ? listKnownFiles(db) : new Map<string, FileRow>();
 	const seen = new Set<string>();
 	const files = walk(libraryRoot);
@@ -170,7 +177,7 @@ export async function rebuildIndex(db: Database.Database | null, libraryRoot: st
 
 		if (!dryRun && db) {
 			checkAborted(signal);
-			const embeddings = await embedDocuments(chunks.map((c) => c.embedText));
+			const embeddings = ftsOnly ? null : await embedDocuments(chunks.map((c) => c.embedText));
 			const fileRow: FileRow = {
 				path: relPath,
 				sha256: hash,
@@ -185,7 +192,7 @@ export async function rebuildIndex(db: Database.Database | null, libraryRoot: st
 				fileRow,
 				chunks.map((c, idx) => ({
 					insert: { path: relPath, heading_path: c.headingPath, display_text: c.displayText },
-					embedding: embeddings[idx]
+					embedding: embeddings ? embeddings[idx] : null
 				}))
 			);
 			chunksWritten += chunks.length;

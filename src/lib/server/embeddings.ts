@@ -1,4 +1,3 @@
-import { ollamaUrl } from './env';
 import { ollamaGate } from './providers/ollama-gate';
 import { embed as ollamaEmbed } from './ollama';
 import { EMBED_MODEL, EMBED_DIMS } from './embed-config';
@@ -56,9 +55,9 @@ function toEmbeddingUnavailable(providerId: string, err: unknown): AppError {
  * Error, which is remapped to the coded EMBEDDING_UNAVAILABLE here so every
  * caller of embedTexts() sees the same error taxonomy regardless of which
  * provider kind actually failed. */
-async function embedViaOllama(texts: string[], model: string, cpuOnly: boolean): Promise<number[][]> {
+async function embedViaOllama(texts: string[], model: string, cpuOnly: boolean, baseUrl: string): Promise<number[][]> {
 	try {
-		return await ollamaEmbed(texts, model, { cpuOnly });
+		return await ollamaEmbed(texts, model, { cpuOnly, baseUrl });
 	} catch (err) {
 		throw toEmbeddingUnavailable('ollama', err);
 	}
@@ -116,7 +115,7 @@ async function embedBatch(
 	model: string,
 	opts: EmbedTextsOptions
 ): Promise<number[][]> {
-	if (entry.kind === 'ollama') return embedViaOllama(texts, model, opts.purpose === 'query');
+	if (entry.kind === 'ollama') return embedViaOllama(texts, model, opts.purpose === 'query', entry.baseUrl);
 	if (entry.kind === 'openai-compat') return embedViaOpenAICompat(texts, entry, model);
 	// config-store.ts's setEmbeddingConfig() already rejects any other kind at
 	// save time — reaching here means providers.json was edited by hand (or
@@ -131,6 +130,9 @@ async function embedBatch(
  * there is no reason for two code paths.
  *
  * Throws (never returns a partial/wrong-length result):
+ *  - EMBEDDING_NOT_CONFIGURED — FTS-only mode (getEmbeddingConfig() is null);
+ *    callers that can run without vectors check the config first instead.
+ *  - NOT_FOUND — the configured provider id no longer exists in providers.json.
  *  - EMBEDDING_CONSENT_REQUIRED — the configured provider is a non-local
  *    cloud provider with no recorded consent (provider-consent.ts).
  *  - EMBEDDING_UNAVAILABLE — a network/HTTP failure reaching the provider.
@@ -141,6 +143,7 @@ async function embedBatch(
 export async function embedTexts(texts: string[], opts: EmbedTextsOptions): Promise<number[][]> {
 	if (texts.length === 0) return [];
 	const config = getEmbeddingConfig();
+	if (!config) throw new AppError('EMBEDDING_NOT_CONFIGURED');
 	const entry = resolveProviderEntry(config.providerId);
 	assertConsented(entry);
 
@@ -175,7 +178,7 @@ export async function measureEmbeddingDims(providerId: string, model: string): P
 	assertConsented(entry);
 	const [vector] =
 		entry.kind === 'ollama'
-			? await embedViaOllama(['test'], model, true)
+			? await embedViaOllama(['test'], model, true, entry.baseUrl)
 			: entry.kind === 'openai-compat'
 				? await embedViaOpenAICompat(['test'], entry, model)
 				: (() => {
@@ -197,7 +200,9 @@ export async function measureEmbeddingDims(providerId: string, model: string): P
  * exactly what should fire for an actual change, just not for "nothing
  * changed since before this feature existed").
  */
-export function embeddingKey(config: EmbeddingConfig = getEmbeddingConfig()): string {
+export function embeddingKey(explicit?: EmbeddingConfig): string {
+	const config = explicit ?? getEmbeddingConfig();
+	if (!config) throw new AppError('EMBEDDING_NOT_CONFIGURED');
 	const isLegacyDefault = config.providerId === 'ollama' && config.model === EMBED_MODEL && config.dims === EMBED_DIMS;
 	return isLegacyDefault ? EMBED_MODEL : `${config.providerId}/${config.model}/${config.dims}`;
 }

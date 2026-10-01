@@ -30,3 +30,9 @@ test('a later hop with no defaultModel configured is skipped (null), never asked
 	assert.equal(resolveHopModel(1, entry(undefined), 'deepseek-flash'), null);
 	assert.equal(resolveHopModel(1, undefined, 'deepseek-flash'), null);
 });
+
+test('hop 0 with requestedModelApplies=false (dropped pin) uses its own defaultModel, or null when it has none', () => {
+	assert.equal(resolveHopModel(0, entry('qwen3:8b'), 'deepseek-flash', false), 'qwen3:8b');
+	assert.equal(resolveHopModel(0, entry(undefined), 'deepseek-flash', false), null);
+	assert.equal(resolveHopModel(0, undefined, 'deepseek-flash', false), null);
+});

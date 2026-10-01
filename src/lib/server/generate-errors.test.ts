@@ -9,6 +9,12 @@ test('assertNoEmbeddingIssue does nothing when embeddingIssue is absent', () => 
 	assert.doesNotThrow(() => assertNoEmbeddingIssue(result));
 });
 
+test('assertNoEmbeddingIssue does NOT throw for a deliberate "fts-only" configuration, whether or not keyword hits were found', () => {
+	const hit = { path: 'a.md', heading_path: 'h', display_text: 't', topic: 't', depth: 'undergrad', domains: [], distance: 1, via: 'keyword' as const };
+	assert.doesNotThrow(() => assertNoEmbeddingIssue({ chunks: [hit], narrowScope: false, keyword: true, embeddingIssue: 'fts-only' }));
+	assert.doesNotThrow(() => assertNoEmbeddingIssue({ chunks: [], narrowScope: false, reason: 'fts-only', embeddingIssue: 'fts-only' }));
+});
+
 test('assertNoEmbeddingIssue throws EMBEDDING_MISMATCH for a "mismatch" issue, even with non-empty chunks', () => {
 	const result: RetrieveResult = {
 		chunks: [{ path: 'a.md', heading_path: 'h', display_text: 't', topic: 't', depth: 'undergrad', domains: [], distance: 1, via: 'keyword' }],

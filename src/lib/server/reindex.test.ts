@@ -288,3 +288,30 @@ test('swapIndexIntoPlace gives up immediately on a non-transient error (no retry
 	assert.equal(fs.readFileSync(dbPath, 'utf-8'), 'ORIGINAL', 'old index restored, not lost, on a non-retryable failure');
 	assert.equal(fs.existsSync(`${dbPath}.bak`), false);
 });
+
+test('reindexVault with no embedding configured (FTS-only) builds a keyword-only index without any embed call', async () => {
+	const v = makeVault();
+	setEmbeddingConfig(null);
+	note(v.libraryRoot, 'a.md', 'First note.');
+	note(v.libraryRoot, 'b.md', 'Second note.');
+	const real = globalThis.fetch;
+	let called = false;
+	globalThis.fetch = (async () => {
+		called = true;
+		throw new Error('no network call expected');
+	}) as typeof fetch;
+	try {
+		const stats = await reindexVault(v);
+		assert.equal(stats.files, 2);
+		assert.equal(stats.chunks, 2);
+		assert.equal(called, false);
+		const Database = (await import('better-sqlite3')).default;
+		const db = new Database(v.indexDbPath, { readonly: true });
+		assert.deepEqual(readIndexEmbedding(db), { provider: 'none', model: 'none', dims: 0 });
+		assert.equal(db.prepare("SELECT 1 FROM sqlite_master WHERE name = 'vec_chunks'").get(), undefined);
+		assert.equal((db.prepare('SELECT count(*) AS n FROM chunks_fts').get() as { n: number }).n, 2);
+		db.close();
+	} finally {
+		globalThis.fetch = real;
+	}
+});

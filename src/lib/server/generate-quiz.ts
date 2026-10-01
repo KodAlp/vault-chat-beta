@@ -240,7 +240,10 @@ export async function generateQuiz(
 		}
 	}
 
+	// keywordQuery: only the topic, not topic + summary — the keyword fallback (FTS-only mode, or an embedding
+	// issue) ANDs every term, so the long summary tail would make it match nothing. See retrieve.ts.
 	const retrieved = await retrieve(v, query, {
+		keywordQuery: topicalQuery,
 		domains: input.domains,
 		includedPaths: input.includedPaths,
 		k: QUIZ_CANDIDATES

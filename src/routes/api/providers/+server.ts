@@ -43,7 +43,7 @@ function mapToStatus(
 	hasKey: boolean,
 	key: string | null,
 	lastError: { ts: string; kind: string } | undefined,
-	embeddingConfig: { providerId: string; model: string }
+	embeddingConfig: { providerId: string; model: string } | null
 ): ProviderStatus {
 	return {
 		id: p.id,
@@ -60,7 +60,7 @@ function mapToStatus(
 		// embedding (getEmbeddingConfig().providerId), not hardcoded to
 		// 'ollama': embedding can now be an openai-compat provider instead.
 		// Every other provider gets null.
-		embedModel: p.id === embeddingConfig.providerId ? embeddingConfig.model : null,
+		embedModel: embeddingConfig && p.id === embeddingConfig.providerId ? embeddingConfig.model : null,
 		rateLimit: rateLimitFor(p.id, lastError)
 	};
 }

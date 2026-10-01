@@ -45,6 +45,31 @@ export interface IndexEmbeddingMeta {
  * tell "recorded" from "assumed" apart still can. */
 export const LEGACY_INDEX_EMBEDDING: IndexEmbeddingMeta = { provider: 'ollama', model: EMBED_MODEL, dims: EMBED_DIMS };
 
+/**
+ * Aşama 4a — what index_meta records for an FTS-only index (no embedding
+ * provider was configured when it was written): provider 'none', model 'none',
+ * dims 0, and no vec_chunks table. An explicit sentinel rather than "no meta":
+ * a missing meta means "built before index_meta existed" (= LEGACY_INDEX_EMBEDDING),
+ * which is a different, vectored state. When the user later picks a real
+ * embedding provider the normal mismatch check (index 'none' != config) fires
+ * and the reindex flow rebuilds with vectors.
+ */
+export const NO_EMBEDDING_PROVIDER = 'none';
+export const FTS_ONLY_INDEX_EMBEDDING: IndexEmbeddingMeta = { provider: NO_EMBEDDING_PROVIDER, model: 'none', dims: 0 };
+
+/** True when the index has no vectors (FTS-only), see FTS_ONLY_INDEX_EMBEDDING. */
+export function isFtsOnlyIndex(meta: IndexEmbeddingMeta): boolean {
+	return meta.provider === NO_EMBEDDING_PROVIDER;
+}
+
+/** The one definition of "the index was built under a different embedding than the config":
+ * a null config (FTS-only mode) never mismatches — there is no vector search to protect, and an
+ * index that still holds old vectors is simply unused until a provider is configured again. */
+export function embeddingMismatches(index: IndexEmbeddingMeta, config: { providerId: string; model: string; dims: number } | null): boolean {
+	if (config === null) return false;
+	return index.provider !== config.providerId || index.model !== config.model || index.dims !== config.dims;
+}
+
 /** Opens (or creates) the index DB with WAL on, so the app can read while this
  * writes. `embedding`, when given, is the config this write is happening
  * under (getEmbeddingConfig(), src/lib/server/providers/config-store.ts) —
@@ -56,8 +81,14 @@ export const LEGACY_INDEX_EMBEDDING: IndexEmbeddingMeta = { provider: 'ollama', 
  * readIndexEmbedding(). An index that already has a vec_chunks table is
  * never resized or re-tagged here regardless of `embedding`: the dimension
  * is baked into that table's DDL and changing it for real requires deleting
- * the DB and rebuilding (`npm run index -- --full`), never a silent rewrite. */
-export function openDb(dbPath: string, embedding?: IndexEmbeddingMeta): Database.Database {
+ * the DB and rebuilding (`npm run index -- --full`), never a silent rewrite.
+ *
+ * Aşama 4a: `embedding === null` is FTS-only mode — a fresh DB gets NO
+ * vec_chunks table and index_meta records FTS_ONLY_INDEX_EMBEDDING. An
+ * existing index already recorded as FTS-only never grows a vec_chunks table
+ * on a later open, whatever `embedding` is passed (it stays 'none' until a
+ * reindex rebuilds it). */
+export function openDb(dbPath: string, embedding?: IndexEmbeddingMeta | null): Database.Database {
 	fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 	const db = new Database(dbPath);
 	db.pragma('journal_mode = WAL');
@@ -103,28 +134,50 @@ export function openDb(dbPath: string, embedding?: IndexEmbeddingMeta): Database
 	// CREATE ... IF NOT EXISTS is silently a no-op on an already-existing
 	// table, dimension mismatch or not, so this is the one chance to know
 	// whether the table (and therefore index_meta) is being created fresh.
-	const vecTableExisted = db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'vec_chunks'").get() !== undefined;
-	const dims = embedding?.dims ?? EMBED_DIMS;
-	db.exec(`
-		CREATE VIRTUAL TABLE IF NOT EXISTS vec_chunks USING vec0(
-			chunk_id INTEGER PRIMARY KEY,
-			embedding FLOAT[${dims}] distance_metric=cosine
-		);
-	`);
+	const vecTableExisted = hasVecTable(db);
 	db.exec(`
 		CREATE TABLE IF NOT EXISTS index_meta (
 			key TEXT PRIMARY KEY,
 			value TEXT NOT NULL
 		);
 	`);
-	// Only ever written at the moment vec_chunks is FIRST created — a real
-	// mismatch on a table that already existed must be visible to
-	// readIndexEmbedding()'s callers (incrementalIndex.ts's refusal,
-	// retrieve.ts's fallback), never quietly overwritten to match whatever
-	// config happens to be active on this particular open.
-	if (!vecTableExisted) writeIndexEmbeddingMeta(db, embedding ?? LEGACY_INDEX_EMBEDDING);
+	const recordedMeta = readIndexEmbeddingMeta(db);
+	const recordedFtsOnly = recordedMeta !== null && isFtsOnlyIndex(recordedMeta);
+	const wantsVectors = embedding !== null && !recordedFtsOnly;
+	if (wantsVectors) {
+		const dims = embedding?.dims ?? EMBED_DIMS;
+		db.exec(`
+			CREATE VIRTUAL TABLE IF NOT EXISTS vec_chunks USING vec0(
+				chunk_id INTEGER PRIMARY KEY,
+				embedding FLOAT[${dims}] distance_metric=cosine
+			);
+		`);
+	}
+	// Only ever written at the moment the index is FIRST created (no vec_chunks
+	// table AND no recorded meta) — a real mismatch on a table that already
+	// existed must be visible to readIndexEmbedding()'s callers
+	// (incrementalIndex.ts's refusal, retrieve.ts's fallback), never quietly
+	// overwritten to match whatever config happens to be active on this
+	// particular open. An FTS-only index has no vec table by design, so the
+	// recorded-meta check is what keeps it from being re-tagged as legacy.
+	if (!vecTableExisted && recordedMeta === null) {
+		writeIndexEmbeddingMeta(db, embedding === null ? FTS_ONLY_INDEX_EMBEDDING : (embedding ?? LEGACY_INDEX_EMBEDDING));
+	}
 	if (ensureFts(db)) ftsEnabled.add(db);
 	return db;
+}
+
+function hasVecTable(db: Database.Database): boolean {
+	return db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'vec_chunks'").get() !== undefined;
+}
+
+/** Marks an existing index as FTS-only: called when chunks are about to be written without vectors
+ * (null embedding config) into an index that was recorded under a real embedding — from that moment its
+ * vec_chunks no longer covers every chunk, so the recorded meta must stop claiming it does. A later
+ * config with a real provider then mismatches and goes through the reindex flow. No-op when already FTS-only. */
+export function markIndexFtsOnly(db: Database.Database): void {
+	if (isFtsOnlyIndex(readIndexEmbedding(db))) return;
+	writeIndexEmbeddingMeta(db, FTS_ONLY_INDEX_EMBEDDING);
 }
 
 /** Records which provider/model/dims this index's vectors were built with.
@@ -265,10 +318,13 @@ export function deleteFile(db: Database.Database, filePath: string): void {
 	const chunkIds = db.prepare('SELECT id FROM chunks WHERE path = ?').all(filePath) as {
 		id: number;
 	}[];
-	const delVec = db.prepare('DELETE FROM vec_chunks WHERE chunk_id = ?');
-	// sqlite-vec's vec0 rowid check rejects a plain JS number bound param here
-	// ("Only integers are allows for primary key values") — BigInt satisfies it.
-	for (const { id } of chunkIds) delVec.run(BigInt(id));
+	// An FTS-only index has no vec_chunks table at all.
+	if (hasVecTable(db)) {
+		const delVec = db.prepare('DELETE FROM vec_chunks WHERE chunk_id = ?');
+		// sqlite-vec's vec0 rowid check rejects a plain JS number bound param here
+		// ("Only integers are allows for primary key values") — BigInt satisfies it.
+		for (const { id } of chunkIds) delVec.run(BigInt(id));
+	}
 	if (ftsEnabled.has(db)) {
 		const delFts = db.prepare('DELETE FROM chunks_fts WHERE rowid = ?');
 		for (const { id } of chunkIds) delFts.run(id);
@@ -280,7 +336,7 @@ export function deleteFile(db: Database.Database, filePath: string): void {
 export function upsertFile(
 	db: Database.Database,
 	file: FileRow,
-	chunks: { insert: ChunkInsert; embedding: number[] }[]
+	chunks: { insert: ChunkInsert; embedding: number[] | null }[]
 ): void {
 	const tx = db.transaction(() => {
 		deleteFile(db, file.path);
@@ -292,14 +348,15 @@ export function upsertFile(
 		const insertChunk = db.prepare(
 			`INSERT INTO chunks (path, heading_path, display_text) VALUES (?, ?, ?)`
 		);
-		const insertVec = db.prepare(`INSERT INTO vec_chunks (chunk_id, embedding) VALUES (?, ?)`);
+		// null embeddings = FTS-only write (Aşama 4a): the vec table may not even exist, so only prepare it when needed.
+		const insertVec = chunks.some((c) => c.embedding !== null) ? db.prepare(`INSERT INTO vec_chunks (chunk_id, embedding) VALUES (?, ?)`) : null;
 		const insertFts = ftsEnabled.has(db)
 			? db.prepare('INSERT INTO chunks_fts (rowid, heading_path, display_text) VALUES (?, ?, ?)')
 			: null;
 		for (const { insert, embedding } of chunks) {
 			const info = insertChunk.run(insert.path, insert.heading_path, insert.display_text);
 			// BigInt, not the plain number lastInsertRowid — see note in deleteFile above.
-			insertVec.run(BigInt(info.lastInsertRowid), Buffer.from(new Float32Array(embedding).buffer));
+			if (embedding) insertVec?.run(BigInt(info.lastInsertRowid), Buffer.from(new Float32Array(embedding).buffer));
 			insertFts?.run(info.lastInsertRowid, insert.heading_path, insert.display_text);
 		}
 	});

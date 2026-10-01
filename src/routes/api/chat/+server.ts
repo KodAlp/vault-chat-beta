@@ -258,7 +258,8 @@ export const POST: RequestHandler = async ({ request }) => {
 					sources = result.chunks;
 					narrowScope = result.narrowScope;
 					smallTalk = result.smallTalk === true;
-					embeddingIssue = result.embeddingIssue;
+					// 'fts-only' is the expected, configured state (no embedding provider) — not a client warning.
+					embeddingIssue = result.embeddingIssue === 'fts-only' ? undefined : result.embeddingIssue;
 					logAppEvent({
 						kind: 'retrieval',
 						chatId,

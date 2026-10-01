@@ -29,7 +29,16 @@ export interface RetrieveResult {
 	/** Set only when chunks is empty — which of retrieve()'s empty-return
 	 * paths produced it, for app-log.ts's no_sources record. 'scope' is the
 	 * log-side counterpart of narrowScope=true. */
-	reason?: 'unindexed' | 'no-embedding-match' | 'filtered' | 'scope' | 'small-talk';
+	reason?:
+		| 'unindexed'
+		| 'no-embedding-match'
+		| 'filtered'
+		| 'scope'
+		| 'small-talk'
+		/** Aşama 4a — vector search never ran: no embedding configured (FTS-only mode) and the keyword search found nothing. */
+		| 'fts-only'
+		/** Aşama 4a — vector search never ran because it could not (mismatch/unavailable) and the keyword fallback found nothing. */
+		| 'embedding-unavailable';
 	/** True when the message was judged small talk (a greeting, slang, a test) and
 	 * retrieval was skipped on purpose — no sources, and the UI says why. Only ever
 	 * set with opts.smallTalkGate (the chat route). */
@@ -63,11 +72,14 @@ export interface RetrieveResult {
 	 * un-vetted keyword hit (the five generate-*.ts, per NoSourcesError's own
 	 * "cite only what vector search actually found" rule) checks this FIRST
 	 * and fails with a coded EMBEDDING_MISMATCH/EMBEDDING_UNAVAILABLE error
-	 * instead of using `chunks`. The chat route is the one caller that
+	 * instead of using `chunks`. 'fts-only' (Aşama 4a) is the EXPECTED state
+	 * when no embedding provider is configured at all: keyword search is the
+	 * only retrieval, so the chat route does not forward it to the client as a
+	 * warning, and the generators proceed with the keyword hits (assertNoEmbeddingIssue). The chat route is the one caller that
 	 * continues with the FTS results anyway, surfacing this on the client
 	 * payload instead (see StreamEvent's 'done' variant).
 	 */
-	embeddingIssue?: 'mismatch' | 'unavailable';
+	embeddingIssue?: 'mismatch' | 'unavailable' | 'fts-only';
 }
 
 export type ChatRole = 'user' | 'assistant';

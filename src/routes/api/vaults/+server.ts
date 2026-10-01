@@ -29,7 +29,7 @@ export const GET: RequestHandler = async () => {
 			...v,
 			unindexedCount: countUnindexedFiles(ctx),
 			embeddingMismatch: embedding.mismatch,
-			...(embedding.mismatch && embedding.index
+			...(embedding.mismatch && embedding.index && embedding.config
 				? {
 						embeddingMismatchDetail: {
 							indexProvider: embedding.index.provider,

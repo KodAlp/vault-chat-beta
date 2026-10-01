@@ -383,9 +383,8 @@
 				body: JSON.stringify({ enabled: nextEnabled })
 			});
 			if (!res.ok) {
-				// The endpoint now rejects disabling Ollama (its own chain
-				// guard) — surface that reason instead of a generic failure,
-				// or a Switch flip that silently reverts would look broken.
+				// Surface the server's reason instead of a generic failure, or a
+				// Switch flip that silently reverts would look broken.
 				loadError = await readResponseError(res);
 				return;
 			}

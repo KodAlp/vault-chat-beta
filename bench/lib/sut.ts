@@ -18,7 +18,9 @@ import { execFile } from 'node:child_process';
 import { retrieve } from '../../src/lib/server/retrieve';
 import { buildRetrievalQuery } from '../../src/lib/server/retrieval-query';
 import { buildPromptMessages, type ResponseLanguageMode } from '../../src/lib/server/prompt';
-import { ollamaUrl as prodOllamaUrl, chatRetrievalK } from '../../src/lib/server/env';
+import { chatRetrievalK } from '../../src/lib/server/env';
+// Dev-tooling default only — the app itself reads the Ollama provider's baseUrl from providers.json.
+const prodOllamaUrl = (): string => process.env.OLLAMA_URL ?? 'http://127.0.0.1:11434';
 import type { VaultContext } from '../../src/lib/server/vaults';
 import type { ChatMessage, RetrievedChunk } from '../../src/lib/types';
 import { chunkAnchor } from './anchor';

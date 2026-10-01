@@ -199,7 +199,10 @@ export async function generateMindMap(
 	// FILES rather than more chunks of the same one. That is exactly what the
 	// "relate at least two sources" rule in parseAndValidate needs in order to
 	// be satisfiable, and why maps used to collapse onto a single note.
+	// keywordQuery: only the topic, not topic + summary — the keyword fallback (FTS-only mode, or an embedding
+	// issue) ANDs every term, so the long summary tail would make it match nothing. See retrieve.ts.
 	const retrieved = await retrieve(v, query, {
+		keywordQuery: topicalQuery,
 		domains: input.domains,
 		includedPaths: input.includedPaths,
 		k: 16

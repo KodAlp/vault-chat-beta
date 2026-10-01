@@ -1,4 +1,5 @@
 import { embedTexts, embeddingKey } from './embeddings';
+import { getEmbeddingConfig } from './providers/config-store';
 import { QUERY_PREFIX } from './embed-config';
 import { getChatsDb } from './chats-db';
 import { logAppEvent } from './app-log';
@@ -37,6 +38,8 @@ function logError(action: string, err: unknown): void {
  */
 export function checkSmallTalk(vector: number[], bestDistance: number | undefined): GateDecision | null {
 	if (!smallTalkGateEnabled(process.env.CHAT_SMALLTALK_GATE)) return null;
+	// FTS-only mode (no embedding config): the gate has no vectors to judge — no decision.
+	if (getEmbeddingConfig() === null) return null;
 	try {
 		const db = getChatsDb();
 		const key = embeddingKey();
@@ -63,6 +66,8 @@ export function checkSmallTalk(vector: number[], bestDistance: number | undefine
 export async function learnFromMessage(text: string, source: 'auto' | 'user'): Promise<store.LearnResult | null> {
 	const clean = text.trim();
 	if (!clean || clean.length > store.MAX_PHRASE_CHARS) return null;
+	// Nothing to embed with in FTS-only mode: learning is a silent no-op, not an error.
+	if (getEmbeddingConfig() === null) return null;
 	const [vec] = await embedFn([clean]);
 	return store.learn(getChatsDb(), embeddingKey(), clean, vec, source);
 }
@@ -76,6 +81,7 @@ export async function learnFromMessage(text: string, source: 'auto' | 'user'): P
  *    switches off the learned phrase that misfired — never a seed, which one message must not disable.
  */
 export function afterSmallTalkGate(gate: NonNullable<RetrieveResult['gate']>, text: string): void {
+	if (getEmbeddingConfig() === null) return;
 	try {
 		const db = getChatsDb();
 		if (gate.phraseId !== undefined) store.recordHit(db, gate.phraseId);

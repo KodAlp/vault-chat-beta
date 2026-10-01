@@ -8,7 +8,8 @@ import { buildRetrievalQuery } from '../../src/lib/server/retrieval-query';
 import { buildFtsQuery, type FtsMode } from '../../src/lib/server/keyword-query';
 import { keywordSearch } from '../../src/lib/server/keyword-search';
 import { getLibrarySettings } from '../../src/lib/server/library-read';
-import { ollamaUrl as prodOllamaUrl } from '../../src/lib/server/env';
+// Dev-tooling default only — the app itself reads the Ollama provider's baseUrl from providers.json.
+const prodOllamaUrl = (): string => process.env.OLLAMA_URL ?? 'http://127.0.0.1:11434';
 import { EMBED_MODEL, QUERY_PREFIX } from '../../src/lib/server/embed-config';
 import type { VaultContext } from '../../src/lib/server/vaults';
 import type { ChatMessage } from '../../src/lib/types';

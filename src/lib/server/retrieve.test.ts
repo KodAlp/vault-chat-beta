@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { retrieve } from './retrieve';
+import { retrieve, checkEmbeddingMismatch } from './retrieve';
 import { setEmbeddingConfig, type ProvidersFile } from './providers/config-store';
 import { openDb, upsertFile } from '../../../indexer/db';
 import type { VaultContext } from './vaults';
@@ -121,6 +121,152 @@ test('a mismatch with no keyword hit still reports embeddingIssue, with an empty
 		const result = await retrieve(vault, 'completely unrelated terms here', {});
 		assert.equal(result.embeddingIssue, 'mismatch');
 		assert.equal(result.chunks.length, 0);
+	} finally {
+		restore();
+	}
+});
+
+// Aşama 4a — FTS-only mode and a vanished embedding provider.
+function setupFtsOnly(): VaultContext {
+	const vault = setup({ provider: 'ollama', model: 'bge-m3', dims: 3 });
+	fs.rmSync(vault.indexDbPath, { force: true });
+	fs.rmSync(vault.indexDbPath + '-wal', { force: true });
+	fs.rmSync(vault.indexDbPath + '-shm', { force: true });
+	const db = openDb(vault.indexDbPath, null);
+	upsertFile(
+		db,
+		{ path: 'a.md', sha256: 'x', mtime: 1, topic: 'Quicksort', depth: 'undergrad', domains_json: '["algorithms"]', prerequisites_json: '[]' },
+		[{ insert: { path: 'a.md', heading_path: 'Quicksort', display_text: CHUNK_TEXT }, embedding: null }]
+	);
+	db.close();
+	return vault;
+}
+
+function failingFetch() {
+	const state = { called: false };
+	const restore = fakeFetch(() => {
+		state.called = true;
+		return new Response('must not be called', { status: 500 });
+	});
+	return { state, restore };
+}
+
+test('FTS-only mode (embedding null): retrieve never throws, never embeds, and answers from keyword search with embeddingIssue:"fts-only"', async () => {
+	const vault = setupFtsOnly();
+	setEmbeddingConfig(null);
+	const { state, restore } = failingFetch();
+	try {
+		const result = await retrieve(vault, QUERY, {});
+		assert.equal(state.called, false);
+		assert.equal(result.embeddingIssue, 'fts-only');
+		assert.equal(result.chunks.length, 1);
+		assert.equal(result.chunks[0].path, 'a.md');
+		assert.equal(result.keyword, true);
+	} finally {
+		restore();
+	}
+});
+
+test('FTS-only mode with no keyword hit reports reason "fts-only", not the misleading "no-embedding-match"', async () => {
+	const vault = setupFtsOnly();
+	setEmbeddingConfig(null);
+	const { restore } = failingFetch();
+	try {
+		const result = await retrieve(vault, 'completely unrelated terms here', {});
+		assert.equal(result.chunks.length, 0);
+		assert.equal(result.embeddingIssue, 'fts-only');
+		assert.equal(result.reason, 'fts-only');
+	} finally {
+		restore();
+	}
+});
+
+test('a null embedding config on an index that still holds vectors is also FTS-only (no embed call, no mismatch)', async () => {
+	const vault = setup({ provider: 'ollama', model: 'bge-m3', dims: 3 });
+	setEmbeddingConfig(null);
+	const { state, restore } = failingFetch();
+	try {
+		const result = await retrieve(vault, QUERY, {});
+		assert.equal(state.called, false);
+		assert.equal(result.embeddingIssue, 'fts-only');
+		assert.equal(result.chunks.length, 1);
+		assert.equal(checkEmbeddingMismatch(vault).mismatch, false);
+	} finally {
+		restore();
+	}
+});
+
+test('checkEmbeddingMismatch: FTS-only index + null config is fine; choosing a provider afterwards mismatches', () => {
+	const vault = setupFtsOnly();
+	setEmbeddingConfig(null);
+	const idle = checkEmbeddingMismatch(vault);
+	assert.equal(idle.mismatch, false);
+	assert.equal(idle.config, null);
+	setEmbeddingConfig({ providerId: 'ollama', model: 'bge-m3', dims: 3 });
+	const after = checkEmbeddingMismatch(vault);
+	assert.equal(after.mismatch, true);
+	assert.deepEqual(after.index, { provider: 'none', model: 'none', dims: 0 });
+});
+
+test('a configured provider that no longer exists (NOT_FOUND) falls back to keyword search instead of throwing', async () => {
+	const vault = setup({ provider: 'ghost', model: 'bge-m3', dims: 3 });
+	// setEmbeddingConfig() would reject an unknown provider, so write the dangling block directly —
+	// exactly the state a hand-edited or partially migrated providers.json leaves behind.
+	fs.writeFileSync(
+		process.env.PROVIDERS_PATH!,
+		JSON.stringify({ providers: [OLLAMA], chains: { chat: ['ollama'] }, embedding: { providerId: 'ghost', model: 'bge-m3', dims: 3 } } satisfies ProvidersFile, null, 2),
+		'utf-8'
+	);
+	const { state, restore } = failingFetch();
+	try {
+		const result = await retrieve(vault, QUERY, {});
+		assert.equal(state.called, false);
+		assert.equal(result.embeddingIssue, 'unavailable');
+		assert.equal(result.chunks.length, 1);
+		assert.equal(result.keyword, true);
+	} finally {
+		restore();
+	}
+});
+
+test('an embedding outage with no keyword hit reports reason "embedding-unavailable", not "no-embedding-match"', async () => {
+	const vault = setup({ provider: 'ollama', model: 'bge-m3', dims: 3 });
+	setEmbeddingConfig({ providerId: 'ollama', model: 'bge-m3', dims: 3 });
+	const restore = fakeFetch(() => new Response('boom', { status: 500 }));
+	try {
+		const result = await retrieve(vault, 'completely unrelated terms here', {});
+		assert.equal(result.embeddingIssue, 'unavailable');
+		assert.equal(result.chunks.length, 0);
+		assert.equal(result.reason, 'embedding-unavailable');
+	} finally {
+		restore();
+	}
+});
+
+test('generator-style call (no keywordFallback, long topic+summary query, keywordQuery = topic) finds keyword hits in FTS-only mode', async () => {
+	const vault = setupFtsOnly();
+	setEmbeddingConfig(null);
+	const { restore } = failingFetch();
+	try {
+		const longQuery = QUERY + ' ' + 'summary words that appear nowhere in the vault '.repeat(8);
+		const withoutKeywordQuery = await retrieve(vault, longQuery, {});
+		assert.equal(withoutKeywordQuery.chunks.length, 0, 'the AND-ed long query alone matches nothing');
+		const result = await retrieve(vault, longQuery, { keywordQuery: QUERY, k: 12 });
+		assert.equal(result.embeddingIssue, 'fts-only');
+		assert.equal(result.chunks.length, 1);
+	} finally {
+		restore();
+	}
+});
+
+test('a one-word query in FTS-only mode yields no chunks (buildFallbackQuery needs >= 2 terms), with reason "fts-only"', async () => {
+	const vault = setupFtsOnly();
+	setEmbeddingConfig(null);
+	const { restore } = failingFetch();
+	try {
+		const result = await retrieve(vault, 'quicksort', {});
+		assert.equal(result.chunks.length, 0);
+		assert.equal(result.reason, 'fts-only');
 	} finally {
 		restore();
 	}
