@@ -191,7 +191,10 @@ sisteminde üretilir (çapraz derleme yok); hedefler `src-tauri/tauri.linux.conf
 aşağıdaki "Linux ve macOS (yeni, beta)" bölümü. Hazır paketler için GitHub
 Actions'taki `desktop` iş akışı dört hedefi (Windows x64, Linux x64, macOS arm64,
 macOS x64) derleyip her biri için `vault-chat-<hedef>` adlı bir artifact yükler
-(`.github/workflows/desktop.yml`; artifact'lar 7 gün saklanır).
+(`.github/workflows/desktop.yml`; artifact'lar 7 gün saklanır). İş akışı **yalnız
+`ci` dalına push'ta** (ya da Actions sekmesinden elle "Run workflow" ile) çalışır;
+`main`, özellik dalları ve PR'lar tetiklemez (Actions dakikaları sınırlı). Bir dalı
+derletmek için: `git push origin <dal>:ci` (gerekirse `--force`).
 
 Windows kurulum konumu ve veri klasörü:
 Kurulum kullanıcı bazlı (yönetici gerektirmez), `%LOCALAPPDATA%\vault-chat\`

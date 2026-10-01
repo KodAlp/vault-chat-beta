@@ -1,9 +1,12 @@
 name: desktop
 
+# CI runs ONLY on the dedicated `ci` branch (and when started by hand from the Actions tab).
+# main, feature branches and pull requests never trigger it — GitHub Actions minutes are limited.
+# To build: git push origin <branch>:ci   (or Actions → desktop → Run workflow).
 on:
   workflow_dispatch:
   push:
-    branches: [linux-destegi, macos-destegi, main]
+    branches: [ci]
 
 permissions:
   contents: read
