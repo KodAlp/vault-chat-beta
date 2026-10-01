@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import Database from 'better-sqlite3';
-import { buildFallbackQuery, buildFtsQuery, extractTerms, MAX_FTS_TERMS } from './keyword-query';
+import { buildCoOccurrenceQuery, buildFallbackQuery, buildFtsQuery, extractTerms, MAX_FTS_TERMS } from './keyword-query';
 
 test('content words survive, question words and articles are dropped', () => {
 	assert.deepEqual(extractTerms('B-tree indeksi nedir?'), ['tree', 'indeksi']);
@@ -146,5 +146,24 @@ test('the fallback expression is only quoted terms joined by AND, whatever the i
 		const built = buildFallbackQuery(q);
 		if (built === null) continue;
 		assert.match(built, /^"[\p{L}\p{N}_]+"( AND "[\p{L}\p{N}_]+")+$/u, `unsafe expression for ${JSON.stringify(q)}: ${built}`);
+	}
+});
+
+test('buildCoOccurrenceQuery: OR over the extracted terms, returned with those terms', () => {
+	const co = buildCoOccurrenceQuery('What is the difference between TCP and UDP?');
+	assert.deepEqual(co, { expr: '"difference" OR "between" OR "tcp" OR "udp"', terms: ['difference', 'between', 'tcp', 'udp'] });
+});
+
+test('buildCoOccurrenceQuery: fewer than two content terms is null, like the AND gate', () => {
+	assert.equal(buildCoOccurrenceQuery('neden?'), null);
+	assert.equal(buildCoOccurrenceQuery('quicksort'), null);
+	assert.equal(buildCoOccurrenceQuery('the and of'), null);
+});
+
+test('buildCoOccurrenceQuery: expression is only quoted terms joined by OR, whatever the input', () => {
+	for (const q of ['foo" OR "bar baz', 'NEAR(a b, 5) c', 'title:secret heading_path:x', '(x AND y) NOT zz']) {
+		const built = buildCoOccurrenceQuery(q);
+		if (built === null) continue;
+		assert.match(built.expr, /^"[\p{L}\p{N}_]+"( OR "[\p{L}\p{N}_]+")+$/u, `unsafe expression for ${JSON.stringify(q)}: ${built.expr}`);
 	}
 });

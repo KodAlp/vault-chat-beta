@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import Database from 'better-sqlite3';
-import { hasKeywordIndex, keywordSearch } from './keyword-search';
+import { hasKeywordIndex, keywordSearch, keywordSearchCoOccurring } from './keyword-search';
+import { buildCoOccurrenceQuery } from './keyword-query';
 
 /**
  * F9 — RAG Retrieval, the deterministic half: keyword-search.ts (the FTS5 fallback, F5) had no direct test at
@@ -86,4 +87,56 @@ test('no matches at all returns []', () => {
 	const db = freshFtsDb();
 	insert(db, 1, 'x', 'tamamen alakasız bir içerik');
 	assert.deepEqual(keywordSearch(db, '"hiç-geçmeyen-terim"', 5), []);
+});
+
+function coSearch(db: Database.Database, question: string, limit = 5): number[] {
+	const co = buildCoOccurrenceQuery(question);
+	assert.ok(co, 'question should yield a co-occurrence query');
+	return keywordSearchCoOccurring(db, co.expr, co.terms, limit).map((h) => h.chunkId);
+}
+
+test('co-occurrence: a chunk with two distinct terms is kept, one term repeated is dropped', () => {
+	const db = freshFtsDb();
+	insert(db, 1, 'Sorting', 'quicksort picks a pivot and partitions the array around it');
+	insert(db, 2, 'Noise', 'pivot pivot pivot pivot pivot pivot');
+	assert.deepEqual(coSearch(db, 'how does quicksort choose a pivot in practice'), [1]);
+});
+
+test('co-occurrence: terms absent from every chunk do not block a chunk holding two others (AND would)', () => {
+	const db = freshFtsDb();
+	insert(db, 1, 'B-tree', 'a b-tree index keeps keys sorted for range scans');
+	assert.deepEqual(coSearch(db, 'why does a database index speed up range queries zebra'), [1]);
+});
+
+test('co-occurrence respects the index tokenizer (porter stemming, diacritics)', () => {
+	const db = freshFtsDb();
+	insert(db, 1, 'DB', 'the index structure makes lookups fast');
+	insert(db, 2, 'Kalıp', 'ağaç yapısı');
+	assert.deepEqual(coSearch(db, 'indexes lookups'), [1]);
+	assert.deepEqual(coSearch(db, 'agac yapısı'), [2]);
+});
+
+test('co-occurrence keeps BM25 order and honours the limit', () => {
+	const db = freshFtsDb();
+	insert(db, 1, 'A', 'tcp protocol');
+	insert(db, 2, 'B', 'tcp protocol tcp protocol tcp protocol handshake');
+	insert(db, 3, 'C', 'tcp only here');
+	const all = coSearch(db, 'tcp protocol', 5);
+	assert.deepEqual([...all].sort(), [1, 2]);
+	assert.equal(coSearch(db, 'tcp protocol', 1).length, 1);
+	assert.equal(coSearch(db, 'tcp protocol', 1)[0], all[0]);
+});
+
+test('co-occurrence is not starved by a pool full of single-term hits', () => {
+	const db = freshFtsDb();
+	for (let i = 1; i <= 30; i++) insert(db, i, 'N', 'pivot pivot pivot pivot pivot pivot pivot pivot');
+	insert(db, 100, 'Real', 'quicksort pivot selection');
+	assert.deepEqual(coSearch(db, 'quicksort pivot'), [100]);
+});
+
+test('co-occurrence never throws: bad expression, bad limit, missing table', () => {
+	const db = freshFtsDb();
+	assert.deepEqual(keywordSearchCoOccurring(db, '"unterminated', ['a', 'b'], 5), []);
+	assert.deepEqual(keywordSearchCoOccurring(db, '"a" OR "b"', ['a', 'b'], 0), []);
+	assert.deepEqual(keywordSearchCoOccurring(new Database(':memory:'), '"a" OR "b"', ['a', 'b'], 5), []);
 });

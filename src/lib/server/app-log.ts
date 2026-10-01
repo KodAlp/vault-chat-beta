@@ -138,11 +138,11 @@ export interface AppLogRecord {
 	/** retrieval, retrieval_fallback. `chunks`: usable chunks returned.
 	 * `bestDistance`: nearest vector match's cosine distance (retrieval only).
 	 * `keyword`: the chunks came from the keyword fallback. `mode`/`terms`/`hits`:
-	 * the fallback pass ('and' | 'or'), its query-term count and raw FTS hits. */
+	 * the fallback pass ('and' | 'or' | 'co2'), its query-term count and raw FTS hits. */
 	chunks?: number;
 	bestDistance?: number;
 	keyword?: boolean;
-	mode?: 'and' | 'or';
+	mode?: 'and' | 'or' | 'co2';
 	terms?: number;
 	hits?: number;
 	/** retrieval: the message was judged small talk (`smallTalk`) and by what — `gateSim`

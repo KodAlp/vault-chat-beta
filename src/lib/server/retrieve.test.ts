@@ -250,7 +250,8 @@ test('generator-style call (no keywordFallback, long topic+summary query, keywor
 	try {
 		const longQuery = QUERY + ' ' + 'summary words that appear nowhere in the vault '.repeat(8);
 		const withoutKeywordQuery = await retrieve(vault, longQuery, {});
-		assert.equal(withoutKeywordQuery.chunks.length, 0, 'the AND-ed long query alone matches nothing');
+		// FTS-only ORs the terms, so the long query's three real terms still co-occur in the chunk.
+		assert.equal(withoutKeywordQuery.chunks.length, 1);
 		const result = await retrieve(vault, longQuery, { keywordQuery: QUERY, k: 12 });
 		assert.equal(result.embeddingIssue, 'fts-only');
 		assert.equal(result.chunks.length, 1);
@@ -267,6 +268,50 @@ test('a one-word query in FTS-only mode yields no chunks (buildFallbackQuery nee
 		const result = await retrieve(vault, 'quicksort', {});
 		assert.equal(result.chunks.length, 0);
 		assert.equal(result.reason, 'fts-only');
+	} finally {
+		restore();
+	}
+});
+
+test('FTS-only mode: a natural question where not all terms occur still finds the chunk holding >= 2 of them (AND found nothing)', async () => {
+	const vault = setupFtsOnly();
+	setEmbeddingConfig(null);
+	const { restore } = failingFetch();
+	try {
+		const result = await retrieve(vault, 'how does quicksort choose a pivot for the zebra', {});
+		assert.equal(result.embeddingIssue, 'fts-only');
+		assert.equal(result.chunks.length, 1);
+		assert.equal(result.chunks[0].path, 'a.md');
+		assert.equal(result.keyword, true);
+	} finally {
+		restore();
+	}
+});
+
+test('FTS-only mode: a greeting whose words co-occur in no chunk returns nothing', async () => {
+	const vault = setupFtsOnly();
+	setEmbeddingConfig(null);
+	const { restore } = failingFetch();
+	try {
+		// "pivot" alone is in the chunk, "hello" is not: one term is not evidence.
+		const result = await retrieve(vault, 'hello pivot there', {});
+		assert.equal(result.chunks.length, 0);
+		assert.equal(result.reason, 'fts-only');
+	} finally {
+		restore();
+	}
+});
+
+test('a transient failure (unavailable) keeps the strict AND: one missing term returns nothing', async () => {
+	const vault = setup({ provider: 'ollama', model: 'bge-m3', dims: 3 });
+	setEmbeddingConfig({ providerId: 'ollama', model: 'bge-m3', dims: 3 });
+	const restore = fakeFetch(() => new Response('boom', { status: 500 }));
+	try {
+		const strict = await retrieve(vault, 'quicksort pivot zebra', {});
+		assert.equal(strict.embeddingIssue, 'unavailable');
+		assert.equal(strict.chunks.length, 0, 'AND needs every term; "zebra" is absent');
+		const ok = await retrieve(vault, 'quicksort pivot', {});
+		assert.equal(ok.chunks.length, 1);
 	} finally {
 		restore();
 	}

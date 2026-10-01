@@ -84,8 +84,8 @@ export const MIN_FALLBACK_TERMS = 2;
  * list cannot cover every language and slang.
  *
  * The rule is language-independent instead: one stray word is not evidence, but
- * two or more distinct terms appearing together in one chunk is. So it is AND
- * only (an OR pass matched 12 of 24 multilingual greeting/slang messages against
+ * two or more distinct terms appearing together in one chunk is. So this
+ * (transient-failure) fallback is AND only (an OR pass matched 12 of 24 multilingual greeting/slang messages against
  * the real index, AND with two or more terms matched 0) and it needs
  * MIN_FALLBACK_TERMS terms. The cost is stated, not hidden: a Turkish question
  * over an English vault rarely has two terms that co-occur (3 of 232 real
@@ -96,4 +96,22 @@ export const MIN_FALLBACK_TERMS = 2;
 export function buildFallbackQuery(query: string): string | null {
 	if (extractTerms(query).length < MIN_FALLBACK_TERMS) return null;
 	return buildFtsQuery(query, 'and');
+}
+
+/**
+ * FTS-only mode's gate (no embedding provider configured, so keyword search is
+ * the ONLY retrieval, not a rescue): AND matched 0 of 70 real questions there,
+ * because a natural question has words the right chunk never contains. So the
+ * candidate set is an OR over the terms, and keywordSearchCoOccurring() then
+ * keeps only chunks in which at least two DISTINCT terms occur. That keeps the
+ * "one stray word is not evidence" rule of buildFallbackQuery while tolerating
+ * absent terms. Same MIN_FALLBACK_TERMS minimum; null for a greeting or a lone
+ * word. `terms` are the extractTerms() output the expression was built from, so
+ * the co-occurrence check counts exactly the same terms.
+ */
+export function buildCoOccurrenceQuery(query: string): { expr: string; terms: string[] } | null {
+	const terms = extractTerms(query);
+	if (terms.length < MIN_FALLBACK_TERMS) return null;
+	const expr = buildFtsQuery(query, 'or');
+	return expr ? { expr, terms } : null;
 }
