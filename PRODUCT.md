@@ -17,8 +17,9 @@ veritabanları, sistem tasarımı, SvelteKit, C, Rust, Assembly domainlerini
 kapsayan 12 alanlı bir yazılım/CS bilgi tabanı.
 
 ## Product Purpose
-Kullanıcının kendi Obsidian kasasını, yerel çalışan (Ollama tabanlı),
-etkileşimli bir öğrenme/çalışma asistanına dönüştürmek — kaynak temelli
+Kullanıcının kendi Obsidian kasasını, yerel çalışan (Ollama önerilir ama
+zorunlu değil — herhangi bir yerel model sunucusu olur), etkileşimli bir
+öğrenme/çalışma asistanına dönüştürmek — kaynak temelli
 RAG sohbet + üretken çalışma materyalleri (quiz, SM-2 aralıklı tekrar
 kartları, zihin haritası, rapor, sunum). Başarı: kullanıcı kendi
 notlarından güvenilir, kaynağı gösterilebilir cevaplar alabiliyor ve aktif
@@ -26,8 +27,8 @@ hatırlama/tekrar döngüsüyle gerçekten öğreniyor — jenerik bir sohbet
 arayüzü değil.
 
 ## Positioning
-Tamamen yerel/gizlilik-öncelikli (Ollama; bulut sağlayıcı isteğe bağlı ve
-varsayılan kapalı) — komşu ürünler (gerçek NotebookLM, bulut RAG chat
+Tamamen yerel/gizlilik-öncelikli (yerel model sunucusu — Ollama, LM Studio,
+llama.cpp...; bulut sağlayıcı isteğe bağlı ve varsayılan kapalı) — komşu ürünler (gerçek NotebookLM, bulut RAG chat
 araçları, Obsidian AI eklentileri) bunu aynı derinlikte veremez: (1)
 hiçbir not buluta gitmeden çalışır, (2) yanıtlar SADECE retrieve edilen
 kaynak parçalarına dayanır (kaynak dışı bilgi/halüsinasyon disiplinle
@@ -40,12 +41,16 @@ Kullanıcı Obsidian'da bir kasa tutuyor. Uygulama iki modda çalışıyor:
 `npm run dev` ile doğrudan SvelteKit dev sunucusu, ya da paketlenmiş bir
 Tauri masaüstü uygulaması (`npm run desktop:build`) — ikisi de tek bir
 localhost'a bağlı Node sürecini sarmalıyor, harici sunucu/Docker yok.
-Ollama ayrıca ve önceden kurulu/çalışır olmalı.
+Model sunucusu (önerilen: Ollama; LM Studio, llama.cpp, vLLM, Jan gibi herhangi
+bir OpenAI uyumlu yerel sunucu da olur) ayrıca kurulu/çalışır olmalı; ilk
+açılıştaki kurulum sihirbazı bulup kurmaya, model seçmeye yardım eder.
 
 ## Capabilities and Constraints
-- Tamamen yerel-öncelikli mimari: Ollama zorunlu bağımlılık, bulut
-  sağlayıcı (örn. DeepSeek) yapılandırılabilir ama varsayılan kapalı —
-  performans tercihi değil, ürünün temel sözleşmesi.
+- Tamamen yerel-öncelikli mimari: varsayılan yol yerel bir model sunucusu
+  (Ollama önerilir, zorunlu değil), bulut sağlayıcı (örn. DeepSeek)
+  yapılandırılabilir ama varsayılan kapalı — performans tercihi değil,
+  ürünün temel sözleşmesi. Embedding de isteğe bağlı: yoksa arama yalnızca
+  anahtar kelimeyle çalışır (anlamsal arama kapalı).
 - Tek kullanıcı / localhost: kimlik doğrulama yok, çoklu kullanıcı/kiracı
   yok — kasıtlı bir kapsam sınırı.
 - İkili çalıştırma modu: `npm run dev` ve paketlenmiş Tauri masaüstü

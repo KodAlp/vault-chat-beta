@@ -20,9 +20,9 @@ tek satırlık `winget` komutu var (Başlat → "cmd" → yapıştır → Enter)
 | Windows 10/11 **x64** | Zorunlu | — | — | ARM (Snapdragon vb.) bilgisayarlarda çalışmaz |
 | Microsoft Edge WebView2 | Zorunlu | güncel | Windows 11'de hazır gelir; yoksa kurulum dosyası indirir (**internet gerekir**) | Pencere açılmaz |
 | **Node.js** | Zorunlu | **tam olarak 22.x** (20 ve 24 çalışmaz) | `winget install -e --id OpenJS.NodeJS.22` | Açılışta "Node.js bulunamadı"; yanlış sürümde uygulama açılışta veritabanını açamaz |
-| **Ollama** | Zorunlu | güncel | `winget install -e --id Ollama.Ollama` | Sohbet, test/kart/rapor üretimi ve **not arama** çalışmaz |
-| ↳ `qwen3:8b` modeli | Zorunlu | — | `ollama pull qwen3:8b` (~5 GB) | Sohbet ve üretim çalışmaz |
-| ↳ `bge-m3` modeli | Zorunlu | — | `ollama pull bge-m3` (~1,2 GB) | İçe aktarılan notlar indekslenemez, not arama çalışmaz |
+| **Ollama** (ya da başka bir yerel model sunucusu) | **Önerilen** | güncel | `winget install -e --id Ollama.Ollama` | Sohbet ve test/kart/rapor üretimi için **bir** model kaynağı gerekir: başka bir yerel sunucu (LM Studio, llama.cpp, vLLM, Jan...) ya da bir bulut sağlayıcı da olur. Hiçbiri yoksa sohbet çalışmaz ("Kurulum tamamlanmadı" uyarısı) |
+| ↳ `qwen3:8b` modeli | **Önerilen** | — | `ollama pull qwen3:8b` (~5 GB) | Başka bir sohbet modeli seçebilirsin; hiç model yoksa sohbet ve üretim çalışmaz |
+| ↳ `bge-m3` modeli | **Önerilen** | — | `ollama pull bge-m3` (~1,2 GB) | Anlamsal arama kapanır; notlar yine indekslenir ve **yalnızca anahtar kelimeyle** aranır (sonuçlar daha zayıf, özellikle Türkçe sorgularda). Başka bir embedding modeli de seçilebilir |
 | Python 3 | İsteğe bağlı | 3.12 önerilir | `winget install -e --id Python.Python.3.12` | **Hiçbir dosya içe aktarılamaz** (PDF, Word, bağlantı, YouTube, hatta .md yükleme) — sohbet çalışır |
 | ↳ Python paketleri | İsteğe bağlı | `ingest\requirements.txt`: markitdown 0.1.6, pypdf 6.14.2, yt-dlp 2026.7.4, trafilatura 2.2.0, py-asciimath 0.3.0 | Uygulamadaki "Şimdi kur" düğmesi ya da Adım 3b | Uygulama yalnız markitdown'u denetler; diğerleri eksikse web sayfası/YouTube içe aktarma hata verir |
 | Pandoc | İsteğe bağlı | güncel | `winget install -e --id JohnMacFarlane.Pandoc` | Yalnız `.tex` (LaTeX) içe aktarma çalışmaz |
@@ -32,11 +32,15 @@ tek satırlık `winget` komutu var (Başlat → "cmd" → yapıştır → Enter)
 **~7 GB boş disk**. İlk model indirmesi ve bulut sağlayıcılar için internet
 gerekir; sonrasında yerel sohbet internetsiz çalışır.
 
-> **Bilinen sınırlar (beta):** Not arama/indeksleme şu an yalnız Ollama ile
-> çalışıyor — Ayarlar'da LM Studio, llama.cpp gibi başka bir yerel sunucu
-> eklesen bile Ollama + `bge-m3` kurulu olmalı. Uygulama Ollama'yı kendisi
-> başlatmıyor; açık değilse uyarı gösterir. İkisi de sonraki sürümde
-> değişecek.
+> **Bilinen sınırlar (beta):** Ollama artık zorunlu değil, **önerilen** seçenek:
+> LM Studio, llama.cpp, vLLM, Jan gibi OpenAI uyumlu bir yerel sunucu ya da
+> bir bulut sağlayıcı da sohbet için yeter; embedding modeli de isteğe
+> bağlı (yoksa arama yalnızca anahtar kelimeyle çalışır, anlamsal arama
+> kapalı olur). Ne var ki bir model kaynağı yoksa sohbet çalışmaz. Uygulama
+> yerel sunucuyu kendisi başlatmaz (kurulum sihirbazında ya da uyarıdaki
+> "Başlat" düğmesiyle, ilgili sunucu uygulama içinden tanımlıysa başlatabilir);
+> sunucu kapalıysa uyarı gösterir. Bir model kaynağı seçmenin ana yolu kurulum
+> sihirbazıdır (Adım 5).
 
 ## 1. Neye ihtiyacın var?
 
@@ -46,9 +50,14 @@ uygulaması. İnternete ihtiyaç duymadan, bilgisayarının kendi işlem gücüy
 gerekiyor — Vault Chat'in kurulum dosyası bunları kendisi kurmaz:
 
 1. **Node.js 22** (uygulamanın arka planda çalıştırdığı motor)
-2. **Ollama** + en az iki yapay zekâ modeli (sohbet ve arama için)
+2. **Bir yapay zekâ model kaynağı** — **önerilen:** Ollama + iki model (sohbet
+   ve arama için). Ollama zorunlu değil: LM Studio, llama.cpp, vLLM, Jan gibi
+   başka bir yerel sunucu ya da bir bulut sağlayıcı (DeepSeek, Gemini...) da
+   olur; embedding (arama) modeli ise isteğe bağlıdır — yoksa notlar yalnızca
+   anahtar kelimeyle aranır.
 
-Aşağıdaki adımları sırayla takip et.
+Aşağıdaki adımları sırayla takip et. Ollama'yı kurmak istemiyorsan Adım 3'ü
+atlayıp doğrudan Adım 5'teki kurulum sihirbazına geçebilirsin.
 
 ## 2. Node.js'i kur
 
@@ -67,7 +76,11 @@ Aşağıdaki adımları sırayla takip et.
    Ekranda `v22.` ile başlayan bir şey görmelisin (örn. `v22.23.2`). Görmüyorsan
    bilgisayarı yeniden başlatıp tekrar dene.
 
-## 3. Ollama'yı kur
+## 3. Ollama'yı kur (önerilen, isteğe bağlı)
+
+Bu adım **önerilen** yoldur ama zorunlu değil: başka bir yerel sunucu ya da bir
+bulut sağlayıcı kullanacaksan atlayabilirsin. Ollama'yı kurmak ve modellerini
+çekmek için kurulum sihirbazı (Adım 5) da yardım eder; elle yapmak istersen:
 
 1. https://ollama.com adresine git, **Download for Windows** butonuna bas.
 2. İndirilen kurulum dosyasını çalıştır (yönetici izni istemez, normal
@@ -82,8 +95,8 @@ Aşağıdaki adımları sırayla takip et.
    ollama pull bge-m3
    ```
    Birincisi sohbet için kullanılan model (~5 GB), ikincisi notlarını
-   aramak için kullanılan model (~1,2 GB). İkisi de inmeden uygulama
-   düzgün çalışmaz.
+   aramak için kullanılan model (~1,2 GB). Sohbet modeli inmeden sohbet
+   çalışmaz; arama modeli inmezse notlar yalnızca anahtar kelimeyle aranır.
 
 **Bu adımı nasıl anlarım doğru gitti mi?** Aynı pencerede `ollama list`
 yazıp Enter'a bas — listede hem `qwen3:8b` hem `bge-m3` görünmeli.
@@ -135,6 +148,26 @@ seçip devam edebilirsin; gerçek notlarını sonradan uygulama içinden
 
 Bu seçim sadece ilk açılışta sorulur, sonra bir daha sorulmaz.
 
+Ardından **kurulum sihirbazı** (`/setup/local-server`) açılır — model kaynağını
+seçmenin ana yolu budur. Üç adımda ilerler:
+
+1. **Sunucuyu bul / kur:** bilgisayarında kurulu yerel sunucuları (Ollama, LM
+   Studio, llama.cpp, Jan, vLLM...) bulur; hiçbiri yoksa kurmana yardım eder
+   (Ollama önerilir). Yalnızca bir bulut sağlayıcı kullanacaksan sihirbazı
+   atlayabilirsin — ama o zaman **Ayarlar → Sağlayıcılar**'dan bir sağlayıcı
+   ekleyip etkinleştirmen gerekir, yoksa sohbet yanıt veremez.
+2. **Sohbet modelini seç:** sunucunun listelediği modellerden birini seçersin
+   (tek model varsa kendiliğinden seçilir); o sağlayıcı ve model sohbet ile
+   üretim için varsayılan olur.
+3. **Arama (embedding) seç:** sunucuda bir embedding modeli varsa
+   (Ollama'da `bge-m3` önerilir; yoksa indirme düğmesi çıkar) onu seçebilir
+   ya da **"Yalnızca anahtar kelime araması"**nı seçebilirsin — bu durumda
+   anlamsal arama kapalı olur, notlar anahtar kelimeyle aranır. Sonradan
+   değiştirmek için **Ayarlar → Sağlayıcılar**.
+
+Sihirbazı sonradan yeniden çalıştırmak için **Ayarlar → Sağlayıcılar**
+sayfasındaki "Kurulum sihirbazını yeniden çalıştır" bağlantısını kullan.
+
 ## 6. Notlarını içeri aktar ve indeksle
 
 1. Uygulama içinde **Ayarlar → Kütüphane → "Obsidian'dan İçe Aktar"** ile
@@ -166,12 +199,19 @@ Claude Desktop için `npm run mcp:config` çıktısını
 - **Uygulama açılırken "Node.js bulunamadı" diyor** → Adım 2'yi tekrar
   kontrol et, `node --version` komutu `v22.` ile başlamıyorsa Node.js ya
   kurulmamış ya da yanlış sürüm kurulmuş.
-- **Kırmızı "Ollama çalışmıyor" uyarısı çıkıyor** → Ollama'nın görev
-  çubuğunda çalıştığından emin ol; kapalıysa Başlat menüsünden "Ollama"yı
-  aç, birkaç saniye bekleyip uygulamadaki "Yeniden dene" butonuna bas.
-- **Turuncu "gerekli model(ler) çekili değil" uyarısı çıkıyor** → Adım
-  3.4'teki iki `ollama pull` komutunu tekrar çalıştır; uyarıda hangi
-  modelin eksik olduğu ve tam komutu zaten yazılı.
+- **Kırmızı "Yerel sunucu … çalışmıyor" uyarısı çıkıyor** → Sohbetin
+  kullandığı yerel sunucu (Ollama, LM Studio, llama.cpp... — uyarıda adı
+  yazar) kapalı demektir. Sunucuyu aç (Ollama için görev çubuğunda
+  çalıştığından emin ol, kapalıysa Başlat menüsünden aç); uyarıda
+  "Başlat" düğmesi varsa onu da kullanabilirsin. Birkaç saniye bekleyip
+  "Tekrar dene"ye bas. Bulut sağlayıcı kullanıyorsan bu uyarı çıkmaz.
+- **Turuncu "Kurulum tamamlanmadı" uyarısı çıkıyor** → Henüz bir sohbet
+  modeli ayarlanmamış (sohbet zinciri boş). Uyarıdaki **"Kurulum sihirbazını
+  aç"** bağlantısına tıkla ya da **Ayarlar → Sağlayıcılar**'dan bir
+  sağlayıcı ekleyip etkinleştir ve varsayılan modelini seç.
+- **Turuncu "gerekli model(ler) indirilmemiş" uyarısı çıkıyor** (yalnızca
+  Ollama kullanıyorsan) → Adım 3.4'teki iki `ollama pull` komutunu tekrar
+  çalıştır; uyarıda hangi modelin eksik olduğu ve tam komutu zaten yazılı.
 - **Kurulum sonrası hiçbir kaynak bulunamıyor** → 6. adımdaki indeksleme
   henüz yapılmamış olabilir.
 - **Cevaplar çok yavaş geliyor** → küçük bir ekran kartın varsa (6-8 GB) `README.md`'deki
