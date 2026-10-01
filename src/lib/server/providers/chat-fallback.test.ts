@@ -482,3 +482,38 @@ test('no pin at all still sends req.model unchanged to the chain head', async ()
 	await collect(chatWithFallbackCore(deps, 'chat', req(), new AbortController().signal));
 	assert.deepEqual(seen, ['requested-model']);
 });
+
+// Aşama 4c — an empty req.model (fresh install: the client has no pick yet) means "the provider's own default".
+test('an empty req.model: hop 0 asks the chain head for its defaultModel', async () => {
+	const seen: string[] = [];
+	const deps = makeDeps({ getChain: () => ['a'], getAdapter: async (id) => modelRecordingAdapter(id, seen) });
+	await collect(chatWithFallbackCore(deps, 'chat', { ...req(), model: '' }, new AbortController().signal));
+	assert.deepEqual(seen, ['a-default-model']);
+});
+
+test('an empty req.model with a valid pin: the pinned provider answers with its own defaultModel', async () => {
+	const seen: string[] = [];
+	const deps = makeDeps({ getAdapter: async (id) => modelRecordingAdapter(id, seen) });
+	await collect(chatWithFallbackCore(deps, 'chat', { ...req(), model: '' }, new AbortController().signal, 'b'));
+	assert.deepEqual(seen, ['b-default-model']);
+});
+
+test('an empty req.model and a chain head with no defaultModel: skipped, then CHAT_NO_MODEL_RESOLVED when nothing is left', async () => {
+	const deps = makeDeps({
+		getChain: () => ['a'],
+		getProviderEntry: (id) => ({ ...stubEntry(id), defaultModel: undefined }),
+		getAdapter: async (id) => okAdapter(id, ['x'])
+	});
+	await assert.rejects(
+		collect(chatWithFallbackCore(deps, 'chat', { ...req(), model: '' }, new AbortController().signal)),
+		(err: unknown) => err instanceof AppError && err.code === 'CHAT_NO_MODEL_RESOLVED'
+	);
+});
+
+test('an empty chain throws CHAT_NO_CHAIN (the "setup not finished" state of a fresh install)', async () => {
+	const deps = makeDeps({ getChain: () => [] });
+	await assert.rejects(
+		collect(chatWithFallbackCore(deps, 'chat', req(), new AbortController().signal)),
+		(err: unknown) => err instanceof AppError && err.code === 'CHAT_NO_CHAIN'
+	);
+});

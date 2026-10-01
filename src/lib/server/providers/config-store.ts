@@ -298,8 +298,21 @@ export function updateProviderLocal(id: string, local: boolean): void {
 	writeFile(data);
 }
 
+/**
+ * Validates before writing (Aşama 4c — the first-run wizard now writes chains over HTTP): the task type must
+ * be a non-empty string, every id a string naming a provider that exists, and an id may appear only once.
+ * An empty list is valid (a task with no provider — chatWithFallback then reports CHAT_NO_CHAIN).
+ */
 export function updateChain(taskType: string, providerIds: string[]): void {
+	if (typeof taskType !== 'string' || !taskType.trim()) throw new AppError('VALIDATION_INVALID', { field: 'taskType' });
+	if (!Array.isArray(providerIds) || providerIds.some((id) => typeof id !== 'string')) {
+		throw new AppError('VALIDATION_INVALID', { field: 'providerIds' });
+	}
 	const data = readFile();
+	for (const id of providerIds) {
+		if (!data.providers.some((p) => p.id === id)) throw new AppError('NOT_FOUND', { entity: 'provider', detail: id }, 404);
+	}
+	if (new Set(providerIds).size !== providerIds.length) throw new AppError('VALIDATION_INVALID', { field: 'providerIds' });
 	data.chains[taskType] = providerIds;
 	writeFile(data);
 }

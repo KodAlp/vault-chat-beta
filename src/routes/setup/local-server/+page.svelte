@@ -33,6 +33,8 @@
 	import { markLocalServerSetupDone } from '$lib/localServerSetup.svelte';
 	import { openExternalLink } from '$lib/openExternalLink';
 	import { readResponseError } from '$lib/server-error';
+	import { settings, persistSettings } from '$lib/settings.svelte';
+	import { autoPickModel, emptyChainTasks, chooseEmbeddingCandidate, modelListed } from '$lib/setup-choices';
 	import type {
 		DetectedServer,
 		ProviderStatus,
@@ -376,25 +378,30 @@
 	let pullError = $state('');
 
 	/** Same base+tag matching rule as OllamaStatusBanner.modelInstalled. */
-	function modelInstalled(installed: string[], wanted: string): boolean {
-		const [wantedBase, wantedTag] = wanted.split(':');
-		return installed.some((name) => {
-			const [base, tag] = name.split(':');
-			if (base !== wantedBase) return false;
-			return wantedTag === undefined || tag === wantedTag;
-		});
-	}
+	const modelInstalled = modelListed;
+
+	/** What the Ollama step offers to download when nothing usable is installed (and no default model is
+	 * configured — the shipped providers.json carries none). */
+	const SUGGESTED_OLLAMA_MODEL = 'qwen3:8b';
 
 	async function checkOllamaModel() {
 		modelCheck = 'checking';
 		try {
 			const ollama = providers.find((p) => p.id === 'ollama');
-			const wanted = ollama?.defaultModel ?? null;
-			defaultOllamaModel = wanted;
+			let wanted = ollama?.defaultModel ?? null;
 			if (!wanted) {
-				modelCheck = 'has_model';
-				return;
+				// No configured default: any installed chat model is fine; only an empty list needs a download.
+				const listRes = await fetch('/api/providers/ollama/models');
+				if (listRes.ok) {
+					const listed = (await listRes.json()) as { approved: { id: string }[] };
+					if (listed.approved.length > 0) {
+						modelCheck = 'has_model';
+						return;
+					}
+				}
+				wanted = SUGGESTED_OLLAMA_MODEL;
 			}
+			defaultOllamaModel = wanted;
 			const res = await fetch('/api/models');
 			if (!res.ok) {
 				modelCheck = 'has_model';
@@ -409,6 +416,12 @@
 
 	async function pullDefaultModel() {
 		if (!defaultOllamaModel) return;
+		if (await pullModelByName(defaultOllamaModel)) modelCheck = 'has_model';
+	}
+
+	/** Streams /api/models' pull progress into pullLog/pullError; true once Ollama reports done. Shared by the
+	 * chat-model download above and the embedding-model (bge-m3) download in the embedding step below. */
+	async function pullModelByName(model: string): Promise<boolean> {
 		pulling = true;
 		pullError = '';
 		pullLog = [];
@@ -417,7 +430,7 @@
 			const res = await fetch('/api/models', {
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ model: defaultOllamaModel })
+				body: JSON.stringify({ model })
 			});
 			if (!res.ok || !res.body) throw new Error(await readResponseError(res));
 			const reader = res.body.getReader();
@@ -442,13 +455,171 @@
 			pullError = errMessage(err);
 		} finally {
 			pulling = false;
-			if (ok) modelCheck = 'has_model';
 		}
+		return ok;
 	}
 
 	$effect(() => {
 		if (usedServer?.id === 'ollama' && modelCheck === 'idle') void checkOllamaModel();
 	});
+
+	// -- chat model + embedding choice (Aşama 4c) ----------------------------
+	//
+	// The shipped providers.json has empty chains, no default model and no embedding (keyword search only),
+	// so once a server is running THIS is what makes chat work: pick a chat model, make it the default for
+	// the provider, put the provider at the head of every empty chain, point the client's pins at it — and
+	// decide how the library is searched.
+
+	/** The providers.json id of the server just set up: 'ollama', or the entry ensureProviderForServer
+	 * created/found by baseUrl. */
+	let usedProviderId = $derived.by(() => {
+		if (!usedServer) return null;
+		if (usedServer.id === 'ollama') return 'ollama';
+		return providers.find((p) => p.baseUrl === `http://127.0.0.1:${usedServer!.port}/v1`)?.id ?? null;
+	});
+
+	let chatModels = $state<string[]>([]);
+	let embeddingModels = $state<string[]>([]);
+	let modelsLoading = $state(false);
+	let chosenChatModel = $state('');
+	let chatApplying = $state(false);
+	let appliedChatModel = $state<string | null>(null);
+	let chatError = $state('');
+
+	let embeddingBusy = $state(false);
+	let embeddingError = $state('');
+	let embeddingResult = $state<'vectors' | 'keyword' | null>(null);
+	let embeddingResultModel = $state('');
+
+	let embeddingCandidate = $derived(chooseEmbeddingCandidate(embeddingModels));
+
+	async function loadServerModels() {
+		if (!usedProviderId) return;
+		modelsLoading = true;
+		chatError = '';
+		try {
+			const res = await fetch(`/api/providers/${encodeURIComponent(usedProviderId)}/models`);
+			if (!res.ok) throw new Error(await readResponseError(res));
+			const data = (await res.json()) as { approved: { id: string }[]; other: { id: string }[]; embedding?: string[] };
+			chatModels = [...data.approved, ...data.other].map((m) => m.id);
+			embeddingModels = data.embedding ?? [];
+			if (!chosenChatModel || !chatModels.includes(chosenChatModel)) chosenChatModel = autoPickModel(chatModels) ?? chatModels[0] ?? '';
+			// Exactly one chat model: nothing to choose, so apply it right away.
+			if (appliedChatModel === null && autoPickModel(chatModels) !== null) await applyChatModel();
+		} catch (err) {
+			chatError = errMessage(err);
+		} finally {
+			modelsLoading = false;
+		}
+	}
+
+	/** Re-loads the server's model list whenever the server (or, for Ollama, its model-download state) changes. */
+	let modelsLoadedKey = '';
+	$effect(() => {
+		if (!usedProviderId) return;
+		if (usedServer?.id === 'ollama' && modelCheck !== 'has_model') return;
+		const key = `${usedProviderId}:${modelCheck}`;
+		if (key === modelsLoadedKey) return;
+		modelsLoadedKey = key;
+		void loadServerModels();
+	});
+
+	async function applyChatModel() {
+		const providerId = usedProviderId;
+		const model = chosenChatModel;
+		if (!providerId || !model) return;
+		chatApplying = true;
+		chatError = '';
+		try {
+			const patch = await fetch(`/api/providers/${encodeURIComponent(providerId)}`, {
+				method: 'PATCH',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ defaultModel: model })
+			});
+			if (!patch.ok) throw new Error(await readResponseError(patch));
+
+			// Put this provider at the head of every chain that is still empty; a chain that already has
+			// providers keeps its own routing.
+			const chainsRes = await fetch('/api/providers/chains');
+			if (!chainsRes.ok) throw new Error(await readResponseError(chainsRes));
+			const chains = (await chainsRes.json()) as Record<string, string[]>;
+			for (const task of emptyChainTasks(chains)) {
+				const r = await fetch('/api/providers/chains', {
+					method: 'PATCH',
+					headers: { 'content-type': 'application/json' },
+					body: JSON.stringify({ taskType: task, providerIds: [providerId] })
+				});
+				if (!r.ok) throw new Error(await readResponseError(r));
+			}
+
+			// The client-side pins (chat header, generation dialogs, grading, title) point at it too.
+			settings.defaultModel = settings.fastModel = settings.reasoningModel = model;
+			settings.defaultProvider = settings.fastProvider = settings.reasoningProvider = providerId;
+			persistSettings();
+			appliedChatModel = model;
+		} catch (err) {
+			chatError = errMessage(err);
+		} finally {
+			chatApplying = false;
+		}
+	}
+
+	/** `model` set = use that embedding model for vectors (dims measured with one real embed call, as
+	 * EmbeddingSettingsCard's "Test" does, then saved through PUT /api/embedding); `null` = explicit
+	 * keyword-search-only (PUT {providerId: null}). */
+	async function applyEmbedding(model: string | null) {
+		const providerId = usedProviderId;
+		if (!providerId) return;
+		embeddingBusy = true;
+		embeddingError = '';
+		try {
+			if (model === null) {
+				const res = await fetch('/api/embedding', {
+					method: 'PUT',
+					headers: { 'content-type': 'application/json' },
+					body: JSON.stringify({ providerId: null })
+				});
+				if (!res.ok) throw new Error(await readResponseError(res));
+				embeddingResult = 'keyword';
+				return;
+			}
+			const test = await fetch('/api/embedding/test', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ providerId, model })
+			});
+			if (!test.ok) throw new Error(await readResponseError(test));
+			const { dims } = (await test.json()) as { dims: number };
+			const res = await fetch('/api/embedding', {
+				method: 'PUT',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ providerId, model, dims })
+			});
+			if (!res.ok) throw new Error(await readResponseError(res));
+			embeddingResult = 'vectors';
+			embeddingResultModel = model;
+		} catch (err) {
+			embeddingError = errMessage(err);
+		} finally {
+			embeddingBusy = false;
+		}
+	}
+
+	/** Ollama without an embedding model yet: download bge-m3 (the app's calibrated one), re-list, use it. */
+	async function pullAndUseBge() {
+		embeddingBusy = true;
+		embeddingError = '';
+		try {
+			if (!(await pullModelByName('bge-m3'))) throw new Error(pullError || t('Common.bilinmeyenHata'));
+		} catch (err) {
+			embeddingError = errMessage(err);
+			embeddingBusy = false;
+			return;
+		}
+		embeddingBusy = false;
+		await loadServerModels();
+		if (embeddingCandidate) await applyEmbedding(embeddingCandidate);
+	}
 
 	// -- system check (python / modules / pandoc) ----------------------------
 
@@ -563,6 +734,7 @@
 		<div>
 			<h1 class="font-display text-xl font-medium">{t('LocalServerSetupPage.title')}</h1>
 			<p class="mt-1 text-sm text-muted-foreground">{t('LocalServerSetupPage.subtitle')}</p>
+			<p class="mt-1 text-xs text-muted-foreground">{t('LocalServerSetupPage.cloudOnlyNote')}</p>
 		</div>
 		<button type="button" class="shrink-0 text-sm text-muted-foreground underline-offset-2 hover:underline" onclick={finish}>
 			{t('LocalServerSetupPage.skip')}
@@ -603,6 +775,73 @@
 					</div>
 				{:else}
 					<p class="mt-3 text-sm text-muted-foreground">{t('LocalServerSetupPage.otherModelNote')}</p>
+				{/if}
+
+				{#if usedProviderId && (usedServer.id !== 'ollama' || modelCheck === 'has_model')}
+					<div class="mt-4 border-t pt-4">
+						<p class="mb-2 text-sm font-medium">{t('LocalServerSetupPage.chatModelTitle')}</p>
+						{#if modelsLoading}
+							<p class="text-sm text-muted-foreground">{t('Common.yukleniyor')}</p>
+						{:else if appliedChatModel}
+							<p class="text-sm text-muted-foreground">{t('LocalServerSetupPage.chatModelApplied', { model: appliedChatModel })}</p>
+						{:else if chatModels.length === 0}
+							<p class="mb-2 text-sm text-muted-foreground">{t('LocalServerSetupPage.chatModelNone')}</p>
+							<Button size="sm" variant="outline" onclick={loadServerModels}>{t('LocalServerSetupPage.refreshModels')}</Button>
+						{:else}
+							<div class="flex flex-wrap items-center gap-2">
+								<select
+									class="h-8 max-w-full rounded-md border bg-background px-2 text-sm"
+									aria-label={t('LocalServerSetupPage.chatModelTitle')}
+									bind:value={chosenChatModel}
+									disabled={chatApplying}
+								>
+									{#each chatModels as id (id)}
+										<option value={id}>{id}</option>
+									{/each}
+								</select>
+								<Button size="sm" onclick={applyChatModel} disabled={chatApplying || !chosenChatModel}>
+									{t('LocalServerSetupPage.chatModelApply')}
+								</Button>
+							</div>
+						{/if}
+						{#if chatError}
+							<p class="mt-1 text-sm text-destructive" role="alert">{chatError}</p>
+						{/if}
+					</div>
+
+					<div class="mt-4 border-t pt-4">
+						<p class="mb-1 text-sm font-medium">{t('LocalServerSetupPage.embeddingTitle')}</p>
+						<p class="mb-2 text-xs text-muted-foreground">{t('LocalServerSetupPage.embeddingDesc')}</p>
+						{#if embeddingResult === 'vectors'}
+							<p class="text-sm text-muted-foreground">{t('LocalServerSetupPage.embeddingDoneVectors', { model: embeddingResultModel })}</p>
+							<p class="mt-1 text-xs text-muted-foreground">{t('LocalServerSetupPage.embeddingReindexNote')}</p>
+						{:else if embeddingResult === 'keyword'}
+							<p class="text-sm text-muted-foreground">{t('LocalServerSetupPage.embeddingDoneKeyword')}</p>
+						{:else}
+							<div class="flex flex-wrap items-center gap-2">
+								{#if embeddingCandidate}
+									<Button size="sm" onclick={() => applyEmbedding(embeddingCandidate)} disabled={embeddingBusy}>
+										{t('LocalServerSetupPage.embeddingUse', { model: embeddingCandidate })}
+									</Button>
+								{:else if usedServer.id === 'ollama'}
+									<Button size="sm" onclick={pullAndUseBge} disabled={embeddingBusy || pulling}>
+										{pulling ? t('LocalServerSetupPage.pulling') : t('LocalServerSetupPage.embeddingPullBge')}
+									</Button>
+								{:else}
+									<p class="text-xs text-muted-foreground">{t('LocalServerSetupPage.embeddingNoneFound')}</p>
+								{/if}
+								<Button size="sm" variant="outline" onclick={() => applyEmbedding(null)} disabled={embeddingBusy}>
+									{t('LocalServerSetupPage.embeddingKeywordOnly')}
+								</Button>
+							</div>
+							{#if pullLog.length > 0 && pulling}
+								<pre class="mt-2 max-h-24 overflow-y-auto rounded bg-muted p-2 text-xs whitespace-pre-wrap">{pullLog.join('\n')}</pre>
+							{/if}
+						{/if}
+						{#if embeddingError}
+							<p class="mt-1 text-sm text-destructive" role="alert">{embeddingError}</p>
+						{/if}
+					</div>
 				{/if}
 
 				<div class="mt-4">

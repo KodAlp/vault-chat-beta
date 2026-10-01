@@ -42,3 +42,15 @@ test('supportsPrefixResume stays Ollama-only: a verified family on a non-Ollama 
 	assert.equal(await supportsPrefixResume('ollama', 'qwen3:8b'), true);
 	assert.equal(await supportsPrefixResume('lmstudio', 'qwen/qwen3-8b'), false);
 });
+
+test('modelCaps with an empty model judges the provider\'s own defaultModel', async () => {
+	const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'registry-caps-empty-'));
+	const data: ProvidersFile = {
+		providers: [{ id: 'lmstudio', label: 'LM Studio', baseUrl: 'http://127.0.0.1:1234/v1', kind: 'openai-compat', reasoningDialect: 'none', enabled: true, local: true, timeouts: T, defaultModel: 'qwen/qwen3-8b' }],
+		chains: { chat: ['lmstudio'] }
+	};
+	fs.writeFileSync(path.join(dir, 'providers.json'), JSON.stringify(data), 'utf-8');
+	process.env.PROVIDERS_PATH = path.join(dir, 'providers.json');
+	assert.deepEqual(await modelCaps(undefined, ''), { tools: true, reasoning: true });
+	assert.deepEqual(await modelCaps('lmstudio', ''), { tools: true, reasoning: true });
+});

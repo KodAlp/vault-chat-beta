@@ -232,15 +232,15 @@
 				<Select.Trigger class="w-full">
 					{selectedOption
 						? `${selectedOption.providerLabel} · ${selectedOption.id}`
-						: parseSelectionKey(selectionKeyState).modelId}
+						: parseSelectionKey(selectionKeyState).modelId || t('ModelPickerRow.autoModel')}
 				</Select.Trigger>
 				<Select.Content>
 					{#if !selectedOption}
 						<Select.Item
 							value={selectionKeyState}
-							label={parseSelectionKey(selectionKeyState).modelId}
+							label={parseSelectionKey(selectionKeyState).modelId || t('ModelPickerRow.autoModel')}
 						>
-							{parseSelectionKey(selectionKeyState).modelId}
+							{parseSelectionKey(selectionKeyState).modelId || t('ModelPickerRow.autoModel')}
 						</Select.Item>
 					{/if}
 					{#each modelOptions as m (m.providerId + '/' + m.id)}

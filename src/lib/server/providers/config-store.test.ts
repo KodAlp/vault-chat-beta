@@ -437,3 +437,28 @@ test('updateModelCaps rejects an unknown provider and an empty or oversized mode
 	updateProviderDefaultModel('local-compat', 'a');
 	assert.deepEqual(readProvidersFile().providers.find((p) => p.id === 'local-compat')?.modelCaps, { a: { tools: true } });
 });
+
+// Aşama 4c — updateChain validation, and the shipped default config.
+test('updateChain rejects an unknown provider id, a duplicate, a non-string id and an empty task type', () => {
+	useTmpProvidersFile();
+	assert.throws(() => updateChain('chat', ['groq', 'no-such']), (err: unknown) => err instanceof AppError && err.code === 'NOT_FOUND');
+	assert.throws(() => updateChain('chat', ['groq', 'groq']), (err: unknown) => err instanceof AppError && err.code === 'VALIDATION_INVALID');
+	assert.throws(() => updateChain('chat', [1 as unknown as string]), (err: unknown) => err instanceof AppError && err.code === 'VALIDATION_INVALID');
+	assert.throws(() => updateChain('  ', ['groq']), (err: unknown) => err instanceof AppError && err.code === 'VALIDATION_INVALID');
+	assert.deepEqual(readProvidersFile().chains.chat, ['groq'], 'a rejected write leaves the chain untouched');
+});
+
+test('updateChain accepts an empty chain and valid ids', () => {
+	useTmpProvidersFile();
+	updateChain('chat', []);
+	assert.deepEqual(readProvidersFile().chains.chat, []);
+	updateChain('title', ['local-compat', 'ollama']);
+	assert.deepEqual(readProvidersFile().chains.title, ['local-compat', 'ollama']);
+});
+
+test('the shipped providers.default.json resolves to FTS-only (embedding null) even though it has an ollama entry', () => {
+	useTmpProvidersFile();
+	fs.copyFileSync(path.join(process.cwd(), 'data', 'providers.default.json'), process.env.PROVIDERS_PATH!);
+	assert.equal(getEmbeddingConfig(), null);
+	assert.equal(readProvidersFile().providers.some((p) => p.id === 'ollama'), true);
+});

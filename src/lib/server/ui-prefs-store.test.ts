@@ -54,7 +54,7 @@ test('a non-boolean value for a boolean field is dropped', () => {
 	assert.deepEqual(readUiPrefs(), { settings: { showWelcomeScreen: true } });
 });
 
-test('a model/provider string over 200 chars is dropped, an empty one too', () => {
+test('a model/provider string over 200 chars is dropped; an empty one is kept (it means "no pin")', () => {
 	useTmpDataDir();
 	writeUiPrefs({
 		settings: {
@@ -63,7 +63,14 @@ test('a model/provider string over 200 chars is dropped, an empty one too', () =
 			reasoningModel: 'qwen3:8b'
 		}
 	});
-	assert.deepEqual(readUiPrefs(), { settings: { reasoningModel: 'qwen3:8b' } });
+	assert.deepEqual(readUiPrefs(), { settings: { fastModel: '', reasoningModel: 'qwen3:8b' } });
+});
+
+test('clearing a saved model to "" overwrites the earlier value instead of leaving it behind', () => {
+	useTmpDataDir();
+	writeUiPrefs({ settings: { defaultModel: 'qwen3:8b', defaultProvider: 'ollama' } });
+	writeUiPrefs({ settings: { defaultModel: '', defaultProvider: '' } });
+	assert.deepEqual(readUiPrefs(), { settings: { defaultModel: '', defaultProvider: '' } });
 });
 
 test('unknown keys at either level are dropped silently, not thrown', () => {

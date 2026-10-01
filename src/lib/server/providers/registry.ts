@@ -183,7 +183,9 @@ export async function modelCaps(
 		if (!providerId) return { tools: false, reasoning: false };
 		const entry = loadConfig().providers.find((p) => p.id === providerId);
 		if (!entry) return { tools: false, reasoning: false };
-		return capsFor(model, entry.modelCaps?.[model]);
+		// An empty model means "the provider's own default" (Aşama 4c) — judge capabilities for THAT model.
+		const effective = model || entry.defaultModel || '';
+		return capsFor(effective, entry.modelCaps?.[effective]);
 	} catch {
 		return { tools: false, reasoning: false };
 	}

@@ -1,6 +1,7 @@
 import type { LayoutLoad } from './$types';
 import { applyLocale, persistLocale, STORAGE_KEY as LOCALE_STORAGE_KEY } from '$lib/i18n/index.svelte';
-import { applySettings, persistSettings, STORAGE_KEY as SETTINGS_STORAGE_KEY } from '$lib/settings.svelte';
+import { applySettings, persistSettings, settings, STORAGE_KEY as SETTINGS_STORAGE_KEY } from '$lib/settings.svelte';
+import { stalePinPatch } from '$lib/settings-reconcile';
 import { applyLocalServerSetupDone } from '$lib/localServerSetup.svelte';
 
 // markdown.ts uses the browser build of DOMPurify (needs `window`); no SSR benefit
@@ -49,6 +50,22 @@ export const load: LayoutLoad = async ({ fetch }) => {
 		if (prefs.locale !== undefined) applyLocale(prefs.locale);
 		if (prefs.settings !== undefined) applySettings(prefs.settings);
 		applyLocalServerSetupDone(prefs.localServerSetupDone);
+
+		// Aşama 4c: a saved model/provider pin whose provider was deleted or disabled is cleared, so requests
+		// carry no pin and the server falls back to the task chain (and that provider's own default model).
+		try {
+			const providersRes = await fetch('/api/providers');
+			if (providersRes.ok) {
+				const list = (await providersRes.json()) as { id: string; enabled: boolean }[];
+				const patch = stalePinPatch(settings, new Set(list.filter((p) => p.enabled).map((p) => p.id)));
+				if (Object.keys(patch).length > 0) {
+					applySettings(patch);
+					persistSettings();
+				}
+			}
+		} catch {
+			// Best-effort: a stale pin just keeps producing chat-fallback's "pin dropped" notice.
+		}
 
 		if (
 			prefs.locale === undefined &&
