@@ -32,3 +32,6 @@ data/provider-consent.json
 # tracked; requirements.txt itself is the reproducible spec.
 ingest/__pycache__/
 ingest/.venv/
+
+# docker/linux-package.sh output (packages, launch log, screenshot).
+docker-out/
