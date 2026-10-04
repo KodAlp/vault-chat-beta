@@ -32,7 +32,7 @@
 	},
 	"Chat": {
 		"smallTalkUnavailable": "Small-talk learning is unavailable with the configured embedding model (only bge-m3 is supported).",
-		"emptyStateTitle": "Ask a question about your notes",
+		"emptyStateTitle": "What do you want to learn from your vault?",
 		"emptyStateSubtitle": "Answers are based only on the sources you've selected.",
 		"emptyStateBrowseSources": "Browse sources",
 		"scrollToBottom": "scroll to bottom",
@@ -54,7 +54,10 @@
 		"nearCtxLimit": "This chat is close to the context limit; part of the prompt sent to the model may have been cut, so this answer may have been generated with incomplete context.",
 		"embeddingMismatch": "The index was built with a different embedding model; this answer was given using keyword search.",
 		"embeddingUnavailable": "Couldn't reach the embedding service; this answer was given using keyword search.",
-		"reindexNow": "Reindex now"
+		"reindexNow": "Reindex now",
+		"toolReading": "reading",
+		"toolDone": "read",
+		"toolError": "error"
 	},
 
 	"ChatBubble": {
@@ -169,7 +172,15 @@
 		"review": "Review",
 		"progress": "Progress",
 		"progressOpen": "Open",
-		"deleteConfirmTitle": "Delete \"{title}\"?"
+		"deleteConfirmTitle": "Delete \"{title}\"?",
+		"quizDesc": "Multiple-choice test from your sources",
+		"cardsDesc": "Spaced-repetition flashcards",
+		"reportDesc": "Cited summary document",
+		"mindmapDesc": "Concept map of the topic",
+		"slidesDesc": "Slide deck with citations",
+		"progressDesc": "How well you know each topic",
+		"open": "Study panel",
+		"close": "Close study panel"
 	},
 
 	"ProgressPage": {
@@ -1134,5 +1145,56 @@
 		"invalidPort": "Port must be between 1 and 65535.",
 		"saved": "Saved.",
 		"savedRestartNote": "Saved. The server is running; the change takes effect the next time it starts."
+	},
+
+	"ChatSidebar": {
+		"ariaLabel": "Chat history",
+		"newChat": "New chat",
+		"today": "TODAY",
+		"yesterday": "YESTERDAY",
+		"last7": "PREVIOUS 7 DAYS",
+		"last30": "PREVIOUS 30 DAYS",
+		"older": "OLDER",
+		"untitled": "Untitled chat",
+		"empty": "No chats yet.",
+		"loadError": "Couldn't load chats."
+	},
+
+	"ChatTitleBar": {
+		"ariaLabel": "Chat toolbar",
+		"showSidebar": "Show chat history"
+	},
+
+	"SourceTrigger": {
+		"all": "All sources",
+		"areas": "{selected} / {total} areas",
+		"none": "No sources",
+		"open": "Open sources: {summary}"
+	},
+
+	"SourcesSheet": {
+		"title": "Sources",
+		"subtitle": "{vault} · answers come only from checked notes",
+		"close": "Close",
+		"all": "All",
+		"none": "None",
+		"filterAll": "All",
+		"filterSelected": "Selected",
+		"filterLabel": "Show",
+		"only": "Only",
+		"onlyTitle": "Select only \"{name}\"",
+		"toggleFolder": "Expand/collapse",
+		"notesCount": "{count} notes",
+		"summaryDetail": "{percent}% of {total} notes · {selected} / {areas} areas",
+		"selectedAreas": "Selected areas",
+		"partial": "partial",
+		"remove": "Remove {name} from the selection",
+		"noSelection": "No area is selected.",
+		"noSelectedMatch": "No sources are selected.",
+		"manage": "Manage sources",
+		"info": "Chat will search {areas} areas, {notes} notes",
+		"done": "Done",
+		"treeLabel": "Source tree",
+		"noReview": "Needs review"
 	}
 }

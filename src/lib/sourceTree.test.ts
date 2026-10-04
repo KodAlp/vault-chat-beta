@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { applyDisplayRules, collectFilePaths, nodeState, toggleNode, toIncludedPaths, isPathInsideFolder } from './sourceTree';
+import { applyDisplayRules, collectFilePaths, nodeState, toggleNode, toIncludedPaths, isPathInsideFolder, selectOnly, countFiles, countSelected, nodeHasSelected, selectedAreas } from './sourceTree';
 import type { LibraryNode } from './types';
 
 const tree: LibraryNode[] = [
@@ -232,4 +232,29 @@ test('isPathInsideFolder rejects the folder itself and a sibling sharing a name 
 	assert.equal(isPathInsideFolder('wiki/math', 'wiki/math'), false);
 	assert.equal(isPathInsideFolder('wiki/mathematics/foo.md', 'wiki/math'), false);
 	assert.equal(isPathInsideFolder('wiki/other/foo.md', 'wiki/math'), false);
+});
+
+test('selectOnly returns exactly the files under a folder, or the file itself', () => {
+	assert.deepEqual([...selectOnly(tree[0])].sort(), ['math/algebra.md', 'math/calculus.md']);
+	assert.deepEqual([...selectOnly(tree[1])], ['notes.md']);
+});
+
+test('countFiles and countSelected count leaf files only', () => {
+	assert.equal(countFiles(tree[0]), 2);
+	assert.equal(countFiles(tree[1]), 1);
+	assert.equal(countSelected(tree[0], new Set(['math/algebra.md', 'notes.md'])), 1);
+	assert.equal(countSelected(tree[1], new Set()), 0);
+});
+
+test('nodeHasSelected is true for a folder with any selected descendant', () => {
+	assert.equal(nodeHasSelected(tree[0], new Set(['math/algebra.md'])), true);
+	assert.equal(nodeHasSelected(tree[0], new Set(['notes.md'])), false);
+});
+
+test('selectedAreas lists only top-level nodes with selected files, with counts', () => {
+	const areas = selectedAreas(tree, new Set(['math/algebra.md']));
+	assert.equal(areas.length, 1);
+	assert.equal(areas[0].node.path, 'math');
+	assert.equal(areas[0].selected, 1);
+	assert.equal(areas[0].total, 2);
 });

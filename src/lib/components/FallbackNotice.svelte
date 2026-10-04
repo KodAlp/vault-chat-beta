@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { Badge } from '$lib/components/ui/badge';
 	import { t } from '$lib/i18n/index.svelte';
 
 	/** Restyle of Message.svelte's old bare `<p class="notice">` — see the
@@ -11,18 +10,15 @@
 	let { message }: { message: string } = $props();
 </script>
 
-<p class="fallback-notice">
-	<Badge variant="outline" class="px-1.5 text-[0.6875rem] font-normal">{t('FallbackNotice.badge')}</Badge>
-	{message}
-</p>
+<div class="vc-banner info fallback-notice">
+	<span class="vc-badge">{t('FallbackNotice.badge')}</span>
+	<div class="d">{message}</div>
+</div>
 
 <style>
 	.fallback-notice {
-		display: flex;
 		align-items: center;
-		gap: 0.4rem;
-		font-size: 0.75rem;
-		color: var(--color-muted-foreground);
-		margin: 0 0 0.3rem;
+		margin: 0 0 var(--space-2);
+		padding: var(--space-2) var(--space-3);
 	}
 </style>

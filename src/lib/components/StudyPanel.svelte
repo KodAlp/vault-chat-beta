@@ -4,10 +4,8 @@
 	import { page } from '$app/state';
 	import * as Sheet from '$lib/components/ui/sheet';
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
-	import { Button } from '$lib/components/ui/button';
 	import { Badge } from '$lib/components/ui/badge';
-	import FileQuestionIcon from '@lucide/svelte/icons/file-question';
-	import LayersIcon from '@lucide/svelte/icons/layers';
+	import Icon from '$lib/components/Icon.svelte';
 	import FileTextIcon from '@lucide/svelte/icons/file-text';
 	import BrainIcon from '@lucide/svelte/icons/brain';
 	import PresentationIcon from '@lucide/svelte/icons/presentation';
@@ -202,117 +200,87 @@
 	}
 </script>
 
+{#snippet recent(items: StudySummary[], kind: StudyKind, route: string)}
+	{#if items.length > 0}
+		<ul class="recent-list">
+			{#each items as item (item.id)}
+				<li>
+					<button type="button" class="item-title" onclick={() => openItem(route + '/' + item.id)}>{item.title}</button>
+					<button type="button" class="item-delete" onclick={(e) => askDelete(kind, item.id, item.title, e)} title={t('Common.sil')} aria-label={t('Common.sil')}>
+						<Trash2Icon size={14} strokeWidth={1.75} aria-hidden="true" />
+					</button>
+				</li>
+			{/each}
+		</ul>
+	{/if}
+{/snippet}
+
 <Sheet.Root bind:open>
-	<Sheet.Content class="w-80">
-		<Sheet.Header>
+	<Sheet.Content class="vc-root w-[var(--panel-width)] !max-w-[var(--panel-width)] bg-[var(--bg-sidebar)] gap-0" showCloseButton={false}>
+		<Sheet.Header class="panel-head">
 			<Sheet.Title>{t('StudyPanel.title')}</Sheet.Title>
+			<Sheet.Close class="vc-icon-btn" aria-label={t('StudyPanel.close')}>
+				<Icon name="panel-right" />
+			</Sheet.Close>
 		</Sheet.Header>
 		<div class="rows">
 			<div class="type-group">
-				<div class="row">
-					<span class="label"><FileQuestionIcon size={16} aria-hidden="true" /> {t('StudyPanel.quiz')}</span>
-					<Button variant="outline" size="sm" onclick={() => trigger(onOpenQuiz)}>{t('StudyPanel.new')}</Button>
-				</div>
-				{#if quizzes.length > 0}
-					<ul class="recent-list">
-						{#each quizzes as item (item.id)}
-							<li>
-								<button type="button" class="item-title" onclick={() => openItem(`/study/quiz/${item.id}`)}>{item.title}</button>
-								<button type="button" class="item-delete" onclick={(e) => askDelete('quizzes', item.id, item.title, e)} title={t('Common.sil')} aria-label={t('Common.sil')}>
-									<Trash2Icon size={12} aria-hidden="true" />
-								</button>
-							</li>
-						{/each}
-					</ul>
-				{/if}
+				<button type="button" class="vc-action" aria-label={t('StudyPanel.quiz') + ': ' + t('StudyPanel.new')} onclick={() => trigger(onOpenQuiz)}>
+					<span class="glyph"><Icon name="neurology" /></span>
+					<span class="text"><span class="t">{t('StudyPanel.quiz')}</span><span class="d">{t('StudyPanel.quizDesc')}</span></span>
+					<span class="chev"><Icon name="arrow-forward" size="sm" /></span>
+				</button>
+				{@render recent(quizzes, 'quizzes', '/study/quiz')}
 			</div>
 			<div class="type-group">
-				<div class="row">
-					<span class="label">
-						<LayersIcon size={16} aria-hidden="true" /> {t('StudyPanel.cards')}
-						{#if dueCount > 0}<Badge variant="secondary">{t('StudyPanel.dueBadge', { count: dueCount })}</Badge>{/if}
+				<button type="button" class="vc-action" aria-label={t('StudyPanel.cards') + ': ' + t('StudyPanel.new')} onclick={() => trigger(onOpenCards)}>
+					<span class="glyph"><Icon name="cards-stack" /></span>
+					<span class="text">
+						<span class="t">
+							{t('StudyPanel.cards')}
+							{#if dueCount > 0}<Badge variant="secondary">{t('StudyPanel.dueBadge', { count: dueCount })}</Badge>{/if}
+						</span>
+						<span class="d">{t('StudyPanel.cardsDesc')}</span>
 					</span>
-					<div class="row-actions">
-						{#if dueCount > 0}
-							<Button variant="outline" size="sm" onclick={reviewCards}>{t('StudyPanel.review')}</Button>
-						{/if}
-						<Button variant="outline" size="sm" onclick={() => trigger(onOpenCards)}>{t('StudyPanel.new')}</Button>
+					<span class="chev"><Icon name="arrow-forward" size="sm" /></span>
+				</button>
+				{#if dueCount > 0}
+					<div class="due-row">
+						<button type="button" class="vc-btn secondary" onclick={reviewCards}>{t('StudyPanel.review')}</button>
 					</div>
-				</div>
-				{#if decks.length > 0}
-					<ul class="recent-list">
-						{#each decks as item (item.id)}
-							<li>
-								<button type="button" class="item-title" onclick={() => openItem(`/study/cards/${item.id}`)}>{item.title}</button>
-								<button type="button" class="item-delete" onclick={(e) => askDelete('decks', item.id, item.title, e)} title={t('Common.sil')} aria-label={t('Common.sil')}>
-									<Trash2Icon size={12} aria-hidden="true" />
-								</button>
-							</li>
-						{/each}
-					</ul>
 				{/if}
+				{@render recent(decks, 'decks', '/study/cards')}
 			</div>
 			<div class="type-group">
-				<div class="row">
-					<span class="label"><FileTextIcon size={16} aria-hidden="true" /> {t('StudyPanel.report')}</span>
-					<Button variant="outline" size="sm" onclick={() => trigger(onOpenReport)}>{t('StudyPanel.new')}</Button>
-				</div>
-				{#if reports.length > 0}
-					<ul class="recent-list">
-						{#each reports as item (item.id)}
-							<li>
-								<button type="button" class="item-title" onclick={() => openItem(`/study/report/${item.id}`)}>{item.title}</button>
-								<button type="button" class="item-delete" onclick={(e) => askDelete('reports', item.id, item.title, e)} title={t('Common.sil')} aria-label={t('Common.sil')}>
-									<Trash2Icon size={12} aria-hidden="true" />
-								</button>
-							</li>
-						{/each}
-					</ul>
-				{/if}
+				<button type="button" class="vc-action" aria-label={t('StudyPanel.report') + ': ' + t('StudyPanel.new')} onclick={() => trigger(onOpenReport)}>
+					<span class="glyph"><FileTextIcon size={20} strokeWidth={1.75} aria-hidden="true" /></span>
+					<span class="text"><span class="t">{t('StudyPanel.report')}</span><span class="d">{t('StudyPanel.reportDesc')}</span></span>
+					<span class="chev"><Icon name="arrow-forward" size="sm" /></span>
+				</button>
+				{@render recent(reports, 'reports', '/study/report')}
 			</div>
 			<div class="type-group">
-				<div class="row">
-					<span class="label"><BrainIcon size={16} aria-hidden="true" /> {t('StudyPanel.mindmap')}</span>
-					<Button variant="outline" size="sm" onclick={() => trigger(onOpenMindMap)}>{t('StudyPanel.new')}</Button>
-				</div>
-				{#if mindmaps.length > 0}
-					<ul class="recent-list">
-						{#each mindmaps as item (item.id)}
-							<li>
-								<button type="button" class="item-title" onclick={() => openItem(`/study/mindmap/${item.id}`)}>{item.title}</button>
-								<button type="button" class="item-delete" onclick={(e) => askDelete('mindmaps', item.id, item.title, e)} title={t('Common.sil')} aria-label={t('Common.sil')}>
-									<Trash2Icon size={12} aria-hidden="true" />
-								</button>
-							</li>
-						{/each}
-					</ul>
-				{/if}
+				<button type="button" class="vc-action" aria-label={t('StudyPanel.mindmap') + ': ' + t('StudyPanel.new')} onclick={() => trigger(onOpenMindMap)}>
+					<span class="glyph"><BrainIcon size={20} strokeWidth={1.75} aria-hidden="true" /></span>
+					<span class="text"><span class="t">{t('StudyPanel.mindmap')}</span><span class="d">{t('StudyPanel.mindmapDesc')}</span></span>
+					<span class="chev"><Icon name="arrow-forward" size="sm" /></span>
+				</button>
+				{@render recent(mindmaps, 'mindmaps', '/study/mindmap')}
 			</div>
 			<div class="type-group">
-				<div class="row">
-					<span class="label"><PresentationIcon size={16} aria-hidden="true" /> {t('StudyPanel.slides')}</span>
-					<Button variant="outline" size="sm" onclick={() => trigger(onOpenSlides)}>{t('StudyPanel.new')}</Button>
-				</div>
-				{#if slidedecks.length > 0}
-					<ul class="recent-list">
-						{#each slidedecks as item (item.id)}
-							<li>
-								<button type="button" class="item-title" onclick={() => openItem(`/study/slides/${item.id}`)}>{item.title}</button>
-								<button type="button" class="item-delete" onclick={(e) => askDelete('slidedecks', item.id, item.title, e)} title={t('Common.sil')} aria-label={t('Common.sil')}>
-									<Trash2Icon size={12} aria-hidden="true" />
-								</button>
-							</li>
-						{/each}
-					</ul>
-				{/if}
+				<button type="button" class="vc-action" aria-label={t('StudyPanel.slides') + ': ' + t('StudyPanel.new')} onclick={() => trigger(onOpenSlides)}>
+					<span class="glyph"><PresentationIcon size={20} strokeWidth={1.75} aria-hidden="true" /></span>
+					<span class="text"><span class="t">{t('StudyPanel.slides')}</span><span class="d">{t('StudyPanel.slidesDesc')}</span></span>
+					<span class="chev"><Icon name="arrow-forward" size="sm" /></span>
+				</button>
+				{@render recent(slidedecks, 'slidedecks', '/study/slides')}
 			</div>
 			<div class="type-group">
-				<div class="row">
-					<span class="label"><ChartColumnIcon size={16} aria-hidden="true" /> {t('StudyPanel.progress')}</span>
-					<div class="row-actions">
-						<Button variant="outline" size="sm" onclick={() => openItem('/study/progress')}>{t('StudyPanel.progressOpen')}</Button>
-					</div>
-				</div>
+				<button type="button" class="vc-action" aria-label={t('StudyPanel.progress') + ': ' + t('StudyPanel.progressOpen')} onclick={() => openItem('/study/progress')}>
+					<span class="glyph"><ChartColumnIcon size={20} strokeWidth={1.75} aria-hidden="true" /></span>
+					<span class="text"><span class="t">{t('StudyPanel.progress')}</span><span class="d">{t('StudyPanel.progressDesc')}</span></span>
+					<span class="chev"><Icon name="arrow-forward" size="sm" /></span>
+				</button>
 			</div>
 		</div>
 	</Sheet.Content>
@@ -340,62 +308,81 @@
 </AlertDialog.Root>
 
 <style>
+	:global(.panel-head) {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		padding: var(--space-4) var(--space-4) var(--space-2);
+	}
+
 	.rows {
 		display: flex;
 		flex-direction: column;
-		gap: 0.5rem;
-		padding: 0 1rem 1rem;
-		/* Sheet.Content is a fixed-height flex column (Sheet.Header above
-		 * this); without flex:1 + min-height:0 this div sizes to its own
-		 * content and pushes past the sheet's bottom edge instead of
-		 * scrolling within it — same pattern as Chat.svelte's
-		 * .messages-wrap/.messages. Every list below used to hard-cut at 4
-		 * items (RECENT_LIMIT) specifically because nothing here could
-		 * scroll; now the lists show everything and this is what makes
-		 * "everything" reachable instead of just taller than the sheet. */
+		gap: var(--space-2);
+		padding: var(--space-2) var(--space-4) var(--space-4);
+		/* Sheet.Content is a fixed-height flex column; without flex:1 +
+		 * min-height:0 this div sizes to its own content and pushes past the
+		 * sheet's bottom edge instead of scrolling within it. */
 		flex: 1;
 		min-height: 0;
 		overflow-y: auto;
 	}
 
 	.type-group {
-		border-bottom: 1px solid var(--color-border);
-		padding-bottom: 0.35rem;
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
 	}
 
-	.row {
+	/* .vc-action is designed for a div; as a button it needs the reset. */
+	.vc-action {
+		appearance: none;
+		border: 0;
+		width: 100%;
+		text-align: left;
+		font: inherit;
+		color: var(--label);
+	}
+
+	.vc-action:focus-visible,
+	.item-title:focus-visible,
+	.item-delete:focus-visible,
+	.due-row .vc-btn:focus-visible {
+		outline: 2px solid var(--focus-ring);
+		outline-offset: 2px;
+	}
+
+	.text {
+		display: flex;
+		flex-direction: column;
+		min-width: 0;
+	}
+
+	.text .t {
 		display: flex;
 		align-items: center;
-		justify-content: space-between;
-		gap: 0.5rem;
-		padding: 0.5rem 0;
+		gap: var(--space-2);
 	}
 
-	.label {
+	.due-row {
 		display: flex;
-		align-items: center;
-		gap: 0.4rem;
-		font-size: 0.85rem;
-	}
-
-	.row-actions {
-		display: flex;
-		gap: 0.35rem;
+		justify-content: flex-end;
+		padding: var(--space-1) var(--space-1) 0;
 	}
 
 	.recent-list {
 		display: flex;
 		flex-direction: column;
-		gap: 0.15rem;
-		margin: 0 0 0.35rem;
-		padding: 0;
+		gap: 2px;
+		margin: var(--space-1) 0 var(--space-1);
+		padding: 0 var(--space-1);
 		list-style: none;
 	}
 
 	.recent-list li {
 		display: flex;
 		align-items: center;
-		gap: 0.15rem;
+		gap: 2px;
 	}
 
 	.recent-list button {
@@ -409,17 +396,18 @@
 		flex: 1;
 		min-width: 0;
 		display: block;
-		padding: 0.2rem 0.1rem;
+		padding: 4px 6px;
 		text-align: left;
-		font-size: 0.78rem;
-		color: var(--color-muted-foreground);
+		font: 400 13px/18px var(--font-sans);
+		color: var(--label-secondary);
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
 	}
 
 	.item-title:hover {
-		color: var(--color-primary);
+		color: var(--accent-text);
+		background: var(--fill-hover);
 	}
 
 	.item-delete {
@@ -427,16 +415,18 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		padding: 0.2rem;
-		color: var(--color-muted-foreground);
+		padding: 6px;
+		color: var(--label-secondary);
 	}
 
 	.item-delete:hover {
-		color: var(--color-destructive);
+		color: var(--danger);
+		background: var(--fill-hover);
 	}
 
-	.recent-list button:focus-visible {
-		outline: 2px solid var(--accent);
-		outline-offset: 1px;
+	@media (prefers-reduced-motion: reduce) {
+		.vc-action {
+			transition: none;
+		}
 	}
 </style>

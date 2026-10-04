@@ -17,33 +17,34 @@
 <!-- Uncontrolled <details> on purpose — no `open` binding, so a manual toggle
 	 during streaming persists natively across content updates instead of
 	 getting fought by reactivity. Collapsed by default. -->
-<details class="thinking">
+<details class="vc-disclosure thinking">
 	<summary>
 		{streaming
 			? t('ThinkingPanel.streamingSummary', { tokens: tokenLabel })
 			: t('ThinkingPanel.doneSummary', { tokens: tokenLabel })}
 	</summary>
-	<pre>{thinking}</pre>
+	<div class="body"><pre>{thinking}</pre></div>
 </details>
 
 <style>
 	.thinking {
-		max-width: 70ch;
-		margin-bottom: 0.4rem;
-		font-size: 0.8rem;
-		color: var(--color-muted-foreground);
+		max-width: var(--reading-measure);
+		margin-bottom: var(--space-2);
 	}
 
-	.thinking summary {
-		cursor: pointer;
+	.thinking summary:focus-visible {
+		outline: 2px solid var(--focus-ring);
+		outline-offset: 2px;
 	}
 
 	.thinking pre {
 		max-height: 40vh;
 		overflow-y: auto;
 		white-space: pre-wrap;
+		overflow-wrap: anywhere;
+		margin: 0;
 		background: none;
-		padding: 0.4rem 0 0 0.5rem;
-		font-family: var(--font-sans);
+		padding: 0;
+		font: inherit;
 	}
 </style>

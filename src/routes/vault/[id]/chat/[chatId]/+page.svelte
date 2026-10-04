@@ -6,16 +6,15 @@
 	import ReportDialog from '$lib/components/ReportDialog.svelte';
 	import MindMapDialog from '$lib/components/MindMapDialog.svelte';
 	import SlidesDialog from '$lib/components/SlidesDialog.svelte';
-	import SourceTree from '$lib/components/SourceTree.svelte';
+	import SourcesSheet, { type SourceCounts } from '$lib/components/SourcesSheet.svelte';
+	import SourceTrigger from '$lib/components/SourceTrigger.svelte';
+	import ChatSidebar from '$lib/components/ChatSidebar.svelte';
+	import Icon from '$lib/components/Icon.svelte';
 	import StudyPanel from '$lib/components/StudyPanel.svelte';
 	import { scopeExpandSignal } from '$lib/scope-expand.svelte';
 	import { t } from '$lib/i18n/index.svelte';
 	import HomeIcon from '@lucide/svelte/icons/house';
 	import SettingsIcon from '@lucide/svelte/icons/settings';
-	import LibraryIcon from '@lucide/svelte/icons/library';
-	import PanelLeftCloseIcon from '@lucide/svelte/icons/panel-left-close';
-	import PanelLeftOpenIcon from '@lucide/svelte/icons/panel-left-open';
-	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -27,8 +26,11 @@
 	// silently reverted by a later resize.
 	let userOverrodeCollapse = false;
 	let includedPaths = $state<string[] | undefined>(undefined);
-	let sourceCounts = $state({ selected: 0, total: 0 });
-	let focusSignal = $state(0);
+	let sourceCounts = $state<SourceCounts>({ selected: 0, total: 0, areasSelected: 0, areasTotal: 0 });
+	let sourcesOpen = $state(false);
+	// Title of the open chat, reported by ChatSidebar from the chat list.
+	let chatTitle = $state<string | null>(null);
+	let sidebar: ReturnType<typeof ChatSidebar> | undefined = $state();
 	let studyPanelOpen = $state(false);
 	// StudyPanel owns the "unseen" computation (it has the data) but not the
 	// trigger button that shows the dot (that lives here) — see
@@ -60,9 +62,10 @@
 		}
 	}
 
+	// Chat's ScopeIndicator asks to "go to the source tree" — the tree now
+	// lives in the sources sheet, so that opens it.
 	function handleFocusTree() {
-		leftCollapsed = false;
-		focusSignal += 1;
+		sourcesOpen = true;
 	}
 
 	// The generation-error toast lives in the root layout (routes/+layout.svelte),
@@ -108,80 +111,96 @@
 	<title>{data.vaultName} — Vault Agent Toolkit</title>
 </svelte:head>
 
-<div class="chat-screen">
-	<aside class="panel-left" class:collapsed={leftCollapsed}>
-		<button
-			class="collapse-toggle"
-			onclick={toggleCollapse}
-			title={leftCollapsed ? t('VaultChatPage.expandPanel') : t('VaultChatPage.collapsePanel')}
-			aria-label={leftCollapsed ? t('VaultChatPage.expandPanel') : t('VaultChatPage.collapsePanel')}
-		>
-			{#if leftCollapsed}
-				<PanelLeftOpenIcon size={16} aria-hidden="true" />
-			{:else}
-				<PanelLeftCloseIcon size={16} aria-hidden="true" />
-			{/if}
-		</button>
-		{#if !leftCollapsed}
-			<a class="vault-name" href="/vault/{data.vaultId}" title={t('VaultChatPage.backToChatList')}>
-				<ArrowLeftIcon size={13} aria-hidden="true" />
-				{data.vaultName}
-			</a>
-			<SourceTree
-				vaultId={data.vaultId}
-				{includedPaths}
-				onSelectionChange={handleScopeChange}
-				onCounts={(c) => (sourceCounts = c)}
-				{focusSignal}
-			/>
-		{/if}
-	</aside>
+<div class="chat-screen vc-root">
+	<ChatSidebar
+		bind:this={sidebar}
+		vaultId={data.vaultId}
+		vaultName={data.vaultName}
+		chatId={data.chatId}
+		collapsed={leftCollapsed}
+		ontoggle={toggleCollapse}
+		onTitle={(title) => (chatTitle = title)}
+	/>
 
 	<main class="panel-center">
-		<Chat
-			chatId={data.chatId}
-			vaultId={data.vaultId}
-			{includedPaths}
-			selectedCount={sourceCounts.selected}
-			totalCount={sourceCounts.total}
-			onChatLoaded={handleChatLoaded}
-			onExpandScope={() => handleScopeChange(undefined)}
-			onFocusTree={handleFocusTree}
-		/>
-	</main>
-
-	<aside class="panel-right">
-		<div class="right-top">
-			<a href="/?picker=1" title={t('VaultChatPage.vaultPicker')} aria-label={t('VaultChatPage.vaultPicker')}><HomeIcon size={17} aria-hidden="true" /></a>
+		<header class="vc-titlebar" aria-label={t('ChatTitleBar.ariaLabel')}>
+			<div class="heading">
+				<div class="title" title={chatTitle ?? undefined}>{chatTitle ?? t('ChatSidebar.newChat')}</div>
+				<div class="sub">{data.vaultName}</div>
+			</div>
+			<span class="spacer"></span>
+			<a
+				class="vc-icon-btn"
+				href="/?picker=1"
+				title={t('VaultChatPage.vaultPicker')}
+				aria-label={t('VaultChatPage.vaultPicker')}
+			><HomeIcon size={20} strokeWidth={1.75} aria-hidden="true" /></a>
 			<ExportMenu chatId={data.chatId} />
-			<a href="/settings" title={t('Common.ayarlar')} aria-label={t('Common.ayarlar')}><SettingsIcon size={17} aria-hidden="true" /></a>
-		</div>
-		<div class="right-middle">
+			<a
+				class="vc-icon-btn"
+				href="/settings"
+				title={t('Common.ayarlar')}
+				aria-label={t('Common.ayarlar')}
+			><SettingsIcon size={20} strokeWidth={1.75} aria-hidden="true" /></a>
 			<button
 				type="button"
-				class="study-panel-trigger"
+				class="vc-icon-btn study-panel-trigger"
+				aria-pressed={studyPanelOpen}
 				onclick={() => (studyPanelOpen = true)}
 				title={t('VaultChatPage.studyPanelTitle')}
+				aria-label={t('VaultChatPage.studyPanelTitle')}
 			>
-				<span class="trigger-icon">
-					<LibraryIcon size={19} aria-hidden="true" />
-					{#if hasUnseenStudyItems}
-						<span class="unseen-dot" aria-hidden="true"></span>
-					{/if}
-				</span>
-				<span class="trigger-label">{t('VaultChatPage.panelLabel')}</span>
+				<Icon name="panel-right" />
 				{#if hasUnseenStudyItems}
+					<span class="unseen-dot" aria-hidden="true"></span>
 					<span class="sr-only">{t('VaultChatPage.unseenContent')}</span>
 				{/if}
 			</button>
-			<QuizDialog chatId={data.chatId} vaultId={data.vaultId} {includedPaths} bind:open={quizOpen} />
-			<CardsDialog chatId={data.chatId} vaultId={data.vaultId} {includedPaths} bind:open={cardsOpen} />
-			<ReportDialog chatId={data.chatId} vaultId={data.vaultId} {includedPaths} bind:open={reportOpen} />
-			<MindMapDialog chatId={data.chatId} vaultId={data.vaultId} {includedPaths} bind:open={mindMapOpen} />
-			<SlidesDialog chatId={data.chatId} vaultId={data.vaultId} {includedPaths} bind:open={slidesOpen} />
+		</header>
+		<div class="chat-host">
+			<Chat
+				chatId={data.chatId}
+				vaultId={data.vaultId}
+				{includedPaths}
+				selectedCount={sourceCounts.selected}
+				totalCount={sourceCounts.total}
+				onChatLoaded={handleChatLoaded}
+				onExpandScope={() => handleScopeChange(undefined)}
+				onFocusTree={handleFocusTree}
+				onTurnEnd={() => void sidebar?.refresh()}
+			>
+				{#snippet composerStart()}
+					<SourceTrigger
+						selected={sourceCounts.selected}
+						total={sourceCounts.total}
+						areasSelected={sourceCounts.areasSelected}
+						areasTotal={sourceCounts.areasTotal}
+						expanded={sourcesOpen}
+						onclick={() => (sourcesOpen = true)}
+					/>
+				{/snippet}
+			</Chat>
 		</div>
-		<div class="right-bottom placeholder-text">{t('VaultChatPage.profileComingSoon')}</div>
-	</aside>
+	</main>
+</div>
+
+<SourcesSheet
+	bind:open={sourcesOpen}
+	vaultId={data.vaultId}
+	vaultName={data.vaultName}
+	{includedPaths}
+	onSelectionChange={handleScopeChange}
+	onCounts={(c) => (sourceCounts = c)}
+/>
+
+<!-- The dialogs render their own rail-style trigger buttons; the StudyPanel rows
+     open them now, so the triggers stay hidden (dialog content is portaled). -->
+<div class="dialog-hosts" hidden>
+	<QuizDialog chatId={data.chatId} vaultId={data.vaultId} {includedPaths} bind:open={quizOpen} />
+	<CardsDialog chatId={data.chatId} vaultId={data.vaultId} {includedPaths} bind:open={cardsOpen} />
+	<ReportDialog chatId={data.chatId} vaultId={data.vaultId} {includedPaths} bind:open={reportOpen} />
+	<MindMapDialog chatId={data.chatId} vaultId={data.vaultId} {includedPaths} bind:open={mindMapOpen} />
+	<SlidesDialog chatId={data.chatId} vaultId={data.vaultId} {includedPaths} bind:open={slidesOpen} />
 </div>
 
 <StudyPanel
@@ -199,180 +218,64 @@
 	.chat-screen {
 		display: flex;
 		height: 100%;
-	}
-
-	.panel-left,
-	.panel-right {
-		flex-shrink: 0;
-		display: flex;
-		flex-direction: column;
-		border-color: var(--color-border);
-	}
-
-	.panel-left {
-		width: 220px;
-		border-right: 1px solid var(--color-border);
-		padding: 0.75rem;
-		/* Evaluated under /impeccable animate, deliberately kept as a width
-		   transition rather than converted to transform: this collapse
-		   reflows exactly one sibling (.panel-center, a simple flex:1 child)
-		   — the cheap, common case the "don't animate width" rule exists to
-		   distinguish from (a deep or repeatedly-nested layout recalculating
-		   every frame). A transform-based slide would either leave a gap
-		   where .panel-center doesn't reflow, or need the panel pulled out
-		   of flow entirely — real added complexity for a two-child layout
-		   that measures fine as-is. */
-		transition: width var(--motion-fast) var(--motion-easing);
-		min-height: 0;
-	}
-
-	.panel-left.collapsed {
-		width: 2.5rem;
-		padding: 0.75rem 0.4rem;
-	}
-
-	.collapse-toggle {
-		align-self: flex-start;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		background: transparent;
-		border: 1px solid var(--color-border);
-		color: var(--color-muted-foreground);
-		border-radius: var(--radius-sm);
-		width: 1.75rem;
-		height: 1.75rem;
-		padding: 0;
-		cursor: pointer;
-		margin-bottom: 0.75rem;
-	}
-
-	.collapse-toggle:hover {
-		color: var(--color-primary);
-		border-color: var(--color-primary);
-	}
-
-	.collapse-toggle:focus-visible {
-		outline: 2px solid var(--accent);
-		outline-offset: 1px;
-	}
-
-	.vault-name {
-		display: flex;
-		align-items: center;
-		gap: 0.35rem;
-		font-size: 0.8rem;
-		font-weight: 600;
-		text-decoration: none;
-		color: var(--color-foreground);
-		margin-bottom: 0.6rem;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-
-	.vault-name:hover {
-		color: var(--color-primary);
-	}
-
-	.vault-name:focus-visible {
-		outline: 2px solid var(--accent);
-		outline-offset: 2px;
-	}
-
-	.placeholder-text {
-		color: var(--color-muted-foreground);
-		font-size: 0.85rem;
+		background: var(--bg-canvas);
 	}
 
 	.panel-center {
 		flex: 1;
 		min-width: 0;
-	}
-
-	.panel-right {
-		width: 3.5rem;
-		border-left: 1px solid var(--color-border);
-		align-items: center;
-		justify-content: space-between;
-		padding: 0.75rem 0;
-	}
-
-	.right-top {
 		display: flex;
 		flex-direction: column;
-		align-items: center;
-		gap: 0.9rem;
 	}
 
-	.right-top a {
-		display: flex;
-		/* Padding brings the ~17px icon glyph up to the 24px WCAG 2.5.8 (AA)
-		   touch-target floor without changing the icon's visual size. */
-		padding: 0.25rem;
-		margin: -0.25rem;
+	.vc-titlebar {
+		position: sticky;
+		top: 0;
+		z-index: 10;
+		flex-shrink: 0;
+	}
+
+	.heading {
+		min-width: 0;
+		max-width: 40%;
+		padding-inline: var(--space-2);
+	}
+
+	.heading .title,
+	.heading .sub {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.spacer {
+		flex: 1;
+	}
+
+	.vc-titlebar a.vc-icon-btn {
 		text-decoration: none;
-		color: var(--color-muted-foreground);
-		border-radius: var(--radius-sm);
 	}
 
-	.right-top a:hover {
-		color: var(--color-primary);
-	}
-
-	.right-top a:focus-visible,
-	.study-panel-trigger:focus-visible {
-		outline: 2px solid var(--accent);
-		outline-offset: 2px;
-	}
-
-	.right-middle {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 1.1rem;
+	.chat-host {
+		flex: 1;
+		min-height: 0;
+		position: relative;
 	}
 
 	.study-panel-trigger {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 0.25rem;
-		border: none;
-		background: transparent;
-		color: var(--color-muted-foreground);
-		cursor: pointer;
-	}
-
-	.study-panel-trigger:hover {
-		color: var(--color-primary);
-	}
-
-	.trigger-label {
-		font-size: 0.6875rem;
-	}
-
-	.trigger-icon {
 		position: relative;
-		display: inline-flex;
 	}
 
-	/* Faz 18 — "there's generated material you haven't looked at yet";
-	   disappears the moment the panel is opened (StudyPanel's markSeen()). */
+	/* "there's generated material you haven't looked at yet"; disappears the
+	   moment the panel is opened (StudyPanel's markSeen()). */
 	.unseen-dot {
 		position: absolute;
-		top: -0.1rem;
-		right: -0.15rem;
-		width: 0.5rem;
-		height: 0.5rem;
+		top: 5px;
+		right: 5px;
+		width: 8px;
+		height: 8px;
 		border-radius: 999px;
 		background: var(--success);
-		border: 1.5px solid var(--color-background);
-	}
-
-	.right-bottom {
-		text-align: center;
-		writing-mode: vertical-rl;
-		font-size: 0.75rem;
+		box-shadow: 0 0 0 2px var(--bg-canvas);
 	}
 </style>

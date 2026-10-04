@@ -129,3 +129,39 @@ export function toIncludedPaths(selected: ReadonlySet<string>, allFiles: string[
 	if (allFiles.every((p) => selected.has(p))) return undefined;
 	return [...selected];
 }
+
+
+/** "Yalnızca" (only this) — the selection that contains exactly the files
+ * under a node (the file itself for a leaf). Replaces the current selection
+ * rather than adding to it. */
+export function selectOnly(node: LibraryNode): Set<string> {
+	return node.type === 'file' ? new Set([node.path]) : new Set(collectFilePaths(node.children ?? []));
+}
+
+/** Number of leaf files under a node (1 for a file). */
+export function countFiles(node: LibraryNode): number {
+	return node.type === 'file' ? 1 : collectFilePaths(node.children ?? []).length;
+}
+
+/** Number of selected leaf files under a node. */
+export function countSelected(node: LibraryNode, selected: ReadonlySet<string>): number {
+	if (node.type === 'file') return selected.has(node.path) ? 1 : 0;
+	return collectFilePaths(node.children ?? []).filter((p) => selected.has(p)).length;
+}
+
+/** "Seçililer" filter: a file is kept when selected, a folder when any
+ * descendant file is selected. */
+export function nodeHasSelected(node: LibraryNode, selected: ReadonlySet<string>): boolean {
+	return countSelected(node, selected) > 0;
+}
+
+/** The top-level (display) areas that contribute at least one selected file,
+ * with how many of their files are selected — feeds the sheet's summary chips. */
+export function selectedAreas(
+	nodes: LibraryNode[],
+	selected: ReadonlySet<string>
+): { node: LibraryNode; selected: number; total: number }[] {
+	return nodes
+		.map((node) => ({ node, selected: countSelected(node, selected), total: countFiles(node) }))
+		.filter((a) => a.selected > 0);
+}

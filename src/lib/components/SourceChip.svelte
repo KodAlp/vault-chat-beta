@@ -90,12 +90,12 @@
 							onfocusin={() => focusHighlight(g.path)}
 							onfocusout={() => cancelScheduledHighlight(g.path)}
 						>
-							<a class="chip" href={libraryViewerUrl(g.path, vaultId, here)}>
+							<a class="vc-chip chip" href={libraryViewerUrl(g.path, vaultId, here)}>
 								{g.topic}
-								{#if g.chunks.length > 1}<span class="count">{t('SourceChip.chunkCount', { count: g.chunks.length })}</span>{/if}
+								{#if g.chunks.length > 1}<span class="n count">{t('SourceChip.chunkCount', { count: g.chunks.length })}</span>{/if}
 							</a>
-							<a class="chip-icon" href={libraryViewerUrl(g.path, vaultId, here)} title={t('Common.kaynagiAc')} aria-label={t('Common.kaynagiAc')}>
-								<ExternalLinkIcon size={12} aria-hidden="true" />
+							<a class="vc-icon-btn chip-icon" href={libraryViewerUrl(g.path, vaultId, here)} title={t('Common.kaynagiAc')} aria-label={t('Common.kaynagiAc')}>
+								<ExternalLinkIcon size={16} strokeWidth={1.75} aria-hidden="true" />
 							</a>
 						</span>
 					{/snippet}
@@ -117,53 +117,37 @@
 	.sources {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 0.4rem;
-		margin-top: 0.5rem;
+		gap: var(--space-2);
 	}
 
 	.chip-group {
 		display: inline-flex;
-		align-items: stretch;
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-pill);
-		overflow: hidden;
+		align-items: center;
+		gap: 2px;
 	}
 
 	.chip {
-		font-size: 0.75rem;
 		text-decoration: none;
-		background: var(--color-muted);
-		color: var(--color-muted-foreground);
-		padding: 0.2rem 0.65rem;
+		max-width: 28ch;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 
-	.chip:hover {
-		color: var(--color-primary);
+	.chip-icon {
+		width: 28px;
+		height: 28px;
+		text-decoration: none;
 	}
 
 	.chip:focus-visible,
 	.chip-icon:focus-visible {
-		outline: 2px solid var(--accent);
-		outline-offset: -2px;
+		outline: 2px solid var(--focus-ring);
+		outline-offset: 2px;
 	}
 
 	.count {
-		opacity: 0.7;
 		margin-left: 0.15rem;
-	}
-
-	.chip-icon {
-		display: inline-flex;
-		align-items: center;
-		text-decoration: none;
-		background: var(--color-muted);
-		color: var(--color-muted-foreground);
-		padding: 0.2rem 0.5rem;
-		border-left: 1px solid var(--color-border);
-	}
-
-	.chip-icon:hover {
-		color: var(--color-primary);
 	}
 
 	.preview-title {
@@ -175,7 +159,7 @@
 	.preview-list {
 		margin: 0;
 		padding-left: 1rem;
-		color: var(--color-muted-foreground);
+		color: var(--label-secondary);
 	}
 
 	.preview-list li {
