@@ -1,0 +1,15 @@
+<!doctype html>
+<html><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="../tokens.css"><link rel="stylesheet" href="../components.css"><meta charset="utf-8"><title>QuizOption</title>
+<style>html,body{margin:0;background:var(--bg-canvas)} .vc-root{padding:16px}</style></head>
+<body style="font-family:var(--font-sans)"><div style="position:sticky;top:0;z-index:9;display:flex;gap:6px;align-items:center;padding:10px 16px;background:var(--material-bar);backdrop-filter:var(--material-blur);border-bottom:1px solid var(--separator);font:500 13px/18px var(--font-sans);color:var(--label)">
+<a href="index.html" style="color:var(--accent-text);margin-right:auto;text-decoration:none">← Tüm bileşenler</a>
+<div class="vc-seg" role="tablist"><button role="tab" data-t="light" onclick="setT('light')">Açık</button><button role="tab" data-t="dark" onclick="setT('dark')">Koyu</button><button role="tab" data-t="cream" onclick="setT('cream')">Krem</button><button role="tab" data-t="sand" onclick="setT('sand')">Kum</button><button role="tab" data-t="forest" onclick="setT('forest')">Orman</button></div></div>
+<script>function setT(t){document.documentElement.dataset.theme=t;document.querySelectorAll('[data-t]').forEach(b=>b.setAttribute('aria-selected',b.dataset.t===t));try{localStorage.setItem('vc-theme',t)}catch(e){}}
+try{setT(localStorage.getItem('vc-theme')||'light')}catch(e){setT('light')}</script><div class="vc-root">
+<div class="vc-stack" style="max-width:520px">
+<div class="vc-option" role="radio" aria-checked="false"><span class="key">A</span>O(V²)</div>
+<div class="vc-option" role="radio" aria-checked="true"><span class="key">B</span>O((V + E) log V)</div>
+<div class="vc-option correct"><span class="key">C</span>O(E log V)<span class="verdict">Doğru</span></div>
+<div class="vc-option wrong"><span class="key">D</span>O(V · E)<span class="verdict">Yanlış</span></div>
+</div>
+</div></body></html>

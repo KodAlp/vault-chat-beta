@@ -1,0 +1,17 @@
+<!doctype html>
+<html><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="../tokens.css"><link rel="stylesheet" href="../components.css"><meta charset="utf-8"><title>Sidebar</title>
+<style>html,body{margin:0;background:var(--bg-canvas)} .vc-root{padding:16px}</style></head>
+<body style="font-family:var(--font-sans)"><div style="position:sticky;top:0;z-index:9;display:flex;gap:6px;align-items:center;padding:10px 16px;background:var(--material-bar);backdrop-filter:var(--material-blur);border-bottom:1px solid var(--separator);font:500 13px/18px var(--font-sans);color:var(--label)">
+<a href="index.html" style="color:var(--accent-text);margin-right:auto;text-decoration:none">← Tüm bileşenler</a>
+<div class="vc-seg" role="tablist"><button role="tab" data-t="light" onclick="setT('light')">Açık</button><button role="tab" data-t="dark" onclick="setT('dark')">Koyu</button><button role="tab" data-t="cream" onclick="setT('cream')">Krem</button><button role="tab" data-t="sand" onclick="setT('sand')">Kum</button><button role="tab" data-t="forest" onclick="setT('forest')">Orman</button></div></div>
+<script>function setT(t){document.documentElement.dataset.theme=t;document.querySelectorAll('[data-t]').forEach(b=>b.setAttribute('aria-selected',b.dataset.t===t));try{localStorage.setItem('vc-theme',t)}catch(e){}}
+try{setT(localStorage.getItem('vc-theme')||'light')}catch(e){setT('light')}</script><div class="vc-root">
+<nav class="vc-sidebar" style="height:280px">
+<button class="vc-btn secondary" style="justify-content:flex-start"><span class="vc-icon sm" style="--icon:url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20height%3D%2224px%22%20viewBox%3D%220%20-960%20960%20960%22%20width%3D%2224px%22%20fill%3D%22%23000%22%3E%3Cpath%20d%3D%22M279.18-124.08q-25.08%200-42.49-17.56-17.42-17.57-17.42-42.62v-591.48q0-25.05%2017.57-42.62%2017.56-17.56%2042.7-17.56H586l154.73%20154.23v497.34q0%2025.14-17.58%2042.71-17.58%2017.56-42.65%2017.56H279.18Zm271.24-521.54v-142.34H279.54q-4.62%200-8.46%203.84-3.85%203.85-3.85%208.47v591.3q0%204.62%203.85%208.47%203.84%203.84%208.46%203.84h400.92q4.62%200%208.46-3.84%203.85-3.85%203.85-8.47v-461.27H550.42ZM267.23-787.96v163.34-163.34V-172.04v-615.92Z%22/%3E%3C/svg%3E')" aria-hidden="true"></span> Yeni sohbet</button>
+<div class="vc-side-head">BUGÜN</div>
+<div class="vc-side-row" aria-current="page">Sanal bellek ve sayfalama</div>
+<div class="vc-side-row">Dijkstra karmaşıklığı</div>
+<div class="vc-side-head">DÜN</div>
+<div class="vc-side-row">Rust ownership özeti <span class="meta">3</span></div>
+</nav>
+</div></body></html>

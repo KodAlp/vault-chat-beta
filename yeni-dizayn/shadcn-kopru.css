@@ -1,0 +1,55 @@
+/* Köprü: yeni dizayn token'larını mevcut shadcn-svelte bileşenlerine bağlar.
+   src/app.css içindeki `@theme inline { … }` bloğunun yerine geçecek sürüm.
+   Bileşenler (src/lib/components/ui/*) değişmeden yeni renkleri alır. */
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *, [data-theme=forest], [data-theme=forest] *));
+
+@theme inline {
+	--color-background: var(--bg-canvas);
+	--color-foreground: var(--label);
+	--color-card: var(--bg-elevated);
+	--color-card-foreground: var(--label);
+	--color-popover: var(--bg-elevated);
+	--color-popover-foreground: var(--label);
+	--color-primary: var(--accent);
+	--color-primary-foreground: var(--on-accent);
+	--color-secondary: var(--fill-control);
+	--color-secondary-foreground: var(--label);
+	--color-muted: var(--bg-sidebar);
+	--color-muted-foreground: var(--label-secondary);
+	/* shadcn'in --accent'i nötr hover'dır; marka vurgusu --color-primary'de. */
+	--color-accent: var(--fill-hover);
+	--color-accent-foreground: var(--label);
+	--color-destructive: var(--danger);
+	--color-destructive-foreground: var(--on-accent);
+	--color-border: var(--separator);
+	--color-input: var(--separator-strong);
+	--color-ring: var(--focus-ring);
+	--color-sidebar: var(--bg-sidebar);
+	--radius-sm: var(--radius-sm);
+	--radius-md: var(--radius-md);
+	--radius-lg: var(--radius-lg);
+	--radius-xl: var(--radius-xl);
+	--font-sans: var(--font-sans);
+	--font-display: var(--font-serif);
+	--font-mono: var(--font-mono);
+}
+
+/* Eski token adlarını kullanan yerler kırılmasın diye geçici takma adlar
+   (src/styles/tokens.css → yeni adlar). Geçiş bitince silinebilir. */
+:root, [data-theme] {
+	--ground: var(--bg-canvas);
+	--ground-deep: var(--bg-sidebar);
+	--surface: var(--bg-elevated);
+	--surface-raised: var(--bg-elevated);
+	--text: var(--label);
+	--text-muted: var(--label-secondary);
+	--accent-glow: var(--focus-ring);
+	--ink-on-accent: var(--on-accent);
+	--hairline: var(--separator);
+	--hairline-strong: var(--separator-strong);
+	--hairline-accent: var(--accent-text);
+	--bubble-assistant: transparent;
+	--motion-fast: var(--duration-fast);
+	--motion-base: var(--duration-base);
+	--motion-easing: var(--ease-standard);
+}

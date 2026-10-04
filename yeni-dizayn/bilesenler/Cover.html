@@ -1,0 +1,29 @@
+<!doctype html>
+<html><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="../tokens.css"><link rel="stylesheet" href="../components.css"><meta charset="utf-8"><title>Cover</title>
+<style>
+html,body{margin:0;background:var(--bg-canvas)}
+.cv{position:relative;width:960px;height:320px;overflow:hidden;background:var(--bg-canvas)}
+svg{position:absolute;inset:0}
+.accent{fill:var(--accent)} .ink{fill:var(--label)} .muted{fill:var(--label-tertiary)} .cut{fill:var(--bg-canvas)}
+.slab{rx:var(--radius-xl);ry:var(--radius-xl)}
+.txt{position:absolute;left:40px;bottom:36px;max-width:440px}
+.name{font:400 120px/0.95 var(--font-serif);letter-spacing:-1.2px;color:var(--label);margin:0}
+.tag{font:400 14px/20px var(--font-sans);color:var(--label-secondary);margin-top:12px}
+</style></head><body style="font-family:var(--font-sans)"><div style="position:sticky;top:0;z-index:9;display:flex;gap:6px;align-items:center;padding:10px 16px;background:var(--material-bar);backdrop-filter:var(--material-blur);border-bottom:1px solid var(--separator);font:500 13px/18px var(--font-sans);color:var(--label)">
+<a href="index.html" style="color:var(--accent-text);margin-right:auto;text-decoration:none">← Tüm bileşenler</a>
+<div class="vc-seg" role="tablist"><button role="tab" data-t="light" onclick="setT('light')">Açık</button><button role="tab" data-t="dark" onclick="setT('dark')">Koyu</button><button role="tab" data-t="cream" onclick="setT('cream')">Krem</button><button role="tab" data-t="sand" onclick="setT('sand')">Kum</button><button role="tab" data-t="forest" onclick="setT('forest')">Orman</button></div></div>
+<script>function setT(t){document.documentElement.dataset.theme=t;document.querySelectorAll('[data-t]').forEach(b=>b.setAttribute('aria-selected',b.dataset.t===t));try{localStorage.setItem('vc-theme',t)}catch(e){}}
+try{setT(localStorage.getItem('vc-theme')||'light')}catch(e){setT('light')}</script><div class="cv">
+<svg width="960" height="320" viewBox="0 0 960 320" aria-hidden="true">
+<!-- blocks: accent slab 168x272 (radius-xl), label pill 224x96, label-tertiary disc r64, accent orb r28 (the send orb)
+     arrangement: one tall slab with satellites, all right of x=480
+     pattern: disc row — pill controls + circular send orb (ref 1) make round shapes this system's signature; dots cut from the slab in bg-canvas
+     scales: dot pitch 24 (space-6), r3; inset 24 (space-6); radii radius-xl 22, radius-full -->
+<rect class="accent slab" x="520" y="24" width="168" height="272"/>
+<circle class="cut" cx="548" cy="196" r="3"/><circle class="cut" cx="572" cy="196" r="3"/><circle class="cut" cx="596" cy="196" r="3"/><circle class="cut" cx="620" cy="196" r="3"/><circle class="cut" cx="644" cy="196" r="3"/><circle class="cut" cx="668" cy="196" r="3"/><circle class="cut" cx="548" cy="220" r="3"/><circle class="cut" cx="572" cy="220" r="3"/><circle class="cut" cx="596" cy="220" r="3"/><circle class="cut" cx="620" cy="220" r="3"/><circle class="cut" cx="644" cy="220" r="3"/><circle class="cut" cx="668" cy="220" r="3"/><circle class="cut" cx="548" cy="244" r="3"/><circle class="cut" cx="572" cy="244" r="3"/><circle class="cut" cx="596" cy="244" r="3"/><circle class="cut" cx="620" cy="244" r="3"/><circle class="cut" cx="644" cy="244" r="3"/><circle class="cut" cx="668" cy="244" r="3"/><circle class="cut" cx="548" cy="268" r="3"/><circle class="cut" cx="572" cy="268" r="3"/><circle class="cut" cx="596" cy="268" r="3"/><circle class="cut" cx="620" cy="268" r="3"/><circle class="cut" cx="644" cy="268" r="3"/><circle class="cut" cx="668" cy="268" r="3"/>
+<rect class="ink" x="712" y="24" width="224" height="96" rx="48"/>
+<circle class="muted" cx="776" cy="224" r="64"/>
+<circle class="accent" cx="896" cy="240" r="28"/>
+</svg>
+<div class="txt"><h1 class="name">Vault<br>Chat</h1><div class="tag">Notlarından öğren. İçerik önde, arayüz geride.</div></div>
+</div></body></html>
