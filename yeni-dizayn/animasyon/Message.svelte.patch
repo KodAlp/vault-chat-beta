@@ -1,0 +1,26 @@
+diff --git a/src/lib/components/Message.svelte b/src/lib/components/Message.svelte
+index 6a18047..4bc3d98 100644
+--- a/src/lib/components/Message.svelte
++++ b/src/lib/components/Message.svelte
+@@ -39,14 +39,14 @@
+ 		message.role === 'assistant' && message.interrupted && !message.content
+ 	);
+ 
+-	// Nothing has arrived yet at all — not even reasoning text. An empty bubble
+-	// here previously gave zero feedback between hitting send and the first
+-	// token (retrieval + first-token latency can be several seconds), which
+-	// read as the page having frozen. Once `thinking` starts streaming,
+-	// ThinkingPanel below already shows real activity, so this only covers the
+-	// gap before either shows up — the two indicators never stack.
++	// No answer text yet. ThinkingChick (ChatBubble) keeps reading through
++	// retrieval, first-token latency AND the model's reasoning phase; it only
++	// closes its book once real answer content starts streaming. ThinkingPanel
++	// may stream reasoning above it meanwhile — the chick is a quiet, fixed-size
++	// mascot, so the two no longer compete the way the old dots + panel did.
++	// (Design decision: yeni-dizayn/animasyon/README.md.)
+ 	let isWaitingForFirstToken = $derived(
+-		message.role === 'assistant' && streaming && !message.content && !message.thinking
++		message.role === 'assistant' && streaming && !message.content
+ 	);
+ 
+ 	// Streaming fires this effect many times per second; renderMarkdown() is async

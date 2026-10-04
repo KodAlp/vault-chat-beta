@@ -1,0 +1,18 @@
+<!doctype html>
+<html><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="../tokens.css"><link rel="stylesheet" href="../components.css"><meta charset="utf-8"><title>Composer</title>
+<style>html,body{margin:0;background:var(--bg-canvas)} .vc-root{padding:16px}</style></head>
+<body style="font-family:var(--font-sans)"><div style="position:sticky;top:0;z-index:9;display:flex;gap:6px;align-items:center;padding:10px 16px;background:var(--material-bar);backdrop-filter:var(--material-blur);border-bottom:1px solid var(--separator);font:500 13px/18px var(--font-sans);color:var(--label)">
+<a href="index.html" style="color:var(--accent-text);margin-right:auto;text-decoration:none">← Tüm bileşenler</a>
+<div class="vc-seg" role="tablist"><button role="tab" data-t="light" onclick="setT('light')">Açık</button><button role="tab" data-t="dark" onclick="setT('dark')">Koyu</button><button role="tab" data-t="cream" onclick="setT('cream')">Krem</button><button role="tab" data-t="sand" onclick="setT('sand')">Kum</button><button role="tab" data-t="forest" onclick="setT('forest')">Orman</button></div></div>
+<script>function setT(t){document.documentElement.dataset.theme=t;document.querySelectorAll('[data-t]').forEach(b=>b.setAttribute('aria-selected',b.dataset.t===t));try{localStorage.setItem('vc-theme',t)}catch(e){}}
+try{setT(localStorage.getItem('vc-theme')||'light')}catch(e){setT('light')}</script><div class="vc-root">
+<div class="vc-composer">
+<textarea rows="1" placeholder="Kasana bir soru sor…"></textarea>
+<div class="vc-composer-bar">
+<button class="vc-icon-btn" aria-label="Dosya ekle"><span class="vc-icon " style="--icon:url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20height%3D%2224px%22%20viewBox%3D%220%20-960%20960%20960%22%20width%3D%2224px%22%20fill%3D%22%23000%22%3E%3Cpath%20d%3D%22M693.85-338.46q0%2090.92-62.62%20154.69Q568.62-120%20478.46-120q-90.92%200-153.92-63.77-63-63.77-63-154.69v-349.23q0-63.46%2043.65-107.89Q348.85-840%20412.31-840q63.46%200%20107.11%2044.42%2043.66%2044.43%2043.66%20107.89v330.77q0%2035.23-24.7%2060.69-24.69%2025.46-59.92%2025.46-35.23%200-60.69-25.08-25.46-25.07-25.46-61.07v-332.31h40v332.31q0%2019.15%2013.11%2032.65%2013.12%2013.5%2032.27%2013.5%2019.16%200%2032.27-13.5%2013.12-13.5%2013.12-32.65v-331.54q-.23-46.62-32.2-79.08Q458.92-800%20412.31-800q-46.62%200-78.69%2032.85-32.08%2032.84-32.08%2079.46v349.23q-.23%2074.08%2051.31%20126.27Q404.38-160%20478.46-160q73.08%200%20124-52.19t51.39-126.27v-350.77h40v350.77Z%22/%3E%3C/svg%3E')" aria-hidden="true"></span></button>
+<span class="vc-badge">Tüm kasa</span>
+<span class="vc-badge">qwen3:8b</span>
+<span class="spacer"></span>
+<button class="vc-send" aria-label="Gönder"><span class="vc-icon " style="--icon:url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20height%3D%2224px%22%20viewBox%3D%220%20-960%20960%20960%22%20width%3D%2224px%22%20fill%3D%22%23000%22%3E%3Cpath%20d%3D%22M446-168v-495.15L216.31-433.46%20168-481l311-311%20313%20313-48.31%2047.54L512-663.15V-168h-66Z%22/%3E%3C/svg%3E')" aria-hidden="true"></span></button>
+</div></div>
+</div></body></html>
