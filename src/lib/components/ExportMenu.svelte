@@ -2,7 +2,7 @@
 	import { onDestroy } from 'svelte';
 	import { motionFly } from '$lib/motion';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
-	import DownloadIcon from '@lucide/svelte/icons/download';
+	import Icon from '$lib/components/Icon.svelte';
 	import CheckIcon from '@lucide/svelte/icons/check';
 	import XIcon from '@lucide/svelte/icons/x';
 	import { isTauri, invoke } from '@tauri-apps/api/core';
@@ -131,11 +131,11 @@
 
 <DropdownMenu.Root>
 	<DropdownMenu.Trigger
-		class="flex border-none bg-transparent p-1 -m-1 leading-none text-muted-foreground hover:text-primary focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-2"
+		class="vc-icon-btn"
 		title={t('ExportMenu.exportTitle')}
 		aria-label={t('ExportMenu.exportTitle')}
 	>
-		<DownloadIcon size={17} aria-hidden="true" />
+		<Icon name="download" />
 	</DropdownMenu.Trigger>
 	<DropdownMenu.Content align="end">
 		<DropdownMenu.Item onSelect={() => download('md')}>{t('ExportMenu.markdown')}</DropdownMenu.Item>

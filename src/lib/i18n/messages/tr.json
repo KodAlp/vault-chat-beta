@@ -32,7 +32,7 @@
 	},
 	"Chat": {
 		"smallTalkUnavailable": "Sohbet ifadesi öğrenme, yapılandırılmış gömme modeliyle kullanılamıyor (yalnızca bge-m3 destekleniyor).",
-		"emptyStateTitle": "Kasandaki notlar hakkında bir soru sor",
+		"emptyStateTitle": "Kasandan ne öğrenmek istersin?",
 		"emptyStateSubtitle": "Cevaplar yalnızca seçtiğin kaynaklara dayanır.",
 		"emptyStateBrowseSources": "Kaynaklara göz at",
 		"scrollToBottom": "en sona in",
@@ -54,7 +54,10 @@
 		"nearCtxLimit": "Bu sohbet bağlam sınırına yaklaştı; modele giden promptun bir kısmı kesilmiş olabilir, bu cevap eksik bağlamla üretilmiş olabilir.",
 		"embeddingMismatch": "İndeks farklı bir embedding modeliyle oluşturulmuş; bu yanıt anahtar kelime aramasıyla verildi.",
 		"embeddingUnavailable": "Embedding servisine ulaşılamadı; bu yanıt anahtar kelime aramasıyla verildi.",
-		"reindexNow": "Yeniden indeksle"
+		"reindexNow": "Yeniden indeksle",
+		"toolReading": "okunuyor",
+		"toolDone": "okundu",
+		"toolError": "hata"
 	},
 
 	"ChatBubble": {
@@ -169,7 +172,15 @@
 		"review": "İncele",
 		"progress": "İlerleme",
 		"progressOpen": "Aç",
-		"deleteConfirmTitle": "\"{title}\" silinsin mi?"
+		"deleteConfirmTitle": "\"{title}\" silinsin mi?",
+		"quizDesc": "Kaynaklardan çoktan seçmeli test",
+		"cardsDesc": "Aralıklı tekrar kartları",
+		"reportDesc": "Atıflı özet belge",
+		"mindmapDesc": "Konunun kavram haritası",
+		"slidesDesc": "Atıflı slayt sunumu",
+		"progressDesc": "Her konuyu ne kadar bildiğin",
+		"open": "Çalışma paneli",
+		"close": "Çalışma panelini kapat"
 	},
 
 	"ProgressPage": {
@@ -1134,5 +1145,56 @@
 		"invalidPort": "Port 1-65535 aralığında olmalı.",
 		"saved": "Kaydedildi.",
 		"savedRestartNote": "Kaydedildi. Sunucu çalışıyor; değişiklik bir sonraki başlatmada geçerli olur."
+	},
+
+	"ChatSidebar": {
+		"ariaLabel": "Sohbet geçmişi",
+		"newChat": "Yeni sohbet",
+		"today": "BUGÜN",
+		"yesterday": "DÜN",
+		"last7": "ÖNCEKİ 7 GÜN",
+		"last30": "ÖNCEKİ 30 GÜN",
+		"older": "DAHA ESKİ",
+		"untitled": "Adsız sohbet",
+		"empty": "Henüz sohbet yok.",
+		"loadError": "Sohbetler yüklenemedi."
+	},
+
+	"ChatTitleBar": {
+		"ariaLabel": "Sohbet araç çubuğu",
+		"showSidebar": "Sohbet geçmişini göster"
+	},
+
+	"SourceTrigger": {
+		"all": "Tüm kasa",
+		"areas": "{selected} / {total} alan",
+		"none": "Kaynak yok",
+		"open": "Kaynakları aç: {summary}"
+	},
+
+	"SourcesSheet": {
+		"title": "Kaynaklar",
+		"subtitle": "{vault} · yanıtlar yalnızca işaretli notlardan gelir",
+		"close": "Kapat",
+		"all": "Tümü",
+		"none": "Hiçbiri",
+		"filterAll": "Hepsi",
+		"filterSelected": "Seçililer",
+		"filterLabel": "Göster",
+		"only": "Yalnızca",
+		"onlyTitle": "Yalnızca \"{name}\" seçilsin",
+		"toggleFolder": "Aç/kapa",
+		"notesCount": "{count} not",
+		"summaryDetail": "toplam {total} notun %{percent} kadarı · {selected} / {areas} alan",
+		"selectedAreas": "Seçili alanlar",
+		"partial": "kısmi",
+		"remove": "{name} seçimden kaldırılsın",
+		"noSelection": "Hiçbir alan seçili değil.",
+		"noSelectedMatch": "Seçili kaynak yok.",
+		"manage": "Kaynakları yönet",
+		"info": "Sohbet {areas} alan içinde, {notes} notta arayacak",
+		"done": "Bitti",
+		"treeLabel": "Kaynak ağacı",
+		"noReview": "İnceleme gerekiyor"
 	}
 }

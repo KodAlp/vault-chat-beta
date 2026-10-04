@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onDestroy, onMount, untrack } from 'svelte';
+	import { onDestroy, onMount, untrack, type Snippet } from 'svelte';
 	import type { ChatMessage, ChatRequestBody, ProviderModelOption, StreamEvent } from '$lib/types';
 	import Message from './Message.svelte';
 	import ScopeIndicator from './ScopeIndicator.svelte';
@@ -13,7 +13,6 @@
 	import { MAX_PHRASE_CHARS } from '$lib/smalltalk-limits';
 	import ArrowDownIcon from '@lucide/svelte/icons/arrow-down';
 	import Icon from '$lib/components/Icon.svelte';
-	import SquareIcon from '@lucide/svelte/icons/square';
 	import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';
 
 	let {
@@ -24,7 +23,9 @@
 		totalCount = 0,
 		onChatLoaded,
 		onExpandScope,
-		onFocusTree
+		onFocusTree,
+		onTurnEnd,
+		composerStart
 	}: {
 		chatId: string;
 		vaultId: string;
@@ -34,6 +35,12 @@
 		onChatLoaded?: (paths: string[] | undefined) => void;
 		onExpandScope?: () => void;
 		onFocusTree?: () => void;
+		/** Fires when a send/stream finishes (success, error or abort) — the page
+		 * refreshes its chat list then, since the first message creates the row. */
+		onTurnEnd?: () => void;
+		/** Optional content for the left end of the composer bar (the source-scope
+		 * trigger is placed here by the chat page). */
+		composerStart?: Snippet;
 	} = $props();
 
 	const FLUSH_INTERVAL_MS = 50;
@@ -354,6 +361,7 @@
 			flush();
 			isStreaming = false;
 			abortController = undefined;
+			onTurnEnd?.();
 		}
 	}
 
@@ -466,47 +474,40 @@
 	<div class="messages-wrap">
 		<div class="messages" bind:this={listEl} onscroll={handleScroll}>
 			{#if messages.length === 0}
-				<div class="empty-state">
-					<svg class="empty-art" viewBox="0 0 96 96" aria-hidden="true" focusable="false">
-						<circle cx="48" cy="48" r="44" class="ring ring-outer" />
-						<circle cx="48" cy="48" r="30" class="ring ring-mid" />
-						<circle cx="48" cy="48" r="3" class="core" />
-						<g class="rays">
-							<line x1="48" y1="2" x2="48" y2="14" />
-							<line x1="48" y1="82" x2="48" y2="94" />
-							<line x1="2" y1="48" x2="14" y2="48" />
-							<line x1="82" y1="48" x2="94" y2="48" />
-							<line x1="15.5" y1="15.5" x2="24" y2="24" />
-							<line x1="72" y1="72" x2="80.5" y2="80.5" />
-							<line x1="80.5" y1="15.5" x2="72" y2="24" />
-							<line x1="24" y1="72" x2="15.5" y2="80.5" />
-						</g>
-					</svg>
-					<h2>{t('Chat.emptyStateTitle')}</h2>
+				<div class="vc-empty">
+					<h1>{t('Chat.emptyStateTitle')}</h1>
 					<p>{t('Chat.emptyStateSubtitle')}</p>
 					{#if onFocusTree}
-						<button type="button" class="empty-action" onclick={() => onFocusTree?.()}>
+						<button type="button" class="vc-btn secondary" onclick={() => onFocusTree?.()}>
 							{t('Chat.emptyStateBrowseSources')}
-							<ArrowRightIcon size={13} aria-hidden="true" />
+							<ArrowRightIcon size={20} strokeWidth={1.75} aria-hidden="true" />
 						</button>
 					{/if}
 				</div>
 			{/if}
-			{#each messages as message, i (message.id)}
-				<Message
-					{message}
-					{vaultId}
-					streaming={isStreaming && i === messages.length - 1}
-					{onExpandScope}
-					onForceSources={message.smallTalk ? () => retryWithSources(i) : undefined}
-					onNotRelevant={message.sources?.length && canTeach(i) ? () => teachNotRelevant(i) : undefined}
-					onReindex={message.embeddingIssue === 'mismatch' ? () => (reindexDialogOpen = true) : undefined}
-				/>
-			{/each}
+			<div class="thread">
+				{#each messages as message, i (message.id)}
+					<Message
+						{message}
+						{vaultId}
+						streaming={isStreaming && i === messages.length - 1}
+						{onExpandScope}
+						onForceSources={message.smallTalk ? () => retryWithSources(i) : undefined}
+						onNotRelevant={message.sources?.length && canTeach(i) ? () => teachNotRelevant(i) : undefined}
+						onReindex={message.embeddingIssue === 'mismatch' ? () => (reindexDialogOpen = true) : undefined}
+					/>
+				{/each}
+			</div>
 		</div>
 		{#if isStreaming && !isAtBottom}
-			<button class="scroll-to-bottom" onclick={() => scrollToBottom(true)}>
-				<ArrowDownIcon size={14} aria-hidden="true" /> {t('Chat.scrollToBottom')}
+			<button
+				type="button"
+				class="vc-icon-btn scroll-to-bottom"
+				onclick={() => scrollToBottom(true)}
+				aria-label={t('Chat.scrollToBottom')}
+				title={t('Chat.scrollToBottom')}
+			>
+				<ArrowDownIcon size={20} strokeWidth={1.75} aria-hidden="true" />
 			</button>
 		{/if}
 	</div>
@@ -515,38 +516,48 @@
 		<p class="error" role="alert">{errorMessage}</p>
 	{/if}
 
-	<ModelPickerRow
-		idPrefix="model"
-		{modelOptions}
-		{activeProvider}
-		{activeModel}
-		bind:thinkMode
-		bind:reviewMode
-		{onModelChange}
-		{onReviewModeChange}
-		class="chat-compose-row"
-	/>
-
 	<footer>
-		<textarea
-			id="chat-input"
-			name="chat-input"
-			bind:value={input}
-			onkeydown={handleKeydown}
-			placeholder={t('Chat.inputPlaceholder')}
-			disabled={isStreaming}
-		></textarea>
-		{#if isStreaming}
-			<button class="stop" onclick={stop} aria-label={t('Chat.stop')}>
-				<SquareIcon size={16} aria-hidden="true" />
-				{t('Chat.stop')}
-			</button>
-		{:else}
-			<button onclick={send} disabled={!input.trim()} aria-label={t('Chat.send')}>
-				<Icon name="send" size="sm" />
-				{t('Chat.send')}
-			</button>
-		{/if}
+		<div class="vc-composer">
+			<textarea
+				id="chat-input"
+				name="chat-input"
+				rows="1"
+				bind:value={input}
+				onkeydown={handleKeydown}
+				placeholder={t('Chat.inputPlaceholder')}
+				disabled={isStreaming}
+			></textarea>
+			<div class="vc-composer-bar">
+				<!-- Left slot: the chat page puts its SourceTrigger here (composerStart). -->
+				{@render composerStart?.()}
+				<ModelPickerRow
+					idPrefix="model"
+					{modelOptions}
+					{activeProvider}
+					{activeModel}
+					bind:thinkMode
+					bind:reviewMode
+					{onModelChange}
+					{onReviewModeChange}
+					class="composer-tools"
+				/>
+				<span class="spacer"></span>
+				{#if isStreaming}
+					<button type="button" class="vc-send stop" onclick={stop} aria-label={t('Chat.stop')} title={t('Chat.stop')}></button>
+				{:else}
+					<button
+						type="button"
+						class="vc-send"
+						onclick={send}
+						disabled={!input.trim()}
+						aria-label={t('Chat.send')}
+						title={t('Chat.send')}
+					>
+						<Icon name="send" />
+					</button>
+				{/if}
+			</div>
+		</div>
 	</footer>
 </div>
 
@@ -557,6 +568,7 @@
 		display: flex;
 		flex-direction: column;
 		height: 100%;
+		background: var(--bg-canvas);
 	}
 
 	header {
@@ -565,18 +577,7 @@
 		justify-content: space-between;
 		gap: 0.75rem;
 		padding: 0.5rem 1rem;
-		border-bottom: 1px solid var(--color-border);
-	}
-
-	/* .compose-controls/.model-pill/.think-pill now live in
-	   ModelPickerRow.svelte (used here and by vault/[id]/+page.svelte's
-	   new-chat composer, which used to duplicate this whole block) —
-	   Svelte's style scoping is per-component-template, so reaching the
-	   child's root element for this one extra bit of layout (this page's
-	   own top padding, not something the shared row should own) needs
-	   :global() rather than a plain class rule. */
-	:global(.chat-compose-row) {
-		padding: 0.6rem 1rem 0;
+		border-bottom: 1px solid var(--separator);
 	}
 
 	.messages-wrap {
@@ -588,33 +589,33 @@
 	.messages {
 		height: 100%;
 		overflow-y: auto;
-		padding: 1rem;
+		padding: var(--space-4);
+	}
+
+	/* Transcript column: centered at the reading measure, messages spaced by
+	   --space-6. */
+	.thread {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-6);
+		width: 100%;
+		max-width: var(--reading-measure);
+		margin-inline: auto;
 	}
 
 	.scroll-to-bottom {
-		display: flex;
-		align-items: center;
-		gap: 0.35rem;
 		position: absolute;
-		bottom: 1rem;
+		bottom: var(--space-4);
 		left: 50%;
 		transform: translateX(-50%);
-		padding: 0.4rem 0.9rem;
-		border-radius: var(--radius-pill);
-		border: 1px solid var(--color-border);
-		background: var(--color-background);
-		color: var(--color-foreground);
-		font-size: 0.8rem;
-		cursor: pointer;
-		/* An overlay floating above scrollable content — a different case
-		   from panel separation, where DESIGN.md's hairlines-not-shadows
-		   principle applies. Uses the accent-glow token rather than a raw
-		   rgb() value so it still ties into the system. */
-		box-shadow: 0 2px 8px var(--accent-glow);
-		/* Task 8 — enters with opacity + a small scale-up; the button's own
-		   static translateX(-50%) centering must survive the keyframe, so
-		   the keyframe repeats it alongside the scale rather than replacing
-		   the transform outright. */
+		width: 36px;
+		height: 36px;
+		border-radius: var(--radius-full);
+		background: var(--bg-elevated);
+		color: var(--label);
+		box-shadow: var(--shadow-popover);
+		/* Enters with opacity + a small scale-up; the static translateX(-50%)
+		   centering must survive the keyframe. */
 		animation: scroll-to-bottom-enter var(--motion-fast) var(--motion-easing);
 	}
 
@@ -629,173 +630,51 @@
 		}
 	}
 
-	.scroll-to-bottom:focus-visible {
-		outline: 2px solid var(--accent);
-		outline-offset: 2px;
-	}
-
-	/* The one place DESIGN.md's particle-vortex/light-beam art direction is
-	   allowed — an authored SVG, not a stock illustration, built from the
-	   same accent/hairline tokens as everything else so it themes for free. */
-	.empty-state {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		text-align: center;
-		margin-top: 3rem;
-		padding: 0 1.5rem;
-	}
-
-	.empty-art {
-		width: 88px;
-		height: 88px;
-		margin-bottom: 1.25rem;
-		overflow: visible;
-	}
-
-	.empty-art .ring {
-		fill: none;
-		stroke: var(--hairline-accent);
-		stroke-width: 1;
-	}
-
-	.empty-art .ring-mid {
-		stroke: var(--accent-soft);
-	}
-
-	/* The one authored moment DESIGN.md reserves this art for — a slow,
-	   even breathing on the single accent dot, not the rings or rays (one
-	   material idea, not several stacked). Reads as "the vault is
-	   listening" rather than decoration; automatically settles to
-	   near-static under prefers-reduced-motion via app.css's global
-	   animation-duration override, so no separate media query is needed
-	   here. */
-	.empty-art .core {
-		fill: var(--accent);
-		transform-box: fill-box;
-		transform-origin: center;
-		animation: empty-art-pulse 2600ms cubic-bezier(0.4, 0, 0.6, 1) infinite;
-	}
-
-	@keyframes empty-art-pulse {
-		0%,
-		100% {
-			transform: scale(1);
-			opacity: 1;
-		}
-		50% {
-			transform: scale(1.35);
-			opacity: 0.7;
-		}
-	}
-
-	.empty-art .rays line {
-		stroke: var(--accent-soft);
-		stroke-width: 1;
-		stroke-linecap: round;
-	}
-
-	.empty-state h2 {
-		font-family: var(--font-display);
-		font-weight: 480;
-		letter-spacing: -0.015em;
-		font-size: 1.5rem;
-		color: var(--color-foreground);
-		margin: 0 0 0.4rem;
-	}
-
-	.empty-state p {
-		color: var(--color-muted-foreground);
-		font-size: 0.875rem;
-		margin: 0 0 1.25rem;
-	}
-
-	.empty-action {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.35rem;
-		background: transparent;
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-pill);
-		padding: 0.4rem 0.9rem;
-		color: var(--color-foreground);
-		font-size: 0.8rem;
-		cursor: pointer;
-	}
-
-	.empty-action:hover {
-		color: var(--color-primary);
-		border-color: var(--color-primary);
-	}
-
-	.empty-action:focus-visible {
-		outline: 2px solid var(--accent);
+	.scroll-to-bottom:focus-visible,
+	.vc-send:focus-visible,
+	.vc-empty .vc-btn:focus-visible {
+		outline: 2px solid var(--focus-ring);
 		outline-offset: 2px;
 	}
 
 	.error {
-		color: var(--color-destructive);
-		padding: 0 1rem;
+		color: var(--danger);
+		width: 100%;
+		max-width: var(--reading-measure);
+		margin: 0 auto;
+		padding: 0 var(--space-4);
 		font-size: 0.85rem;
 	}
 
 	footer {
 		display: flex;
-		gap: 0.5rem;
-		padding: 0.75rem 1rem;
-		border-top: 1px solid var(--color-border);
+		justify-content: center;
+		padding: var(--space-3) var(--space-4) var(--space-4);
 	}
 
-	textarea {
-		flex: 1;
-		resize: none;
-		min-height: 2.5rem;
+	.vc-composer textarea {
+		field-sizing: content;
 		max-height: 10rem;
-		/* Pill radius (İdeas.txt: the composer read as "too rectangular")
-		   on a box this short renders as fully rounded ends at min-height
-		   and gracefully becomes a rounded rectangle as it grows with
-		   multi-line input — no separate handling needed for either
-		   state. Horizontal padding bumped up from the rounded-rect value
-		   so text doesn't crowd the now-much-tighter curve. */
-		padding: 0.6rem 1.1rem;
-		border-radius: var(--radius-pill);
-		border: 1px solid var(--color-border);
-		background: var(--color-background);
-		color: var(--color-foreground);
-		font-family: var(--font-sans);
-		font-size: 1rem;
+		overflow-y: auto;
+	}
+	/* The composer's own :focus-within ring is the focus indicator; the
+	   textarea's .vc-root :focus-visible outline would draw a second box. */
+	.vc-composer textarea:focus-visible {
+		outline: none;
 	}
 
-	textarea:focus-visible {
-		outline: 2px solid var(--accent);
-		outline-offset: 1px;
+	.vc-composer textarea:disabled {
+		color: var(--label-tertiary);
 	}
 
-	footer button {
-		display: flex;
-		align-items: center;
-		gap: 0.4rem;
-		padding: 0 1.4rem;
-		border-radius: var(--radius-pill);
-		border: none;
-		background: var(--color-primary);
-		color: var(--color-primary-foreground);
-		font-weight: 600;
-		cursor: pointer;
+	.vc-composer-bar {
+		flex-wrap: wrap;
 	}
 
-	footer button:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
-
-	footer button:focus-visible {
-		outline: 2px solid var(--accent);
-		outline-offset: 2px;
-	}
-
-	footer button.stop {
-		background: var(--color-destructive);
-		color: var(--color-background);
+	/* ModelPickerRow brings its own layout; inside the bar it only needs to
+	   shrink gracefully next to the slot and the send button. */
+	.vc-composer-bar :global(.composer-tools) {
+		padding: 0;
+		min-width: 0;
 	}
 </style>

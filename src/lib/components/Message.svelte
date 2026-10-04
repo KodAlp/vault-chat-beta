@@ -5,7 +5,12 @@
 	import ChatBubble from './ChatBubble.svelte';
 	import FallbackNotice from './FallbackNotice.svelte';
 	import ThinkingPanel from './ThinkingPanel.svelte';
-	import { Button } from '$lib/components/ui/button';
+	import FileTextIcon from '@lucide/svelte/icons/file-text';
+	import CheckIcon from '@lucide/svelte/icons/check';
+	import XIcon from '@lucide/svelte/icons/x';
+	import LoaderIcon from '@lucide/svelte/icons/loader';
+	import TriangleAlertIcon from '@lucide/svelte/icons/triangle-alert';
+	import InfoIcon from '@lucide/svelte/icons/info';
 	import { t } from '$lib/i18n/index.svelte';
 	import { localizeError } from '$lib/server-error';
 
@@ -39,14 +44,12 @@
 		message.role === 'assistant' && message.interrupted && !message.content
 	);
 
-	// Nothing has arrived yet at all — not even reasoning text. An empty bubble
-	// here previously gave zero feedback between hitting send and the first
-	// token (retrieval + first-token latency can be several seconds), which
-	// read as the page having frozen. Once `thinking` starts streaming,
-	// ThinkingPanel below already shows real activity, so this only covers the
-	// gap before either shows up — the two indicators never stack.
+	// No answer text yet. ThinkingChick (ChatBubble) keeps reading through
+	// retrieval, first-token latency AND the model's reasoning phase; it only
+	// closes its book once real answer content starts streaming. ThinkingPanel
+	// may stream reasoning above it meanwhile.
 	let isWaitingForFirstToken = $derived(
-		message.role === 'assistant' && streaming && !message.content && !message.thinking
+		message.role === 'assistant' && streaming && !message.content
 	);
 
 	// Streaming fires this effect many times per second; renderMarkdown() is async
@@ -80,9 +83,19 @@
 	{#if message.role === 'assistant' && message.toolCalls?.length}
 		<div class="tool-calls">
 			{#each message.toolCalls as tc, i (tc.skill + '#' + tc.path + '#' + i)}
-				<span class="tool-call-chip" class:error={tc.status === 'error'} title={tc.error}>
-					📄 {tc.path}
-					{tc.status === 'reading' ? '…' : tc.status === 'error' ? '✕' : '✓'}
+				<span class="vc-chip tool-call-chip" class:error={tc.status === 'error'} title={tc.error}>
+					<FileTextIcon size={16} strokeWidth={1.75} aria-hidden="true" />
+					<span class="tool-call-path">{tc.path}</span>
+					{#if tc.status === 'reading'}
+						<LoaderIcon size={16} strokeWidth={1.75} aria-hidden="true" />
+						<span class="tool-call-status">{t('Message.toolReading')}</span>
+					{:else if tc.status === 'error'}
+						<XIcon size={16} strokeWidth={1.75} aria-hidden="true" />
+						<span class="tool-call-status">{t('Message.toolError')}</span>
+					{:else}
+						<CheckIcon size={16} strokeWidth={1.75} aria-hidden="true" />
+						<span class="tool-call-status">{t('Message.toolDone')}</span>
+					{/if}
 				</span>
 			{/each}
 		</div>
@@ -95,61 +108,76 @@
 	     the 50ms flush loop in Chat.svelte previously updated this region
 	     up to 20x/second with no aria-live at all, so assistive tech never
 	     announced an answer arriving. -->
-	<div aria-live={streaming ? 'polite' : 'off'} aria-atomic="false">
+	<div class="bubble-wrap" aria-live={streaming ? 'polite' : 'off'} aria-atomic="false">
 		<ChatBubble role={message.role} {html} interrupted={isEmptyInterrupted} loading={isWaitingForFirstToken} />
 	</div>
 	{#if message.role === 'assistant' && !streaming && message.hedges?.length}
-		<span class="hedge-badge" title={t('Message.hedgeBadgeTitle', { hedges: message.hedges.join(', ') })}
-			>{t('Message.hedgeBadge', { count: message.hedges.length })}</span
-		>
+		<span class="vc-badge hedge-badge" title={t('Message.hedgeBadgeTitle', { hedges: message.hedges.join(', ') })}>
+			<TriangleAlertIcon size={14} strokeWidth={1.75} aria-hidden="true" />
+			{t('Message.hedgeBadge', { count: message.hedges.length })}
+		</span>
 	{/if}
 	{#if message.role === 'assistant' && message.sources?.length}
 		<div class="citation-row">
 			<SourceChip sources={message.sources} {vaultId} />
 		</div>
 		{#if onNotRelevant && !streaming}
-			<p class="narrow-scope">
-				{#if message.taughtSmallTalk}
-					{t('Message.taught')}
-				{:else}
-					<Button variant="link" class="h-auto p-0 text-xs" onclick={onNotRelevant}>{t('Message.notRelevant')}</Button>
-				{/if}
-			</p>
+			<div class="vc-banner info extra">
+				<InfoIcon size={20} strokeWidth={1.75} aria-hidden="true" />
+				<div class="d">
+					{#if message.taughtSmallTalk}
+						{t('Message.taught')}
+					{:else}
+						<button type="button" class="vc-btn ghost" onclick={onNotRelevant}>{t('Message.notRelevant')}</button>
+					{/if}
+				</div>
+			</div>
 		{/if}
 	{/if}
 	{#if message.role === 'assistant' && message.smallTalk && !streaming}
-		<p class="narrow-scope">
-			{t('Message.smallTalk')}
-			{#if onForceSources}
-				<Button variant="link" class="h-auto p-0 text-xs" onclick={onForceSources}>{t('Message.forceSources')}</Button>
-			{/if}
-		</p>
+		<div class="vc-banner info extra">
+			<InfoIcon size={20} strokeWidth={1.75} aria-hidden="true" />
+			<div class="d">
+				{t('Message.smallTalk')}
+				{#if onForceSources}
+					<button type="button" class="vc-btn ghost" onclick={onForceSources}>{t('Message.forceSources')}</button>
+				{/if}
+			</div>
+		</div>
 	{/if}
 	{#if message.role === 'assistant' && message.narrowScope && !streaming}
-		<p class="narrow-scope">
-			{t('Message.narrowScope')}
-			{#if onExpandScope}
-				<Button variant="link" class="h-auto p-0 text-xs" onclick={onExpandScope}>{t('Message.expandScope')}</Button>
-			{/if}
-		</p>
+		<div class="vc-banner warning extra">
+			<TriangleAlertIcon size={20} strokeWidth={1.75} aria-hidden="true" />
+			<div class="d">
+				{t('Message.narrowScope')}
+				{#if onExpandScope}
+					<button type="button" class="vc-btn ghost" onclick={onExpandScope}>{t('Message.expandScope')}</button>
+				{/if}
+			</div>
+		</div>
 	{/if}
 	{#if message.role === 'assistant' && message.nearCtxLimit && !streaming}
-		<p class="narrow-scope">{t('Message.nearCtxLimit')}</p>
+		<div class="vc-banner warning extra">
+			<TriangleAlertIcon size={20} strokeWidth={1.75} aria-hidden="true" />
+			<div class="d">{t('Message.nearCtxLimit')}</div>
+		</div>
 	{/if}
 	{#if message.role === 'assistant' && message.embeddingIssue && !streaming}
-		<p class="narrow-scope">
-			{message.embeddingIssue === 'mismatch' ? t('Message.embeddingMismatch') : t('Message.embeddingUnavailable')}
-			{#if message.embeddingIssue === 'mismatch' && onReindex}
-				<Button variant="link" class="h-auto p-0 text-xs" onclick={onReindex}>{t('Message.reindexNow')}</Button>
-			{/if}
-		</p>
+		<div class="vc-banner warning extra">
+			<TriangleAlertIcon size={20} strokeWidth={1.75} aria-hidden="true" />
+			<div class="d">
+				{message.embeddingIssue === 'mismatch' ? t('Message.embeddingMismatch') : t('Message.embeddingUnavailable')}
+				{#if message.embeddingIssue === 'mismatch' && onReindex}
+					<button type="button" class="vc-btn ghost" onclick={onReindex}>{t('Message.reindexNow')}</button>
+				{/if}
+			</div>
+		</div>
 	{/if}
 </div>
 
 <style>
 	.message {
 		display: flex;
-		margin: 0.75rem 0;
 	}
 
 	.message.user {
@@ -161,9 +189,17 @@
 		flex-direction: column;
 	}
 
+	/* The live region wraps the bubble; keep a user bubble right-aligned inside it. */
+	.message.user .bubble-wrap {
+		display: flex;
+		justify-content: flex-end;
+		width: 100%;
+	}
+
 	/* Task 8 — the citation row fades in (opacity only) when it first
 	   appears, marking the moment sources became available for this answer. */
 	.citation-row {
+		margin-top: var(--space-2);
 		animation: citation-fade-in var(--motion-fast) var(--motion-easing);
 	}
 
@@ -176,46 +212,85 @@
 		}
 	}
 
-	.narrow-scope {
-		margin-top: 0.4rem;
-		font-size: 0.78rem;
-		color: var(--color-muted-foreground);
+	/* Post-stream extras: compact banners under the answer. Status = icon +
+	   words, with the colour only reinforcing it. */
+	.extra {
+		margin-top: var(--space-2);
+		align-items: center;
+		padding: var(--space-2) var(--space-3);
+	}
+
+	.extra :global(svg) {
+		flex: none;
+	}
+
+	.extra.warning :global(svg) {
+		color: var(--warning);
+	}
+
+	.extra.info :global(svg) {
+		color: var(--info);
+	}
+
+	.extra .d {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: var(--space-1) var(--space-2);
+		color: var(--label-secondary);
+	}
+
+	.extra .vc-btn {
+		height: 28px;
+		padding: 0 var(--space-2);
+		font-size: 13px;
+		line-height: 18px;
+		color: var(--accent-text);
+	}
+
+	.extra .vc-btn:focus-visible,
+	.tool-call-chip:focus-visible {
+		outline: 2px solid var(--focus-ring);
+		outline-offset: 2px;
 	}
 
 	.hedge-badge {
 		align-self: flex-start;
-		margin-top: 0.35rem;
-		padding: 0.05rem 0.4rem;
-		border-radius: 999px;
-		font-size: 0.72rem;
+		margin-top: var(--space-2);
+		height: 24px;
 		color: var(--warning);
-		background: color-mix(in srgb, var(--warning) 20%, transparent);
+		box-shadow: inset 0 0 0 1px var(--warning);
 	}
 
 	.tool-calls {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 0.35rem;
-		margin-bottom: 0.4rem;
+		gap: var(--space-2);
+		margin-bottom: var(--space-2);
 	}
 
 	.tool-call-chip {
-		border: 1px solid var(--color-border);
-		border-radius: 999px;
-		padding: 0.15rem 0.6rem;
-		font-size: 0.72rem;
-		color: var(--color-muted-foreground);
-		background: var(--color-muted);
+		cursor: default;
 		/* A folder-skill's supporting-file path can be long (nested
-		   directories) — without this, a flex child's default min-width:auto
-		   keeps it from shrinking below its content's natural width, so it
-		   overflowed the message column instead of wrapping. */
+		   directories) — without min-width:0 a flex child keeps its content's
+		   natural width and overflows the message column instead of wrapping. */
 		min-width: 0;
+		height: auto;
+		min-height: 28px;
+		padding-block: 4px;
 		overflow-wrap: anywhere;
 	}
 
+	.tool-call-chip :global(svg) {
+		flex: none;
+	}
+
 	.tool-call-chip.error {
-		color: var(--color-destructive);
-		border-color: var(--color-destructive);
+		color: var(--danger);
+		box-shadow: inset 0 0 0 1px var(--danger);
+	}
+
+	.tool-call-status {
+		font-weight: 600;
 	}
 </style>
