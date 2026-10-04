@@ -71,24 +71,24 @@
 		display: inline-flex;
 		align-items: center;
 		gap: 0.35rem;
-		font-size: 0.875rem;
+		font: var(--text-subheadline);
 		text-decoration: none;
-		color: var(--color-muted-foreground);
+		color: var(--label-secondary);
 		margin-bottom: 1rem;
 	}
 
 	.home-link:hover {
-		color: var(--color-primary);
+		color: var(--label);
 	}
 
 	.home-link:focus-visible {
-		outline: 2px solid var(--accent);
+		outline: 2px solid var(--focus-ring);
 		outline-offset: 2px;
 	}
 
 	.path {
-		font-size: 0.75rem;
-		color: var(--color-muted-foreground);
+		font: var(--text-caption-1);
+		color: var(--label-secondary);
 		margin-bottom: 1.5rem;
 		font-family: var(--font-mono);
 	}
@@ -98,10 +98,10 @@
 		align-items: flex-start;
 		gap: 0.6rem;
 		padding: 0.9rem 1rem;
-		border: 1px solid var(--hairline);
+		box-shadow: inset 0 0 0 1px var(--separator);
 		border-radius: var(--radius-lg);
-		background: var(--surface);
-		color: var(--color-destructive);
+		background: var(--bg-elevated);
+		color: var(--danger);
 	}
 
 	.error p {

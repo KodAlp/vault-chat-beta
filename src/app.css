@@ -1,6 +1,8 @@
 @import 'tailwindcss';
 @import './styles/tokens.css';
-@import './styles/components.css';
+/* In Tailwind's components layer: utilities (and unlayered Svelte scoped styles)
+   can still adjust a .vc-* element, e.g. flex-col on a .vc-list-row. */
+@import './styles/components.css' layer(components);
 
 /* Tailwind v4 is CSS-first: bg-background/text-primary etc. come from these
    --color-* keys. "inline" so the CURRENT value of each token is read at usage
@@ -211,36 +213,41 @@ body {
    flash users reported when changing a model on /settings. Painting html too
    means the canvas is never unpainted, whatever bits-ui does to body. Keep
    both declarations; dropping the html one brings the flash straight back. */
-html {
-	background: var(--bg-canvas);
-}
+/* Element-level defaults live in the base layer so the .vc-* component
+   classes (components layer, see the import at the top) override them —
+   unlayered, `a { color }` turned every link-based sidebar row orange. */
+@layer base {
+	html {
+		background: var(--bg-canvas);
+	}
 
-body {
-	background: var(--bg-canvas);
-	color: var(--label);
-	font-family: var(--font-sans);
-}
+	body {
+		background: var(--bg-canvas);
+		color: var(--label);
+		font-family: var(--font-sans);
+	}
 
-pre,
-code {
-	font-family: var(--font-mono);
-}
+	pre,
+	code {
+		font-family: var(--font-mono);
+	}
 
-pre {
-	background: var(--ground-deep);
-	border-radius: var(--radius-sm);
-	padding: 0.75rem 1rem;
-	overflow-x: auto;
-}
+	pre {
+		background: var(--ground-deep);
+		border-radius: var(--radius-sm);
+		padding: 0.75rem 1rem;
+		overflow-x: auto;
+	}
 
-:not(pre) > code {
-	background: var(--ground-deep);
-	border-radius: 4px;
-	padding: 0.1rem 0.35rem;
-}
+	:not(pre) > code {
+		background: var(--ground-deep);
+		border-radius: 4px;
+		padding: 0.1rem 0.35rem;
+	}
 
-a {
-	color: var(--accent-text);
+	a {
+		color: var(--accent-text);
+	}
 }
 
 /* shiki's dual-theme output bakes the light theme in as plain inline

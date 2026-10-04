@@ -745,11 +745,11 @@
 <div class="mx-auto max-w-2xl px-4 pt-8 pb-16">
 	<div class="mb-6 flex items-baseline justify-between gap-4">
 		<div>
-			<h1 class="font-display text-xl font-medium">{t('LocalServerSetupPage.title')}</h1>
-			<p class="mt-1 text-sm text-muted-foreground">{t('LocalServerSetupPage.subtitle')}</p>
+			<h1 class="text-display-title">{t('LocalServerSetupPage.title')}</h1>
+			<p class="text-body mt-1 text-[var(--label-secondary)]">{t('LocalServerSetupPage.subtitle')}</p>
 			<p class="mt-1 text-xs text-muted-foreground">{t('LocalServerSetupPage.cloudOnlyNote')}</p>
 		</div>
-		<button type="button" class="shrink-0 text-sm text-muted-foreground underline-offset-2 hover:underline" onclick={finish}>
+		<button type="button" class="vc-btn ghost shrink-0 text-[var(--label-secondary)]" onclick={finish}>
 			{t('LocalServerSetupPage.skip')}
 		</button>
 	</div>
@@ -759,7 +759,7 @@
 	{:else if usedServer}
 		<Card.Root class="mb-6">
 			<Card.Content>
-				<p class="text-sm font-semibold">{t('LocalServerSetupPage.successTitle', { name: usedServer.display_name })}</p>
+				<p class="text-headline">{t('LocalServerSetupPage.successTitle', { name: usedServer.display_name })}</p>
 				<p class="mt-1 text-sm text-muted-foreground">{t('LocalServerSetupPage.successBody')}</p>
 
 				{#if usedServer.id === 'ollama'}
@@ -803,7 +803,7 @@
 						{:else}
 							<div class="flex flex-wrap items-center gap-2">
 								<select
-									class="h-8 max-w-full rounded-md border bg-background px-2 text-sm"
+									class="h-9 max-w-full rounded-[var(--radius-md)] border border-input bg-secondary px-3 text-[15px] outline-none focus-visible:ring-2 focus-visible:ring-ring"
 									aria-label={t('LocalServerSetupPage.chatModelTitle')}
 									bind:value={chosenChatModel}
 									disabled={chatApplying}
@@ -864,7 +864,7 @@
 		</Card.Root>
 	{:else if installedServers.length > 0}
 		<section class="mb-6">
-			<h2 class="mb-2 text-sm font-semibold">{t('LocalServerSetupPage.installedSectionTitle')}</h2>
+			<h2 class="text-headline mb-2">{t('LocalServerSetupPage.installedSectionTitle')}</h2>
 			<div class="flex flex-col gap-3">
 				{#each installedServers as server (server.id)}
 					<Card.Root>
@@ -937,7 +937,7 @@
 		</section>
 	{:else}
 		<section class="mb-6">
-			<h2 class="mb-1 text-sm font-semibold">{t('LocalServerSetupPage.noneInstalledTitle')}</h2>
+			<h2 class="text-headline mb-1">{t('LocalServerSetupPage.noneInstalledTitle')}</h2>
 			<p class="mb-3 text-sm text-muted-foreground">{t('LocalServerSetupPage.noneInstalledSubtitle')}</p>
 			<p class="mb-4 text-xs text-muted-foreground">{t('LocalServerSetupPage.hardwareNote')}</p>
 
@@ -981,7 +981,7 @@
 	{/if}
 
 	<section class="mt-8 border-t pt-6">
-		<h2 class="mb-2 text-sm font-semibold">{t('LocalServerSetupPage.systemCheckTitle')}</h2>
+		<h2 class="text-headline mb-2">{t('LocalServerSetupPage.systemCheckTitle')}</h2>
 
 		{#if pySystem}
 			<div class="flex flex-col gap-2 text-sm">

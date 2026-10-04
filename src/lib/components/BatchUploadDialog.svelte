@@ -89,9 +89,9 @@
 	});
 
 	const STATUS_BADGE_CLASS: Record<string, string> = {
-		converted: 'bg-primary/15 text-primary',
-		needs_review: 'bg-orange-500/20 text-amber-700 dark:text-amber-400',
-		failed: 'bg-destructive/15 text-destructive'
+		converted: 'bg-[var(--accent-soft)] text-[var(--accent-text)]',
+		needs_review: 'bg-secondary text-[var(--warning)]',
+		failed: 'bg-secondary text-destructive'
 	};
 
 	let allowedCount = $derived(queue.filter((e) => e.status === 'pending').length);
@@ -366,7 +366,7 @@
 		</Dialog.Header>
 
 		{#if phase === 'idle'}
-			<label class="flex flex-col gap-1 text-sm">
+			<label class="flex flex-col gap-1.5 text-[13px] leading-[18px] font-medium">
 				{t('BatchUploadDialog.pickFilesLabel')}
 				<Input
 					type="file"
@@ -375,7 +375,7 @@
 					accept=".docx,.pptx,.xlsx,.html,.htm,.epub,.pdf,.md,.tex,.js,.ts,.py,.c,.h,.cpp,.hpp,.rs,.sh,.json,.css,.svelte,.sql,.asm,.s"
 				/>
 			</label>
-			<label class="flex flex-col gap-1 text-sm">
+			<label class="flex flex-col gap-1.5 text-[13px] leading-[18px] font-medium">
 				{t('BatchUploadDialog.pickFolderLabel')}
 				{#if useNativeFolderPicker}
 					<Button variant="outline" onclick={pickFolderNative} disabled={scanning}>
@@ -400,11 +400,11 @@
 				{/if}
 			{/if}
 
-			<label class="flex flex-col gap-1 text-sm">
+			<label class="flex flex-col gap-1.5 text-[13px] leading-[18px] font-medium">
 				{t('UploadDialog.domainLabel')}
 				<Input type="text" bind:value={domain} placeholder={t('UploadDialog.domainPlaceholder')} />
 			</label>
-			<label class="flex flex-col gap-1 text-sm">
+			<label class="flex flex-col gap-1.5 text-[13px] leading-[18px] font-medium">
 				{t('UploadDialog.levelLabel')}
 				<Select.Root type="single" bind:value={level}>
 					<Select.Trigger class="w-full">{level}</Select.Trigger>
@@ -468,7 +468,7 @@
 			<div class="flex max-h-[50vh] flex-col gap-1 overflow-y-auto">
 				{#each queue as entry (entry.key)}
 					<div class="flex items-center gap-2 border-b py-1 text-sm">
-						<span class="shrink-0 rounded-full px-2 py-0.5 text-[0.68rem] {STATUS_BADGE_CLASS[entry.status] ?? ''}">
+						<span class="shrink-0 rounded-[var(--radius-sm)] px-[7px] py-0 text-[11px] leading-[18px] font-medium {STATUS_BADGE_CLASS[entry.status] ?? ''}">
 							{STATUS_LABELS[entry.status] ?? entry.status}
 						</span>
 						<span class="overflow-hidden text-ellipsis whitespace-nowrap">{targetPath(entry)}</span>

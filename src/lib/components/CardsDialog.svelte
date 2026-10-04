@@ -91,13 +91,13 @@
 >
 	{#snippet extraTop()}
 		{#if dueCount > 0}
-			<Button variant="outline" class="w-full border-primary text-primary" onclick={review}>
+			<Button variant="outline" class="w-full" onclick={review}>
 				{t('CardsDialog.review', { dueCount })}
 			</Button>
 		{/if}
 	{/snippet}
 	{#snippet extraFields()}
-		<label class="flex w-24 flex-col gap-1 text-sm">
+		<label class="flex w-24 flex-col gap-1.5 text-[13px] leading-[18px] font-medium">
 			{t('CardsDialog.cardCount')}
 			<Input type="number" min="1" max="30" bind:value={count} onblur={() => (count = clampCount(count))} />
 		</label>

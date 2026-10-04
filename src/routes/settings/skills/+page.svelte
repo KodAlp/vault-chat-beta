@@ -12,7 +12,6 @@
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
 	import { t } from '$lib/i18n/index.svelte';
 	import { localizeError, readResponseError } from '$lib/server-error';
-	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 
 	let SCOPE_LABELS = $derived<Record<UserSkillScope, string>>({
 		chat: t('SkillsSettingsPage.scopeChat'),
@@ -238,13 +237,7 @@ ${t('SkillsSettingsPage.templateBody')}
 	<title>{t('SkillsSettingsPage.title')} — Vault Agent Toolkit</title>
 </svelte:head>
 
-<div class="mx-auto max-w-3xl px-4 pt-6 pb-12">
-	<div class="mb-3 flex items-baseline gap-4">
-		<a href="/settings" class="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-2">
-			<ArrowLeftIcon size={14} aria-hidden="true" /> {t('Common.ayarlar')}
-		</a>
-		<h1 class="font-display text-xl font-medium">{t('SkillsSettingsPage.title')}</h1>
-	</div>
+<div>
 
 	<p class="mb-5 text-sm text-muted-foreground">
 		<code class="rounded bg-muted px-1 py-0.5 text-xs">data/skills/</code>

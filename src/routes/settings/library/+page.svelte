@@ -8,7 +8,6 @@
 	import { Input } from '$lib/components/ui/input';
 	import * as Card from '$lib/components/ui/card';
 	import { t } from '$lib/i18n/index.svelte';
-	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 
 	let settings = $state<LibrarySettings>({
 		keepOriginals: false,
@@ -108,14 +107,7 @@
 	<title>{t('LibrarySettingsPage.title')} — Vault Agent Toolkit</title>
 </svelte:head>
 
-<div class="mx-auto max-w-2xl px-4 pt-6 pb-12">
-	<div class="mb-6 flex items-baseline gap-4">
-		<a href="/settings" class="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-2">
-			<ArrowLeftIcon size={14} aria-hidden="true" /> {t('Common.ayarlar')}
-		</a>
-		<h1 class="font-display text-xl font-medium">{t('LibrarySettingsPage.title')}</h1>
-	</div>
-
+<div>
 	{#if loadError}
 		<p class="mb-4 text-sm text-destructive" role="alert">{loadError}</p>
 	{/if}
@@ -153,18 +145,6 @@
 				<Switch checked={settings.keepOriginals} onCheckedChange={persistKeepOriginals} />
 				{t('LibrarySettingsPage.keepOriginals', { path: 'data/library/_meta/originals/' })}
 			</label>
-			<label class="flex flex-col gap-1 text-sm">
-				{t('LibrarySettingsPage.allowedLanguages')}
-				<Input
-					type="text"
-					bind:value={allowedLanguagesInput}
-					onchange={persistAllowedLanguages}
-					placeholder={t('LibrarySettingsPage.allowedLanguagesPlaceholder')}
-				/>
-				<span class="text-xs text-muted-foreground">
-					{t('LibrarySettingsPage.allowedLanguagesHint')}
-				</span>
-			</label>
 			<div class="flex flex-col gap-1 text-sm">
 				{t('LibrarySettingsPage.responseLanguage')}
 				<label class="flex cursor-pointer items-center gap-2">
@@ -177,30 +157,47 @@
 					{t('LibrarySettingsPage.responseLanguageHint')}
 				</span>
 			</div>
-			<label class="flex flex-col gap-1 text-sm">
-				{t('LibrarySettingsPage.hiddenFolders')}
-				<Input
-					type="text"
-					bind:value={hiddenFoldersInput}
-					onchange={persistHiddenFolders}
-					placeholder={t('LibrarySettingsPage.hiddenFoldersPlaceholder')}
-				/>
-				<span class="text-xs text-muted-foreground">
-					{t('LibrarySettingsPage.hiddenFoldersHint')}
-				</span>
-			</label>
-			<label class="flex flex-col gap-1 text-sm">
-				{t('LibrarySettingsPage.flattenFolders')}
-				<Input
-					type="text"
-					bind:value={flattenFoldersInput}
-					onchange={persistFlattenFolders}
-					placeholder={t('LibrarySettingsPage.flattenFoldersPlaceholder')}
-				/>
-				<span class="text-xs text-muted-foreground">
-					{t('LibrarySettingsPage.flattenFoldersHint')}
-				</span>
-			</label>
+			<details class="vc-disclosure">
+				<summary>{t('LibrarySettingsPage.advancedUploadOptions')}</summary>
+				<div class="body flex flex-col gap-4">
+					<label class="flex flex-col gap-1 text-sm">
+						{t('LibrarySettingsPage.allowedLanguages')}
+						<Input
+							type="text"
+							bind:value={allowedLanguagesInput}
+							onchange={persistAllowedLanguages}
+							placeholder={t('LibrarySettingsPage.allowedLanguagesPlaceholder')}
+						/>
+						<span class="text-xs text-muted-foreground">
+							{t('LibrarySettingsPage.allowedLanguagesHint')}
+						</span>
+					</label>
+					<label class="flex flex-col gap-1 text-sm">
+						{t('LibrarySettingsPage.hiddenFolders')}
+						<Input
+							type="text"
+							bind:value={hiddenFoldersInput}
+							onchange={persistHiddenFolders}
+							placeholder={t('LibrarySettingsPage.hiddenFoldersPlaceholder')}
+						/>
+						<span class="text-xs text-muted-foreground">
+							{t('LibrarySettingsPage.hiddenFoldersHint')}
+						</span>
+					</label>
+					<label class="flex flex-col gap-1 text-sm">
+						{t('LibrarySettingsPage.flattenFolders')}
+						<Input
+							type="text"
+							bind:value={flattenFoldersInput}
+							onchange={persistFlattenFolders}
+							placeholder={t('LibrarySettingsPage.flattenFoldersPlaceholder')}
+						/>
+						<span class="text-xs text-muted-foreground">
+							{t('LibrarySettingsPage.flattenFoldersHint')}
+						</span>
+					</label>
+				</div>
+			</details>
 		</Card.Content>
 	</Card.Root>
 

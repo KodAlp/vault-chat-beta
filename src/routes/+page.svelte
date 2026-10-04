@@ -52,19 +52,22 @@
 </svelte:head>
 
 <div class="mx-auto max-w-3xl px-4 pt-10 pb-12">
-	<div class="mb-8 flex items-center justify-between">
-		<h1 class="font-display text-2xl font-medium">{t('HomePage.title')}</h1>
-		<a href="/settings" title={t('Common.ayarlar')} aria-label={t('Common.ayarlar')} class="text-muted-foreground hover:text-primary focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-2">
-			<SettingsIcon size={19} aria-hidden="true" />
+	<div class="mb-8 flex items-start justify-between gap-4">
+		<h1 class="text-display-hero m-0" style="letter-spacing: -0.45px;">{t('HomePage.title')}</h1>
+		<a
+			href="/settings"
+			title={t('Common.ayarlar')}
+			aria-label={t('Common.ayarlar')}
+			class="vc-icon-btn shrink-0 focus-visible:outline-2 focus-visible:outline-[var(--focus-ring)] focus-visible:outline-offset-2"
+		>
+			<SettingsIcon size={20} strokeWidth={1.75} aria-hidden="true" />
 		</a>
 	</div>
 
 	{#if vaults.length === 0}
-		<div class="mb-8 flex flex-col items-center gap-2 rounded-lg border border-dashed py-12 text-center">
-			<p class="font-display text-lg text-foreground">{t('HomePage.emptyTitle')}</p>
-			<p class="max-w-sm text-sm text-muted-foreground">
-				{t('HomePage.emptyDescription')}
-			</p>
+		<div class="vc-empty mb-8" style="padding-block: var(--space-8);">
+			<p class="text-[22px] leading-7 font-semibold text-[var(--label)]">{t('HomePage.emptyTitle')}</p>
+			<p>{t('HomePage.emptyDescription')}</p>
 		</div>
 	{/if}
 
@@ -74,15 +77,13 @@
 				<VaultCard {vault} />
 			</div>
 		{/each}
+	</div>
 
-		<button
-			type="button"
-			class="flex min-h-[5.5rem] flex-col items-center justify-center gap-1 rounded-xl border border-dashed text-sm text-muted-foreground hover:border-primary hover:text-primary focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-2"
-			onclick={() => (createOpen = true)}
-		>
-			<PlusIcon size={18} aria-hidden="true" />
+	<div class="mt-6">
+		<Button size="lg" onclick={() => (createOpen = true)}>
+			<PlusIcon size={20} strokeWidth={1.75} aria-hidden="true" />
 			{t('HomePage.newVault')}
-		</button>
+		</Button>
 	</div>
 </div>
 
@@ -91,7 +92,7 @@
 		<Dialog.Header>
 			<Dialog.Title>{t('HomePage.newVaultDialogTitle')}</Dialog.Title>
 		</Dialog.Header>
-		<label class="flex flex-col gap-1 text-sm">
+		<label class="flex flex-col gap-1.5 text-[13px] leading-[18px] font-medium">
 			{t('HomePage.vaultNameLabel')}
 			<Input
 				type="text"
@@ -101,10 +102,10 @@
 			/>
 		</label>
 		{#if createError}
-			<p class="text-sm text-destructive">{createError}</p>
+			<p class="text-[13px] leading-[18px] text-destructive">{createError}</p>
 		{/if}
 		<Dialog.Footer>
-			<Button variant="outline" onclick={() => (createOpen = false)}>{t('Common.iptal')}</Button>
+			<Button variant="secondary" onclick={() => (createOpen = false)}>{t('Common.iptal')}</Button>
 			<Button onclick={createVault} disabled={!newVaultName.trim()} loading={creating}>
 				{creating ? t('HomePage.creating') : t('HomePage.create')}
 			</Button>

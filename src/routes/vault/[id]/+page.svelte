@@ -7,10 +7,9 @@
 	import { parseSelectionKey } from '$lib/model-selection';
 	import { settings } from '$lib/settings.svelte';
 	import { i18n, t } from '$lib/i18n/index.svelte';
-	import { Button } from '$lib/components/ui/button';
-	import * as Card from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
+	import Icon from '$lib/components/Icon.svelte';
 	import ModelPickerRow from '$lib/components/ModelPickerRow.svelte';
 	import SettingsIcon from '@lucide/svelte/icons/settings';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
@@ -227,37 +226,46 @@
 	<div class="mt-6 mb-2 flex shrink-0 items-center justify-between">
 		<a
 			href="/?picker=1"
-			class="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-2"
+			class="flex items-center gap-1 rounded-[var(--radius-md)] px-1 text-[13px] leading-[18px] text-[var(--label-secondary)] hover:text-[var(--label)] focus-visible:outline-2 focus-visible:outline-[var(--focus-ring)] focus-visible:outline-offset-2"
 		>
-			<ArrowLeftIcon size={14} aria-hidden="true" /> {t('VaultChatListPage.backToVaults')}
+			<ArrowLeftIcon size={16} strokeWidth={1.75} aria-hidden="true" /> {t('VaultChatListPage.backToVaults')}
 		</a>
-		<h1
-			class="min-w-0 flex-1 truncate px-2 text-center font-display text-lg font-medium"
+		<span
+			class="min-w-0 flex-1 truncate px-2 text-center text-[15px] leading-5 font-semibold tracking-[-0.23px]"
 			title={data.vaultName}
 		>
 			{data.vaultName}
-		</h1>
+		</span>
 		<a
 			href="/settings"
 			title={t('Common.ayarlar')}
 			aria-label={t('Common.ayarlar')}
-			class="text-muted-foreground hover:text-primary focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-2"
+			class="vc-icon-btn focus-visible:outline-2 focus-visible:outline-[var(--focus-ring)] focus-visible:outline-offset-2"
 		>
-			<SettingsIcon size={18} aria-hidden="true" />
+			<SettingsIcon size={20} strokeWidth={1.75} aria-hidden="true" />
 		</a>
 	</div>
 
-	<!-- Grows to push the composer down off the header (İdeas.txt: "y axis
-	     lower than the y middle") when the list below is short or empty,
-	     but is capped so a long list still gets most of the vertical space
-	     rather than this staying permanently oversized — see the flex-1
-	     list region below it: both compete equally for the space left over
-	     after the header/composer/footer padding, but only this one has a
-	     ceiling, so anything beyond it is handed to the list instead. -->
-	<div class="max-h-[min(36vh,20rem)] flex-1" aria-hidden="true"></div>
+	<!-- Grows to push the hero/composer down off the header when the list
+	     below is short or empty, but is capped so a long list still gets
+	     most of the vertical space — see the flex-1 list region below. -->
+	<div class="max-h-[min(14vh,8rem)] flex-1" aria-hidden="true"></div>
 
-	<Card.Root class="mb-4 shrink-0">
-		<Card.Content class="flex flex-col gap-2">
+	<div class="vc-empty shrink-0" style="padding-block: var(--space-6);">
+		<h1 style="max-width: 16ch;">{t('VaultChatListPage.heroTitle')}</h1>
+		<p>{t('VaultChatListPage.heroSubtitle')}</p>
+	</div>
+
+	<div class="vc-composer mx-auto mb-6 shrink-0">
+		<textarea
+			id="new-chat-input"
+			name="new-chat-input"
+			rows="1"
+			bind:value={question}
+			onkeydown={handleKeydown}
+			placeholder={t('VaultChatListPage.inputPlaceholder')}
+		></textarea>
+		<div class="vc-composer-bar" style="flex-wrap: wrap;">
 			<ModelPickerRow
 				idPrefix="new-chat"
 				{modelOptions}
@@ -266,102 +274,99 @@
 				bind:thinkMode
 				bind:reviewMode
 				{onModelChange}
+				class="new-chat-tools"
 			/>
-			<div class="flex gap-2">
-				<textarea
-					id="new-chat-input"
-					name="new-chat-input"
-					bind:value={question}
-					onkeydown={handleKeydown}
-					placeholder={t('VaultChatListPage.inputPlaceholder')}
-					class="min-h-[3rem] max-h-40 flex-1 resize-none rounded-full border bg-background px-4 py-2.5 text-sm outline-none placeholder:text-muted-foreground"
-				></textarea>
-				<Button onclick={start} disabled={!question.trim()} class="rounded-full">{t('VaultChatListPage.start')}</Button>
-			</div>
-		</Card.Content>
-	</Card.Root>
+			<span class="spacer"></span>
+			<button
+				type="button"
+				class="vc-send"
+				onclick={start}
+				disabled={!question.trim()}
+				aria-label={t('VaultChatListPage.start')}
+				title={t('VaultChatListPage.start')}
+			>
+				<Icon name="send" />
+			</button>
+		</div>
+	</div>
 
 	<!-- The one scrolling region on this page — everything below the
 	     composer (the chat list, or whichever empty/error state applies)
 	     scrolls in place instead of taking the whole page down with it. -->
 	<div class="min-h-0 flex-1 overflow-y-auto">
 	{#if chats.length > 0}
-		<div class="flex flex-col gap-2 pb-2">
+		<h2 class="vc-group-title" style="padding-inline: 0;">{t('VaultChatListPage.recentChats')}</h2>
+		<ul class="vc-list m-0 list-none p-0 pb-0">
 			{#each chats as chat (chat.id)}
 				{@const n = scopeCount(chat.included_paths_json)}
-				<div class="relative">
+				<li class="vc-list-row relative p-0" style="padding: 0;">
 					{#if renamingId === chat.id}
-						<Card.Root>
-							<Card.Content class="flex items-center justify-between gap-3 pr-16">
-								<input
-									type="text"
-									bind:value={renameValue}
-									onkeydown={(e) => e.key === 'Enter' && submitRename(chat.id)}
-									onblur={() => submitRename(chat.id)}
-									class="min-w-0 flex-1 rounded border bg-background px-2 py-1 text-sm text-foreground outline-none focus-visible:outline-2 focus-visible:outline-[var(--accent)]"
-									use:autofocusInput
-								/>
-								<span class="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
-									{#if n !== null}
-										<Badge variant="outline">{t('VaultChatListPage.sourceCountBadge', { count: n })}</Badge>
-									{/if}
-									{chat.model} · {formatDate(chat.updated_at)}
-								</span>
-							</Card.Content>
-						</Card.Root>
+						<div class="flex min-h-[52px] min-w-0 flex-1 items-center justify-between gap-3 py-2 pr-20 pl-4">
+							<input
+								type="text"
+								bind:value={renameValue}
+								onkeydown={(e) => e.key === 'Enter' && submitRename(chat.id)}
+								onblur={() => submitRename(chat.id)}
+								aria-label={t('VaultChatListPage.rename')}
+								class="min-w-0 flex-1 rounded-[var(--radius-md)] bg-[var(--fill-control)] px-3 py-1 text-[15px] text-[var(--label)] shadow-[inset_0_0_0_1px_var(--separator-strong)] outline-none focus-visible:shadow-[inset_0_0_0_1px_var(--border-control),0_0_0_2px_var(--focus-ring)]"
+								use:autofocusInput
+							/>
+							<span class="flex shrink-0 items-center gap-2 text-[13px] leading-[18px] text-[var(--label-secondary)]">
+								{#if n !== null}
+									<Badge variant="secondary">{t('VaultChatListPage.sourceCountBadge', { count: n })}</Badge>
+								{/if}
+								{chat.model} · {formatDate(chat.updated_at)}
+							</span>
+						</div>
 					{:else}
-						<a href="/vault/{data.vaultId}/chat/{chat.id}" class="block no-underline">
-							<Card.Root class="transition-colors hover:border-primary">
-								<Card.Content class="flex items-center justify-between gap-3 pr-16">
-									<span class="truncate text-sm text-foreground">{chat.title ?? t('VaultChatListPage.untitled')}</span>
-									<span class="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
-										{#if n !== null}
-											<Badge variant="outline">{t('VaultChatListPage.sourceCountBadge', { count: n })}</Badge>
-										{/if}
-										{chat.model} · {formatDate(chat.updated_at)}
-									</span>
-								</Card.Content>
-							</Card.Root>
+						<a
+							href="/vault/{data.vaultId}/chat/{chat.id}"
+							class="flex min-h-[52px] min-w-0 flex-1 items-center justify-between gap-3 py-2 pr-20 pl-4 no-underline hover:bg-[var(--fill-hover)] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
+						>
+							<span class="truncate text-[15px] leading-5 font-medium tracking-[-0.23px] text-[var(--label)]">{chat.title ?? t('VaultChatListPage.untitled')}</span>
+							<span class="flex shrink-0 items-center gap-2 text-[13px] leading-[18px] text-[var(--label-secondary)]">
+								{#if n !== null}
+									<Badge variant="secondary">{t('VaultChatListPage.sourceCountBadge', { count: n })}</Badge>
+								{/if}
+								{chat.model} · {formatDate(chat.updated_at)}
+							</span>
 						</a>
 					{/if}
-					<div class="absolute top-1/2 right-2 flex -translate-y-1/2 gap-1">
+					<div class="absolute top-1/2 right-2 flex -translate-y-1/2 gap-0.5">
 						<button
 							type="button"
 							onclick={() => startRename(chat)}
 							title={t('VaultChatListPage.rename')}
 							aria-label={t('VaultChatListPage.rename')}
-							class="text-muted-foreground hover:text-primary focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-2"
+							class="vc-icon-btn"
+							style="width: 28px; height: 28px;"
 						>
-							<PencilIcon size={14} aria-hidden="true" />
+							<PencilIcon size={16} strokeWidth={1.75} aria-hidden="true" />
 						</button>
 						<button
 							type="button"
 							onclick={() => askDeleteChat(chat.id)}
 							title={t('Common.sil')}
 							aria-label={t('Common.sil')}
-							class="text-muted-foreground hover:text-destructive focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-2"
+							class="vc-icon-btn hover:!text-[var(--danger)]"
+							style="width: 28px; height: 28px;"
 						>
-							<Trash2Icon size={14} aria-hidden="true" />
+							<Trash2Icon size={16} strokeWidth={1.75} aria-hidden="true" />
 						</button>
 					</div>
-				</div>
+				</li>
 			{/each}
-		</div>
+		</ul>
 	{:else if sourceCount === 0}
-		<div class="flex flex-col items-center gap-2 rounded-lg border border-dashed py-12 text-center">
-			<p class="font-display text-lg text-foreground">{t('VaultChatListPage.noSourcesTitle')}</p>
-			<p class="max-w-sm text-sm text-muted-foreground">
-				{t('VaultChatListPage.noSourcesDescription')}
-			</p>
-			<a
-				href="/settings/library"
-				class="mt-2 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-2"
-			>
-				{t('VaultChatListPage.importSources')} <ArrowRightIcon size={14} aria-hidden="true" />
+		<div class="vc-empty" style="padding-block: var(--space-6);">
+			<p class="text-[17px] leading-[22px] font-semibold text-[var(--label)]">{t('VaultChatListPage.noSourcesTitle')}</p>
+			<p>{t('VaultChatListPage.noSourcesDescription')}</p>
+			<a href="/settings/library" class="vc-btn secondary no-underline">
+				{t('VaultChatListPage.importSources')} <ArrowRightIcon size={16} strokeWidth={1.75} aria-hidden="true" />
 			</a>
 		</div>
 	{:else if loadError}
-		<p class="text-center text-sm text-destructive">{loadError}</p>
+		<p class="text-center text-[15px] text-[var(--danger)]">{loadError}</p>
 	{/if}
 	</div>
 </div>
@@ -389,3 +394,18 @@
 		</AlertDialog.Footer>
 	</AlertDialog.Content>
 </AlertDialog.Root>
+
+<style>
+	.vc-composer textarea {
+		field-sizing: content;
+		max-height: 10rem;
+		overflow-y: auto;
+	}
+	.vc-composer textarea:focus-visible {
+		outline: none;
+	}
+	.vc-composer-bar :global(.new-chat-tools) {
+		padding: 0;
+		min-width: 0;
+	}
+</style>

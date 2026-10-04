@@ -125,7 +125,7 @@
 </svelte:head>
 
 <div class="cards-screen">
-	<a class="home-link" href={backHref}><ArrowLeftIcon size={14} aria-hidden="true" /> {t('Common.geriDon')}</a>
+	<a class="home-link" href={backHref}><ArrowLeftIcon size={16} strokeWidth={1.75} aria-hidden="true" /> {t('Common.geriDon')}</a>
 
 	{#if phase === 'loading'}
 		<p class="status">{t('Common.yukleniyor')}</p>
@@ -136,7 +136,7 @@
 		{:else}
 			<p class="status error" role="alert">{errorMessage}</p>
 			<div class="retry-row">
-				<button type="button" class="retry-btn" onclick={load}>{t('Common.yenidenDene')}</button>
+				<button type="button" class="vc-btn secondary" onclick={load}>{t('Common.yenidenDene')}</button>
 			</div>
 		{/if}
 	{:else if phase === 'empty'}
@@ -148,12 +148,12 @@
 	{:else if phase === 'reviewing' || phase === 'grading'}
 		<h1>{pageTitle}</h1>
 		{@const card = cards[currentIndex]}
-		<div class="progress-bar">
-			<div class="progress-fill" style="transform: scaleX({(currentIndex + 1) / cards.length})"></div>
+		<div class="vc-progress">
+			<span style="width: 100%; transform: scaleX({(currentIndex + 1) / cards.length})"></span>
 		</div>
 		<p class="progress-label">{currentIndex + 1} / {cards.length}</p>
 
-		<div class="card-box">
+		<div class="vc-card card-box">
 			{#key currentIndex}
 				<div class="card-content">
 					<div class="face front markdown-body">{@html frontHtml}</div>
@@ -166,7 +166,7 @@
 									{card.source_path}
 								</a>
 								<a class="chip-icon" href={libraryViewerUrl(card.source_path, vaultId ?? '', here)} title={t('Common.kaynagiAc')} aria-label={t('Common.kaynagiAc')}>
-									<ExternalLinkIcon size={13} aria-hidden="true" />
+									<ExternalLinkIcon size={16} strokeWidth={1.75} aria-hidden="true" />
 								</a>
 							</span>
 						</div>
@@ -176,19 +176,19 @@
 		</div>
 
 		{#if !revealed}
-			<button class="reveal" onclick={reveal}>{t('CardsStudyPage.reveal')}</button>
+			<button class="vc-btn primary lg reveal" onclick={reveal}>{t('CardsStudyPage.reveal')}</button>
 		{:else}
-			<div class="grades">
-				<button class="grade again" onclick={() => grade('again')} disabled={phase === 'grading'}>
+			<div class="vc-grade grades">
+				<button class="vc-btn secondary grade again" onclick={() => grade('again')} disabled={phase === 'grading'}>
 					{t('CardsStudyPage.gradeAgain')}
 				</button>
-				<button class="grade hard" onclick={() => grade('hard')} disabled={phase === 'grading'}>
+				<button class="vc-btn secondary grade hard" onclick={() => grade('hard')} disabled={phase === 'grading'}>
 					{t('CardsStudyPage.gradeHard')}
 				</button>
-				<button class="grade good" onclick={() => grade('good')} disabled={phase === 'grading'}>
+				<button class="vc-btn primary grade good" onclick={() => grade('good')} disabled={phase === 'grading'}>
 					{t('CardsStudyPage.gradeGood')}
 				</button>
-				<button class="grade easy" onclick={() => grade('easy')} disabled={phase === 'grading'}>
+				<button class="vc-btn secondary grade easy" onclick={() => grade('easy')} disabled={phase === 'grading'}>
 					{t('CardsStudyPage.gradeEasy')}
 				</button>
 			</div>
@@ -200,36 +200,37 @@
 	.cards-screen {
 		max-width: 640px;
 		margin: 0 auto;
-		padding: 1.5rem 1rem 3rem;
+		padding: var(--space-6) var(--space-4) var(--space-14);
 	}
 
 	.home-link {
 		display: inline-flex;
 		align-items: center;
 		gap: 0.35rem;
-		font-size: 0.875rem;
-		color: var(--color-muted-foreground);
+		font: var(--text-subheadline);
+		color: var(--label-secondary);
 		text-decoration: none;
-		margin-bottom: 1.5rem;
+		margin-bottom: var(--space-6);
 	}
 
 	.home-link:hover {
-		color: var(--color-primary);
+		color: var(--label);
 	}
 
 	.home-link:focus-visible {
-		outline: 2px solid var(--accent);
+		outline: 2px solid var(--focus-ring);
 		outline-offset: 2px;
 	}
 
 	.status {
-		color: var(--color-muted-foreground);
+		font: var(--text-body);
+		color: var(--label-secondary);
 		text-align: center;
 		margin-top: 3rem;
 	}
 
 	.status.error {
-		color: var(--color-destructive);
+		color: var(--danger);
 	}
 
 	.retry-row {
@@ -238,66 +239,43 @@
 		margin-top: 1rem;
 	}
 
-	.retry-btn {
-		padding: 0.5rem 1.2rem;
-		border-radius: 8px;
-		border: 1px solid var(--color-border);
-		background: transparent;
-		color: var(--color-foreground);
-		cursor: pointer;
-	}
-
-	.retry-btn:hover {
-		border-color: var(--color-primary);
-		color: var(--color-primary);
-	}
-
-	.retry-btn:focus-visible {
-		outline: 2px solid var(--accent);
-		outline-offset: 2px;
-	}
-
 	.cards-screen h1 {
-		font-family: var(--font-display);
-		font-weight: 480;
-		letter-spacing: -0.015em;
-		font-size: 1.5rem;
-		margin: 0 0 1.5rem;
+		font: var(--text-display-title);
+		margin: 0 0 var(--space-6);
 	}
 
-	.progress-bar {
-		height: 6px;
-		background: var(--color-border);
-		border-radius: 999px;
-		overflow: hidden;
-	}
-
-	.progress-fill {
-		height: 100%;
-		width: 100%;
-		background: var(--color-primary);
-		/* scaleX, not width — the fill never triggers layout recalculation
-		   on its own track (its parent .progress-bar's size is fixed). */
+	/* scaleX, not width — the fill never triggers layout recalculation on
+	   its own track (its parent .vc-progress's size is fixed). */
+	.vc-progress > span {
 		transform-origin: left;
 		transition: transform var(--motion-base) var(--motion-easing);
 	}
 
 	.progress-label {
-		font-size: 0.75rem;
-		color: var(--color-muted-foreground);
-		margin: 0.4rem 0 1.5rem;
+		font: var(--text-footnote);
+		color: var(--label-secondary);
+		margin: 0.4rem 0 var(--space-6);
 	}
 
 	.card-box {
-		background: var(--bubble-assistant);
-		border-radius: 10px;
-		padding: 1.5rem;
-		margin-bottom: 1.5rem;
-		min-height: 8rem;
+		max-width: none;
+		margin-bottom: var(--space-6);
 	}
 
 	.face {
 		line-height: 1.6;
+	}
+
+	/* Flashcard front: Gambetta 28/34 (Flashcard.html's .q). */
+	.face.front {
+		font: var(--text-display-title);
+		font-size: 28px;
+		line-height: 34px;
+		letter-spacing: -0.2px;
+	}
+
+	.face.back {
+		font: var(--text-body-reading);
 	}
 
 	/* Advancing to the next card (Task 7b) — enter-only: opacity + a small
@@ -335,7 +313,7 @@
 
 	.card-box hr {
 		border: none;
-		border-top: 1px solid var(--color-border);
+		border-top: 1px solid var(--separator);
 		margin: 1rem 0;
 	}
 
@@ -343,99 +321,55 @@
 		display: inline-flex;
 		align-items: stretch;
 		margin-top: 0.9rem;
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-pill);
+		box-shadow: inset 0 0 0 1px var(--separator-strong);
+		border-radius: var(--radius-full);
 		overflow: hidden;
 	}
 
 	.chip {
-		font-size: 0.75rem;
+		font: var(--text-caption-1);
 		text-decoration: none;
-		color: var(--color-muted-foreground);
+		color: var(--label-secondary);
 		padding: 0.2rem 0.65rem;
 		overflow-wrap: anywhere;
 		min-width: 0;
 	}
 
 	.chip:hover {
-		color: var(--color-primary);
+		color: var(--label);
 	}
 
 	.chip-icon {
 		display: inline-flex;
 		align-items: center;
 		text-decoration: none;
-		color: var(--color-muted-foreground);
+		color: var(--label-secondary);
 		padding: 0.2rem 0.5rem;
-		border-left: 1px solid var(--color-border);
+		border-left: 1px solid var(--separator);
 	}
 
 	.chip-icon:hover {
-		color: var(--color-primary);
+		color: var(--label);
 	}
 
 	.chip:focus-visible,
 	.chip-icon:focus-visible {
-		outline: 2px solid var(--accent);
+		outline: 2px solid var(--focus-ring);
 		outline-offset: -2px;
 	}
 
 	.reveal {
-		display: block;
+		display: flex;
 		width: 100%;
-		padding: 0.6rem 1rem;
-		border-radius: 8px;
-		border: 1px solid var(--color-border);
-		background: transparent;
-		color: var(--color-foreground);
-		cursor: pointer;
-		font-size: 1rem;
-	}
-
-	.reveal:hover {
-		border-color: var(--color-primary);
-		color: var(--color-primary);
-	}
-
-	.reveal:focus-visible {
-		outline: 2px solid var(--accent);
-		outline-offset: 2px;
+		max-width: none;
 	}
 
 	.grades {
-		display: flex;
-		gap: 0.6rem;
+		max-width: none;
 	}
 
-	.grade {
-		flex: 1;
-		padding: 0.6rem 0.5rem;
-		border-radius: 8px;
-		border: 1px solid var(--color-border);
-		background: transparent;
-		color: var(--color-foreground);
-		cursor: pointer;
-		font-size: 0.9rem;
-		font-weight: 600;
-	}
-
-	.grade:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
-
-	.grade:focus-visible {
-		outline: 2px solid var(--accent);
+	.vc-btn:focus-visible {
+		outline: 2px solid var(--focus-ring);
 		outline-offset: 2px;
-	}
-
-	.grade.again {
-		border-color: var(--color-destructive);
-		color: var(--color-destructive);
-	}
-
-	.grade.good {
-		border-color: var(--color-primary);
-		color: var(--color-primary);
 	}
 </style>

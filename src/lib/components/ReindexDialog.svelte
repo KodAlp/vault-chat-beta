@@ -162,12 +162,9 @@
 					aria-valuemin={0}
 					aria-valuemax={100}
 					aria-valuenow={percent}
-					class="h-2 w-full overflow-hidden rounded-full bg-muted"
+					class="vc-progress"
 				>
-					<div
-						class="h-full rounded-full bg-primary transition-[width] duration-200"
-						style="width: {percent}%"
-					></div>
+					<span class="transition-[width] duration-200" style="width: {percent}%"></span>
 				</div>
 				<p class="truncate text-xs text-muted-foreground">
 					{#if total > 0}

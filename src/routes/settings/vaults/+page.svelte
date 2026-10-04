@@ -1,8 +1,10 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { isTauri, invoke } from '@tauri-apps/api/core';
 	import type { VaultRecord, VaultWithStatus } from '$lib/types';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
+	import { Label } from '$lib/components/ui/label';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Switch } from '$lib/components/ui/switch';
 	import * as Card from '$lib/components/ui/card';
@@ -10,7 +12,6 @@
 	import ReindexDialog from '$lib/components/ReindexDialog.svelte';
 	import { t } from '$lib/i18n/index.svelte';
 	import { readResponseError } from '$lib/server-error';
-	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
 
 	// Stable per-instance id prefix for label/control association.
@@ -58,6 +59,42 @@
 	}
 
 	onMount(loadVaults);
+
+	// Desktop (Tauri) first-run vault config — what the app launches into NEXT time
+	// (not the vault being browsed now). Moved here from the old settings home page.
+	const runningInTauri = isTauri();
+	let desktopVaultPath = $state('');
+	let desktopVaultName = $state('');
+	let desktopSaveStatus = $state<'idle' | 'saved' | 'error'>('idle');
+
+	onMount(async () => {
+		if (!runningInTauri) return;
+		try {
+			const cfg = await invoke<{ vault_path: string; vault_name: string } | null>('get_vault_config');
+			if (cfg) {
+				desktopVaultPath = cfg.vault_path;
+				desktopVaultName = cfg.vault_name;
+			}
+		} catch {
+			// Page still usable without this — just starts blank.
+		}
+	});
+
+	async function pickVaultFolder() {
+		const { open } = await import('@tauri-apps/plugin-dialog');
+		const picked = await open({ directory: true, multiple: false });
+		if (typeof picked === 'string') desktopVaultPath = picked;
+	}
+
+	async function saveVaultConfig() {
+		desktopSaveStatus = 'idle';
+		try {
+			await invoke('update_vault_config', { vaultPath: desktopVaultPath, vaultName: desktopVaultName });
+			desktopSaveStatus = 'saved';
+		} catch {
+			desktopSaveStatus = 'error';
+		}
+	}
 
 	async function resolveMcpMigration(exposeAll: boolean) {
 		mcpMigrationBusy = true;
@@ -187,14 +224,7 @@
 	<title>{t('VaultsSettingsPage.title')} — Vault Agent Toolkit</title>
 </svelte:head>
 
-<div class="mx-auto max-w-2xl px-4 pt-6 pb-12">
-	<div class="mb-4 flex items-baseline gap-4">
-		<a href="/settings" class="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-2">
-			<ArrowLeftIcon size={14} aria-hidden="true" /> {t('Common.ayarlar')}
-		</a>
-		<h1 class="font-display text-xl font-medium">{t('VaultsSettingsPage.title')}</h1>
-	</div>
-
+<div>
 	<p class="mb-6 text-sm text-muted-foreground">
 		{t('VaultsSettingsPage.intro')}
 	</p>
@@ -331,6 +361,38 @@
 			{/if}
 		</Card.Content>
 	</Card.Root>
+
+	{#if runningInTauri}
+		<Card.Root class="mt-6">
+			<Card.Header>
+				<Card.Title level={2}>{t('SettingsPage.desktopVaultTitle')}</Card.Title>
+				<Card.Description>
+					{t('SettingsPage.desktopVaultDescription')}
+				</Card.Description>
+			</Card.Header>
+			<Card.Content class="flex flex-col gap-4">
+				<div class="flex flex-col gap-1.5">
+					<Label for="{uid}-vault-folder">{t('SettingsPage.vaultFolder')}</Label>
+					<div class="flex gap-2">
+						<Input id="{uid}-vault-folder" type="text" readonly value={desktopVaultPath} placeholder={t('SettingsPage.vaultFolderPlaceholder')} class="flex-1" />
+						<Button type="button" variant="outline" onclick={pickVaultFolder}>{t('SettingsPage.choose')}</Button>
+					</div>
+				</div>
+				<div class="flex flex-col gap-1.5">
+					<Label for="{uid}-vault-name">{t('SettingsPage.obsidianVaultName')}</Label>
+					<Input id="{uid}-vault-name" type="text" bind:value={desktopVaultName} placeholder={t('SettingsPage.obsidianVaultNamePlaceholder')} class="max-w-xs" />
+				</div>
+				<div>
+					<Button type="button" onclick={saveVaultConfig}>{t('Common.kaydet')}</Button>
+					{#if desktopSaveStatus === 'saved'}
+						<span class="ml-2 text-sm text-[var(--success)]">{t('SettingsPage.vaultSaved')}</span>
+					{:else if desktopSaveStatus === 'error'}
+						<span class="ml-2 text-sm text-destructive" role="alert">{t('SettingsPage.vaultSaveFailed')}</span>
+					{/if}
+				</div>
+			</Card.Content>
+		</Card.Root>
+	{/if}
 </div>
 
 <AlertDialog.Root open={!!deleteTarget} onOpenChange={(open) => !open && (deleteTarget = null)}>

@@ -56,7 +56,7 @@
      overflows that container and centers itself in the overflow, not the
      visible area — on a dark theme (near-black --ground) that reads as a
      totally blank screen with the real content scrolled out of view. -->
-<div class="flex h-full flex-col items-center justify-center gap-4 px-4 text-center">
+<div class="vc-empty h-full justify-center">
 	<!-- Chick's own entrance/idle animation lives entirely in the scoped
 	     <style> below (plain CSS @keyframes, not motionFly) — it needs a
 	     two-stage timeline (settle in, then bob forever) that Svelte's
@@ -68,18 +68,19 @@
 		<div class="chick-shadow" aria-hidden="true"></div>
 	</div>
 
-	<h1 in:motionFly={{ y: 12, duration: MOTION.fast, delay: 40 }} class="font-display text-3xl font-medium">
+	<h1 in:motionFly={{ y: 12, duration: MOTION.fast, delay: 40 }} class="text-display-hero" style="max-width: 14ch; margin: 0;">
 		{t('WelcomePage.title')}
 	</h1>
 	<p
 		in:motionFly={{ y: 12, duration: MOTION.fast, delay: 60 }}
-		class="font-display max-w-sm text-base italic text-muted-foreground"
+		class="text-body"
+		style="max-width: 44ch; margin: 0; color: var(--label-secondary);"
 	>
 		{t('WelcomePage.tagline')}
 	</p>
 
 	<div in:motionFly={{ y: 12, duration: MOTION.fast, delay: 80 }}>
-		<Button onclick={proceed}>{t('WelcomePage.continue')}</Button>
+		<Button size="lg" onclick={proceed}>{t('WelcomePage.continue')}</Button>
 	</div>
 
 	<!-- Same <details>/<summary> disclosure pattern as
@@ -88,10 +89,10 @@
 	     three paragraphs of legal-flavored disclosure text. -->
 	<details
 		in:motionFly={{ y: 12, duration: MOTION.fast, delay: 100 }}
-		class="max-w-md text-xs text-muted-foreground"
+		class="text-footnote max-w-md text-[var(--label-secondary)]"
 		ontoggle={onDetailsToggle}
 	>
-		<summary class="cursor-pointer underline-offset-2 hover:underline">{t('WelcomePage.details')}</summary>
+		<summary class="cursor-pointer rounded-[var(--radius-sm)] underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]">{t('WelcomePage.details')}</summary>
 		<ul class="mt-2 flex flex-col gap-2 text-left">
 			<li>{t('WelcomePage.note1')}</li>
 			<li>{t('WelcomePage.note2')}</li>

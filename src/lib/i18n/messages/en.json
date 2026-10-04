@@ -441,6 +441,9 @@
 		"backToVaults": "Vaults",
 		"loadError": "Couldn't load history",
 		"inputPlaceholder": "Type a question... (Enter: start, Shift+Enter: new line)",
+		"heroTitle": "What do you want to learn from your vault?",
+		"heroSubtitle": "Answers rely only on your notes, and every claim links to its source.",
+		"recentChats": "Recent chats",
 		"start": "Start",
 		"noSourcesTitle": "No sources yet",
 		"noSourcesDescription": "For your questions to get source-grounded, citable answers, you first need to import notes from your Obsidian vault — otherwise every question comes back \"out of scope\".",
@@ -527,7 +530,37 @@
 		"obsidianVaultNamePlaceholder": "e.g. Math"
 	},
 
+	"SettingsNav": {
+		"title": "Settings",
+		"backToApp": "Back to app",
+		"groupGeneral": "GENERAL",
+		"groupAdvanced": "ADVANCED",
+		"appearance": "Appearance",
+		"vaults": "Vaults",
+		"upload": "File upload",
+		"skills": "Skills",
+		"memory": "Chat memory",
+		"progress": "Progress",
+		"models": "Models",
+		"providers": "Model providers",
+		"embedding": "Embedding",
+		"smalltalk": "Chat gate (developer)",
+		"leavesSettings": "Leaves settings",
+		"behaviorTitle": "Behavior"
+	},
+
+	"ModelsSettingsPage": {
+		"intro": "Choose which model chat and background jobs use. Models come from the providers you connect on the Model providers page.",
+		"rolesTitle": "Model selection",
+		"ollamaTitle": "Ollama models"
+	},
+
+	"EmbeddingSettingsPage": {
+		"intro": "The embedding model that prepares your library for search. If you change it, your vaults need to be reindexed."
+	},
+
 	"LibrarySettingsPage": {
+		"advancedUploadOptions": "Advanced upload options",
 		"title": "Library",
 		"saveError": "Couldn't save settings.",
 		"importObsidianTitle": "Import from Obsidian",
