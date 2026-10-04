@@ -12,16 +12,13 @@
 	import * as Card from '$lib/components/ui/card';
 	import * as Select from '$lib/components/ui/select';
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
-	import ArrowUpIcon from '@lucide/svelte/icons/arrow-up';
-	import ArrowDownIcon from '@lucide/svelte/icons/arrow-down';
+	import ChainEditor from '$lib/components/ChainEditor.svelte';
 	import PlusIcon from '@lucide/svelte/icons/plus';
 	import TrashIcon from '@lucide/svelte/icons/trash';
 	import { Label } from '$lib/components/ui/label';
 	import { t, i18n } from '$lib/i18n/index.svelte';
 	import { relativeTime } from '$lib/relative-time';
 	import { readResponseError } from '$lib/server-error';
-	import { flip } from 'svelte/animate';
-	import { flipDuration, motionEase } from '$lib/motion';
 
 	// Stable per-instance id prefix for label/control association (see
 	// craft-floor's accessibility pass) — $props.id() rather than a literal
@@ -190,7 +187,6 @@
 	let keyEditingId = $state<string | null>(null);
 	let testResults = $state<Record<string, string>>({});
 	let testingId = $state<string | null>(null);
-	let addChainSelection = $state<Record<string, string>>({});
 	let keyDeleteTarget = $state<ProviderStatus | null>(null);
 
 	let addFormOpen = $state(false);
@@ -539,35 +535,9 @@
 		}
 	}
 
-	function moveInChain(taskType: string, index: number, dir: -1 | 1) {
-		const previous = chains[taskType] ?? [];
-		const chain = [...previous];
-		const target = index + dir;
-		if (target < 0 || target >= chain.length) return;
-		[chain[index], chain[target]] = [chain[target], chain[index]];
-		void saveChain(taskType, chain, previous);
-	}
 
-	function removeFromChain(taskType: string, index: number) {
-		const previous = chains[taskType] ?? [];
-		const chain = [...previous];
-		chain.splice(index, 1);
-		void saveChain(taskType, chain, previous);
-	}
 
-	function addToChain(taskType: string) {
-		const id = addChainSelection[taskType];
-		if (!id) return;
-		const previous = chains[taskType] ?? [];
-		const chain = [...previous, id];
-		addChainSelection[taskType] = '';
-		void saveChain(taskType, chain, previous);
-	}
 
-	function availableToAdd(taskType: string): ProviderStatus[] {
-		const current = new Set(chains[taskType] ?? []);
-		return providers.filter((p) => p.enabled && !current.has(p.id));
-	}
 
 	let TEST_LABELS = $derived<Record<string, string>>({
 		ok: t('ProvidersSettingsPage.testOk'),
@@ -956,67 +926,20 @@
 		</section>
 	{/if}
 
-	<section>
-		<h2 class="mb-1 text-base font-semibold">{t('ProvidersSettingsPage.chainSectionTitle')}</h2>
-		<p class="mb-4 text-sm text-muted-foreground">
-			{t('ProvidersSettingsPage.chainSectionDescription')}
-		</p>
-		{#each Object.keys(TASK_LABELS) as taskType (taskType)}
-			<div class="flex flex-wrap items-center gap-3 border-b py-2.5">
-				<span class="min-w-[140px] text-sm font-semibold">{TASK_LABELS[taskType]}</span>
-				<div class="flex flex-1 flex-wrap gap-1.5">
-					{#each chains[taskType] ?? [] as providerId, i (providerId)}
-						<span
-							class="inline-flex items-center gap-0.5 rounded-full border py-0.5 pr-1.5 pl-2.5 text-xs"
-							animate:flip={{ duration: flipDuration(), easing: motionEase }}
-						>
-							{labelFor(providerId)}
-							<button
-								type="button"
-								class="flex items-center px-0.5 text-muted-foreground disabled:opacity-30"
-								title={t('ProvidersSettingsPage.moveUp')}
-								aria-label={t('ProvidersSettingsPage.moveUp')}
-								disabled={i === 0}
-								onclick={() => moveInChain(taskType, i, -1)}><ArrowUpIcon size={12} aria-hidden="true" /></button
-							>
-							<button
-								type="button"
-								class="flex items-center px-0.5 text-muted-foreground disabled:opacity-30"
-								title={t('ProvidersSettingsPage.moveDown')}
-								aria-label={t('ProvidersSettingsPage.moveDown')}
-								disabled={i === (chains[taskType]?.length ?? 0) - 1}
-								onclick={() => moveInChain(taskType, i, 1)}><ArrowDownIcon size={12} aria-hidden="true" /></button
-							>
-							<button
-								type="button"
-								class="px-0.5 text-muted-foreground"
-								title={t('ProvidersSettingsPage.removeFromChain')}
-								onclick={() => removeFromChain(taskType, i)}>×</button
-							>
-						</span>
-					{:else}
-						<span class="text-sm text-muted-foreground">{t('ProvidersSettingsPage.chainEmpty')}</span>
-					{/each}
-				</div>
-				{#if availableToAdd(taskType).length > 0}
-					<div class="flex gap-1.5">
-						<Select.Root type="single" bind:value={addChainSelection[taskType]}>
-							<Select.Trigger size="sm" class="w-44">
-								{addChainSelection[taskType]
-									? labelFor(addChainSelection[taskType])
-									: t('ProvidersSettingsPage.addToChainPlaceholder')}
-							</Select.Trigger>
-							<Select.Content>
-								{#each availableToAdd(taskType) as p (p.id)}
-									<Select.Item value={p.id} label={p.label}>{p.label}</Select.Item>
-								{/each}
-							</Select.Content>
-						</Select.Root>
-						<Button size="sm" variant="outline" onclick={() => addToChain(taskType)}>{t('ProvidersSettingsPage.add')}</Button>
-					</div>
-				{/if}
-			</div>
-		{/each}
+	<section class="vc-group chain-section">
+		<h2 class="vc-group-title">{t('ProvidersSettingsPage.chainSectionTitle')}</h2>
+		<p class="chain-intro">{t('ProvidersSettingsPage.chainSectionDescription')}</p>
+		<div class="vc-list">
+			{#each Object.keys(TASK_LABELS) as taskType (taskType)}
+				<ChainEditor
+					label={TASK_LABELS[taskType]}
+					chain={chains[taskType] ?? []}
+					options={providers.filter((p) => p.enabled).map((p) => ({ id: p.id, label: p.label }))}
+					{labelFor}
+					onchange={(next) => void saveChain(taskType, next, chains[taskType] ?? [])}
+				/>
+			{/each}
+		</div>
 	</section>
 </div>
 
@@ -1100,3 +1023,11 @@
 		{/if}
 	</AlertDialog.Content>
 </AlertDialog.Root>
+
+<style>
+	.chain-intro {
+		margin: 0 0 var(--space-3);
+		font: 400 13px/18px var(--font-sans);
+		color: var(--label-secondary);
+	}
+</style>
