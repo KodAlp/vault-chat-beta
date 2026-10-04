@@ -12,13 +12,11 @@
 	import * as Card from '$lib/components/ui/card';
 	import * as Select from '$lib/components/ui/select';
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
-	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 	import ArrowUpIcon from '@lucide/svelte/icons/arrow-up';
 	import ArrowDownIcon from '@lucide/svelte/icons/arrow-down';
 	import PlusIcon from '@lucide/svelte/icons/plus';
 	import TrashIcon from '@lucide/svelte/icons/trash';
 	import { Label } from '$lib/components/ui/label';
-	import EmbeddingSettingsCard from '$lib/components/EmbeddingSettingsCard.svelte';
 	import { t, i18n } from '$lib/i18n/index.svelte';
 	import { relativeTime } from '$lib/relative-time';
 	import { readResponseError } from '$lib/server-error';
@@ -582,13 +580,7 @@
 	<title>{t('ProvidersSettingsPage.title')} — Vault Agent Toolkit</title>
 </svelte:head>
 
-<div class="mx-auto max-w-3xl px-4 pt-6 pb-12">
-	<div class="mb-3 flex items-baseline gap-4">
-		<a href="/settings" class="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-2">
-			<ArrowLeftIcon size={14} aria-hidden="true" /> {t('Common.ayarlar')}
-		</a>
-		<h1 class="font-display text-xl font-medium">{t('ProvidersSettingsPage.title')}</h1>
-	</div>
+<div>
 
 	<p class="mb-2 text-sm text-muted-foreground">
 		{t('ProvidersSettingsPage.intro', { path: 'data/secrets.json' })}
@@ -938,12 +930,6 @@
 			{/each}
 		</div>
 	</section>
-
-	<!-- Aşama 3c — depends on the provider list above (its own provider
-	     select is "enabled ollama/openai-compat providers" from `providers`),
-	     so it sits right after that section rather than before it or on a
-	     separate page. See the component's own doc comment. -->
-	<EmbeddingSettingsCard {providers} />
 
 	{#if tauri && unclaimedLocalServers.length > 0}
 		<section class="mb-8">

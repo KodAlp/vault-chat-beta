@@ -194,12 +194,12 @@
 				</Button>
 			</div>
 			{#if source === 'file'}
-				<label class="flex flex-col gap-1 text-sm">
+				<label class="flex flex-col gap-1.5 text-[13px] leading-[18px] font-medium">
 					{t('UploadDialog.fileLabel')}
 					<Input type="file" onchange={onFileChange} accept=".docx,.pptx,.xlsx,.html,.htm,.epub,.pdf,.md,.tex" />
 				</label>
 			{:else}
-				<label class="flex flex-col gap-1 text-sm">
+				<label class="flex flex-col gap-1.5 text-[13px] leading-[18px] font-medium">
 					{t('UploadDialog.youtubeLabel')}
 					<Input
 						type="url"
@@ -243,15 +243,15 @@
 					{/each}
 				</ul>
 			{/if}
-			<label class="flex flex-col gap-1 text-sm">
+			<label class="flex flex-col gap-1.5 text-[13px] leading-[18px] font-medium">
 				{t('UploadDialog.titleLabel')}
 				<Input type="text" bind:value={title} />
 			</label>
-			<label class="flex flex-col gap-1 text-sm">
+			<label class="flex flex-col gap-1.5 text-[13px] leading-[18px] font-medium">
 				{t('UploadDialog.domainLabel')}
 				<Input type="text" bind:value={domain} placeholder={t('UploadDialog.domainPlaceholder')} />
 			</label>
-			<label class="flex flex-col gap-1 text-sm">
+			<label class="flex flex-col gap-1.5 text-[13px] leading-[18px] font-medium">
 				{t('UploadDialog.levelLabel')}
 				<Select.Root type="single" bind:value={level}>
 					<Select.Trigger class="w-full">{level}</Select.Trigger>

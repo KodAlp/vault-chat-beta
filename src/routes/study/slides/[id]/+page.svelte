@@ -125,8 +125,8 @@
 		</div>
 
 		<div class="nav">
-			<button onclick={prev} disabled={currentIndex === 0}>{t('SlidesStudyPage.prev')}</button>
-			<button onclick={next} disabled={currentIndex === slideDocs.length - 1}>{t('SlidesStudyPage.next')}</button>
+			<button class="vc-btn secondary" onclick={prev} disabled={currentIndex === 0}>{t('SlidesStudyPage.prev')}</button>
+			<button class="vc-btn secondary" onclick={next} disabled={currentIndex === slideDocs.length - 1}>{t('SlidesStudyPage.next')}</button>
 		</div>
 
 		{#if slides[currentIndex]}
@@ -167,29 +167,29 @@
 		display: inline-flex;
 		align-items: center;
 		gap: 0.35rem;
-		font-size: 0.875rem;
-		color: var(--color-muted-foreground);
+		font: var(--text-subheadline);
+		color: var(--label-secondary);
 		text-decoration: none;
-		margin-bottom: 1.5rem;
+		margin-bottom: var(--space-6);
 	}
 
 	.home-link:hover {
-		color: var(--color-primary);
+		color: var(--label);
 	}
 
 	.home-link:focus-visible {
-		outline: 2px solid var(--accent);
+		outline: 2px solid var(--focus-ring);
 		outline-offset: 2px;
 	}
 
 	.status {
-		color: var(--color-muted-foreground);
+		color: var(--label-secondary);
 		text-align: center;
 		margin-top: 3rem;
 	}
 
 	.status.error {
-		color: var(--color-destructive);
+		color: var(--danger);
 	}
 
 	.retry-row {
@@ -198,44 +198,22 @@
 		margin-top: 1rem;
 	}
 
-	.retry-btn {
-		padding: 0.5rem 1.2rem;
-		border-radius: 8px;
-		border: 1px solid var(--color-border);
-		background: transparent;
-		color: var(--color-foreground);
-		cursor: pointer;
-	}
-
-	.retry-btn:hover {
-		border-color: var(--color-primary);
-		color: var(--color-primary);
-	}
-
-	.retry-btn:focus-visible {
-		outline: 2px solid var(--accent);
-		outline-offset: 2px;
-	}
-
 	h1 {
-		font-family: var(--font-display);
-		font-weight: 480;
-		letter-spacing: -0.015em;
-		font-size: 1.5rem;
+		font: var(--text-display-title);
 		margin: 0 0 0.75rem;
 	}
 
 	.progress-label {
-		font-size: 0.75rem;
-		color: var(--color-muted-foreground);
+		font: var(--text-caption-1);
+		color: var(--label-secondary);
 		margin: 0 0 0.5rem;
 	}
 
 	.slide-frame {
 		width: 100%;
 		aspect-ratio: 16 / 9;
-		border: 1px solid var(--color-border);
-		border-radius: 10px;
+		box-shadow: inset 0 0 0 1px var(--separator);
+		border-radius: var(--radius-lg);
 		overflow: hidden;
 	}
 
@@ -251,20 +229,6 @@
 		margin-top: 1rem;
 	}
 
-	.nav button {
-		padding: 0.5rem 1.2rem;
-		border-radius: 8px;
-		border: 1px solid var(--color-border);
-		background: transparent;
-		color: var(--color-foreground);
-		cursor: pointer;
-	}
-
-	.nav button:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
-
 	.citation-row {
 		display: flex;
 		gap: 0.4rem;
@@ -272,10 +236,10 @@
 	}
 
 	.source-link {
-		font-size: 0.75rem;
-		color: var(--color-muted-foreground);
+		font: var(--text-caption-1);
+		color: var(--label-secondary);
 		text-decoration: none;
-		border: 1px solid var(--color-border);
+		box-shadow: inset 0 0 0 1px var(--separator);
 		border-radius: 999px;
 		padding: 0.2rem 0.65rem;
 		overflow-wrap: anywhere;
@@ -283,7 +247,7 @@
 	}
 
 	.source-link:hover {
-		color: var(--color-primary);
-		border-color: var(--color-primary);
+		color: var(--label);
+		background: var(--fill-hover);
 	}
 </style>

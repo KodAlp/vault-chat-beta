@@ -147,7 +147,7 @@
 </svelte:head>
 
 <div class="mindmap-screen">
-	<a class="home-link" href={backHref}><ArrowLeftIcon size={14} aria-hidden="true" /> {t('Common.geriDon')}</a>
+	<a class="home-link" href={backHref}><ArrowLeftIcon size={16} strokeWidth={1.75} aria-hidden="true" /> {t('Common.geriDon')}</a>
 
 	<!-- See study/report/[id]/+page.svelte for why every one of these view
 	     routes gets a boundary: phase='ready' is assigned before its subtree
@@ -163,7 +163,7 @@
 		{:else}
 			<p class="status error" role="alert">{errorMessage}</p>
 			<div class="retry-row">
-				<button type="button" class="retry-btn" onclick={load}>{t('Common.yenidenDene')}</button>
+				<button type="button" class="vc-btn secondary" onclick={load}>{t('Common.yenidenDene')}</button>
 			</div>
 		{/if}
 	{:else if phase === 'ready' && mindmap}
@@ -179,7 +179,7 @@
 					disabled={!markmapInstance}
 					onclick={() => markmapInstance?.rescale(ZOOM_STEP_IN)}
 				>
-					<ZoomInIcon size={15} aria-hidden="true" />
+					<ZoomInIcon size={16} strokeWidth={1.75} aria-hidden="true" />
 				</button>
 				<button
 					type="button"
@@ -188,7 +188,7 @@
 					disabled={!markmapInstance}
 					onclick={() => markmapInstance?.rescale(ZOOM_STEP_OUT)}
 				>
-					<ZoomOutIcon size={15} aria-hidden="true" />
+					<ZoomOutIcon size={16} strokeWidth={1.75} aria-hidden="true" />
 				</button>
 				<button
 					type="button"
@@ -197,7 +197,7 @@
 					disabled={!markmapInstance}
 					onclick={() => markmapInstance?.fit()}
 				>
-					<MaximizeIcon size={15} aria-hidden="true" />
+					<MaximizeIcon size={16} strokeWidth={1.75} aria-hidden="true" />
 				</button>
 			</div>
 		</div>
@@ -212,7 +212,7 @@
 						{node.source_path}
 					</a>
 					<a class="source-link" href={libraryViewerUrl(node.source_path, data.vaultId ?? '', here)} title={t('Common.kaynagiAc')} aria-label={t('Common.kaynagiAc')}>
-						<ExternalLinkIcon size={13} aria-hidden="true" />
+						<ExternalLinkIcon size={16} strokeWidth={1.75} aria-hidden="true" />
 					</a>
 				</div>
 			{/each}
@@ -237,29 +237,29 @@
 		display: inline-flex;
 		align-items: center;
 		gap: 0.35rem;
-		font-size: 0.875rem;
-		color: var(--color-muted-foreground);
+		font: var(--text-subheadline);
+		color: var(--label-secondary);
 		text-decoration: none;
-		margin-bottom: 1.5rem;
+		margin-bottom: var(--space-6);
 	}
 
 	.home-link:hover {
-		color: var(--color-primary);
+		color: var(--label);
 	}
 
 	.home-link:focus-visible {
-		outline: 2px solid var(--accent);
+		outline: 2px solid var(--focus-ring);
 		outline-offset: 2px;
 	}
 
 	.status {
-		color: var(--color-muted-foreground);
+		color: var(--label-secondary);
 		text-align: center;
 		margin-top: 3rem;
 	}
 
 	.status.error {
-		color: var(--color-destructive);
+		color: var(--danger);
 	}
 
 	.retry-row {
@@ -268,30 +268,8 @@
 		margin-top: 1rem;
 	}
 
-	.retry-btn {
-		padding: 0.5rem 1.2rem;
-		border-radius: 8px;
-		border: 1px solid var(--color-border);
-		background: transparent;
-		color: var(--color-foreground);
-		cursor: pointer;
-	}
-
-	.retry-btn:hover {
-		border-color: var(--color-primary);
-		color: var(--color-primary);
-	}
-
-	.retry-btn:focus-visible {
-		outline: 2px solid var(--accent);
-		outline-offset: 2px;
-	}
-
 	h1 {
-		font-family: var(--font-display);
-		font-weight: 480;
-		letter-spacing: -0.015em;
-		font-size: 1.5rem;
+		font: var(--text-display-title);
 		margin: 0 0 1rem;
 	}
 
@@ -302,9 +280,9 @@
 	.mindmap-svg {
 		width: 100%;
 		height: 60vh;
-		border: 1px solid var(--color-border);
-		border-radius: 10px;
-		background: var(--color-background);
+		box-shadow: inset 0 0 0 1px var(--separator);
+		border-radius: var(--radius-lg);
+		background: var(--bg-canvas);
 		display: block;
 	}
 
@@ -323,16 +301,16 @@
 		justify-content: center;
 		width: 1.85rem;
 		height: 1.85rem;
-		border: 1px solid var(--color-border);
+		box-shadow: inset 0 0 0 1px var(--separator);
 		border-radius: var(--radius-md);
-		background: var(--color-background);
-		color: var(--color-muted-foreground);
+		background: var(--bg-canvas);
+		color: var(--label-secondary);
 		cursor: pointer;
 	}
 
 	.map-controls button:hover:not(:disabled) {
-		color: var(--color-primary);
-		border-color: var(--color-primary);
+		color: var(--label);
+		background: var(--fill-hover);
 	}
 
 	.map-controls button:disabled {
@@ -341,14 +319,14 @@
 	}
 
 	.map-controls button:focus-visible {
-		outline: 2px solid var(--accent);
+		outline: 2px solid var(--focus-ring);
 		outline-offset: 1px;
 	}
 
 	.map-hint {
 		margin: 0.4rem 0 0;
 		font-size: 0.72rem;
-		color: var(--color-muted-foreground);
+		color: var(--label-secondary);
 	}
 
 	/* markmap-view injects its own `.markmap { --markmap-text-color: #333;
@@ -368,9 +346,9 @@
 	.mindmap-svg :global(.mm-summary) {
 		display: block;
 		padding: 0.3rem 0.5rem;
-		border-radius: 8px;
-		background: var(--color-muted);
-		color: var(--color-muted-foreground);
+		border-radius: var(--radius-md);
+		background: var(--bg-sidebar);
+		color: var(--label-secondary);
 		line-height: 1.45;
 	}
 
@@ -389,17 +367,17 @@
 
 	.mindmap-svg :global(.mm-summary.is-expanded) {
 		cursor: pointer;
-		background: var(--color-secondary);
+		background: var(--fill-control);
 	}
 
 	:global([data-theme='dark']) .mindmap-svg,
 	:global([data-theme='forest']) .mindmap-svg {
-		--markmap-text-color: var(--color-foreground);
-		--markmap-code-bg: var(--color-muted);
-		--markmap-code-color: var(--color-foreground);
-		--markmap-circle-open-bg: var(--color-muted);
-		--markmap-a-color: var(--color-primary);
-		--markmap-a-hover-color: var(--color-primary);
+		--markmap-text-color: var(--label);
+		--markmap-code-bg: var(--bg-sidebar);
+		--markmap-code-color: var(--label);
+		--markmap-circle-open-bg: var(--bg-sidebar);
+		--markmap-a-color: var(--label);
+		--markmap-a-hover-color: var(--label);
 	}
 
 	h2 {
@@ -422,15 +400,15 @@
 	}
 
 	.node-path {
-		color: var(--color-muted-foreground);
+		color: var(--label-secondary);
 		min-width: 200px;
 	}
 
 	.source-link {
-		font-size: 0.75rem;
-		color: var(--color-muted-foreground);
+		font: var(--text-caption-1);
+		color: var(--label-secondary);
 		text-decoration: none;
-		border: 1px solid var(--color-border);
+		box-shadow: inset 0 0 0 1px var(--separator);
 		border-radius: 999px;
 		padding: 0.2rem 0.65rem;
 		overflow-wrap: anywhere;
@@ -438,7 +416,7 @@
 	}
 
 	.source-link:hover {
-		color: var(--color-primary);
-		border-color: var(--color-primary);
+		color: var(--label);
+		background: var(--fill-hover);
 	}
 </style>

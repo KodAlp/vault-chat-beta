@@ -13,7 +13,7 @@
 <div class="wrap">
 	<div class="card">
 		<p class="status font-mono">{page.status}</p>
-		<h1 class="font-display">
+		<h1>
 			{isNotFound ? t('ErrorPage.notFoundTitle') : t('ErrorPage.title')}
 		</h1>
 		<p class="body">
@@ -43,22 +43,20 @@
 
 	.status {
 		margin: 0 0 0.75rem;
-		font-size: 0.8125rem;
-		color: var(--text-muted);
+		font: var(--text-footnote);
+		color: var(--label-secondary);
 	}
 
 	h1 {
 		margin: 0 0 0.75rem;
-		font-size: 1.5rem;
-		font-weight: 480;
-		color: var(--text);
+		font: var(--text-display-title);
+		color: var(--label);
 	}
 
 	.body {
 		margin: 0 0 2rem;
-		font-size: 1rem;
-		line-height: 1.5;
-		color: var(--text-muted);
+		font: var(--text-body);
+		color: var(--label-secondary);
 	}
 
 	.actions {

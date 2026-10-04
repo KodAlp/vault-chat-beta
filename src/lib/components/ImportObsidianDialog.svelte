@@ -83,9 +83,9 @@
 	});
 
 	const STATUS_BADGE_CLASS: Record<string, string> = {
-		converted: 'bg-primary/15 text-primary',
-		needs_review: 'bg-orange-500/20 text-amber-700 dark:text-amber-400',
-		failed: 'bg-destructive/15 text-destructive'
+		converted: 'bg-[var(--accent-soft)] text-[var(--accent-text)]',
+		needs_review: 'bg-secondary text-[var(--warning)]',
+		failed: 'bg-secondary text-destructive'
 	};
 
 	let counts = $derived(
@@ -99,7 +99,7 @@
 	);
 </script>
 
-<Button variant="outline" class="border-primary text-primary" onclick={openDialog}>{t('ImportObsidianDialog.trigger')}</Button>
+<Button variant="outline" onclick={openDialog}>{t('ImportObsidianDialog.trigger')}</Button>
 
 <Dialog.Root bind:open>
 	<Dialog.Content class="sm:max-w-lg">
@@ -111,7 +111,7 @@
 		</Dialog.Header>
 
 		{#if phase === 'idle'}
-			<label class="flex flex-col gap-1 text-sm">
+			<label class="flex flex-col gap-1.5 text-[13px] leading-[18px] font-medium">
 				{t('ImportObsidianDialog.sourcePathLabel')}
 				<Input type="text" bind:value={sourcePath} placeholder={t(
 					serverPlatform() === 'darwin'
@@ -140,7 +140,7 @@
 			<div class="flex max-h-[40vh] flex-col gap-1 overflow-y-auto">
 				{#each items.filter((i) => i.status !== 'skipped') as item (item.id)}
 					<div class="flex items-center gap-2 border-b py-1 text-sm">
-						<span class="shrink-0 rounded-full px-2 py-0.5 text-[0.68rem] {STATUS_BADGE_CLASS[item.status] ?? ''}">
+						<span class="shrink-0 rounded-[var(--radius-sm)] px-[7px] py-0 text-[11px] leading-[18px] font-medium {STATUS_BADGE_CLASS[item.status] ?? ''}">
 							{STATUS_LABELS[item.status] ?? item.status}
 						</span>
 						<span class="overflow-hidden text-ellipsis whitespace-nowrap">{item.fileName}</span>

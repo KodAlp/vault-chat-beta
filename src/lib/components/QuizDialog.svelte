@@ -74,15 +74,15 @@
 >
 	{#snippet extraFields()}
 		<div class="flex gap-3">
-			<label class="flex flex-1 flex-col gap-1 text-xs">
+			<label class="flex flex-1 flex-col gap-1.5 text-[13px] leading-[18px] font-medium">
 				{t('QuizDialog.multipleChoice')}
-				<Input type="number" min="0" max="20" bind:value={mc} onblur={() => (mc = clampCount(mc))} class="h-8" />
+				<Input type="number" min="0" max="20" bind:value={mc} onblur={() => (mc = clampCount(mc))} class="h-9" />
 			</label>
-			<label class="flex flex-1 flex-col gap-1 text-xs">
+			<label class="flex flex-1 flex-col gap-1.5 text-[13px] leading-[18px] font-medium">
 				{t('QuizDialog.trueFalse')}
-				<Input type="number" min="0" max="20" bind:value={tf} onblur={() => (tf = clampCount(tf))} class="h-8" />
+				<Input type="number" min="0" max="20" bind:value={tf} onblur={() => (tf = clampCount(tf))} class="h-9" />
 			</label>
-			<label class="flex flex-1 flex-col gap-1 text-xs">
+			<label class="flex flex-1 flex-col gap-1.5 text-[13px] leading-[18px] font-medium">
 				{t('QuizDialog.openEnded')}
 				<Input
 					type="number"

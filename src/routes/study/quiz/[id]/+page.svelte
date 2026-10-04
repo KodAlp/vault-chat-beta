@@ -213,7 +213,7 @@
 </svelte:head>
 
 <div class="quiz-screen">
-	<a class="home-link" href={backHref}><ArrowLeftIcon size={14} aria-hidden="true" /> {t('Common.geriDon')}</a>
+	<a class="home-link" href={backHref}><ArrowLeftIcon size={16} strokeWidth={1.75} aria-hidden="true" /> {t('Common.geriDon')}</a>
 
 	<!-- See study/report/[id]/+page.svelte for why every one of these view
 	     routes gets a boundary: the phase is switched off 'loading' before its
@@ -229,14 +229,14 @@
 		{:else}
 			<p class="status error" role="alert">{errorMessage}</p>
 			<div class="retry-row">
-				<button type="button" class="retry-btn" onclick={load}>{t('Common.yenidenDene')}</button>
+				<button type="button" class="vc-btn secondary" onclick={load}>{t('Common.yenidenDene')}</button>
 			</div>
 		{/if}
 	{:else if phase === 'taking' || phase === 'submitting'}
 		{@const item = items[currentIndex]}
 		<h1>{quiz?.title ?? t('QuizStudyPage.defaultTitle')}</h1>
-		<div class="progress-bar">
-			<div class="progress-fill" style="transform: scaleX({(currentIndex + 1) / items.length})"></div>
+		<div class="vc-progress">
+			<span style="width: 100%; transform: scaleX({(currentIndex + 1) / items.length})"></span>
 		</div>
 		<p class="progress-label">{currentIndex + 1} / {items.length}</p>
 
@@ -245,25 +245,28 @@
 				<div class="question markdown-body">{@html questionHtml}</div>
 
 				{#if item.type === 'multiple_choice' && item.options}
-					<div class="options">
+					<div class="options" role="radiogroup" aria-label={quiz?.title ?? t('QuizStudyPage.defaultTitle')}>
 						{#each item.options as option, i (option + '#' + i)}
 							<button
-								class="option"
-								class:selected={answers[item.id] === option}
-								aria-pressed={answers[item.id] === option}
+								type="button"
+								class="vc-option"
+								role="radio"
+								aria-checked={answers[item.id] === option}
 								onclick={() => selectAnswer(option)}
 							>
-								<span class="option-letter">{String.fromCharCode(65 + i)})</span>
-								{@html optionsHtml[i] ?? option}
+								<span class="key">{String.fromCharCode(65 + i)}</span>
+								<span class="option-md">{@html optionsHtml[i] ?? option}</span>
 							</button>
 						{/each}
 					</div>
 				{:else if item.type === 'true_false'}
-					<div class="options">
-						<button class="option" class:selected={answers[item.id] === 'true'} aria-pressed={answers[item.id] === 'true'} onclick={() => selectAnswer('true')}>
+					<div class="options" role="radiogroup" aria-label={quiz?.title ?? t('QuizStudyPage.defaultTitle')}>
+						<button type="button" class="vc-option" role="radio" aria-checked={answers[item.id] === 'true'} onclick={() => selectAnswer('true')}>
+							<span class="key">A</span>
 							{t('QuizStudyPage.true')}
 						</button>
-						<button class="option" class:selected={answers[item.id] === 'false'} aria-pressed={answers[item.id] === 'false'} onclick={() => selectAnswer('false')}>
+						<button type="button" class="vc-option" role="radio" aria-checked={answers[item.id] === 'false'} onclick={() => selectAnswer('false')}>
+							<span class="key">B</span>
 							{t('QuizStudyPage.false')}
 						</button>
 					</div>
@@ -282,11 +285,11 @@
 		{/if}
 
 		<div class="nav">
-			<button onclick={prev} disabled={currentIndex === 0 || phase === 'submitting'}>{t('QuizStudyPage.back')}</button>
+			<button class="vc-btn secondary" onclick={prev} disabled={currentIndex === 0 || phase === 'submitting'}>{t('QuizStudyPage.back')}</button>
 			{#if currentIndex < items.length - 1}
-				<button onclick={next} disabled={phase === 'submitting'}>{t('QuizStudyPage.next')}</button>
+				<button class="vc-btn primary" onclick={next} disabled={phase === 'submitting'}>{t('QuizStudyPage.next')}</button>
 			{:else}
-				<button class="primary" onclick={finish} disabled={phase === 'submitting'}>
+				<button class="vc-btn primary" onclick={finish} disabled={phase === 'submitting'}>
 					{phase === 'submitting' ? t('QuizStudyPage.submitting') : t('QuizStudyPage.finish')}
 				</button>
 			{/if}
@@ -305,9 +308,11 @@
 				<div class="result-item" class:correct={r.item.isCorrect} class:incorrect={!r.item.isCorrect}>
 					<div class="result-mark">
 						{#if r.item.isCorrect}
-							<CheckIcon size={16} aria-hidden="true" />
+							<CheckIcon size={20} strokeWidth={1.75} aria-hidden="true" />
+							<span class="sr-only">{t('QuizStudyPage.true')}</span>
 						{:else}
-							<XIcon size={16} aria-hidden="true" />
+							<XIcon size={20} strokeWidth={1.75} aria-hidden="true" />
+							<span class="sr-only">{t('QuizStudyPage.false')}</span>
 						{/if}
 					</div>
 					<div class="result-body">
@@ -321,12 +326,17 @@
 							<div class="options result-options">
 								{#each r.item.options as option, i (option + '#' + i)}
 									<div
-										class="option static"
-										class:given-option={option === r.item.given}
-										class:correct-option={option === r.item.correctAnswer}
+										class="vc-option static"
+										class:correct={option === r.item.correctAnswer}
+										class:wrong={option === r.item.given && option !== r.item.correctAnswer}
 									>
-										<span class="option-letter">{String.fromCharCode(65 + i)})</span>
+										<span class="key">{String.fromCharCode(65 + i)}</span>
 										<span class="markdown-body option-md">{@html r.optionsHtml?.[i] ?? option}</span>
+										{#if option === r.item.correctAnswer}
+											<span class="verdict">{t('QuizStudyPage.true')}</span>
+										{:else if option === r.item.given}
+											<span class="verdict">{t('QuizStudyPage.false')}</span>
+										{/if}
 									</div>
 								{/each}
 							</div>
@@ -370,7 +380,7 @@
 							{r.item.sourcePath}
 						</a>
 						<a class="source-link" href={libraryViewerUrl(r.item.sourcePath, data.vaultId ?? '', here)} title={t('Common.kaynagiAc')} aria-label={t('Common.kaynagiAc')}>
-							<ExternalLinkIcon size={13} aria-hidden="true" />
+							<ExternalLinkIcon size={16} strokeWidth={1.75} aria-hidden="true" />
 						</a>
 					</div>
 				</div>
@@ -390,50 +400,48 @@
 	.quiz-screen {
 		max-width: 640px;
 		margin: 0 auto;
-		padding: 1.5rem 1rem 3rem;
+		padding: var(--space-6) var(--space-4) var(--space-14);
 	}
 
 	.quiz-screen h1 {
-		font-family: var(--font-display);
-		font-weight: 480;
-		letter-spacing: -0.015em;
-		font-size: 1.5rem;
-		margin: 0 0 1.5rem;
+		font: var(--text-display-title);
+		margin: 0 0 var(--space-6);
 	}
 
 	.home-link {
 		display: inline-flex;
 		align-items: center;
 		gap: 0.35rem;
-		font-size: 0.875rem;
-		color: var(--color-muted-foreground);
+		font: var(--text-subheadline);
+		color: var(--label-secondary);
 		text-decoration: none;
-		margin-bottom: 1.5rem;
+		margin-bottom: var(--space-6);
 	}
 
 	.home-link:hover {
-		color: var(--color-primary);
+		color: var(--label);
 	}
 
 	.home-link:focus-visible {
-		outline: 2px solid var(--accent);
+		outline: 2px solid var(--focus-ring);
 		outline-offset: 2px;
 	}
 
 	.status {
-		color: var(--color-muted-foreground);
+		font: var(--text-body);
+		color: var(--label-secondary);
 		text-align: center;
 		margin-top: 3rem;
 	}
 
 	.status.error {
-		color: var(--color-destructive);
+		color: var(--danger);
 	}
 
 	.status.error.inline {
 		text-align: left;
 		margin: 0 0 1rem;
-		font-size: 0.85rem;
+		font: var(--text-footnote);
 	}
 
 	.retry-row {
@@ -442,53 +450,21 @@
 		margin-top: 1rem;
 	}
 
-	.retry-btn {
-		padding: 0.5rem 1.2rem;
-		border-radius: 8px;
-		border: 1px solid var(--color-border);
-		background: transparent;
-		color: var(--color-foreground);
-		cursor: pointer;
-	}
-
-	.retry-btn:hover {
-		border-color: var(--color-primary);
-		color: var(--color-primary);
-	}
-
-	.retry-btn:focus-visible {
-		outline: 2px solid var(--accent);
-		outline-offset: 2px;
-	}
-
-	.progress-bar {
-		height: 6px;
-		background: var(--color-border);
-		border-radius: 999px;
-		overflow: hidden;
-	}
-
-	.progress-fill {
-		height: 100%;
-		width: 100%;
-		background: var(--color-primary);
-		/* scaleX, not width — the fill never triggers layout recalculation
-		   on its own track (its parent .progress-bar's size is fixed). */
+	/* scaleX, not width — the fill never triggers layout recalculation on
+	   its own track (its parent .vc-progress's size is fixed). */
+	.vc-progress > span {
 		transform-origin: left;
 		transition: transform var(--motion-base) var(--motion-easing);
 	}
 
 	.progress-label {
-		font-size: 0.75rem;
-		color: var(--color-muted-foreground);
-		margin: 0.4rem 0 1.5rem;
+		font: var(--text-footnote);
+		color: var(--label-secondary);
+		margin: 0.4rem 0 var(--space-6);
 	}
 
 	.question-card {
-		background: var(--bubble-assistant);
-		border-radius: 10px;
-		padding: 1.25rem;
-		margin-bottom: 1.5rem;
+		margin-bottom: var(--space-6);
 		/* Task 7 — keyed on currentIndex (see the {#key} wrapper in markup),
 		   so this replays every time the question changes. --nav-dir (set
 		   inline per-render) is +1 going forward, -1 going back, so the
@@ -522,70 +498,62 @@
 	}
 
 	.question {
-		line-height: 1.6;
-		margin-bottom: 1rem;
+		font: var(--text-body-reading);
+		margin-bottom: var(--space-4);
 	}
 
 	.options {
 		display: flex;
 		flex-direction: column;
-		gap: 0.5rem;
+		gap: var(--space-2);
 	}
 
-	.option {
-		display: flex;
-		align-items: baseline;
-		gap: 0.5rem;
+	/* .vc-option from components.css; the taking-phase variant is a
+	   <button role="radio"> so it needs its UA button chrome stripped. */
+	button.vc-option {
+		appearance: none;
+		border: 0;
+		width: 100%;
 		text-align: left;
-		padding: 0.6rem 0.9rem;
-		border-radius: 8px;
-		border: 1px solid var(--color-border);
-		background: var(--color-background);
-		color: var(--color-foreground);
-		cursor: pointer;
-		font-size: 1rem;
-		transition:
-			background-color var(--motion-fast) var(--motion-easing),
-			border-color var(--motion-fast) var(--motion-easing),
-			color var(--motion-fast) var(--motion-easing);
+		color: var(--label);
+		transition: background-color var(--motion-fast) var(--motion-easing);
 	}
 
-	.option-letter {
-		flex-shrink: 0;
-		font-weight: 600;
-		color: var(--color-muted-foreground);
+	button.vc-option:hover {
+		background: var(--fill-hover);
 	}
 
-	.option.selected .option-letter {
-		color: var(--color-primary);
-	}
-
-	.option.selected {
-		border-color: var(--color-primary);
-		background: var(--bubble-user);
-	}
-
-	.option:focus-visible {
-		outline: 2px solid var(--accent);
+	button.vc-option:focus-visible {
+		outline: 2px solid var(--focus-ring);
 		outline-offset: 2px;
+	}
+
+	.vc-option :global(p) {
+		margin: 0;
 	}
 
 	.open-answer {
 		width: 100%;
 		min-height: 6rem;
 		resize: vertical;
-		padding: 0.6rem 0.75rem;
-		border-radius: 8px;
-		border: 1px solid var(--color-border);
-		background: var(--color-background);
-		color: var(--color-foreground);
-		font-family: var(--font-sans);
-		font-size: 1rem;
+		padding: var(--space-3);
+		border-radius: var(--radius-md);
+		border: 0;
+		background: var(--fill-control);
+		box-shadow: inset 0 0 0 1px var(--separator-strong);
+		color: var(--label);
+		font: var(--text-callout);
+	}
+
+	.open-answer::placeholder {
+		color: var(--label-tertiary);
 	}
 
 	.open-answer:focus-visible {
-		outline: 2px solid var(--accent);
-		outline-offset: 1px;
+		outline: none;
+		box-shadow:
+			inset 0 0 0 1px var(--border-control),
+			0 0 0 2px var(--focus-ring);
 	}
 
 	.nav {
@@ -593,60 +561,28 @@
 		justify-content: space-between;
 	}
 
-	.nav button {
-		padding: 0.5rem 1.2rem;
-		border-radius: 8px;
-		border: 1px solid var(--color-border);
-		background: transparent;
-		color: var(--color-foreground);
-		cursor: pointer;
-	}
-
-	.nav button.primary {
-		background: var(--color-primary);
-		color: var(--color-primary-foreground);
-		border-color: var(--color-primary);
-		font-weight: 600;
-	}
-
-	.nav button:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
-
-	.nav button:focus-visible {
-		outline: 2px solid var(--accent);
+	.nav .vc-btn:focus-visible {
+		outline: 2px solid var(--focus-ring);
 		outline-offset: 2px;
 	}
 
 	.results {
 		display: flex;
 		flex-direction: column;
-		gap: 1rem;
+		gap: var(--space-3);
 	}
 
 	.result-item {
 		display: flex;
 		gap: 0.75rem;
-		padding: 1rem;
+		padding: var(--space-4);
 		border-radius: var(--radius-lg);
-		border: 1px solid var(--color-border);
+		background: var(--bg-elevated);
+		box-shadow: inset 0 0 0 1px var(--separator);
 	}
 
-	/* A thick colored border-left is the detector's own named "most
-	   recognizable AI-slop tell" — kept at 2px (not the original 3px) and
-	   tied to the semantic --success/--destructive tokens rather than the
-	   brand accent, since this is a real correct/incorrect scan cue
-	   (the Duolingo/Anki-review pattern), not decoration standing in for
-	   content. */
-	.result-item.correct {
-		border-left: 2px solid var(--success);
-	}
-
-	.result-item.incorrect {
-		border-left: 2px solid var(--color-destructive);
-	}
-
+	/* Correct/incorrect is carried by the icon plus a visually-hidden
+	   verdict word, not by the color alone. */
 	.result-mark {
 		display: flex;
 		align-items: center;
@@ -661,7 +597,7 @@
 	}
 
 	.result-item.incorrect .result-mark {
-		color: var(--color-destructive);
+		color: var(--danger);
 	}
 
 	.result-body {
@@ -669,20 +605,20 @@
 		min-width: 0;
 	}
 
-	/* Results-only variant of .options/.option above: static (no hover/click
-	   affordance, no :focus-visible — these are read-only), and the given/
-	   correct markers replace the "Cevabın:"/"Doğru cevap:" text rows that
-	   used to duplicate this same information as plain, unrendered text. */
+	/* Results-only variant of .vc-option: read-only (no hover/click
+	   affordance), correct/wrong marked with a verdict word. */
 	.result-options {
-		display: flex;
-		flex-direction: column;
-		gap: 0.4rem;
 		margin: 0.4rem 0;
 	}
 
-	.option.static {
+	.vc-option.static {
 		cursor: default;
-		font-size: 0.9rem;
+		font: var(--text-subheadline);
+		font-weight: 400;
+	}
+
+	.vc-option.static .option-md {
+		min-width: 0;
 	}
 
 	.option-md :global(p) {
@@ -690,34 +626,22 @@
 		display: inline;
 	}
 
-	.option.given-option {
-		border-color: var(--color-primary);
-		background: var(--bubble-user);
-	}
-
-	.option.correct-option {
-		border-color: var(--color-destructive);
-	}
-
-	.option.given-option.correct-option {
-		border-color: var(--color-primary);
-	}
-
 	.answer-block {
 		display: flex;
 		align-items: baseline;
 		gap: 0.4rem;
-		font-size: 0.9rem;
+		font: var(--text-subheadline);
+		font-weight: 400;
 		margin: 0.3rem 0;
 	}
 
 	.answer-label {
 		flex-shrink: 0;
-		color: var(--color-muted-foreground);
+		color: var(--label-secondary);
 	}
 
 	.answer-empty {
-		color: var(--color-muted-foreground);
+		color: var(--label-secondary);
 		font-style: italic;
 	}
 
@@ -727,8 +651,9 @@
 	}
 
 	.explanation {
-		font-size: 0.9rem;
-		color: var(--color-muted-foreground);
+		font: var(--text-subheadline);
+		font-weight: 400;
+		color: var(--label-secondary);
 		margin-top: 0.5rem;
 	}
 
@@ -736,37 +661,37 @@
 		display: flex;
 		align-items: baseline;
 		gap: 0.4rem;
-		font-size: 0.85rem;
+		font: var(--text-footnote);
 		margin-top: 0.5rem;
 	}
 
 	.source-link {
 		display: inline-block;
 		margin-top: 0.6rem;
-		font-size: 0.75rem;
-		color: var(--color-muted-foreground);
+		font: var(--text-caption-1);
+		color: var(--label-secondary);
 		text-decoration: none;
-		border: 1px solid var(--color-border);
-		border-radius: 999px;
+		box-shadow: inset 0 0 0 1px var(--separator-strong);
+		border-radius: var(--radius-full);
 		padding: 0.2rem 0.65rem;
 		overflow-wrap: anywhere;
 		min-width: 0;
 	}
 
 	.source-link:hover {
-		color: var(--color-primary);
-		border-color: var(--color-primary);
+		color: var(--label);
+		background: var(--fill-hover);
 	}
 
 	.source-link:focus-visible {
-		outline: 2px solid var(--accent);
+		outline: 2px solid var(--focus-ring);
 		outline-offset: 2px;
 	}
 
 	.score-note {
 		margin: -1rem 0 1.25rem;
-		font-size: 0.8rem;
-		color: var(--color-muted-foreground);
+		font: var(--text-footnote);
+		color: var(--label-secondary);
 	}
 
 	.flag-row {
@@ -775,8 +700,8 @@
 		align-items: baseline;
 		gap: 0.6rem;
 		margin-top: 0.5rem;
-		font-size: 0.78rem;
-		color: var(--color-muted-foreground);
+		font: var(--text-footnote);
+		color: var(--label-secondary);
 	}
 
 	.flag-btn {
@@ -791,7 +716,7 @@
 	}
 
 	.flag-btn:focus-visible {
-		outline: 2px solid var(--accent);
+		outline: 2px solid var(--focus-ring);
 		outline-offset: 2px;
 	}
 </style>

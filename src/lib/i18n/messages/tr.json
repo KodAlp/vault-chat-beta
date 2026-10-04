@@ -441,6 +441,9 @@
 		"backToVaults": "Vault'lar",
 		"loadError": "Geçmiş alınamadı",
 		"inputPlaceholder": "Bir soru yaz... (Enter: başlat, Shift+Enter: yeni satır)",
+		"heroTitle": "Kasandan ne öğrenmek istersin?",
+		"heroSubtitle": "Yanıtlar yalnızca notlarına dayanır ve her iddia kaynağına bağlanır.",
+		"recentChats": "Geçmiş sohbetler",
 		"start": "Başlat",
 		"noSourcesTitle": "Henüz kaynak yok",
 		"noSourcesDescription": "Sorularının kaynağa dayalı, gösterilebilir cevaplar alması için önce Obsidian kasandan not içe aktarman gerekiyor — aksi halde her soru \"kapsamda yok\" döner.",
@@ -527,7 +530,37 @@
 		"obsidianVaultNamePlaceholder": "ör. Matematik"
 	},
 
+	"SettingsNav": {
+		"title": "Ayarlar",
+		"backToApp": "Uygulamaya dön",
+		"groupGeneral": "GENEL",
+		"groupAdvanced": "GELİŞMİŞ",
+		"appearance": "Görünüm",
+		"vaults": "Kasalar",
+		"upload": "Dosya yükleme",
+		"skills": "Skill'ler",
+		"memory": "Sohbet hafızası",
+		"progress": "İlerleme",
+		"models": "Modeller",
+		"providers": "Model sağlayıcıları",
+		"embedding": "Embedding",
+		"smalltalk": "Sohbet kapısı (geliştirici)",
+		"leavesSettings": "Ayarlardan çıkar",
+		"behaviorTitle": "Davranış"
+	},
+
+	"ModelsSettingsPage": {
+		"intro": "Sohbetin ve arka plan işlerinin hangi modeli kullanacağını seç. Modeller, Model sağlayıcıları sayfasında bağladığın sağlayıcılardan gelir.",
+		"rolesTitle": "Model seçimi",
+		"ollamaTitle": "Ollama modelleri"
+	},
+
+	"EmbeddingSettingsPage": {
+		"intro": "Kütüphaneni aramaya hazırlayan embedding modeli. Modeli değiştirirsen kasaların yeniden indekslenmesi gerekir."
+	},
+
 	"LibrarySettingsPage": {
+		"advancedUploadOptions": "Gelişmiş yükleme seçenekleri",
 		"title": "Kütüphane",
 		"saveError": "Ayarlar kaydedilemedi.",
 		"importObsidianTitle": "Obsidian'dan İçe Aktar",

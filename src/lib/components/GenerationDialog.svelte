@@ -226,7 +226,7 @@
 			{@render extraTop()}
 		{/if}
 
-		<label class="flex flex-col gap-1 text-sm">
+		<label class="flex flex-col gap-1.5 text-[13px] leading-[18px] font-medium">
 			{t('GenerationDialog.modelLabel')}
 			<Select.Root type="single" value={selectionKeyState} onValueChange={handleModelSelect}>
 				<Select.Trigger class="w-full">
@@ -252,7 +252,7 @@
 			</Select.Root>
 		</label>
 
-		<label class="flex flex-col gap-1 text-sm">
+		<label class="flex flex-col gap-1.5 text-[13px] leading-[18px] font-medium">
 			{t('GenerationDialog.domainLabel')}
 			<Select.Root type="single" bind:value={selectedDomain}>
 				<Select.Trigger class="w-full">
@@ -271,7 +271,7 @@
 			{t('GenerationDialog.useChatContext')}
 		</label>
 
-		<label class="flex flex-col gap-1 text-sm">
+		<label class="flex flex-col gap-1.5 text-[13px] leading-[18px] font-medium">
 			{promptLabel}
 			<Textarea bind:value={prompt} placeholder={promptPlaceholder} class="min-h-16" />
 		</label>

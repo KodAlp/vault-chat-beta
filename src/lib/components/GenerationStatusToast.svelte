@@ -2,6 +2,7 @@
 	import { motionFly } from '$lib/motion';
 	import CheckIcon from '@lucide/svelte/icons/check';
 	import XIcon from '@lucide/svelte/icons/x';
+	import AlertIcon from '@lucide/svelte/icons/triangle-alert';
 	import { t } from '$lib/i18n/index.svelte';
 
 	/**
@@ -66,7 +67,7 @@
      animate, since it wasn't a single persistent element. -->
 <div
 	class="fixed right-5 z-[200]"
-	style="bottom: 1.25rem; --stack: {stackIndex}; transform: translateY(calc(-3rem * var(--stack, 0))); transition: transform var(--motion-base) var(--motion-easing);"
+	style="bottom: 1.25rem; --stack: {stackIndex}; transform: translateY(calc(-4.5rem * var(--stack, 0))); transition: transform var(--motion-base) var(--motion-easing);"
 >
 	<!-- A stable wrapper, not aria-live on each swapped-in phase element: the
 	     three phases are separate nodes via {#if}/{:else if}, so a screen
@@ -76,77 +77,150 @@
 	     mutation inside an already-registered region is. -->
 	<div aria-live="polite" aria-atomic="true">
 		{#if status.phase === 'generating'}
-			<div
-				class="flex items-center gap-2.5 rounded-full border bg-background px-4 py-2.5 text-sm"
-				style="box-shadow: 0 2px 8px var(--accent-glow)"
-				transition:motionFly={{ y: 12 }}
-			>
-				<span
-					class="inline-block size-3.5 shrink-0 animate-spin rounded-full border-2 border-border border-t-primary"
-					aria-hidden="true"
-				></span>
-				<span>{stageLabels[status.stage] ?? t('GenerationStatusToast.defaultGeneratingLabel')}{status.elapsedMs ? t('GenerationStatusToast.elapsedSuffix', { seconds: Math.round(status.elapsedMs / 1000) }) : ''}</span>
+			<div class="vc-toast" transition:motionFly={{ y: 12 }}>
+				<div class="toast-body">
+					<span class="toast-title">{stageLabels[status.stage] ?? t('GenerationStatusToast.defaultGeneratingLabel')}{status.elapsedMs ? t('GenerationStatusToast.elapsedSuffix', { seconds: Math.round(status.elapsedMs / 1000) }) : ''}</span>
+					<div class="vc-progress" aria-hidden="true"><span class="indeterminate"></span></div>
+				</div>
 				{#if onCancel}
 					<button
 						type="button"
-						class="flex shrink-0 border-none bg-transparent p-0 text-inherit focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-2"
+						class="vc-icon-btn toast-btn"
 						onclick={onCancel}
 						title={t('GenerationStatusToast.cancel')}
 						aria-label={t('GenerationStatusToast.cancel')}
 					>
-						<XIcon size={15} aria-hidden="true" />
+						<XIcon size={16} strokeWidth={1.75} aria-hidden="true" />
 					</button>
 				{/if}
 			</div>
 		{:else if status.phase === 'done'}
 			<button
 				type="button"
-				class="flex items-center gap-2 rounded-full border border-primary bg-background px-4 py-2.5 text-sm font-semibold text-primary focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-2"
-				style="box-shadow: 0 2px 8px var(--accent-glow)"
+				class="vc-toast toast-action"
 				onclick={onView}
 				transition:motionFly={{ y: 12 }}
 			>
-				<CheckIcon size={15} aria-hidden="true" /> {doneMessage}
+				<CheckIcon size={20} strokeWidth={1.75} aria-hidden="true" />
+				<span class="toast-title">{doneMessage}</span>
 			</button>
 		{:else if status.phase === 'error'}
-			<div
-				class="flex max-w-[min(360px,80vw)] items-center gap-2.5 rounded-full border border-destructive bg-background px-4 py-2.5 text-sm text-destructive"
-				style="box-shadow: 0 2px 8px var(--accent-glow)"
-				role="alert"
-				transition:motionFly={{ y: 12 }}
-			>
-				<span>{errorPrefix}{status.message}</span>
-				{#if status.narrowScope && onExpandScope}
-					<button
-						type="button"
-						class="shrink-0 whitespace-nowrap border-none bg-transparent p-0 text-inherit underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-2"
-						onclick={() => {
-							onExpandScope?.();
-							onDismiss();
-						}}
-					>
-						{t('GenerationStatusToast.expandScope')}
-					</button>
-				{/if}
-				{#if status.embeddingMismatch && onReindex}
-					<button
-						type="button"
-						class="shrink-0 whitespace-nowrap border-none bg-transparent p-0 text-inherit underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-2"
-						onclick={onReindex}
-					>
-						{t('GenerationStatusToast.reindexNow')}
-					</button>
-				{/if}
+			<div class="vc-toast error" role="alert" transition:motionFly={{ y: 12 }}>
+				<AlertIcon size={20} strokeWidth={1.75} aria-hidden="true" />
+				<div class="toast-body">
+					<span class="toast-title">{errorPrefix}{status.message}</span>
+					{#if (status.narrowScope && onExpandScope) || (status.embeddingMismatch && onReindex)}
+						<div class="toast-actions">
+							{#if status.narrowScope && onExpandScope}
+								<button
+									type="button"
+									class="vc-btn secondary"
+									onclick={() => {
+										onExpandScope?.();
+										onDismiss();
+									}}
+								>
+									{t('GenerationStatusToast.expandScope')}
+								</button>
+							{/if}
+							{#if status.embeddingMismatch && onReindex}
+								<button type="button" class="vc-btn secondary" onclick={onReindex}>
+									{t('GenerationStatusToast.reindexNow')}
+								</button>
+							{/if}
+						</div>
+					{/if}
+				</div>
 				<button
 					type="button"
-					class="flex shrink-0 border-none bg-transparent p-0 text-inherit focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-2"
+					class="vc-icon-btn toast-btn"
 					onclick={onDismiss}
 					title={t('GenerationStatusToast.dismiss')}
 					aria-label={t('GenerationStatusToast.dismiss')}
 				>
-					<XIcon size={15} aria-hidden="true" />
+					<XIcon size={16} strokeWidth={1.75} aria-hidden="true" />
 				</button>
 			</div>
 		{/if}
 	</div>
 </div>
+
+<style>
+	.vc-toast {
+		width: auto;
+		min-width: 260px;
+		max-width: min(360px, 90vw);
+		color: var(--label);
+		font: var(--text-subheadline);
+	}
+
+	.vc-toast.error {
+		align-items: flex-start;
+	}
+
+	.toast-body {
+		display: flex;
+		flex: 1;
+		min-width: 0;
+		flex-direction: column;
+		gap: var(--space-2);
+	}
+
+	.toast-title {
+		font: var(--text-subheadline);
+		font-weight: 600;
+		overflow-wrap: anywhere;
+	}
+
+	.toast-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--space-2);
+	}
+
+	.toast-btn {
+		flex: none;
+	}
+
+	/* The toast is a button in its 'done' phase: reset UA button chrome. */
+	.toast-action {
+		appearance: none;
+		border: 0;
+		cursor: pointer;
+		text-align: left;
+	}
+
+	.toast-action:hover {
+		background: var(--bg-elevated);
+		box-shadow: var(--shadow-popover), inset 0 0 0 999px var(--fill-hover);
+	}
+
+	.vc-toast:focus-visible,
+	.vc-btn:focus-visible,
+	.toast-btn:focus-visible {
+		outline: 2px solid var(--focus-ring);
+		outline-offset: 2px;
+	}
+
+	/* No percentage is known (the stage label is the progress), so the bar
+	   slides; under reduced motion it holds as a static partial fill. */
+	.indeterminate {
+		width: 40%;
+		animation: toast-slide 1.4s var(--motion-easing) infinite;
+	}
+
+	@keyframes toast-slide {
+		from {
+			transform: translateX(-100%);
+		}
+		to {
+			transform: translateX(250%);
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.indeterminate {
+			animation: none;
+		}
+	}
+</style>

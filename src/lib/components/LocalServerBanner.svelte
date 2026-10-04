@@ -174,118 +174,133 @@
 </script>
 
 {#if target.state === 'setup'}
-	<div class="local-banner local-banner--warning" role="status" transition:motionFly={{ y: -16 }}>
-		<TriangleAlertIcon size={16} aria-hidden="true" />
-		<span>
-			{t('LocalServerBanner.setupNotFinished')}
-			<a href="/setup/local-server">{t('LocalServerBanner.openWizard')}</a>
-			·
-			<a href="/settings/providers">{t('LocalServerBanner.openProviders')}</a>
-		</span>
+	<div class="banner-slot" transition:motionFly={{ y: -16 }}>
+		<div class="vc-banner warning" role="status">
+			<span class="dot" aria-hidden="true"></span>
+			<TriangleAlertIcon size={20} strokeWidth={1.75} class="banner-icon" aria-hidden="true" />
+			<div class="banner-text">
+				<div class="t">{t('LocalServerBanner.setupNotFinished')}</div>
+				<div class="d">
+					<a href="/setup/local-server">{t('LocalServerBanner.openWizard')}</a>
+					·
+					<a href="/settings/providers">{t('LocalServerBanner.openProviders')}</a>
+				</div>
+			</div>
+		</div>
 	</div>
 {:else if targetProvider && (status === 'unreachable' || status === 'auth_error')}
-	<div class="local-banner" role="alert" transition:motionFly={{ y: -16 }}>
-		<TriangleAlertIcon size={16} aria-hidden="true" />
-		<span>
-			{status === 'auth_error'
-				? t('LocalServerBanner.authError', { label: targetLabel })
-				: t('LocalServerBanner.unreachable', { label: targetLabel })}
-			{#if status === 'unreachable' && targetKind === 'ollama'}
-				{t('LocalServerBanner.installHint')}
-				<a href="https://ollama.com" target="_blank" rel="noopener">ollama.com</a>
-				· <code>ollama serve</code>
-			{/if}
-		</span>
-		{#if status === 'unreachable' && launcherId}
-			<button type="button" onclick={startServer} disabled={starting || probing}>
-				{starting ? t('LocalServerBanner.starting') : t('LocalServerBanner.startNow')}
-			</button>
-		{/if}
-		<button type="button" onclick={check} disabled={probing}>
-			<RefreshCwIcon size={13} aria-hidden="true" class={probing ? 'animate-spin' : ''} />
-			{probing ? t('LocalServerBanner.checking') : t('LocalServerBanner.retry')}
-		</button>
+	<div class="banner-slot" transition:motionFly={{ y: -16 }}>
+		<div class="vc-banner danger" role="alert">
+			<span class="dot" aria-hidden="true"></span>
+			<TriangleAlertIcon size={20} strokeWidth={1.75} class="banner-icon" aria-hidden="true" />
+			<div class="banner-text">
+				<div class="t">
+					{status === 'auth_error'
+						? t('LocalServerBanner.authError', { label: targetLabel })
+						: t('LocalServerBanner.unreachable', { label: targetLabel })}
+				</div>
+				{#if status === 'unreachable' && targetKind === 'ollama'}
+					<div class="d">
+						{t('LocalServerBanner.installHint')}
+						<a href="https://ollama.com" target="_blank" rel="noopener">ollama.com</a>
+						· <code>ollama serve</code>
+					</div>
+				{/if}
+			</div>
+			<div class="banner-actions">
+				{#if status === 'unreachable' && launcherId}
+					<button type="button" class="vc-btn secondary" onclick={startServer} disabled={starting || probing}>
+						{starting ? t('LocalServerBanner.starting') : t('LocalServerBanner.startNow')}
+					</button>
+				{/if}
+				<button type="button" class="vc-btn secondary" onclick={check} disabled={probing}>
+					<RefreshCwIcon size={16} strokeWidth={1.75} aria-hidden="true" class={probing ? 'animate-spin' : ''} />
+					{probing ? t('LocalServerBanner.checking') : t('LocalServerBanner.retry')}
+				</button>
+			</div>
+		</div>
 	</div>
 {:else if targetProvider && status === 'ok' && missingModels.length > 0}
-	<div class="local-banner local-banner--warning" role="status" transition:motionFly={{ y: -16 }}>
-		<TriangleAlertIcon size={16} aria-hidden="true" />
-		<span>
-			{t('LocalServerBanner.missingModels', { models: missingModels.join(', ') })}
-			<a href="/settings">{t('LocalServerBanner.pullFromSettings')}</a>
-			{t('LocalServerBanner.orRunPull')}
-			{#each missingModels as model, i (model)}
-				<code>ollama pull {model}</code>{i < missingModels.length - 1 ? ',' : ''}
-			{/each}
-		</span>
+	<div class="banner-slot" transition:motionFly={{ y: -16 }}>
+		<div class="vc-banner warning" role="status">
+			<span class="dot" aria-hidden="true"></span>
+			<TriangleAlertIcon size={20} strokeWidth={1.75} class="banner-icon" aria-hidden="true" />
+			<div class="banner-text">
+				<div class="t">{t('LocalServerBanner.missingModels', { models: missingModels.join(', ') })}</div>
+				<div class="d">
+					<a href="/settings/models">{t('LocalServerBanner.pullFromSettings')}</a>
+					{t('LocalServerBanner.orRunPull')}
+					{#each missingModels as model, i (model)}
+						<code>ollama pull {model}</code>{i < missingModels.length - 1 ? ',' : ''}
+					{/each}
+				</div>
+			</div>
+		</div>
 	</div>
 {/if}
 
 <style>
-	.local-banner {
-		/* Sticky, not fixed: fixed used to sit outside document flow entirely
-		   and permanently cover the chat route's icon rail / panel toggles,
-		   which size themselves to fill the space below this banner rather
-		   than the raw viewport (see +layout.svelte's .app-shell). Sticky
-		   keeps the same "stays visible while the page scrolls" behavior
-		   without ever overlapping anything. */
+	/* Sticky, not fixed: fixed used to sit outside document flow entirely
+	   and permanently cover the chat route's icon rail / panel toggles,
+	   which size themselves to fill the space below this banner rather
+	   than the raw viewport (see +layout.svelte's .app-shell). Sticky
+	   keeps the same "stays visible while the page scrolls" behavior
+	   without ever overlapping anything. */
+	.banner-slot {
 		position: sticky;
 		top: 0;
 		z-index: 300;
-		display: flex;
+		padding: var(--space-2) var(--space-3) 0;
+	}
+
+	.vc-banner {
 		align-items: center;
-		justify-content: center;
-		flex-wrap: wrap;
-		gap: 0.6rem;
-		padding: 0.6rem 1rem;
-		background: var(--ground);
-		border-bottom: 1px solid var(--color-destructive);
-		color: var(--color-destructive);
-		font-size: 0.85rem;
-		text-align: center;
+		background: var(--bg-elevated);
 	}
 
-	.local-banner button {
-		display: flex;
-		align-items: center;
-		gap: 0.3rem;
-		background: transparent;
-		border: 1px solid var(--color-destructive);
-		color: var(--color-destructive);
-		border-radius: var(--radius-pill);
-		padding: 0.25rem 0.7rem;
-		font-size: 0.8rem;
-		cursor: pointer;
+	.vc-banner .dot {
+		margin-top: 0;
 	}
 
-	.local-banner button:hover:not(:disabled) {
-		background: color-mix(in srgb, var(--color-destructive) 12%, transparent);
+	.vc-banner :global(.banner-icon) {
+		flex: none;
 	}
 
-	.local-banner button:disabled {
-		opacity: 0.6;
-		cursor: not-allowed;
-	}
-
-	.local-banner button:focus-visible {
-		outline: 2px solid var(--accent);
-		outline-offset: 2px;
-	}
-
-	/* The server is up (or setup simply isn't finished) — not the same severity as "chat is entirely
-	   unavailable", so this gets its own softer color rather than reusing --color-destructive. */
-	.local-banner--warning {
-		border-bottom-color: var(--warning);
+	.vc-banner.warning :global(.banner-icon) {
 		color: var(--warning);
 	}
 
-	.local-banner code {
-		background: color-mix(in srgb, currentColor 12%, transparent);
-		border-radius: var(--radius-sm, 4px);
-		padding: 0.05rem 0.35rem;
+	.vc-banner.danger :global(.banner-icon) {
+		color: var(--danger);
 	}
 
-	.local-banner a {
-		color: inherit;
+	.banner-text {
+		flex: 1;
+		min-width: 0;
+	}
+
+	.banner-actions {
+		display: flex;
+		flex: none;
+		flex-wrap: wrap;
+		gap: var(--space-2);
+	}
+
+	.vc-banner a {
+		color: var(--accent-text);
 		text-decoration: underline;
+	}
+
+	.vc-banner code {
+		background: var(--fill-control);
+		border-radius: var(--radius-sm);
+		padding: 0.05rem 0.35rem;
+		font: var(--text-code);
+	}
+
+	.vc-btn:focus-visible,
+	.vc-banner a:focus-visible {
+		outline: 2px solid var(--focus-ring);
+		outline-offset: 2px;
 	}
 </style>

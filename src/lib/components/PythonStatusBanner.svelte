@@ -112,99 +112,99 @@
 </script>
 
 {#if status === 'missing' || status === 'no_python'}
-	<div class="python-banner" role="status" transition:motionFly={{ y: -16 }}>
-		<TriangleAlertIcon size={16} aria-hidden="true" />
-		<span>
-			{#if status === 'no_python'}
-				{#if problemText}{problemText}{' '}{/if}
-				{platform === 'darwin'
-					? t('PythonStatusBanner.noPythonMac')
-					: platform === 'linux'
-						? t('PythonStatusBanner.noPythonLinux')
-						: t('PythonStatusBanner.noPython')}
-				{#if platform !== 'linux'}
-					<a href="https://python.org" target="_blank" rel="noopener">python.org</a>
+	<div class="banner-slot" transition:motionFly={{ y: -16 }}>
+		<div class="vc-banner warning" role="status">
+			<span class="dot" aria-hidden="true"></span>
+			<TriangleAlertIcon size={20} strokeWidth={1.75} class="banner-icon" aria-hidden="true" />
+			<div class="banner-text">
+				<div class="t">
+					{#if status === 'no_python'}
+						{#if problemText}{problemText}{' '}{/if}
+						{platform === 'darwin'
+							? t('PythonStatusBanner.noPythonMac')
+							: platform === 'linux'
+								? t('PythonStatusBanner.noPythonLinux')
+								: t('PythonStatusBanner.noPython')}
+						{#if platform !== 'linux'}
+							<a href="https://python.org" target="_blank" rel="noopener">python.org</a>
+						{/if}
+					{:else}
+						{t('PythonStatusBanner.missingModules', { modules: missingModuleNames.join(', ') })}
+					{/if}
+				</div>
+				{#if logLines.length > 0}
+					<pre class="python-banner-log" class:python-banner-log--error={installFailed}>{logLines.join('\n')}</pre>
 				{/if}
-			{:else}
-				{t('PythonStatusBanner.missingModules', { modules: missingModuleNames.join(', ') })}
+			</div>
+			{#if status === 'missing'}
+				<div class="banner-actions">
+					<button type="button" class="vc-btn secondary" onclick={install} disabled={installing}>
+						<RefreshCwIcon size={16} strokeWidth={1.75} aria-hidden="true" class={installing ? 'animate-spin' : ''} />
+						{installing ? t('PythonStatusBanner.installing') : t('PythonStatusBanner.installNow')}
+					</button>
+				</div>
 			{/if}
-		</span>
-		{#if status === 'missing'}
-			<button type="button" onclick={install} disabled={installing}>
-				<RefreshCwIcon size={13} aria-hidden="true" class={installing ? 'animate-spin' : ''} />
-				{installing ? t('PythonStatusBanner.installing') : t('PythonStatusBanner.installNow')}
-			</button>
-		{/if}
-		{#if logLines.length > 0}
-			<pre class="python-banner-log" class:python-banner-log--error={installFailed}>{logLines.join('\n')}</pre>
-		{/if}
+		</div>
 	</div>
 {/if}
 
 <style>
-	.python-banner {
+	.banner-slot {
 		position: sticky;
 		top: 0;
 		z-index: 290;
-		display: flex;
+		padding: var(--space-2) var(--space-3) 0;
+	}
+
+	.vc-banner {
 		align-items: center;
-		justify-content: center;
-		flex-wrap: wrap;
-		gap: 0.6rem;
-		padding: 0.6rem 1rem;
-		background: var(--ground);
-		border-bottom: 1px solid var(--warning);
-		color: var(--warning);
-		font-size: 0.85rem;
-		text-align: center;
+		background: var(--bg-elevated);
 	}
 
-	.python-banner button {
+	.vc-banner .dot {
+		margin-top: 0;
+	}
+
+	.vc-banner :global(.banner-icon) {
+		flex: none;
+		color: var(--warning);
+	}
+
+	.banner-text {
+		flex: 1;
+		min-width: 0;
+	}
+
+	.banner-actions {
 		display: flex;
-		align-items: center;
-		gap: 0.3rem;
-		background: transparent;
-		border: 1px solid var(--warning);
-		color: var(--warning);
-		border-radius: var(--radius-pill);
-		padding: 0.25rem 0.7rem;
-		font-size: 0.8rem;
-		cursor: pointer;
+		flex: none;
+		gap: var(--space-2);
 	}
 
-	.python-banner button:hover:not(:disabled) {
-		background: color-mix(in srgb, var(--warning) 12%, transparent);
-	}
-
-	.python-banner button:disabled {
-		opacity: 0.6;
-		cursor: not-allowed;
-	}
-
-	.python-banner button:focus-visible {
-		outline: 2px solid var(--accent);
-		outline-offset: 2px;
-	}
-
-	.python-banner a {
-		color: inherit;
+	.vc-banner a {
+		color: var(--accent-text);
 		text-decoration: underline;
 	}
 
+	.vc-btn:focus-visible,
+	.vc-banner a:focus-visible {
+		outline: 2px solid var(--focus-ring);
+		outline-offset: 2px;
+	}
+
 	.python-banner-log {
-		flex-basis: 100%;
 		max-height: 8rem;
 		overflow-y: auto;
-		margin: 0;
-		text-align: left;
-		font-size: 0.75rem;
-		background: color-mix(in srgb, var(--warning) 8%, transparent);
-		border-radius: var(--radius-sm, 4px);
+		margin: var(--space-2) 0 0;
+		font: var(--text-code);
+		font-size: 12px;
+		background: var(--fill-control);
+		border-radius: var(--radius-sm);
 		padding: 0.4rem 0.6rem;
 		white-space: pre-wrap;
 	}
 
 	.python-banner-log--error {
-		color: var(--color-destructive);
+		color: var(--danger);
 	}
 </style>

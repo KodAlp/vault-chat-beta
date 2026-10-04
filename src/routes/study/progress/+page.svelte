@@ -95,8 +95,8 @@
 		{#if e.count === 0}
 			<span class="muted">{t('ProgressPage.noAnswers')}</span>
 		{:else if e.reliable && e.mastery !== null}
-			<div class="meter" role="meter" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct(e.mastery)}>
-				<div class="fill" style:width="{pct(e.mastery)}%"></div>
+			<div class="meter vc-progress" role="meter" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct(e.mastery)}>
+				<span style:width="{pct(e.mastery)}%"></span>
 			</div>
 			<span class="value">{pct(e.mastery)}%</span>
 			<span class="muted small">{t('ProgressPage.answers', { count: e.count })} · {confidenceLabel(e)}{e.lastAt ? ` · ${t('ProgressPage.lastAnswered', { date: day(e.lastAt) })}` : ''}</span>
@@ -112,8 +112,8 @@
 		<div class="metric">
 			<span class="metric-label">{label}</span>
 			{#if e.reliable && e.retention !== null}
-				<div class="meter" role="meter" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct(e.retention)}>
-					<div class="fill card" style:width="{pct(e.retention)}%"></div>
+				<div class="meter vc-progress" role="meter" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct(e.retention)}>
+					<span style:width="{pct(e.retention)}%"></span>
 				</div>
 				<span class="value">{pct(e.retention)}%</span>
 				<span class="muted small">{t('ProgressPage.cards', { count: e.cards })}</span>
@@ -166,13 +166,13 @@
 	{#if spotsPhase === 'error'}
 		<p class="status error small" role="alert">{t('ProgressPage.weakSpotsLoadFailed')}</p>
 	{:else if spotsPhase === 'ready'}
-		<h2 class="section-title">{t('ProgressPage.weakSpotsTitle')}</h2>
+		<h2 class="section-title vc-group-title">{t('ProgressPage.weakSpotsTitle')}</h2>
 		{#if flagError}<p class="status error small" role="alert">{flagError}</p>{/if}
 		{#if spots.length === 0}
 			<p class="status small">{t('ProgressPage.weakSpotsEmpty')}</p>
 		{:else}
 			{#each spots as spot (spot.id)}
-				<section class="card-block" aria-label={spot.noteName}>
+				<section class="card-block vc-list" aria-label={spot.noteName}>
 					<h3>{spot.noteName}</h3>
 					<p class="muted small">
 						{#if spot.openErrors > 0}{t('ProgressPage.weakSpotOpenCount', { count: spot.openErrors })}{/if}
@@ -199,7 +199,7 @@
 {/snippet}
 
 <div class="progress-screen">
-	<a class="home-link" href={backHref}><ArrowLeftIcon size={16} aria-hidden="true" /> {t('ProgressPage.back')}</a>
+	<a class="home-link" href={backHref}><ArrowLeftIcon size={16} strokeWidth={1.75} aria-hidden="true" /> {t('ProgressPage.back')}</a>
 	<h1>{t('ProgressPage.title')}</h1>
 
 	{#if phase === 'loading'}
@@ -211,7 +211,7 @@
 	{:else if overall}
 		<p class="intro">{t('ProgressPage.intro')}</p>
 
-		<section class="card-block" aria-label={t('ProgressPage.overall')}>
+		<section class="card-block vc-list" aria-label={t('ProgressPage.overall')}>
 			<h2>{t('ProgressPage.overall')}</h2>
 			{@render quizRow(t('ProgressPage.quizAnswers'), overall.quiz)}
 			{@render cardRow(t('ProgressPage.cardMemory'), overall.retention)}
@@ -221,10 +221,10 @@
 		{@render weakSpots()}
 
 		{#if domains.length > 0}
-			<h2 class="section-title">{t('ProgressPage.byDomain')}</h2>
+			<h2 class="section-title vc-group-title">{t('ProgressPage.byDomain')}</h2>
 			{#each domains as domain (domain.id)}
 				{@const notes = notesOf(domain)}
-				<section class="card-block" aria-label={domainLabel(domain)}>
+				<section class="card-block vc-list" aria-label={domainLabel(domain)}>
 					<h3>{domainLabel(domain)}</h3>
 					{@render quizRow(t('ProgressPage.quizAnswers'), domain.quiz)}
 					{@render cardRow(t('ProgressPage.cardMemory'), domain.retention)}
@@ -261,73 +261,68 @@
 	.progress-screen {
 		max-width: 640px;
 		margin: 0 auto;
-		padding: 1.5rem 1rem 3rem;
+		padding: var(--space-6) var(--space-4) var(--space-14);
 	}
 
 	.progress-screen h1 {
-		font-family: var(--font-display);
-		font-weight: 480;
-		letter-spacing: -0.015em;
-		font-size: 1.5rem;
-		margin: 0 0 1rem;
+		font: var(--text-display-title);
+		margin: 0 0 var(--space-4);
 	}
 
 	.home-link {
 		display: inline-flex;
 		align-items: center;
 		gap: 0.35rem;
-		font-size: 0.875rem;
-		color: var(--color-muted-foreground);
+		font: var(--text-subheadline);
+		color: var(--label-secondary);
 		text-decoration: none;
-		margin-bottom: 1.5rem;
+		margin-bottom: var(--space-6);
 	}
 
 	.home-link:hover {
-		color: var(--color-primary);
+		color: var(--label);
 	}
 
 	.home-link:focus-visible,
-	.toggle:focus-visible {
-		outline: 2px solid var(--accent);
+	.toggle:focus-visible,
+	.flag:focus-visible {
+		outline: 2px solid var(--focus-ring);
 		outline-offset: 2px;
 	}
 
 	.status {
-		color: var(--color-muted-foreground);
+		font: var(--text-body);
+		color: var(--label-secondary);
 		text-align: center;
 		margin-top: 3rem;
 	}
 
 	.status.error {
-		color: var(--color-destructive);
+		color: var(--danger);
 	}
 
 	.intro {
-		color: var(--color-muted-foreground);
-		font-size: 0.9rem;
-		line-height: 1.5;
-		margin: 0 0 1.25rem;
+		color: var(--label-secondary);
+		font: var(--text-callout);
+		margin: 0 0 var(--space-5);
 	}
 
+	/* .vc-list from components.css supplies the elevated surface and hairline;
+	   these blocks hold free-form content, so they add their own padding. */
 	.card-block {
-		border: 1px solid var(--color-border);
-		border-radius: var(--radius-lg);
-		padding: 1rem 1.1rem;
-		margin-bottom: 0.9rem;
+		padding: var(--space-4) var(--space-4);
+		margin-bottom: var(--space-3);
 	}
 
 	.card-block h2,
 	.card-block h3 {
-		font-size: 1rem;
-		font-weight: 600;
-		margin: 0 0 0.75rem;
+		font: var(--text-headline);
+		margin: 0 0 var(--space-3);
 	}
 
 	.section-title {
-		font-family: var(--font-display);
-		font-weight: 480;
-		font-size: 1.1rem;
-		margin: 1.75rem 0 0.75rem;
+		margin: var(--space-8) 0 var(--space-2);
+		padding-inline: var(--space-1);
 	}
 
 	.metric {
@@ -339,59 +334,44 @@
 	}
 
 	.metric-label {
-		font-size: 0.85rem;
-		color: var(--color-foreground);
+		font: var(--text-subheadline);
+		font-weight: 400;
+		color: var(--label);
 	}
 
 	.metric .small {
 		grid-column: 2 / 4;
 	}
 
-	.meter {
-		height: 0.55rem;
-		border-radius: 999px;
-		background: var(--color-border);
-		overflow: hidden;
-	}
-
-	.fill {
-		height: 100%;
-		background: var(--color-primary);
-		border-radius: 999px;
-	}
-
-	.fill.card {
-		background: var(--accent);
-	}
-
 	.value {
-		font-variant-numeric: tabular-nums;
+		font: var(--text-subheadline);
 		font-weight: 600;
-		font-size: 0.9rem;
+		font-variant-numeric: tabular-nums;
 	}
 
 	.muted {
-		color: var(--color-muted-foreground);
+		color: var(--label-secondary);
 	}
 
 	.small {
-		font-size: 0.75rem;
+		font: var(--text-caption-1);
+		font-weight: 400;
 	}
 
 	.metric > .muted:not(.small) {
 		grid-column: 2 / 4;
-		font-size: 0.85rem;
+		font: var(--text-footnote);
 	}
 
 	.bands {
-		margin-top: 0.9rem;
-		padding-top: 0.75rem;
-		border-top: 1px dashed var(--color-border);
+		margin-top: var(--space-3);
+		padding-top: var(--space-3);
+		border-top: 1px solid var(--separator);
 	}
 
 	.bands-title {
-		font-size: 0.8rem;
-		color: var(--color-muted-foreground);
+		font: var(--text-caption-1);
+		color: var(--label-secondary);
 		margin: 0 0 0.5rem;
 	}
 
@@ -403,8 +383,8 @@
 		border: none;
 		padding: 0.25rem 0;
 		margin-top: 0.4rem;
-		font-size: 0.85rem;
-		color: var(--color-primary);
+		font: var(--text-subheadline);
+		color: var(--accent-text);
 		cursor: pointer;
 	}
 
@@ -420,34 +400,33 @@
 
 	.notes li {
 		padding: 0.6rem 0;
-		border-top: 1px solid var(--color-border);
+		border-top: 1px solid var(--separator);
 	}
 
 	.note-name {
 		display: block;
-		font-size: 0.85rem;
+		font: var(--text-subheadline);
 		font-weight: 600;
 		margin-bottom: 0.4rem;
 		overflow-wrap: anywhere;
 	}
 
 	.how {
-		margin-top: 1.75rem;
-		color: var(--color-muted-foreground);
-		font-size: 0.85rem;
-		line-height: 1.55;
+		margin-top: var(--space-8);
+		color: var(--label-secondary);
+		font: var(--text-footnote);
 	}
 
 	.how h2 {
-		font-size: 0.95rem;
+		font: var(--text-subheadline);
 		font-weight: 600;
-		color: var(--color-foreground);
+		color: var(--label);
 		margin: 0 0 0.4rem;
 	}
 
 	.status.small {
 		margin: 0.75rem 0;
-		font-size: 0.85rem;
+		font: var(--text-footnote);
 	}
 
 	.errors {
@@ -458,7 +437,7 @@
 
 	.error-row {
 		padding: 0.6rem 0;
-		border-top: 1px solid var(--color-border);
+		border-top: 1px solid var(--separator);
 	}
 
 	.error-row.resolved {
@@ -466,14 +445,14 @@
 	}
 
 	.error-question {
-		font-size: 0.85rem;
+		font: var(--text-subheadline);
 		font-weight: 600;
 		margin: 0 0 0.3rem;
 		overflow-wrap: anywhere;
 	}
 
 	.confusion {
-		font-size: 0.82rem;
+		font: var(--text-footnote);
 		margin: 0 0 0.3rem;
 	}
 
@@ -487,12 +466,17 @@
 
 	.flag {
 		background: none;
-		border: 1px solid var(--color-border);
+		box-shadow: inset 0 0 0 1px var(--separator-strong);
+		border: 0;
 		border-radius: var(--radius-md);
 		padding: 0.15rem 0.5rem;
-		font-size: 0.75rem;
-		color: var(--color-destructive);
+		font: var(--text-caption-1);
+		color: var(--danger);
 		cursor: pointer;
+	}
+
+	.flag:hover {
+		background: var(--fill-hover);
 	}
 
 	@media (max-width: 480px) {
