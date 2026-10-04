@@ -5,6 +5,7 @@
 	import { Input } from '$lib/components/ui/input';
 	import { Badge } from '$lib/components/ui/badge';
 	import * as Select from '$lib/components/ui/select';
+	import { Switch } from '$lib/components/ui/switch';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { t } from '$lib/i18n/index.svelte';
 	import { localizeError, readResponseError } from '$lib/server-error';
@@ -37,6 +38,11 @@
 		params?: Record<string, string | number>;
 		reason?: string;
 		path?: string;
+		// Per-row live state while this file is in flight (several rows can
+		// be running at once with parallel processing).
+		running?: boolean;
+		stage?: string;
+		estimatedSeconds?: number;
 	}
 
 	let localKeySeq = 0;
@@ -54,12 +60,13 @@
 	let domain = $state('');
 	let level = $state('undergraduate');
 
+	// Session-only, not persisted: off = one file at a time (the old behavior).
+	let parallel = $state(false);
+	let concurrencyChoice = $state('2');
+
 	let stopRequested = false;
 	let totalToRun = $state(0);
-	let currentIndex = $state(0);
-	let currentFileName = $state('');
-	let statusLabel = $state('');
-	let estimatedSeconds = $state<number | null>(null);
+	let finishedCount = $state(0);
 
 	// $derived, not a plain const — see +layout.svelte's identical STAGE_LABELS
 	// comment: a bare object literal would call t() once at component init and
@@ -192,22 +199,22 @@
 		level = 'undergraduate';
 		stopRequested = false;
 		totalToRun = 0;
-		currentIndex = 0;
-		currentFileName = '';
-		statusLabel = '';
-		estimatedSeconds = null;
+		finishedCount = 0;
+		parallel = false;
+		concurrencyChoice = '2';
 	}
 
 	/** One file, one POST — see +server.ts's doc comment for why: it lets the
 	 * Ollama-eviction win apply per file instead of once for a whole batch
 	 * stuck behind the slowest document. A network/stream error here marks
 	 * just this row failed; the caller loop moves on to the next file. */
-	async function runOne(entry: QueueEntry): Promise<void> {
+	async function runOne(entry: QueueEntry, concurrency: number): Promise<void> {
 		const fd = new FormData();
 		fd.append('files', entry.file);
 		fd.append('domain', domain.trim());
 		fd.append('level', level);
 		fd.append('relDir', entry.relDir);
+		fd.append('concurrency', String(concurrency));
 
 		try {
 			const res = await fetch('/api/import/batch', { method: 'POST', body: fd });
@@ -230,8 +237,8 @@
 					if (!line.startsWith('data:')) continue;
 					const event = JSON.parse(line.slice(5)) as ImportEvent;
 					if (event.type === 'progress') {
-						statusLabel = STAGE_LABELS[event.stage] ?? event.stage;
-						estimatedSeconds = event.estimatedSeconds ?? estimatedSeconds;
+						entry.stage = STAGE_LABELS[event.stage] ?? event.stage;
+						entry.estimatedSeconds = event.estimatedSeconds ?? entry.estimatedSeconds;
 					} else if (event.type === 'item') {
 						entry.key = event.item.id;
 						entry.status = event.item.status;
@@ -260,19 +267,30 @@
 		const toRun = queue.filter((e) => e.status === 'pending');
 		if (toRun.length === 0) return;
 
+		const concurrency = parallel ? Math.min(4, Math.max(2, Number.parseInt(concurrencyChoice, 10) || 2)) : 1;
 		phase = 'running';
 		stopRequested = false;
 		totalToRun = toRun.length;
-		currentIndex = 0;
+		finishedCount = 0;
 
-		for (const entry of toRun) {
-			if (stopRequested) break;
-			currentIndex += 1;
-			currentFileName = entry.file.name;
-			statusLabel = STAGE_LABELS.converting;
-			estimatedSeconds = null;
-			await runOne(entry);
-		}
+		// N workers pulling the next pending entry. nextIndex is only touched
+		// synchronously (no await between the stop check and the increment),
+		// so no two workers take the same file and none starts a new file
+		// after Stop. A file already in flight finishes (same semantic as the
+		// old sequential loop).
+		let nextIndex = 0;
+		const worker = async () => {
+			while (!stopRequested && nextIndex < toRun.length) {
+				const entry = toRun[nextIndex++];
+				entry.running = true;
+				entry.stage = STAGE_LABELS.converting;
+				entry.estimatedSeconds = undefined;
+				await runOne(entry, concurrency);
+				entry.running = false;
+				finishedCount += 1;
+			}
+		};
+		await Promise.all(Array.from({ length: Math.min(concurrency, toRun.length) }, worker));
 
 		phase = 'done';
 		if (queue.some((e) => e.status === 'converted' || e.status === 'needs_review')) onImported();
@@ -353,6 +371,27 @@
 				</Select.Root>
 			</label>
 
+			<div class="flex flex-col gap-1.5 text-sm">
+				<label class="flex items-center justify-between gap-2">
+					{t('BatchUploadDialog.parallelLabel')}
+					<Switch bind:checked={parallel} />
+				</label>
+				{#if parallel}
+					<label class="flex items-center justify-between gap-2">
+						{t('BatchUploadDialog.parallelCount')}
+						<Select.Root type="single" bind:value={concurrencyChoice}>
+							<Select.Trigger class="w-20">{concurrencyChoice}</Select.Trigger>
+							<Select.Content>
+								<Select.Item value="2" label="2">2</Select.Item>
+								<Select.Item value="3" label="3">3</Select.Item>
+								<Select.Item value="4" label="4">4</Select.Item>
+							</Select.Content>
+						</Select.Root>
+					</label>
+				{/if}
+				<p class="text-xs text-muted-foreground">{t('BatchUploadDialog.parallelHelp')}</p>
+			</div>
+
 			<Dialog.Footer>
 				<Button variant="outline" onclick={close}>{t('Common.iptal')}</Button>
 				<Button onclick={run} disabled={!domain.trim() || allowedCount === 0}>{t('BatchUploadDialog.start')}</Button>
@@ -360,11 +399,18 @@
 		{:else if phase === 'running'}
 			<p class="flex items-center gap-2 text-sm text-muted-foreground">
 				<span class="inline-block size-3.5 animate-spin rounded-full border-2 border-border border-t-primary" aria-hidden="true"></span>
-				{t('BatchUploadDialog.progressHeader', { current: currentIndex, total: totalToRun, fileName: currentFileName, stage: statusLabel })}
+				{t('BatchUploadDialog.progressCount', { done: finishedCount, total: totalToRun })}
 			</p>
-			{#if estimatedSeconds}
-				<p class="text-xs text-muted-foreground">{t('UploadDialog.estimatedTime', { seconds: estimatedSeconds })}</p>
-			{/if}
+			<div class="flex max-h-[40vh] flex-col gap-1 overflow-y-auto">
+				{#each queue.filter((e) => e.running) as entry (entry.key)}
+					<div class="border-b py-1 text-sm">
+						<div class="overflow-hidden text-ellipsis whitespace-nowrap">{entry.file.name}</div>
+						<div class="text-xs text-muted-foreground">
+							{entry.stage ?? ''}{#if entry.estimatedSeconds} — {t('UploadDialog.estimatedTime', { seconds: entry.estimatedSeconds })}{/if}
+						</div>
+					</div>
+				{/each}
+			</div>
 			<Dialog.Footer>
 				<Button variant="outline" onclick={stop}>{t('BatchUploadDialog.stop')}</Button>
 			</Dialog.Footer>

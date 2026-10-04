@@ -18,6 +18,7 @@ import {
 	MAX_UPLOAD_BYTES
 } from '$lib/server/library';
 import { indexLibraryFile } from '$lib/server/incrementalIndex';
+import { inflightImportHashes } from '$lib/server/inflight-hashes';
 import { vaultFromId } from '$lib/server/requestVault';
 import { sseStream } from '$lib/server/sse';
 import { logAppEvent } from '$lib/server/app-log';
@@ -38,6 +39,10 @@ import type { ImportEvent, ImportResultItem, ImportSummary } from '$lib/types';
  * so the Ollama-eviction win below (exclusiveGpu) applies file-by-file
  * rather than for a whole batch stuck behind one slow document; `files`
  * still accepts several entries for backward compat with any other caller.
+ * `concurrency` (1..4, clamped HERE, never trusted from the client) lets the
+ * dialog's "parallel processing" option run several of these requests at
+ * once: it is passed to enqueueConversion, whose shared-slot limit is what
+ * actually bounds simultaneous conversions.
  * `relDir` carries the picked folder's subdirectory structure (already
  * stripped of the folder's own top-level name by the client — that becomes
  * `domain`); `level` is the study level chosen in the dialog.
@@ -48,6 +53,8 @@ export const POST: RequestHandler = async ({ request }) => {
 	const relDir = (formData.get('relDir') as string | null) ?? '';
 	const levelRaw = (formData.get('level') as string | null) ?? '';
 	const level = levelRaw === 'graduate' || levelRaw === 'phd' ? levelRaw : 'undergraduate';
+	const concurrencyParsed = Number.parseInt(String(formData.get('concurrency') ?? ''), 10);
+	const concurrency = Number.isFinite(concurrencyParsed) ? Math.min(4, Math.max(1, concurrencyParsed)) : 1;
 	const files = formData.getAll('files').filter((f): f is File => f instanceof File);
 	const v = vaultFromId(formData.get('vault') as string | null);
 	const subSegments = relDirToSegments(relDir);
@@ -62,8 +69,9 @@ export const POST: RequestHandler = async ({ request }) => {
 		const items: ImportResultItem[] = [];
 		// E5: content-addressed, not just "have we seen this exact URL/name
 		// before" — catches the same PDF re-dropped under a different
-		// filename, which a name-only check never would.
-		const alreadyImported = loadImportedSourceHashes(importLogPath(v));
+		// filename, which a name-only check never would. The log is re-read
+		// per file (below), right before the in-flight reservation, so a
+		// parallel request that finished a moment ago is already in it.
 
 		for (const file of files) {
 			const safeName = safeBasename(file.name);
@@ -99,21 +107,27 @@ export const POST: RequestHandler = async ({ request }) => {
 
 			const fileBytes = Buffer.from(await file.arrayBuffer());
 			const sourceSha256 = crypto.createHash('sha256').update(fileBytes).digest('hex');
-			if (alreadyImported.has(sourceSha256)) {
+			// No await between this read, the check and reserve(): another
+			// request cannot slip in. The in-flight set covers the window
+			// where an identical file is still converting (not yet logged).
+			const alreadyImported = loadImportedSourceHashes(importLogPath(v));
+			if (alreadyImported.has(sourceSha256) || !inflightImportHashes.reserve(v.id, sourceSha256)) {
 				const item: ImportResultItem = { id: crypto.randomUUID(), fileName: safeName, status: 'skipped' };
 				items.push(item);
 				send({ type: 'item', item });
 				continue;
 			}
 
-			const workDir = path.join(stagingDir(v), crypto.randomUUID());
-			fs.mkdirSync(workDir, { recursive: true });
-			const tempIn = path.join(workDir, `original${ext}`);
-			fs.writeFileSync(tempIn, fileBytes);
-
+			let workDir = '';
 			try {
+				workDir = path.join(stagingDir(v), crypto.randomUUID());
+				fs.mkdirSync(workDir, { recursive: true });
+				const tempIn = path.join(workDir, `original${ext}`);
+				fs.writeFileSync(tempIn, fileBytes);
+
 				const result = await enqueueConversion(tempIn, workDir, 'auto', undefined, safeName, undefined, {
-					exclusiveGpu: true
+					exclusiveGpu: true,
+					concurrency
 				});
 				if (!result.outPath) throw new AppError('CONVERSION_EMPTY');
 
@@ -166,7 +180,8 @@ export const POST: RequestHandler = async ({ request }) => {
 				items.push(item);
 				send({ type: 'item', item });
 			} finally {
-				fs.rmSync(workDir, { recursive: true, force: true });
+				if (workDir) fs.rmSync(workDir, { recursive: true, force: true });
+				inflightImportHashes.release(v.id, sourceSha256);
 			}
 		}
 
