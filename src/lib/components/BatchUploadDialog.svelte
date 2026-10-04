@@ -1,6 +1,8 @@
 <script lang="ts">
 	import type { ImportEvent, ImportResultStatus } from '$lib/types';
-	import { ALLOWED_EXTENSIONS, CODE_EXTENSIONS, MAX_UPLOAD_BYTES } from '$lib/import-extensions';
+	import { skipReasonFor, type SkipReason } from '$lib/import-filter';
+	import { isTauri } from '@tauri-apps/api/core';
+	import { serverPlatform } from '$lib/serverPlatform.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Badge } from '$lib/components/ui/badge';
@@ -12,19 +14,18 @@
 
 	let { onImported }: { onImported: () => void } = $props();
 
-	// Union of both lists (Aşama 11's client-side pre-filter, see
-	// $lib/import-extensions.ts's doc comment): a code file and a "real
-	// document" both reach /api/import/batch, which itself checks the same
-	// two sets — this is purely so the preview count/skip-reason shown here
-	// matches what the server will actually do, not a security boundary.
-	const ALL_EXTENSIONS = new Set([...ALLOWED_EXTENSIONS, ...CODE_EXTENSIONS]);
-
 	interface QueueEntry {
 		// Stable {#each} key: a client-local id until the server answers, then
 		// that item's server-assigned id (ImportResultItem.id). A name-based
 		// key would collide for two same-named files in one folder pick.
 		key: string;
-		file: File;
+		// Display name and size; the source is EITHER an uploaded File
+		// (browsers, macOS/Windows desktop) OR a file inside a folder the
+		// server scanned (Linux desktop: scan = { scanId, relPath }).
+		name: string;
+		size: number;
+		file?: File;
+		scan?: { scanId: string; relPath: string };
 		// '' for a plain multi-file pick; the picked folder's own top-level
 		// name and the filename itself already stripped for a folder pick
 		// (see buildEntries below) — this is exactly the `relDir` the server
@@ -113,21 +114,23 @@
 
 	function targetPath(entry: QueueEntry): string {
 		const dirLabel = domain.trim() || '?';
-		return entry.relDir ? `${dirLabel}/${entry.relDir}/${entry.file.name}` : `${dirLabel}/${entry.file.name}`;
+		return entry.relDir ? `${dirLabel}/${entry.relDir}/${entry.name}` : `${dirLabel}/${entry.name}`;
 	}
 
-	function extOf(name: string): string {
+	function skipText(reason: SkipReason, name: string): string {
+		if (reason === 'junk') return t('BatchUploadDialog.skipJunk');
+		if (reason === 'tooLarge') return t('BatchUploadDialog.skipTooLarge');
+		if (reason === 'tooDeep') return t('BatchUploadDialog.skipTooDeep');
 		const i = name.lastIndexOf('.');
-		return i === -1 ? '' : name.slice(i).toLowerCase();
+		return t('BatchUploadDialog.skipUnsupported', { ext: i === -1 ? '?' : name.slice(i).toLowerCase() });
 	}
 
-	// __MACOSX (macOS zip export junk) and .git (an accidentally-picked repo
-	// checkout) are folder NAMES that can appear anywhere in a picked tree,
-	// not just at its root — checked against every segment, not just the
-	// first, since a folder pick can nest arbitrarily deep.
-	function hasJunkSegment(relativePath: string): boolean {
-		return relativePath.split('/').some((seg) => seg === '__MACOSX' || seg === '.git');
-	}
+	// Tauri on Linux only: WebKitGTK's file chooser is always "open file", so
+	// <input webkitdirectory> cannot pick a folder there. macOS (wry) and
+	// Windows (WebView2) handle it natively, and so does every browser.
+	let useNativeFolderPicker = $derived(isTauri() && serverPlatform() === 'linux');
+	let scanning = $state(false);
+	let scanError = $state('');
 
 	/**
 	 * Rebuilds the whole queue from one <input type=file> pick — a folder
@@ -152,31 +155,16 @@
 			const relativePath = isFolder ? ((file as File & { webkitRelativePath?: string }).webkitRelativePath ?? '') : '';
 			const parts = relativePath.split('/').filter(Boolean);
 			// Top segment (the picked folder's own name) and the filename
-			// itself are both dropped — the top segment becomes `domain`
-			// above, the filename is sent separately as the file itself.
+			// itself are both dropped from relDir — the top segment becomes
+			// `domain` above, the filename is sent separately as the file.
 			const relDir = parts.length > 2 ? parts.slice(1, -1).join('/') : '';
-			const baseName = file.name;
-
-			if (hasJunkSegment(relativePath) || baseName.toLowerCase() === 'desktop.ini' || baseName.startsWith('.')) {
-				entries.push({ key: localKey(), file, relDir, status: 'skipped', reason: t('BatchUploadDialog.skipJunk') });
-				continue;
-			}
-			if (file.size > MAX_UPLOAD_BYTES) {
-				entries.push({ key: localKey(), file, relDir, status: 'skipped', reason: t('BatchUploadDialog.skipTooLarge') });
-				continue;
-			}
-			const ext = extOf(baseName);
-			if (!ALL_EXTENSIONS.has(ext)) {
-				entries.push({
-					key: localKey(),
-					file,
-					relDir,
-					status: 'skipped',
-					reason: t('BatchUploadDialog.skipUnsupported', { ext: ext || '?' })
-				});
-				continue;
-			}
-			entries.push({ key: localKey(), file, relDir, status: 'pending' });
+			// Path inside the picked folder, the unit the shared filter works on.
+			const inner = isFolder && parts.length > 1 ? parts.slice(1).join('/') : file.name;
+			const reason = skipReasonFor(inner, file.size);
+			const base = { key: localKey(), name: file.name, size: file.size, file, relDir };
+			entries.push(
+				reason ? { ...base, status: 'skipped', reason: skipText(reason, file.name) } : { ...base, status: 'pending' }
+			);
 		}
 		queue = entries;
 	}
@@ -184,6 +172,49 @@
 	function onFilesChange(e: Event) {
 		const input = e.currentTarget as HTMLInputElement;
 		buildEntries(input.files, false);
+	}
+
+	/** Linux desktop: pick a folder with the Tauri dialog, then let the server
+	 * scan it (POST /api/import/batch/scan) — same filters as the browser path
+	 * (import-filter.ts), and the files are later imported by { scanId, relPath }. */
+	async function pickFolderNative() {
+		scanError = '';
+		try {
+			const { open: openFolderDialog } = await import('@tauri-apps/plugin-dialog');
+			const picked = await openFolderDialog({ directory: true, multiple: false });
+			if (typeof picked !== 'string') return;
+			scanning = true;
+			const res = await fetch('/api/import/batch/scan', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ root: picked })
+			});
+			if (!res.ok) throw new Error(await readResponseError(res));
+			const data = (await res.json()) as {
+				scanId: string;
+				folderName: string;
+				entries: { relPath: string; size: number; skip?: SkipReason }[];
+			};
+			if (data.folderName && !domain.trim()) domain = data.folderName;
+			queue = data.entries.map((e) => {
+				const parts = e.relPath.split('/');
+				const name = parts.pop() ?? e.relPath;
+				const base = {
+					key: localKey(),
+					name,
+					size: e.size,
+					scan: { scanId: data.scanId, relPath: e.relPath },
+					relDir: parts.join('/')
+				};
+				return e.skip
+					? { ...base, status: 'skipped' as const, reason: skipText(e.skip, name) }
+					: { ...base, status: 'pending' as const };
+			});
+		} catch (err) {
+			scanError = err instanceof Error ? err.message : t('BatchUploadDialog.scanFailed');
+		} finally {
+			scanning = false;
+		}
 	}
 
 	function onFolderChange(e: Event) {
@@ -202,6 +233,8 @@
 		finishedCount = 0;
 		parallel = false;
 		concurrencyChoice = '2';
+		scanning = false;
+		scanError = '';
 	}
 
 	/** One file, one POST — see +server.ts's doc comment for why: it lets the
@@ -210,10 +243,15 @@
 	 * just this row failed; the caller loop moves on to the next file. */
 	async function runOne(entry: QueueEntry, concurrency: number): Promise<void> {
 		const fd = new FormData();
-		fd.append('files', entry.file);
+		if (entry.scan) {
+			fd.append('scanId', entry.scan.scanId);
+			fd.append('relPath', entry.scan.relPath);
+		} else if (entry.file) {
+			fd.append('files', entry.file);
+			fd.append('relDir', entry.relDir);
+		}
 		fd.append('domain', domain.trim());
 		fd.append('level', level);
-		fd.append('relDir', entry.relDir);
 		fd.append('concurrency', String(concurrency));
 
 		try {
@@ -339,7 +377,14 @@
 			</label>
 			<label class="flex flex-col gap-1 text-sm">
 				{t('BatchUploadDialog.pickFolderLabel')}
-				<Input type="file" multiple webkitdirectory onchange={onFolderChange} />
+				{#if useNativeFolderPicker}
+					<Button variant="outline" onclick={pickFolderNative} disabled={scanning}>
+						{scanning ? t('BatchUploadDialog.scanning') : t('BatchUploadDialog.pickFolderButton')}
+					</Button>
+					{#if scanError}<span class="text-xs text-destructive" role="alert">{scanError}</span>{/if}
+				{:else}
+					<Input type="file" multiple webkitdirectory onchange={onFolderChange} />
+				{/if}
 			</label>
 
 			{#if queue.length > 0}
@@ -404,7 +449,7 @@
 			<div class="flex max-h-[40vh] flex-col gap-1 overflow-y-auto">
 				{#each queue.filter((e) => e.running) as entry (entry.key)}
 					<div class="border-b py-1 text-sm">
-						<div class="overflow-hidden text-ellipsis whitespace-nowrap">{entry.file.name}</div>
+						<div class="overflow-hidden text-ellipsis whitespace-nowrap">{entry.name}</div>
 						<div class="text-xs text-muted-foreground">
 							{entry.stage ?? ''}{#if entry.estimatedSeconds} — {t('UploadDialog.estimatedTime', { seconds: entry.estimatedSeconds })}{/if}
 						</div>

@@ -8,6 +8,7 @@ import { stagingDir, resolveLibraryPath, slugify, appendImportLog } from '$lib/s
 import { indexLibraryFile } from '$lib/server/incrementalIndex';
 import { vaultFromId } from '$lib/server/requestVault';
 import { fail } from '$lib/server/app-error';
+import { sanitizeDomain } from '$lib/server/domain-name';
 
 /** params.id is never checked against resolveLibraryPath-style containment
  * before this — it goes straight into path.join(stagingDir(v), \`${id}.md\`)
@@ -29,17 +30,21 @@ export const POST: RequestHandler = async ({ params, request }) => {
 	if (!body.title?.trim()) fail('VALIDATION_REQUIRED', { field: 'title' });
 	if (!body.domain?.trim()) fail('VALIDATION_REQUIRED', { field: 'domain' });
 
+	// Same normalization as the batch import: NFC, no Windows-invalid or
+	// control characters, no indexer-excluded / reserved folder names.
+	const domain = sanitizeDomain(body.domain);
+
 	const raw = fs.readFileSync(stagedPath, 'utf-8');
 	const parsed = matter(raw);
 	const frontmatter: Record<string, unknown> = {
 		...parsed.data,
 		title: body.title.trim(),
-		domain: body.domain.trim(),
+		domain,
 		level: body.level || 'undergraduate'
 	};
 
-	const filename = `${slugify(v, body.title, body.domain)}.md`;
-	const relPath = `${body.domain}/${filename}`;
+	const filename = `${slugify(v, body.title, domain)}.md`;
+	const relPath = `${domain}/${filename}`;
 	const destAbs = resolveLibraryPath(v, relPath);
 	fs.mkdirSync(path.dirname(destAbs), { recursive: true });
 	const finalRaw = matter.stringify(parsed.content, frontmatter);

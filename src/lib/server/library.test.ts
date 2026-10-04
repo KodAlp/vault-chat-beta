@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { renameLibraryEntry, ALLOWED_EXTENSIONS, CODE_EXTENSIONS } from './library';
+import { renameLibraryEntry, slugify, ALLOWED_EXTENSIONS, CODE_EXTENSIONS } from './library';
 import { AppError } from './app-error';
 import type { VaultContext } from './vaults';
 
@@ -63,4 +63,22 @@ test('CODE_EXTENSIONS never overlaps ALLOWED_EXTENSIONS (doc converter vs. fence
 test('CODE_EXTENSIONS excludes .html/.htm — those are real documents via ALLOWED_EXTENSIONS', () => {
 	assert.equal(CODE_EXTENSIONS.has('.html'), false);
 	assert.equal(CODE_EXTENSIONS.has('.htm'), false);
+});
+
+test('slugify caps a very long title and the dedupe suffix still fits', () => {
+	const v = tmpVault();
+	const title = 'Uzun baslik '.repeat(60);
+	const first = slugify(v, title, 'd');
+	assert.ok(first.length <= 100);
+	assert.ok(!first.endsWith('-'));
+	fs.mkdirSync(path.join(v.libraryRoot, 'd'), { recursive: true });
+	fs.writeFileSync(path.join(v.libraryRoot, 'd', `${first}.md`), 'x');
+	const second = slugify(v, title, 'd');
+	assert.equal(second, `${first}-2`);
+	assert.ok(`${second}.md`.length <= 255);
+});
+
+test('slugify avoids Windows device names', () => {
+	const v = tmpVault();
+	assert.equal(slugify(v, 'CON', 'd'), 'con-doc');
 });
