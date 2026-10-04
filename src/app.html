@@ -7,15 +7,15 @@
 		<!-- No-JS fallback for the gap between this raw shell loading and
 		     Svelte actually mounting (+layout.svelte's own $effect sets the
 		     real data-theme, but that needs JS to have run first) — matches
-		     tokens.css's --ground so that gap reads as "still loading" in
+		     tokens.css's --bg-canvas so that gap reads as "still loading" in
 		     the right tone instead of a stark white flash, light or dark. -->
 		<style>
 			body {
-				background: oklch(97% 0.006 165);
+				background: #fcfbf8;
 			}
 			@media (prefers-color-scheme: dark) {
 				body {
-					background: oklch(13% 0.008 165);
+					background: #000000;
 				}
 			}
 		</style>
@@ -26,7 +26,7 @@
 		THESIS: A private local RAG study tool reads as a dark observatory
 		instrument, not another indigo/system-ui SaaS chat template.
 		OWN-WORLD: near-black green-tinted ground, one living green accent,
-		hairline depth (no shadows), Fraunces/Schibsted Grotesk/IBM Plex Mono.
+		hairline depth (no shadows), Satoshi/Gambetta.
 		STORY: the visitor's own vault made interactive; every answer is
 		source-grounded, never invented; they ask, verify citations, generate
 		study material from what's real.

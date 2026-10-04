@@ -75,7 +75,7 @@ Yalnızca kullanıcı matematik-yoğun/taranmış PDF dönüştürme için elle 
 
 ## Fontlar
 
-`static/fonts/` altında self-host edilen Fraunces, Schibsted Grotesk ve IBM Plex Mono — üçü de SIL Open Font License 1.1 ile lisanslı (bkz. `static/fonts/OFL.txt`).
+`static/fonts/` altında self-host edilen Satoshi (sans) ve Gambetta (serif) — ikisi de Fontshare'den, ITF Free Font License (FFL) ile lisanslı; uygulamada kullanımı ve yeniden dağıtımı serbest (bkz. `static/fonts/FFL-Satoshi.txt`, `static/fonts/FFL-Gambetta.txt`). Monospace için sistem yazı tipleri kullanılır, font dosyası dağıtılmaz.
 
 ## Modeller (uygulamanın çalışma zamanında kullandığı, repoya dahil olmayan)
 

@@ -1,226 +1,265 @@
 ---
-name: Vault Agent Toolkit
+name: Vault Chat (yeni dizayn)
 description: >
-  Dark observatory system. A near-black, faintly green-tinted ground with a
-  single living green accent; fine hairlines and particle-dust texture instead
-  of heavy shadows; wide-tracked editorial type over a calm dashboard shell.
-  Restraint everywhere, brilliance in one place per screen.
+  Apple HIG mantığında, içerik önde / arayüz geride bir sistem. Akromatik çerçeve,
+  tek vurgu rengi, hairline ile derinlik. Beş tema: Açık, Koyu, Krem, Kum, Orman.
 
-# Source of truth is src/styles/tokens.css (CSS custom properties).
-# This frontmatter is the portable export for Impeccable commands.
-# If a token changes there, update both.
+# Doğruluk kaynağı tokens.json; tokens.css ondan üretilir.
 
-colors:
-  # Surfaces — never pure black; every dark is tinted toward the accent hue.
-  ground: "oklch(13% 0.008 165)"          # page background (--bg)
-  ground-deep: "oklch(9% 0.006 165)"      # insets, code wells, transcript gutter
-  surface: "oklch(17% 0.010 165)"         # panels, cards, inputs (--surface)
-  surface-raised: "oklch(21% 0.010 165)"  # popovers, hover lift, active row
-
-  # Text — neutral near-whites, never #fff on large areas.
-  text: "oklch(93% 0.004 165)"            # headings, primary body (--text)
-  text-muted: "oklch(62% 0.008 165)"      # meta, timestamps, kickers (--muted)
-
-  # Accent — one green, used for state and focus, not decoration.
-  accent: "oklch(76% 0.17 155)"           # primary accent (--accent)
-  accent-soft: "oklch(76% 0.17 155 / 0.14)"  # selection fills, tag backgrounds
-  accent-glow: "oklch(76% 0.17 155 / 0.25)"  # focus rings, subtle outer glow
-  accent-text: "oklch(82% 0.13 155)"      # small readable green text on dark
-  ink-on-accent: "oklch(13% 0.008 165)"   # dark ink on the accent-filled primary button
-
-  # Chat bubbles — solid tint, not accent-soft alpha-blended (see
-  # src/styles/tokens.css's comment on why the blend broke across themes).
-  bubble-user: "oklch(28% 0.03 155)"      # user message fill
-
-  # Hairlines — alpha-based so they sit on any surface.
-  hairline: "oklch(90% 0 0 / 0.08)"       # default 1px rule (--border)
-  hairline-strong: "oklch(90% 0 0 / 0.16)" # section dividers, table heads
-  hairline-accent: "oklch(76% 0.17 155 / 0.45)" # active tab underline, selected card
-
-  # State (sparingly)
-  warning: "oklch(72% 0.15 70)"
-  danger: "oklch(62% 0.19 25)"
-  success: "oklch(72% 0.15 150)"
-
-# Companion light ramp — same hue family (165 neutrals, 155 accent) as the
-# dark ramp above, added so a "system" theme session on a light OS
-# preference is never left on an undocumented palette. Every pairing is
-# WCAG-verified (OKLCH -> linear sRGB -> relative luminance; see
-# src/styles/tokens.css's header comment for the exact ratios). The accent
-# had to invert to 50% L (from dark's 76%) to stay legible as small
-# text/icons on a near-white ground, which in turn flips ink-on-accent from
-# dark ink to light ink on the primary-button fill — the one deliberate
-# divergence from the dark ramp's own ink rule. See "Light companion" below.
 colors-light:
-  ground: "oklch(97% 0.006 165)"
-  ground-deep: "oklch(90% 0.012 165)"
-  surface: "oklch(99% 0.004 165)"
-  surface-raised: "oklch(99.3% 0.003 165)"
-
-  text: "oklch(22% 0.01 165)"
-  text-muted: "oklch(50% 0.012 165)"
-
-  accent: "oklch(50% 0.17 155)"
-  accent-soft: "oklch(50% 0.17 155 / 0.12)"
-  accent-glow: "oklch(50% 0.17 155 / 0.2)"
-  accent-text: "oklch(38% 0.15 155)"
-  ink-on-accent: "oklch(97% 0.006 165)"  # light ink — see note above
-
-  bubble-user: "oklch(93% 0.03 155)"
-
-  hairline: "oklch(20% 0 0 / 0.1)"
-  hairline-strong: "oklch(20% 0 0 / 0.18)"
-  hairline-accent: "oklch(50% 0.17 155 / 0.5)"
-
-  warning: "oklch(48% 0.15 70)"
-  danger: "oklch(48% 0.19 25)"
-  success: "oklch(48% 0.15 150)"
-
+  bg-canvas: "#fcfbf8"
+  bg-sidebar: "#f7f4ed"
+  bg-grouped: "#f2efe7"
+  bg-elevated: "#ffffff"
+  fill-control: "#f0ede4"
+  fill-hover: "rgba(0, 0, 0, 0.05)"
+  fill-pressed: "rgba(0, 0, 0, 0.10)"
+  bubble-user: "#efebe1"
+  label: "#1c1c1c"
+  label-secondary: "#5f5f5d"
+  label-tertiary: "#767570"
+  separator: "rgba(0, 0, 0, 0.09)"
+  separator-strong: "rgba(0, 0, 0, 0.16)"
+  border-control: "#8a8984"
+  accent: "#c0803c"
+  accent-hover: "#cc8d4a"
+  on-accent: "#1c1c1c"
+  accent-text: "#8a5418"
+  accent-soft: "rgba(212, 150, 83, 0.18)"
+  focus-ring: "#8a5418"
+  danger: "#d70015"
+  success: "#1f7a35"
+  warning: "#8f5200"
+  info: "#0040dd"
+  scrim: "rgba(0, 0, 0, 0.40)"
+  material-bar: "rgba(252, 251, 248, 0.80)"
+colors-dark:
+  bg-canvas: "#000000"
+  bg-sidebar: "#0f0f0f"
+  bg-grouped: "#171717"
+  bg-elevated: "#1c1c1c"
+  fill-control: "#292929"
+  fill-hover: "rgba(255, 255, 255, 0.07)"
+  fill-pressed: "rgba(255, 255, 255, 0.13)"
+  bubble-user: "#292929"
+  label: "#ffffff"
+  label-secondary: "#bfbfbf"
+  label-tertiary: "#808080"
+  separator: "rgba(255, 255, 255, 0.10)"
+  separator-strong: "rgba(255, 255, 255, 0.18)"
+  border-control: "#808080"
+  accent: "#d49653"
+  accent-hover: "#e0a868"
+  on-accent: "#000000"
+  accent-text: "#e0a868"
+  accent-soft: "rgba(212, 150, 83, 0.18)"
+  focus-ring: "#e0a868"
+  danger: "#ff6961"
+  success: "#30d158"
+  warning: "#ffd60a"
+  info: "#409cff"
+  scrim: "rgba(0, 0, 0, 0.60)"
+  material-bar: "rgba(0, 0, 0, 0.72)"
+colors-cream:
+  bg-canvas: "#f6efe0"
+  bg-sidebar: "#efe5d0"
+  bg-grouped: "#ece2cc"
+  bg-elevated: "#fbf7ee"
+  fill-control: "#ebe0c9"
+  fill-hover: "rgba(60, 40, 20, 0.06)"
+  fill-pressed: "rgba(60, 40, 20, 0.11)"
+  bubble-user: "#e9dcc1"
+  label: "#241a12"
+  label-secondary: "#62513f"
+  label-tertiary: "#7a6956"
+  separator: "rgba(60, 40, 20, 0.12)"
+  separator-strong: "rgba(60, 40, 20, 0.20)"
+  border-control: "#857360"
+  accent: "#bd7d38"
+  accent-hover: "#c98c49"
+  on-accent: "#241a12"
+  accent-text: "#84501a"
+  accent-soft: "rgba(189, 125, 56, 0.18)"
+  focus-ring: "#84501a"
+  danger: "#b3261e"
+  success: "#2f6b2f"
+  warning: "#8a5a00"
+  info: "#2f4a6b"
+  scrim: "rgba(36, 26, 18, 0.40)"
+  material-bar: "rgba(246, 239, 224, 0.82)"
+colors-sand:
+  bg-canvas: "#f1e6cf"
+  bg-sidebar: "#e9dcc0"
+  bg-grouped: "#e7dbc2"
+  bg-elevated: "#f8f1e2"
+  fill-control: "#e5d7b9"
+  fill-hover: "rgba(60, 40, 20, 0.06)"
+  fill-pressed: "rgba(60, 40, 20, 0.12)"
+  bubble-user: "#e2d2b1"
+  label: "#241a12"
+  label-secondary: "#5c4b39"
+  label-tertiary: "#6f5f4d"
+  separator: "rgba(60, 40, 20, 0.13)"
+  separator-strong: "rgba(60, 40, 20, 0.22)"
+  border-control: "#7a6956"
+  accent: "#b4532a"
+  accent-hover: "#a3471f"
+  on-accent: "#ffffff"
+  accent-text: "#93401e"
+  accent-soft: "rgba(180, 83, 42, 0.14)"
+  focus-ring: "#93401e"
+  danger: "#a8231b"
+  success: "#2b632b"
+  warning: "#7f5300"
+  info: "#2a4463"
+  scrim: "rgba(36, 26, 18, 0.40)"
+  material-bar: "rgba(241, 230, 207, 0.84)"
+colors-forest:
+  bg-canvas: "#0f1d1c"
+  bg-sidebar: "#0a1615"
+  bg-grouped: "#132422"
+  bg-elevated: "#182b29"
+  fill-control: "#203633"
+  fill-hover: "rgba(220, 240, 225, 0.07)"
+  fill-pressed: "rgba(220, 240, 225, 0.13)"
+  bubble-user: "#203633"
+  label: "#eef2ea"
+  label-secondary: "#b4c2b7"
+  label-tertiary: "#8a9c8f"
+  separator: "rgba(220, 240, 225, 0.10)"
+  separator-strong: "rgba(220, 240, 225, 0.18)"
+  border-control: "#8a9c8f"
+  accent: "#b9cf8f"
+  accent-hover: "#c9dca3"
+  on-accent: "#0a1615"
+  accent-text: "#c5d9a0"
+  accent-soft: "rgba(185, 207, 143, 0.16)"
+  focus-ring: "#c5d9a0"
+  danger: "#ff8a80"
+  success: "#7fd3a8"
+  warning: "#f2cf6b"
+  info: "#8ab4f8"
+  scrim: "rgba(0, 0, 0, 0.60)"
+  material-bar: "rgba(15, 29, 28, 0.80)"
 typography:
-  # Three faces, three jobs. No Inter, no system default as a brand voice.
-  display:
-    fontFamily: "Fraunces, Georgia, serif"     # poster/'Think' voice: page titles, empty states
-    fontWeight: 480
-    letterSpacing: "-0.015em"
-  body:
-    fontFamily: "Schibsted Grotesk, 'Instrument Sans', sans-serif"  # UI + long-form
-    fontWeight: 400
-  mono:
-    fontFamily: "'IBM Plex Mono', ui-monospace, monospace"  # code, stats, tabular numbers
-    fontWeight: 400
-  kicker:
-    # Wide-tracked uppercase labels — the signature from the reference boards.
-    fontFamily: "Schibsted Grotesk, sans-serif"
-    fontSize: "0.6875rem"     # 11px
-    fontWeight: 600
-    letterSpacing: "0.10em"
-    textTransform: uppercase
+  sans: "Satoshi (variable 300–900)"
+  serif: "Gambetta (variable 300–700) — yalnızca editoryal anlar"
+  mono: "sistem monospace"
   scale:
-    "11": "0.6875rem"   # kicker, tag
-    "12": "0.75rem"     # meta, table chrome, inline code
-    "13": "0.8125rem"   # tree items, dense secondary UI
-    "14": "0.875rem"    # controls, list rows, dense body
-    "16": "1rem"        # default body, chat transcript
-    "18": "1.125rem"    # lead paragraph, card heading
-    "20": "1.25rem"     # panel titles
-    "24": "1.5rem"      # subsection heads
-    "32": "2rem"        # section heads
-    "42": "2.625rem"    # page display (Fraunces)
-    "56": "3.5rem"      # hero / empty-state display
-
-spacing:
-  reading-measure: "68ch"                  # transcript & long-form max width
-
+    display-hero: "45px/48px 400"
+    display-title: "34px/41px 400"
+    title-1: "28px/34px 600"
+    title-2: "22px/28px 600"
+    title-3: "20px/25px 600"
+    headline: "17px/22px 600"
+    body: "17px/22px 400"
+    body-reading: "17px/27px 400"
+    callout: "16px/21px 400"
+    subheadline: "15px/20px 500"
+    footnote: "13px/18px 400"
+    caption-1: "12px/16px 500"
+    caption-2: "11px/13px 500"
+    code: "14px/21px 400"
 radius:
-  sm: "6px"     # tags, checkboxes, inline chips
-  md: "10px"    # buttons, inputs, tree rows
-  lg: "14px"    # cards, panels
-  pill: "999px" # kickers-as-badges, filter chips
-
+  radius-sm: "6px"
+  radius-md: "10px"
+  radius-lg: "14px"
+  radius-xl: "22px"
+  radius-full: "9999px"
 motion:
-  fast: "150ms"      # hover, focus, chevron rotation
-  base: "200ms"      # panel/popover reveal
-  easing: "cubic-bezier(0.2, 0, 0, 1)"   # ease-out family only; never bounce/elastic
+  fast: "150ms"
+  base: "220ms"
+  easing: "cubic-bezier(0.2, 0, 0, 1)"
 ---
 
-# Design language
+# Tasarım dili
 
-## Principles
+Vault Chat, kişisel bir Obsidian kasasının üzerinde çalışan yerel bir RAG sohbet ve çalışma uygulamasıdır. Arayüz Apple Human Interface Guidelines (HIG) mantığıyla kurulur: **içerik önce gelir, arayüz geri çekilir**. Yazılı yanıt ürünün kendisidir; çerçeve (kenar çubuğu, araç çubuğu, paneller) sakin ve akromatiktir. Renk yalnızca tek bir yerde konuşur: safran vurgu.
 
-1. **One bright thing per screen.** The green accent marks the single most
-   important interactive state — active tab, primary action, live progress.
-   Everything else earns hierarchy through type and spacing, not color.
-2. **Depth from hairlines, not shadows.** Panels separate with 1px alpha
-   hairlines and at most a faint accent glow on focus. No neumorphic double
-   shadows, no drop-shadow stacks, no dark glows under cards.
-3. **Texture once, in the background.** A single fixed grain/particle layer
-   (star-dust feel from the reference boards) may sit behind the app shell at
-   very low opacity. Content surfaces stay flat and clean.
-4. **Editorial moments in a utilitarian shell.** The dashboard, tree, and
-   transcript are calm and dense (Schibsted, 13–16px). Page titles, empty
-   states, and onboarding get the Fraunces display voice with generous space —
-   that contrast *is* the brand.
-5. **Numbers are mono.** Stats cards, progress values, token counts, and
-   timestamps use IBM Plex Mono with tabular figures.
+Görsel dil iki referanstan gelir: açık tema “kâğıt üstünde grafit mürekkep” (ChatGPT, ref 5; sıcak tonlar ref 2 Lovable'dan), koyu tema “parlayan stüdyo konsolu” (Linearity, ref 1): siyah boşluk, beyaz ince çizgiler ve tek bir safran kıvılcımı (renk ref 3 Amrit Palace'tan).
 
-## Component notes
+## HIG ilkeleri — bu sistemde ne anlama geliyor
 
-- **Vault tree** (ported from the react-aria reference): level-based indent via
-  `--tree-item-level`, chevron rotates 90° in 150ms, selected row gets
-  `accent-soft` fill + `hairline-accent` left rule — never a solid green row.
-- **Cards**: `surface` + `hairline` border + `radius-lg`. Cards never nest
-  inside cards; inner grouping uses spacing and hairline dividers.
-- **Kickers**: every panel/card may carry one wide-tracked uppercase kicker in
-  `text-muted`; it replaces icon-tiles above headings.
-- **Buttons**: primary = accent fill with `ink-on-accent` text (dark ink in
-  dark theme, light ink in light theme — see Light companion); secondary =
-  surface + hairline; ghost = text only. Pill radius reserved for
-  chips/filters.
-- **Empty states**: the particle-vortex / light-beam art direction lives here
-  (and only here) — one SVG illustration, Fraunces headline, one action.
-- **Citation ↔ tree highlight**: hovering (after a ~120ms intent delay) or
-  focusing a citation chip lights the cited note in the source tree with the
-  selected-row language (`accent-soft` fill + `hairline-accent` inset rule)
-  and scrolls it into view; a collapsed folder containing it gets only the
-  rule and is never auto-expanded. Transient — it clears on leave. This is the
-  app's one authored motion moment: the answer visibly points at your notes.
+- **Clarity (Netlik).** Her metin HIG metin stillerinden biriyle yazılır (`title-1` … `caption-2`). 11px'in altına inilmez. Okunabilir metin her iki temada en az 4.5:1 kontrast taşır.
+- **Deference (Geri çekilme).** Çerçeve renksizdir: `bg-sidebar`, `separator`, `label-secondary`. Asistan yanıtının balonu yoktur; doğrudan `bg-canvas` üzerinde `body-reading` ile durur. Yalnızca kullanıcının mesajı `bubble-user` dolgusu alır.
+- **Depth (Derinlik).** Katmanlar gölgeyle değil, 1px `separator` ve yüzey tonuyla ayrılır. Gölge yalnızca gerçekten yüzen öğelerde kullanılır: menü/popover `shadow-popover`, diyalog `shadow-dialog`. Kaydırılan içeriğin üstündeki başlık çubuğu yarı saydam materyaldir: `material-bar` + `material-blur`.
+- **Tek vurgu rengi (HIG accent color).** `accent` birincil düğme, gönder düğmesi, seçili sekme, açık anahtar, ilerleme çubuğu ve menü vurgusunda kullanılır. Bir ekranda tek bir dolu safran öğe olmalı. Vurgu asla yüzey ya da dekor rengi değildir.
+- **Durumu yalnızca renkle anlatma.** `danger`, `success`, `warning`, `info` her zaman bir ikon ya da kelimeyle birlikte kullanılır ("Doğru", "Sil", "Çevrimdışı").
 
-## Motion
+## Renk
 
-- **Jobs, in order**: acknowledge an action, make a state change legible,
-  keep continuity. Nothing moves for decoration.
-- **Timing**: enter over `base` (200ms), exit over `fast` (150ms) — exits are
-  always faster. Overlays (dialog, sheet, select, dropdown, tooltip) use the
-  local `animate-in`/`animate-out` utilities in `src/app.css`, which read the
-  tokens rather than each component's own `duration-*` class.
-- **JS-driven motion goes through `src/lib/motion.ts`.** Svelte transitions
-  and `animate:flip` run on the Web Animations API, which the CSS
-  reduced-motion net in `app.css` cannot reach, so every one of them uses
-  `motionFly` / `flipDuration()` / `motionEase` instead of `svelte/transition`
-  directly.
-- **Reduced motion** removes spatial movement (slides, scales, reorders) but
-  keeps opacity and color changes, so every state change stays visible.
-- **Material**: transform, opacity, clip-path, background-color. No blur,
-  filter or looping effects on data surfaces — the GPU is often busy with the
-  local model.
+| Rol | Token | Kural |
+|---|---|---|
+| Zemin | `bg-canvas` | Sohbet alanı. Açıkta `#fcfbf8` parşömen, koyuda `#000000` boşluk. |
+| İkincil zemin | `bg-sidebar` | Sol kenar çubuğu ve sağ çalışma paneli. |
+| Gruplu zemin | `bg-grouped` | Ayarlar sayfalarında gruplanmış listenin arkası. |
+| Yükseltilmiş | `bg-elevated` | Menü, diyalog, kart, gruplu liste satırları. |
+| Kontrol | `fill-control` | Mesaj kutusu, metin alanı, segmentli kontrol. |
+| Etkileşim | `fill-hover`, `fill-pressed` | Hover örtüsü ve seçili/basılı satır. Satırlar varsayılan durumda dolgusuzdur. |
+| Metin | `label`, `label-secondary`, `label-tertiary` | `label-tertiary` yalnızca placeholder ve devre dışı metin içindir. |
+| Vurgu | `accent`, `accent-hover`, `on-accent` | Safran: koyuda kaynak ton `#d49653` (ref 3 Saffron Glow), açıkta parşömen üzerinde 3:1 tutsun diye bir ton koyu `#c0803c`. Dolu vurgu üzerinde **her zaman** `on-accent` — iki temada da koyu mürekkep. Beyaz metin bu tonda en fazla 3.3:1 verir; vurgu üstüne asla beyaz yazma. Hover bir ton açılır. |
+| Vurgu metni | `accent-text` | Bağlantılar, atıf numaraları, “Kaynaklar” geçişi. |
+| Odak | `focus-ring` | 2px düz çizgi, 2px boşluk; her etkileşimli öğede `:focus-visible`. |
 
-## Light companion
+Saf `#000` yalnızca koyu temanın zemini ve `on-accent` içindir. Gradyan yok, mor-mavi yok, ikinci bir marka rengi yok.
 
-Dark is the primary, original identity (`colors` above); `colors-light` is a
-companion ramp so a "system" theme session on a light OS preference is never
-left on an undocumented palette. Selectable via Settings → Theme (Sistem /
-Açık / Koyu — system / light / dark); "system" resolves live against
-`prefers-color-scheme`, not a static default.
+## Temalar
 
-- **Same hue family, inverted lightness.** Every surface still carries the
-  faint 165° green tint (never pure white, mirroring dark's never-pure-black
-  rule); the accent stays 155° green. Only the L values invert.
-- **The accent had to get darker, not just the ground lighter.** Dark
-  theme's accent sits at 76% L (bright-on-black); that same L fails as
-  small text/icon contrast on a near-white ground, so light's accent drops
-  to 50% L (4.85:1 against `ground`, clearing the 3:1 non-text floor with
-  room for icon/large-text use).
-- **`ink-on-accent` flips with it.** Dark ink on the accent fill (dark
-  theme's rule) only reaches 3.8:1 at light's darker accent — light ink
-  reaches 4.85:1 instead. Same "high-contrast ink on the fill" principle,
-  opposite ink color, because the fill's own lightness inverted.
-- **One bright thing per screen still holds.** The green accent is the only
-  saturated color in either ramp; light does not add texture, gradients, or
-  a second accent to compensate for the lower-contrast ground.
+Beş tema aynı token adlarını paylaşır; bileşenler temayı bilmez, yalnızca `data-theme` değişir. Kullanıcı Ayarlar → Tema'dan seçer; "Sistem" seçeneği `prefers-color-scheme`'e göre Açık/Koyu'ya çözülür.
 
-## Anti-patterns (hard rules)
+| Tema | `data-theme` | Zemin | Vurgu | Ne zaman |
+|---|---|---|---|---|
+| Açık | `light` | Parşömen `#fcfbf8` | Safran `#c0803c` | Varsayılan gündüz teması |
+| Koyu | `dark` | Boşluk `#000000` | Safran `#d49653` | OLED / gece, en yüksek kontrast |
+| Krem | `cream` | Krem `#f6efe0` | Safran `#bd7d38` | Uzun okuma; düşük parlaklıkta kâğıt defter hissi |
+| Kum | `sand` | Kum `#f1e6cf` | Terakota `#b4532a` | Krem'in daha sıcak, daha koyu kardeşi; vurgu beyaz yazı alır |
+| Orman | `forest` | Köknar `#0f1d1c` | Liken `#b9cf8f` | Siyah yerine doğal, sakin bir koyu tema |
 
-- No Inter, Arial, or bare system-ui as the brand voice.
-- No pure black (#000), pure white (#fff), or pure gray surfaces — always
-  tinted per the ramp, dark or light.
-- No purple-to-blue gradients; no gradient text.
-- No cards nested in cards; no rounded icon-tile above every heading.
-- No bounce/elastic easing; no animation past 300ms for UI chrome.
-- No neumorphism; no gray text on colored backgrounds.
-- Particle/vortex art only on hero and empty states, never behind data.
+- Krem ve Kum'da mürekkep espresso `#241a12`; hairline ve gölgeler siyah değil kahve tonludur (`rgba(60, 40, 20, …)`).
+- Krem'de safran dolgu zemine karşı 2.98:1'dir — açık anahtar ve ilerleme çubuğu her zaman `border-control` kenarı ya da yanında metinle birlikte kullanılır.
+- Orman'da `on-accent` koyu köknar `#0a1615`; liken vurgu `success` yeşiline yakın olduğundan durumlar her zaman ikon + kelimeyle verilir.
 
-## Anti-references
+## Tipografi
 
-Default shadcn demo look; generic SaaS landing templates; Web3 glow-card
-dashboards (reference board #06 is a *mood* reference for line-work, not a
-style to copy); anything that reads as a template before it reads as this app.
+- **Satoshi** (sans) tüm arayüzü taşır. HIG metin stilleri birebir uygulanır: `title-1` 28, `title-2` 22, `title-3` 20, `headline` 17/600, `body` 17, `callout` 16, `subheadline` 15/500, `footnote` 13, `caption-1` 12, `caption-2` 11. Negatif harf aralıkları SF Pro'nun izleme tablosundan alınmıştır.
+- Sohbet dökümü `body-reading` (17/27) kullanır ve satır uzunluğu `reading-measure` (720px) ile sınırlıdır.
+- **Gambetta** (serif) yalnızca editoryal anlarda: boş sohbet ekranı `display-hero` (45/48, ağırlık 400) ve üst düzey sayfa başlığı `display-title` (34/41). Bilgi kartının ön yüzü de Gambetta 28px'tir. Gambetta asla kalın, asla gövde metni değildir.
+- Kod ve sayısal veri `code` (sistem monospace).
+- İkisi de Türkçe karakterlerin (ş, ğ, ı, İ, ç, ö, ü) tamamını içerir; değişken font olarak `static/fonts/` altında kendi sunucunuzdan yüklenir (CDN yok — ürün tamamen yereldir).
+
+## Boşluk, yarıçap, hedef boyutu
+
+- 4/8 tabanlı ızgara: `space-1` 4 … `space-8` 32, boş durumda `space-14` 56.
+- Mesajlar arası `space-6`, kart iç boşluğu `space-4`, kenar çubuğu iç kenarı `space-5`.
+- Yarıçaplar: `radius-sm` 6 (rozet, checkbox), `radius-md` 10 (düğme, satır, alan), `radius-lg` 14 (kart, menü, kullanıcı balonu), `radius-xl` 22 (mesaj kutusu, diyalog), `radius-full` (gönder küresi, kaynak çipleri, anahtar).
+- Hedef boyutu: dokunmatik düzende `target-min` 44px. Masaüstü işaretçide düğmeler en az 32px, ikon düğmeleri 32×32, liste satırları 34–44px.
+- Düzen: `sidebar-width` 272 · içerik ortada `reading-measure` · sağ panel `panel-width` 340.
+
+## Hareket
+
+- HIG'de hareket bir değişikliği anlatır, süslemez. Hover/basma ve çıkışlar `duration-fast` (150ms), panel/popover açılışı `duration-base` (220ms). Eğri `cubic-bezier(0.2, 0, 0, 1)`; zıplama ya da elastik yok.
+- Basılan düğme `scale(0.97)` ile küçülür (dokunsal geri bildirim).
+- `prefers-reduced-motion` açıkken kayma ve ölçek kaldırılır, opaklık ve renk geçişleri kalır.
+
+## İkonografi
+
+- Kaynak ikonlar **Material Symbols** (Outlined) SVG'leridir; `assets/Icons` grubundadır. 20px (satır içi) ve 24px (araç çubuğu) boyutlarında kullanılır, tek renklidir.
+- Dosyalar `#e3e3e3` mürekkeple kaydedilmiştir, bu yüzden `<img>` ile değil **CSS maskesi** olarak kullanılır: `.vc-icon` + `--icon: url(...)`, böylece `currentColor` alır ve iki temada da doğru görünür.
+- İkon her zaman bir etiket ya da `aria-label` ile gelir. Emoji kullanılmaz.
+
+## Yazım ve ses
+
+- Arayüz Türkçedir; kısa, fiil odaklı, cümle düzeninde (Title Case yok): “Yeni sohbet”, “Kaynakları göster”, “Quiz oluştur”.
+- Kullanıcıya “sen” diye hitap edilir: “Kasandan ne öğrenmek istersin?”
+- Hata mesajları ne olduğunu ve ne yapılacağını söyler: “Yerel model sunucusuna ulaşılamadı. Ollama'nın çalıştığını kontrol et.”
+- Büyük harf yalnızca `caption-1` bölüm başlıklarında (BUGÜN, DÜN).
+
+## Bekleme animasyonu (ThinkingChick)
+
+- Yanıt beklenirken üç nokta yerine "defter okuyan kuş": kilidi yere bırakır, defteri açar, sayfa çevirir; asıl yanıt metni gelince (düşünme aşaması boyunca okumaya devam eder) defteri kapatıp kilidi alır (500 ms), yanıt bundan sonra görünür.
+- Asistan balonu bekleme sırasında dolgusuzdur; kuş 112px, sola yaslı. Maskotun renkleri kendi paletindedir, tema token'larına bağlı değildir.
+- Hareket azaltmada sayfa çevirme durur, fazlar doğrudan geçer. Kapsayıcı `role="status"`.
+
+## Bileşenler
+
+Hepsi `src/styles/components.css` içindeki `vc-` sınıflarıdır ve yalnızca token değişkenlerini okur. Uygulamada shadcn-svelte bileşenlerine bu sınıfların değerleri `@theme inline` köprüsüyle bağlanır (`--color-primary` → `accent`, `--color-background` → `bg-canvas` …). Önizlemeler statik HTML'dir.

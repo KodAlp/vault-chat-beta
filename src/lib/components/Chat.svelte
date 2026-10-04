@@ -12,7 +12,7 @@
 	import { takePendingMessage } from '$lib/pending-message';
 	import { MAX_PHRASE_CHARS } from '$lib/smalltalk-limits';
 	import ArrowDownIcon from '@lucide/svelte/icons/arrow-down';
-	import SendIcon from '@lucide/svelte/icons/send';
+	import Icon from '$lib/components/Icon.svelte';
 	import SquareIcon from '@lucide/svelte/icons/square';
 	import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';
 
@@ -543,7 +543,7 @@
 			</button>
 		{:else}
 			<button onclick={send} disabled={!input.trim()} aria-label={t('Chat.send')}>
-				<SendIcon size={16} aria-hidden="true" />
+				<Icon name="send" size="sm" />
 				{t('Chat.send')}
 			</button>
 		{/if}

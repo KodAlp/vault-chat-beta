@@ -28,65 +28,13 @@
 
 export const SLIDES_THEME_NAME = 'vault-observatory';
 
-// Same latin/latin-ext @font-face pairs as app.css, so slide text (including
-// Turkish Ş/ş/Ğ/ğ, carried by latin-ext) matches the rest of the app exactly.
+// Same Satoshi/Gambetta variable-font @font-face pairs as src/styles/tokens.css,
+// so slide text (including Turkish Ş/ş/Ğ/ğ) matches the rest of the app exactly.
 const FONT_FACES = `
-@font-face {
-	font-family: 'Fraunces';
-	font-style: normal;
-	font-weight: 480;
-	src: url('/fonts/fraunces-480-latin.woff2') format('woff2');
-	unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122;
-}
-@font-face {
-	font-family: 'Fraunces';
-	font-style: normal;
-	font-weight: 480;
-	src: url('/fonts/fraunces-480-latin-ext.woff2') format('woff2');
-	unicode-range: U+0100-024F, U+0300-0301, U+0303-0304, U+0308-0309, U+1E00-1EFF;
-}
-@font-face {
-	font-family: 'Schibsted Grotesk';
-	font-style: normal;
-	font-weight: 400;
-	src: url('/fonts/schibsted-grotesk-400-latin.woff2') format('woff2');
-	unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122;
-}
-@font-face {
-	font-family: 'Schibsted Grotesk';
-	font-style: normal;
-	font-weight: 400;
-	src: url('/fonts/schibsted-grotesk-400-latin-ext.woff2') format('woff2');
-	unicode-range: U+0100-024F, U+0300-0301, U+0303-0304, U+0308-0309, U+1E00-1EFF;
-}
-@font-face {
-	font-family: 'Schibsted Grotesk';
-	font-style: normal;
-	font-weight: 600;
-	src: url('/fonts/schibsted-grotesk-600-latin.woff2') format('woff2');
-	unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122;
-}
-@font-face {
-	font-family: 'Schibsted Grotesk';
-	font-style: normal;
-	font-weight: 600;
-	src: url('/fonts/schibsted-grotesk-600-latin-ext.woff2') format('woff2');
-	unicode-range: U+0100-024F, U+0300-0301, U+0303-0304, U+0308-0309, U+1E00-1EFF;
-}
-@font-face {
-	font-family: 'IBM Plex Mono';
-	font-style: normal;
-	font-weight: 400;
-	src: url('/fonts/ibm-plex-mono-400-latin.woff2') format('woff2');
-	unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122;
-}
-@font-face {
-	font-family: 'IBM Plex Mono';
-	font-style: normal;
-	font-weight: 400;
-	src: url('/fonts/ibm-plex-mono-400-latin-ext.woff2') format('woff2');
-	unicode-range: U+0100-024F, U+0300-0301, U+0303-0304, U+0308-0309, U+1E00-1EFF;
-}
+@font-face { font-family: 'Satoshi'; src: url('/fonts/Satoshi-Variable.woff2') format('woff2'); font-weight: 300 900; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Satoshi'; src: url('/fonts/Satoshi-VariableItalic.woff2') format('woff2'); font-weight: 300 900; font-style: italic; font-display: swap; }
+@font-face { font-family: 'Gambetta'; src: url('/fonts/Gambetta-Variable.woff2') format('woff2'); font-weight: 300 700; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Gambetta'; src: url('/fonts/Gambetta-VariableItalic.woff2') format('woff2'); font-weight: 300 700; font-style: italic; font-display: swap; }
 `;
 
 export const SLIDES_THEME_CSS = `/* @theme ${SLIDES_THEME_NAME} */
@@ -102,7 +50,7 @@ section {
 	height: 720px;
 	background: oklch(13% 0.008 165);
 	color: oklch(93% 0.004 165);
-	font-family: 'Schibsted Grotesk', 'Instrument Sans', sans-serif;
+	font-family: Satoshi, -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
 	font-size: 30px;
 	line-height: 1.5;
 	padding: 64px 76px;
@@ -114,7 +62,7 @@ section {
 }
 
 section h1 {
-	font-family: 'Fraunces', Georgia, serif;
+	font-family: Gambetta, 'New York', Georgia, serif;
 	font-weight: 480;
 	letter-spacing: -0.015em;
 	font-size: 52px;
@@ -147,7 +95,7 @@ section a {
 }
 
 section code {
-	font-family: 'IBM Plex Mono', ui-monospace, monospace;
+	font-family: ui-monospace, 'SF Mono', 'Cascadia Code', Menlo, Consolas, monospace;
 	background: oklch(90% 0 0 / 0.08);
 	border-radius: 4px;
 	padding: 0.1em 0.35em;
@@ -202,7 +150,7 @@ section.quote {
 }
 section.quote blockquote {
 	border-left: none;
-	font-family: 'Fraunces', Georgia, serif;
+	font-family: Gambetta, 'New York', Georgia, serif;
 	font-weight: 480;
 	font-size: 38px;
 	line-height: 1.3;

@@ -392,7 +392,8 @@
 		background: var(--color-secondary);
 	}
 
-	:global([data-theme='dark']) .mindmap-svg {
+	:global([data-theme='dark']) .mindmap-svg,
+	:global([data-theme='forest']) .mindmap-svg {
 		--markmap-text-color: var(--color-foreground);
 		--markmap-code-bg: var(--color-muted);
 		--markmap-code-color: var(--color-foreground);
