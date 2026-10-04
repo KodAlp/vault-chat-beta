@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { foldToSlug } from './slug';
+import { foldToSlug, capSlug, MAX_SLUG_LENGTH } from './slug';
 
 // K4 (2026-09-23 report): Turkish dotless ı (U+0131) has no canonical
 // Unicode decomposition, unlike ç/ğ/ö/ş/ü — NFKD leaves it untouched, and the
@@ -33,4 +33,10 @@ test('empty or all-punctuation input falls back', () => {
 	assert.equal(foldToSlug(''), 'adsiz');
 	assert.equal(foldToSlug('!!!'), 'adsiz');
 	assert.equal(foldToSlug('', 'ozel-varsayilan'), 'ozel-varsayilan');
+});
+
+test('capSlug cuts to the limit and trims a trailing hyphen', () => {
+	assert.equal(capSlug('abc', 10), 'abc');
+	assert.equal(capSlug('abcd-efgh', 5), 'abcd');
+	assert.equal(capSlug('a'.repeat(300)).length, MAX_SLUG_LENGTH);
 });

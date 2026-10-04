@@ -5,6 +5,9 @@ import matter from 'gray-matter';
 import type { RequestHandler } from './$types';
 import { enqueueConversion } from '$lib/server/convertQueue';
 import { relDirToSegments } from '$lib/server/batch-paths';
+import { sanitizeDomain } from '$lib/server/domain-name';
+import { scanRegistry } from '$lib/server/scan-registry';
+import { resolveScannedFile } from '$lib/server/folder-scan';
 import {
 	stagingDir,
 	resolveLibraryPath,
@@ -22,7 +25,7 @@ import { inflightImportHashes } from '$lib/server/inflight-hashes';
 import { vaultFromId } from '$lib/server/requestVault';
 import { sseStream } from '$lib/server/sse';
 import { logAppEvent } from '$lib/server/app-log';
-import { AppError, toCodedError } from '$lib/server/app-error';
+import { AppError, toCodedError, errorPayload } from '$lib/server/app-error';
 import type { ImportEvent, ImportResultItem, ImportSummary } from '$lib/types';
 
 /**
@@ -43,13 +46,19 @@ import type { ImportEvent, ImportResultItem, ImportSummary } from '$lib/types';
  * dialog's "parallel processing" option run several of these requests at
  * once: it is passed to enqueueConversion, whose shared-slot limit is what
  * actually bounds simultaneous conversions.
+ * Two ways to name a file: an uploaded `files` entry (browsers, macOS and
+ * Windows desktop), or `scanId` + `relPath` for a file inside a folder the
+ * server scanned earlier (POST /api/import/batch/scan, the Linux desktop
+ * app). The scanned file is resolved only inside the scanned root, then goes
+ * through exactly the same dedupe / conversion / indexing path.
  * `relDir` carries the picked folder's subdirectory structure (already
  * stripped of the folder's own top-level name by the client — that becomes
  * `domain`); `level` is the study level chosen in the dialog.
  */
 export const POST: RequestHandler = async ({ request }) => {
 	const formData = await request.formData();
-	const domain = (formData.get('domain') as string | null)?.trim() || 'genel';
+	// NFC, no Windows-invalid/control chars, indexer-excluded and reserved names suffixed, length-capped.
+	const domain = sanitizeDomain((formData.get('domain') as string | null) ?? '');
 	const relDir = (formData.get('relDir') as string | null) ?? '';
 	const levelRaw = (formData.get('level') as string | null) ?? '';
 	const level = levelRaw === 'graduate' || levelRaw === 'phd' ? levelRaw : 'undergraduate';
@@ -57,8 +66,8 @@ export const POST: RequestHandler = async ({ request }) => {
 	const concurrency = Number.isFinite(concurrencyParsed) ? Math.min(4, Math.max(1, concurrencyParsed)) : 1;
 	const files = formData.getAll('files').filter((f): f is File => f instanceof File);
 	const v = vaultFromId(formData.get('vault') as string | null);
-	const subSegments = relDirToSegments(relDir);
-	const dir = [domain, ...subSegments].join('/');
+	const scanId = formData.get('scanId');
+	const scanRelPath = formData.get('relPath');
 
 	// sseStream, not a bare ReadableStream — same crash this fixed for the
 	// five /api/generate/* routes and for /api/import: an abandoned batch
@@ -67,14 +76,49 @@ export const POST: RequestHandler = async ({ request }) => {
 	// whole server down instead of just this one request.
 	return sseStream<ImportEvent>(async (send) => {
 		const items: ImportResultItem[] = [];
+
+		interface BatchInput {
+			name: string;
+			size: number;
+			relDir: string;
+			bytes: () => Promise<Buffer>;
+		}
+		const inputs: BatchInput[] = files.map((f) => ({
+			name: f.name,
+			size: f.size,
+			relDir,
+			bytes: async () => Buffer.from(await f.arrayBuffer())
+		}));
+		if (typeof scanId === 'string' && scanId) {
+			try {
+				const rec = scanRegistry.get(scanId, v.id);
+				if (!rec) throw new AppError('SCAN_EXPIRED', undefined, 404);
+				// Only paths the scan itself listed as importable.
+				if (typeof scanRelPath !== 'string' || !rec.allowed.has(scanRelPath)) throw new AppError('SCAN_PATH_INVALID');
+				const resolved = resolveScannedFile(rec.root, scanRelPath);
+				const parts = scanRelPath.split('/');
+				const name = parts.pop() as string;
+				inputs.push({
+					name,
+					size: resolved.size,
+					relDir: parts.join('/'),
+					bytes: async () => fs.readFileSync(resolved.abs)
+				});
+			} catch (err) {
+				send({ type: 'error', ...errorPayload(err) });
+				return;
+			}
+		}
 		// E5: content-addressed, not just "have we seen this exact URL/name
 		// before" — catches the same PDF re-dropped under a different
 		// filename, which a name-only check never would. The log is re-read
 		// per file (below), right before the in-flight reservation, so a
 		// parallel request that finished a moment ago is already in it.
 
-		for (const file of files) {
-			const safeName = safeBasename(file.name);
+		for (const input of inputs) {
+			// NFC: macOS can hand NFD names; keep one canonical spelling.
+			const safeName = safeBasename(input.name).normalize('NFC');
+			const dir = [domain, ...relDirToSegments(input.relDir)].join('/');
 			send({ type: 'progress', stage: 'converting', fileName: safeName });
 
 			const ext = path.extname(safeName).toLowerCase() || '.bin';
@@ -91,7 +135,7 @@ export const POST: RequestHandler = async ({ request }) => {
 				send({ type: 'item', item });
 				continue;
 			}
-			if (file.size > MAX_UPLOAD_BYTES) {
+			if (input.size > MAX_UPLOAD_BYTES) {
 				const item: ImportResultItem = {
 					id: crypto.randomUUID(),
 					fileName: safeName,
@@ -105,7 +149,21 @@ export const POST: RequestHandler = async ({ request }) => {
 				continue;
 			}
 
-			const fileBytes = Buffer.from(await file.arrayBuffer());
+			const fileBytes = await input.bytes();
+			// A scanned file can have grown since the scan; re-check what was actually read.
+			if (fileBytes.length > MAX_UPLOAD_BYTES) {
+				const item: ImportResultItem = {
+					id: crypto.randomUUID(),
+					fileName: safeName,
+					status: 'failed',
+					code: 'FILE_TOO_LARGE',
+					params: { limitMb: Math.round(MAX_UPLOAD_BYTES / (1024 * 1024)) },
+					reason: 'FILE_TOO_LARGE'
+				};
+				items.push(item);
+				send({ type: 'item', item });
+				continue;
+			}
 			const sourceSha256 = crypto.createHash('sha256').update(fileBytes).digest('hex');
 			// No await between this read, the check and reserve(): another
 			// request cannot slip in. The in-flight set covers the window

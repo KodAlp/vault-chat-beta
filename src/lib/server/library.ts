@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { removeLibraryFileFromIndex, renameLibraryFileInIndex } from './incrementalIndex';
-import { foldToSlug } from './slug';
+import { foldToSlug, capSlug } from './slug';
 import { resolveLibraryPath, settingsPath } from './library-read';
 import { AppError } from './app-error';
 import type { LibrarySettings } from '$lib/types';
@@ -190,7 +190,10 @@ export function loadImportedSourceHashes(logPath: string): Set<string> {
 /** kebab-case, ascii-folded, collision-safe (numeric suffix) — used to turn
  * a user-edited title into a library filename. */
 export function slugify(v: VaultContext, title: string, domain: string): string {
-	const base = foldToSlug(title);
+	// Capped so the file name (plus the -N suffix below) stays far under
+	// NAME_MAX; a Windows device name (con, nul...) would be unusable there.
+	let base = capSlug(foldToSlug(title)) || 'adsiz';
+	if (/^(con|prn|aux|nul|com[0-9]|lpt[0-9])$/.test(base)) base = `${base}-doc`;
 
 	let candidate = base;
 	let n = 2;
