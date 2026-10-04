@@ -1,5 +1,5 @@
 export interface Settings {
-	theme: 'light' | 'dark' | 'system';
+	theme: 'system' | 'light' | 'dark' | 'cream' | 'sand' | 'forest';
 	/** Small/fast model used for background utility calls (title generation). */
 	defaultModel: string;
 	fastModel: string;

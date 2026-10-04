@@ -1,155 +1,245 @@
-/**
- * Source of truth for the "Vault Agent Toolkit" dark observatory design
- * system — see DESIGN.md, which mirrors this file's dark-theme values as
- * its portable frontmatter export for Impeccable commands. If a value
- * changes here, update DESIGN.md's frontmatter too.
- *
- * Two full ramps: dark (DESIGN.md's original, primary identity) and light
- * (a companion derived from the same hue family — 165 for neutrals, 155 for
- * the green accent — extended for this build so a "system" theme session
- * with no stored preference isn't left on an undocumented palette). Every
- * pairing below was checked against WCAG contrast math (OKLCH -> linear
- * sRGB -> relative luminance) before being set, not eyeballed:
- *   dark:  text/ground 16.4:1 · text-muted/ground 5.5:1 · accent-text/ground 12.1:1
- *   light: text/ground 15.9:1 · text-muted/ground 5.5:1 · accent-text/ground 8.1:1
- *          accent/ground 4.85:1 (clears the 3:1 non-text floor with room
- *          for large-text/icon use; accent-text is the separate token for
- *          small green body text, exactly the split DESIGN.md's own dark
- *          ramp already makes).
- *
- * app.css maps these onto the shadcn-svelte token names every vendored
- * ui/ primitive already reads (--background, --primary, --border, etc.) —
- * this file only owns the raw palette, never shadcn's naming.
- */
+/* Kaynak: yeni-dizayn/tokens.json (doğruluk kaynağı). Bu dosya yeni-dizayn/tokens.css'in uygulamaya
+   taşınmış kopyasıdır (font yolları /fonts/… — static/fonts). Değer değişirse önce tokens.json. */
+/* Vault Chat — yeni dizayn token'ları. tokens.json'dan üretildi; elle düzenleme yerine tokens.json'u güncelle.
+   Tema seçimi: <html data-theme="light|dark|cream|sand|forest">. Mevcut uygulama zaten data-theme kullanıyor. */
+
+@font-face { font-family: 'Satoshi'; src: url('/fonts/Satoshi-Variable.woff2') format('woff2'); font-weight: 300 900; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Satoshi'; src: url('/fonts/Satoshi-VariableItalic.woff2') format('woff2'); font-weight: 300 900; font-style: italic; font-display: swap; }
+@font-face { font-family: 'Gambetta'; src: url('/fonts/Gambetta-Variable.woff2') format('woff2'); font-weight: 300 700; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Gambetta'; src: url('/fonts/Gambetta-VariableItalic.woff2') format('woff2'); font-weight: 300 700; font-style: italic; font-display: swap; }
 
 :root {
-	/* Native controls follow the theme too. Without this the browser paints
-	   every UA-rendered surface with its light default — most visibly the
-	   popup list of a native <select> (the chat's model picker), which came
-	   out white with the pill's light-on-dark text drawn onto it, i.e.
-	   unreadable. CSS on the control itself cannot reach that popup; only
-	   color-scheme can. It also fixes scrollbars and any future date/number
-	   input for free. Declared here rather than on body because it must be
-	   on the same element data-theme is set on (+layout.svelte writes it to
-	   documentElement), and because the canvas reads it from :root. */
-	color-scheme: light;
-
-	/* Light — the companion ramp. Never pure white: every surface carries
-	   the same faint green tint as the dark ramp carries in reverse. */
-	--ground: oklch(97% 0.006 165);
-	--ground-deep: oklch(90% 0.012 165);
-	--surface: oklch(99% 0.004 165);
-	--surface-raised: oklch(99.3% 0.003 165);
-
-	--text: oklch(22% 0.01 165);
-	--text-muted: oklch(50% 0.012 165);
-
-	--accent: oklch(50% 0.17 155);
-	--accent-soft: oklch(50% 0.17 155 / 0.12);
-	--accent-glow: oklch(50% 0.17 155 / 0.2);
-	--accent-text: oklch(38% 0.15 155);
-	/* Primary-button ink: DESIGN.md's dark theme uses dark ink on its bright
-	   (76% L) accent fill. At light theme's necessarily darker accent
-	   (50% L, needed so accent-as-text/icon still clears contrast against a
-	   near-white ground), dark ink only reaches 3.8:1 on that fill — light
-	   ink reaches 4.85:1. Same "high-contrast ink on the fill" principle,
-	   the opposite ink color, because the fill's own lightness inverted. */
-	--ink-on-accent: oklch(97% 0.006 165);
-
-	--hairline: oklch(20% 0 0 / 0.1);
-	--hairline-strong: oklch(20% 0 0 / 0.18);
-	--hairline-accent: oklch(50% 0.17 155 / 0.5);
-
-	--warning: oklch(48% 0.15 70);
-	--danger: oklch(48% 0.19 25);
-	--success: oklch(48% 0.15 150);
-
-	/* User chat-bubble fill — a solid tint, not accent-soft alpha-blended
-	   over ground. Alpha-over-ground made the "same" token render as two
-	   unrelated colors across themes (a khaki wash in dark, a bright mint
-	   highlight in light) because the underlying ground's own lightness
-	   changed what the blend produced. A fixed hue/chroma with lightness
-	   inverted per theme (matching how ground/surface already work) reads
-	   as one recognizable green note in both. */
-	--bubble-user: oklch(93% 0.03 155);
+  --font-sans: Satoshi, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --font-serif: Gambetta, "New York", Georgia, serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-14: 56px;
+  --target-min: 44px;
+  --sidebar-width: 272px;
+  --panel-width: 340px;
+  --reading-measure: 720px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 22px;
+  --radius-full: 9999px;
+  --material-blur: saturate(180%) blur(20px);
+  --duration-fast: 150ms;
+  --duration-base: 220ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --text-display-hero: 400 45px/48px var(--font-serif);
+  --tracking-display-hero: -0.45px;
+  --text-display-title: 400 34px/41px var(--font-serif);
+  --tracking-display-title: -0.34px;
+  --text-title-1: 600 28px/34px var(--font-sans);
+  --tracking-title-1: -0.4px;
+  --text-title-2: 600 22px/28px var(--font-sans);
+  --tracking-title-2: -0.26px;
+  --text-title-3: 600 20px/25px var(--font-sans);
+  --tracking-title-3: -0.45px;
+  --text-headline: 600 17px/22px var(--font-sans);
+  --tracking-headline: -0.43px;
+  --text-body: 400 17px/22px var(--font-sans);
+  --tracking-body: -0.43px;
+  --text-body-reading: 400 17px/27px var(--font-sans);
+  --tracking-body-reading: -0.2px;
+  --text-callout: 400 16px/21px var(--font-sans);
+  --tracking-callout: -0.31px;
+  --text-subheadline: 500 15px/20px var(--font-sans);
+  --tracking-subheadline: -0.23px;
+  --text-footnote: 400 13px/18px var(--font-sans);
+  --tracking-footnote: -0.08px;
+  --text-caption-1: 500 12px/16px var(--font-sans);
+  --tracking-caption-1: 0px;
+  --text-caption-2: 500 11px/13px var(--font-sans);
+  --tracking-caption-2: 0.06px;
+  --text-code: 400 14px/21px var(--font-mono);
 }
 
-:root[data-theme='dark'] {
-	color-scheme: dark;
-
-	/* Dark — DESIGN.md's primary, original ramp. Values copied verbatim. */
-	--ground: oklch(13% 0.008 165);
-	--ground-deep: oklch(9% 0.006 165);
-	--surface: oklch(17% 0.01 165);
-	--surface-raised: oklch(21% 0.01 165);
-
-	--text: oklch(93% 0.004 165);
-	--text-muted: oklch(62% 0.008 165);
-
-	--accent: oklch(76% 0.17 155);
-	--accent-soft: oklch(76% 0.17 155 / 0.14);
-	--accent-glow: oklch(76% 0.17 155 / 0.25);
-	--accent-text: oklch(82% 0.13 155);
-	--ink-on-accent: oklch(13% 0.008 165);
-
-	--hairline: oklch(90% 0 0 / 0.08);
-	--hairline-strong: oklch(90% 0 0 / 0.16);
-	--hairline-accent: oklch(76% 0.17 155 / 0.45);
-
-	--warning: oklch(72% 0.15 70);
-	--danger: oklch(62% 0.19 25);
-	--success: oklch(72% 0.15 150);
-
-	/* Same green note as the light ramp's --bubble-user, lightness inverted
-	   — and deliberately a few points lighter than --surface-raised (21%)
-	   so the user bubble doesn't sit too close in value to the assistant
-	   bubble right next to it. */
-	--bubble-user: oklch(28% 0.03 155);
+:root, [data-theme="light"] {
+  color-scheme: light;
+  --bg-canvas: #fcfbf8;
+  --bg-sidebar: #f7f4ed;
+  --bg-grouped: #f2efe7;
+  --bg-elevated: #ffffff;
+  --fill-control: #f0ede4;
+  --fill-hover: rgba(0, 0, 0, 0.05);
+  --fill-pressed: rgba(0, 0, 0, 0.10);
+  --bubble-user: #efebe1;
+  --label: #1c1c1c;
+  --label-secondary: #5f5f5d;
+  --label-tertiary: #767570;
+  --separator: rgba(0, 0, 0, 0.09);
+  --separator-strong: rgba(0, 0, 0, 0.16);
+  --border-control: #8a8984;
+  --accent: #c0803c;
+  --accent-hover: #cc8d4a;
+  --on-accent: #1c1c1c;
+  --accent-text: #8a5418;
+  --accent-soft: rgba(212, 150, 83, 0.18);
+  --focus-ring: #8a5418;
+  --danger: #d70015;
+  --success: #1f7a35;
+  --warning: #8f5200;
+  --info: #0040dd;
+  --scrim: rgba(0, 0, 0, 0.40);
+  --material-bar: rgba(252, 251, 248, 0.80);
+  --shadow-popover: 0 8px 28px rgba(0, 0, 0, 0.10), 0 0 0 1px rgba(0, 0, 0, 0.06);
+  --shadow-dialog: 0 24px 64px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(0, 0, 0, 0.06);
+  --shadow-composer: 0 1px 2px rgba(0, 0, 0, 0.04), 0 0 0 1px rgba(0, 0, 0, 0.09);
 }
 
-/* Typography — three faces, three jobs (DESIGN.md's own framing). Self-hosted
-   under /fonts (see app.css's @font-face rules) rather than a runtime Google
-   Fonts request: PRODUCT.md's "gizlilik ve yerellik pazarlık konusu değil"
-   (privacy/locality non-negotiable) rules out a CDN font dependency. */
-:root {
-	--font-display: 'Fraunces', Georgia, serif;
-	--font-body: 'Schibsted Grotesk', 'Instrument Sans', sans-serif;
-	--font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+[data-theme="dark"] {
+  color-scheme: dark;
+  --bg-canvas: #000000;
+  --bg-sidebar: #0f0f0f;
+  --bg-grouped: #171717;
+  --bg-elevated: #1c1c1c;
+  --fill-control: #292929;
+  --fill-hover: rgba(255, 255, 255, 0.07);
+  --fill-pressed: rgba(255, 255, 255, 0.13);
+  --bubble-user: #292929;
+  --label: #ffffff;
+  --label-secondary: #bfbfbf;
+  --label-tertiary: #808080;
+  --separator: rgba(255, 255, 255, 0.10);
+  --separator-strong: rgba(255, 255, 255, 0.18);
+  --border-control: #808080;
+  --accent: #d49653;
+  --accent-hover: #e0a868;
+  --on-accent: #000000;
+  --accent-text: #e0a868;
+  --accent-soft: rgba(212, 150, 83, 0.18);
+  --focus-ring: #e0a868;
+  --danger: #ff6961;
+  --success: #30d158;
+  --warning: #ffd60a;
+  --info: #409cff;
+  --scrim: rgba(0, 0, 0, 0.60);
+  --material-bar: rgba(0, 0, 0, 0.72);
+  --shadow-popover: 0 8px 28px rgba(0, 0, 0, 0.60), 0 0 0 1px rgba(255, 255, 255, 0.10);
+  --shadow-dialog: 0 24px 64px rgba(0, 0, 0, 0.70), 0 0 0 1px rgba(255, 255, 255, 0.12);
+  --shadow-composer: inset 0 0 0 1px rgba(255, 255, 255, 0.10);
 }
 
-/* Long-form text measure — ChatBubble's transcript column. */
-:root {
-	--reading-measure: 68ch;
+[data-theme="cream"] {
+  color-scheme: light;
+  --bg-canvas: #f6efe0;
+  --bg-sidebar: #efe5d0;
+  --bg-grouped: #ece2cc;
+  --bg-elevated: #fbf7ee;
+  --fill-control: #ebe0c9;
+  --fill-hover: rgba(60, 40, 20, 0.06);
+  --fill-pressed: rgba(60, 40, 20, 0.11);
+  --bubble-user: #e9dcc1;
+  --label: #241a12;
+  --label-secondary: #62513f;
+  --label-tertiary: #7a6956;
+  --separator: rgba(60, 40, 20, 0.12);
+  --separator-strong: rgba(60, 40, 20, 0.20);
+  --border-control: #857360;
+  --accent: #bd7d38;
+  --accent-hover: #c98c49;
+  --on-accent: #241a12;
+  --accent-text: #84501a;
+  --accent-soft: rgba(189, 125, 56, 0.18);
+  --focus-ring: #84501a;
+  --danger: #b3261e;
+  --success: #2f6b2f;
+  --warning: #8a5a00;
+  --info: #2f4a6b;
+  --scrim: rgba(36, 26, 18, 0.40);
+  --material-bar: rgba(246, 239, 224, 0.82);
+  --shadow-popover: 0 8px 28px rgba(60, 40, 20, 0.14), 0 0 0 1px rgba(60, 40, 20, 0.08);
+  --shadow-dialog: 0 24px 64px rgba(60, 40, 20, 0.22), 0 0 0 1px rgba(60, 40, 20, 0.08);
+  --shadow-composer: 0 1px 2px rgba(60, 40, 20, 0.05), 0 0 0 1px rgba(60, 40, 20, 0.12);
 }
 
-/* Radius — sm/md/lg/pill are named, fixed values, not a calc() chain off one
-   base (6/10/14/999 doesn't fit a linear formula). */
-:root {
-	--radius-sm: 6px;
-	--radius-md: 10px;
-	--radius-lg: 14px;
-	--radius-pill: 999px;
+[data-theme="sand"] {
+  color-scheme: light;
+  --bg-canvas: #f1e6cf;
+  --bg-sidebar: #e9dcc0;
+  --bg-grouped: #e7dbc2;
+  --bg-elevated: #f8f1e2;
+  --fill-control: #e5d7b9;
+  --fill-hover: rgba(60, 40, 20, 0.06);
+  --fill-pressed: rgba(60, 40, 20, 0.12);
+  --bubble-user: #e2d2b1;
+  --label: #241a12;
+  --label-secondary: #5c4b39;
+  --label-tertiary: #6f5f4d;
+  --separator: rgba(60, 40, 20, 0.13);
+  --separator-strong: rgba(60, 40, 20, 0.22);
+  --border-control: #7a6956;
+  --accent: #b4532a;
+  --accent-hover: #a3471f;
+  --on-accent: #ffffff;
+  --accent-text: #93401e;
+  --accent-soft: rgba(180, 83, 42, 0.14);
+  --focus-ring: #93401e;
+  --danger: #a8231b;
+  --success: #2b632b;
+  --warning: #7f5300;
+  --info: #2a4463;
+  --scrim: rgba(36, 26, 18, 0.40);
+  --material-bar: rgba(241, 230, 207, 0.84);
+  --shadow-popover: 0 8px 28px rgba(60, 40, 20, 0.14), 0 0 0 1px rgba(60, 40, 20, 0.08);
+  --shadow-dialog: 0 24px 64px rgba(60, 40, 20, 0.22), 0 0 0 1px rgba(60, 40, 20, 0.08);
+  --shadow-composer: 0 1px 2px rgba(60, 40, 20, 0.05), 0 0 0 1px rgba(60, 40, 20, 0.12);
 }
 
-/* Motion — ease-out family only; never bounce/elastic (DESIGN.md anti-pattern). */
-:root {
-	--motion-fast: 150ms;
-	--motion-base: 200ms;
-	--motion-easing: cubic-bezier(0.2, 0, 0, 1);
+[data-theme="forest"] {
+  color-scheme: dark;
+  --bg-canvas: #0f1d1c;
+  --bg-sidebar: #0a1615;
+  --bg-grouped: #132422;
+  --bg-elevated: #182b29;
+  --fill-control: #203633;
+  --fill-hover: rgba(220, 240, 225, 0.07);
+  --fill-pressed: rgba(220, 240, 225, 0.13);
+  --bubble-user: #203633;
+  --label: #eef2ea;
+  --label-secondary: #b4c2b7;
+  --label-tertiary: #8a9c8f;
+  --separator: rgba(220, 240, 225, 0.10);
+  --separator-strong: rgba(220, 240, 225, 0.18);
+  --border-control: #8a9c8f;
+  --accent: #b9cf8f;
+  --accent-hover: #c9dca3;
+  --on-accent: #0a1615;
+  --accent-text: #c5d9a0;
+  --accent-soft: rgba(185, 207, 143, 0.16);
+  --focus-ring: #c5d9a0;
+  --danger: #ff8a80;
+  --success: #7fd3a8;
+  --warning: #f2cf6b;
+  --info: #8ab4f8;
+  --scrim: rgba(0, 0, 0, 0.60);
+  --material-bar: rgba(15, 29, 28, 0.80);
+  --shadow-popover: 0 8px 28px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(220, 240, 225, 0.10);
+  --shadow-dialog: 0 24px 64px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(220, 240, 225, 0.12);
+  --shadow-composer: inset 0 0 0 1px rgba(220, 240, 225, 0.10);
 }
 
-/* Collapses every motion token toward-instant under the OS reduced-motion
-   preference, everywhere at once, rather than gating each transition rule
-   individually across the app. Near-zero rather than literally 0ms: some
-   libraries (bits-ui's dialog/dropdown primitives among them) skip their own
-   open/close logic entirely on a 0-duration transition, which would silently
-   break rather than just de-animate them — 1ms transitions instead, which
-   still fire their transitionend/animationend events. The state change
-   itself (panel collapsed, dialog open, chevron rotated) is never hidden,
-   only how it gets there. */
-@media (prefers-reduced-motion: reduce) {
-	:root {
-		--motion-fast: 1ms;
-		--motion-base: 1ms;
-	}
-}
+@media (prefers-reduced-motion: reduce) { :root { --duration-fast: 1ms; --duration-base: 1ms; } }
+
+.text-display-hero { font: var(--text-display-hero); letter-spacing: var(--tracking-display-hero, normal); }
+.text-display-title { font: var(--text-display-title); letter-spacing: var(--tracking-display-title, normal); }
+.text-title-1 { font: var(--text-title-1); letter-spacing: var(--tracking-title-1, normal); }
+.text-title-2 { font: var(--text-title-2); letter-spacing: var(--tracking-title-2, normal); }
+.text-title-3 { font: var(--text-title-3); letter-spacing: var(--tracking-title-3, normal); }
+.text-headline { font: var(--text-headline); letter-spacing: var(--tracking-headline, normal); }
+.text-body { font: var(--text-body); letter-spacing: var(--tracking-body, normal); }
+.text-body-reading { font: var(--text-body-reading); letter-spacing: var(--tracking-body-reading, normal); }
+.text-callout { font: var(--text-callout); letter-spacing: var(--tracking-callout, normal); }
+.text-subheadline { font: var(--text-subheadline); letter-spacing: var(--tracking-subheadline, normal); }
+.text-footnote { font: var(--text-footnote); letter-spacing: var(--tracking-footnote, normal); }
+.text-caption-1 { font: var(--text-caption-1); letter-spacing: var(--tracking-caption-1, normal); }
+.text-caption-2 { font: var(--text-caption-2); letter-spacing: var(--tracking-caption-2, normal); }
+.text-code { font: var(--text-code); letter-spacing: var(--tracking-code, normal); }

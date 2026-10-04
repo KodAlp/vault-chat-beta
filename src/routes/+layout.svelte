@@ -49,7 +49,7 @@
 	// prefers-color-scheme reflects actual OS state and can't be overridden by
 	// a manual in-app choice, so "system" is resolved here (with a live
 	// listener for OS theme changes) rather than left to a CSS media query —
-	// data-theme is always a concrete 'light'/'dark', never left unset.
+	// data-theme is always a concrete theme name, never left unset ('system' → light/dark; cream/sand/forest are written as-is).
 	let systemPrefersDark = $state(false);
 
 	$effect(() => {

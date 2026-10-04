@@ -263,7 +263,10 @@
 	let themeOptions = $derived([
 		{ value: 'system', label: t('SettingsPage.themeSystem') },
 		{ value: 'light', label: t('SettingsPage.themeLight') },
-		{ value: 'dark', label: t('SettingsPage.themeDark') }
+		{ value: 'dark', label: t('SettingsPage.themeDark') },
+		{ value: 'cream', label: t('SettingsPage.themeCream') },
+		{ value: 'sand', label: t('SettingsPage.themeSand') },
+		{ value: 'forest', label: t('SettingsPage.themeForest') }
 	] as const);
 
 	// Locale names are endonyms (a language's own name for itself) — these
@@ -291,7 +294,7 @@
 		<Card.Header>
 			<Card.Title level={2}>{t('SettingsPage.themeTitle')}</Card.Title>
 		</Card.Header>
-		<Card.Content class="flex gap-5">
+		<Card.Content class="flex flex-wrap gap-x-5 gap-y-2">
 			{#each themeOptions as opt (opt.value)}
 				<label class="flex cursor-pointer items-center gap-1.5 text-sm">
 					<input

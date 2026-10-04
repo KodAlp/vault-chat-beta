@@ -43,7 +43,7 @@ export type UiPrefs = {
 	localServerSetupDone?: boolean;
 };
 
-const THEMES = new Set(['light', 'dark', 'system']);
+const THEMES = new Set(['light', 'dark', 'cream', 'sand', 'forest', 'system']);
 const MAX_STRING_LEN = 200;
 const STRING_FIELDS = [
 	'defaultModel',
