@@ -20,8 +20,9 @@ const defaultDeps: GpuEvictDeps = {
  * Other local OpenAI-compatible servers (LM Studio, llama.cpp, vLLM) have no
  * generic unload API, so their models are NOT evicted.
  *
- * Must be called from inside sharedJobMutex.run() (see
- * ollamaGate.evictAllForExclusiveJob). Lives here rather than in
+ * Must be called while holding a sharedJobMutex slot (run() or runShared();
+ * see ollamaGate.evictAllForExclusiveJob for why a shared slot is enough and
+ * why concurrent calls from parallel conversions are harmless). Lives here rather than in
  * convertQueue.ts so the decision is unit-testable without that module's
  * python/pandoc/env imports.
  */

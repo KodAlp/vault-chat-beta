@@ -199,18 +199,28 @@ function runConvert(
 }
 
 /**
- * System-wide sequential queue — conversion is CPU-bound and can be slow
- * (especially once Marker/Docling are added later); the skill doc is
- * explicit that the user's RAM/CPU belongs to Ollama first, so only one
- * conversion runs at a time regardless of how many uploads arrive at once.
+ * System-wide queue — conversion is CPU-bound and can be slow (especially
+ * once Marker/Docling are added later); the skill doc is explicit that the
+ * user's RAM/CPU belongs to Ollama first, so by default only one conversion
+ * runs at a time regardless of how many uploads arrive at once.
  * Shares `sharedJobMutex` with Faz 6's Ollama model-swap logic — a model
- * load/unload and a running conversion must never overlap either.
+ * load/unload and a running conversion must never overlap either. A
+ * conversion takes a SHARED slot (sharedJobMutex.runShared): several may
+ * overlap up to `concurrency`, but never an exclusive job (model swap,
+ * YouTube/web/link import), and a queued exclusive job blocks conversions
+ * queued after it, so a chat model swap waits only for the files already
+ * running, not the whole batch.
+ *
+ * `concurrency` (batch import's "parallel processing", default 1 = exactly
+ * the old serial behavior; the batch endpoint clamps it to 1..4): whole
+ * files run in parallel, not pages — in `auto` mode the converter is only
+ * chosen inside convert.py, so the server cannot size per-tool limits.
  *
  * `exclusiveGpu` (batch import): before this conversion starts, unload every
- * idle Ollama model (only when Ollama is configured — see gpu-evict.ts) so docling has the 6 GB card to itself — measured
- * (Aşama 7) at roughly 3x slower when qwen3 is resident. A chat request that
- * arrives meanwhile waits for this one file, not the whole batch: the mutex
- * is released between files.
+ * idle Ollama model (only when Ollama is configured — see gpu-evict.ts) so
+ * docling has the 6 GB card to itself — measured (Aşama 7) at roughly 3x
+ * slower when qwen3 is resident. Runs while holding a shared slot, which is
+ * safe: see ollamaGate.evictAllForExclusiveJob.
  */
 export function enqueueConversion(
 	inPath: string,
@@ -219,10 +229,10 @@ export function enqueueConversion(
 	onEvent?: (event: ConvertEvent) => void,
 	sourceName?: string,
 	pages?: string,
-	opts: { exclusiveGpu?: boolean } = {}
+	opts: { exclusiveGpu?: boolean; concurrency?: number } = {}
 ): Promise<ConvertEvent & { type: 'done' }> {
-	return sharedJobMutex.run(async () => {
+	return sharedJobMutex.runShared(async () => {
 		if (opts.exclusiveGpu) await evictForExclusiveJob();
 		return runConvert(inPath, outDir, tool, onEvent, sourceName, pages);
-	});
+	}, opts.concurrency ?? 1);
 }

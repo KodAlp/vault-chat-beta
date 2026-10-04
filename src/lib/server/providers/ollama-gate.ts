@@ -17,9 +17,15 @@ export interface OllamaGate {
 	 * batch import): forgets the active model so every later lease on it
 	 * queues behind the shared mutex, waits for leases already open on it to
 	 * finish, then unloads every model Ollama reports resident that has no
-	 * open lease. MUST be called from inside `sharedJobMutex.run()` — it does
-	 * not take the mutex itself (nesting would deadlock), and it is holding
-	 * the mutex that keeps a new chat from reloading the model mid-job. */
+	 * open lease. MUST be called while holding a `sharedJobMutex` slot
+	 * (`run()` or `runShared()`) — it does not take the mutex itself (nesting
+	 * would deadlock). A shared slot is enough: a model swap is exclusive
+	 * (`mutex.run`) so it cannot start while any shared slot is held, and once
+	 * `currentModel` is null every chat request for the old model misses the
+	 * fast path and queues on that exclusive path. Several parallel
+	 * conversions may call this concurrently; that is harmless (each just
+	 * re-reads /api/ps and unloads whatever has no open lease, an idempotent
+	 * keep_alive:0). */
 	evictAllForExclusiveJob(): Promise<void>;
 }
 
