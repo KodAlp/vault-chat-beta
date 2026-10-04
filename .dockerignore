@@ -1,0 +1,15 @@
+.git
+.claude
+node_modules
+build
+dist-server
+.svelte-kit
+src-tauri/target
+data/*
+!data/.gitkeep
+!data/providers.json
+!data/providers.default.json
+ingest/.venv
+ingest/__pycache__
+.env
+docker-out
