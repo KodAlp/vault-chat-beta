@@ -354,7 +354,7 @@
 	"BatchUploadDialog": {
 		"trigger": "+ Çoklu / klasör yükle",
 		"dialogTitle": "Çoklu Dosya / Klasör Yükle",
-		"dialogDescription": "Birden çok dosya ya da bir klasörün tamamı seçilebilir; dosyalar tek tek dönüştürülür, her birinden önce sohbet modeli VRAM'den boşaltılır. Onay adımı yok — varsayılanlar uygulanır, sonda özet gösterilir.",
+		"dialogDescription": "Birden çok dosya ya da bir klasörün tamamı seçilebilir; dosyalar tek tek dönüştürülür, Ollama kullanılıyorsa her birinden önce yüklü modeller VRAM'den boşaltılır. Onay adımı yok — varsayılanlar uygulanır, sonda özet gösterilir.",
 		"pickFilesLabel": "Dosyalar (çoklu seçim)",
 		"pickFolderLabel": "Klasör (alt klasör yapısı korunur)",
 		"previewSummary": "{allowed} dosya işlenecek, {skipped} atlanacak",

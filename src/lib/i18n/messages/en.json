@@ -354,7 +354,7 @@
 	"BatchUploadDialog": {
 		"trigger": "+ Upload multiple / folder",
 		"dialogTitle": "Upload Multiple Files / Folder",
-		"dialogDescription": "Pick several files, or a whole folder; files are converted one at a time, and the chat model is unloaded from VRAM before each one. No per-file confirmation — defaults are applied, with a summary at the end.",
+		"dialogDescription": "Pick several files, or a whole folder; files are converted one at a time, and when Ollama is in use its loaded models are unloaded from VRAM before each one. No per-file confirmation — defaults are applied, with a summary at the end.",
 		"pickFilesLabel": "Files (multiple selection)",
 		"pickFolderLabel": "Folder (subfolder structure is kept)",
 		"previewSummary": "{allowed} file(s) will be processed, {skipped} skipped",
