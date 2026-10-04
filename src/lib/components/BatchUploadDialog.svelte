@@ -7,6 +7,7 @@
 	import * as Select from '$lib/components/ui/select';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { t } from '$lib/i18n/index.svelte';
+	import { localizeError, readResponseError } from '$lib/server-error';
 
 	let { onImported }: { onImported: () => void } = $props();
 
@@ -18,6 +19,10 @@
 	const ALL_EXTENSIONS = new Set([...ALLOWED_EXTENSIONS, ...CODE_EXTENSIONS]);
 
 	interface QueueEntry {
+		// Stable {#each} key: a client-local id until the server answers, then
+		// that item's server-assigned id (ImportResultItem.id). A name-based
+		// key would collide for two same-named files in one folder pick.
+		key: string;
 		file: File;
 		// '' for a plain multi-file pick; the picked folder's own top-level
 		// name and the filename itself already stripped for a folder pick
@@ -25,8 +30,21 @@
 		// expects (relDirToSegments() in batch-paths.ts sanitizes it further).
 		relDir: string;
 		status: ImportResultStatus;
+		// Server failures carry code/params (rendered via localizeError);
+		// `reason` is plain text only for client-side skips (already t()'d)
+		// and as localizeError's fallback message.
+		code?: string;
+		params?: Record<string, string | number>;
 		reason?: string;
 		path?: string;
+	}
+
+	let localKeySeq = 0;
+	const localKey = () => `local-${++localKeySeq}`;
+
+	function reasonText(entry: QueueEntry): string {
+		if (entry.code) return localizeError({ code: entry.code, params: entry.params, message: entry.reason });
+		return entry.reason ?? '';
 	}
 
 	let open = $state(false);
@@ -133,16 +151,17 @@
 			const baseName = file.name;
 
 			if (hasJunkSegment(relativePath) || baseName.toLowerCase() === 'desktop.ini' || baseName.startsWith('.')) {
-				entries.push({ file, relDir, status: 'skipped', reason: t('BatchUploadDialog.skipJunk') });
+				entries.push({ key: localKey(), file, relDir, status: 'skipped', reason: t('BatchUploadDialog.skipJunk') });
 				continue;
 			}
 			if (file.size > MAX_UPLOAD_BYTES) {
-				entries.push({ file, relDir, status: 'skipped', reason: t('BatchUploadDialog.skipTooLarge') });
+				entries.push({ key: localKey(), file, relDir, status: 'skipped', reason: t('BatchUploadDialog.skipTooLarge') });
 				continue;
 			}
 			const ext = extOf(baseName);
 			if (!ALL_EXTENSIONS.has(ext)) {
 				entries.push({
+					key: localKey(),
 					file,
 					relDir,
 					status: 'skipped',
@@ -150,7 +169,7 @@
 				});
 				continue;
 			}
-			entries.push({ file, relDir, status: 'pending' });
+			entries.push({ key: localKey(), file, relDir, status: 'pending' });
 		}
 		queue = entries;
 	}
@@ -194,7 +213,8 @@
 			const res = await fetch('/api/import/batch', { method: 'POST', body: fd });
 			// Same 413-has-no-SSE-body reasoning as UploadDialog.upload().
 			if (res.status === 413) throw new Error(t('UploadDialog.tooLarge'));
-			if (!res.ok || !res.body) throw new Error(t('Common.istekBasarisiz', { status: res.status }));
+			if (!res.ok) throw new Error(await readResponseError(res));
+			if (!res.body) throw new Error(t('Common.istekBasarisiz', { status: res.status }));
 
 			const reader = res.body.getReader();
 			const decoder = new TextDecoder();
@@ -213,17 +233,24 @@
 						statusLabel = STAGE_LABELS[event.stage] ?? event.stage;
 						estimatedSeconds = event.estimatedSeconds ?? estimatedSeconds;
 					} else if (event.type === 'item') {
+						entry.key = event.item.id;
 						entry.status = event.item.status;
+						entry.code = event.item.code;
+						entry.params = event.item.params;
 						entry.reason = event.item.reason;
 						entry.path = event.item.path;
 					} else if (event.type === 'error') {
 						entry.status = 'failed';
+						entry.code = event.code;
+						entry.params = event.params;
 						entry.reason = event.message;
 					}
 				}
 			}
 		} catch (err) {
 			entry.status = 'failed';
+			// Already localized text (readResponseError / t()), no code.
+			entry.code = undefined;
 			entry.reason = err instanceof Error ? err.message : t('UploadDialog.uploadFailed');
 		}
 	}
@@ -285,23 +312,16 @@
 		{#if phase === 'idle'}
 			<label class="flex flex-col gap-1 text-sm">
 				{t('BatchUploadDialog.pickFilesLabel')}
-				<input
+				<Input
 					type="file"
 					multiple
 					onchange={onFilesChange}
 					accept=".docx,.pptx,.xlsx,.html,.htm,.epub,.pdf,.md,.tex,.js,.ts,.py,.c,.h,.cpp,.hpp,.rs,.sh,.json,.css,.svelte,.sql,.asm,.s"
-					class="h-8 rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm file:h-6 file:border-0 file:bg-transparent file:text-sm file:font-medium"
 				/>
 			</label>
 			<label class="flex flex-col gap-1 text-sm">
 				{t('BatchUploadDialog.pickFolderLabel')}
-				<input
-					type="file"
-					multiple
-					webkitdirectory
-					onchange={onFolderChange}
-					class="h-8 rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm file:h-6 file:border-0 file:bg-transparent file:text-sm file:font-medium"
-				/>
+				<Input type="file" multiple webkitdirectory onchange={onFolderChange} />
 			</label>
 
 			{#if queue.length > 0}
@@ -355,13 +375,13 @@
 				{/each}
 			</div>
 			<div class="flex max-h-[50vh] flex-col gap-1 overflow-y-auto">
-				{#each queue as entry (entry.file.name + entry.relDir)}
+				{#each queue as entry (entry.key)}
 					<div class="flex items-center gap-2 border-b py-1 text-sm">
 						<span class="shrink-0 rounded-full px-2 py-0.5 text-[0.68rem] {STATUS_BADGE_CLASS[entry.status] ?? ''}">
 							{STATUS_LABELS[entry.status] ?? entry.status}
 						</span>
 						<span class="overflow-hidden text-ellipsis whitespace-nowrap">{targetPath(entry)}</span>
-						{#if entry.reason}<span class="text-xs text-muted-foreground">{entry.reason}</span>{/if}
+						{#if entry.reason || entry.code}<span class="text-xs text-muted-foreground">{reasonText(entry)}</span>{/if}
 					</div>
 				{/each}
 			</div>
