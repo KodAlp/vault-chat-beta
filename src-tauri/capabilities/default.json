@@ -8,6 +8,7 @@
   "permissions": [
     "core:default",
     "core:event:default",
+    "core:window:allow-show",
     "dialog:default",
     "opener:default",
     "allow-check-and-start",
