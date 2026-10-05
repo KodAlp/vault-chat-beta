@@ -256,18 +256,9 @@
   },
   "LibraryImport": {
     "pageIntro": "Importez dans la bibliothèque de ce coffre les notes que vous avez déjà. Vos originaux ne sont jamais modifiés : tout est copié, et les liens et pièces jointes sont convertis.",
-    "appsHeading": "Depuis des applications de notes",
     "badgeReady": "Disponible",
     "badgeSoon": "Bientôt",
     "soonIntro": "Ces applications ne sont pas encore prises en charge. En attendant, exportez vos notes en Markdown depuis l'application et utilisez la carte « Dossier Markdown ».",
-    "filesHeading": "Fichiers et liens",
-    "filesIntro": "Les documents, pages web, liens et vidéos YouTube passent par le convertisseur.",
-    "file_upload_title": "Un fichier ou YouTube",
-    "file_upload_desc": "PDF, Word, PowerPoint, Markdown… ou la transcription d'une vidéo YouTube.",
-    "file_batch_title": "Dossier ou plusieurs fichiers",
-    "file_batch_desc": "Choisissez un dossier de documents et importez-les d'un seul coup.",
-    "file_links_title": "Liens web",
-    "file_links_desc": "Collez des liens vers des PDF et des pages web : ils sont téléchargés puis ajoutés.",
     "source_obsidian": "Obsidian",
     "source_logseq": "Logseq",
     "source_joplin": "Joplin",
@@ -348,7 +339,8 @@
     "flavor_obsidian": "Obsidian",
     "flavor_zettlr": "Zettlr",
     "flavor_foam": "Foam",
-    "flavor_dendron": "Dendron"
+    "flavor_dendron": "Dendron",
+    "sectionTitle": "Import de la bibliothèque"
   },
   "LinksImportDialog": {
     "trigger": "Importer depuis des liens",
@@ -381,8 +373,8 @@
   },
   "LibraryTree": {
     "loadError": "Impossible de charger la bibliothèque.",
-    "empty": "La bibliothèque est vide. Téléversez un document ou importez vos notes depuis d'autres applications :",
-    "emptyLink": "Paramètres → Importer la bibliothèque"
+    "empty": "La bibliothèque est vide. Ajoutez un fichier ou importez vos notes depuis d'autres applications :",
+    "emptyLink": "Paramètres → Téléversement de fichiers"
   },
   "LibraryTreeNode": {
     "needsReview": "À vérifier",
@@ -392,17 +384,24 @@
     "deleteFolderDescription": "Ce dossier et tout son contenu seront définitivement supprimés. Cette action est irréversible.",
     "deleteFileDescription": "Ce fichier sera définitivement supprimé. Cette action est irréversible."
   },
-  "UploadDialog": {
-    "trigger": "+ Téléverser",
-    "dialogTitle": "Téléverser un document",
-    "uploading": "Téléversement…",
-    "sourceFile": "Fichier",
-    "sourceYoutube": "Vidéo (YouTube)",
-    "fileLabel": "Fichier (DOCX / PPTX / XLSX / HTML / EPUB / PDF simple)",
+  "AddFilesDialog": {
+    "trigger": "Ajouter des fichiers",
+    "dialogTitle": "Ajouter des fichiers",
+    "dialogDescription": "Si vous choisissez un seul fichier, vous pouvez vérifier son titre et son domaine avant l'enregistrement. Plusieurs fichiers ou un dossier sont importés directement, et le nom du dossier devient le domaine.",
+    "pickFilesButton": "Choisir des fichiers…",
+    "pickFolderButton": "Choisir un dossier…",
+    "scanning": "Analyse du dossier…",
+    "scanFailed": "Impossible d'analyser le dossier",
+    "dropHint": "…ou déposez ici des fichiers ou un dossier",
+    "youtubeToggle": "Ajouter plutôt une vidéo YouTube",
     "youtubeLabel": "Lien YouTube",
     "youtubePlaceholder": "https://www.youtube.com/watch?v=...",
     "youtubeRightsConfirm": "Je confirme avoir le droit d'utiliser le contenu de cette vidéo.",
-    "upload": "Téléverser",
+    "youtubeUpload": "Téléverser",
+    "back": "Retour"
+  },
+  "ImportFlow": {
+    "uploading": "Téléversement…",
     "stageQueued": "En file d'attente…",
     "stageConverting": "Conversion…",
     "stagePostprocessing": "Traitement…",
@@ -417,12 +416,8 @@
     "uploadFailed": "Échec du téléversement",
     "tooLarge": "Fichier trop volumineux : le serveur a refusé un envoi de cette taille."
   },
-  "BatchUploadDialog": {
-    "trigger": "+ Téléverser plusieurs fichiers / un dossier",
-    "dialogTitle": "Téléverser plusieurs fichiers / un dossier",
-    "dialogDescription": "Choisissez plusieurs fichiers ou un dossier entier ; les fichiers sont convertis un par un et, si Ollama est utilisé, ses modèles chargés sont déchargés de la VRAM avant chacun. Aucune confirmation par fichier : les valeurs par défaut sont appliquées, avec un récapitulatif à la fin.",
-    "pickFilesLabel": "Fichiers (sélection multiple)",
-    "pickFolderLabel": "Dossier (l'arborescence des sous-dossiers est conservée)",
+  "BatchImport": {
+    "description": "Choisissez plusieurs fichiers ou un dossier entier ; les fichiers sont convertis un par un et, si Ollama est utilisé, ses modèles chargés sont déchargés de la VRAM avant chacun. Aucune confirmation par fichier : les valeurs par défaut sont appliquées, avec un récapitulatif à la fin.",
     "previewSummary": "{allowed} fichier(s) seront traités, {skipped} ignoré(s)",
     "start": "Démarrer",
     "stop": "Arrêter",
@@ -433,9 +428,6 @@
     "skipJunk": "Fichier système/masqué",
     "skipTooLarge": "Fichier trop volumineux (limite de 100 Mo)",
     "skipUnsupported": "Type de fichier non pris en charge : {ext}",
-    "pickFolderButton": "Choisir un dossier…",
-    "scanning": "Analyse du dossier…",
-    "scanFailed": "Impossible d'analyser le dossier",
     "skipTooDeep": "Dossier trop profondément imbriqué",
     "statusConverted": "importé",
     "statusSkipped": "ignoré",
@@ -478,7 +470,7 @@
   "HomePage": {
     "title": "Vault Chat",
     "emptyTitle": "Aucun coffre pour l'instant",
-    "emptyDescription": "Créez d'abord un coffre pour pouvoir discuter avec vos notes. Importez ensuite vos notes ou documents via Paramètres → Importer la bibliothèque, et leur contenu deviendra consultable ici.",
+    "emptyDescription": "Créez d'abord un coffre pour pouvoir discuter avec vos notes. Importez ensuite vos notes ou documents via Paramètres → Téléversement de fichiers, et leur contenu deviendra consultable ici.",
     "newVault": "Nouveau coffre",
     "newVaultDialogTitle": "Nouveau coffre",
     "vaultNameLabel": "Nom du coffre",
@@ -496,7 +488,7 @@
     "recentChats": "Chats récents",
     "start": "Lancer",
     "noSourcesTitle": "Aucune source pour l'instant",
-    "noSourcesDescription": "Pour que vos questions obtiennent des réponses sourcées et citables, vous devez d'abord importer vos notes ou documents (Paramètres → Importer la bibliothèque) ; sinon, chaque question sera jugée « hors sujet ».",
+    "noSourcesDescription": "Pour que vos questions obtiennent des réponses fondées sur les sources et citables, vous devez d'abord importer vos notes ou documents (Paramètres → Téléversement de fichiers) — sinon chaque question renvoie « hors périmètre ».",
     "importSources": "Importer des sources",
     "untitled": "(sans titre)",
     "sourceCountBadge": "{count} sources",
@@ -620,7 +612,6 @@
     "appearance": "Apparence",
     "vaults": "Coffres",
     "upload": "Téléversement de fichiers",
-    "importLibrary": "Importer la bibliothèque",
     "skills": "Compétences",
     "memory": "Mémoire du chat",
     "progress": "Progression",
@@ -643,9 +634,6 @@
     "advancedUploadOptions": "Options de téléversement avancées",
     "title": "Bibliothèque",
     "saveError": "Impossible d'enregistrer les paramètres.",
-    "importNotesTitle": "Importer des notes depuis d'autres applications",
-    "importNotesDescription": "Importez une bibliothèque de notes depuis d'autres applications de notes : une seule page, avec un aperçu avant toute écriture.",
-    "importNotesOpen": "Ouvrir l'importation de bibliothèque",
     "importLinksTitle": "Importer depuis des liens",
     "importLinksDescription": "Collez des liens vers des PDF et des pages web : ils sont téléchargés séquentiellement et ajoutés à la bibliothèque. Les liens déjà importés avec succès sont ignorés lors d'une nouvelle exécution.",
     "uploadSettingsTitle": "Réglages de téléversement",
@@ -665,7 +653,9 @@
     "flattenFoldersHint": "Ces dossiers racine sont eux-mêmes masqués ; les dossiers qu'ils contiennent s'affichent directement à la racine de l'arborescence. Les chemins ne changent pas : seul l'aspect de l'arborescence est simplifié.",
     "libraryTreeTitle": "Arborescence de la bibliothèque",
     "libraryTreeDescription": "Téléversez, renommez ou supprimez des documents. L'arborescence des sources de l'écran de chat (phase 9) utilise à la place une copie distincte, en lecture seule, pour la sélection du périmètre.",
-    "loadError": "Impossible de charger les paramètres."
+    "loadError": "Impossible de charger les paramètres.",
+    "addFilesTitle": "Ajouter des fichiers",
+    "addFilesDescription": "PDF, Word, PowerPoint, Markdown, code… Choisissez un fichier, plusieurs fichiers ou un dossier entier ; l'application détermine toute seule de quoi il s'agit."
   },
   "ProvidersSettingsPage": {
     "title": "Fournisseurs de modèles",

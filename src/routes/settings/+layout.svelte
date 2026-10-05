@@ -7,7 +7,6 @@
 	import PaletteIcon from '@lucide/svelte/icons/palette';
 	import ArchiveIcon from '@lucide/svelte/icons/archive';
 	import UploadIcon from '@lucide/svelte/icons/upload';
-	import FolderInputIcon from '@lucide/svelte/icons/folder-input';
 	import SparklesIcon from '@lucide/svelte/icons/sparkles';
 	import BrainIcon from '@lucide/svelte/icons/brain';
 	import ChartColumnIcon from '@lucide/svelte/icons/chart-column';
@@ -41,7 +40,6 @@
 				{ href: '/settings', label: t('SettingsNav.appearance'), icon: PaletteIcon },
 				{ href: '/settings/vaults', label: t('SettingsNav.vaults'), icon: ArchiveIcon },
 				{ href: '/settings/library', label: t('SettingsNav.upload'), icon: UploadIcon },
-				{ href: '/settings/import', label: t('SettingsNav.importLibrary'), icon: FolderInputIcon },
 				{ href: '/settings/skills', label: t('SettingsNav.skills'), icon: SparklesIcon },
 				{ href: '/settings/memory', label: t('SettingsNav.memory'), icon: BrainIcon },
 				{ href: '/study/progress', label: t('SettingsNav.progress'), icon: ChartColumnIcon, external: true }

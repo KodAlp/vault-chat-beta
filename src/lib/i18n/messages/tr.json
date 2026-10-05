@@ -270,18 +270,9 @@
 
 	"LibraryImport": {
 		"pageIntro": "Başka uygulamalardaki notlarını bu vault'un kütüphanesine getir. Orijinallerine asla dokunulmaz — her şey kopyalanır, bağlantılar ve ekler dönüştürülür.",
-		"appsHeading": "Not uygulamalarından",
 		"badgeReady": "Hazır",
 		"badgeSoon": "Yakında",
 		"soonIntro": "Bu uygulamalar henüz desteklenmiyor. O zamana kadar notlarını uygulamadan Markdown olarak dışa aktarıp Markdown klasörü kartını kullanabilirsin.",
-		"filesHeading": "Dosyalar ve bağlantılar",
-		"filesIntro": "Belgeler, web sayfaları, bağlantılar ve YouTube videoları dönüştürücüden geçer.",
-		"file_upload_title": "Tek dosya veya YouTube",
-		"file_upload_desc": "PDF, Word, PowerPoint, Markdown… ya da bir YouTube videosunun dökümü.",
-		"file_batch_title": "Klasör veya birden çok dosya",
-		"file_batch_desc": "Bir belge klasörü seç, hepsini tek seferde içe aktar.",
-		"file_links_title": "Web bağlantıları",
-		"file_links_desc": "PDF ve web sayfası bağlantılarını yapıştır; indirilip eklenir.",
 		"source_obsidian": "Obsidian",
 		"source_logseq": "Logseq",
 		"source_joplin": "Joplin",
@@ -360,7 +351,8 @@
 		"flavor_obsidian": "Obsidian",
 		"flavor_zettlr": "Zettlr",
 		"flavor_foam": "Foam",
-		"flavor_dendron": "Dendron"
+		"flavor_dendron": "Dendron",
+		"sectionTitle": "Kütüphane içe aktar"
 	},
 
 	"LinksImportDialog": {
@@ -393,8 +385,8 @@
 
 	"LibraryTree": {
 		"loadError": "Kütüphane yüklenemedi.",
-		"empty": "Kütüphane boş. Bir belge yükle ya da notlarını başka uygulamalardan içe aktar:",
-		"emptyLink": "Ayarlar → Kütüphane içe aktar"
+		"empty": "Kütüphane boş. Bir dosya ekle ya da notlarını başka uygulamalardan içe aktar:",
+		"emptyLink": "Ayarlar → Dosya yükleme"
 	},
 
 	"LibraryTreeNode": {
@@ -406,17 +398,25 @@
 		"deleteFileDescription": "Bu dosya kalıcı olarak silinecek. Bu işlem geri alınamaz."
 	},
 
-	"UploadDialog": {
-		"trigger": "+ Yükle",
-		"dialogTitle": "Belge Yükle",
-		"uploading": "Yükleniyor...",
-		"sourceFile": "Dosya",
-		"sourceYoutube": "Video (YouTube)",
-		"fileLabel": "Dosya (DOCX / PPTX / XLSX / HTML / EPUB / basit PDF)",
+	"AddFilesDialog": {
+		"trigger": "Dosya ekle",
+		"dialogTitle": "Dosya ekle",
+		"dialogDescription": "Tek bir dosya seçersen kaydetmeden önce başlığını ve domain'ini gözden geçirebilirsin. Birden çok dosya ya da bir klasör doğrudan içe aktarılır; klasör adı domain olur.",
+		"pickFilesButton": "Dosya seç…",
+		"pickFolderButton": "Klasör seç…",
+		"scanning": "Klasör taranıyor…",
+		"scanFailed": "Klasör taranamadı",
+		"dropHint": "…ya da dosyaları veya bir klasörü buraya bırak",
+		"youtubeToggle": "Bunun yerine bir YouTube videosu ekle",
 		"youtubeLabel": "YouTube bağlantısı",
 		"youtubePlaceholder": "https://www.youtube.com/watch?v=...",
 		"youtubeRightsConfirm": "Bu videonun içeriğini kullanma iznim/hakkım olduğunu onaylıyorum.",
-		"upload": "Yükle",
+		"youtubeUpload": "Yükle",
+		"back": "Geri"
+	},
+
+	"ImportFlow": {
+		"uploading": "Yükleniyor...",
 		"stageQueued": "Sırada...",
 		"stageConverting": "Dönüştürülüyor...",
 		"stagePostprocessing": "İşleniyor...",
@@ -432,12 +432,8 @@
 		"tooLarge": "Dosya çok büyük — sunucu bu boyuttaki bir yüklemeyi kabul etmedi."
 	},
 
-	"BatchUploadDialog": {
-		"trigger": "+ Çoklu / klasör yükle",
-		"dialogTitle": "Çoklu Dosya / Klasör Yükle",
-		"dialogDescription": "Birden çok dosya ya da bir klasörün tamamı seçilebilir; dosyalar tek tek dönüştürülür, Ollama kullanılıyorsa her birinden önce yüklü modeller VRAM'den boşaltılır. Onay adımı yok — varsayılanlar uygulanır, sonda özet gösterilir.",
-		"pickFilesLabel": "Dosyalar (çoklu seçim)",
-		"pickFolderLabel": "Klasör (alt klasör yapısı korunur)",
+	"BatchImport": {
+		"description": "Birden çok dosya ya da bir klasörün tamamı seçilebilir; dosyalar tek tek dönüştürülür, Ollama kullanılıyorsa her birinden önce yüklü modeller VRAM'den boşaltılır. Onay adımı yok — varsayılanlar uygulanır, sonda özet gösterilir.",
 		"previewSummary": "{allowed} dosya işlenecek, {skipped} atlanacak",
 		"start": "Başlat",
 		"stop": "Durdur",
@@ -448,9 +444,6 @@
 		"skipJunk": "Sistem/gizli dosya",
 		"skipTooLarge": "Dosya çok büyük (100MB sınırı)",
 		"skipUnsupported": "Desteklenmeyen dosya türü: {ext}",
-		"pickFolderButton": "Klasör seç…",
-		"scanning": "Klasör taranıyor…",
-		"scanFailed": "Klasör taranamadı",
 		"skipTooDeep": "Klasör çok derin",
 		"statusConverted": "içe aktarıldı",
 		"statusSkipped": "atlandı",
@@ -497,7 +490,7 @@
 	"HomePage": {
 		"title": "Vault Chat",
 		"emptyTitle": "Henüz bir vault yok",
-		"emptyDescription": "Notlarınla sohbet edebilmek için önce bir vault oluştur. Sonra Ayarlar → Kütüphane içe aktar'dan notlarını veya belgelerini getir; içerikleri burada aranabilir olur.",
+		"emptyDescription": "Notlarınla sohbet edebilmek için önce bir vault oluştur. Sonra Ayarlar → Dosya yükleme'den notlarını veya belgelerini getir; içerikleri burada aranabilir olur.",
 		"newVault": "Yeni vault",
 		"newVaultDialogTitle": "Yeni vault",
 		"vaultNameLabel": "Vault adı",
@@ -516,7 +509,7 @@
 		"recentChats": "Geçmiş sohbetler",
 		"start": "Başlat",
 		"noSourcesTitle": "Henüz kaynak yok",
-		"noSourcesDescription": "Sorularının kaynağa dayalı, gösterilebilir cevaplar alması için önce notlarını ya da belgelerini içe aktarman gerekiyor (Ayarlar → Kütüphane içe aktar) — aksi halde her soru \"kapsamda yok\" döner.",
+		"noSourcesDescription": "Sorularının kaynağa dayalı, gösterilebilir cevaplar alması için önce notlarını ya da belgelerini içe aktarman gerekiyor (Ayarlar → Dosya yükleme) — aksi halde her soru \"kapsamda yok\" döner.",
 		"importSources": "Kaynakları içe aktar",
 		"untitled": "(başlıksız)",
 		"sourceCountBadge": "{count} kaynak",
@@ -647,7 +640,6 @@
 		"appearance": "Görünüm",
 		"vaults": "Kasalar",
 		"upload": "Dosya yükleme",
-		"importLibrary": "Kütüphane içe aktar",
 		"skills": "Skill'ler",
 		"memory": "Sohbet hafızası",
 		"progress": "İlerleme",
@@ -673,9 +665,6 @@
 		"advancedUploadOptions": "Gelişmiş yükleme seçenekleri",
 		"title": "Kütüphane",
 		"saveError": "Ayarlar kaydedilemedi.",
-		"importNotesTitle": "Başka uygulamalardan not içe aktar",
-		"importNotesDescription": "Başka not uygulamalarından bir not kütüphanesi getir — tek sayfa, bir şey yazılmadan önce önizleme.",
-		"importNotesOpen": "Kütüphane içe aktarmayı aç",
 		"importLinksTitle": "Linkten İçe Aktar",
 		"importLinksDescription": "PDF ve web sayfası bağlantılarını yapıştır — sırayla indirilip kütüphaneye eklenir. Daha önce başarıyla içe aktarılmış bağlantılar tekrar çalıştırmada atlanır.",
 		"uploadSettingsTitle": "Yükleme Ayarları",
@@ -695,7 +684,9 @@
 		"flattenFoldersHint": "Bu kök klasörlerin kendisi gizlenir, altındaki klasörler doğrudan ağacın kökünde gösterilir. Yollar değişmez, sadece ağacın görünümü sadeleşir.",
 		"libraryTreeTitle": "Kütüphane Ağacı",
 		"libraryTreeDescription": "Belge yükle, yeniden adlandır veya sil. Sohbet ekranındaki kaynak ağacı (Faz 9) bunun yerine kapsam seçimi için ayrı, salt-görüntüleme bir kopyasını kullanır.",
-		"loadError": "Ayarlar alınamadı."
+		"loadError": "Ayarlar alınamadı.",
+		"addFilesTitle": "Dosya ekle",
+		"addFilesDescription": "PDF, Word, PowerPoint, Markdown, kod… Tek dosya, birden çok dosya ya da bir klasör seç; hangisi olduğunu uygulama kendisi anlar."
 	},
 
 	"ProvidersSettingsPage": {

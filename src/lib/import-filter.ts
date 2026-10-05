@@ -2,7 +2,7 @@ import { ALLOWED_EXTENSIONS, CODE_EXTENSIONS, MAX_UPLOAD_BYTES } from './import-
 
 /**
  * The ONE place that decides whether a file found in a picked folder is worth
- * importing. Used by BatchUploadDialog (browser folder picks, where the file
+ * importing. Used by BatchImport (browser folder picks, where the file
  * list comes from webkitRelativePath) and by the server folder scan
  * (folder-scan.ts, the Linux desktop picker), so the two cannot drift apart.
  * Pure and isomorphic on purpose: no fs, no $lib alias (the test runner cannot

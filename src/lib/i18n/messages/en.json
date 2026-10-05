@@ -270,18 +270,9 @@
 
 	"LibraryImport": {
 		"pageIntro": "Bring notes you already have into this vault's library. Your originals are never changed — everything is copied, and links and attachments are converted.",
-		"appsHeading": "From note apps",
 		"badgeReady": "Ready",
 		"badgeSoon": "Coming soon",
 		"soonIntro": "These apps aren't supported yet. Until then, export your notes as Markdown from the app and use the Markdown folder card.",
-		"filesHeading": "Files and links",
-		"filesIntro": "Documents, web pages, links and YouTube videos go through the converter instead.",
-		"file_upload_title": "Single file or YouTube",
-		"file_upload_desc": "PDF, Word, PowerPoint, Markdown… or a YouTube video's transcript.",
-		"file_batch_title": "Folder or several files",
-		"file_batch_desc": "Pick a folder of documents and import them in one go.",
-		"file_links_title": "Web links",
-		"file_links_desc": "Paste PDF and web page links — they are downloaded and added.",
 		"source_obsidian": "Obsidian",
 		"source_logseq": "Logseq",
 		"source_joplin": "Joplin",
@@ -360,7 +351,8 @@
 		"flavor_obsidian": "Obsidian",
 		"flavor_zettlr": "Zettlr",
 		"flavor_foam": "Foam",
-		"flavor_dendron": "Dendron"
+		"flavor_dendron": "Dendron",
+		"sectionTitle": "Library import"
 	},
 
 	"LinksImportDialog": {
@@ -393,8 +385,8 @@
 
 	"LibraryTree": {
 		"loadError": "Couldn't load the library.",
-		"empty": "The library is empty. Upload a document, or import your notes from other apps:",
-		"emptyLink": "Settings → Library import"
+		"empty": "The library is empty. Add a file, or import your notes from other apps:",
+		"emptyLink": "Settings → File upload"
 	},
 
 	"LibraryTreeNode": {
@@ -406,17 +398,25 @@
 		"deleteFileDescription": "This file will be permanently deleted. This action cannot be undone."
 	},
 
-	"UploadDialog": {
-		"trigger": "+ Upload",
-		"dialogTitle": "Upload Document",
-		"uploading": "Uploading...",
-		"sourceFile": "File",
-		"sourceYoutube": "Video (YouTube)",
-		"fileLabel": "File (DOCX / PPTX / XLSX / HTML / EPUB / simple PDF)",
+	"AddFilesDialog": {
+		"trigger": "Add files",
+		"dialogTitle": "Add files",
+		"dialogDescription": "Pick one file to review its title and domain before saving. Several files or a folder are imported directly, and the folder name becomes the domain.",
+		"pickFilesButton": "Choose files…",
+		"pickFolderButton": "Choose folder…",
+		"scanning": "Scanning folder…",
+		"scanFailed": "Could not scan the folder",
+		"dropHint": "…or drop files or a folder here",
+		"youtubeToggle": "Add a YouTube video instead",
 		"youtubeLabel": "YouTube link",
 		"youtubePlaceholder": "https://www.youtube.com/watch?v=...",
 		"youtubeRightsConfirm": "I confirm I have the right/permission to use this video's content.",
-		"upload": "Upload",
+		"youtubeUpload": "Upload",
+		"back": "Back"
+	},
+
+	"ImportFlow": {
+		"uploading": "Uploading...",
 		"stageQueued": "Queued...",
 		"stageConverting": "Converting...",
 		"stagePostprocessing": "Processing...",
@@ -432,12 +432,8 @@
 		"tooLarge": "File too large — the server refused an upload of this size."
 	},
 
-	"BatchUploadDialog": {
-		"trigger": "+ Upload multiple / folder",
-		"dialogTitle": "Upload Multiple Files / Folder",
-		"dialogDescription": "Pick several files, or a whole folder; files are converted one at a time, and when Ollama is in use its loaded models are unloaded from VRAM before each one. No per-file confirmation — defaults are applied, with a summary at the end.",
-		"pickFilesLabel": "Files (multiple selection)",
-		"pickFolderLabel": "Folder (subfolder structure is kept)",
+	"BatchImport": {
+		"description": "Pick several files, or a whole folder; files are converted one at a time, and when Ollama is in use its loaded models are unloaded from VRAM before each one. No per-file confirmation — defaults are applied, with a summary at the end.",
 		"previewSummary": "{allowed} file(s) will be processed, {skipped} skipped",
 		"start": "Start",
 		"stop": "Stop",
@@ -448,9 +444,6 @@
 		"skipJunk": "System/hidden file",
 		"skipTooLarge": "File too large (100MB limit)",
 		"skipUnsupported": "Unsupported file type: {ext}",
-		"pickFolderButton": "Choose folder…",
-		"scanning": "Scanning folder…",
-		"scanFailed": "Could not scan the folder",
 		"skipTooDeep": "Folder nested too deeply",
 		"statusConverted": "imported",
 		"statusSkipped": "skipped",
@@ -497,7 +490,7 @@
 	"HomePage": {
 		"title": "Vault Chat",
 		"emptyTitle": "No vaults yet",
-		"emptyDescription": "Create a vault first so you can chat with your notes. Then bring your notes or documents in via Settings → Library import, and their contents become searchable here.",
+		"emptyDescription": "Create a vault first so you can chat with your notes. Then bring your notes or documents in via Settings → File upload, and their contents become searchable here.",
 		"newVault": "New vault",
 		"newVaultDialogTitle": "New vault",
 		"vaultNameLabel": "Vault name",
@@ -516,7 +509,7 @@
 		"recentChats": "Recent chats",
 		"start": "Start",
 		"noSourcesTitle": "No sources yet",
-		"noSourcesDescription": "For your questions to get source-grounded, citable answers, you first need to import your notes or documents (Settings → Library import) — otherwise every question comes back \"out of scope\".",
+		"noSourcesDescription": "For your questions to get source-grounded, citable answers, you first need to import your notes or documents (Settings → File upload) — otherwise every question comes back \"out of scope\".",
 		"importSources": "Import sources",
 		"untitled": "(untitled)",
 		"sourceCountBadge": "{count} sources",
@@ -647,7 +640,6 @@
 		"appearance": "Appearance",
 		"vaults": "Vaults",
 		"upload": "File upload",
-		"importLibrary": "Library import",
 		"skills": "Skills",
 		"memory": "Chat memory",
 		"progress": "Progress",
@@ -673,9 +665,6 @@
 		"advancedUploadOptions": "Advanced upload options",
 		"title": "Library",
 		"saveError": "Couldn't save settings.",
-		"importNotesTitle": "Import notes from other apps",
-		"importNotesDescription": "Bring a notes library in from other note apps — one page, with a preview before anything is written.",
-		"importNotesOpen": "Open library import",
 		"importLinksTitle": "Import from Links",
 		"importLinksDescription": "Paste PDF and web page links — they're downloaded in sequence and added to the library. Links already imported successfully are skipped on a re-run.",
 		"uploadSettingsTitle": "Upload Settings",
@@ -695,7 +684,9 @@
 		"flattenFoldersHint": "These root folders themselves are hidden; the folders beneath them are shown directly at the tree's root instead. Paths are unchanged — only the tree's appearance is simplified.",
 		"libraryTreeTitle": "Library Tree",
 		"libraryTreeDescription": "Upload, rename, or delete documents. The chat screen's own source tree (Faz 9) uses a separate, read-only copy of this for scope selection instead.",
-		"loadError": "Couldn't load settings."
+		"loadError": "Couldn't load settings.",
+		"addFilesTitle": "Add files",
+		"addFilesDescription": "PDF, Word, PowerPoint, Markdown, code… Choose one file, several files or a whole folder — the app works out which."
 	},
 
 	"ProvidersSettingsPage": {

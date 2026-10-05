@@ -254,18 +254,9 @@
   },
   "LibraryImport": {
     "pageIntro": "Hole Notizen, die du schon hast, in die Bibliothek dieses Tresors. Deine Originale bleiben unverändert – alles wird kopiert, Links und Anhänge werden umgewandelt.",
-    "appsHeading": "Aus Notiz-Apps",
     "badgeReady": "Verfügbar",
     "badgeSoon": "Demnächst",
     "soonIntro": "Diese Apps werden noch nicht unterstützt. Exportiere deine Notizen bis dahin als Markdown aus der App und nutze die Karte „Markdown-Ordner“.",
-    "filesHeading": "Dateien und Links",
-    "filesIntro": "Dokumente, Webseiten, Links und YouTube-Videos laufen stattdessen über den Konverter.",
-    "file_upload_title": "Einzelne Datei oder YouTube",
-    "file_upload_desc": "PDF, Word, PowerPoint, Markdown … oder das Transkript eines YouTube-Videos.",
-    "file_batch_title": "Ordner oder mehrere Dateien",
-    "file_batch_desc": "Wähle einen Ordner mit Dokumenten und importiere sie in einem Rutsch.",
-    "file_links_title": "Web-Links",
-    "file_links_desc": "Füge Links zu PDFs und Webseiten ein – sie werden heruntergeladen und hinzugefügt.",
     "source_obsidian": "Obsidian",
     "source_logseq": "Logseq",
     "source_joplin": "Joplin",
@@ -346,7 +337,8 @@
     "flavor_obsidian": "Obsidian",
     "flavor_zettlr": "Zettlr",
     "flavor_foam": "Foam",
-    "flavor_dendron": "Dendron"
+    "flavor_dendron": "Dendron",
+    "sectionTitle": "Bibliotheksimport"
   },
   "LinksImportDialog": {
     "trigger": "Aus Links importieren",
@@ -379,8 +371,8 @@
   },
   "LibraryTree": {
     "loadError": "Die Bibliothek konnte nicht geladen werden.",
-    "empty": "Die Bibliothek ist leer. Lade ein Dokument hoch oder importiere deine Notizen aus anderen Apps:",
-    "emptyLink": "Einstellungen → Bibliotheksimport"
+    "empty": "Die Bibliothek ist leer. Füge eine Datei hinzu oder importiere deine Notizen aus anderen Apps:",
+    "emptyLink": "Einstellungen → Datei-Upload"
   },
   "LibraryTreeNode": {
     "needsReview": "Prüfung nötig",
@@ -390,17 +382,24 @@
     "deleteFolderDescription": "Dieser Ordner und alles darin wird endgültig gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.",
     "deleteFileDescription": "Diese Datei wird endgültig gelöscht. Diese Aktion kann nicht rückgängig gemacht werden."
   },
-  "UploadDialog": {
-    "trigger": "+ Hochladen",
-    "dialogTitle": "Dokument hochladen",
-    "uploading": "Wird hochgeladen…",
-    "sourceFile": "Datei",
-    "sourceYoutube": "Video (YouTube)",
-    "fileLabel": "Datei (DOCX / PPTX / XLSX / HTML / EPUB / einfaches PDF)",
+  "AddFilesDialog": {
+    "trigger": "Dateien hinzufügen",
+    "dialogTitle": "Dateien hinzufügen",
+    "dialogDescription": "Wenn du eine einzelne Datei wählst, kannst du vor dem Speichern ihren Titel und ihr Fachgebiet prüfen. Mehrere Dateien oder ein Ordner werden direkt importiert, und der Ordnername wird zum Fachgebiet.",
+    "pickFilesButton": "Dateien auswählen…",
+    "pickFolderButton": "Ordner wählen…",
+    "scanning": "Ordner wird durchsucht…",
+    "scanFailed": "Der Ordner konnte nicht durchsucht werden",
+    "dropHint": "…oder Dateien bzw. einen Ordner hierher ziehen",
+    "youtubeToggle": "Stattdessen ein YouTube-Video hinzufügen",
     "youtubeLabel": "YouTube-Link",
     "youtubePlaceholder": "https://www.youtube.com/watch?v=...",
     "youtubeRightsConfirm": "Ich bestätige, dass ich berechtigt bin, den Inhalt dieses Videos zu verwenden.",
-    "upload": "Hochladen",
+    "youtubeUpload": "Hochladen",
+    "back": "Zurück"
+  },
+  "ImportFlow": {
+    "uploading": "Wird hochgeladen…",
     "stageQueued": "In Warteschlange…",
     "stageConverting": "Wird konvertiert…",
     "stagePostprocessing": "Wird verarbeitet…",
@@ -415,12 +414,8 @@
     "uploadFailed": "Hochladen fehlgeschlagen",
     "tooLarge": "Datei zu groß – der Server hat einen Upload dieser Größe abgelehnt."
   },
-  "BatchUploadDialog": {
-    "trigger": "+ Mehrere Dateien / Ordner hochladen",
-    "dialogTitle": "Mehrere Dateien / Ordner hochladen",
-    "dialogDescription": "Wähle mehrere Dateien oder einen ganzen Ordner; die Dateien werden nacheinander konvertiert, und bei Verwendung von Ollama werden dessen geladene Modelle vor jeder Datei aus dem VRAM entladen. Keine Bestätigung pro Datei – es gelten die Standardwerte, am Ende gibt es eine Zusammenfassung.",
-    "pickFilesLabel": "Dateien (Mehrfachauswahl)",
-    "pickFolderLabel": "Ordner (Unterordnerstruktur bleibt erhalten)",
+  "BatchImport": {
+    "description": "Wähle mehrere Dateien oder einen ganzen Ordner; die Dateien werden nacheinander konvertiert, und bei Verwendung von Ollama werden dessen geladene Modelle vor jeder Datei aus dem VRAM entladen. Keine Bestätigung pro Datei – es gelten die Standardwerte, am Ende gibt es eine Zusammenfassung.",
     "previewSummary": "{allowed} Datei(en) werden verarbeitet, {skipped} übersprungen",
     "start": "Starten",
     "stop": "Stopp",
@@ -431,9 +426,6 @@
     "skipJunk": "System-/versteckte Datei",
     "skipTooLarge": "Datei zu groß (Limit 100 MB)",
     "skipUnsupported": "Nicht unterstützter Dateityp: {ext}",
-    "pickFolderButton": "Ordner wählen…",
-    "scanning": "Ordner wird durchsucht…",
-    "scanFailed": "Der Ordner konnte nicht durchsucht werden",
     "skipTooDeep": "Ordner zu tief verschachtelt",
     "statusConverted": "importiert",
     "statusSkipped": "übersprungen",
@@ -476,7 +468,7 @@
   "HomePage": {
     "title": "Vault Chat",
     "emptyTitle": "Noch keine Tresore",
-    "emptyDescription": "Lege zuerst einen Tresor an, damit du mit deinen Notizen chatten kannst. Hole dann deine Notizen oder Dokumente über Einstellungen → Bibliotheksimport herein – ihr Inhalt wird hier durchsuchbar.",
+    "emptyDescription": "Erstelle zuerst einen Tresor, damit du mit deinen Notizen chatten kannst. Bring dann deine Notizen oder Dokumente über Einstellungen → Datei-Upload ein, und ihre Inhalte werden hier durchsuchbar.",
     "newVault": "Neuer Tresor",
     "newVaultDialogTitle": "Neuer Tresor",
     "vaultNameLabel": "Tresorname",
@@ -494,7 +486,7 @@
     "recentChats": "Letzte Chats",
     "start": "Starten",
     "noSourcesTitle": "Noch keine Quellen",
-    "noSourcesDescription": "Damit deine Fragen quellenbasierte, zitierfähige Antworten bekommen, musst du zuerst deine Notizen oder Dokumente importieren (Einstellungen → Bibliotheksimport) – sonst wird jede Frage als „außerhalb des Umfangs“ eingestuft.",
+    "noSourcesDescription": "Damit deine Fragen quellenbasierte, zitierbare Antworten bekommen, musst du zuerst deine Notizen oder Dokumente importieren (Einstellungen → Datei-Upload) – sonst lautet die Antwort auf jede Frage „außerhalb des Bereichs“.",
     "importSources": "Quellen importieren",
     "untitled": "(ohne Titel)",
     "sourceCountBadge": "{count} Quellen",
@@ -618,7 +610,6 @@
     "appearance": "Erscheinungsbild",
     "vaults": "Tresore",
     "upload": "Datei-Upload",
-    "importLibrary": "Bibliotheksimport",
     "skills": "Skills",
     "memory": "Chat-Gedächtnis",
     "progress": "Fortschritt",
@@ -641,9 +632,6 @@
     "advancedUploadOptions": "Erweiterte Upload-Optionen",
     "title": "Bibliothek",
     "saveError": "Die Einstellungen konnten nicht gespeichert werden.",
-    "importNotesTitle": "Notizen aus anderen Apps importieren",
-    "importNotesDescription": "Hole eine Notizbibliothek aus anderen Notiz-Apps herein – auf einer Seite, mit Vorschau, bevor etwas geschrieben wird.",
-    "importNotesOpen": "Bibliotheksimport öffnen",
     "importLinksTitle": "Aus Links importieren",
     "importLinksDescription": "Füge Links zu PDFs und Webseiten ein – sie werden nacheinander heruntergeladen und der Bibliothek hinzugefügt. Bereits erfolgreich importierte Links werden bei einem erneuten Lauf übersprungen.",
     "uploadSettingsTitle": "Upload-Einstellungen",
@@ -663,7 +651,9 @@
     "flattenFoldersHint": "Diese Stammordner selbst werden ausgeblendet; die darunterliegenden Ordner erscheinen stattdessen direkt an der Wurzel des Baums. Die Pfade bleiben unverändert – nur die Darstellung des Baums wird vereinfacht.",
     "libraryTreeTitle": "Bibliotheksbaum",
     "libraryTreeDescription": "Dokumente hochladen, umbenennen oder löschen. Der Quellenbaum des Chat-Bildschirms (Phase 9) nutzt für die Umfangsauswahl stattdessen eine separate, schreibgeschützte Kopie davon.",
-    "loadError": "Die Einstellungen konnten nicht geladen werden."
+    "loadError": "Die Einstellungen konnten nicht geladen werden.",
+    "addFilesTitle": "Dateien hinzufügen",
+    "addFilesDescription": "PDF, Word, PowerPoint, Markdown, Code… Wähle eine Datei, mehrere Dateien oder einen ganzen Ordner – die App erkennt selbst, was es ist."
   },
   "ProvidersSettingsPage": {
     "title": "Modellanbieter",

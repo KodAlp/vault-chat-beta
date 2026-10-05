@@ -250,18 +250,9 @@
   },
   "LibraryImport": {
     "pageIntro": "Bring di notes wey you don already get enter di library for dis vault. We no dey ever change your originals — everything dey copy, and we dey convert links and attachments.",
-    "appsHeading": "From note apps",
     "badgeReady": "Ready",
     "badgeSoon": "E dey come soon",
     "soonIntro": "We no support dis apps yet. For now, export your notes as Markdown from di app and use di Markdown folder card.",
-    "filesHeading": "Files and links",
-    "filesIntro": "Documents, web pages, links and YouTube videos dey go through di converter instead.",
-    "file_upload_title": "Single file or YouTube",
-    "file_upload_desc": "PDF, Word, PowerPoint, Markdown… or di transcript of one YouTube video.",
-    "file_batch_title": "Folder or plenty files",
-    "file_batch_desc": "Pick one folder of documents and import dem all together.",
-    "file_links_title": "Web links",
-    "file_links_desc": "Paste PDF and web page links — we go download dem and add dem.",
     "source_obsidian": "Obsidian",
     "source_logseq": "Logseq",
     "source_joplin": "Joplin",
@@ -340,7 +331,8 @@
     "flavor_obsidian": "Obsidian",
     "flavor_zettlr": "Zettlr",
     "flavor_foam": "Foam",
-    "flavor_dendron": "Dendron"
+    "flavor_dendron": "Dendron",
+    "sectionTitle": "Library import"
   },
   "LinksImportDialog": {
     "trigger": "Import from Links",
@@ -371,8 +363,8 @@
   },
   "LibraryTree": {
     "loadError": "Library no load.",
-    "empty": "Di library empty. Upload one document, or import your notes from other apps:",
-    "emptyLink": "Settings → Library import"
+    "empty": "Di library empty. Add one file, or import your notes from other apps:",
+    "emptyLink": "Settings → File upload"
   },
   "LibraryTreeNode": {
     "needsReview": "Need review",
@@ -382,17 +374,24 @@
     "deleteFolderDescription": "Dis folder and everything inside am go delete forever. You no fit undo dis action.",
     "deleteFileDescription": "Dis file go delete forever. You no fit undo dis action."
   },
-  "UploadDialog": {
-    "trigger": "+ Upload",
-    "dialogTitle": "Upload Document",
-    "uploading": "E dey upload...",
-    "sourceFile": "File",
-    "sourceYoutube": "Video (YouTube)",
-    "fileLabel": "File (DOCX / PPTX / XLSX / HTML / EPUB / simple PDF)",
+  "AddFilesDialog": {
+    "trigger": "Add files",
+    "dialogTitle": "Add files",
+    "dialogDescription": "If you pick one file, you fit check im title and domain before you save am. Plenty files or one folder dey import straight, and di folder name go be di domain.",
+    "pickFilesButton": "Choose files…",
+    "pickFolderButton": "Choose folder…",
+    "scanning": "E dey scan folder…",
+    "scanFailed": "We no fit scan di folder",
+    "dropHint": "…or drop files or one folder here",
+    "youtubeToggle": "Add YouTube video instead",
     "youtubeLabel": "YouTube link",
     "youtubePlaceholder": "https://www.youtube.com/watch?v=...",
     "youtubeRightsConfirm": "I confirm say I get right/permission to use dis video content.",
-    "upload": "Upload",
+    "youtubeUpload": "Upload",
+    "back": "Back"
+  },
+  "ImportFlow": {
+    "uploading": "E dey upload...",
     "stageQueued": "E dey line up...",
     "stageConverting": "E dey convert...",
     "stagePostprocessing": "E dey process...",
@@ -407,12 +406,8 @@
     "uploadFailed": "Upload fail",
     "tooLarge": "File too big — di server no accept upload wey big like dis."
   },
-  "BatchUploadDialog": {
-    "trigger": "+ Upload many files / folder",
-    "dialogTitle": "Upload Many Files / Folder",
-    "dialogDescription": "Pick plenty files, or one whole folder; we dey convert di files one by one, and if Ollama dey use, we go comot im loaded models from VRAM before each one. We no go ask confirmation for each file — we go use defaults, and give you summary for end.",
-    "pickFilesLabel": "Files (you fit pick many)",
-    "pickFolderLabel": "Folder (di subfolder structure go stay)",
+  "BatchImport": {
+    "description": "Pick plenty files, or one whole folder; we dey convert di files one by one, and if Ollama dey use, we go comot im loaded models from VRAM before each one. We no go ask confirmation for each file — we go use defaults, and give you summary for end.",
     "previewSummary": "{allowed} file(s) go process, {skipped} go skip",
     "start": "Start",
     "stop": "Stop",
@@ -423,9 +418,6 @@
     "skipJunk": "System/hidden file",
     "skipTooLarge": "File too big (100MB limit)",
     "skipUnsupported": "File type wey we no support: {ext}",
-    "pickFolderButton": "Choose folder…",
-    "scanning": "E dey scan folder…",
-    "scanFailed": "We no fit scan di folder",
     "skipTooDeep": "Folder dey inside too many folders",
     "statusConverted": "imported",
     "statusSkipped": "skipped",
@@ -468,7 +460,7 @@
   "HomePage": {
     "title": "Vault Chat",
     "emptyTitle": "No vault yet",
-    "emptyDescription": "Create one vault first so you fit chat with your notes. Then bring your notes or documents come through Settings → Library import, and dia content go dey searchable here.",
+    "emptyDescription": "Create one vault first so you fit chat with your notes. Then bring your notes or documents come through Settings → File upload, and dem content go dey searchable here.",
     "newVault": "New vault",
     "newVaultDialogTitle": "New vault",
     "vaultNameLabel": "Vault name",
@@ -486,7 +478,7 @@
     "recentChats": "Recent chats",
     "start": "Start",
     "noSourcesTitle": "No source yet",
-    "noSourcesDescription": "Make your questions fit get answers wey get source and wey you fit cite, you first need to import your notes or documents (Settings → Library import) — if not, every question go come back \"out of scope\".",
+    "noSourcesDescription": "Make your questions fit get source-based answers wey you fit cite, you first need to import your notes or documents (Settings → File upload) — if no, every question go come back \"out of scope\".",
     "importSources": "Import sources",
     "untitled": "(no title)",
     "sourceCountBadge": "{count} sources",
@@ -609,7 +601,6 @@
     "appearance": "Appearance",
     "vaults": "Vaults",
     "upload": "File upload",
-    "importLibrary": "Library import",
     "skills": "Skills",
     "memory": "Chat memory",
     "progress": "Progress",
@@ -632,9 +623,6 @@
     "advancedUploadOptions": "Advanced upload options",
     "title": "Library",
     "saveError": "Settings no save.",
-    "importNotesTitle": "Import notes from other apps",
-    "importNotesDescription": "Bring one notes library come from other note apps — one page, with preview before anything write.",
-    "importNotesOpen": "Open library import",
     "importLinksTitle": "Import from Links",
     "importLinksDescription": "Paste PDF and web page links — dem go download one by one and join di library. Links wey we don import well before go skip if you run am again.",
     "uploadSettingsTitle": "Upload Settings",
@@ -654,7 +642,9 @@
     "flattenFoldersHint": "Dis root folders demself go hide; di folders wey dey under dem go show direct for di root of di tree instead. Di paths no change — na only how di tree look dem simplify.",
     "libraryTreeTitle": "Library Tree",
     "libraryTreeDescription": "Upload, rename, or delete documents. Di chat screen own source tree (Faz 9) dey use separate, read-only copy of dis one for scope selection instead.",
-    "loadError": "Settings no load."
+    "loadError": "Settings no load.",
+    "addFilesTitle": "Add files",
+    "addFilesDescription": "PDF, Word, PowerPoint, Markdown, code… Choose one file, plenty files or one whole folder — di app go sabi which one e be."
   },
   "ProvidersSettingsPage": {
     "title": "Model Providers",

@@ -250,18 +250,9 @@
   },
   "LibraryImport": {
     "pageIntro": "把你已有的笔记带入此仓库的资料库。原始文件绝不会被改动——所有内容都会被复制，链接和附件会被转换。",
-    "appsHeading": "来自笔记应用",
     "badgeReady": "可用",
     "badgeSoon": "即将推出",
     "soonIntro": "这些应用暂不支持。在此之前，请先从应用中将笔记导出为 Markdown，再使用“Markdown 文件夹”卡片。",
-    "filesHeading": "文件和链接",
-    "filesIntro": "文档、网页、链接和 YouTube 视频会改由转换器处理。",
-    "file_upload_title": "单个文件或 YouTube",
-    "file_upload_desc": "PDF、Word、PowerPoint、Markdown……或 YouTube 视频的字幕文本。",
-    "file_batch_title": "文件夹或多个文件",
-    "file_batch_desc": "选择一个文档文件夹，一次性导入。",
-    "file_links_title": "网页链接",
-    "file_links_desc": "粘贴 PDF 和网页链接——它们会被下载并添加。",
     "source_obsidian": "Obsidian",
     "source_logseq": "Logseq",
     "source_joplin": "Joplin",
@@ -340,7 +331,8 @@
     "flavor_obsidian": "Obsidian",
     "flavor_zettlr": "Zettlr",
     "flavor_foam": "Foam",
-    "flavor_dendron": "Dendron"
+    "flavor_dendron": "Dendron",
+    "sectionTitle": "资料库导入"
   },
   "LinksImportDialog": {
     "trigger": "从链接导入",
@@ -371,8 +363,8 @@
   },
   "LibraryTree": {
     "loadError": "无法加载资料库。",
-    "empty": "资料库是空的。请上传文档，或从其他应用导入你的笔记：",
-    "emptyLink": "设置 → 资料库导入"
+    "empty": "资料库是空的。添加一个文件，或从其他应用导入你的笔记：",
+    "emptyLink": "设置 → 文件上传"
   },
   "LibraryTreeNode": {
     "needsReview": "需要检查",
@@ -382,17 +374,24 @@
     "deleteFolderDescription": "此文件夹及其中的所有内容将被永久删除。此操作无法撤销。",
     "deleteFileDescription": "此文件将被永久删除。此操作无法撤销。"
   },
-  "UploadDialog": {
-    "trigger": "+ 上传",
-    "dialogTitle": "上传文档",
-    "uploading": "正在上传…",
-    "sourceFile": "文件",
-    "sourceYoutube": "视频 (YouTube)",
-    "fileLabel": "文件（DOCX / PPTX / XLSX / HTML / EPUB / 简单 PDF）",
+  "AddFilesDialog": {
+    "trigger": "添加文件",
+    "dialogTitle": "添加文件",
+    "dialogDescription": "选择单个文件时，保存前可以先查看它的标题和领域。选择多个文件或一个文件夹则会直接导入，文件夹名称将作为领域。",
+    "pickFilesButton": "选择文件…",
+    "pickFolderButton": "选择文件夹…",
+    "scanning": "正在扫描文件夹…",
+    "scanFailed": "无法扫描该文件夹",
+    "dropHint": "…或将文件或文件夹拖放到此处",
+    "youtubeToggle": "改为添加 YouTube 视频",
     "youtubeLabel": "YouTube 链接",
     "youtubePlaceholder": "https://www.youtube.com/watch?v=...",
     "youtubeRightsConfirm": "我确认我有权使用此视频的内容。",
-    "upload": "上传",
+    "youtubeUpload": "上传",
+    "back": "返回"
+  },
+  "ImportFlow": {
+    "uploading": "正在上传…",
     "stageQueued": "排队中…",
     "stageConverting": "正在转换…",
     "stagePostprocessing": "正在处理…",
@@ -407,12 +406,8 @@
     "uploadFailed": "上传失败",
     "tooLarge": "文件过大——服务器拒绝了此大小的上传。"
   },
-  "BatchUploadDialog": {
-    "trigger": "+ 批量上传 / 文件夹",
-    "dialogTitle": "批量上传文件 / 文件夹",
-    "dialogDescription": "选择多个文件或整个文件夹；文件将逐个转换，使用 Ollama 时，每转换一个文件前会先从显存中卸载其已加载的模型。无需逐个文件确认——将应用默认设置，并在最后给出汇总。",
-    "pickFilesLabel": "文件（可多选）",
-    "pickFolderLabel": "文件夹（保留子文件夹结构）",
+  "BatchImport": {
+    "description": "选择多个文件或整个文件夹；文件将逐个转换，使用 Ollama 时，每转换一个文件前会先从显存中卸载其已加载的模型。无需逐个文件确认——将应用默认设置，并在最后给出汇总。",
     "previewSummary": "将处理 {allowed} 个文件，跳过 {skipped} 个",
     "start": "开始",
     "stop": "停止",
@@ -423,9 +418,6 @@
     "skipJunk": "系统/隐藏文件",
     "skipTooLarge": "文件过大（上限 100MB）",
     "skipUnsupported": "不支持的文件类型：{ext}",
-    "pickFolderButton": "选择文件夹…",
-    "scanning": "正在扫描文件夹…",
-    "scanFailed": "无法扫描该文件夹",
     "skipTooDeep": "文件夹嵌套过深",
     "statusConverted": "已导入",
     "statusSkipped": "已跳过",
@@ -468,7 +460,7 @@
   "HomePage": {
     "title": "Vault Chat",
     "emptyTitle": "还没有仓库",
-    "emptyDescription": "请先创建一个仓库，这样才能与你的笔记聊天。然后通过“设置 → 资料库导入”导入笔记或文档，它们的内容就能在这里被搜索。",
+    "emptyDescription": "请先创建一个仓库，这样才能与你的笔记聊天。然后通过 设置 → 文件上传 导入笔记或文档，它们的内容就可以在这里被检索。",
     "newVault": "新建仓库",
     "newVaultDialogTitle": "新建仓库",
     "vaultNameLabel": "仓库名称",
@@ -486,7 +478,7 @@
     "recentChats": "最近的聊天",
     "start": "开始",
     "noSourcesTitle": "还没有来源",
-    "noSourcesDescription": "要让你的问题得到有来源依据、可引用的回答，需要先导入笔记或文档（设置 → 资料库导入）——否则每个问题都会得到“超出范围”。",
+    "noSourcesDescription": "为了让你的问题得到基于来源、可引用的回答，需要先导入你的笔记或文档（设置 → 文件上传）——否则每个问题都会返回“超出范围”。",
     "importSources": "导入来源",
     "untitled": "（无标题）",
     "sourceCountBadge": "{count} 个来源",
@@ -609,7 +601,6 @@
     "appearance": "外观",
     "vaults": "仓库",
     "upload": "文件上传",
-    "importLibrary": "资料库导入",
     "skills": "技能",
     "memory": "聊天记忆",
     "progress": "进度",
@@ -632,9 +623,6 @@
     "advancedUploadOptions": "高级上传选项",
     "title": "资料库",
     "saveError": "无法保存设置。",
-    "importNotesTitle": "从其他应用导入笔记",
-    "importNotesDescription": "从其他笔记应用带入笔记库——集中在一个页面，写入任何内容之前都有预览。",
-    "importNotesOpen": "打开资料库导入",
     "importLinksTitle": "从链接导入",
     "importLinksDescription": "粘贴 PDF 和网页链接——它们将依次下载并添加到资料库。重新运行时，已成功导入的链接会被跳过。",
     "uploadSettingsTitle": "上传设置",
@@ -654,7 +642,9 @@
     "flattenFoldersHint": "这些根文件夹本身会被隐藏，其下的文件夹会直接显示在树的根部。路径保持不变——只是简化了树的外观。",
     "libraryTreeTitle": "资料库树",
     "libraryTreeDescription": "上传、重命名或删除文档。聊天界面自己的来源树（阶段 9）使用其单独的只读副本来选择范围。",
-    "loadError": "无法加载设置。"
+    "loadError": "无法加载设置。",
+    "addFilesTitle": "添加文件",
+    "addFilesDescription": "PDF、Word、PowerPoint、Markdown、代码…… 可选择单个文件、多个文件或整个文件夹，应用会自动判断。"
   },
   "ProvidersSettingsPage": {
     "title": "模型提供商",

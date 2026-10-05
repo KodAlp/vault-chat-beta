@@ -1,8 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import type { LibraryNode } from '$lib/types';
-	import UploadDialog from './UploadDialog.svelte';
-	import BatchUploadDialog from './BatchUploadDialog.svelte';
+	import AddFilesDialog from './AddFilesDialog.svelte';
 	import LibraryTreeNode from './LibraryTreeNode.svelte';
 	import { t } from '$lib/i18n/index.svelte';
 
@@ -23,15 +22,14 @@
 </script>
 
 <div class="library-tree">
-	<UploadDialog onImported={refresh} />
-	<BatchUploadDialog onImported={refresh} />
+	<AddFilesDialog onImported={refresh} />
 
 	{#if loadError}
 		<p class="error" role="alert">{loadError}</p>
 	{:else if tree.length === 0}
 		<p class="empty">
 			{t('LibraryTree.empty')}
-			<a href="/settings/import">{t('LibraryTree.emptyLink')}</a>
+			<a href="/settings/library#kutuphane-ice-aktar">{t('LibraryTree.emptyLink')}</a>
 		</p>
 	{:else}
 		{#each tree as node (node.path)}

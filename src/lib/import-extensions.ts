@@ -5,7 +5,7 @@
  *
  * A hand-synced DUPLICATE of $lib/server/library.ts's own copy of these same
  * three exports, not a shared source of truth re-exported from there: this
- * module exists so BatchUploadDialog.svelte (a client component) can import
+ * module exists so AddFilesDialog (a client component) can import
  * the exact lists for its pre-filter preview without pulling in a server
  * module (fs/child_process, which don't bundle for the browser) — but
  * library.ts itself can't import FROM here either, because a real (value)

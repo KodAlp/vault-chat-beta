@@ -42,7 +42,7 @@
 			 * action (kaydet/sil/generate) whose button should give immediate
 			 * feedback instead of looking unresponsive until the request
 			 * settles. Reuses the same animate-spin ring already used for
-			 * UploadDialog/ImportObsidianDialog's own status spinners, just on
+			 * SingleFileImport/ImportObsidianDialog's own status spinners, just on
 			 * border-current so it matches whatever variant's text color is. */
 			loading?: boolean;
 		};
