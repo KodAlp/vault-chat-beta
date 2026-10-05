@@ -187,6 +187,17 @@
 	--tw-exit-translate-x: calc(--value(integer) * var(--spacing));
 }
 
+/* Full-width slides (translateX 100%) for panels that travel in from the screen
+   edge (StudyPanel). Static utilities so they never collide with the numeric
+   -* ones above; callers add `!` to win over the sheet's built-in -10 variants. */
+@utility slide-in-from-right-full {
+	--tw-enter-translate-x: 100%;
+}
+
+@utility slide-out-to-right-full {
+	--tw-exit-translate-x: 100%;
+}
+
 html,
 body {
 	height: 100%;

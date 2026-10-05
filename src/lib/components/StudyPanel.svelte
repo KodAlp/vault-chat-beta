@@ -216,7 +216,7 @@
 {/snippet}
 
 <Sheet.Root bind:open>
-	<Sheet.Content class="vc-root w-[var(--panel-width)] !max-w-[var(--panel-width)] bg-[var(--bg-sidebar)] gap-0" showCloseButton={false}>
+	<Sheet.Content class="vc-root w-[var(--panel-width)] !max-w-[var(--panel-width)] bg-[var(--bg-sidebar)] gap-0 data-[side=right]:data-open:slide-in-from-right-full! data-[side=right]:data-closed:slide-out-to-right-full! data-open:[--tw-enter-opacity:1]! data-closed:[--tw-exit-opacity:1]!" showCloseButton={false}>
 		<Sheet.Header class="panel-head">
 			<Sheet.Title>{t('StudyPanel.title')}</Sheet.Title>
 			<Sheet.Close class="vc-icon-btn" aria-label={t('StudyPanel.close')}>
