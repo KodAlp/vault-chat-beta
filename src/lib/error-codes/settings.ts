@@ -64,6 +64,9 @@ export const SETTINGS_CODES = [
 	'LOCAL_ONLY',
 	'CROSS_SITE_BLOCKED',
 	'SESSION_REQUIRED',
+	// hooks.server.ts's /api/mcp/* gate (mcp-gate.ts): no token configured / missing or wrong x-vc-mcp-token.
+	'MCP_API_DISABLED',
+	'MCP_TOKEN_REQUIRED',
 	'SKILL_FILE_UNREADABLE',
 	'SKILL_ZIP_TOO_MANY_ENTRIES',
 	'SKILL_ZIP_ENTRY_PATH_INVALID',

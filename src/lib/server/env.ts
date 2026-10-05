@@ -163,3 +163,21 @@ export function secretsProtection(): string | undefined {
 export function sessionToken(): string | undefined {
 	return nonEmpty(process.env.VC_SESSION_TOKEN);
 }
+
+/**
+ * The second, separate per-launch token: lets the MCP stdio process call the
+ * running app's /api/mcp/* routes (create vault, stage an import) — and only
+ * those; hooks.server.ts's gate (mcp-gate.ts) refuses it everywhere else, and
+ * the browser session token never opens /api/mcp/*. Set by the host that knows
+ * the port: the Tauri shell (spawn_sidecar -> VC_MCP_TOKEN) or, under
+ * `npm run dev`, the Vite plugin in vite.config.ts. Both also publish it in
+ * DATA_DIR/mcp-endpoint.json (mcp-endpoint.ts) for the MCP process to read.
+ *
+ * Absent (plain `node build`, `npm test`, the MCP process itself) means the
+ * whole /api/mcp/* area answers 503 MCP_API_DISABLED. Unlike sessionToken()
+ * this is read per /api/mcp request, not captured at module load: the dev
+ * plugin sets it after this module could already have been imported.
+ */
+export function mcpToken(): string | undefined {
+	return nonEmpty(process.env.VC_MCP_TOKEN);
+}

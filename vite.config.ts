@@ -1,7 +1,10 @@
 import { sveltekit } from '@sveltejs/kit/vite';
 import tailwindcss from '@tailwindcss/vite';
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
 import path from 'node:path';
+import crypto from 'node:crypto';
+import { dataDir } from './src/lib/server/env';
+import { writeMcpEndpoint, removeMcpEndpoint } from './src/lib/server/mcp-endpoint';
 
 // src/lib/server/env.ts reads process.env directly (so it also works
 // outside Vite, for mcp/), but Vite's own .env loading only ever
@@ -17,8 +20,48 @@ try {
 	// .env is optional
 }
 
+/**
+ * `npm run dev` side of the MCP endpoint discovery (the packaged app does the same from Rust, see
+ * spawn_sidecar in src-tauri/src/lib.rs): mint a per-run MCP token, hand it to the SSR code in this same
+ * process (VC_MCP_TOKEN -> env.ts mcpToken() -> hooks.server.ts's /api/mcp/* gate), and publish
+ * DATA_DIR/mcp-endpoint.json once the port is known so the MCP stdio process can find this server.
+ * The file is removed again on close/exit, but only if it is still ours (another dev server or the
+ * desktop app may own it by then). Serve mode only: `vite build` has nothing to publish.
+ */
+function mcpEndpointPlugin(): Plugin {
+	return {
+		name: 'vault-chat-mcp-endpoint',
+		apply: 'serve',
+		configureServer(server) {
+			const http = server.httpServer;
+			if (!http) return;
+			const token = crypto.randomBytes(32).toString('hex');
+			process.env.VC_MCP_TOKEN = token;
+			const dir = dataDir();
+			const pid = process.pid;
+			const publish = () => {
+				const addr = http.address();
+				if (!addr || typeof addr === 'string') return;
+				writeMcpEndpoint(dir, {
+					url: `http://127.0.0.1:${addr.port}`,
+					mcpToken: token,
+					pid,
+					startedAt: new Date().toISOString()
+				});
+			};
+			const cleanup = () => {
+				removeMcpEndpoint(dir, pid, token);
+			};
+			if (http.listening) publish();
+			else http.once('listening', publish);
+			http.once('close', cleanup);
+			process.once('exit', cleanup);
+		}
+	};
+}
+
 export default defineConfig({
-	plugins: [tailwindcss(), sveltekit()],
+	plugins: [tailwindcss(), sveltekit(), mcpEndpointPlugin()],
 	// Pin to IPv4 loopback explicitly. Vite's default host resolution picked
 	// whichever address "localhost" resolved to first on this machine (IPv6
 	// ::1), which some Windows setups (VPN/AV breaking IPv6 loopback) can't

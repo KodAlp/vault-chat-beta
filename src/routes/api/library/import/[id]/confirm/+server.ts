@@ -9,6 +9,7 @@ import { indexLibraryFile } from '$lib/server/incrementalIndex';
 import { vaultFromId } from '$lib/server/requestVault';
 import { fail } from '$lib/server/app-error';
 import { sanitizeDomain } from '$lib/server/domain-name';
+import { readMeta, deleteMeta } from '$lib/server/pending-imports';
 
 /** params.id is never checked against resolveLibraryPath-style containment
  * before this — it goes straight into path.join(stagingDir(v), \`${id}.md\`)
@@ -26,6 +27,9 @@ export const POST: RequestHandler = async ({ params, request }) => {
 
 	const stagedPath = path.join(stagingDir(v), `${params.id}.md`);
 	if (!fs.existsSync(stagedPath)) fail('IMPORT_EXPIRED', undefined, 404);
+
+	// Imports staged by an MCP client are marked in the import log, so the library's history shows who brought them in.
+	const byMcp = readMeta(v, params.id)?.by === 'mcp';
 
 	if (!body.title?.trim()) fail('VALIDATION_REQUIRED', { field: 'title' });
 	if (!body.domain?.trim()) fail('VALIDATION_REQUIRED', { field: 'domain' });
@@ -67,7 +71,8 @@ export const POST: RequestHandler = async ({ params, request }) => {
 			sourceSha256: frontmatter.source_sha256,
 			importedAt: new Date().toISOString(),
 			status: 'indekslenmedi',
-			tool: frontmatter.converted_by ?? 'upload'
+			tool: frontmatter.converted_by ?? 'upload',
+			...(byMcp ? { by: 'mcp' } : {})
 		});
 		fail('IMPORT_INDEX_FAILED', { detail: err instanceof Error ? err.message : 'bilinmeyen hata' }, 500);
 	}
@@ -79,10 +84,12 @@ export const POST: RequestHandler = async ({ params, request }) => {
 		sourceSha256: frontmatter.source_sha256,
 		importedAt: new Date().toISOString(),
 		status: 'converted',
-		tool: frontmatter.converted_by ?? 'upload'
+		tool: frontmatter.converted_by ?? 'upload',
+		...(byMcp ? { by: 'mcp' } : {})
 	});
 
 	fs.rmSync(stagedPath, { force: true });
+	deleteMeta(v, params.id);
 
 	return json({ ok: true, path: relPath });
 };

@@ -25,6 +25,9 @@ export interface VaultRecord {
 	 * access-denied on request (a client that already knows or guesses an
 	 * id, e.g. "default", must not be able to reach it either). */
 	mcpExposed?: boolean;
+	/** Set when an MCP client created the vault (create_vault -> POST /api/mcp/vaults) so the
+	 * UI can mark it "created via MCP". Absent for every vault made in the app. */
+	createdVia?: 'mcp';
 }
 
 export interface VaultContext {
@@ -214,6 +217,19 @@ export function createVault(name: string): VaultRecord {
 	reg.vaults.push(record);
 	if (!reg.activeVaultId) reg.activeVaultId = id;
 	if (isFirstVaultEver) reg.mcpMigrationAsked = true;
+	writeRegistry(reg);
+	return record;
+}
+
+/** create_vault: an ordinary createVault() that is also opened to MCP (the client that made it must be
+ * able to use it) and stamped `createdVia: 'mcp'`. Both fields are written in one registry write. */
+export function createVaultViaMcp(name: string): VaultRecord {
+	const created = createVault(name);
+	const reg = readRegistry();
+	const record = reg.vaults.find((v) => v.id === created.id);
+	if (!record) throw new AppError('NOT_FOUND', { entity: 'vault', detail: created.id }, 404);
+	record.mcpExposed = true;
+	record.createdVia = 'mcp';
 	writeRegistry(reg);
 	return record;
 }
