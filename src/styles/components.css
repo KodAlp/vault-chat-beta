@@ -225,6 +225,10 @@
 .vc-banner.danger .dot { background: var(--danger); }
 .vc-banner.success .dot { background: var(--success); }
 .vc-banner.info .dot { background: var(--info); }
+.vc-banner.warning { background: var(--warning-soft); box-shadow: inset 0 0 0 1px var(--warning-ring); }
+.vc-banner.danger { background: var(--danger-soft); box-shadow: inset 0 0 0 1px var(--danger-ring); }
+.vc-banner.success { background: var(--success-soft); box-shadow: inset 0 0 0 1px var(--success-ring); }
+.vc-banner.info { background: var(--info-soft); box-shadow: inset 0 0 0 1px var(--info-ring); }
 
 /* ---------- Toast (generation status) ---------- */
 .vc-toast { display: flex; align-items: center; gap: var(--space-3); width: 340px; padding: var(--space-3) var(--space-4); border-radius: var(--radius-lg); background: var(--bg-elevated); box-shadow: var(--shadow-popover); }

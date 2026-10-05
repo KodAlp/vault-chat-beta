@@ -60,6 +60,19 @@
   --text-caption-2: 500 11px/13px var(--font-sans);
   --tracking-caption-2: 0.06px;
   --text-code: 400 14px/21px var(--font-mono);
+
+  /* Status tints — derived from each theme's status colour over its canvas,
+     so banners sit in the page tone (cream/sand included) instead of the
+     near-white --bg-elevated box. Resolved per theme because data-theme lives
+     on the same <html> element as these declarations. */
+  --info-soft: color-mix(in srgb, var(--info) 7%, var(--bg-canvas));
+  --warning-soft: color-mix(in srgb, var(--warning) 9%, var(--bg-canvas));
+  --danger-soft: color-mix(in srgb, var(--danger) 8%, var(--bg-canvas));
+  --success-soft: color-mix(in srgb, var(--success) 8%, var(--bg-canvas));
+  --info-ring: color-mix(in oklab, var(--info) 22%, transparent);
+  --warning-ring: color-mix(in oklab, var(--warning) 26%, transparent);
+  --danger-ring: color-mix(in oklab, var(--danger) 24%, transparent);
+  --success-ring: color-mix(in oklab, var(--success) 24%, transparent);
 }
 
 :root, [data-theme="light"] {

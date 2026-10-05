@@ -255,7 +255,6 @@
 
 	.vc-banner {
 		align-items: center;
-		background: var(--bg-elevated);
 	}
 
 	.vc-banner .dot {
