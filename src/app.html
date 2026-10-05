@@ -22,7 +22,17 @@
 					background: #000000;
 				}
 			}
+			/* Set by static/theme-boot.js before first paint: each theme's
+			   --bg-canvas on <html> (not body, so app.css's layered body rule
+			   still wins once loaded) — a reload shows the chosen theme's tone
+			   instead of a black or white flash. Keep in sync with tokens.css. */
+			html[data-theme="light"] { background: #fcfbf8; }
+			html[data-theme="dark"] { background: #000000; }
+			html[data-theme="cream"] { background: #f6efe0; }
+			html[data-theme="sand"] { background: #f1e6cf; }
+			html[data-theme="forest"] { background: #0f1d1c; }
 		</style>
+		<script src="%sveltekit.assets%/theme-boot.js"></script>
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">
