@@ -4,8 +4,8 @@
 
 # Vault Chat — Kurulum
 
-Yerel, Docker'sız bir SvelteKit sohbet uygulaması. Kasandaki notlar üzerinde
-RAG yapar; yerel bir model sunucusuyla (Ollama önerilir ama zorunlu değil —
+Yerel, Docker'sız bir SvelteKit çalışma/sohbet uygulaması. Kendi kütüphanendeki
+notlar ve belgeler üzerinde RAG yapar; yerel bir model sunucusuyla (Ollama önerilir ama zorunlu değil —
 LM Studio, llama.cpp, vLLM, Jan gibi herhangi bir OpenAI uyumlu sunucu da olur)
 ya da isteğe bağlı bir bulut sağlayıcıyla konuşur. Tek Node süreci,
 `localhost`'a bağlı.
@@ -76,8 +76,9 @@ ayarlanır.
 `PUBLIC_VAULT_NAME` yalnızca "default" vault ilk oluşturulurken (bkz.
 `migrateVaults.ts`) varsayılan görünen ad olarak okunur — sonraki
 çalıştırmalarda etkisi yok. Kaynaklar her zaman uygulamanın kendi
-görüntüleyicisinde açılır; Obsidian yalnızca **Ayarlar → Kütüphane →
-Obsidian'dan İçe Aktar** sırasında devreye girer.
+görüntüleyicisinde açılır. Obsidian, Logseq, Joplin, Zettlr gibi not
+uygulamalarından gelen Markdown klasörleri yalnızca birer içe aktarma
+kaynağıdır (**Ayarlar → Kütüphane**).
 
 `data/providers.json` bu repoyla birlikte gelen bir **tohum** dosya — yeni
 bir kurulum bulut sağlayıcılardan (DeepSeek, Google AI Studio) bazılarını
@@ -108,11 +109,11 @@ kaydeder.
   `LIBRARY_PATH`/`INDEX_DB_PATH`/`STUDY_DB_PATH` içeriğini otomatik olarak
   `data/vaults/default/` altına taşır ve "default" adında bir vault kaydeder;
   eski sohbetlerin hepsi bu vault'a bağlanır. **`VAULT_PATH` bilerek
-  taşınmaz** — Faz 5 öncesi mimaride bu, canlı Obsidian vault'unu yerinde
-  gösteren bir işaretçiydi (hiç kopyalanmazdı), app'e ait bir klasör değil.
+  taşınmaz** — Faz 5 öncesi mimaride bu, canlı bir Markdown not klasörünü
+  (örn. bir Obsidian vault'unu) yerinde gösteren bir işaretçiydi (hiç kopyalanmazdı), app'e ait bir klasör değil.
   Sadece `VAULT_PATH` ayarlıysa (bu repodaki gibi — `data/library` boş,
   gerçek içerik `VAULT_PATH=..`'den yerinde indeksleniyor) "default" vault
-  **boş** başlar; içeriği Ayarlar → Kütüphane → "Obsidian'dan İçe Aktar" ile
+  **boş** başlar; içeriği Ayarlar → Kütüphane'deki içe aktarma ile
   elle (yeniden) içe aktarman gerekir. Bunu elle, önizlemeli çalıştırmak
   istersen:
   ```bash
@@ -209,7 +210,7 @@ vault'un adını belirler, ek vault'lar sonradan uygulama içi Ayarlar → Vault
 oluşturulur.
 
 İlk açılışta bir klasör seçmen istenir (native klasör seçici) — bu, "default"
-vault'un görünen adı için Obsidian tarafındaki isimle eşleşsin diye sorulur,
+vault'un görünen adı için sorulur,
 kütüphane içeriği oraya BAĞLANMAZ (kütüphane her zaman uygulamaya ait bir
 klasördür, bkz. yukarıdaki "Vault'lar" bölümü). Seçim `config.json`'a yazılır
 ve sonraki açılışlarda tekrar sorulmaz. Bu adı sonradan değiştirmek için
@@ -257,7 +258,7 @@ Dikkat edilecek noktalar:
 - **Vault içerikleri elle taşınır.** `data/vaults.json` kendi yollarını her
   okumada yeniden türettiği için taşınabilir, ama her vault'un asıl içeriği
   (`data/vaults/<id>/library/`, `index.db`, `study.db`) ayrıca kopyalanmalı —
-  ya da hedef makinede "Obsidian'dan İçe Aktar" + `npm run index` ile
+  ya da hedef makinede içe aktarma + `npm run index` ile
   yeniden oluşturulmalı.
 - **Masaüstü paketinde PDF/doküman/YouTube içe aktarma, Python + markitdown
   hedef makinede kuruluysa çalışır.** `ingest/` klasörü kurulum paketine

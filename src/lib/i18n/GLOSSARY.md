@@ -5,7 +5,7 @@ Kararlar bir kez verilir, her dilde aynı uygulanır. Kaynak katalog `messages/e
 
 ## Hiç çevrilmeyenler
 
-- Ürün / servis adları: Vault Chat, Vault Agent Toolkit, Obsidian, Ollama, MCP,
+- Ürün / servis adları: Vault Chat, Obsidian (yalnız içe aktarma kaynağı adı olarak), Ollama, MCP,
   Claude, DeepSeek, OpenAI, Azure, Gemini, Kimi, Tauri, Python, Pandoc, docling,
   MinerU, YouTube, GitHub, Hugging Face, Whisper, WebView2.
 - Biçim ve teknoloji adları: PDF, DOCX, PPTX, XLSX, EPUB, HTML, Markdown, LaTeX,
@@ -20,7 +20,7 @@ Kararlar bir kez verilir, her dilde aynı uygulanır. Kaynak katalog `messages/e
 
 | Kavram (en) | Karar | Gerekçe |
 |---|---|---|
-| vault | Obsidian'ın o dildeki resmî karşılığı (de *Tresor*, es *bóveda*, fr *coffre*, pt *cofre*, ru *хранилище*, ja *保管庫*, zh-CN *仓库*). Resmî karşılık yoksa *vault*. | Kullanıcılar kavramı Obsidian'dan tanıyor. |
+| vault | Dilde yerleşik, kişisel not koleksiyonu anlamındaki karşılık (de *Tresor*, es *bóveda*, fr *coffre*, pt *cofre*, ru *хранилище*, ja *保管庫*, zh-CN *仓库*). Yerleşik karşılık yoksa *vault*. | Kavram kullanıcıların not uygulamalarından aşina olduğu "kasa / depo" fikridir; uygulama adı (Vault Chat) ile tutarlı kalır. |
 | library | "kütüphane"nin doğal karşılığı | Vault içindeki not ağacı. |
 | source | doğal karşılık (kaynak) | Sohbette alıntılanan not. |
 | embedding / embedding model | Dilde yerleşik teknik terim (zh 嵌入, ja 埋め込み); yoksa *embedding* | Teknik kullanıcı kitlesi. |

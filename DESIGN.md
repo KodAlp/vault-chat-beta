@@ -174,7 +174,7 @@ motion:
 
 # Tasarım dili
 
-Vault Chat, kişisel bir Obsidian kasasının üzerinde çalışan yerel bir RAG sohbet ve çalışma uygulamasıdır. Arayüz Apple Human Interface Guidelines (HIG) mantığıyla kurulur: **içerik önce gelir, arayüz geri çekilir**. Yazılı yanıt ürünün kendisidir; çerçeve (kenar çubuğu, araç çubuğu, paneller) sakin ve akromatiktir. Renk yalnızca tek bir yerde konuşur: safran vurgu.
+Vault Chat, kişisel bir not/belge kütüphanesinin üzerinde çalışan yerel bir RAG sohbet ve çalışma uygulamasıdır. Arayüz Apple Human Interface Guidelines (HIG) mantığıyla kurulur: **içerik önce gelir, arayüz geri çekilir**. Yazılı yanıt ürünün kendisidir; çerçeve (kenar çubuğu, araç çubuğu, paneller) sakin ve akromatiktir. Renk yalnızca tek bir yerde konuşur: safran vurgu.
 
 Görsel dil iki referanstan gelir: açık tema “kâğıt üstünde grafit mürekkep” (ChatGPT, ref 5; sıcak tonlar ref 2 Lovable'dan), koyu tema “parlayan stüdyo konsolu” (Linearity, ref 1): siyah boşluk, beyaz ince çizgiler ve tek bir safran kıvılcımı (renk ref 3 Amrit Palace'tan).
 
