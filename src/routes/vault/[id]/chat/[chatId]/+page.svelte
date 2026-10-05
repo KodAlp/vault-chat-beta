@@ -110,7 +110,7 @@
 </script>
 
 <svelte:head>
-	<title>{data.vaultName} — Vault Agent Toolkit</title>
+	<title>{data.vaultName} — Vault Chat</title>
 </svelte:head>
 
 <div class="chat-screen vc-root">

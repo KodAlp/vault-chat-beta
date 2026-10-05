@@ -250,7 +250,7 @@
   },
   "ImportObsidianDialog": {
     "trigger": "इम्पोर्ट",
-    "dialogTitle": "Obsidian vault इम्पोर्ट करें",
+    "dialogTitle": "Markdown फ़ोल्डर इम्पोर्ट करें (Obsidian, Zettlr…)",
     "dialogDescription": "एकतरफ़ा कॉपी — स्रोत vault में कभी कुछ नहीं लिखा जाता। दोबारा इम्पोर्ट करने पर अपरिवर्तित नोट्स छोड़ दिए जाते हैं।",
     "sourcePathLabel": "स्रोत vault का पथ",
     "sourcePathPlaceholder": "जैसे: C:\\Users\\...\\MyVault",
@@ -295,7 +295,7 @@
   },
   "LibraryTree": {
     "loadError": "लाइब्रेरी लोड नहीं हो सकी।",
-    "empty": "लाइब्रेरी खाली है। कोई दस्तावेज़ अपलोड करें, या सेटिंग्स → लाइब्रेरी से Obsidian vault इम्पोर्ट करें।"
+    "empty": "लाइब्रेरी खाली है। कोई दस्तावेज़ अपलोड करें, या सेटिंग्स → लाइब्रेरी से अपने नोट्स इम्पोर्ट करें।"
   },
   "LibraryTreeNode": {
     "needsReview": "समीक्षा चाहिए",
@@ -389,9 +389,9 @@
     "continue": "जारी रखें"
   },
   "HomePage": {
-    "title": "Vault Agent Toolkit",
+    "title": "Vault Chat",
     "emptyTitle": "अभी कोई vault नहीं",
-    "emptyDescription": "अपने नोट्स से चैट करने के लिए पहले एक vault बनाएँ — अपना Obsidian vault जोड़ते ही उसकी सामग्री यहाँ खोजने योग्य हो जाती है।",
+    "emptyDescription": "अपने नोट्स से चैट करने के लिए पहले एक vault बनाएँ — अपने नोट्स या दस्तावेज़ इम्पोर्ट करते ही उनकी सामग्री यहाँ खोजने योग्य हो जाती है।",
     "newVault": "नया vault",
     "newVaultDialogTitle": "नया vault",
     "vaultNameLabel": "Vault का नाम",
@@ -409,7 +409,7 @@
     "recentChats": "हाल की चैट",
     "start": "शुरू करें",
     "noSourcesTitle": "अभी कोई स्रोत नहीं",
-    "noSourcesDescription": "आपके प्रश्नों को स्रोत-आधारित, उद्धृत करने योग्य उत्तर मिलें, इसके लिए पहले अपने Obsidian vault से नोट्स इम्पोर्ट करने होंगे — वरना हर प्रश्न \"दायरे से बाहर\" लौटता है।",
+    "noSourcesDescription": "आपके प्रश्नों को स्रोत-आधारित, उद्धृत करने योग्य उत्तर मिलें, इसके लिए पहले अपने नोट्स या दस्तावेज़ इम्पोर्ट करने होंगे — वरना हर प्रश्न \"दायरे से बाहर\" लौटता है।",
     "importSources": "स्रोत इम्पोर्ट करें",
     "untitled": "(शीर्षकहीन)",
     "sourceCountBadge": "{count} स्रोत",
@@ -497,7 +497,7 @@
     "vaultFolder": "Vault फ़ोल्डर",
     "vaultFolderPlaceholder": "अभी चुना नहीं गया",
     "choose": "चुनें…",
-    "obsidianVaultName": "Vault का नाम",
+    "defaultVaultName": "Vault का नाम",
     "vaultSaved": "सहेजा गया — अगली बार खुलने पर लागू होगा।",
     "vaultSaveFailed": "सहेजा नहीं जा सका।",
     "home": "होम",
@@ -510,7 +510,7 @@
     "vaultsCardDescription": "कई लाइब्रेरी के बीच बदलें, vault बनाएँ या हटाएँ।",
     "activeVaultLabel": "वर्तमान में सक्रिय",
     "manageVaults": "Vault प्रबंधित करें",
-    "libraryCardDescription": "Obsidian vault से इम्पोर्ट करें, अपलोड सेटिंग्स।",
+    "libraryCardDescription": "अपने नोट्स इम्पोर्ट करें, अपलोड सेटिंग्स।",
     "manageLibrary": "लाइब्रेरी प्रबंधित करें",
     "skillsCardDescription": "चैट, क्विज़ और फ़्लैशकार्ड जनरेशन को अनुकूलित करें।",
     "manageSkills": "स्किल प्रबंधित करें",
@@ -522,7 +522,7 @@
     "manageMemory": "नोट्स प्रबंधित करें",
     "deleteModelConfirmTitle": "\"{name}\" हटाएँ?",
     "deleteModelConfirmDescription": "यह मॉडल Ollama से हमेशा के लिए हटा दिया जाएगा। डाउनलोड की गई फ़ाइलें डिस्क से मिटा दी जाती हैं।",
-    "obsidianVaultNamePlaceholder": "जैसे: गणित"
+    "defaultVaultNamePlaceholder": "जैसे: गणित"
   },
   "SettingsNav": {
     "title": "सेटिंग्स",
@@ -554,8 +554,8 @@
     "advancedUploadOptions": "उन्नत अपलोड विकल्प",
     "title": "लाइब्रेरी",
     "saveError": "सेटिंग्स सहेजी नहीं जा सकीं।",
-    "importObsidianTitle": "Obsidian से इम्पोर्ट",
-    "importObsidianDescription": "Obsidian vault की एकतरफ़ा कॉपी बनाता है (स्रोत में कभी कुछ नहीं लिखा जाता)। Wikilink सापेक्ष markdown लिंक में बदल दिए जाते हैं, अटैचमेंट कॉपी होते हैं, और जिन नोट्स में frontmatter फ़ील्ड नहीं हैं उन्हें डिफ़ॉल्ट मान और समीक्षा बैज मिलता है।",
+    "importObsidianTitle": "Markdown फ़ोल्डर इम्पोर्ट करें (Obsidian, Zettlr…)",
+    "importObsidianDescription": "Markdown नोट्स फ़ोल्डर (जैसे Obsidian vault) की एकतरफ़ा कॉपी बनाता है (स्रोत में कभी कुछ नहीं लिखा जाता)। Wikilink सापेक्ष markdown लिंक में बदल दिए जाते हैं, अटैचमेंट कॉपी होते हैं, और जिन नोट्स में frontmatter फ़ील्ड नहीं हैं उन्हें डिफ़ॉल्ट मान और समीक्षा बैज मिलता है।",
     "importLinksTitle": "लिंक से इम्पोर्ट",
     "importLinksDescription": "PDF और वेब पेज लिंक पेस्ट करें — वे क्रम से डाउनलोड होकर लाइब्रेरी में जुड़ जाते हैं। जो लिंक पहले सफलतापूर्वक इम्पोर्ट हो चुके हैं, दोबारा चलाने पर छोड़ दिए जाते हैं।",
     "uploadSettingsTitle": "अपलोड सेटिंग्स",
@@ -1008,7 +1008,7 @@
     "FILE_EXISTS": "इस नाम की फ़ाइल पहले से मौजूद है",
     "IMPORT_EXPIRED": "लंबित इम्पोर्ट नहीं मिला (हो सकता है समय समाप्त हो गया हो)",
     "IMPORT_INDEX_FAILED": "फ़ाइल सहेजी गई पर इंडेक्स नहीं हो सकी, इसलिए उसे वापस स्टेजिंग में ले जाया गया",
-    "OBSIDIAN_SOURCE_INVALID": "स्रोत vault का पथ नहीं मिला, या वह फ़ोल्डर नहीं है",
+    "IMPORT_SOURCE_INVALID": "स्रोत vault का पथ नहीं मिला, या वह फ़ोल्डर नहीं है",
     "ATTACHMENT_TYPE_MISMATCH": "फ़ाइल की सामग्री अपेक्षित प्रकार से मेल नहीं खाती",
     "IMPORT_DUPLICATE_CONTENT": "लगता है यह फ़ाइल (वही सामग्री) पहले इम्पोर्ट हो चुकी है — आप फिर भी जारी रख सकते हैं।",
     "SCAN_ROOT_INVALID": "फ़ोल्डर का पथ अमान्य है, नहीं मिला, या स्कैन नहीं किया जा सकता",

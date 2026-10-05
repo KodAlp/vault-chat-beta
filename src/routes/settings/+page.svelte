@@ -34,7 +34,7 @@
 </script>
 
 <svelte:head>
-	<title>{t('SettingsNav.appearance')} — Vault Agent Toolkit</title>
+	<title>{t('SettingsNav.appearance')} — Vault Chat</title>
 </svelte:head>
 
 <div class="flex flex-col gap-6">

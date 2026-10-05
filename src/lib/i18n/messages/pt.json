@@ -258,7 +258,7 @@
   },
   "ImportObsidianDialog": {
     "trigger": "Importar",
-    "dialogTitle": "Importar cofre do Obsidian",
+    "dialogTitle": "Importar pasta Markdown (Obsidian, Zettlr…)",
     "dialogDescription": "Cópia unidirecional: o cofre de origem nunca é modificado. Notas sem alterações são ignoradas ao importar novamente.",
     "sourcePathLabel": "Caminho do cofre de origem",
     "sourcePathPlaceholder": "ex.: C:\\Users\\...\\MeuCofre",
@@ -306,7 +306,7 @@
   },
   "LibraryTree": {
     "loadError": "Não foi possível carregar a biblioteca.",
-    "empty": "A biblioteca está vazia. Envie um documento ou importe um cofre do Obsidian em Configurações → Biblioteca."
+    "empty": "A biblioteca está vazia. Envie um documento ou importe as suas notas em Configurações → Biblioteca."
   },
   "LibraryTreeNode": {
     "needsReview": "Requer revisão",
@@ -400,9 +400,9 @@
     "continue": "Continuar"
   },
   "HomePage": {
-    "title": "Vault Agent Toolkit",
+    "title": "Vault Chat",
     "emptyTitle": "Ainda não há cofres",
-    "emptyDescription": "Crie primeiro um cofre para conversar com as suas notas: depois que você conectar o seu cofre do Obsidian, o conteúdo dele poderá ser pesquisado aqui.",
+    "emptyDescription": "Crie primeiro um cofre para conversar com as suas notas: depois que você importar as suas notas ou documentos, o conteúdo deles poderá ser pesquisado aqui.",
     "newVault": "Novo cofre",
     "newVaultDialogTitle": "Novo cofre",
     "vaultNameLabel": "Nome do cofre",
@@ -420,7 +420,7 @@
     "recentChats": "Chats recentes",
     "start": "Iniciar",
     "noSourcesTitle": "Ainda não há fontes",
-    "noSourcesDescription": "Para que as suas perguntas recebam respostas fundamentadas em fontes e com citações, primeiro você precisa importar notas do seu cofre do Obsidian; caso contrário, toda pergunta voltará como \"fora do escopo\".",
+    "noSourcesDescription": "Para que as suas perguntas recebam respostas fundamentadas em fontes e com citações, primeiro você precisa importar as suas notas ou documentos; caso contrário, toda pergunta voltará como \"fora do escopo\".",
     "importSources": "Importar fontes",
     "untitled": "(sem título)",
     "sourceCountBadge": "{count} fontes",
@@ -509,7 +509,7 @@
     "vaultFolder": "Pasta do cofre",
     "vaultFolderPlaceholder": "Ainda não selecionada",
     "choose": "Escolher…",
-    "obsidianVaultName": "Nome do cofre",
+    "defaultVaultName": "Nome do cofre",
     "vaultSaved": "Salvo: será aplicado na próxima inicialização.",
     "vaultSaveFailed": "Não foi possível salvar.",
     "home": "Início",
@@ -522,7 +522,7 @@
     "vaultsCardDescription": "Alterne entre várias bibliotecas, crie ou exclua um cofre.",
     "activeVaultLabel": "Ativo no momento",
     "manageVaults": "Gerenciar cofres",
-    "libraryCardDescription": "Importe de um cofre do Obsidian, configurações de envio.",
+    "libraryCardDescription": "Importe as suas notas, configurações de envio.",
     "manageLibrary": "Gerenciar biblioteca",
     "skillsCardDescription": "Personalize o chat e a geração de quizzes e flashcards.",
     "manageSkills": "Gerenciar habilidades",
@@ -534,7 +534,7 @@
     "manageMemory": "Gerenciar notas",
     "deleteModelConfirmTitle": "Excluir \"{name}\"?",
     "deleteModelConfirmDescription": "Este modelo será removido permanentemente do Ollama. Os arquivos baixados são apagados do disco.",
-    "obsidianVaultNamePlaceholder": "ex.: Matemática"
+    "defaultVaultNamePlaceholder": "ex.: Matemática"
   },
   "SettingsNav": {
     "title": "Configurações",
@@ -566,8 +566,8 @@
     "advancedUploadOptions": "Opções avançadas de envio",
     "title": "Biblioteca",
     "saveError": "Não foi possível salvar as configurações.",
-    "importObsidianTitle": "Importar do Obsidian",
-    "importObsidianDescription": "Copia um cofre do Obsidian em mão única (a origem nunca é modificada). Os wikilinks são convertidos em links Markdown relativos, os anexos são copiados e as notas sem campos de frontmatter recebem um valor padrão e um selo de revisão.",
+    "importObsidianTitle": "Importar pasta Markdown (Obsidian, Zettlr…)",
+    "importObsidianDescription": "Copia uma pasta de notas Markdown (por exemplo, um cofre do Obsidian) em mão única (a origem nunca é modificada). Os wikilinks são convertidos em links Markdown relativos, os anexos são copiados e as notas sem campos de frontmatter recebem um valor padrão e um selo de revisão.",
     "importLinksTitle": "Importar de links",
     "importLinksDescription": "Cole links de PDFs e páginas da web: eles são baixados em sequência e adicionados à biblioteca. Links já importados com sucesso são ignorados em uma nova execução.",
     "uploadSettingsTitle": "Configurações de envio",
@@ -1023,7 +1023,7 @@
     "FILE_EXISTS": "Já existe um arquivo com este nome",
     "IMPORT_EXPIRED": "Importação pendente não encontrada (pode ter expirado)",
     "IMPORT_INDEX_FAILED": "O arquivo foi salvo, mas não pôde ser indexado, então foi movido de volta para a área de preparação",
-    "OBSIDIAN_SOURCE_INVALID": "O caminho do cofre de origem não foi encontrado ou não é uma pasta",
+    "IMPORT_SOURCE_INVALID": "O caminho do cofre de origem não foi encontrado ou não é uma pasta",
     "ATTACHMENT_TYPE_MISMATCH": "O conteúdo do arquivo não corresponde ao tipo esperado",
     "IMPORT_DUPLICATE_CONTENT": "Parece que este arquivo (mesmo conteúdo) já foi importado antes: você ainda pode continuar.",
     "SCAN_ROOT_INVALID": "O caminho da pasta é inválido, não foi encontrado ou não pode ser verificado",

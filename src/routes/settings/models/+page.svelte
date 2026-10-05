@@ -195,7 +195,7 @@
 </script>
 
 <svelte:head>
-	<title>{t('SettingsNav.models')} — Vault Agent Toolkit</title>
+	<title>{t('SettingsNav.models')} — Vault Chat</title>
 </svelte:head>
 
 <div class="flex flex-col gap-6">

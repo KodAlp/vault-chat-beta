@@ -114,3 +114,32 @@ for (const file of catalogFiles) {
 		assert.deepEqual(problems, []);
 	});
 }
+
+/** The product is no longer positioned as Obsidian-based: Obsidian survives only as an import source's name. */
+test('no catalog mentions Obsidian or "Vault Agent Toolkit" outside the import-source keys', () => {
+	const dir = path.join(path.dirname(fileURLToPath(import.meta.url)), 'messages');
+	const isImportSourceKey = (k: string) => k.startsWith('ImportObsidianDialog.') || k.startsWith('LibrarySettingsPage.importObsidian');
+	const offenders: string[] = [];
+	for (const f of fs.readdirSync(dir).filter((n) => n.endsWith('.json'))) {
+		const cat = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8')) as Record<string, unknown>;
+		const walk = (o: Record<string, unknown>, prefix: string) => {
+			for (const [k, v] of Object.entries(o)) {
+				if (typeof v === 'object' && v !== null) walk(v as Record<string, unknown>, `${prefix}${k}.`);
+				else if (typeof v === 'string' && /obsidian|Vault Agent Toolkit/i.test(v) && !isImportSourceKey(`${prefix}${k}`)) offenders.push(`${f}: ${prefix}${k}`);
+			}
+		};
+		walk(cat, '');
+	}
+	assert.deepEqual(offenders, []);
+});
+
+test('no .svelte file contains the old product name "Vault Agent Toolkit"', () => {
+	const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
+	const walk = (dir: string): string[] =>
+		fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+			const p = path.join(dir, e.name);
+			return e.isDirectory() ? walk(p) : e.name.endsWith('.svelte') ? [p] : [];
+		});
+	const bad = walk(root).filter((f) => fs.readFileSync(f, 'utf8').includes('Vault Agent Toolkit')).map((f) => path.relative(root, f));
+	assert.deepEqual(bad, []);
+});

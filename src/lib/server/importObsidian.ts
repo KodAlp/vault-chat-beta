@@ -130,7 +130,7 @@ export async function importObsidianVault(
 ): Promise<ImportSummary> {
 	const resolvedSource = path.resolve(expandHome(sourcePath));
 	if (!fs.existsSync(resolvedSource) || !fs.statSync(resolvedSource).isDirectory()) {
-		throw new AppError('OBSIDIAN_SOURCE_INVALID');
+		throw new AppError('IMPORT_SOURCE_INVALID');
 	}
 
 	const allFiles = walkAll(resolvedSource);

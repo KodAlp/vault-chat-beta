@@ -250,7 +250,7 @@
   },
   "ImportObsidianDialog": {
     "trigger": "导入",
-    "dialogTitle": "导入 Obsidian 仓库",
+    "dialogTitle": "导入 Markdown 文件夹（Obsidian、Zettlr…）",
     "dialogDescription": "单向复制——不会对源仓库进行任何写入。重新导入时会跳过未更改的笔记。",
     "sourcePathLabel": "源仓库路径",
     "sourcePathPlaceholder": "例如：C:\\Users\\...\\MyVault",
@@ -295,7 +295,7 @@
   },
   "LibraryTree": {
     "loadError": "无法加载资料库。",
-    "empty": "资料库为空。请上传文档，或在“设置 → 资料库”中导入 Obsidian 仓库。"
+    "empty": "资料库为空。请上传文档，或在“设置 → 资料库”中导入你的笔记。"
   },
   "LibraryTreeNode": {
     "needsReview": "需要检查",
@@ -389,9 +389,9 @@
     "continue": "继续"
   },
   "HomePage": {
-    "title": "Vault Agent Toolkit",
+    "title": "Vault Chat",
     "emptyTitle": "还没有仓库",
-    "emptyDescription": "请先创建一个仓库，才能与你的笔记聊天——连接 Obsidian 仓库后，其内容即可在此搜索。",
+    "emptyDescription": "请先创建一个仓库，才能与你的笔记聊天——导入笔记或文档后，其内容即可在此搜索。",
     "newVault": "新建仓库",
     "newVaultDialogTitle": "新建仓库",
     "vaultNameLabel": "仓库名称",
@@ -409,7 +409,7 @@
     "recentChats": "最近的聊天",
     "start": "开始",
     "noSourcesTitle": "还没有来源",
-    "noSourcesDescription": "要让你的提问得到有来源依据、可引用的回答，首先需要从 Obsidian 仓库导入笔记——否则每个问题都会返回“超出范围”。",
+    "noSourcesDescription": "要让你的提问得到有来源依据、可引用的回答，首先需要导入你的笔记或文档——否则每个问题都会返回“超出范围”。",
     "importSources": "导入来源",
     "untitled": "（无标题）",
     "sourceCountBadge": "{count} 个来源",
@@ -497,7 +497,7 @@
     "vaultFolder": "仓库文件夹",
     "vaultFolderPlaceholder": "尚未选择",
     "choose": "选择…",
-    "obsidianVaultName": "仓库名称",
+    "defaultVaultName": "仓库名称",
     "vaultSaved": "已保存——将在下次启动时生效。",
     "vaultSaveFailed": "无法保存。",
     "home": "主页",
@@ -510,7 +510,7 @@
     "vaultsCardDescription": "在多个资料库之间切换，创建或删除仓库。",
     "activeVaultLabel": "当前使用",
     "manageVaults": "管理仓库",
-    "libraryCardDescription": "从 Obsidian 仓库导入，上传设置。",
+    "libraryCardDescription": "导入你的笔记，上传设置。",
     "manageLibrary": "管理资料库",
     "skillsCardDescription": "自定义聊天、测验和记忆卡片的生成。",
     "manageSkills": "管理技能",
@@ -522,7 +522,7 @@
     "manageMemory": "管理笔记",
     "deleteModelConfirmTitle": "删除“{name}”？",
     "deleteModelConfirmDescription": "此模型将从 Ollama 中永久移除，已下载的文件会从磁盘上删除。",
-    "obsidianVaultNamePlaceholder": "例如：数学"
+    "defaultVaultNamePlaceholder": "例如：数学"
   },
   "SettingsNav": {
     "title": "设置",
@@ -554,8 +554,8 @@
     "advancedUploadOptions": "高级上传选项",
     "title": "资料库",
     "saveError": "无法保存设置。",
-    "importObsidianTitle": "从 Obsidian 导入",
-    "importObsidianDescription": "单向复制 Obsidian 仓库（不会对源仓库进行任何写入）。维基链接会转换为相对 Markdown 链接，附件会一并复制，缺少 frontmatter 字段的笔记会获得默认值并带有待检查标记。",
+    "importObsidianTitle": "导入 Markdown 文件夹（Obsidian、Zettlr…）",
+    "importObsidianDescription": "单向复制 Markdown 笔记文件夹，例如 Obsidian 仓库（不会对源仓库进行任何写入）。维基链接会转换为相对 Markdown 链接，附件会一并复制，缺少 frontmatter 字段的笔记会获得默认值并带有待检查标记。",
     "importLinksTitle": "从链接导入",
     "importLinksDescription": "粘贴 PDF 和网页链接——它们将依次下载并添加到资料库。重新运行时，已成功导入的链接会被跳过。",
     "uploadSettingsTitle": "上传设置",
@@ -1008,7 +1008,7 @@
     "FILE_EXISTS": "已存在同名文件",
     "IMPORT_EXPIRED": "未找到待处理的导入（可能已过期）",
     "IMPORT_INDEX_FAILED": "文件已保存，但无法建立索引，因此已移回暂存区",
-    "OBSIDIAN_SOURCE_INVALID": "未找到源仓库路径，或它不是文件夹",
+    "IMPORT_SOURCE_INVALID": "未找到源仓库路径，或它不是文件夹",
     "ATTACHMENT_TYPE_MISMATCH": "文件内容与预期类型不符",
     "IMPORT_DUPLICATE_CONTENT": "此文件（内容相同）似乎之前已导入过——你仍可继续。",
     "SCAN_ROOT_INVALID": "文件夹路径无效、未找到或无法扫描",

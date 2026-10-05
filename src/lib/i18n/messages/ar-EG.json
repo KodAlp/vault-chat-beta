@@ -287,7 +287,7 @@
   },
   "ImportObsidianDialog": {
     "trigger": "استيراد",
-    "dialogTitle": "استيراد مخزن Obsidian",
+    "dialogTitle": "استيراد مجلد Markdown (Obsidian وZettlr…)",
     "dialogDescription": "نسخ في اتجاه واحد — المخزن المصدر عمره ما بيتكتب فيه. الملاحظات اللي ماتغيّرتش بتتخطّى لما تعيد الاستيراد.",
     "sourcePathLabel": "مسار المخزن المصدر",
     "sourcePathPlaceholder": "مثال: C:\\Users\\...\\MyVault",
@@ -347,7 +347,7 @@
   },
   "LibraryTree": {
     "loadError": "تعذّر تحميل المكتبة.",
-    "empty": "المكتبة فارغة. ارفع مستندًا، أو استورد مخزن Obsidian من الإعدادات → المكتبة."
+    "empty": "المكتبة فارغة. ارفع مستندًا، أو استورد ملاحظاتك من الإعدادات → المكتبة."
   },
   "LibraryTreeNode": {
     "needsReview": "يحتاج مراجعة",
@@ -441,9 +441,9 @@
     "continue": "متابعة"
   },
   "HomePage": {
-    "title": "Vault Agent Toolkit",
+    "title": "Vault Chat",
     "emptyTitle": "مفيش مخازن لسه",
-    "emptyDescription": "أنشئ مخزن الأول عشان تقدر تدردش مع ملاحظاتك — أول ما تربط مخزن Obsidian بتاعك، محتواه يبقى قابل للبحث هنا.",
+    "emptyDescription": "أنشئ مخزن الأول عشان تقدر تدردش مع ملاحظاتك — أول ما تستورد ملاحظاتك أو مستنداتك، محتواها يبقى قابل للبحث هنا.",
     "newVault": "مخزن جديد",
     "newVaultDialogTitle": "مخزن جديد",
     "vaultNameLabel": "اسم المخزن",
@@ -461,7 +461,7 @@
     "recentChats": "المحادثات الأخيرة",
     "start": "ابدأ",
     "noSourcesTitle": "مفيش مصادر لسه",
-    "noSourcesDescription": "عشان أسئلتك تاخد إجابات موثّقة بالمصادر وينفع تستشهد بيها، لازم الأول تستورد ملاحظات من مخزن Obsidian — وإلا كل سؤال هيرجع بـ \"برّه النطاق\".",
+    "noSourcesDescription": "عشان أسئلتك تاخد إجابات موثّقة بالمصادر وينفع تستشهد بيها، لازم الأول تستورد ملاحظاتك أو مستنداتك — وإلا كل سؤال هيرجع بـ \"برّه النطاق\".",
     "importSources": "استيراد المصادر",
     "untitled": "(بلا عنوان)",
     "sourceCountBadge": "{count} مصدر",
@@ -554,7 +554,7 @@
     "vaultFolder": "مجلد المخزن",
     "vaultFolderPlaceholder": "لم يُحدَّد بعد",
     "choose": "اختيار…",
-    "obsidianVaultName": "اسم المخزن",
+    "defaultVaultName": "اسم المخزن",
     "vaultSaved": "اتحفظ — هيتطبّق عند التشغيل الجاي.",
     "vaultSaveFailed": "تعذّر الحفظ.",
     "home": "الرئيسية",
@@ -567,7 +567,7 @@
     "vaultsCardDescription": "التبديل بين عدة مكتبات، وإنشاء مخزن أو حذفه.",
     "activeVaultLabel": "النشط حاليًا",
     "manageVaults": "إدارة المخازن",
-    "libraryCardDescription": "الاستيراد من مخزن Obsidian، وإعدادات الرفع.",
+    "libraryCardDescription": "استيراد ملاحظاتك، وإعدادات الرفع.",
     "manageLibrary": "إدارة المكتبة",
     "skillsCardDescription": "خصّص الدردشة وتوليد الاختبارات والبطاقات التعليمية.",
     "manageSkills": "إدارة المهارات",
@@ -579,7 +579,7 @@
     "manageMemory": "إدارة الملاحظات",
     "deleteModelConfirmTitle": "حذف \"{name}\"؟",
     "deleteModelConfirmDescription": "سيُزال هذا النموذج نهائيًا من Ollama. وتُحذف الملفات المنزَّلة من القرص.",
-    "obsidianVaultNamePlaceholder": "مثال: الرياضيات"
+    "defaultVaultNamePlaceholder": "مثال: الرياضيات"
   },
   "SettingsNav": {
     "title": "الإعدادات",
@@ -611,8 +611,8 @@
     "advancedUploadOptions": "خيارات الرفع المتقدمة",
     "title": "المكتبة",
     "saveError": "تعذّر حفظ الإعدادات.",
-    "importObsidianTitle": "الاستيراد من Obsidian",
-    "importObsidianDescription": "ينسخ مخزن Obsidian باتجاه واحد (لا يُكتب إلى المصدر أبدًا). تُحوَّل الروابط الداخلية (wikilinks) إلى روابط Markdown نسبية، وتُنسخ المرفقات، وتحصل الملاحظات الناقصة الحقول في frontmatter على قيمة افتراضية مع شارة مراجعة.",
+    "importObsidianTitle": "استيراد مجلد Markdown (Obsidian وZettlr…)",
+    "importObsidianDescription": "ينسخ مجلد ملاحظات Markdown (مثل مخزن Obsidian) باتجاه واحد (لا يُكتب إلى المصدر أبدًا). تُحوَّل الروابط الداخلية (wikilinks) إلى روابط Markdown نسبية، وتُنسخ المرفقات، وتحصل الملاحظات الناقصة الحقول في frontmatter على قيمة افتراضية مع شارة مراجعة.",
     "importLinksTitle": "الاستيراد من روابط",
     "importLinksDescription": "الصق روابط PDF وصفحات الويب — تُنزَّل بالتتابع وتُضاف إلى المكتبة. تُتخطّى الروابط المستوردة بنجاح سابقًا عند إعادة التشغيل.",
     "uploadSettingsTitle": "إعدادات الرفع",
@@ -1100,7 +1100,7 @@
     "FILE_EXISTS": "فيه ملف بنفس الاسم موجود بالفعل",
     "IMPORT_EXPIRED": "لم يُعثر على الاستيراد المعلّق (ربما انتهت صلاحيته)",
     "IMPORT_INDEX_FAILED": "حُفظ الملف لكن تعذّرت فهرسته، فأُعيد إلى منطقة الانتظار",
-    "OBSIDIAN_SOURCE_INVALID": "لم يُعثر على مسار المخزن المصدر، أو ليس مجلدًا",
+    "IMPORT_SOURCE_INVALID": "لم يُعثر على مسار المخزن المصدر، أو ليس مجلدًا",
     "ATTACHMENT_TYPE_MISMATCH": "محتوى الملف لا يطابق النوع المتوقع",
     "IMPORT_DUPLICATE_CONTENT": "يبدو أن هذا الملف (بالمحتوى نفسه) استُورد من قبل — ما زال بإمكانك المتابعة.",
     "SCAN_ROOT_INVALID": "مسار المجلد غير صالح أو لم يُعثر عليه أو لا يمكن فحصه",

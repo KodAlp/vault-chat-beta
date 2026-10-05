@@ -250,7 +250,7 @@
   },
   "ImportObsidianDialog": {
     "trigger": "امپورٹ",
-    "dialogTitle": "Obsidian والٹ امپورٹ کریں",
+    "dialogTitle": "Markdown فولڈر امپورٹ کریں (Obsidian, Zettlr…)",
     "dialogDescription": "یک طرفہ کاپی — ماخذ والٹ میں کبھی کچھ نہیں لکھا جاتا۔ دوبارہ امپورٹ پر غیر تبدیل شدہ نوٹس چھوڑ دیے جاتے ہیں۔",
     "sourcePathLabel": "ماخذ والٹ کا راستہ",
     "sourcePathPlaceholder": "مثلاً C:\\Users\\...\\MyVault",
@@ -295,7 +295,7 @@
   },
   "LibraryTree": {
     "loadError": "لائبریری لوڈ نہیں ہو سکی۔",
-    "empty": "لائبریری خالی ہے۔ کوئی دستاویز اپ لوڈ کریں، یا ترتیبات ← لائبریری سے Obsidian والٹ امپورٹ کریں۔"
+    "empty": "لائبریری خالی ہے۔ کوئی دستاویز اپ لوڈ کریں، یا ترتیبات ← لائبریری سے اپنے نوٹس امپورٹ کریں۔"
   },
   "LibraryTreeNode": {
     "needsReview": "جائزہ درکار",
@@ -389,9 +389,9 @@
     "continue": "جاری رکھیں"
   },
   "HomePage": {
-    "title": "Vault Agent Toolkit",
+    "title": "Vault Chat",
     "emptyTitle": "ابھی کوئی والٹ نہیں",
-    "emptyDescription": "پہلے ایک والٹ بنائیں تاکہ اپنے نوٹس سے چیٹ کر سکیں — اپنا Obsidian والٹ جوڑتے ہی اس کا مواد یہاں تلاش کے قابل ہو جاتا ہے۔",
+    "emptyDescription": "پہلے ایک والٹ بنائیں تاکہ اپنے نوٹس سے چیٹ کر سکیں — اپنے نوٹس یا دستاویزات امپورٹ کرتے ہی ان کا مواد یہاں تلاش کے قابل ہو جاتا ہے۔",
     "newVault": "نیا والٹ",
     "newVaultDialogTitle": "نیا والٹ",
     "vaultNameLabel": "والٹ کا نام",
@@ -409,7 +409,7 @@
     "recentChats": "حالیہ چیٹس",
     "start": "شروع کریں",
     "noSourcesTitle": "ابھی کوئی ماخذ نہیں",
-    "noSourcesDescription": "آپ کے سوالات کو ماخذ پر مبنی، حوالہ دار جواب ملنے کے لیے پہلے اپنے Obsidian والٹ سے نوٹس امپورٹ کرنا ہوں گے — ورنہ ہر سوال “دائرے سے باہر” آتا ہے۔",
+    "noSourcesDescription": "آپ کے سوالات کو ماخذ پر مبنی، حوالہ دار جواب ملنے کے لیے پہلے اپنے نوٹس یا دستاویزات امپورٹ کرنا ہوں گے — ورنہ ہر سوال “دائرے سے باہر” آتا ہے۔",
     "importSources": "ماخذ امپورٹ کریں",
     "untitled": "(بلا عنوان)",
     "sourceCountBadge": "{count} ماخذ",
@@ -497,7 +497,7 @@
     "vaultFolder": "والٹ فولڈر",
     "vaultFolderPlaceholder": "ابھی منتخب نہیں",
     "choose": "چنیں…",
-    "obsidianVaultName": "والٹ کا نام",
+    "defaultVaultName": "والٹ کا نام",
     "vaultSaved": "محفوظ ہو گیا — اگلی بار شروع ہونے پر لاگو ہوگا۔",
     "vaultSaveFailed": "محفوظ نہیں ہو سکا۔",
     "home": "ہوم",
@@ -510,7 +510,7 @@
     "vaultsCardDescription": "متعدد لائبریریوں کے درمیان سوئچ کریں، والٹ بنائیں یا حذف کریں۔",
     "activeVaultLabel": "فی الحال فعال",
     "manageVaults": "والٹس کا انتظام",
-    "libraryCardDescription": "Obsidian والٹ سے امپورٹ کریں، اپ لوڈ کی ترتیبات۔",
+    "libraryCardDescription": "اپنے نوٹس امپورٹ کریں، اپ لوڈ کی ترتیبات۔",
     "manageLibrary": "لائبریری کا انتظام",
     "skillsCardDescription": "چیٹ، کوئز اور فلیش کارڈ کی تخلیق کو اپنی مرضی کے مطابق ڈھالیں۔",
     "manageSkills": "مہارتوں کا انتظام",
@@ -522,7 +522,7 @@
     "manageMemory": "نوٹس کا انتظام",
     "deleteModelConfirmTitle": "“{name}” حذف کریں؟",
     "deleteModelConfirmDescription": "یہ ماڈل Ollama سے مستقل طور پر ہٹا دیا جائے گا۔ ڈاؤن لوڈ شدہ فائلیں ڈسک سے حذف ہو جاتی ہیں۔",
-    "obsidianVaultNamePlaceholder": "مثلاً ریاضی"
+    "defaultVaultNamePlaceholder": "مثلاً ریاضی"
   },
   "SettingsNav": {
     "title": "ترتیبات",
@@ -554,8 +554,8 @@
     "advancedUploadOptions": "اپ لوڈ کے اعلیٰ اختیارات",
     "title": "لائبریری",
     "saveError": "ترتیبات محفوظ نہیں ہو سکیں۔",
-    "importObsidianTitle": "Obsidian سے امپورٹ",
-    "importObsidianDescription": "Obsidian والٹ کو یک طرفہ کاپی کرتا ہے (ماخذ میں کبھی کچھ نہیں لکھا جاتا)۔ Wikilinks کو متعلقہ markdown لنکس میں بدلا جاتا ہے، منسلکات کاپی ہوتے ہیں، اور جن نوٹس میں frontmatter فیلڈز نہ ہوں انہیں ڈیفالٹ قدر اور جائزے کا بیج ملتا ہے۔",
+    "importObsidianTitle": "Markdown فولڈر امپورٹ کریں (Obsidian, Zettlr…)",
+    "importObsidianDescription": "Markdown نوٹس فولڈر (مثلاً Obsidian والٹ) کو یک طرفہ کاپی کرتا ہے (ماخذ میں کبھی کچھ نہیں لکھا جاتا)۔ Wikilinks کو متعلقہ markdown لنکس میں بدلا جاتا ہے، منسلکات کاپی ہوتے ہیں، اور جن نوٹس میں frontmatter فیلڈز نہ ہوں انہیں ڈیفالٹ قدر اور جائزے کا بیج ملتا ہے۔",
     "importLinksTitle": "لنکس سے امپورٹ",
     "importLinksDescription": "PDF اور ویب صفحات کے لنکس پیسٹ کریں — وہ ترتیب وار ڈاؤن لوڈ ہو کر لائبریری میں شامل ہوتے ہیں۔ جو لنکس پہلے کامیابی سے امپورٹ ہو چکے وہ دوبارہ چلانے پر چھوڑ دیے جاتے ہیں۔",
     "uploadSettingsTitle": "اپ لوڈ کی ترتیبات",
@@ -1008,7 +1008,7 @@
     "FILE_EXISTS": "اس نام کی فائل پہلے سے موجود ہے",
     "IMPORT_EXPIRED": "زیر التوا امپورٹ نہیں ملا (ہو سکتا ہے میعاد ختم ہو گئی ہو)",
     "IMPORT_INDEX_FAILED": "فائل محفوظ ہو گئی مگر انڈیکس نہیں ہو سکی، اس لیے اسے واپس اسٹیجنگ میں منتقل کر دیا گیا",
-    "OBSIDIAN_SOURCE_INVALID": "ماخذ والٹ کا راستہ نہیں ملا، یا وہ فولڈر نہیں ہے",
+    "IMPORT_SOURCE_INVALID": "ماخذ والٹ کا راستہ نہیں ملا، یا وہ فولڈر نہیں ہے",
     "ATTACHMENT_TYPE_MISMATCH": "فائل کا مواد متوقع قسم سے مطابقت نہیں رکھتا",
     "IMPORT_DUPLICATE_CONTENT": "لگتا ہے یہ فائل (وہی مواد) پہلے امپورٹ ہو چکی ہے — آپ پھر بھی جاری رکھ سکتے ہیں۔",
     "SCAN_ROOT_INVALID": "فولڈر کا راستہ غلط ہے، نہیں ملا، یا اسکین نہیں ہو سکتا",

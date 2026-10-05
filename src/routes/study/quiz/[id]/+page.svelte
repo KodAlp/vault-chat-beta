@@ -209,7 +209,7 @@
 </script>
 
 <svelte:head>
-	<title>{quiz?.title ?? t('QuizStudyPage.defaultTitle')} — Vault Agent Toolkit</title>
+	<title>{quiz?.title ?? t('QuizStudyPage.defaultTitle')} — Vault Chat</title>
 </svelte:head>
 
 <div class="quiz-screen">

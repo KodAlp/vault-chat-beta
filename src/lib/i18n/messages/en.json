@@ -270,7 +270,7 @@
 
 	"ImportObsidianDialog": {
 		"trigger": "Import",
-		"dialogTitle": "Import Obsidian Vault",
+		"dialogTitle": "Import Markdown folder (Obsidian, Zettlr…)",
 		"dialogDescription": "One-way copy — the source vault is never written to. Unchanged notes are skipped on re-import.",
 		"sourcePathLabel": "Source vault path",
 		"sourcePathPlaceholder": "e.g. C:\\Users\\...\\MyVault",
@@ -317,7 +317,7 @@
 
 	"LibraryTree": {
 		"loadError": "Couldn't load the library.",
-		"empty": "The library is empty. Upload a document, or import an Obsidian vault from Settings → Library."
+		"empty": "The library is empty. Upload a document, or import your notes from Settings → Library."
 	},
 
 	"LibraryTreeNode": {
@@ -418,9 +418,9 @@
 	},
 
 	"HomePage": {
-		"title": "Vault Agent Toolkit",
+		"title": "Vault Chat",
 		"emptyTitle": "No vaults yet",
-		"emptyDescription": "Create a vault first so you can chat with your notes — once you connect your Obsidian vault, its contents become searchable here.",
+		"emptyDescription": "Create a vault first so you can chat with your notes — once you import your notes or documents, their contents become searchable here.",
 		"newVault": "New vault",
 		"newVaultDialogTitle": "New vault",
 		"vaultNameLabel": "Vault name",
@@ -439,7 +439,7 @@
 		"recentChats": "Recent chats",
 		"start": "Start",
 		"noSourcesTitle": "No sources yet",
-		"noSourcesDescription": "For your questions to get source-grounded, citable answers, you first need to import notes from your Obsidian vault — otherwise every question comes back \"out of scope\".",
+		"noSourcesDescription": "For your questions to get source-grounded, citable answers, you first need to import your notes or documents — otherwise every question comes back \"out of scope\".",
 		"importSources": "Import sources",
 		"untitled": "(untitled)",
 		"sourceCountBadge": "{count} sources",
@@ -534,7 +534,7 @@
 		"vaultFolder": "Vault folder",
 		"vaultFolderPlaceholder": "Not selected yet",
 		"choose": "Choose…",
-		"obsidianVaultName": "Vault name",
+		"defaultVaultName": "Vault name",
 		"vaultSaved": "Saved — applied on next launch.",
 		"vaultSaveFailed": "Couldn't save.",
 		"home": "Home",
@@ -547,7 +547,7 @@
 		"vaultsCardDescription": "Switch between multiple libraries, create or delete a vault.",
 		"activeVaultLabel": "Currently active",
 		"manageVaults": "Manage vaults",
-		"libraryCardDescription": "Import from an Obsidian vault, upload settings.",
+		"libraryCardDescription": "Import your notes, upload settings.",
 		"manageLibrary": "Manage library",
 		"skillsCardDescription": "Customize chat, quiz, and flashcard generation.",
 		"manageSkills": "Manage skills",
@@ -559,7 +559,7 @@
 		"manageMemory": "Manage notes",
 		"deleteModelConfirmTitle": "Delete \"{name}\"?",
 		"deleteModelConfirmDescription": "This model will be permanently removed from Ollama. Downloaded files are deleted from disk.",
-		"obsidianVaultNamePlaceholder": "e.g. Math"
+		"defaultVaultNamePlaceholder": "e.g. Math"
 	},
 
 	"SettingsNav": {
@@ -595,8 +595,8 @@
 		"advancedUploadOptions": "Advanced upload options",
 		"title": "Library",
 		"saveError": "Couldn't save settings.",
-		"importObsidianTitle": "Import from Obsidian",
-		"importObsidianDescription": "Copies an Obsidian vault one-way (the source is never written to). Wikilinks are converted to relative markdown links, attachments are copied, and notes missing frontmatter fields get a default value plus a review badge.",
+		"importObsidianTitle": "Import Markdown folder (Obsidian, Zettlr…)",
+		"importObsidianDescription": "Copies a Markdown notes folder (e.g. an Obsidian vault) one-way (the source is never written to). Wikilinks are converted to relative markdown links, attachments are copied, and notes missing frontmatter fields get a default value plus a review badge.",
 		"importLinksTitle": "Import from Links",
 		"importLinksDescription": "Paste PDF and web page links — they're downloaded in sequence and added to the library. Links already imported successfully are skipped on a re-run.",
 		"uploadSettingsTitle": "Upload Settings",
@@ -1065,7 +1065,7 @@
 		"FILE_EXISTS": "A file with this name already exists",
 		"IMPORT_EXPIRED": "Pending import not found (it may have expired)",
 		"IMPORT_INDEX_FAILED": "The file was saved but couldn't be indexed, so it was moved back to staging",
-		"OBSIDIAN_SOURCE_INVALID": "Source vault path not found, or it isn't a folder",
+		"IMPORT_SOURCE_INVALID": "Source vault path not found, or it isn't a folder",
 		"ATTACHMENT_TYPE_MISMATCH": "The file's content doesn't match the expected type",
 		"IMPORT_DUPLICATE_CONTENT": "This file (same content) appears to have been imported before — you can still continue.",
 		"SCAN_ROOT_INVALID": "The folder path is invalid, was not found, or cannot be scanned",

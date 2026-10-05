@@ -234,7 +234,7 @@ ${t('SkillsSettingsPage.templateBody')}
 </script>
 
 <svelte:head>
-	<title>{t('SkillsSettingsPage.title')} — Vault Agent Toolkit</title>
+	<title>{t('SkillsSettingsPage.title')} — Vault Chat</title>
 </svelte:head>
 
 <div>

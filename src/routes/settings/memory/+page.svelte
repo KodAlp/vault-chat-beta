@@ -120,7 +120,7 @@
 </script>
 
 <svelte:head>
-	<title>{t('MemorySettingsPage.title')} — Vault Agent Toolkit</title>
+	<title>{t('MemorySettingsPage.title')} — Vault Chat</title>
 </svelte:head>
 
 <div>

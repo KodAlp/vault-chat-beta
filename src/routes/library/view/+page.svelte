@@ -351,7 +351,7 @@
 </script>
 
 <svelte:head>
-	<title>{filePath || t('LibraryViewPage.fallbackTitle')} — Vault Agent Toolkit</title>
+	<title>{filePath || t('LibraryViewPage.fallbackTitle')} — Vault Chat</title>
 </svelte:head>
 
 <svelte:window onkeydown={onWindowKeydown} onbeforeunload={onBeforeUnload} />

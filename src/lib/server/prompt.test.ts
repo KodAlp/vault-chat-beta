@@ -204,3 +204,11 @@ async function withVaultAsync(fn: (v: VaultContext) => Promise<void>): Promise<v
 		fs.rmSync(dir, { recursive: true, force: true });
 	}
 }
+
+test('the core prompt does not position the app as Obsidian-based', () => {
+	for (const mode of ['match', 'fixed'] as const) {
+		const text = `${coreIntro(['Türkçe', 'English'], mode)}\n${CORE_INVARIANTS}`;
+		assert.ok(!/obsidian/i.test(text), 'core prompt mentions Obsidian');
+		assert.ok(!/ikinci beyin/i.test(text), 'core prompt mentions "ikinci beyin"');
+	}
+});

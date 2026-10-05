@@ -93,7 +93,7 @@
 </script>
 
 <svelte:head>
-	<title>{deck?.title ?? t('SlidesStudyPage.defaultTitle')} — Vault Agent Toolkit</title>
+	<title>{deck?.title ?? t('SlidesStudyPage.defaultTitle')} — Vault Chat</title>
 </svelte:head>
 
 <div class="slides-screen">
