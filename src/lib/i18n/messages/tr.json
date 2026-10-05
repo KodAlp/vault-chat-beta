@@ -1182,6 +1182,13 @@
 		"savedRestartNote": "Kaydedildi. Sunucu çalışıyor; değişiklik bir sonraki başlatmada geçerli olur."
 	},
 
+	"WindowTitleBar": {
+		"minimize": "Küçült",
+		"maximize": "Ekranı kapla",
+		"restore": "Önceki boyuta getir",
+		"close": "Kapat"
+	},
+
 	"ChatSidebar": {
 		"ariaLabel": "Sohbet geçmişi",
 		"newChat": "Yeni sohbet",

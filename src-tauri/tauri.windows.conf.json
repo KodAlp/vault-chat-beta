@@ -1,0 +1,17 @@
+{
+  "app": {
+    "windows": [
+      {
+        "title": "Vault Chat",
+        "width": 1280,
+        "height": 840,
+        "minWidth": 640,
+        "minHeight": 480,
+        "resizable": true,
+        "fullscreen": false,
+        "visible": false,
+        "decorations": false
+      }
+    ]
+  }
+}

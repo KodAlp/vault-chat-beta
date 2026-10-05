@@ -6,6 +6,7 @@
 	import { page } from '$app/state';
 	import { isTauri } from '@tauri-apps/api/core';
 	import { getCurrentWindow } from '@tauri-apps/api/window';
+	import WindowTitleBar from '$lib/components/WindowTitleBar.svelte';
 	import { settings } from '$lib/settings.svelte';
 	import { welcomeAlreadyShown } from '$lib/welcome';
 	import { quizGeneration, dismissQuizGeneration, cancelQuizGeneration } from '$lib/quiz-generation.svelte';
@@ -94,6 +95,63 @@
 		if (settings.showWelcomeScreen && page.url.pathname !== '/welcome' && !welcomeAlreadyShown()) {
 			goto('/welcome', { replaceState: true });
 		}
+	});
+
+	// Custom title bar (Windows desktop only — tauri.windows.conf.json turns the native decorations
+	// off there) + F11 fullscreen. Set in onMount, not derived at init, so SSR and the first client
+	// render agree (no bar) and the Tauri check only runs in the real window.
+	let showTitleBar = $state(false);
+	let fullscreen = $state(false);
+
+	onMount(() => {
+		if (!isTauri()) return;
+		showTitleBar = /Windows/i.test(navigator.userAgent);
+		const win = getCurrentWindow();
+		let disposed = false;
+		let unlisten: (() => void) | undefined;
+		const refreshFullscreen = () => {
+			win
+				.isFullscreen()
+				.then((f) => {
+					if (!disposed) fullscreen = f;
+				})
+				.catch(() => {});
+		};
+		refreshFullscreen();
+		win
+			.onResized(refreshFullscreen)
+			.then((fn) => {
+				if (disposed) fn();
+				else unlisten = fn;
+			})
+			.catch(() => {});
+
+		const onKeydown = async (e: KeyboardEvent) => {
+			if (e.key === 'F11') {
+				e.preventDefault();
+				try {
+					const next = !(await win.isFullscreen());
+					await win.setFullscreen(next);
+					fullscreen = next;
+				} catch {
+					// Best-effort — a failed toggle just leaves the window as it was.
+				}
+			} else if (e.key === 'Escape' && !e.defaultPrevented && fullscreen) {
+				// Only when nothing else (a dialog, a menu) already consumed the Escape.
+				try {
+					await win.setFullscreen(false);
+					fullscreen = false;
+				} catch {
+					// see above
+				}
+			}
+		};
+		window.addEventListener('keydown', onKeydown);
+		return () => {
+			disposed = true;
+			unlisten?.();
+			window.removeEventListener('keydown', onKeydown);
+		};
 	});
 
 	// Desktop dev builds only (`desktop:dev` loads the Vite devUrl directly,
@@ -186,6 +244,9 @@
      viewport, precisely so a banner pushing down from here reserves real
      space instead of overlapping it). -->
 <div class="app-shell">
+	{#if showTitleBar && !fullscreen}
+		<WindowTitleBar />
+	{/if}
 	<LocalServerBanner />
 	<PythonStatusBanner />
 	<div class="app-content">
