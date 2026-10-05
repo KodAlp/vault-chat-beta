@@ -1,6 +1,7 @@
 import { sveltekit } from '@sveltejs/kit/vite';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
+import path from 'node:path';
 
 // src/lib/server/env.ts reads process.env directly (so it also works
 // outside Vite, for mcp/), but Vite's own .env loading only ever
@@ -30,7 +31,33 @@ export default defineConfig({
 		// write was triggering a full browser reload ("page reload
 		// data/providers.json") instead of just the intended API response.
 		watch: {
-			ignored: ['**/data/**']
+			// .claude/worktrees/ holds full repo copies (each with node_modules)
+			// when parallel work sessions are open — watching them only costs
+			// file handles and CPU, nothing there is ever part of this app.
+			// Anchored to this project's own root: a bare '**/.claude/**' would also
+			// match every file of a worktree that itself lives under .claude/.
+			ignored: ['**/data/**', path.join(process.cwd(), '.claude', '**').replaceAll('\\', '/')]
 		}
+	},
+	// Without this, Vite only discovered a client dependency (most often a
+	// single @lucide/svelte icon) the first time a page or panel using it was
+	// opened, re-bundled, and then FULL-RELOADED the page ("optimized
+	// dependencies changed. reloading") — measured 4 reloads in 4 clicks on
+	// a fresh cache. In the desktop dev window that read as the screen going
+	// black and restarting whenever a not-yet-visited screen was opened.
+	// Crawling every client source file up front finds them all at startup.
+	optimizeDeps: {
+		entries: [
+			'src/routes/**/+*.{svelte,ts}',
+			'src/lib/**/*.{svelte,ts}',
+			'!src/**/*.test.ts',
+			// A type-only declaration file aborts the whole scan (esbuild:
+			// "The constant ... must be initialized"), silently bringing the
+			// per-page reloads back.
+			'!src/**/*.d.ts',
+			'!src/**/+server.ts',
+			'!src/**/*.server.ts',
+			'!src/lib/server/**'
+		]
 	}
 });
