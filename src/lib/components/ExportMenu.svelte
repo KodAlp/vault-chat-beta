@@ -152,7 +152,7 @@
 <div aria-live="polite" aria-atomic="true">
 	{#if errorMessage}
 		<div
-			class="fixed bottom-5 left-5 z-[200] flex max-w-[min(360px,80vw)] items-center gap-2.5 rounded-full border border-destructive bg-background px-4 py-2.5 text-sm text-destructive break-all"
+			class="fixed bottom-5 start-5 z-[200] flex max-w-[min(360px,80vw)] items-center gap-2.5 rounded-full border border-destructive bg-background px-4 py-2.5 text-sm text-destructive break-all"
 			style="box-shadow: 0 2px 8px var(--accent-glow)"
 			role="alert"
 			transition:motionFly={{ y: 12 }}
@@ -181,7 +181,7 @@
 <div aria-live="polite" aria-atomic="true">
 	{#if successMessage}
 		<div
-			class="fixed bottom-5 left-5 z-[200] flex max-w-[min(360px,80vw)] items-center gap-2.5 rounded-full border bg-background px-4 py-2.5 text-sm break-all"
+			class="fixed bottom-5 start-5 z-[200] flex max-w-[min(360px,80vw)] items-center gap-2.5 rounded-full border bg-background px-4 py-2.5 text-sm break-all"
 			style="box-shadow: 0 2px 8px var(--accent-glow)"
 			transition:motionFly={{ y: 12 }}
 		>

@@ -26,11 +26,23 @@ test('an invalid locale is dropped, a valid one is kept', () => {
 	useTmpDataDir();
 	// @ts-expect-error — intentionally passing a bad value, this is exactly
 	// what an untrusted PUT body could contain.
-	writeUiPrefs({ locale: 'fr' });
+	writeUiPrefs({ locale: 'xx' });
 	assert.deepEqual(readUiPrefs(), {});
 
 	writeUiPrefs({ locale: 'tr' });
 	assert.deepEqual(readUiPrefs(), { locale: 'tr' });
+});
+
+test('every catalog language is accepted, including regional codes like ar-EG', () => {
+	useTmpDataDir();
+	writeUiPrefs({ locale: 'de' });
+	assert.deepEqual(readUiPrefs(), { locale: 'de' });
+	writeUiPrefs({ locale: 'ar-EG' });
+	assert.deepEqual(readUiPrefs(), { locale: 'ar-EG' });
+	// Codes are case-sensitive as listed in LOCALES; an unknown spelling is dropped and the stored value survives.
+	// @ts-expect-error — intentionally invalid
+	writeUiPrefs({ locale: 'ar-eg' });
+	assert.deepEqual(readUiPrefs(), { locale: 'ar-EG' });
 });
 
 test('an invalid theme is dropped but other valid settings fields survive', () => {

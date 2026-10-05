@@ -484,6 +484,11 @@
 		"restored": "Version restored."
 	},
 
+	"LanguageCombobox": {
+		"searchPlaceholder": "Search languages…",
+		"noResults": "No language found"
+	},
+
 	"SettingsPage": {
 		"themeTitle": "Theme",
 		"themeSystem": "System",

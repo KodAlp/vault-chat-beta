@@ -213,7 +213,7 @@
 </svelte:head>
 
 <div class="quiz-screen">
-	<a class="home-link" href={backHref}><ArrowLeftIcon size={16} strokeWidth={1.75} aria-hidden="true" /> {t('Common.geriDon')}</a>
+	<a class="home-link" href={backHref}><ArrowLeftIcon class="rtl-flip" size={16} strokeWidth={1.75} aria-hidden="true" /> {t('Common.geriDon')}</a>
 
 	<!-- See study/report/[id]/+page.svelte for why every one of these view
 	     routes gets a boundary: the phase is switched off 'loading' before its
@@ -439,7 +439,7 @@
 	}
 
 	.status.error.inline {
-		text-align: left;
+		text-align: start;
 		margin: 0 0 1rem;
 		font: var(--text-footnote);
 	}
@@ -514,7 +514,7 @@
 		appearance: none;
 		border: 0;
 		width: 100%;
-		text-align: left;
+		text-align: start;
 		color: var(--label);
 		transition: background-color var(--motion-fast) var(--motion-easing);
 	}

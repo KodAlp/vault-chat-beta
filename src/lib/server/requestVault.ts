@@ -1,5 +1,12 @@
-import { error } from '@sveltejs/kit';
 import { resolveVault, type VaultContext } from './vaults';
+import { AppError, fail } from './app-error';
+
+/** resolveVault throws a coded AppError (VAULT_NONE / NOT_FOUND{vault}); keep its code so the client can localize it
+ * (a bare error(404, message) used to drop the code and show a hard-coded Turkish sentence). */
+function vaultNotFound(e: unknown): never {
+	if (e instanceof AppError) fail(e.code, e.params, 404);
+	fail('NOT_FOUND', { entity: 'vault' }, 404);
+}
 
 /**
  * Bridge until Faz 9's /vault/[id]/... routes exist: reads an explicit
@@ -13,7 +20,7 @@ export function vaultFromUrl(url: URL): VaultContext {
 	try {
 		return resolveVault(id);
 	} catch (e) {
-		error(404, e instanceof Error ? e.message : 'Vault bulunamadı');
+		vaultNotFound(e);
 	}
 }
 
@@ -23,6 +30,6 @@ export function vaultFromId(id?: string | null): VaultContext {
 	try {
 		return resolveVault(id);
 	} catch (e) {
-		error(404, e instanceof Error ? e.message : 'Vault bulunamadı');
+		vaultNotFound(e);
 	}
 }

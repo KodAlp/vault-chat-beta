@@ -392,7 +392,7 @@
 					{t('BatchUploadDialog.previewSummary', { allowed: allowedCount, skipped: skippedCount })}
 				</p>
 				{#if previewTargets.length > 0}
-					<ul class="max-h-28 list-disc space-y-0.5 overflow-y-auto pl-5 text-xs text-muted-foreground">
+					<ul class="max-h-28 list-disc space-y-0.5 overflow-y-auto ps-5 text-xs text-muted-foreground">
 						{#each previewTargets as target (target)}
 							<li class="overflow-hidden text-ellipsis whitespace-nowrap">{target}</li>
 						{/each}

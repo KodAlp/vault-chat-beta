@@ -333,7 +333,7 @@
 						<div class="flex flex-col gap-1.5 rounded-md border p-2 text-sm">
 							<span class="overflow-hidden text-ellipsis whitespace-nowrap text-xs text-muted-foreground">{item.fileName}</span>
 							{#if item.warnings && item.warnings.length > 0}
-								<ul class="list-disc space-y-0.5 pl-4 text-xs text-destructive">
+								<ul class="list-disc space-y-0.5 ps-4 text-xs text-destructive">
 									{#each item.warnings as warning (warning)}
 										<li>{localizeError({ code: warning, message: warning })}</li>
 									{/each}

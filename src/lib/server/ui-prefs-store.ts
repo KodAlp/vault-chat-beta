@@ -2,6 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { dataDir } from './env';
 import type { Settings } from '$lib/settings.svelte';
+// Relative, not $lib: this module also runs under plain tsx --test where the alias isn't resolved.
+import { isLocale, type Locale } from '../i18n/locales';
 
 /**
  * Desktop launches spawn the Node sidecar with PORT=0 (src-tauri/src/lib.rs's
@@ -28,7 +30,7 @@ import type { Settings } from '$lib/settings.svelte';
 const FILE_NAME = 'ui-prefs.json';
 
 export type UiPrefs = {
-	locale?: 'tr' | 'en';
+	locale?: Locale;
 	settings?: Partial<Settings>;
 	/**
 	 * Aşama 2b — "has this install already been walked through
@@ -59,8 +61,8 @@ function isNonEmptyShortString(v: unknown): v is string {
 	return typeof v === 'string' && v.length > 0 && v.length <= MAX_STRING_LEN;
 }
 
-function sanitizeLocale(raw: unknown): 'tr' | 'en' | undefined {
-	return raw === 'tr' || raw === 'en' ? raw : undefined;
+function sanitizeLocale(raw: unknown): Locale | undefined {
+	return isLocale(raw) ? raw : undefined;
 }
 
 /** Strict boolean only — anything else (a string "true", a number, null) is

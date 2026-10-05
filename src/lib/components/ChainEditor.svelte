@@ -333,7 +333,8 @@
 		align-items: center;
 		gap: 6px;
 		height: 28px;
-		padding: 0 2px 0 6px;
+		padding-block: 0;
+		padding-inline: 6px 2px;
 		border-radius: var(--radius-md);
 		background: var(--fill-control);
 		font: 500 13px/18px var(--font-sans);
@@ -383,7 +384,7 @@
 	}
 	.chain-menu {
 		flex: none;
-		margin-left: auto;
+		margin-inline-start: auto;
 	}
 	.chain-menu[aria-expanded='true'] {
 		background: var(--fill-pressed);
@@ -476,7 +477,7 @@
 		background: transparent;
 		color: var(--label);
 		font: 400 15px/20px var(--font-sans);
-		text-align: left;
+		text-align: start;
 		cursor: pointer;
 	}
 	.opt-name {

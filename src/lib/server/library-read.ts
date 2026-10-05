@@ -6,6 +6,19 @@ import type { VaultContext } from './vaults';
 
 const META_DIR = '_meta';
 
+/**
+ * A plain Error carrying the registry code, not an AppError: this module is also loaded by the MCP server, which must
+ * not drag @sveltejs/kit in. toCodedError (app-error.ts) recognises a string `code` that is in the registry, so HTTP
+ * routes still render the localized ServerErrors.PATH_OUTSIDE_LIBRARY; the message is a stable English log string.
+ */
+export class PathOutsideLibraryError extends Error {
+	readonly code = 'PATH_OUTSIDE_LIBRARY' as const;
+	constructor() {
+		super('Path escapes the library root');
+		this.name = 'PathOutsideLibraryError';
+	}
+}
+
 const DEFAULT_SETTINGS: LibrarySettings = {
 	keepOriginals: false,
 	allowedLanguages: ['Türkçe'],
@@ -46,7 +59,7 @@ export function resolveLibraryPath(v: VaultContext, relPath: string): string {
 	const resolved = path.resolve(root, relPath);
 	const withSep = root.endsWith(path.sep) ? root : root + path.sep;
 	if (resolved !== root && !resolved.startsWith(withSep)) {
-		throw new Error('Geçersiz yol (library dışına çıkıyor)');
+		throw new PathOutsideLibraryError();
 	}
 	return resolved;
 }

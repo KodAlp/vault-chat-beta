@@ -484,6 +484,11 @@
 		"restored": "Sürüm geri yüklendi."
 	},
 
+	"LanguageCombobox": {
+		"searchPlaceholder": "Dil ara…",
+		"noResults": "Dil bulunamadı"
+	},
+
 	"SettingsPage": {
 		"themeTitle": "Tema",
 		"themeSystem": "Sistem",

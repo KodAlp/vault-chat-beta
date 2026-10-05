@@ -93,7 +93,7 @@
 		ontoggle={onDetailsToggle}
 	>
 		<summary class="cursor-pointer rounded-[var(--radius-sm)] underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]">{t('WelcomePage.details')}</summary>
-		<ul class="mt-2 flex flex-col gap-2 text-left">
+		<ul class="mt-2 flex flex-col gap-2 text-start">
 			<li>{t('WelcomePage.note1')}</li>
 			<li>{t('WelcomePage.note2')}</li>
 			<li>{t('WelcomePage.note3')}</li>

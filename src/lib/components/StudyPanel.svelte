@@ -339,7 +339,7 @@
 		appearance: none;
 		border: 0;
 		width: 100%;
-		text-align: left;
+		text-align: start;
 		font: inherit;
 		color: var(--label);
 	}
@@ -397,7 +397,7 @@
 		min-width: 0;
 		display: block;
 		padding: 4px 6px;
-		text-align: left;
+		text-align: start;
 		font: 400 13px/18px var(--font-sans);
 		color: var(--label-secondary);
 		white-space: nowrap;

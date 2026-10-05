@@ -147,7 +147,7 @@
 	}
 
 	.count {
-		margin-left: 0.15rem;
+		margin-inline-start: 0.15rem;
 	}
 
 	.preview-title {
@@ -158,7 +158,7 @@
 
 	.preview-list {
 		margin: 0;
-		padding-left: 1rem;
+		padding-inline-start: 1rem;
 		color: var(--label-secondary);
 	}
 

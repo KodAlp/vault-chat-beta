@@ -125,7 +125,7 @@
 </svelte:head>
 
 <div class="cards-screen">
-	<a class="home-link" href={backHref}><ArrowLeftIcon size={16} strokeWidth={1.75} aria-hidden="true" /> {t('Common.geriDon')}</a>
+	<a class="home-link" href={backHref}><ArrowLeftIcon class="rtl-flip" size={16} strokeWidth={1.75} aria-hidden="true" /> {t('Common.geriDon')}</a>
 
 	{#if phase === 'loading'}
 		<p class="status">{t('Common.yukleniyor')}</p>
@@ -345,7 +345,7 @@
 		text-decoration: none;
 		color: var(--label-secondary);
 		padding: 0.2rem 0.5rem;
-		border-left: 1px solid var(--separator);
+		border-inline-start: 1px solid var(--separator);
 	}
 
 	.chip-icon:hover {

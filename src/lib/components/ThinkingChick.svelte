@@ -9,18 +9,19 @@
           'done'     defter kapanır, kilit alınır (config.exitMs, varsayılan 500 ms);
                      bitince onexited çağrılır — yanıtı bundan sonra göster.
   config: önizleme sayfasındaki "Ayarları kopyala" çıktısı (isteğe bağlı).
-  label:  ekran okuyucu metni (varsayılan "Yanıt bekleniyor…").
+  label:  ekran okuyucu metni (varsayılan t('ChatBubble.waitingForResponse')).
   Arka plan şeffaf; boyut kapsayıcının genişliğine uyar.
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { t } from '$lib/i18n/index.svelte';
 	import { createChick, type Chick, type ChickConfig } from './thinking-chick.js';
 
 	type Phase = 'idle' | 'thinking' | 'done';
 	let {
 		phase = 'idle',
 		config = {},
-		label = 'Yanıt bekleniyor…',
+		label = t('ChatBubble.waitingForResponse'),
 		onexited
 	}: {
 		phase?: Phase;

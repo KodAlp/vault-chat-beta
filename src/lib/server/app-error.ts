@@ -12,7 +12,7 @@
  * the same reasoning config-store.test.ts etc. already rely on.
  */
 import { error } from '@sveltejs/kit';
-import type { ErrorCode, ErrorParams, CodedError } from '../errors';
+import { ALL_ERROR_CODES, type ErrorCode, type ErrorParams, type CodedError } from '../errors';
 import { ProviderError } from './providers/types';
 import { NoSourcesError } from './generate-errors';
 
@@ -97,6 +97,13 @@ export function toCodedError(err: unknown): CodedError {
 		if (typeof err.body.message === 'string') {
 			return { code: 'UNKNOWN', params: { detail: err.body.message } };
 		}
+	}
+
+	// Plain Errors from modules that must stay free of kit/AppError imports (library-read.ts) carry a registry code
+	// as a string property; node errno codes (ENOENT, ...) are not in the registry so they fall through below.
+	const plainCode = err instanceof Error ? (err as { code?: unknown }).code : undefined;
+	if (typeof plainCode === 'string' && (ALL_ERROR_CODES as readonly string[]).includes(plainCode)) {
+		return { code: plainCode };
 	}
 
 	if (err instanceof Error) {

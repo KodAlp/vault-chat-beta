@@ -190,6 +190,11 @@
 		transform: rotate(90deg);
 	}
 
+	/* A closed branch's chevron points toward the inline end, i.e. left in RTL; open still points down. */
+	:global(:root[dir="rtl"] .caret:not(.open)) {
+		transform: scaleX(-1);
+	}
+
 	:global(.file-icon) {
 		flex-shrink: 0;
 		color: var(--color-muted-foreground);
@@ -260,8 +265,8 @@
 	}
 
 	.children {
-		margin-left: 0.9rem;
-		border-left: 1px solid var(--color-border);
-		padding-left: 0.4rem;
+		margin-inline-start: 0.9rem;
+		border-inline-start: 1px solid var(--color-border);
+		padding-inline-start: 0.4rem;
 	}
 </style>
