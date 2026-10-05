@@ -143,7 +143,7 @@
 </script>
 
 <svelte:head>
-	<title>{mindmap?.title ?? t('MindmapStudyPage.defaultTitle')} — Vault Agent Toolkit</title>
+	<title>{mindmap?.title ?? t('MindmapStudyPage.defaultTitle')} — Vault Chat</title>
 </svelte:head>
 
 <div class="mindmap-screen">

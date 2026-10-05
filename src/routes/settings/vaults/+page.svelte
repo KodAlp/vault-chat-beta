@@ -221,7 +221,7 @@
 </script>
 
 <svelte:head>
-	<title>{t('VaultsSettingsPage.title')} — Vault Agent Toolkit</title>
+	<title>{t('VaultsSettingsPage.title')} — Vault Chat</title>
 </svelte:head>
 
 <div>
@@ -379,8 +379,8 @@
 					</div>
 				</div>
 				<div class="flex flex-col gap-1.5">
-					<Label for="{uid}-vault-name">{t('SettingsPage.obsidianVaultName')}</Label>
-					<Input id="{uid}-vault-name" type="text" bind:value={desktopVaultName} placeholder={t('SettingsPage.obsidianVaultNamePlaceholder')} class="max-w-xs" />
+					<Label for="{uid}-vault-name">{t('SettingsPage.defaultVaultName')}</Label>
+					<Input id="{uid}-vault-name" type="text" bind:value={desktopVaultName} placeholder={t('SettingsPage.defaultVaultNamePlaceholder')} class="max-w-xs" />
 				</div>
 				<div>
 					<Button type="button" onclick={saveVaultConfig}>{t('Common.kaydet')}</Button>

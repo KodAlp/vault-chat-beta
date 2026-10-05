@@ -270,7 +270,7 @@
 
 	"ImportObsidianDialog": {
 		"trigger": "İçe Aktar",
-		"dialogTitle": "Obsidian Vault'unu İçe Aktar",
+		"dialogTitle": "Markdown klasörü içe aktar (Obsidian, Zettlr…)",
 		"dialogDescription": "Tek yönlü kopya — kaynak vault'una asla yazılmaz. Değişmemiş notlar yeniden içe aktarmada atlanır.",
 		"sourcePathLabel": "Kaynak vault yolu",
 		"sourcePathPlaceholder": "örn. C:\\Kullanıcılar\\...\\MyVault",
@@ -317,7 +317,7 @@
 
 	"LibraryTree": {
 		"loadError": "Kütüphane yüklenemedi.",
-		"empty": "Kütüphane boş. Bir belge yükle veya Ayarlar → Kütüphane'den Obsidian vault'unu içe aktar."
+		"empty": "Kütüphane boş. Bir belge yükle veya Ayarlar → Kütüphane'den notlarını içe aktar."
 	},
 
 	"LibraryTreeNode": {
@@ -418,9 +418,9 @@
 	},
 
 	"HomePage": {
-		"title": "Vault Agent Toolkit",
+		"title": "Vault Chat",
 		"emptyTitle": "Henüz bir vault yok",
-		"emptyDescription": "Kasandaki notlarla sohbet edebilmek için önce bir vault oluştur — Obsidian kasanı bağlayınca içeriği burada aranabilir hale gelir.",
+		"emptyDescription": "Kütüphanendeki notlarla sohbet edebilmek için önce bir vault oluştur — notlarını ya da belgelerini içe aktarınca içeriği burada aranabilir hale gelir.",
 		"newVault": "Yeni vault",
 		"newVaultDialogTitle": "Yeni vault",
 		"vaultNameLabel": "Vault adı",
@@ -439,7 +439,7 @@
 		"recentChats": "Geçmiş sohbetler",
 		"start": "Başlat",
 		"noSourcesTitle": "Henüz kaynak yok",
-		"noSourcesDescription": "Sorularının kaynağa dayalı, gösterilebilir cevaplar alması için önce Obsidian kasandan not içe aktarman gerekiyor — aksi halde her soru \"kapsamda yok\" döner.",
+		"noSourcesDescription": "Sorularının kaynağa dayalı, gösterilebilir cevaplar alması için önce notlarını ya da belgelerini içe aktarman gerekiyor — aksi halde her soru \"kapsamda yok\" döner.",
 		"importSources": "Kaynakları içe aktar",
 		"untitled": "(başlıksız)",
 		"sourceCountBadge": "{count} kaynak",
@@ -534,7 +534,7 @@
 		"vaultFolder": "Kasa klasörü",
 		"vaultFolderPlaceholder": "Henüz seçilmedi",
 		"choose": "Seç…",
-		"obsidianVaultName": "Kasa adı",
+		"defaultVaultName": "Vault adı",
 		"vaultSaved": "Kaydedildi — bir sonraki başlatmada uygulanır.",
 		"vaultSaveFailed": "Kaydedilemedi.",
 		"home": "Ana sayfa",
@@ -547,7 +547,7 @@
 		"vaultsCardDescription": "Birden fazla kütüphane arasında geçiş yap, yeni vault oluştur veya sil.",
 		"activeVaultLabel": "Şu an aktif",
 		"manageVaults": "Vault'ları yönet",
-		"libraryCardDescription": "Obsidian vault'undan içe aktar, belge yükleme ayarları.",
+		"libraryCardDescription": "Notlarını içe aktar, belge yükleme ayarları.",
 		"manageLibrary": "Kütüphaneyi yönet",
 		"skillsCardDescription": "Sohbet, test ve bilgi kartı üretimini kişiselleştir.",
 		"manageSkills": "Skill'leri yönet",
@@ -559,7 +559,7 @@
 		"manageMemory": "Notları yönet",
 		"deleteModelConfirmTitle": "\"{name}\" silinsin mi?",
 		"deleteModelConfirmDescription": "Bu model Ollama'dan kalıcı olarak kaldırılacak. İndirme dosyaları diskten silinir.",
-		"obsidianVaultNamePlaceholder": "ör. Matematik"
+		"defaultVaultNamePlaceholder": "ör. Matematik"
 	},
 
 	"SettingsNav": {
@@ -595,8 +595,8 @@
 		"advancedUploadOptions": "Gelişmiş yükleme seçenekleri",
 		"title": "Kütüphane",
 		"saveError": "Ayarlar kaydedilemedi.",
-		"importObsidianTitle": "Obsidian'dan İçe Aktar",
-		"importObsidianDescription": "Bir Obsidian vault'unu tek yönlü kopyalar (kaynağa asla yazılmaz). Wikilink'ler göreli markdown linklerine çevrilir, eklerin kopyaları alınır, eksik frontmatter alanları varsayılan değer + gözden geçirme rozeti alır.",
+		"importObsidianTitle": "Markdown klasörü içe aktar (Obsidian, Zettlr…)",
+		"importObsidianDescription": "Bir Markdown not klasörünü (ör. Obsidian vault'u) tek yönlü kopyalar (kaynağa asla yazılmaz). Wikilink'ler göreli markdown linklerine çevrilir, eklerin kopyaları alınır, eksik frontmatter alanları varsayılan değer + gözden geçirme rozeti alır.",
 		"importLinksTitle": "Linkten İçe Aktar",
 		"importLinksDescription": "PDF ve web sayfası bağlantılarını yapıştır — sırayla indirilip kütüphaneye eklenir. Daha önce başarıyla içe aktarılmış bağlantılar tekrar çalıştırmada atlanır.",
 		"uploadSettingsTitle": "Yükleme Ayarları",
@@ -1065,7 +1065,7 @@
 		"FILE_EXISTS": "Bu isimde bir dosya zaten var",
 		"IMPORT_EXPIRED": "Bekleyen içe aktarma bulunamadı (süresi dolmuş olabilir)",
 		"IMPORT_INDEX_FAILED": "Dosya kaydedildi ama indekslenemedi, staging'e geri alındı",
-		"OBSIDIAN_SOURCE_INVALID": "Kaynak vault yolu bulunamadı ya da bir klasör değil",
+		"IMPORT_SOURCE_INVALID": "Kaynak vault yolu bulunamadı ya da bir klasör değil",
 		"ATTACHMENT_TYPE_MISMATCH": "Dosya içeriği beklenen türle uyuşmuyor",
 		"IMPORT_DUPLICATE_CONTENT": "Bu dosya (aynı içerik) daha önce içe aktarılmış görünüyor — yine de devam edebilirsin.",
 		"SCAN_ROOT_INVALID": "Klasör yolu geçersiz, bulunamadı ya da bu klasör taranamaz",

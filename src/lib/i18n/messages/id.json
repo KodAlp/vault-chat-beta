@@ -250,7 +250,7 @@
   },
   "ImportObsidianDialog": {
     "trigger": "Impor",
-    "dialogTitle": "Impor Vault Obsidian",
+    "dialogTitle": "Impor folder Markdown (Obsidian, Zettlr…)",
     "dialogDescription": "Penyalinan satu arah — vault sumber tidak pernah ditulisi. Catatan yang tidak berubah dilewati saat impor ulang.",
     "sourcePathLabel": "Jalur vault sumber",
     "sourcePathPlaceholder": "mis. C:\\Users\\...\\MyVault",
@@ -295,7 +295,7 @@
   },
   "LibraryTree": {
     "loadError": "Gagal memuat pustaka.",
-    "empty": "Pustaka kosong. Unggah dokumen, atau impor vault Obsidian dari Pengaturan → Pustaka."
+    "empty": "Pustaka kosong. Unggah dokumen, atau impor catatan Anda dari Pengaturan → Pustaka."
   },
   "LibraryTreeNode": {
     "needsReview": "Perlu ditinjau",
@@ -389,9 +389,9 @@
     "continue": "Lanjutkan"
   },
   "HomePage": {
-    "title": "Vault Agent Toolkit",
+    "title": "Vault Chat",
     "emptyTitle": "Belum ada vault",
-    "emptyDescription": "Buat vault terlebih dahulu agar Anda bisa mengobrol dengan catatan Anda — setelah vault Obsidian Anda terhubung, isinya dapat dicari di sini.",
+    "emptyDescription": "Buat vault terlebih dahulu agar Anda bisa mengobrol dengan catatan Anda — setelah catatan atau dokumen Anda diimpor, isinya dapat dicari di sini.",
     "newVault": "Vault baru",
     "newVaultDialogTitle": "Vault baru",
     "vaultNameLabel": "Nama vault",
@@ -409,7 +409,7 @@
     "recentChats": "Obrolan terbaru",
     "start": "Mulai",
     "noSourcesTitle": "Belum ada sumber",
-    "noSourcesDescription": "Agar pertanyaan Anda mendapat jawaban berbasis sumber yang dapat dikutip, Anda perlu mengimpor catatan dari vault Obsidian terlebih dahulu — jika tidak, setiap pertanyaan akan dijawab \"di luar cakupan\".",
+    "noSourcesDescription": "Agar pertanyaan Anda mendapat jawaban berbasis sumber yang dapat dikutip, Anda perlu mengimpor catatan atau dokumen Anda terlebih dahulu — jika tidak, setiap pertanyaan akan dijawab \"di luar cakupan\".",
     "importSources": "Impor sumber",
     "untitled": "(tanpa judul)",
     "sourceCountBadge": "{count} sumber",
@@ -497,7 +497,7 @@
     "vaultFolder": "Folder vault",
     "vaultFolderPlaceholder": "Belum dipilih",
     "choose": "Pilih…",
-    "obsidianVaultName": "Nama vault",
+    "defaultVaultName": "Nama vault",
     "vaultSaved": "Tersimpan — diterapkan pada peluncuran berikutnya.",
     "vaultSaveFailed": "Gagal menyimpan.",
     "home": "Beranda",
@@ -510,7 +510,7 @@
     "vaultsCardDescription": "Beralih antar beberapa pustaka, buat atau hapus vault.",
     "activeVaultLabel": "Sedang aktif",
     "manageVaults": "Kelola vault",
-    "libraryCardDescription": "Impor dari vault Obsidian, pengaturan unggahan.",
+    "libraryCardDescription": "Impor catatan Anda, pengaturan unggahan.",
     "manageLibrary": "Kelola pustaka",
     "skillsCardDescription": "Sesuaikan obrolan, pembuatan kuis, dan kartu belajar.",
     "manageSkills": "Kelola skill",
@@ -522,7 +522,7 @@
     "manageMemory": "Kelola catatan",
     "deleteModelConfirmTitle": "Hapus \"{name}\"?",
     "deleteModelConfirmDescription": "Model ini akan dihapus permanen dari Ollama. Berkas yang diunduh dihapus dari disk.",
-    "obsidianVaultNamePlaceholder": "mis. Matematika"
+    "defaultVaultNamePlaceholder": "mis. Matematika"
   },
   "SettingsNav": {
     "title": "Pengaturan",
@@ -554,8 +554,8 @@
     "advancedUploadOptions": "Opsi unggahan lanjutan",
     "title": "Pustaka",
     "saveError": "Gagal menyimpan pengaturan.",
-    "importObsidianTitle": "Impor dari Obsidian",
-    "importObsidianDescription": "Menyalin vault Obsidian satu arah (sumber tidak pernah ditulisi). Wikilink dikonversi menjadi tautan markdown relatif, lampiran disalin, dan catatan yang tidak memiliki kolom frontmatter diberi nilai default beserta lencana tinjauan.",
+    "importObsidianTitle": "Impor folder Markdown (Obsidian, Zettlr…)",
+    "importObsidianDescription": "Menyalin folder catatan Markdown (misalnya vault Obsidian) satu arah (sumber tidak pernah ditulisi). Wikilink dikonversi menjadi tautan markdown relatif, lampiran disalin, dan catatan yang tidak memiliki kolom frontmatter diberi nilai default beserta lencana tinjauan.",
     "importLinksTitle": "Impor dari Tautan",
     "importLinksDescription": "Tempelkan tautan PDF dan halaman web — diunduh berurutan dan ditambahkan ke pustaka. Tautan yang sudah berhasil diimpor dilewati saat dijalankan ulang.",
     "uploadSettingsTitle": "Pengaturan Unggahan",
@@ -1008,7 +1008,7 @@
     "FILE_EXISTS": "Berkas dengan nama ini sudah ada",
     "IMPORT_EXPIRED": "Impor yang tertunda tidak ditemukan (mungkin sudah kedaluwarsa)",
     "IMPORT_INDEX_FAILED": "Berkas tersimpan tetapi gagal diindeks, sehingga dipindahkan kembali ke area staging",
-    "OBSIDIAN_SOURCE_INVALID": "Jalur vault sumber tidak ditemukan, atau bukan folder",
+    "IMPORT_SOURCE_INVALID": "Jalur vault sumber tidak ditemukan, atau bukan folder",
     "ATTACHMENT_TYPE_MISMATCH": "Isi berkas tidak sesuai dengan jenis yang diharapkan",
     "IMPORT_DUPLICATE_CONTENT": "Berkas ini (dengan isi yang sama) tampaknya pernah diimpor sebelumnya — Anda tetap dapat melanjutkan.",
     "SCAN_ROOT_INVALID": "Jalur folder tidak valid, tidak ditemukan, atau tidak dapat dipindai",

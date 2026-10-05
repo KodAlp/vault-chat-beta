@@ -121,7 +121,7 @@
 </script>
 
 <svelte:head>
-	<title>{pageTitle} — Vault Agent Toolkit</title>
+	<title>{pageTitle} — Vault Chat</title>
 </svelte:head>
 
 <div class="cards-screen">

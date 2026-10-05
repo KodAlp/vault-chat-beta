@@ -213,7 +213,7 @@
 </script>
 
 <svelte:head>
-	<title>{data.vaultName} — Vault Agent Toolkit</title>
+	<title>{data.vaultName} — Vault Chat</title>
 </svelte:head>
 
 <!-- height:h-full + flex column, same mechanism as Chat.svelte's own root

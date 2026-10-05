@@ -250,7 +250,7 @@
   },
   "ImportObsidianDialog": {
     "trigger": "Import",
-    "dialogTitle": "Import Obsidian Vault",
+    "dialogTitle": "Import Markdown folder (Obsidian, Zettlr…)",
     "dialogDescription": "Na one-way copy — we no dey write anything inside di source vault. If you import again, notes wey no change go skip.",
     "sourcePathLabel": "Source vault path",
     "sourcePathPlaceholder": "e.g. C:\\Users\\...\\MyVault",
@@ -295,7 +295,7 @@
   },
   "LibraryTree": {
     "loadError": "Library no load.",
-    "empty": "Di library empty. Upload document, or import Obsidian vault from Settings → Library."
+    "empty": "Di library empty. Upload document, or import your notes from Settings → Library."
   },
   "LibraryTreeNode": {
     "needsReview": "Need review",
@@ -389,9 +389,9 @@
     "continue": "Continue"
   },
   "HomePage": {
-    "title": "Vault Agent Toolkit",
+    "title": "Vault Chat",
     "emptyTitle": "No vault yet",
-    "emptyDescription": "Make one vault first so you fit chat with your notes — as you connect your Obsidian vault, wetin dey inside go dey searchable here.",
+    "emptyDescription": "Make one vault first so you fit chat with your notes — as you import your notes or documents, wetin dey inside go dey searchable here.",
     "newVault": "New vault",
     "newVaultDialogTitle": "New vault",
     "vaultNameLabel": "Vault name",
@@ -409,7 +409,7 @@
     "recentChats": "Recent chats",
     "start": "Start",
     "noSourcesTitle": "No source yet",
-    "noSourcesDescription": "Make your questions get answers wey dey based on sources and fit show citations, you must first import notes from your Obsidian vault — if not, every question go come back \"out of scope\".",
+    "noSourcesDescription": "Make your questions get answers wey dey based on sources and fit show citations, you must first import your notes or documents — if not, every question go come back \"out of scope\".",
     "importSources": "Import sources",
     "untitled": "(no title)",
     "sourceCountBadge": "{count} sources",
@@ -497,7 +497,7 @@
     "vaultFolder": "Vault folder",
     "vaultFolderPlaceholder": "You never select am",
     "choose": "Choose…",
-    "obsidianVaultName": "Vault name",
+    "defaultVaultName": "Vault name",
     "vaultSaved": "E don save — e go work for next launch.",
     "vaultSaveFailed": "E no save.",
     "home": "Home",
@@ -510,7 +510,7 @@
     "vaultsCardDescription": "Switch between plenty libraries, create or delete vault.",
     "activeVaultLabel": "Dey active now",
     "manageVaults": "Manage vaults",
-    "libraryCardDescription": "Import from Obsidian vault, upload settings.",
+    "libraryCardDescription": "Import your notes, upload settings.",
     "manageLibrary": "Manage library",
     "skillsCardDescription": "Customize how chat, quiz, and flashcard generation go work.",
     "manageSkills": "Manage skills",
@@ -522,7 +522,7 @@
     "manageMemory": "Manage notes",
     "deleteModelConfirmTitle": "Delete \"{name}\"?",
     "deleteModelConfirmDescription": "Dem go remove dis model from Ollama forever. Di files wey you download go delete from disk.",
-    "obsidianVaultNamePlaceholder": "e.g. Math"
+    "defaultVaultNamePlaceholder": "e.g. Math"
   },
   "SettingsNav": {
     "title": "Settings",
@@ -554,8 +554,8 @@
     "advancedUploadOptions": "Advanced upload options",
     "title": "Library",
     "saveError": "Settings no save.",
-    "importObsidianTitle": "Import from Obsidian",
-    "importObsidianDescription": "E dey copy Obsidian vault one-way (we no dey write anything inside di source). Wikilinks go change to relative markdown links, attachments go copy, and notes wey no get some frontmatter fields go get default value plus review badge.",
+    "importObsidianTitle": "Import Markdown folder (Obsidian, Zettlr…)",
+    "importObsidianDescription": "E dey copy Markdown notes folder (like Obsidian vault) one-way (we no dey write anything inside di source). Wikilinks go change to relative markdown links, attachments go copy, and notes wey no get some frontmatter fields go get default value plus review badge.",
     "importLinksTitle": "Import from Links",
     "importLinksDescription": "Paste PDF and web page links — dem go download one by one and join di library. Links wey we don import well before go skip if you run am again.",
     "uploadSettingsTitle": "Upload Settings",
@@ -1008,7 +1008,7 @@
     "FILE_EXISTS": "File wey get dis name dey already",
     "IMPORT_EXPIRED": "We no see di pending import (e fit don expire)",
     "IMPORT_INDEX_FAILED": "Di file save but we no fit index am, so we move am go back to staging",
-    "OBSIDIAN_SOURCE_INVALID": "We no see di source vault path, or e no be folder",
+    "IMPORT_SOURCE_INVALID": "We no see di source vault path, or e no be folder",
     "ATTACHMENT_TYPE_MISMATCH": "Di file content no match di type wey dem expect",
     "IMPORT_DUPLICATE_CONTENT": "Dis file (same content) don import before — you fit still continue.",
     "SCAN_ROOT_INVALID": "Folder path no correct, we no see am, or we no fit scan am",

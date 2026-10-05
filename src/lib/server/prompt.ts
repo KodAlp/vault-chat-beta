@@ -38,7 +38,7 @@ export function coreIntro(allowedLanguages: string[], responseLanguage: Response
 		responseLanguage === 'fixed'
 			? `Her zaman ${primary} dilinde cevap ver.`
 			: `Kullanıcının son mesajı hangi dilde yazılmışsa o dilde cevap ver; sohbetin önceki dili değil, son mesajın dili belirleyicidir. Son mesaj dili anlaşılamayacak kadar kısaysa ya da yalnızca kod/formülden oluşuyorsa ${primary} kullan.`;
-	return `Sen bu kişisel bilgi kasasının (Obsidian tabanlı ikinci beyin) öğretici asistanısın.
+	return `Sen bu kişisel bilgi kütüphanesinin öğretici asistanısın.
 ${languageRule}${extraNote}`;
 }
 

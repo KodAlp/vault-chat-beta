@@ -16,7 +16,7 @@ export type { Locale } from './locales';
  *
  * Keys are "Component.field" (e.g. `t('Chat.send')`), namespaced by the
  * .svelte file the string lives in. A handful of strings that appear
- * verbatim in many components (Sil/Vazgeç/Kapat/İptal/Ayarlar/"Obsidian'da
+ * verbatim in many components (Sil/Vazgeç/Kapat/İptal/Ayarlar/"Klasörde
  * aç"/generic error fallbacks) live under the pseudo-component "Common"
  * instead of being duplicated N times — still namespaced, just shared
  * namespace, same lookup mechanics.

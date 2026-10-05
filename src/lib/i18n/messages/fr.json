@@ -256,7 +256,7 @@
   },
   "ImportObsidianDialog": {
     "trigger": "Importer",
-    "dialogTitle": "Importer un coffre Obsidian",
+    "dialogTitle": "Importer un dossier Markdown (Obsidian, Zettlr…)",
     "dialogDescription": "Copie à sens unique : le coffre source n'est jamais modifié. Les notes inchangées sont ignorées lors d'une nouvelle importation.",
     "sourcePathLabel": "Chemin du coffre source",
     "sourcePathPlaceholder": "ex. C:\\Users\\...\\MonCoffre",
@@ -304,7 +304,7 @@
   },
   "LibraryTree": {
     "loadError": "Impossible de charger la bibliothèque.",
-    "empty": "La bibliothèque est vide. Téléversez un document ou importez un coffre Obsidian depuis Paramètres → Bibliothèque."
+    "empty": "La bibliothèque est vide. Téléversez un document ou importez vos notes depuis Paramètres → Bibliothèque."
   },
   "LibraryTreeNode": {
     "needsReview": "À vérifier",
@@ -398,9 +398,9 @@
     "continue": "Continuer"
   },
   "HomePage": {
-    "title": "Vault Agent Toolkit",
+    "title": "Vault Chat",
     "emptyTitle": "Aucun coffre pour l'instant",
-    "emptyDescription": "Créez d'abord un coffre pour discuter avec vos notes : une fois votre coffre Obsidian connecté, son contenu devient consultable ici.",
+    "emptyDescription": "Créez d'abord un coffre pour discuter avec vos notes : une fois vos notes ou documents importés, leur contenu devient consultable ici.",
     "newVault": "Nouveau coffre",
     "newVaultDialogTitle": "Nouveau coffre",
     "vaultNameLabel": "Nom du coffre",
@@ -418,7 +418,7 @@
     "recentChats": "Chats récents",
     "start": "Lancer",
     "noSourcesTitle": "Aucune source pour l'instant",
-    "noSourcesDescription": "Pour obtenir des réponses sourcées et citables, vous devez d'abord importer des notes depuis votre coffre Obsidian ; sinon, chaque question aboutira à « hors périmètre ».",
+    "noSourcesDescription": "Pour obtenir des réponses sourcées et citables, vous devez d'abord importer vos notes ou documents ; sinon, chaque question aboutira à « hors périmètre ».",
     "importSources": "Importer des sources",
     "untitled": "(sans titre)",
     "sourceCountBadge": "{count} sources",
@@ -507,7 +507,7 @@
     "vaultFolder": "Dossier du coffre",
     "vaultFolderPlaceholder": "Pas encore sélectionné",
     "choose": "Choisir…",
-    "obsidianVaultName": "Nom du coffre",
+    "defaultVaultName": "Nom du coffre",
     "vaultSaved": "Enregistré : pris en compte au prochain lancement.",
     "vaultSaveFailed": "Échec de l'enregistrement.",
     "home": "Accueil",
@@ -520,7 +520,7 @@
     "vaultsCardDescription": "Passez d'une bibliothèque à l'autre, créez ou supprimez un coffre.",
     "activeVaultLabel": "Actuellement actif",
     "manageVaults": "Gérer les coffres",
-    "libraryCardDescription": "Importez depuis un coffre Obsidian, réglages de téléversement.",
+    "libraryCardDescription": "Importez vos notes, réglages de téléversement.",
     "manageLibrary": "Gérer la bibliothèque",
     "skillsCardDescription": "Personnalisez la génération du chat, des quiz et des cartes mémoire.",
     "manageSkills": "Gérer les compétences",
@@ -532,7 +532,7 @@
     "manageMemory": "Gérer les notes",
     "deleteModelConfirmTitle": "Supprimer « {name} » ?",
     "deleteModelConfirmDescription": "Ce modèle sera définitivement retiré d'Ollama. Les fichiers téléchargés sont supprimés du disque.",
-    "obsidianVaultNamePlaceholder": "ex. Maths"
+    "defaultVaultNamePlaceholder": "ex. Maths"
   },
   "SettingsNav": {
     "title": "Paramètres",
@@ -564,8 +564,8 @@
     "advancedUploadOptions": "Options de téléversement avancées",
     "title": "Bibliothèque",
     "saveError": "Impossible d'enregistrer les paramètres.",
-    "importObsidianTitle": "Importer depuis Obsidian",
-    "importObsidianDescription": "Copie un coffre Obsidian à sens unique (la source n'est jamais modifiée). Les wikilinks sont convertis en liens markdown relatifs, les pièces jointes sont copiées, et les notes dont il manque des champs de frontmatter reçoivent une valeur par défaut ainsi qu'un badge de vérification.",
+    "importObsidianTitle": "Importer un dossier Markdown (Obsidian, Zettlr…)",
+    "importObsidianDescription": "Copie un dossier de notes Markdown (p. ex. un coffre Obsidian) à sens unique (la source n'est jamais modifiée). Les wikilinks sont convertis en liens markdown relatifs, les pièces jointes sont copiées, et les notes dont il manque des champs de frontmatter reçoivent une valeur par défaut ainsi qu'un badge de vérification.",
     "importLinksTitle": "Importer depuis des liens",
     "importLinksDescription": "Collez des liens vers des PDF et des pages web : ils sont téléchargés séquentiellement et ajoutés à la bibliothèque. Les liens déjà importés avec succès sont ignorés lors d'une nouvelle exécution.",
     "uploadSettingsTitle": "Réglages de téléversement",
@@ -1023,7 +1023,7 @@
     "FILE_EXISTS": "Un fichier portant ce nom existe déjà",
     "IMPORT_EXPIRED": "Importation en attente introuvable (elle a peut-être expiré)",
     "IMPORT_INDEX_FAILED": "Le fichier a été enregistré mais n'a pas pu être indexé ; il a donc été remis en zone d'attente",
-    "OBSIDIAN_SOURCE_INVALID": "Chemin du coffre source introuvable, ou ce n'est pas un dossier",
+    "IMPORT_SOURCE_INVALID": "Chemin du coffre source introuvable, ou ce n'est pas un dossier",
     "ATTACHMENT_TYPE_MISMATCH": "Le contenu du fichier ne correspond pas au type attendu",
     "IMPORT_DUPLICATE_CONTENT": "Ce fichier (même contenu) semble avoir déjà été importé : vous pouvez tout de même continuer.",
     "SCAN_ROOT_INVALID": "Le chemin du dossier est invalide, introuvable ou ne peut pas être analysé",

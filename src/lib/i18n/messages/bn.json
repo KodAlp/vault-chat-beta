@@ -250,7 +250,7 @@
   },
   "ImportObsidianDialog": {
     "trigger": "ইম্পোর্ট",
-    "dialogTitle": "Obsidian vault ইম্পোর্ট করুন",
+    "dialogTitle": "Markdown ফোল্ডার ইম্পোর্ট করুন (Obsidian, Zettlr…)",
     "dialogDescription": "একমুখী অনুলিপি — উৎস vault-এ কখনও কিছু লেখা হয় না। আবার ইম্পোর্ট করলে অপরিবর্তিত নোট বাদ যায়।",
     "sourcePathLabel": "উৎস vault-এর পাথ",
     "sourcePathPlaceholder": "যেমন: C:\\Users\\...\\MyVault",
@@ -295,7 +295,7 @@
   },
   "LibraryTree": {
     "loadError": "লাইব্রেরি লোড করা যায়নি।",
-    "empty": "লাইব্রেরি খালি। একটি নথি আপলোড করুন, অথবা সেটিংস → লাইব্রেরি থেকে Obsidian vault ইম্পোর্ট করুন।"
+    "empty": "লাইব্রেরি খালি। একটি নথি আপলোড করুন, অথবা সেটিংস → লাইব্রেরি থেকে আপনার নোট ইম্পোর্ট করুন।"
   },
   "LibraryTreeNode": {
     "needsReview": "পর্যালোচনা দরকার",
@@ -389,9 +389,9 @@
     "continue": "চালিয়ে যান"
   },
   "HomePage": {
-    "title": "Vault Agent Toolkit",
+    "title": "Vault Chat",
     "emptyTitle": "এখনও কোনো vault নেই",
-    "emptyDescription": "আপনার নোটের সাথে চ্যাট করতে প্রথমে একটি vault তৈরি করুন — Obsidian vault যুক্ত করলেই এর বিষয়বস্তু এখানে সার্চযোগ্য হয়ে যায়।",
+    "emptyDescription": "আপনার নোটের সাথে চ্যাট করতে প্রথমে একটি vault তৈরি করুন — নোট বা নথি ইম্পোর্ট করলেই সেগুলোর বিষয়বস্তু এখানে সার্চযোগ্য হয়ে যায়।",
     "newVault": "নতুন vault",
     "newVaultDialogTitle": "নতুন vault",
     "vaultNameLabel": "Vault-এর নাম",
@@ -409,7 +409,7 @@
     "recentChats": "সাম্প্রতিক চ্যাট",
     "start": "শুরু করুন",
     "noSourcesTitle": "এখনও কোনো উৎস নেই",
-    "noSourcesDescription": "আপনার প্রশ্নের উৎসভিত্তিক, উদ্ধৃতিযোগ্য উত্তর পেতে প্রথমে আপনার Obsidian vault থেকে নোট ইম্পোর্ট করতে হবে — নইলে প্রতিটি প্রশ্ন \"পরিধির বাইরে\" ফিরে আসে।",
+    "noSourcesDescription": "আপনার প্রশ্নের উৎসভিত্তিক, উদ্ধৃতিযোগ্য উত্তর পেতে প্রথমে আপনার নোট বা নথি ইম্পোর্ট করতে হবে — নইলে প্রতিটি প্রশ্ন \"পরিধির বাইরে\" ফিরে আসে।",
     "importSources": "উৎস ইম্পোর্ট করুন",
     "untitled": "(শিরোনামহীন)",
     "sourceCountBadge": "{count}টি উৎস",
@@ -497,7 +497,7 @@
     "vaultFolder": "Vault ফোল্ডার",
     "vaultFolderPlaceholder": "এখনও বাছাই করা হয়নি",
     "choose": "বেছে নিন…",
-    "obsidianVaultName": "Vault-এর নাম",
+    "defaultVaultName": "Vault-এর নাম",
     "vaultSaved": "সংরক্ষিত — পরের বার চালুর সময় কার্যকর হবে।",
     "vaultSaveFailed": "সংরক্ষণ করা যায়নি।",
     "home": "হোম",
@@ -510,7 +510,7 @@
     "vaultsCardDescription": "একাধিক লাইব্রেরির মধ্যে বদলান, vault তৈরি বা মুছুন।",
     "activeVaultLabel": "বর্তমানে সক্রিয়",
     "manageVaults": "Vault পরিচালনা করুন",
-    "libraryCardDescription": "Obsidian vault থেকে ইম্পোর্ট, আপলোড সেটিংস।",
+    "libraryCardDescription": "আপনার নোট ইম্পোর্ট, আপলোড সেটিংস।",
     "manageLibrary": "লাইব্রেরি পরিচালনা করুন",
     "skillsCardDescription": "চ্যাট, কুইজ ও ফ্ল্যাশকার্ড তৈরি নিজের মতো করুন।",
     "manageSkills": "দক্ষতা পরিচালনা করুন",
@@ -522,7 +522,7 @@
     "manageMemory": "নোট পরিচালনা করুন",
     "deleteModelConfirmTitle": "\"{name}\" মুছবেন?",
     "deleteModelConfirmDescription": "এই মডেল Ollama থেকে স্থায়ীভাবে সরানো হবে। ডাউনলোড করা ফাইল ডিস্ক থেকে মুছে যায়।",
-    "obsidianVaultNamePlaceholder": "যেমন: গণিত"
+    "defaultVaultNamePlaceholder": "যেমন: গণিত"
   },
   "SettingsNav": {
     "title": "সেটিংস",
@@ -554,8 +554,8 @@
     "advancedUploadOptions": "উন্নত আপলোড বিকল্প",
     "title": "লাইব্রেরি",
     "saveError": "সেটিংস সংরক্ষণ করা যায়নি।",
-    "importObsidianTitle": "Obsidian থেকে ইম্পোর্ট",
-    "importObsidianDescription": "একটি Obsidian vault একমুখীভাবে কপি করে (উৎসে কখনও কিছু লেখা হয় না)। Wikilink আপেক্ষিক markdown লিংকে বদলানো হয়, সংযুক্তি কপি হয়, আর frontmatter ফিল্ড না থাকা নোট ডিফল্ট মান ও পর্যালোচনা ব্যাজ পায়।",
+    "importObsidianTitle": "Markdown ফোল্ডার ইম্পোর্ট করুন (Obsidian, Zettlr…)",
+    "importObsidianDescription": "একটি Markdown নোট ফোল্ডার (যেমন Obsidian vault) একমুখীভাবে কপি করে (উৎসে কখনও কিছু লেখা হয় না)। Wikilink আপেক্ষিক markdown লিংকে বদলানো হয়, সংযুক্তি কপি হয়, আর frontmatter ফিল্ড না থাকা নোট ডিফল্ট মান ও পর্যালোচনা ব্যাজ পায়।",
     "importLinksTitle": "লিংক থেকে ইম্পোর্ট",
     "importLinksDescription": "PDF ও ওয়েব পেজের লিংক পেস্ট করুন — সেগুলো ক্রমানুসারে ডাউনলোড হয়ে লাইব্রেরিতে যোগ হয়। আগে সফলভাবে ইম্পোর্ট হওয়া লিংক আবার চালালে বাদ যায়।",
     "uploadSettingsTitle": "আপলোড সেটিংস",
@@ -1008,7 +1008,7 @@
     "FILE_EXISTS": "এই নামের একটি ফাইল ইতিমধ্যে আছে",
     "IMPORT_EXPIRED": "মুলতুবি ইম্পোর্ট পাওয়া যায়নি (মেয়াদ শেষ হয়ে থাকতে পারে)",
     "IMPORT_INDEX_FAILED": "ফাইল সংরক্ষিত হয়েছে কিন্তু ইনডেক্স করা যায়নি, তাই সেটি আবার স্টেজিংয়ে সরানো হয়েছে",
-    "OBSIDIAN_SOURCE_INVALID": "উৎস vault-এর পাথ পাওয়া যায়নি, অথবা সেটি ফোল্ডার নয়",
+    "IMPORT_SOURCE_INVALID": "উৎস vault-এর পাথ পাওয়া যায়নি, অথবা সেটি ফোল্ডার নয়",
     "ATTACHMENT_TYPE_MISMATCH": "ফাইলের বিষয়বস্তু প্রত্যাশিত ধরনের সাথে মেলে না",
     "IMPORT_DUPLICATE_CONTENT": "মনে হচ্ছে এই ফাইল (একই বিষয়বস্তু) আগে ইম্পোর্ট করা হয়েছে — তবুও চালিয়ে যেতে পারেন।",
     "SCAN_ROOT_INVALID": "ফোল্ডারের পাথ অবৈধ, পাওয়া যায়নি, বা স্ক্যান করা যায় না",

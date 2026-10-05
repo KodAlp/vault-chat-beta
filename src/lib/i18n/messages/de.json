@@ -254,7 +254,7 @@
   },
   "ImportObsidianDialog": {
     "trigger": "Importieren",
-    "dialogTitle": "Obsidian-Tresor importieren",
+    "dialogTitle": "Markdown-Ordner importieren (Obsidian, Zettlr …)",
     "dialogDescription": "Einseitiges Kopieren – der Quelltresor wird nie verändert. Unveränderte Notizen werden beim erneuten Import übersprungen.",
     "sourcePathLabel": "Pfad des Quelltresors",
     "sourcePathPlaceholder": "z. B. C:\\Users\\...\\MeinTresor",
@@ -302,7 +302,7 @@
   },
   "LibraryTree": {
     "loadError": "Die Bibliothek konnte nicht geladen werden.",
-    "empty": "Die Bibliothek ist leer. Lade ein Dokument hoch oder importiere einen Obsidian-Tresor unter Einstellungen → Bibliothek."
+    "empty": "Die Bibliothek ist leer. Lade ein Dokument hoch oder importiere deine Notizen unter Einstellungen → Bibliothek."
   },
   "LibraryTreeNode": {
     "needsReview": "Prüfung nötig",
@@ -396,9 +396,9 @@
     "continue": "Weiter"
   },
   "HomePage": {
-    "title": "Vault Agent Toolkit",
+    "title": "Vault Chat",
     "emptyTitle": "Noch keine Tresore",
-    "emptyDescription": "Erstelle zuerst einen Tresor, um mit deinen Notizen zu chatten – sobald du deinen Obsidian-Tresor verbindest, wird sein Inhalt hier durchsuchbar.",
+    "emptyDescription": "Erstelle zuerst einen Tresor, um mit deinen Notizen zu chatten – sobald du deine Notizen oder Dokumente importierst, wird ihr Inhalt hier durchsuchbar.",
     "newVault": "Neuer Tresor",
     "newVaultDialogTitle": "Neuer Tresor",
     "vaultNameLabel": "Tresorname",
@@ -416,7 +416,7 @@
     "recentChats": "Letzte Chats",
     "start": "Starten",
     "noSourcesTitle": "Noch keine Quellen",
-    "noSourcesDescription": "Damit deine Fragen quellenbasierte, belegbare Antworten bekommen, musst du zuerst Notizen aus deinem Obsidian-Tresor importieren – sonst lautet die Antwort auf jede Frage „außerhalb des Umfangs“.",
+    "noSourcesDescription": "Damit deine Fragen quellenbasierte, belegbare Antworten bekommen, musst du zuerst deine Notizen oder Dokumente importieren – sonst lautet die Antwort auf jede Frage „außerhalb des Umfangs“.",
     "importSources": "Quellen importieren",
     "untitled": "(ohne Titel)",
     "sourceCountBadge": "{count} Quellen",
@@ -505,7 +505,7 @@
     "vaultFolder": "Tresorordner",
     "vaultFolderPlaceholder": "Noch nicht ausgewählt",
     "choose": "Auswählen…",
-    "obsidianVaultName": "Tresorname",
+    "defaultVaultName": "Tresorname",
     "vaultSaved": "Gespeichert – gilt ab dem nächsten Start.",
     "vaultSaveFailed": "Speichern fehlgeschlagen.",
     "home": "Start",
@@ -518,7 +518,7 @@
     "vaultsCardDescription": "Zwischen mehreren Bibliotheken wechseln, Tresore erstellen oder löschen.",
     "activeVaultLabel": "Aktuell aktiv",
     "manageVaults": "Tresore verwalten",
-    "libraryCardDescription": "Aus einem Obsidian-Tresor importieren, Upload-Einstellungen.",
+    "libraryCardDescription": "Notizen importieren, Upload-Einstellungen.",
     "manageLibrary": "Bibliothek verwalten",
     "skillsCardDescription": "Chat, Quiz und Lernkarten-Erstellung anpassen.",
     "manageSkills": "Skills verwalten",
@@ -530,7 +530,7 @@
     "manageMemory": "Notizen verwalten",
     "deleteModelConfirmTitle": "„{name}“ löschen?",
     "deleteModelConfirmDescription": "Dieses Modell wird endgültig aus Ollama entfernt. Heruntergeladene Dateien werden von der Festplatte gelöscht.",
-    "obsidianVaultNamePlaceholder": "z. B. Mathe"
+    "defaultVaultNamePlaceholder": "z. B. Mathe"
   },
   "SettingsNav": {
     "title": "Einstellungen",
@@ -562,8 +562,8 @@
     "advancedUploadOptions": "Erweiterte Upload-Optionen",
     "title": "Bibliothek",
     "saveError": "Die Einstellungen konnten nicht gespeichert werden.",
-    "importObsidianTitle": "Aus Obsidian importieren",
-    "importObsidianDescription": "Kopiert einen Obsidian-Tresor einseitig (die Quelle wird nie verändert). Wikilinks werden in relative Markdown-Links umgewandelt, Anhänge werden kopiert, und Notizen mit fehlenden Frontmatter-Feldern erhalten einen Standardwert und ein Prüfabzeichen.",
+    "importObsidianTitle": "Markdown-Ordner importieren (Obsidian, Zettlr …)",
+    "importObsidianDescription": "Kopiert einen Markdown-Notizordner (z. B. einen Obsidian-Tresor) einseitig (die Quelle wird nie verändert). Wikilinks werden in relative Markdown-Links umgewandelt, Anhänge werden kopiert, und Notizen mit fehlenden Frontmatter-Feldern erhalten einen Standardwert und ein Prüfabzeichen.",
     "importLinksTitle": "Aus Links importieren",
     "importLinksDescription": "Füge Links zu PDFs und Webseiten ein – sie werden nacheinander heruntergeladen und der Bibliothek hinzugefügt. Bereits erfolgreich importierte Links werden bei einem erneuten Lauf übersprungen.",
     "uploadSettingsTitle": "Upload-Einstellungen",
@@ -1020,7 +1020,7 @@
     "FILE_EXISTS": "Eine Datei mit diesem Namen existiert bereits",
     "IMPORT_EXPIRED": "Ausstehender Import nicht gefunden (er ist möglicherweise abgelaufen)",
     "IMPORT_INDEX_FAILED": "Die Datei wurde gespeichert, ließ sich aber nicht indizieren und wurde deshalb zurück in den Zwischenspeicher verschoben",
-    "OBSIDIAN_SOURCE_INVALID": "Pfad des Quelltresors nicht gefunden oder kein Ordner",
+    "IMPORT_SOURCE_INVALID": "Pfad des Quelltresors nicht gefunden oder kein Ordner",
     "ATTACHMENT_TYPE_MISMATCH": "Der Inhalt der Datei passt nicht zum erwarteten Typ",
     "IMPORT_DUPLICATE_CONTENT": "Diese Datei (gleicher Inhalt) wurde offenbar schon einmal importiert – du kannst trotzdem fortfahren.",
     "SCAN_ROOT_INVALID": "Der Ordnerpfad ist ungültig, wurde nicht gefunden oder kann nicht durchsucht werden",

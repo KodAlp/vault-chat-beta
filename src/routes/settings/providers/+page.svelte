@@ -547,7 +547,7 @@
 </script>
 
 <svelte:head>
-	<title>{t('ProvidersSettingsPage.title')} — Vault Agent Toolkit</title>
+	<title>{t('ProvidersSettingsPage.title')} — Vault Chat</title>
 </svelte:head>
 
 <div>

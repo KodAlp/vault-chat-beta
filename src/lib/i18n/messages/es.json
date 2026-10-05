@@ -258,7 +258,7 @@
   },
   "ImportObsidianDialog": {
     "trigger": "Importar",
-    "dialogTitle": "Importar bóveda de Obsidian",
+    "dialogTitle": "Importar carpeta Markdown (Obsidian, Zettlr…)",
     "dialogDescription": "Copia unidireccional: nunca se escribe en la bóveda de origen. Las notas sin cambios se omiten al volver a importar.",
     "sourcePathLabel": "Ruta de la bóveda de origen",
     "sourcePathPlaceholder": "p. ej., C:\\Users\\...\\MiBoveda",
@@ -306,7 +306,7 @@
   },
   "LibraryTree": {
     "loadError": "No se pudo cargar la biblioteca.",
-    "empty": "La biblioteca está vacía. Sube un documento o importa una bóveda de Obsidian desde Ajustes → Biblioteca."
+    "empty": "La biblioteca está vacía. Sube un documento o importa tus notas desde Ajustes → Biblioteca."
   },
   "LibraryTreeNode": {
     "needsReview": "Requiere revisión",
@@ -400,9 +400,9 @@
     "continue": "Continuar"
   },
   "HomePage": {
-    "title": "Vault Agent Toolkit",
+    "title": "Vault Chat",
     "emptyTitle": "Aún no hay bóvedas",
-    "emptyDescription": "Crea primero una bóveda para chatear con tus notas: cuando conectes tu bóveda de Obsidian, su contenido se podrá buscar aquí.",
+    "emptyDescription": "Crea primero una bóveda para chatear con tus notas: cuando importes tus notas o documentos, su contenido se podrá buscar aquí.",
     "newVault": "Nueva bóveda",
     "newVaultDialogTitle": "Nueva bóveda",
     "vaultNameLabel": "Nombre de la bóveda",
@@ -420,7 +420,7 @@
     "recentChats": "Chats recientes",
     "start": "Iniciar",
     "noSourcesTitle": "Aún no hay fuentes",
-    "noSourcesDescription": "Para que tus preguntas obtengan respuestas basadas en fuentes y con citas, primero debes importar notas de tu bóveda de Obsidian; de lo contrario, todas las preguntas darán \"fuera de alcance\".",
+    "noSourcesDescription": "Para que tus preguntas obtengan respuestas basadas en fuentes y con citas, primero debes importar tus notas o documentos; de lo contrario, todas las preguntas darán \"fuera de alcance\".",
     "importSources": "Importar fuentes",
     "untitled": "(sin título)",
     "sourceCountBadge": "{count} fuentes",
@@ -509,7 +509,7 @@
     "vaultFolder": "Carpeta de la bóveda",
     "vaultFolderPlaceholder": "Aún sin seleccionar",
     "choose": "Elegir…",
-    "obsidianVaultName": "Nombre de la bóveda",
+    "defaultVaultName": "Nombre de la bóveda",
     "vaultSaved": "Guardado: se aplicará en el próximo inicio.",
     "vaultSaveFailed": "No se pudo guardar.",
     "home": "Inicio",
@@ -522,7 +522,7 @@
     "vaultsCardDescription": "Cambia entre varias bibliotecas, crea o elimina una bóveda.",
     "activeVaultLabel": "Activa actualmente",
     "manageVaults": "Gestionar bóvedas",
-    "libraryCardDescription": "Importa desde una bóveda de Obsidian, ajustes de subida.",
+    "libraryCardDescription": "Importa tus notas, ajustes de subida.",
     "manageLibrary": "Gestionar biblioteca",
     "skillsCardDescription": "Personaliza el chat y la generación de cuestionarios y tarjetas.",
     "manageSkills": "Gestionar habilidades",
@@ -534,7 +534,7 @@
     "manageMemory": "Gestionar notas",
     "deleteModelConfirmTitle": "¿Eliminar \"{name}\"?",
     "deleteModelConfirmDescription": "Este modelo se eliminará de forma permanente de Ollama. Los archivos descargados se borran del disco.",
-    "obsidianVaultNamePlaceholder": "p. ej., Matemáticas"
+    "defaultVaultNamePlaceholder": "p. ej., Matemáticas"
   },
   "SettingsNav": {
     "title": "Ajustes",
@@ -566,8 +566,8 @@
     "advancedUploadOptions": "Opciones avanzadas de subida",
     "title": "Biblioteca",
     "saveError": "No se pudieron guardar los ajustes.",
-    "importObsidianTitle": "Importar desde Obsidian",
-    "importObsidianDescription": "Copia una bóveda de Obsidian en un solo sentido (nunca se escribe en el origen). Los wikilinks se convierten en enlaces Markdown relativos, se copian los adjuntos y las notas a las que les faltan campos de frontmatter reciben un valor predeterminado y una insignia de revisión.",
+    "importObsidianTitle": "Importar carpeta Markdown (Obsidian, Zettlr…)",
+    "importObsidianDescription": "Copia una carpeta de notas Markdown (p. ej., una bóveda de Obsidian) en un solo sentido (nunca se escribe en el origen). Los wikilinks se convierten en enlaces Markdown relativos, se copian los adjuntos y las notas a las que les faltan campos de frontmatter reciben un valor predeterminado y una insignia de revisión.",
     "importLinksTitle": "Importar desde enlaces",
     "importLinksDescription": "Pega enlaces a PDF y páginas web: se descargan en secuencia y se añaden a la biblioteca. Los enlaces ya importados correctamente se omiten al volver a ejecutar.",
     "uploadSettingsTitle": "Ajustes de subida",
@@ -1023,7 +1023,7 @@
     "FILE_EXISTS": "Ya existe un archivo con este nombre",
     "IMPORT_EXPIRED": "No se encontró la importación pendiente (puede que haya caducado)",
     "IMPORT_INDEX_FAILED": "El archivo se guardó pero no se pudo indexar, por lo que se devolvió al área de preparación",
-    "OBSIDIAN_SOURCE_INVALID": "No se encontró la ruta de la bóveda de origen o no es una carpeta",
+    "IMPORT_SOURCE_INVALID": "No se encontró la ruta de la bóveda de origen o no es una carpeta",
     "ATTACHMENT_TYPE_MISMATCH": "El contenido del archivo no coincide con el tipo esperado",
     "IMPORT_DUPLICATE_CONTENT": "Parece que este archivo (mismo contenido) ya se importó antes: aun así puedes continuar.",
     "SCAN_ROOT_INVALID": "La ruta de la carpeta no es válida, no se encontró o no se puede analizar",

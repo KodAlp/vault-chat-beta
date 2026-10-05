@@ -76,7 +76,7 @@
 </script>
 
 <svelte:head>
-	<title>{report?.title ?? t('ReportStudyPage.defaultTitle')} — Vault Agent Toolkit</title>
+	<title>{report?.title ?? t('ReportStudyPage.defaultTitle')} — Vault Chat</title>
 </svelte:head>
 
 <div class="report-screen">

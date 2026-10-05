@@ -250,7 +250,7 @@
   },
   "ImportObsidianDialog": {
     "trigger": "インポート",
-    "dialogTitle": "Obsidian 保管庫をインポート",
+    "dialogTitle": "Markdown フォルダーをインポート（Obsidian、Zettlr…）",
     "dialogDescription": "一方向のコピーです。元の保管庫には一切書き込みません。再インポート時、変更のないノートはスキップされます。",
     "sourcePathLabel": "元の保管庫のパス",
     "sourcePathPlaceholder": "例：C:\\Users\\...\\MyVault",
@@ -295,7 +295,7 @@
   },
   "LibraryTree": {
     "loadError": "ライブラリを読み込めませんでした。",
-    "empty": "ライブラリは空です。ドキュメントをアップロードするか、「設定 → ライブラリ」から Obsidian 保管庫をインポートしてください。"
+    "empty": "ライブラリは空です。ドキュメントをアップロードするか、「設定 → ライブラリ」からノートをインポートしてください。"
   },
   "LibraryTreeNode": {
     "needsReview": "要確認",
@@ -389,9 +389,9 @@
     "continue": "続ける"
   },
   "HomePage": {
-    "title": "Vault Agent Toolkit",
+    "title": "Vault Chat",
     "emptyTitle": "保管庫がまだありません",
-    "emptyDescription": "ノートとチャットするには、まず保管庫を作成してください。Obsidian の保管庫を接続すると、その内容をここで検索できるようになります。",
+    "emptyDescription": "ノートとチャットするには、まず保管庫を作成してください。ノートやドキュメントをインポートすると、その内容をここで検索できるようになります。",
     "newVault": "新しい保管庫",
     "newVaultDialogTitle": "新しい保管庫",
     "vaultNameLabel": "保管庫の名前",
@@ -409,7 +409,7 @@
     "recentChats": "最近のチャット",
     "start": "開始",
     "noSourcesTitle": "ソースがまだありません",
-    "noSourcesDescription": "質問に対して、出典に基づいた引用可能な回答を得るには、まず Obsidian の保管庫からノートをインポートする必要があります。そうしないと、すべての質問が「範囲外」になります。",
+    "noSourcesDescription": "質問に対して、出典に基づいた引用可能な回答を得るには、まずノートやドキュメントをインポートする必要があります。そうしないと、すべての質問が「範囲外」になります。",
     "importSources": "ソースをインポート",
     "untitled": "（無題）",
     "sourceCountBadge": "{count} 件のソース",
@@ -497,7 +497,7 @@
     "vaultFolder": "保管庫のフォルダ",
     "vaultFolderPlaceholder": "未選択",
     "choose": "選択…",
-    "obsidianVaultName": "保管庫の名前",
+    "defaultVaultName": "保管庫の名前",
     "vaultSaved": "保存しました — 次回の起動時に反映されます。",
     "vaultSaveFailed": "保存できませんでした。",
     "home": "ホーム",
@@ -510,7 +510,7 @@
     "vaultsCardDescription": "複数のライブラリを切り替え、保管庫を作成または削除します。",
     "activeVaultLabel": "使用中",
     "manageVaults": "保管庫を管理",
-    "libraryCardDescription": "Obsidian の保管庫からのインポート、アップロード設定。",
+    "libraryCardDescription": "ノートのインポート、アップロード設定。",
     "manageLibrary": "ライブラリを管理",
     "skillsCardDescription": "チャット、クイズ、フラッシュカードの生成をカスタマイズします。",
     "manageSkills": "スキルを管理",
@@ -522,7 +522,7 @@
     "manageMemory": "メモを管理",
     "deleteModelConfirmTitle": "「{name}」を削除しますか？",
     "deleteModelConfirmDescription": "このモデルは Ollama から完全に削除されます。ダウンロード済みのファイルはディスクから削除されます。",
-    "obsidianVaultNamePlaceholder": "例：数学"
+    "defaultVaultNamePlaceholder": "例：数学"
   },
   "SettingsNav": {
     "title": "設定",
@@ -554,8 +554,8 @@
     "advancedUploadOptions": "アップロードの詳細オプション",
     "title": "ライブラリ",
     "saveError": "設定を保存できませんでした。",
-    "importObsidianTitle": "Obsidian からインポート",
-    "importObsidianDescription": "Obsidian の保管庫を一方向にコピーします（元の保管庫には書き込みません）。ウィキリンクは相対 Markdown リンクに変換され、添付ファイルもコピーされます。frontmatter のフィールドが欠けているノートには、既定値と要確認バッジが付きます。",
+    "importObsidianTitle": "Markdown フォルダーをインポート（Obsidian、Zettlr…）",
+    "importObsidianDescription": "Markdown ノートのフォルダー（Obsidian の保管庫など）を一方向にコピーします（元の保管庫には書き込みません）。ウィキリンクは相対 Markdown リンクに変換され、添付ファイルもコピーされます。frontmatter のフィールドが欠けているノートには、既定値と要確認バッジが付きます。",
     "importLinksTitle": "リンクからインポート",
     "importLinksDescription": "PDF や Web ページのリンクを貼り付けると、順番にダウンロードされてライブラリに追加されます。再実行時は、すでにインポートに成功したリンクはスキップされます。",
     "uploadSettingsTitle": "アップロード設定",
@@ -1008,7 +1008,7 @@
     "FILE_EXISTS": "同じ名前のファイルがすでに存在します",
     "IMPORT_EXPIRED": "保留中のインポートが見つかりません（期限切れの可能性があります）",
     "IMPORT_INDEX_FAILED": "ファイルは保存されましたが、インデックスを作成できなかったため、ステージングに戻しました",
-    "OBSIDIAN_SOURCE_INVALID": "元の保管庫のパスが見つからないか、フォルダではありません",
+    "IMPORT_SOURCE_INVALID": "元の保管庫のパスが見つからないか、フォルダではありません",
     "ATTACHMENT_TYPE_MISMATCH": "ファイルの内容が想定される形式と一致しません",
     "IMPORT_DUPLICATE_CONTENT": "このファイル（同じ内容）は以前にインポート済みのようです。続行することもできます。",
     "SCAN_ROOT_INVALID": "フォルダのパスが無効、見つからない、またはスキャンできません",

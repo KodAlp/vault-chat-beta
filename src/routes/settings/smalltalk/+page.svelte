@@ -81,7 +81,7 @@
 </script>
 
 <svelte:head>
-	<title>{t('SmallTalkSettingsPage.title')} — Vault Agent Toolkit</title>
+	<title>{t('SmallTalkSettingsPage.title')} — Vault Chat</title>
 </svelte:head>
 
 <div>
