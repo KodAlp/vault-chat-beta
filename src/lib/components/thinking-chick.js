@@ -4,22 +4,19 @@
 // const chick = createChick(el, { config, onExited, onState });
 // chick.setPhase('idle' | 'thinking' | 'done');
 //   idle     kilit elde, defter kapalı
-//   thinking kilit yere iner, defter açılır, gözler satırları okur (pageTurn: true ise sol kanatla sayfa çevrilir)
-//   done     defter closeMs (1 sn) boyunca yavaşça kapanır, sonra kilit alınır (exitMs), bitince onExited çağrılır
+//   thinking kilit yere iner, defter kuşa doğru açılır, beklerken sayfalar çevrilir
+//   done     defter kapanır, kilit alınır (exitMs, 500 ms), bitince onExited çağrılır
 // chick.setConfig(partial) · chick.getConfig() · chick.setSpeed(n) · chick.destroy()
 
 export var VAULT_CHICK_DEFAULTS = {
   bodyWidth: 1,
   bookW: 85, bookH: 117, pitch: 0.47, pageThick: 11,
   idleX: 420, idleY: 249, idleTilt: 16,
-  readX: 256, readY: 264, readTilt: -4,
-  closedAngle: 168, holdAngle: 26, spread: 130,
+  readX: 414, readY: 232, readTilt: 17,
+  closedAngle: 168, holdAngle: 130, spread: 123,
   lockLift: 40,
   lockDrop: 420, bookTurn: 300, coverOpen: 360,
-  flip: 570, gapMin: 350, gapMax: 800, exitMs: 500,
-  reachMs: 260, armWidth: 18,
-  pageTurn: false,  // true: sol kanatla sayfa çevirme (kapalı — okurken gözler satırları izler)
-  closeMs: 1000     // defterin en açıktan kapanana kadar geçen süre (gözle görülür yavaş kapanış)
+  flip: 570, gapMin: 350, gapMax: 800, exitMs: 500
 };
 
 export function createChick(root, opts) {
@@ -44,8 +41,7 @@ export function createChick(root, opts) {
   };
 
   // Animasyon durumu (hepsi 0..1 arası, flip -1 = çevrilen sayfa yok)
-  // reach: sol kanadın sayfaya uzanması (0 yanda, 1 sayfa köşesinde); hA: elin sayfa üzerindeki konumu (0 yakın yarı, 1 uzak yarı)
-  var st = { lockT: 0, wingDown: 0, wingRest: 0, turn: 0, open: 0, flip: -1, pup: 0, reach: 0, hA: 0, scan: 0 };
+  var st = { lockT: 0, wingDown: 0, wingRest: 0, turn: 0, open: 0, flip: -1, pup: 0 };
   var refs = {};
 
   // ---------- Sabit çizim ----------
@@ -156,9 +152,6 @@ export function createChick(root, opts) {
 
     // defter ve el
     s += '<g data-k="book"></g>';
-    // sol kanat → sayfa çeviren el (yalnızca uzanırken görünür)
-    s += '<g data-k="turn" opacity="0"><path data-k="tArm" fill="none" stroke="' + C.wing + '" stroke-width="' + c.armWidth + '" stroke-linecap="round"/>' +
-      '<g data-k="tHand"><ellipse cx="0" cy="0" rx="12" ry="10" fill="#FFC72C"/><path d="M-6 -3 Q0 -7 6 -3" stroke="' + C.wingLine + '" stroke-width="2.2" fill="none" stroke-linecap="round"/></g></g>';
     s += '<g data-k="hand"><ellipse cx="0" cy="0" rx="13" ry="11" fill="#FFC72C"/><path d="M-7 -3 Q0 -8 7 -3" stroke="' + C.wingLine + '" stroke-width="2.2" fill="none" stroke-linecap="round"/></g>';
     s += '</svg>';
 
@@ -166,7 +159,7 @@ export function createChick(root, opts) {
     function q(k) { return root.querySelector('[data-k="' + k + '"]'); }
     refs = {
       lock: q('lock'), lockShadow: q('lockShadow'), wing: q('wing'), pupils: q('pupils'),
-      arm: q('arm'), book: q('book'), hand: q('hand'), turn: q('turn'), tArm: q('tArm'), tHand: q('tHand'),
+      arm: q('arm'), book: q('book'), hand: q('hand'),
       eyes: Array.prototype.slice.call(root.querySelectorAll('[data-k="eye"]')),
       wingPivot: [px, py], shoulder: [R - 16, 298]
     };
@@ -237,9 +230,8 @@ export function createChick(root, opts) {
       var off = th * (1 - 2 * k);
       var pts = rect(a, 1, 1.5, W - 3, 1.5, H - 1.5, off);
       var face = Math.abs(Math.cos(a));
-      // çevrilen yaprak: beyaz sayfaların üstünde seçilsin diye ince kenar + dönerken koyulaşan gölge
-      return poly(pts, C.page, ' stroke="' + C.pageEdge2 + '" stroke-width="1.6" stroke-linejoin="round"') +
-        poly(pts, '#2A1A5A', ' opacity="' + f(0.06 + (1 - face) * 0.34) + '"') +
+      return poly(pts, C.page) +
+        poly(pts, '#2A1A5A', ' opacity="' + f((1 - face) * 0.3) + '"') +
         lines(a, 1, off, face);
     }
     var items = [
@@ -254,11 +246,7 @@ export function createChick(root, opts) {
     var rb = P(g.aN, 1, 4, H - 2, th / 2);
     var ribbon = '<path d="M' + f(rb[0]) + ' ' + f(rb[1]) + ' q2 10 -2 18 l5 -3 l3 5 q3 -10 0 -20 Z" fill="' + C.ribbon + '"/>';
     var hand = P(g.aN, 1, 8, H * 0.8, -4);
-    // sayfa çeviren elin hedefi: çevrilen yaprağın üst ön köşesi
-    var ht = Math.max(0, Math.min(1, st.hA));
-    var turnPt = P(lerp(g.aN, g.aF, ht), 1, W - 7, H * 0.62, th * (1 - 2 * ht) + 2);
     return {
-      turn: rot(turnPt, [g.Sx, g.Sy], g.tilt),
       svg: '<g transform="rotate(' + f(g.tilt) + ' ' + f(g.Sx) + ' ' + f(g.Sy) + ')">' + ribbon + items.map(function (x) { return x.s; }).join('') + '</g>',
       hand: rot(hand, [g.Sx, g.Sy], g.tilt)
     };
@@ -279,8 +267,7 @@ export function createChick(root, opts) {
     var pv = refs.wingPivot;
     refs.wing.setAttribute('transform',
       'translate(0 ' + f(c.lockLift * st.wingDown - 6 * st.wingRest) + ') rotate(' + f(-26 * st.wingRest) + ' ' + pv[0] + ' ' + pv[1] + ')');
-    // scan: okurken gözler satır boyunca soldan sağa kayar, sonra satır başına döner
-    refs.pupils.setAttribute('transform', 'translate(' + f(lerp(-3, 5, st.pup) + lerp(-4, 4, st.scan)) + ' ' + f(lerp(1, 3, st.pup) + 1.2 * st.scan) + ')');
+    refs.pupils.setAttribute('transform', 'translate(' + f(lerp(-3, 5, st.pup)) + ' ' + f(lerp(1, 3, st.pup)) + ')');
     var bs = 1;
     if (blinkAt >= 0) {
       var k = (clock - blinkAt) / 150;
@@ -297,19 +284,6 @@ export function createChick(root, opts) {
     refs.arm.setAttribute('x1', sh[0]); refs.arm.setAttribute('y1', sh[1]);
     refs.arm.setAttribute('x2', f(b.hand[0])); refs.arm.setAttribute('y2', f(b.hand[1]));
     refs.hand.setAttribute('transform', 'translate(' + f(b.hand[0]) + ' ' + f(b.hand[1]) + ') rotate(' + f(g.tilt - 20) + ')');
-    // sol kanat sayfaya uzanır: kanat şekli söner, yerine omuzdan çıkan kol + el
-    var r = st.reach, wingVis = 1 - Math.min(1, r * 4);
-    refs.wing.setAttribute('opacity', f(wingVis));
-    refs.turn.setAttribute('opacity', r > 0.01 ? 1 : 0);
-    if (r > 0.01) {
-      var s0 = [pv[0] + 10, pv[1] + 4];                 // omuz
-      var rest = [pv[0] + 4, pv[1] + 46];               // kanat ucu (dinlenme)
-      var tip = [lerp(rest[0], b.turn[0], EASE.io(r)), lerp(rest[1], b.turn[1], EASE.io(r)) - 10 * Math.sin(Math.PI * r)];
-      // kol gövdenin önünden, karna doğru hafif kavisle geçer
-      var ctl = [(s0[0] + tip[0]) / 2, Math.max(s0[1], tip[1]) + 34 * EASE.io(r)];
-      refs.tArm.setAttribute('d', 'M' + s0[0] + ' ' + s0[1] + ' Q' + f(ctl[0]) + ' ' + f(ctl[1]) + ' ' + f(tip[0]) + ' ' + f(tip[1]));
-      refs.tHand.setAttribute('transform', 'translate(' + f(tip[0]) + ' ' + f(tip[1]) + ') rotate(' + f(-25 + 40 * st.hA) + ')');
-    }
   }
 
   // ---------- Zaman çizelgesi ----------
@@ -356,8 +330,7 @@ export function createChick(root, opts) {
   // Çevrilen sayfayı hızla bitir, beklemeyi kes
   function hurry() {
     tweens.forEach(function (tw) {
-      if (tw.key === 'flip' || tw.key === 'hA') { tw.from = st[tw.key]; tw.start = clock; tw.dur = 20 + 110 * (1 - st.flip); tw.ease = EASE.lin; }
-      else if (tw.key === 'reach' || tw.key === 'scan') { tw.from = st[tw.key]; tw.start = clock; tw.dur = 110; tw.ease = EASE.out; }
+      if (tw.key === 'flip') { tw.from = st.flip; tw.start = clock; tw.dur = 20 + 110 * (1 - st.flip); tw.ease = EASE.lin; }
       else if (!tw.key) { tw.start = clock; tw.dur = 1; }
     });
   }
@@ -376,44 +349,25 @@ export function createChick(root, opts) {
     ]);
   }
   function exit() {
-    // 1) defter en açık hâlinden closeMs boyunca yavaşça kapanır
-    // 2) ardından exitMs içinde defter yana iner, kanat kilidi alır
-    var E = cfg.exitMs, K = cfg.closeMs, d = Math.max(0, K - E * 0.42);
+    var E = cfg.exitMs;
     return Promise.all([
-      tween('reach', 0, E * 0.25, EASE.out),
-      tween('scan', 0, 260, EASE.out),
-      tween('open', 0, K, EASE.io),
-      tween('turn', 0, E * 0.55, EASE.io, d + E * 0.38),
-      tween('pup', 0, E * 0.4, EASE.out, d + E * 0.3),
-      tween('wingRest', 0, E * 0.32, EASE.out, d + E * 0.1),
-      tween('wingDown', 1, E * 0.32, EASE.out, d + E * 0.1),
-      tween('wingDown', 0, E * 0.5, EASE.io, d + E * 0.5),
-      tween('lockT', 0, E * 0.5, EASE.io, d + E * 0.5)
+      tween('open', 0, E * 0.42, EASE.in),
+      tween('turn', 0, E * 0.55, EASE.io, E * 0.38),
+      tween('pup', 0, E * 0.4, EASE.out, E * 0.3),
+      tween('wingRest', 0, E * 0.32, EASE.out, E * 0.1),
+      tween('wingDown', 1, E * 0.32, EASE.out, E * 0.1),
+      tween('wingDown', 0, E * 0.5, EASE.io, E * 0.5),
+      tween('lockT', 0, E * 0.5, EASE.io, E * 0.5)
     ]);
   }
   function readOnce() {
     var c = cfg;
     if (reduced()) return wait(1000);
-    if (!c.pageTurn) {
-      // sayfa çevirme yok: gözler bir satırı okur, satır başına döner, kısa ara
-      return tween('scan', 1, 1100, EASE.io).then(function () {
-        return tween('scan', 0, want === 'thinking' ? 300 : 120, EASE.out);
-      }).then(function () {
-        if (want === 'thinking') return wait(c.gapMin * 0.5 + Math.random() * c.gapMin);
-      });
-    }
-    st.hA = 0;
-    // 1) sol kanat sayfanın köşesine uzanır  2) sayfayı tutup çevirir  3) geri çekilir, kısa ara
-    return tween('reach', 1, c.reachMs, EASE.out).then(function () {
-      if (want !== 'thinking') return;
-      st.flip = 0;
-      return Promise.all([tween('flip', 1, c.flip, EASE.io), tween('hA', 1, c.flip, EASE.io)]);
-    }).then(function () {
+    st.flip = 0;
+    return tween('flip', 1, c.flip, EASE.io).then(function () {
       st.flip = -1;
-      var back = tween('reach', 0, want === 'thinking' ? c.reachMs * 0.85 : 110, EASE.io);
-      if (want !== 'thinking') return back;
-      return Promise.all([back, wait(c.gapMin + Math.random() * Math.max(0, c.gapMax - c.gapMin))]);
-    }).then(function () { st.hA = 0; });
+      if (want === 'thinking') return wait(c.gapMin + Math.random() * Math.max(0, c.gapMax - c.gapMin));
+    });
   }
 
   // ---------- Faz makinesi ----------
