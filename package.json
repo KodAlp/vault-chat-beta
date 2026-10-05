@@ -26,6 +26,7 @@
     "stage:server": "node scripts/stage-server.mjs",
     "mcp": "tsx mcp/server.ts",
     "mcp:smoke": "tsx mcp/smoke.ts",
+    "mcp:e2e": "tsx mcp/e2e-pipeline.ts",
     "mcp:config": "node mcp/launch.mjs --print-config",
     "tauri": "tauri",
     "desktop:dev": "tauri dev",
