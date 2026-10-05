@@ -2,6 +2,9 @@
 	import { page } from '$app/state';
 	import { afterNavigate } from '$app/navigation';
 	import { t } from '$lib/i18n/index.svelte';
+	import { onMount } from 'svelte';
+	import { pendingImports, refreshPendingImports } from '$lib/pending-imports.svelte';
+	import { attentionCount } from '$lib/pending-imports-view';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 	import ArrowUpRightIcon from '@lucide/svelte/icons/arrow-up-right';
 	import PaletteIcon from '@lucide/svelte/icons/palette';
@@ -18,6 +21,13 @@
 
 	let { children } = $props();
 
+	// Pending imports needing the user (ready + error): one fetch on entering settings; the panel on the
+	// upload page keeps the shared store fresh afterwards.
+	let pendingCount = $derived(attentionCount(pendingImports.items));
+	onMount(() => {
+		void refreshPendingImports();
+	});
+
 	// The content pane is its own scroll container, which SvelteKit's scroll
 	// restoration doesn't reset — switching settings pages kept the old offset.
 	let mainEl: HTMLDivElement | undefined = $state();
@@ -31,6 +41,8 @@
 		icon: Component<any>;
 		/** Leaves the settings area (a study page, not a settings page). */
 		external?: boolean;
+		/** Count shown as a small pill after the label (hidden at 0). */
+		badge?: number;
 	}
 
 	let groups = $derived<{ title: string; items: NavItem[] }[]>([
@@ -39,7 +51,7 @@
 			items: [
 				{ href: '/settings', label: t('SettingsNav.appearance'), icon: PaletteIcon },
 				{ href: '/settings/vaults', label: t('SettingsNav.vaults'), icon: ArchiveIcon },
-				{ href: '/settings/library', label: t('SettingsNav.upload'), icon: UploadIcon },
+				{ href: '/settings/library', label: t('SettingsNav.upload'), icon: UploadIcon, badge: pendingCount },
 				{ href: '/settings/skills', label: t('SettingsNav.skills'), icon: SparklesIcon },
 				{ href: '/settings/memory', label: t('SettingsNav.memory'), icon: BrainIcon },
 				{ href: '/study/progress', label: t('SettingsNav.progress'), icon: ChartColumnIcon, external: true }
@@ -86,6 +98,9 @@
 					>
 						<Icon size={20} strokeWidth={1.75} aria-hidden="true" />
 						{item.label}
+						{#if item.badge}
+							<span class="nav-badge" aria-label={t('PendingImports.navBadgeLabel', { count: item.badge })}>{item.badge}</span>
+						{/if}
 						{#if item.external}
 							<ArrowUpRightIcon class="meta" size={16} strokeWidth={1.75} aria-label={t('SettingsNav.leavesSettings')} />
 						{/if}
@@ -135,6 +150,19 @@
 	.settings-nav :global(.vc-side-row .meta) {
 		margin-inline-start: auto;
 		color: var(--label-secondary);
+	}
+	.nav-badge {
+		margin-inline-start: auto;
+		min-width: 18px;
+		height: 18px;
+		padding: 0 5px;
+		border-radius: 9px;
+		background: var(--accent-soft);
+		color: var(--accent-text);
+		font-size: 11px;
+		line-height: 18px;
+		text-align: center;
+		font-weight: 600;
 	}
 	.settings-main {
 		flex: 1;

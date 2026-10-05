@@ -865,6 +865,32 @@
     "deleteFailed": "„{name}“ konnte nicht gelöscht werden.",
     "previewFailed": "Die Vorschau konnte nicht abgerufen werden."
   },
+  "PendingImports": {
+    "title": "Ausstehende Importe",
+    "description": "Quellen, die ein KI-Agent über MCP gebracht hat oder die unfertig blieben. Nichts gelangt in deine Bibliothek, bevor du es bestätigst.",
+    "statusQueued": "In der Warteschlange",
+    "statusConverting": "Wird konvertiert",
+    "statusReady": "Bereit zur Prüfung",
+    "statusError": "Fehlgeschlagen",
+    "mcpBadgeTitle": "Von einem KI-Agenten über MCP hinzugefügt",
+    "confirm": "Bestätigen",
+    "remove": "Entfernen",
+    "loadFailed": "Ausstehende Importe konnten nicht geladen werden.",
+    "removeFailed": "Der Import konnte nicht entfernt werden.",
+    "navBadgeLabel": "{count} ausstehende Importe brauchen deine Aufmerksamkeit"
+  },
+  "McpImportSettings": {
+    "title": "MCP-Importordner",
+    "description": "Ein über MCP verbundener KI-Agent darf lokale Dateien nur aus diesen Ordnern importieren. Importe warten immer auf deine Bestätigung. Lass die Liste leer, um lokale Dateiimporte zu sperren; Link-Importe (URL) sind erlaubt und laufen über dieselbe Bestätigung.",
+    "empty": "Keine Ordner erlaubt — lokale Dateiimporte sind gesperrt.",
+    "removeAria": "{path} entfernen",
+    "add": "Hinzufügen",
+    "addFolder": "Ordner hinzufügen…",
+    "pathPlaceholder": "Absoluter Ordnerpfad",
+    "saveFailed": "Die Ordner konnten nicht gespeichert werden.",
+    "loadFailed": "Die Ordner konnten nicht geladen werden.",
+    "createdViaMcp": "Über MCP erstellt"
+  },
   "VaultsSettingsPage": {
     "title": "Tresore",
     "intro": "Jeder Tresor hat seine eigene Quellenbibliothek und seinen eigenen Suchindex – sie vermischen sich nie. Der Chatverlauf ist pro Tresor getrennt, und der Chat-Bildschirm arbeitet immer mit dem aktiven Tresor.",

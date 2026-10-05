@@ -855,6 +855,32 @@
     "deleteFailed": "We no fit delete \"{name}\".",
     "previewFailed": "We no fit get di preview."
   },
+  "PendingImports": {
+    "title": "Imports wey dey wait",
+    "description": "Sources wey AI agent bring through MCP or wey no finish. Nothing go enter your library until you confirm am.",
+    "statusQueued": "Dey line up",
+    "statusConverting": "Dey convert",
+    "statusReady": "Ready make you check am",
+    "statusError": "E fail",
+    "mcpBadgeTitle": "AI agent add am through MCP",
+    "confirm": "Confirm",
+    "remove": "Remove",
+    "loadFailed": "We no fit load the imports wey dey wait.",
+    "removeFailed": "We no fit remove the import.",
+    "navBadgeLabel": "{count} imports wey dey wait need your attention"
+  },
+  "McpImportSettings": {
+    "title": "MCP import folders",
+    "description": "AI agent wey connect through MCP fit only import local files from these folders. Imports go always wait for your confirmation. Leave the list empty if you want block local file imports; link (URL) imports dey allowed and dem go pass the same confirmation.",
+    "empty": "No folder dey allowed — local file imports dey blocked.",
+    "removeAria": "Remove {path}",
+    "add": "Add",
+    "addFolder": "Add folder…",
+    "pathPlaceholder": "Full path of the folder",
+    "saveFailed": "We no fit save the folders.",
+    "loadFailed": "We no fit load the folders.",
+    "createdViaMcp": "Dem create am through MCP"
+  },
   "VaultsSettingsPage": {
     "title": "Vaults",
     "intro": "Each vault get im own source library and search index — dem no dey mix. Chat history dey separate for each vault, and di chat screen dey always work on di active vault.",

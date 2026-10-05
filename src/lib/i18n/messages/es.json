@@ -870,6 +870,32 @@
     "deleteFailed": "No se pudo eliminar \"{name}\".",
     "previewFailed": "No se pudo obtener la vista previa."
   },
+  "PendingImports": {
+    "title": "Importaciones pendientes",
+    "description": "Fuentes que un agente de IA trajo por MCP o que quedaron a medias. Nada entra en tu biblioteca hasta que lo confirmes.",
+    "statusQueued": "En cola",
+    "statusConverting": "Convirtiendo",
+    "statusReady": "Listo para revisar",
+    "statusError": "Falló",
+    "mcpBadgeTitle": "Añadido por un agente de IA mediante MCP",
+    "confirm": "Confirmar",
+    "remove": "Quitar",
+    "loadFailed": "No se pudieron cargar las importaciones pendientes.",
+    "removeFailed": "No se pudo quitar la importación.",
+    "navBadgeLabel": "{count} importaciones pendientes requieren tu atención"
+  },
+  "McpImportSettings": {
+    "title": "Carpetas de importación MCP",
+    "description": "Un agente de IA conectado por MCP solo puede importar archivos locales de estas carpetas. Las importaciones siempre esperan tu confirmación. Deja la lista vacía para bloquear la importación de archivos locales; las importaciones por enlace (URL) están permitidas y pasan por la misma confirmación.",
+    "empty": "No hay carpetas permitidas: la importación de archivos locales está bloqueada.",
+    "removeAria": "Quitar {path}",
+    "add": "Añadir",
+    "addFolder": "Añadir carpeta…",
+    "pathPlaceholder": "Ruta absoluta de la carpeta",
+    "saveFailed": "No se pudieron guardar las carpetas.",
+    "loadFailed": "No se pudieron cargar las carpetas.",
+    "createdViaMcp": "Creada mediante MCP"
+  },
   "VaultsSettingsPage": {
     "title": "Bóvedas",
     "intro": "Cada bóveda mantiene su propia biblioteca de fuentes y su propio índice de búsqueda: nunca se mezclan. El historial de chats se divide por bóveda y la pantalla de chat siempre opera sobre la bóveda activa.",

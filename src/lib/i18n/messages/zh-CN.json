@@ -855,6 +855,32 @@
     "deleteFailed": "无法删除“{name}”。",
     "previewFailed": "无法获取预览。"
   },
+  "PendingImports": {
+    "title": "待处理的导入",
+    "description": "由 AI 代理通过 MCP 带来或尚未完成的来源。在你确认之前，不会有任何内容进入你的资料库。",
+    "statusQueued": "排队中",
+    "statusConverting": "转换中",
+    "statusReady": "待审核",
+    "statusError": "失败",
+    "mcpBadgeTitle": "由 AI 代理通过 MCP 添加",
+    "confirm": "确认",
+    "remove": "移除",
+    "loadFailed": "无法加载待处理的导入。",
+    "removeFailed": "无法移除该导入。",
+    "navBadgeLabel": "有 {count} 项待处理的导入需要你处理"
+  },
+  "McpImportSettings": {
+    "title": "MCP 导入文件夹",
+    "description": "通过 MCP 连接的 AI 代理只能从这些文件夹导入本地文件。导入始终等待你的确认。将列表留空即可禁止导入本地文件；链接（URL）导入是允许的，并经过同样的确认。",
+    "empty": "没有允许的文件夹——本地文件导入已被阻止。",
+    "removeAria": "移除 {path}",
+    "add": "添加",
+    "addFolder": "添加文件夹…",
+    "pathPlaceholder": "文件夹的绝对路径",
+    "saveFailed": "无法保存文件夹。",
+    "loadFailed": "无法加载文件夹。",
+    "createdViaMcp": "通过 MCP 创建"
+  },
   "VaultsSettingsPage": {
     "title": "仓库",
     "intro": "每个仓库都有自己的来源资料库和搜索索引——二者绝不会混在一起。聊天历史按仓库分开，聊天界面始终作用于当前使用的仓库。",

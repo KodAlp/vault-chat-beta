@@ -870,6 +870,32 @@
     "deleteFailed": "Não foi possível excluir \"{name}\".",
     "previewFailed": "Não foi possível obter a pré-visualização."
   },
+  "PendingImports": {
+    "title": "Importações pendentes",
+    "description": "Fontes trazidas por um agente de IA via MCP ou deixadas incompletas. Nada entra na sua biblioteca até você confirmar.",
+    "statusQueued": "Na fila",
+    "statusConverting": "Convertendo",
+    "statusReady": "Pronto para revisão",
+    "statusError": "Falhou",
+    "mcpBadgeTitle": "Adicionado por um agente de IA via MCP",
+    "confirm": "Confirmar",
+    "remove": "Remover",
+    "loadFailed": "Não foi possível carregar as importações pendentes.",
+    "removeFailed": "Não foi possível remover a importação.",
+    "navBadgeLabel": "{count} importações pendentes precisam da sua atenção"
+  },
+  "McpImportSettings": {
+    "title": "Pastas de importação MCP",
+    "description": "Um agente de IA conectado via MCP só pode importar arquivos locais destas pastas. As importações sempre aguardam a sua confirmação. Deixe a lista vazia para bloquear a importação de arquivos locais; importações por link (URL) são permitidas e passam pela mesma confirmação.",
+    "empty": "Nenhuma pasta permitida — a importação de arquivos locais está bloqueada.",
+    "removeAria": "Remover {path}",
+    "add": "Adicionar",
+    "addFolder": "Adicionar pasta…",
+    "pathPlaceholder": "Caminho absoluto da pasta",
+    "saveFailed": "Não foi possível salvar as pastas.",
+    "loadFailed": "Não foi possível carregar as pastas.",
+    "createdViaMcp": "Criado via MCP"
+  },
   "VaultsSettingsPage": {
     "title": "Cofres",
     "intro": "Cada cofre mantém a sua própria biblioteca de fontes e o seu próprio índice de busca: eles nunca se misturam. O histórico de chats é dividido por cofre e a tela de chat sempre opera no cofre ativo.",

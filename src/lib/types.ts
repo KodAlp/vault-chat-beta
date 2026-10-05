@@ -481,6 +481,8 @@ export interface VaultRecord {
 	lastOpenedAt: string;
 	/** İ6 (Aşama 8) — see the server-side VaultRecord's own doc comment. */
 	mcpExposed?: boolean;
+	/** Set when an MCP client created the vault (server VaultRecord.createdVia). */
+	createdVia?: 'mcp';
 }
 
 /** VaultRecord plus a computed, non-persisted field — api/vaults/+server.ts
@@ -489,6 +491,19 @@ export interface VaultRecord {
  * comment). Files on disk that `npm run index` would walk but hasn't yet —
  * a curation pass that finished without a following reindex looked, before
  * this existed, identical to a vault with nothing new (E2). */
+/** One row of GET /api/library/pending-imports (server: pending-imports.ts PendingImportMeta). */
+export interface PendingImportItem {
+	importId: string;
+	status: 'queued' | 'converting' | 'ready' | 'error';
+	source: { kind: 'path' | 'url'; name: string };
+	proposed: { title: string; domain: string; level: string };
+	warnings: string[];
+	error?: { code: string; params?: Record<string, string | number> };
+	by: 'mcp' | 'app';
+	createdAt: string;
+	updatedAt: string;
+}
+
 export interface VaultWithStatus extends VaultRecord {
 	unindexedCount: number;
 	/** Aşama 3c — true when this vault's index was built under a different

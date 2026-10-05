@@ -855,6 +855,32 @@
     "deleteFailed": "「{name}」を削除できませんでした。",
     "previewFailed": "プレビューを取得できませんでした。"
   },
+  "PendingImports": {
+    "title": "保留中のインポート",
+    "description": "MCP 経由で AI エージェントが持ち込んだ、または未完了のソースです。確認するまで、ライブラリには何も追加されません。",
+    "statusQueued": "待機中",
+    "statusConverting": "変換中",
+    "statusReady": "確認待ち",
+    "statusError": "失敗",
+    "mcpBadgeTitle": "MCP 経由で AI エージェントが追加",
+    "confirm": "確認",
+    "remove": "削除",
+    "loadFailed": "保留中のインポートを読み込めませんでした。",
+    "removeFailed": "インポートを削除できませんでした。",
+    "navBadgeLabel": "対応が必要な保留中のインポートが {count} 件あります"
+  },
+  "McpImportSettings": {
+    "title": "MCP インポート用フォルダ",
+    "description": "MCP で接続した AI エージェントは、これらのフォルダにあるローカルファイルだけをインポートできます。インポートは常にあなたの確認を待ちます。ローカルファイルのインポートを禁止するにはリストを空にしてください。リンク（URL）のインポートは許可され、同じ確認を経ます。",
+    "empty": "許可されたフォルダはありません。ローカルファイルのインポートはブロックされています。",
+    "removeAria": "{path} を削除",
+    "add": "追加",
+    "addFolder": "フォルダを追加…",
+    "pathPlaceholder": "フォルダの絶対パス",
+    "saveFailed": "フォルダを保存できませんでした。",
+    "loadFailed": "フォルダを読み込めませんでした。",
+    "createdViaMcp": "MCP で作成"
+  },
   "VaultsSettingsPage": {
     "title": "保管庫",
     "intro": "各保管庫は、それぞれ独自のソースライブラリと検索インデックスを持ち、混ざることはありません。チャット履歴も保管庫ごとに分かれており、チャット画面は常に使用中の保管庫を対象にします。",

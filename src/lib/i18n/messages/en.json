@@ -903,6 +903,32 @@
 		"previewFailed": "Couldn't get the preview."
 	},
 
+	"PendingImports": {
+		"title": "Pending imports",
+		"description": "Sources brought in by an AI agent over MCP or left unfinished. Nothing enters your library until you confirm it.",
+		"statusQueued": "Queued",
+		"statusConverting": "Converting",
+		"statusReady": "Ready for review",
+		"statusError": "Failed",
+		"mcpBadgeTitle": "Added by an AI agent over MCP",
+		"confirm": "Confirm",
+		"remove": "Remove",
+		"loadFailed": "Couldn't load pending imports.",
+		"removeFailed": "Couldn't remove the import.",
+		"navBadgeLabel": "{count} pending imports need your attention"
+	},
+	"McpImportSettings": {
+		"title": "MCP import folders",
+		"description": "An AI agent connected via MCP may only import local files from these folders. Imports always wait for your confirmation. Leave the list empty to block local file imports; link (URL) imports are allowed and go through the same confirmation.",
+		"empty": "No folders allowed — local file imports are blocked.",
+		"removeAria": "Remove {path}",
+		"add": "Add",
+		"addFolder": "Add folder…",
+		"pathPlaceholder": "Absolute folder path",
+		"saveFailed": "Couldn't save the folders.",
+		"loadFailed": "Couldn't load the folders.",
+		"createdViaMcp": "Created via MCP"
+	},
 	"VaultsSettingsPage": {
 		"title": "Vaults",
 		"intro": "Each vault keeps its own source library and search index — they never mix. Chat history is split per vault, and the chat screen always operates on the active vault.",
