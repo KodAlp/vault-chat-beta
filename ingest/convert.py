@@ -36,6 +36,7 @@ import sys
 from pathlib import Path
 from typing import Callable
 
+from column_order import repair_document_order
 from heading_repair import body_size, read_text_layer, repair_headings, restructure_headings
 from postprocess import _apply_outside_verbatim, postprocess, quality_warnings
 
@@ -298,6 +299,12 @@ def pdf_has_text_layer(path: Path, sample_pages: int = 10) -> bool:
         return False
 
 
+# Pages whose docling reading order column_order.py repaired in the most recent
+# convert_with_docling call; main() turns it into a warning. Module-level so
+# the many call sites that return only the Markdown string stay unchanged.
+_COLUMN_REPAIRED_PAGES: list[int] = []
+
+
 def convert_with_docling(path: Path, page_range: tuple[int, int] | None = None) -> str:
     """docling 2.x — preferred over marker when the document's value is in its
     tables, and the only one of the two that works on Windows (see
@@ -359,6 +366,14 @@ def convert_with_docling(path: Path, page_range: tuple[int, int] | None = None) 
     )
     convert_kwargs = {"page_range": page_range} if page_range else {}
     result = converter.convert(str(path), **convert_kwargs)
+    # docling's reading-order pass sometimes swaps the columns of a two-column
+    # page although every bbox is right (column_order.py). A failure here must
+    # never fail the conversion: fall back to docling's own order.
+    _COLUMN_REPAIRED_PAGES.clear()
+    try:
+        _COLUMN_REPAIRED_PAGES.extend(repair_document_order(result.document))
+    except Exception as err:  # noqa: BLE001 — repair is best-effort
+        print(f"column_order: onarım atlandı: {err}", file=sys.stderr)
     return result.document.export_to_markdown()
 
 
@@ -658,6 +673,11 @@ def main() -> int:
     # not something to present as if it were the note's real title.
     if is_md and existing_md_title is None and not re.search(r"^#\s+\S", text, re.MULTILINE):
         warnings.append("Başlık kaynak dosyada bulunamadı, dosya adından türetildi.")
+    if converted_by == "docling" and _COLUMN_REPAIRED_PAGES:
+        warnings.append(
+            "Sütun sırası düzeltildi (docling okuma sırası): sayfa "
+            + ", ".join(str(n) for n in _COLUMN_REPAIRED_PAGES)
+        )
     if warnings and not frontmatter.get("needs_review"):
         frontmatter["needs_review"] = True
 
