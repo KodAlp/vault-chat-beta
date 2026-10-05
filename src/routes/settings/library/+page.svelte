@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import ImportObsidianDialog from '$lib/components/ImportObsidianDialog.svelte';
 	import LinksImportDialog from '$lib/components/LinksImportDialog.svelte';
 	import LibraryTree from '$lib/components/LibraryTree.svelte';
 	import type { LibrarySettings } from '$lib/types';
 	import { Switch } from '$lib/components/ui/switch';
+	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import * as Card from '$lib/components/ui/card';
 	import { t } from '$lib/i18n/index.svelte';
@@ -114,13 +114,13 @@
 
 	<Card.Root class="mb-6">
 		<Card.Header>
-			<Card.Title level={2}>{t('LibrarySettingsPage.importObsidianTitle')}</Card.Title>
+			<Card.Title level={2}>{t('LibrarySettingsPage.importNotesTitle')}</Card.Title>
 			<Card.Description>
-				{t('LibrarySettingsPage.importObsidianDescription')}
+				{t('LibrarySettingsPage.importNotesDescription')}
 			</Card.Description>
 		</Card.Header>
 		<Card.Content>
-			<ImportObsidianDialog />
+			<Button variant="outline" href="/settings/import">{t('LibrarySettingsPage.importNotesOpen')}</Button>
 		</Card.Content>
 	</Card.Root>
 

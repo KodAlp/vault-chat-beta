@@ -8,6 +8,9 @@ Kararlar bir kez verilir, her dilde aynı uygulanır. Kaynak katalog `messages/e
 - Ürün / servis adları: Vault Chat, Obsidian (yalnız içe aktarma kaynağı adı olarak), Ollama, MCP,
   Claude, DeepSeek, OpenAI, Azure, Gemini, Kimi, Tauri, Python, Pandoc, docling,
   MinerU, YouTube, GitHub, Hugging Face, Whisper, WebView2.
+- Not uygulaması adları (Kütüphane içe aktar kartları): Obsidian, Logseq, Joplin, Zettlr, Foam, Dendron, Notion,
+  Evernote, Bear, Notesnook, Capacities, Heptabase, Tana, SiYuan, Trilium Notes, Anytype, AFFiNE, Roam Research,
+  Google Keep, Apple Notes. Bu adlar yalnız `LibraryImport.source_*` / `flavor_*` anahtarlarında geçebilir.
 - Biçim ve teknoloji adları: PDF, DOCX, PPTX, XLSX, EPUB, HTML, Markdown, LaTeX,
   KaTeX, JSON, YAML, URL, API, GPU, CPU, RAM, VRAM, SSE, HTTP(S), CSV, SQLite,
   FTS, RAG.
@@ -23,6 +26,7 @@ Kararlar bir kez verilir, her dilde aynı uygulanır. Kaynak katalog `messages/e
 | vault | Dilde yerleşik, kişisel not koleksiyonu anlamındaki karşılık (de *Tresor*, es *bóveda*, fr *coffre*, pt *cofre*, ru *хранилище*, ja *保管庫*, zh-CN *仓库*). Yerleşik karşılık yoksa *vault*. | Kavram kullanıcıların not uygulamalarından aşina olduğu "kasa / depo" fikridir; uygulama adı (Vault Chat) ile tutarlı kalır. |
 | library | "kütüphane"nin doğal karşılığı | Vault içindeki not ağacı. |
 | source | doğal karşılık (kaynak) | Sohbette alıntılanan not. |
+| library import | "kütüphane içe aktarma" anlamı (tr *Kütüphane içe aktar*) | Başka not uygulamalarından (Obsidian, Logseq, Joplin…) not kütüphanesi getirme sayfası; "import" burada kopyalama + dönüştürme demektir. |
 | embedding / embedding model | Dilde yerleşik teknik terim (zh 嵌入, ja 埋め込み); yoksa *embedding* | Teknik kullanıcı kitlesi. |
 | chunk | Dilde yerleşik karşılık yoksa *chunk* | |
 | index / reindex | "dizin(le) / yeniden dizinle" anlamındaki doğal fiil | Arama dizini anlamında, klasör değil. |

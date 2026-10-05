@@ -29,7 +29,10 @@
 	{#if loadError}
 		<p class="error" role="alert">{loadError}</p>
 	{:else if tree.length === 0}
-		<p class="empty">{t('LibraryTree.empty')}</p>
+		<p class="empty">
+			{t('LibraryTree.empty')}
+			<a href="/settings/import">{t('LibraryTree.emptyLink')}</a>
+		</p>
 	{:else}
 		{#each tree as node (node.path)}
 			<LibraryTreeNode {node} onchange={refresh} />
@@ -55,5 +58,10 @@
 		color: var(--color-muted-foreground);
 		font-size: 0.78rem;
 		line-height: 1.4;
+	}
+
+	.empty a {
+		color: var(--accent-text);
+		text-decoration: underline;
 	}
 </style>
