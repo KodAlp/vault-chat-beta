@@ -603,12 +603,15 @@ export type ImportEvent =
 	| { type: 'done'; summary?: ImportSummary }
 	| { type: 'error'; message: string; code?: string; params?: Record<string, string | number> };
 
-/** SSE event shapes streamed by POST /api/library/import-obsidian. */
-export type ObsidianImportEvent =
+/** SSE event shapes streamed by POST /api/library/import-source/run (and the older /import-obsidian wrapper). */
+export type LibraryImportEvent =
 	| { type: 'progress'; stage: string; fileName?: string }
 	| { type: 'item'; item: ImportResultItem }
 	| { type: 'done'; summary: ImportSummary }
 	| { type: 'error'; message: string; code?: string; params?: Record<string, string | number> };
+
+/** Alias kept for the pre-generalization name. */
+export type ObsidianImportEvent = LibraryImportEvent;
 
 /** SSE event shapes streamed by POST /api/system/python (pip install run). */
 export type PythonSetupEvent =

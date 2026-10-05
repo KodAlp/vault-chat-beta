@@ -115,10 +115,10 @@ for (const file of catalogFiles) {
 	});
 }
 
-/** The product is no longer positioned as Obsidian-based: Obsidian survives only as an import source's name. */
+/** The product is no longer positioned as Obsidian-based: Obsidian survives only as an import source's name (LibraryImport.source_* / flavor_* keys). */
 test('no catalog mentions Obsidian or "Vault Agent Toolkit" outside the import-source keys', () => {
 	const dir = path.join(path.dirname(fileURLToPath(import.meta.url)), 'messages');
-	const isImportSourceKey = (k: string) => k.startsWith('ImportObsidianDialog.') || k.startsWith('LibrarySettingsPage.importObsidian');
+	const isImportSourceKey = (k: string) => k.startsWith('LibraryImport.source_') || k.startsWith('LibraryImport.flavor_');
 	const offenders: string[] = [];
 	for (const f of fs.readdirSync(dir).filter((n) => n.endsWith('.json'))) {
 		const cat = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8')) as Record<string, unknown>;

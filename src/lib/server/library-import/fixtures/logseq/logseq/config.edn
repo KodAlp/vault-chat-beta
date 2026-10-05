@@ -1,0 +1,3 @@
+{:meta/version 1
+ :file/name-format :triple-lowbar
+ :preferred-format :markdown}
