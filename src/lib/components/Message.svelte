@@ -217,6 +217,8 @@
 	.extra {
 		margin-top: var(--space-2);
 		align-items: center;
+		width: fit-content;
+		max-width: 100%;
 		padding: var(--space-2) var(--space-3);
 	}
 
