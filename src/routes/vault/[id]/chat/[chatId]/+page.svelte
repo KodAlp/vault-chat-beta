@@ -28,6 +28,8 @@
 	let includedPaths = $state<string[] | undefined>(undefined);
 	let sourceCounts = $state<SourceCounts>({ selected: 0, total: 0, areasSelected: 0, areasTotal: 0 });
 	let sourcesOpen = $state(false);
+	// "<provider> · <model>" reported by Chat; shown in the sidebar's Kaynaklar card.
+	let modelLabel = $state('');
 	// Title of the open chat, reported by ChatSidebar from the chat list.
 	let chatTitle = $state<string | null>(null);
 	let sidebar: ReturnType<typeof ChatSidebar> | undefined = $state();
@@ -62,7 +64,7 @@
 		}
 	}
 
-	// Chat's ScopeIndicator asks to "go to the source tree" — the tree now
+	// Chat's empty state asks to "go to the source tree" — the tree now
 	// lives in the sources sheet, so that opens it.
 	function handleFocusTree() {
 		sourcesOpen = true;
@@ -120,6 +122,10 @@
 		collapsed={leftCollapsed}
 		ontoggle={toggleCollapse}
 		onTitle={(title) => (chatTitle = title)}
+		sourceCounts={sourceCounts}
+		sourcesExpanded={sourcesOpen}
+		{modelLabel}
+		onOpenSources={() => (sourcesOpen = true)}
 	/>
 
 	<main class="panel-center">
@@ -162,12 +168,11 @@
 				chatId={data.chatId}
 				vaultId={data.vaultId}
 				{includedPaths}
-				selectedCount={sourceCounts.selected}
-				totalCount={sourceCounts.total}
 				onChatLoaded={handleChatLoaded}
 				onExpandScope={() => handleScopeChange(undefined)}
 				onFocusTree={handleFocusTree}
 				onTurnEnd={() => void sidebar?.refresh()}
+				onModelLabel={(label) => (modelLabel = label)}
 			>
 				{#snippet composerStart()}
 					<SourceTrigger

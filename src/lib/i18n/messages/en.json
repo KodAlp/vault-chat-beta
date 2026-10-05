@@ -78,13 +78,6 @@
 		"chunkCount": "×{count} chunks"
 	},
 
-	"ScopeIndicator": {
-		"goToSourceTree": "Go to source tree",
-		"partialScope": "{selected}/{total} sources active",
-		"zeroScope": "0/{total} sources active",
-		"allSources": "all sources"
-	},
-
 	"ExportMenu": {
 		"exportTitle": "Export",
 		"markdown": "Markdown (.md)",

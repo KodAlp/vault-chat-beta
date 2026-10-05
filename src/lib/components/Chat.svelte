@@ -2,7 +2,6 @@
 	import { onDestroy, onMount, untrack, type Snippet } from 'svelte';
 	import type { ChatMessage, ChatRequestBody, ProviderModelOption, StreamEvent } from '$lib/types';
 	import Message from './Message.svelte';
-	import ScopeIndicator from './ScopeIndicator.svelte';
 	import ModelPickerRow from './ModelPickerRow.svelte';
 	import ReindexDialog from './ReindexDialog.svelte';
 	import { settings } from '$lib/settings.svelte';
@@ -19,19 +18,16 @@
 		chatId,
 		vaultId,
 		includedPaths,
-		selectedCount = 0,
-		totalCount = 0,
 		onChatLoaded,
 		onExpandScope,
 		onFocusTree,
 		onTurnEnd,
-		composerStart
+		composerStart,
+		onModelLabel
 	}: {
 		chatId: string;
 		vaultId: string;
 		includedPaths?: string[];
-		selectedCount?: number;
-		totalCount?: number;
 		onChatLoaded?: (paths: string[] | undefined) => void;
 		onExpandScope?: () => void;
 		onFocusTree?: () => void;
@@ -41,6 +37,9 @@
 		/** Optional content for the left end of the composer bar (the source-scope
 		 * trigger is placed here by the chat page). */
 		composerStart?: Snippet;
+		/** Reports the active "<provider> · <model>" label (for the sidebar's
+		 * Kaynaklar card) — derived from the model list this component already loads. */
+		onModelLabel?: (label: string) => void;
 	} = $props();
 
 	const FLUSH_INTERVAL_MS = 50;
@@ -86,6 +85,11 @@
 	let activeProvider = $derived(
 		overrideProvider ?? (thinkMode ? settings.reasoningProvider : settings.fastProvider)
 	);
+
+	$effect(() => {
+		const providerLabel = modelOptions.find((m) => m.providerId === activeProvider)?.providerLabel;
+		onModelLabel?.([providerLabel, activeModel].filter(Boolean).join(' · '));
+	});
 
 	async function onReviewModeChange(value: boolean) {
 		reviewMode = value;
@@ -467,10 +471,6 @@
 </script>
 
 <div class="chat">
-	<header>
-		<ScopeIndicator selected={selectedCount} total={totalCount} onFocusTree={() => onFocusTree?.()} />
-	</header>
-
 	<div class="messages-wrap">
 		<div class="messages" bind:this={listEl} onscroll={handleScroll}>
 			{#if messages.length === 0}
@@ -569,15 +569,6 @@
 		flex-direction: column;
 		height: 100%;
 		background: var(--bg-canvas);
-	}
-
-	header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 0.75rem;
-		padding: 0.5rem 1rem;
-		border-bottom: 1px solid var(--separator);
 	}
 
 	.messages-wrap {

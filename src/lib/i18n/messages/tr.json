@@ -78,13 +78,6 @@
 		"chunkCount": "×{count} bölüm"
 	},
 
-	"ScopeIndicator": {
-		"goToSourceTree": "Kaynak ağacına git",
-		"partialScope": "{selected}/{total} kaynak aktif",
-		"zeroScope": "0/{total} kaynak aktif",
-		"allSources": "tüm kaynaklar"
-	},
-
 	"ExportMenu": {
 		"exportTitle": "Dışa aktar",
 		"markdown": "Markdown (.md)",

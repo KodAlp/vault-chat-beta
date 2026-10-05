@@ -1,6 +1,7 @@
 <script lang="ts">
 	import FileTextIcon from '@lucide/svelte/icons/file-text';
 	import { t } from '$lib/i18n/index.svelte';
+	import { scopeSummary } from '$lib/source-summary';
 
 	/**
 	 * Chip showing the current source scope ("Tüm kasa" / "13 / 14 alan"); a
@@ -27,14 +28,7 @@
 	} = $props();
 
 	let zero = $derived(total > 0 && selected === 0);
-	let partial = $derived(total > 0 && selected > 0 && selected < total);
-	let summary = $derived(
-		zero
-			? t('SourceTrigger.none')
-			: partial
-				? t('SourceTrigger.areas', { selected: areasSelected, total: areasTotal })
-				: t('SourceTrigger.all')
-	);
+	let summary = $derived(scopeSummary({ selected, total, areasSelected, areasTotal }));
 </script>
 
 <button
