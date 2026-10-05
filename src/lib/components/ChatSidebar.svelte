@@ -5,6 +5,9 @@
 	import { groupChatsByDate } from '$lib/chat-groups';
 	import { t } from '$lib/i18n/index.svelte';
 	import Icon from './Icon.svelte';
+	import { scopeSummary, type ScopeCounts } from '$lib/source-summary';
+	import FolderIcon from '@lucide/svelte/icons/folder';
+	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 	import PanelLeftCloseIcon from '@lucide/svelte/icons/panel-left-close';
 	import PanelLeftOpenIcon from '@lucide/svelte/icons/panel-left-open';
@@ -25,7 +28,11 @@
 		chatId,
 		collapsed = false,
 		ontoggle,
-		onTitle
+		onTitle,
+		sourceCounts,
+		sourcesExpanded = false,
+		modelLabel = '',
+		onOpenSources
 	}: {
 		vaultId: string;
 		vaultName: string;
@@ -34,6 +41,12 @@
 		ontoggle: () => void;
 		/** Reports the open chat's title (null until it has a row/title). */
 		onTitle?: (title: string | null) => void;
+		/** Source scope numbers for the "Kaynaklar" card pinned to the bottom. */
+		sourceCounts?: ScopeCounts;
+		sourcesExpanded?: boolean;
+		/** "<provider> · <model>" appended to the card's subtitle (empty = omit). */
+		modelLabel?: string;
+		onOpenSources?: () => void;
 	} = $props();
 
 	let chats = $state<ChatSummary[]>([]);
@@ -45,6 +58,9 @@
 
 	let current = $derived(chats.find((c) => c.id === chatId));
 	let groups = $derived(groupChatsByDate(chats));
+	let sourcesSubtitle = $derived(
+		[sourceCounts ? scopeSummary(sourceCounts) : '', modelLabel].filter(Boolean).join(' · ')
+	);
 
 	$effect(() => {
 		onTitle?.(current ? (current.title ?? null) : null);
@@ -160,6 +176,40 @@
 			{/if}
 		</nav>
 	{/if}
+
+	{#if onOpenSources}
+		<div class="sources-foot">
+			{#if collapsed}
+				<button
+					type="button"
+					class="vc-src-trigger sources-icon"
+					aria-haspopup="dialog"
+					aria-expanded={sourcesExpanded}
+					title={t('SourcesSheet.title')}
+					aria-label={t('SourceTrigger.open', { summary: sourcesSubtitle })}
+					onclick={onOpenSources}
+				>
+					<span class="g"><FolderIcon size={18} strokeWidth={1.75} aria-hidden="true" /></span>
+				</button>
+			{:else}
+				<button
+					type="button"
+					class="vc-src-trigger"
+					aria-haspopup="dialog"
+					aria-expanded={sourcesExpanded}
+					aria-label={t('SourceTrigger.open', { summary: sourcesSubtitle })}
+					onclick={onOpenSources}
+				>
+					<span class="g"><FolderIcon size={18} strokeWidth={1.75} aria-hidden="true" /></span>
+					<span class="txt">
+						<b>{t('SourcesSheet.title')}</b>
+						<small title={sourcesSubtitle}>{sourcesSubtitle}</small>
+					</span>
+					<ChevronRightIcon class="chev" size={16} strokeWidth={1.75} aria-hidden="true" />
+				</button>
+			{/if}
+		</div>
+	{/if}
 </aside>
 
 <style>
@@ -238,6 +288,34 @@
 	.vc-side-row {
 		text-decoration: none;
 		flex-shrink: 0;
+	}
+
+	.sources-foot {
+		flex-shrink: 0;
+		margin-top: var(--space-2);
+		padding-top: var(--space-2);
+		border-top: 1px solid var(--separator);
+		width: 100%;
+	}
+
+	.collapsed .sources-foot {
+		width: auto;
+		border-top: 0;
+	}
+
+	.vc-src-trigger .txt {
+		flex: 1;
+		min-width: 0;
+	}
+
+	.vc-src-trigger:focus-visible {
+		outline: 2px solid var(--focus-ring);
+		outline-offset: 2px;
+	}
+
+	.sources-icon {
+		width: auto;
+		padding: 4px;
 	}
 
 	.name {
