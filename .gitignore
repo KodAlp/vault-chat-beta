@@ -25,6 +25,8 @@ data/model-catalog.json
 # İ2 (Aşama 8) — which cloud providers this instance's user has consented
 # to send chat data to; local-instance state, not source.
 data/provider-consent.json
+# Per-install UI preferences (theme, locale, models) written by /api/ui-prefs.
+data/ui-prefs.json
 .env
 !.env.example
 
