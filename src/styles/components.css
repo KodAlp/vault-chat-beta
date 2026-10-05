@@ -332,5 +332,5 @@
 .vc-sel-chip { display: inline-flex; align-items: center; gap: 4px; height: 26px; padding: 0 4px 0 10px; border-radius: var(--radius-full); font: 500 13px/16px var(--font-sans); background: var(--bg-elevated); box-shadow: inset 0 0 0 1px var(--separator-strong); }
 .vc-sel-chip button { all: unset; cursor: pointer; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; color: var(--label-secondary); }
 .vc-sel-chip button:hover { background: var(--fill-hover); color: var(--label); }
-@media (prefers-reduced-motion: reduce) { .vc-sheet { transform: none !important; } }
+:root[data-motion="reduce"] .vc-sheet { transform: none !important; }
 @media (max-width: 900px) { .vc-sheet-body { grid-template-columns: 1fr; } .vc-sheet-summary { display: none; } }

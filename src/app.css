@@ -70,7 +70,9 @@
 	box-sizing: border-box;
 }
 
-/* Universal safety net for prefers-reduced-motion: tokens.css collapses the
+/* Universal safety net for reduced motion (<html data-motion="reduce">, set by
+   +layout.svelte from the in-app Animasyonlar setting or, for "system", from
+   prefers-reduced-motion — so the app setting can override the OS): tokens.css collapses the
    --motion-* variables for everything that reads them, but a few rules use a
    hardcoded duration instead (SourceTree's "jump here" flash, the quiz/cards
    progress-bar fills) and the local animate-in/animate-out utilities defined
@@ -84,15 +86,13 @@
    element.animate() (the Web Animations API), which this CSS-only net
    cannot reach, so those are gated in JS instead (motion.ts's
    prefersReducedMotion()). */
-@media (prefers-reduced-motion: reduce) {
-	*,
-	*::before,
-	*::after {
-		animation-duration: 1ms !important;
-		animation-iteration-count: 1 !important;
-		transition-duration: 1ms !important;
-		scroll-behavior: auto !important;
-	}
+:root[data-motion="reduce"] *,
+:root[data-motion="reduce"] *::before,
+:root[data-motion="reduce"] *::after {
+	animation-duration: 1ms !important;
+	animation-iteration-count: 1 !important;
+	transition-duration: 1ms !important;
+	scroll-behavior: auto !important;
 }
 
 /* Local replacement for the `tw-animate-css` plugin, which every vendored
@@ -208,7 +208,7 @@ body {
    document.startViewTransition — timed off the same --motion-* tokens as
    every other transition in the app instead of the browser's own default
    (250ms ease), so a route change doesn't feel like a different app than a
-   dialog opening. Falls under the prefers-reduced-motion !important block
+   dialog opening. Falls under the data-motion="reduce" !important block
    above like any other animation-duration in this file. */
 ::view-transition-old(root),
 ::view-transition-new(root) {

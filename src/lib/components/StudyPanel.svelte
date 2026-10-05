@@ -424,9 +424,7 @@
 		background: var(--fill-hover);
 	}
 
-	@media (prefers-reduced-motion: reduce) {
-		.vc-action {
-			transition: none;
-		}
+	:global(:root[data-motion="reduce"]) .vc-action {
+		transition: none;
 	}
 </style>

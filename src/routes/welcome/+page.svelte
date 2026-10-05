@@ -169,11 +169,9 @@
 		}
 	}
 
-	@media (prefers-reduced-motion: reduce) {
-		.chick-wrap,
-		.chick-bob,
-		.chick-shadow {
-			animation: none;
-		}
+	:global(:root[data-motion="reduce"]) .chick-wrap,
+	:global(:root[data-motion="reduce"]) .chick-bob,
+	:global(:root[data-motion="reduce"]) .chick-shadow {
+		animation: none;
 	}
 </style>

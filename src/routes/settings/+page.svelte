@@ -28,6 +28,18 @@
 		persistSettings();
 	}
 
+	type MotionValue = typeof settings.motion;
+	let motionOptions = $derived<{ value: MotionValue; label: string }[]>([
+		{ value: 'system', label: t('SettingsPage.motionSystem') },
+		{ value: 'on', label: t('SettingsPage.motionOn') },
+		{ value: 'off', label: t('SettingsPage.motionOff') }
+	]);
+
+	function pickMotion(value: MotionValue) {
+		settings.motion = value;
+		persistSettings();
+	}
+
 	function pickLocale(value: Locale) {
 		i18n.locale = value;
 		persistLocale();
@@ -65,6 +77,25 @@
 					<span class="theme-label">{opt.label}</span>
 				</label>
 			{/each}
+		</div>
+	</section>
+
+	<section class="vc-group !p-0">
+		<h2 class="vc-group-title">{t('SettingsPage.motionTitle')}</h2>
+		<div class="vc-list">
+			<div class="vc-list-row items-start py-3">
+				<span class="flex min-w-0 flex-1 flex-col gap-0.5 text-sm">
+					{t('SettingsPage.motionTitle')}
+					<span class="text-xs text-muted-foreground">{t('SettingsPage.motionHint')}</span>
+				</span>
+				<div class="vc-seg ml-auto" role="tablist" aria-label={t('SettingsPage.motionTitle')}>
+					{#each motionOptions as opt (opt.value)}
+						<button type="button" role="tab" aria-selected={settings.motion === opt.value} onclick={() => pickMotion(opt.value)}>
+							{opt.label}
+						</button>
+					{/each}
+				</div>
+			</div>
 		</div>
 	</section>
 

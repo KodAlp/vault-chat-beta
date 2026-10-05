@@ -83,6 +83,9 @@ function sanitizeSettings(raw: unknown): Partial<Settings> | undefined {
 	if (typeof src.theme === 'string' && THEMES.has(src.theme)) {
 		out.theme = src.theme as Settings['theme'];
 	}
+	if (src.motion === 'system' || src.motion === 'on' || src.motion === 'off') {
+		out.motion = src.motion;
+	}
 	for (const key of STRING_FIELDS) {
 		// Aşama 4c: '' is a real value here ("no model/provider chosen — use the task chain"), and it must
 		// survive the merge in writeUiPrefs: dropping it would let an older saved pin (e.g. a provider that

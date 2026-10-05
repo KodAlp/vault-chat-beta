@@ -218,9 +218,7 @@
 		}
 	}
 
-	@media (prefers-reduced-motion: reduce) {
-		.indeterminate {
-			animation: none;
-		}
+	:global(:root[data-motion="reduce"]) .indeterminate {
+		animation: none;
 	}
 </style>

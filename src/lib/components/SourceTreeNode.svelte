@@ -186,9 +186,7 @@
 		transition-duration: var(--duration-base);
 	}
 
-	@media (prefers-reduced-motion: reduce) {
-		.vc-trow {
-			transition: none;
-		}
+	:global(:root[data-motion="reduce"]) .vc-trow {
+		transition: none;
 	}
 </style>

@@ -323,10 +323,8 @@
 		}
 	}
 
-	@media (prefers-reduced-motion: reduce) {
-		:global(.vc-sheet.static.sources-sheet[data-state='open']) {
-			animation: none;
-		}
+	:global(:root[data-motion="reduce"] .vc-sheet.static.sources-sheet[data-state='open']) {
+		animation: none;
 	}
 
 	.tree-scroll {

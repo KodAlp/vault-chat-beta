@@ -1,5 +1,8 @@
 export interface Settings {
 	theme: 'system' | 'light' | 'dark' | 'cream' | 'sand' | 'forest';
+	/** In-app animation setting: 'on' = always animate, 'off' = always reduce, 'system' = follow the OS
+	 * prefers-reduced-motion. +layout.svelte resolves it into <html data-motion="reduce|full">. */
+	motion: 'system' | 'on' | 'off';
 	/** Small/fast model used for background utility calls (title generation). */
 	defaultModel: string;
 	fastModel: string;
@@ -49,6 +52,7 @@ export const STORAGE_KEY = 'vault-chat-settings';
 
 const DEFAULTS: Settings = {
 	theme: 'system',
+	motion: 'system',
 	// Aşama 4c: blank = "no choice made" — the client sends no model/provider and the server uses the first
 	// provider of the task chain with ITS defaultModel (the first-run wizard, or Settings, fills these in).
 	defaultModel: '',
