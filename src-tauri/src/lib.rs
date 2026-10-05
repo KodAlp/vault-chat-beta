@@ -497,6 +497,13 @@ fn sidecar_remote_capability(url: String) -> tauri::ipc::CapabilityBuilder {
         .remote(url)
         .permission("core:default")
         .permission("core:event:default")
+        // Custom title bar + F11 (WindowTitleBar.svelte / +layout.svelte): the page runs on the
+        // sidecar's remote origin, so these are granted here as well as in capabilities/default.json.
+        .permission("core:window:allow-start-dragging")
+        .permission("core:window:allow-minimize")
+        .permission("core:window:allow-toggle-maximize")
+        .permission("core:window:allow-close")
+        .permission("core:window:allow-set-fullscreen")
         .permission("dialog:default")
         .permission("opener:default")
         .permission("allow-winget-install")

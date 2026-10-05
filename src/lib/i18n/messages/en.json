@@ -1182,6 +1182,13 @@
 		"savedRestartNote": "Saved. The server is running; the change takes effect the next time it starts."
 	},
 
+	"WindowTitleBar": {
+		"minimize": "Minimize",
+		"maximize": "Maximize",
+		"restore": "Restore",
+		"close": "Close"
+	},
+
 	"ChatSidebar": {
 		"ariaLabel": "Chat history",
 		"newChat": "New chat",
