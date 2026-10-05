@@ -227,7 +227,7 @@
   --shadow-composer: inset 0 0 0 1px rgba(220, 240, 225, 0.10);
 }
 
-@media (prefers-reduced-motion: reduce) { :root { --duration-fast: 1ms; --duration-base: 1ms; } }
+:root[data-motion="reduce"] { --duration-fast: 1ms; --duration-base: 1ms; }
 
 .text-display-hero { font: var(--text-display-hero); letter-spacing: var(--tracking-display-hero, normal); }
 .text-display-title { font: var(--text-display-title); letter-spacing: var(--tracking-display-title, normal); }

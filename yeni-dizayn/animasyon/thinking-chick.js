@@ -24,8 +24,12 @@ export function createChick(root, opts) {
   var cfg = Object.assign({}, VAULT_CHICK_DEFAULTS, opts.config || {});
   var uid = 'vc' + Math.random().toString(36).slice(2, 8);
   var D2R = Math.PI / 180;
+  // Aynı mantık src/lib/motion.ts prefersReducedMotion(): uygulama ayarı (<html data-motion>) varsa o, yoksa işletim sistemi tercihi.
   var mq = window.matchMedia('(prefers-reduced-motion: reduce)');
-  function reduced() { return mq.matches; }
+  function reduced() {
+    var m = document.documentElement.dataset.motion;
+    return m ? m === 'reduce' : mq.matches;
+  }
   function lerp(a, b, t) { return a + (b - a) * t; }
   function f(n) { return Math.round(n * 10) / 10; }
 
@@ -59,7 +63,7 @@ export function createChick(root, opts) {
       '.' + uid + ' .tassel{transform-origin:356px 117px;animation:' + uid + 't 2.6s ease-in-out infinite}' +
       '@keyframes ' + uid + 'b{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}' +
       '@keyframes ' + uid + 't{0%,100%{transform:rotate(-5deg)}50%{transform:rotate(5deg)}}' +
-      '@media (prefers-reduced-motion: reduce){.' + uid + ' .breathe,.' + uid + ' .tassel{animation:none}}' +
+      ':root[data-motion="reduce"] .' + uid + ' .breathe,:root[data-motion="reduce"] .' + uid + ' .tassel{animation:none}' +
       '</style>';
     s += '<defs><clipPath id="' + uid + 'body"><path d="' + bodyPath() + '"/></clipPath></defs>';
 

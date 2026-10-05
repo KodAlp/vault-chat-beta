@@ -73,25 +73,28 @@ function solveTForX(x: number): number {
  * at 0, 1 at 1, and is monotonically increasing in between. */
 export const motionEase = (x: number): number => bezierComponent(solveTForX(x), BEZIER_Y1, BEZIER_Y2);
 
-/** True only in a browser that reports prefers-reduced-motion: reduce.
- * False during SSR (no `window`) and in any environment without
- * matchMedia. */
+/** True when animations should be reduced. The in-app Animasyonlar setting
+ * wins: +layout.svelte writes the effective value to <html data-motion="reduce|full">
+ * (system → prefers-reduced-motion), so that attribute is read first. Without
+ * it (before the layout mounted, tests) it falls back to matchMedia. False
+ * during SSR (no `window`) and in any environment without matchMedia. */
 export function prefersReducedMotion(): boolean {
-	return (
-		typeof window !== 'undefined' &&
-		window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true
-	);
+	if (typeof window === 'undefined') return false;
+	const attr = typeof document !== 'undefined' ? document.documentElement?.dataset?.motion : undefined;
+	if (attr === 'reduce') return true;
+	if (attr === 'full') return false;
+	return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
 }
 
 /**
  * Svelte transition wrapper used at every `transition:`/`in:`/`out:fly` call
  * site in the app instead of svelte/transition's `fly` directly. Svelte 5's
  * transitions run through element.animate() (the Web Animations API), which
- * the CSS `prefers-reduced-motion` !important safety net in app.css cannot
+ * the CSS `data-motion="reduce"` !important safety net in app.css cannot
  * reach — that net only overrides `animation-duration`/`transition-duration`
  * CSS properties. This is the actual reduced-motion gate for every Svelte
  * transition in the app: swap the spatial fly for an opacity-only fade
- * (same duration family, no movement) whenever the OS preference is set.
+ * (same duration family, no movement) whenever reduced motion is in effect (app setting or OS preference).
  */
 export function motionFly(node: Element, params: FlyParams = {}) {
 	if (prefersReducedMotion()) {

@@ -65,6 +65,24 @@
 			settings.theme === 'system' ? (systemPrefersDark ? 'dark' : 'light') : settings.theme;
 	});
 
+	// Animation setting: 'on' → full, 'off' → reduce, 'system' → follow the OS's prefers-reduced-motion
+	// (live listener, same pattern as the theme above). Written to <html data-motion> so every CSS rule and
+	// the JS gates (motion.ts, thinking-chick.js) key off one attribute that the in-app setting can override.
+	let systemReducesMotion = $state(false);
+
+	$effect(() => {
+		const mql = window.matchMedia('(prefers-reduced-motion: reduce)');
+		systemReducesMotion = mql.matches;
+		const handler = (e: MediaQueryListEvent) => (systemReducesMotion = e.matches);
+		mql.addEventListener('change', handler);
+		return () => mql.removeEventListener('change', handler);
+	});
+
+	$effect(() => {
+		const reduce = settings.motion === 'off' || (settings.motion !== 'on' && systemReducesMotion);
+		document.documentElement.dataset.motion = reduce ? 'reduce' : 'full';
+	});
+
 	// Root-level, not +page.svelte's: "/" itself 307-redirects straight to
 	// /vault/[id] server-side the moment a vault is active or there's only
 	// one (see +page.server.ts's "son vault'u hatırlama" load) — for
@@ -101,7 +119,7 @@
 	// startViewTransition is undefined in browsers/WebViews that don't
 	// support it (onNavigate then just returns undefined, SvelteKit
 	// navigates as it always did), and app.css's global
-	// prefers-reduced-motion override already collapses the
+	// data-motion="reduce" override already collapses the
 	// ::view-transition-* animation durations it drives, same as every
 	// other animation in this app.
 	//

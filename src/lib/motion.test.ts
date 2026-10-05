@@ -49,6 +49,30 @@ test('prefersReducedMotion reflects a stubbed matchMedia', () => {
 	}
 });
 
+test('prefersReducedMotion: the data-motion attribute overrides matchMedia', () => {
+	const g = globalThis as { window?: unknown; document?: unknown };
+	const origWindow = g.window;
+	const origDocument = g.document;
+	try {
+		g.window = { matchMedia: (_query: string) => ({ matches: false }) };
+		g.document = { documentElement: { dataset: { motion: 'reduce' } } };
+		assert.equal(prefersReducedMotion(), true);
+
+		g.window = { matchMedia: (_query: string) => ({ matches: true }) };
+		g.document = { documentElement: { dataset: { motion: 'full' } } };
+		assert.equal(prefersReducedMotion(), false);
+
+		// Attribute absent → falls back to matchMedia.
+		g.document = { documentElement: { dataset: {} } };
+		assert.equal(prefersReducedMotion(), true);
+	} finally {
+		if (origWindow === undefined) delete g.window;
+		else g.window = origWindow;
+		if (origDocument === undefined) delete g.document;
+		else g.document = origDocument;
+	}
+});
+
 test('flipDuration is 0 under reduced motion and MOTION.fast otherwise', () => {
 	const original = (globalThis as { window?: unknown }).window;
 	try {

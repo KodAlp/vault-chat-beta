@@ -329,9 +329,7 @@
 		color: var(--danger);
 	}
 
-	@media (prefers-reduced-motion: reduce) {
-		.chat-sidebar {
-			transition: none;
-		}
+	:global(:root[data-motion="reduce"]) .chat-sidebar {
+		transition: none;
 	}
 </style>

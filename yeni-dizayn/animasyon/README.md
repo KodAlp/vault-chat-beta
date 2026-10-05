@@ -15,10 +15,10 @@ Sohbette yanıt beklenirken üç noktanın (`ChatBubble.svelte` → `.thinking-d
 | `phase` | Ne olur | Süre |
 |---|---|---|
 | `idle` | Kilit kanatta, defter kapalı | — |
-| `thinking` | (Gönderimden asıl yanıtın ilk kelimesine kadar — düşünme aşaması dahil) Kilit yere iner → defter kuşun önüne gelip açılır → gözler satır boyunca kayar, satır başına döner; kısa aralar, göz kırpma | giriş ≈ 1 sn, sonra döngü |
-| `done` | Defter en açık hâlinden **yavaşça kapanır** (`closeMs`, 1000 ms) → yana iner, kanat kilidi alır (`exitMs`, 500 ms) → `onexited` | ≈ 1,3 sn |
+| `thinking` | (Gönderimden asıl yanıtın ilk kelimesine kadar — düşünme aşaması dahil) Kilit yere iner → defter kuşa doğru açılır → beklerken sayfalar çevrilir; kısa aralar, göz kırpma | giriş ≈ 1 sn, sonra döngü |
+| `done` | Defter kapanır, kanat kilidi alır (`exitMs`, 500 ms) → `onexited` | ≈ 0,5 sn |
 
-Yanıt HTML'i **`onexited`'dan sonra** gösterilir. Akış bu ~1,3 sn boyunca da sürdüğü için yanıt ilk göründüğünde birkaç satır gelmiş olur. Daha erken göstermek istenirse `closeMs` kısaltılır.
+Yanıt HTML'i **`onexited`'dan sonra** gösterilir. Akış bu ~0,5 sn boyunca da sürdüğü için yanıt ilk göründüğünde birkaç satır gelmiş olur. Daha erken göstermek istenirse `exitMs` kısaltılır.
 
 ## Uygulamaya bağlarken
 
@@ -31,9 +31,7 @@ Yanıt HTML'i **`onexited`'dan sonra** gösterilir. Akış bu ~1,3 sn boyunca da
 
 - Boyut kapsayıcının genişliğine uyar; sohbet balonunda 112px öneriliyor (`.chick-slot`). Kep ve defter viewBox dışına taştığı için kapsayıcıda `overflow: visible` olmalı.
 - Kuşun renkleri kendi paletinde (sarı gövde, mor kep/defter); 5 temada da aynı kalır — maskot olduğu için tema token'larına bağlanmadı.
-- `prefers-reduced-motion`: göz gezdirme, sayfa çevirme, nefes ve püskül animasyonu durur; fazlar arasında doğrudan geçer.
+- Azaltılmış hareket (`<html data-motion="reduce">`; uygulamadaki Animasyonlar ayarı, "Sistem" ise `prefers-reduced-motion`): göz gezdirme, sayfa çevirme, nefes ve püskül animasyonu durur; fazlar arasında doğrudan geçer.
 - Erişilebilirlik: kapsayıcı `role="status"` + `aria-label` ("Yanıt bekleniyor…"), ekran okuyucu animasyonu değil durumu duyar.
-- Sayfa çevirme varsayılan olarak **kapalı** (`pageTurn: false`). Açılırsa kilidi bırakan sol kanat sayfanın köşesine uzanıp sayfayı çevirir (`reachMs` 260, `armWidth` 18).
-- Kapanış: `closeMs` (1000) — defter en açık hâlden kapanana kadar geçen süre; kilidi alma bundan sonra `exitMs` (500) içinde.
-- Okuma pozu: defter artık kuşun önünde, iki sayfası izleyiciye açık duruyor (`readX 256, readY 264, readTilt -4, holdAngle 26, spread 130`). Eski pozda (defter yanda, kuşa dönük) çevrilen sayfa kapağın arkasında kaldığı için görünmüyordu. Kendi "Ayarları kopyala" çıktında eski `readX/readY/holdAngle` değerleri varsa bu poz ezilir — o anahtarları çıkar.
-- Ayarlar (`config`): kitap boyutu/açıları, kilit düşüşü, sayfa çevirme süresi, aralar, `exitMs`. Varsayılanlar `VAULT_CHICK_DEFAULTS`.
+- Okuma pozu: `readX 414, readY 232, readTilt 17, holdAngle 130, spread 123` (defter kuşa doğru açık, beklerken sayfalar çevrilir).
+- Ayarlar (`config`): kitap boyutu/açıları, kilit düşüşü, sayfa çevirme süresi (`flip`), aralar, `exitMs`. Varsayılanlar `VAULT_CHICK_DEFAULTS`.

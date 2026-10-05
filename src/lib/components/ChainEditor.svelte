@@ -500,9 +500,7 @@
 		background: var(--accent);
 		box-shadow: none;
 	}
-	@media (prefers-reduced-motion: reduce) {
-		.chain-opt {
-			transition: none;
-		}
+	:global(:root[data-motion="reduce"]) .chain-opt {
+		transition: none;
 	}
 </style>

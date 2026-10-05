@@ -66,9 +66,7 @@
 		box-shadow: inset 0 0 0 1px var(--warning);
 	}
 
-	@media (prefers-reduced-motion: reduce) {
-		.source-trigger {
-			transition: none;
-		}
+	:global(:root[data-motion="reduce"]) .source-trigger {
+		transition: none;
 	}
 </style>
