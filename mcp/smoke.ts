@@ -1,10 +1,13 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import http from 'node:http';
+import type { AddressInfo } from 'node:net';
 import assert from 'node:assert/strict';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { createServer } from './create-server';
+import { writeMcpEndpoint, mcpEndpointPath } from '../src/lib/server/mcp-endpoint';
 
 /**
  * The workhorse verification from the mcp-server skill's Tier 1: a real
@@ -62,14 +65,31 @@ try {
 	await client.connect(clientTransport);
 
 	const { tools } = await client.listTools();
-	assert.equal(tools.length, 4, `expected 4 registered tools, got ${tools.length}`);
+	assert.equal(tools.length, 7, `expected 7 registered tools, got ${tools.length}`);
 	const names = tools.map((t) => t.name).sort();
-	assert.deepEqual(names, ['get_note', 'list_sources', 'list_vaults', 'search_library']);
+	assert.deepEqual(names, [
+		'create_vault',
+		'get_note',
+		'import_source',
+		'list_pending_imports',
+		'list_sources',
+		'list_vaults',
+		'search_library'
+	]);
+	// Write tools reach the app over HTTP: create_vault/import_source change state (readOnlyHint false) but never
+	// destroy anything; only import_source touches the open world (it fetches URLs). list_pending_imports only reads.
+	const expectedAnnotations: Record<string, { readOnlyHint: boolean; openWorldHint: boolean }> = {
+		create_vault: { readOnlyHint: false, openWorldHint: false },
+		import_source: { readOnlyHint: false, openWorldHint: true },
+		list_pending_imports: { readOnlyHint: true, openWorldHint: false }
+	};
 	for (const t of tools) {
-		assert.equal(t.annotations?.readOnlyHint, true, `${t.name} must be marked readOnlyHint`);
+		const want = expectedAnnotations[t.name] ?? { readOnlyHint: true, openWorldHint: false };
+		assert.equal(t.annotations?.readOnlyHint, want.readOnlyHint, `${t.name} readOnlyHint`);
+		assert.equal(t.annotations?.openWorldHint, want.openWorldHint, `${t.name} openWorldHint`);
 		assert.equal(t.annotations?.destructiveHint, false, `${t.name} must be marked destructiveHint:false`);
 	}
-	console.log('ok - tools/list returns all 4 tools, all readOnlyHint');
+	console.log('ok - tools/list returns all 7 tools with the right annotations (5 read-only, 2 write tools not)');
 
 	// list_vaults
 	{
@@ -164,6 +184,144 @@ try {
 	}
 	console.log('ok - every vault-scoped tool reports VAULT_NOT_EXPOSED for a vault that exists but is not opened to MCP');
 
+	// ---- write tools: they only ever talk to the running app over HTTP (app-client.ts) ----
+	const text = (r: unknown): string => (r as { content: { text: string }[] }).content[0].text;
+	const writeCalls: { name: string; arguments: Record<string, unknown> }[] = [
+		{ name: 'create_vault', arguments: { name: 'Gizli Kasa Adı' } },
+		{ name: 'import_source', arguments: { vault: 'default', url: 'https://example.com/secret-article' } },
+		{ name: 'list_pending_imports', arguments: { vault: 'default' } }
+	];
+
+	// No endpoint file at all: the app is not running.
+	assert.ok(!fs.existsSync(mcpEndpointPath(scratch)));
+	for (const call of writeCalls) {
+		const r = await client.callTool(call);
+		assert.equal(r.isError, true, `${call.name} without an app must return isError`);
+		assert.ok(text(r).startsWith('APP_NOT_RUNNING:'), `${call.name}: expected APP_NOT_RUNNING, got: ${text(r)}`);
+	}
+	console.log('ok - create_vault/import_source/list_pending_imports return APP_NOT_RUNNING when there is no mcp-endpoint.json');
+
+	// import_source argument rule is checked before any network call: exactly one of path/url.
+	{
+		const both = await client.callTool({ name: 'import_source', arguments: { path: '/a.pdf', url: 'https://example.com/a' } });
+		assert.ok(text(both).startsWith('INVALID_ARGUMENTS:'), text(both));
+		const neither = await client.callTool({ name: 'import_source', arguments: {} });
+		assert.ok(text(neither).startsWith('INVALID_ARGUMENTS:'), text(neither));
+		console.log('ok - import_source requires exactly one of path/url');
+	}
+
+	// A stale file (dead pid) is also "not running".
+	writeMcpEndpoint(scratch, { url: 'http://127.0.0.1:9', mcpToken: 'f'.repeat(64), pid: 2147483646, startedAt: now });
+	{
+		const r = await client.callTool(writeCalls[0]);
+		assert.ok(text(r).startsWith('APP_NOT_RUNNING:'), text(r));
+	}
+	// A live pid but nothing listening on the port (crashed app, reused pid): connection refused -> APP_NOT_RUNNING.
+	{
+		const closed = http.createServer();
+		await new Promise<void>((resolve) => closed.listen(0, '127.0.0.1', resolve));
+		const deadPort = (closed.address() as AddressInfo).port;
+		await new Promise<void>((resolve) => closed.close(() => resolve()));
+		writeMcpEndpoint(scratch, { url: `http://127.0.0.1:${deadPort}`, mcpToken: 'f'.repeat(64), pid: process.pid, startedAt: now });
+		const r = await client.callTool(writeCalls[0]);
+		assert.ok(text(r).startsWith('APP_NOT_RUNNING:'), text(r));
+	}
+	console.log('ok - a stale pid and a refused connection both report APP_NOT_RUNNING');
+
+	// A fake app on a real loopback port: checks forwarding, the token header, and error mapping.
+	const MCP_TOKEN = 'ab'.repeat(32);
+	const seen: { method: string; url: string; token: string | undefined; origin: string | undefined; body: string }[] = [];
+	const fakeApp = http.createServer((req, res) => {
+		const chunks: Buffer[] = [];
+		req.on('data', (c: Buffer) => chunks.push(c));
+		req.on('end', () => {
+			const body = Buffer.concat(chunks).toString('utf-8');
+			seen.push({
+				method: req.method ?? '',
+				url: req.url ?? '',
+				token: req.headers['x-vc-mcp-token'] as string | undefined,
+				origin: req.headers.origin,
+				body
+			});
+			const reply = (status: number, payload: unknown) => {
+				res.writeHead(status, { 'content-type': 'application/json' });
+				res.end(JSON.stringify(payload));
+			};
+			if (req.headers['x-vc-mcp-token'] !== MCP_TOKEN) return reply(401, { message: 'MCP_TOKEN_REQUIRED', code: 'MCP_TOKEN_REQUIRED' });
+			if (req.method === 'POST' && req.url === '/api/mcp/vaults') {
+				const { name } = JSON.parse(body) as { name: string };
+				return reply(200, { id: 'agent-kasasi', name, mcpExposed: true, createdVia: 'mcp' });
+			}
+			if (req.method === 'POST' && req.url === '/api/mcp/imports') {
+				const parsed = JSON.parse(body) as { vault?: string; path?: string };
+				if (parsed.path === '/forbidden/file.pdf') {
+					return reply(403, { message: 'MCP_PATH_NOT_ALLOWED', code: 'MCP_PATH_NOT_ALLOWED' });
+				}
+				if (parsed.vault === 'ghost') return reply(404, { message: 'NOT_FOUND', code: 'NOT_FOUND', params: { entity: 'vault' } });
+				if (parsed.vault === 'closed') return reply(403, { message: 'MCP_VAULT_NOT_EXPOSED', code: 'MCP_VAULT_NOT_EXPOSED' });
+				return reply(200, { vault: parsed.vault ?? 'default', importId: '11111111-1111-4111-8111-111111111111', status: 'queued' });
+			}
+			if (req.method === 'GET' && req.url?.startsWith('/api/mcp/imports')) {
+				return reply(200, { vault: 'default', imports: [{ importId: '11111111-1111-4111-8111-111111111111', status: 'ready' }] });
+			}
+			return reply(404, { message: 'ROUTE_NOT_FOUND' });
+		});
+	});
+	await new Promise<void>((resolve) => fakeApp.listen(0, '127.0.0.1', resolve));
+	const fakePort = (fakeApp.address() as AddressInfo).port;
+	try {
+		writeMcpEndpoint(scratch, { url: `http://127.0.0.1:${fakePort}`, mcpToken: MCP_TOKEN, pid: process.pid, startedAt: now });
+
+		const created = await client.callTool({ name: 'create_vault', arguments: { name: 'Gizli Kasa Adı' } });
+		assert.equal(created.isError, undefined, text(created));
+		assert.equal((JSON.parse(text(created)) as { vault: string }).vault, 'agent-kasasi', 'create_vault echoes the new vault id');
+
+		const imported = await client.callTool({
+			name: 'import_source',
+			arguments: { vault: 'default', url: 'https://example.com/secret-article', domain: 'fizik' }
+		});
+		assert.equal(imported.isError, undefined, text(imported));
+		const importedBody = JSON.parse(text(imported)) as { vault: string; importId: string; status: string };
+		assert.equal(importedBody.vault, 'default');
+		assert.equal(importedBody.status, 'queued');
+
+		const pending = await client.callTool({ name: 'list_pending_imports', arguments: { vault: 'default' } });
+		assert.equal(pending.isError, undefined, text(pending));
+		const pendingBody = JSON.parse(text(pending)) as { vault: string; imports: { status: string }[] };
+		assert.equal(pendingBody.vault, 'default');
+		assert.equal(pendingBody.imports[0].status, 'ready');
+
+		assert.deepEqual(
+			seen.map((s) => `${s.method} ${s.url}`),
+			['POST /api/mcp/vaults', 'POST /api/mcp/imports', 'GET /api/mcp/imports?vault=default']
+		);
+		for (const s of seen) {
+			assert.equal(s.token, MCP_TOKEN, 'every request carries the MCP token from mcp-endpoint.json');
+			assert.equal(s.origin, undefined, 'an MCP client must never send an Origin header');
+		}
+		assert.deepEqual(JSON.parse(seen[1].body), { vault: 'default', url: 'https://example.com/secret-article', domain: 'fizik' });
+		console.log('ok - create_vault/import_source/list_pending_imports forward to the app with the token header and echo the vault id');
+
+		// App-side coded errors surface as tool errors with the app's code (or the read tools' equivalent).
+		const forbidden = await client.callTool({ name: 'import_source', arguments: { vault: 'default', path: '/forbidden/file.pdf' } });
+		assert.equal(forbidden.isError, true);
+		assert.ok(text(forbidden).startsWith('MCP_PATH_NOT_ALLOWED:'), text(forbidden));
+		const ghost = await client.callTool({ name: 'import_source', arguments: { vault: 'ghost', url: 'https://example.com/a' } });
+		assert.ok(text(ghost).startsWith('VAULT_NOT_FOUND:'), text(ghost));
+		const closedVault = await client.callTool({ name: 'import_source', arguments: { vault: 'closed', url: 'https://example.com/a' } });
+		assert.ok(text(closedVault).startsWith('VAULT_NOT_EXPOSED:'), text(closedVault));
+		console.log('ok - app errors map to MCP_PATH_NOT_ALLOWED / VAULT_NOT_FOUND / VAULT_NOT_EXPOSED');
+
+		// A rotated token (app restarted) is a 401 from the app -> APP_UNAUTHORIZED, never a thrown exception.
+		writeMcpEndpoint(scratch, { url: `http://127.0.0.1:${fakePort}`, mcpToken: 'cd'.repeat(32), pid: process.pid, startedAt: now });
+		const unauthorized = await client.callTool(writeCalls[0]);
+		assert.equal(unauthorized.isError, true);
+		assert.ok(text(unauthorized).startsWith('APP_UNAUTHORIZED:'), text(unauthorized));
+		console.log('ok - a rejected token reports APP_UNAUTHORIZED');
+	} finally {
+		await new Promise<void>((resolve) => fakeApp.close(() => resolve()));
+	}
+
 	const logPath = path.join(scratch, 'mcp-log.jsonl');
 	assert.ok(fs.existsSync(logPath), 'mcp-log.jsonl should exist after these calls');
 	const logLines = fs
@@ -176,6 +334,19 @@ try {
 	assert.ok(searchLine, 'search_library call should be logged even though it never reached embed()');
 	assert.ok(!('query' in searchLine.params), 'the raw query string must never be logged, only queryChars');
 	console.log('ok - mcp-log.jsonl recorded every call, and never logs a raw query string');
+
+	// Content rule for the write tools: kind/domain/nameChars only, never the URL, path or vault name.
+	const rawLog = fs.readFileSync(logPath, 'utf-8');
+	for (const secret of ['secret-article', '/forbidden/file.pdf', 'Gizli Kasa']) {
+		assert.ok(!rawLog.includes(secret), `mcp-log.jsonl must not contain "${secret}"`);
+	}
+	const allLines = rawLog
+		.trim()
+		.split('\n')
+		.map((l) => JSON.parse(l) as { tool: string; params: Record<string, unknown> });
+	assert.deepEqual(allLines.find((l) => l.tool === 'import_source' && l.params.domain === 'fizik')?.params, { kind: 'url', domain: 'fizik' });
+	assert.deepEqual(allLines.find((l) => l.tool === 'create_vault')?.params, { nameChars: 'Gizli Kasa Adı'.length });
+	console.log('ok - write tools log metadata only (kind/domain/nameChars), never the path, URL or vault name');
 
 	console.log('smoke test passed');
 } finally {

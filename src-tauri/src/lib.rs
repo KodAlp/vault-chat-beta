@@ -470,6 +470,52 @@ fn hex_encode(bytes: &[u8]) -> String {
     bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
 
+const MCP_ENDPOINT_FILE: &str = "mcp-endpoint.json";
+
+/// Publishes where the sidecar listens plus the MCP token for the MCP stdio
+/// process (mcp/app-client.ts reads it; format shared with
+/// src/lib/server/mcp-endpoint.ts): `{ url, mcpToken, pid, startedAt }`. The
+/// session token is deliberately NOT in here. Written to a temp file first and
+/// renamed over the target, so a reader never sees half a file; owner-only
+/// (0600) on Unix, the per-user app-data ACL on Windows.
+fn write_mcp_endpoint(dir: &Path, url: &str, token: &str, pid: u32) -> Result<(), String> {
+    use std::io::Write;
+    // utc_timestamp_now() is "YYYYMMDDTHHMMSSZ"; the Node side writes ISO 8601.
+    let ts = secrets_key::utc_timestamp_now();
+    let started_at = if ts.len() == 16 {
+        format!("{}-{}-{}T{}:{}:{}Z", &ts[0..4], &ts[4..6], &ts[6..8], &ts[9..11], &ts[11..13], &ts[13..15])
+    } else {
+        ts
+    };
+    let body = serde_json::json!({ "url": url, "mcpToken": token, "pid": pid, "startedAt": started_at });
+    let text = serde_json::to_string_pretty(&body).map_err(|e| e.to_string())? + "\n";
+
+    let target = dir.join(MCP_ENDPOINT_FILE);
+    let tmp = dir.join(format!("{MCP_ENDPOINT_FILE}.tmp"));
+    let mut opts = std::fs::OpenOptions::new();
+    opts.write(true).create(true).truncate(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        opts.mode(0o600);
+    }
+    let mut file = opts.open(&tmp).map_err(|e| e.to_string())?;
+    file.write_all(text.as_bytes()).map_err(|e| e.to_string())?;
+    drop(file);
+    std::fs::rename(&tmp, &target).map_err(|e| e.to_string())
+}
+
+/// Removes mcp-endpoint.json, but only if it still names `pid` — a newer app
+/// instance may have replaced it already. Best-effort: any failure is ignored.
+fn remove_mcp_endpoint(dir: &Path, pid: u32) {
+    let target = dir.join(MCP_ENDPOINT_FILE);
+    let Ok(raw) = std::fs::read_to_string(&target) else { return };
+    let Ok(value) = serde_json::from_str::<serde_json::Value>(&raw) else { return };
+    if value.get("pid").and_then(|p| p.as_u64()) == Some(u64::from(pid)) {
+        let _ = std::fs::remove_file(&target);
+    }
+}
+
 /// The runtime IPC capability granted to the sidecar's own origin (see
 /// `spawn_sidecar`'s registration of it) — pulled out as its own function
 /// so the ACL regression test below (`ipc_acl_tests`) exercises the EXACT
@@ -530,11 +576,17 @@ fn stop_all_children(app_handle: &AppHandle) {
     let mut child_slot = state.child.lock().unwrap();
     let process_guard = state.guard.lock().unwrap().take();
     if let Some(mut child) = child_slot.take() {
+        let pid = child.id();
         // Windows: Child::kill() + dropping the Job (tree kill).
         // Unix: SIGTERM to the sidecar's process group first
         // (adapter-node shuts down gracefully on it), then SIGKILL
         // if it hasn't exited after ~3s.
         ProcessGuard::stop_or_kill(process_guard, &mut child);
+        // The sidecar is gone, so its MCP endpoint file is stale — remove it so an MCP client reports
+        // "app not running" instead of timing out on a dead port.
+        if let Ok(dir) = app_handle.path().app_data_dir() {
+            remove_mcp_endpoint(&strip_verbatim_prefix(&dir), pid);
+        }
     }
     drop(child_slot);
 
@@ -705,6 +757,25 @@ async fn spawn_sidecar(app: &AppHandle, cfg: &VaultConfig) -> Result<SidecarOutc
     })?;
     let session_token = hex_encode(&session_token_bytes);
 
+    // A SECOND, separate per-launch token for the MCP stdio process (mcp/): it
+    // lets that process call the sidecar's /api/mcp/* routes (create a vault,
+    // stage an import) and nothing else — hooks.server.ts's mcp-gate refuses it
+    // on every other path, and the session token above never opens /api/mcp/*.
+    // Handed to Node as VC_MCP_TOKEN and published, once the port is known, in
+    // <app_data_dir>/mcp-endpoint.json (see write_mcp_endpoint). Unlike the
+    // session token this is best-effort: without it the sidecar simply answers
+    // 503 on /api/mcp/*, and the rest of the app is unaffected.
+    let mcp_token = {
+        let mut bytes = [0u8; 32];
+        match getrandom::getrandom(&mut bytes) {
+            Ok(()) => Some(hex_encode(&bytes)),
+            Err(e) => {
+                log_line(app, &format!("MCP anahtarı üretilemedi (MCP yazma araçları kapalı): {e}"));
+                None
+            }
+        }
+    };
+
     // DATA_DIR replaces the old LIBRARY_PATH/INDEX_DB_PATH/STUDY_DB_PATH trio
     // (Faz 8) — vaults.ts derives every vault's paths from DATA_DIR/vaults/<id>/
     // itself now, migrating automatically on first launch after the upgrade
@@ -748,6 +819,9 @@ async fn spawn_sidecar(app: &AppHandle, cfg: &VaultConfig) -> Result<SidecarOutc
     cmd.env("SECRETS_PROTECTION", secrets_protection.env_value());
     if let Some(key_hex) = secrets_protection.key_hex() {
         cmd.env("SECRETS_KEY_HEX", key_hex);
+    }
+    if let Some(token) = &mcp_token {
+        cmd.env("VC_MCP_TOKEN", token);
     }
     // Unix: give the sidecar the same PATH we resolved Node with, so its own
     // python/pandoc/ollama lookups work when launched from Finder/a desktop file.
@@ -842,6 +916,13 @@ async fn spawn_sidecar(app: &AppHandle, cfg: &VaultConfig) -> Result<SidecarOutc
     };
 
     let url = format!("http://127.0.0.1:{port}");
+
+    // Tell the MCP process where this sidecar is (best-effort — see mcp_token above).
+    if let Some(token) = &mcp_token {
+        if let Err(e) = write_mcp_endpoint(&app_data_dir, &url, token, child.id()) {
+            log_line(app, &format!("mcp-endpoint.json yazılamadı (non-fatal): {e}"));
+        }
+    }
 
     // Grants IPC access (core commands + the specific custom app commands
     // listed below, each requiring its own "allow-*" ACL permission — see

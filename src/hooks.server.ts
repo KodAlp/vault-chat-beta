@@ -1,8 +1,9 @@
 import { error, redirect, type Handle, type HandleServerError, type RequestEvent } from '@sveltejs/kit';
 import { runVaultMigrationIfNeeded } from '$lib/server/migrateVaults';
 import { logAppEvent } from '$lib/server/app-log';
-import { sessionToken } from '$lib/server/env';
+import { sessionToken, mcpToken } from '$lib/server/env';
 import { decideSessionGate } from '$lib/server/session-gate';
+import { decideMcpGate, MCP_TOKEN_HEADER } from '$lib/server/mcp-gate';
 import tls from 'node:tls';
 import { installSystemCa } from '$lib/server/system-ca';
 
@@ -201,6 +202,24 @@ export const handle: Handle = async ({ event, resolve }) => {
 	if (!LOOPBACK_HOSTNAMES.has(event.url.hostname)) {
 		logSecurityBlock('LOCAL_ONLY', event);
 		error(403, { message: 'LOCAL_ONLY', code: 'LOCAL_ONLY' });
+	}
+
+	// /api/mcp/* is the MCP process's write surface. It is authenticated ONLY by the MCP token
+	// (x-vc-mcp-token, see mcp-gate.ts) and deliberately skips the browser session gate below —
+	// the MCP process never holds the session cookie, and the MCP token grants nothing outside
+	// this prefix. Read per request (not at module load): the dev server sets it after startup.
+	const mcpDecision = decideMcpGate({
+		pathname: event.url.pathname,
+		token: mcpToken(),
+		headerToken: event.request.headers.get(MCP_TOKEN_HEADER),
+		origin: event.request.headers.get('origin')
+	});
+	if (mcpDecision.kind === 'reject') {
+		logSecurityBlock(mcpDecision.code, event);
+		error(mcpDecision.status, { message: mcpDecision.code, code: mcpDecision.code });
+	}
+	if (mcpDecision.kind === 'allow') {
+		return resolve(event);
 	}
 
 	if (SESSION_TOKEN) {

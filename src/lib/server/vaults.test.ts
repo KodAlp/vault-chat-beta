@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {
 	createVault,
+	createVaultViaMcp,
 	renameVault,
 	deleteVault,
 	listVaults,
@@ -101,6 +102,26 @@ test('vault registry', async (t) => {
 		fs.writeFileSync(path.join(process.env.DATA_DIR!, 'vaults.json'), '{ not valid json', 'utf-8');
 		assert.deepEqual(listVaults(), []);
 		assert.equal(getActiveVaultId(), null);
+	});
+
+	await t.test('createVaultViaMcp opens the vault to MCP and stamps createdVia, leaving app-made vaults unmarked', () => {
+		useTmpDataDir();
+		const appMade = createVault('Elle');
+		const viaMcp = createVaultViaMcp('Ajan Kasası');
+		assert.equal(viaMcp.mcpExposed, true);
+		assert.equal(viaMcp.createdVia, 'mcp');
+
+		// Persisted, not just returned.
+		const stored = listVaults().find((v) => v.id === viaMcp.id)!;
+		assert.equal(stored.mcpExposed, true);
+		assert.equal(stored.createdVia, 'mcp');
+		assert.equal(isVaultMcpExposed(viaMcp.id), true);
+		assert.ok(fs.existsSync(contextFor(stored).libraryRoot));
+
+		const other = listVaults().find((v) => v.id === appMade.id)!;
+		assert.equal(other.mcpExposed, false);
+		assert.equal(other.createdVia, undefined);
+		assert.throws(() => createVaultViaMcp('   '), (e: unknown) => (e as { code?: string }).code === 'VAULT_NAME_EMPTY');
 	});
 
 	await t.test('hasAnyVault reflects registry state', () => {

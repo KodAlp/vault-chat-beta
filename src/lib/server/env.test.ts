@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { chatRetrievalK, DEFAULT_CHAT_RETRIEVAL_K, MAX_CHAT_RETRIEVAL_K, serveCtxOverride } from './env';
+import { chatRetrievalK, DEFAULT_CHAT_RETRIEVAL_K, MAX_CHAT_RETRIEVAL_K, serveCtxOverride, mcpToken } from './env';
 
 function withEnv(name: string, value: string | undefined, fn: () => void) {
 	const prev = process.env[name];
@@ -56,4 +56,10 @@ test('chat k falls back to the default on a bad value — never turns retrieval 
 test('chat k is re-read on every call (a running server picks up a changed value)', () => {
 	withK('9', () => assert.equal(chatRetrievalK(), 9));
 	withK('4', () => assert.equal(chatRetrievalK(), 4));
+});
+
+test('mcpToken treats unset and empty as undefined and is re-read on every call', () => {
+	withEnv('VC_MCP_TOKEN', undefined, () => assert.equal(mcpToken(), undefined));
+	withEnv('VC_MCP_TOKEN', '', () => assert.equal(mcpToken(), undefined));
+	withEnv('VC_MCP_TOKEN', 'ab'.repeat(32), () => assert.equal(mcpToken(), 'ab'.repeat(32)));
 });

@@ -1,30 +1,12 @@
-import fs from 'node:fs';
-import path from 'node:path';
 import crypto from 'node:crypto';
-import matter from 'gray-matter';
 import type { RequestHandler } from './$types';
-import { enqueueConversion } from '$lib/server/convertQueue';
-import { enqueueWebExtract } from '$lib/server/webExtractQueue';
-import { enqueueYoutubeTranscript } from '$lib/server/youtubeQueue';
-import {
-	isPdfBytes,
-	validateLinkUrl,
-	assertPublicHost,
-	loadImportedUrls,
-	sourceNameFromUrl,
-	isYoutubeUrl,
-	fetchWithRetry,
-	pdfContentTypeMismatch,
-	rewriteArxivAbsToPdf,
-	fetchRobotsTxt,
-	isAllowedByRobots,
-	politeDelay
-} from '$lib/server/link-import';
-import { stagingDir, importLogPath } from '$lib/server/library';
+import { validateLinkUrl, loadImportedUrls, rewriteArxivAbsToPdf } from '$lib/server/link-import';
+import { stageUrl } from '$lib/server/stage-url';
+import { importLogPath } from '$lib/server/library';
 import { vaultFromId } from '$lib/server/requestVault';
 import { sseStream } from '$lib/server/sse';
 import { logAppEvent } from '$lib/server/app-log';
-import { AppError, fail, toCodedError } from '$lib/server/app-error';
+import { fail, toCodedError } from '$lib/server/app-error';
 import type { ImportEvent, ImportResultItem, ImportSummary } from '$lib/types';
 
 const MAX_LINKS_PER_BATCH = 50;
@@ -97,92 +79,18 @@ export const POST: RequestHandler = async ({ request }) => {
 			}
 			seenInBatch.add(url.href);
 
-			// #17: a YouTube link pasted into the generic importer must go
-			// through the transcript sidecar, not be fetched as an ordinary
-			// web page (trafilatura would extract youtube.com's JS-shell
-			// boilerplate, never the actual video content).
-			if (isYoutubeUrl(url)) {
-				const importId = crypto.randomUUID();
-				const workDir = path.join(stagingDir(v), importId);
-				fs.mkdirSync(workDir, { recursive: true });
-				try {
-					const result = await enqueueYoutubeTranscript(url.href, workDir);
-					if (!result.outPath) throw new AppError('TRANSCRIPT_EMPTY');
-					fs.copyFileSync(result.outPath, path.join(stagingDir(v), `${importId}.md`));
-					const item: ImportResultItem = {
-						id: crypto.randomUUID(),
-						fileName: rawLink,
-						status: 'pending',
-						importId,
-						proposed: { title: (result.frontmatter.title as string) ?? 'YouTube video', domain, level: 'undergraduate' },
-						warnings: result.warnings ?? []
-					};
-					items.push(item);
-					send({ type: 'item', item });
-				} catch (err) {
-					const item = failedItem(rawLink, err);
-					items.push(item);
-					send({ type: 'item', item });
-				} finally {
-					fs.rmSync(workDir, { recursive: true, force: true });
-				}
-				continue;
-			}
-
-			try {
-				await assertPublicHost(url);
-			} catch (err) {
-				const item = failedItem(rawLink, err);
-				items.push(item);
-				send({ type: 'item', item });
-				continue;
-			}
-
-			// Aşama 10 #3: robots.txt is cached per origin (fetchRobotsTxt),
-			// so a batch of several links from the same site fetches it once,
-			// not once per link.
-			const robotsTxt = await fetchRobotsTxt(url.origin);
-			if (!isAllowedByRobots(url, robotsTxt)) {
-				const item = failedItem(rawLink, new AppError('LINK_ROBOTS_DISALLOWED', undefined, 403));
-				items.push(item);
-				send({ type: 'item', item });
-				continue;
-			}
-			await politeDelay(url.hostname);
-
 			const importId = crypto.randomUUID();
-			const workDir = path.join(stagingDir(v), importId);
-			fs.mkdirSync(workDir, { recursive: true });
-
 			try {
-				const bytes = await fetchWithRetry(url);
-				if (bytes.length === 0) throw new AppError('LINK_EMPTY_RESPONSE');
-
-				const isPdf = isPdfBytes(bytes);
-				if (pdfContentTypeMismatch(url, isPdf)) {
-					throw new AppError('LINK_PDF_NOT_PDF');
-				}
-				const tempIn = path.join(workDir, isPdf ? 'original.pdf' : 'original.html');
-				fs.writeFileSync(tempIn, bytes);
-
-				const result = isPdf
-					? await enqueueConversion(tempIn, workDir, 'auto', undefined, sourceNameFromUrl(url))
-					: await enqueueWebExtract(tempIn, url.href, workDir);
-				if (!result.outPath) throw new AppError('CONVERSION_EMPTY');
-
-				const raw = fs.readFileSync(result.outPath, 'utf-8');
-				const parsed = matter(raw);
-				const title = (parsed.data.title as string) ?? url.hostname;
-				const frontmatter: Record<string, unknown> = { ...parsed.data, source_url: url.href };
-				fs.writeFileSync(path.join(stagingDir(v), `${importId}.md`), matter.stringify(parsed.content, frontmatter), 'utf-8');
-
+				// The whole fetch/convert/stage pipeline (YouTube branch, SSRF guard, robots, size cap) lives in
+				// stage-url.ts so the MCP import route runs the very same code.
+				const { title, warnings } = await stageUrl(v, url, importId);
 				const item: ImportResultItem = {
 					id: crypto.randomUUID(),
 					fileName: rawLink,
 					status: 'pending',
 					importId,
 					proposed: { title, domain, level: 'undergraduate' },
-					warnings: result.warnings ?? []
+					warnings
 				};
 				items.push(item);
 				send({ type: 'item', item });
@@ -190,8 +98,6 @@ export const POST: RequestHandler = async ({ request }) => {
 				const item = failedItem(rawLink, err);
 				items.push(item);
 				send({ type: 'item', item });
-			} finally {
-				fs.rmSync(workDir, { recursive: true, force: true });
 			}
 		}
 

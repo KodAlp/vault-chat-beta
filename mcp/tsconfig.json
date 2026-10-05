@@ -16,6 +16,7 @@
 		"**/*.ts",
 		"../src/lib/types.ts",
 		"../src/lib/server/env.ts",
+		"../src/lib/server/mcp-endpoint.ts",
 		"../src/lib/server/vaults.ts",
 		"../src/lib/server/slug.ts",
 		"../src/lib/server/ollama.ts",

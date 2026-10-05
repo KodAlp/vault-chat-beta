@@ -10,12 +10,24 @@ export type ToolErrorCode =
 	| 'NOT_INDEXED'
 	| 'RETRIEVAL_FAILED'
 	| 'NOTE_NOT_FOUND'
-	| 'PATH_OUTSIDE_LIBRARY';
+	| 'PATH_OUTSIDE_LIBRARY'
+	// Write tools (create_vault / import_source / list_pending_imports) go through the running app's
+	// local HTTP API — see app-client.ts.
+	| 'APP_NOT_RUNNING'
+	| 'APP_TIMEOUT'
+	| 'APP_UNAUTHORIZED'
+	| 'APP_ERROR'
+	| 'INVALID_ARGUMENTS';
+
+/** Codes the app itself answers with (src/lib/error-codes/*, e.g. MCP_PATH_NOT_ALLOWED,
+ * MCP_IMPORT_ROOTS_EMPTY, UNSUPPORTED_FILE_TYPE) are passed through verbatim so the agent sees the real
+ * reason; hence the open string alternative. */
+export type AppPassthroughCode = string & {};
 
 export class ToolError extends Error {
-	readonly code: ToolErrorCode;
+	readonly code: ToolErrorCode | AppPassthroughCode;
 
-	constructor(code: ToolErrorCode, message: string) {
+	constructor(code: ToolErrorCode | AppPassthroughCode, message: string) {
 		super(message);
 		this.code = code;
 	}
