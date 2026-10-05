@@ -258,18 +258,9 @@
   },
   "LibraryImport": {
     "pageIntro": "Trae a la biblioteca de esta bóveda las notas que ya tienes. Tus originales nunca se modifican: todo se copia y los enlaces y adjuntos se convierten.",
-    "appsHeading": "Desde aplicaciones de notas",
     "badgeReady": "Disponible",
     "badgeSoon": "Próximamente",
     "soonIntro": "Estas aplicaciones aún no son compatibles. Mientras tanto, exporta tus notas como Markdown desde la aplicación y usa la tarjeta «Carpeta Markdown».",
-    "filesHeading": "Archivos y enlaces",
-    "filesIntro": "Los documentos, páginas web, enlaces y vídeos de YouTube pasan por el conversor.",
-    "file_upload_title": "Un archivo o YouTube",
-    "file_upload_desc": "PDF, Word, PowerPoint, Markdown… o la transcripción de un vídeo de YouTube.",
-    "file_batch_title": "Carpeta o varios archivos",
-    "file_batch_desc": "Elige una carpeta de documentos e impórtalos de una vez.",
-    "file_links_title": "Enlaces web",
-    "file_links_desc": "Pega enlaces a PDF y páginas web: se descargan y se añaden.",
     "source_obsidian": "Obsidian",
     "source_logseq": "Logseq",
     "source_joplin": "Joplin",
@@ -350,7 +341,8 @@
     "flavor_obsidian": "Obsidian",
     "flavor_zettlr": "Zettlr",
     "flavor_foam": "Foam",
-    "flavor_dendron": "Dendron"
+    "flavor_dendron": "Dendron",
+    "sectionTitle": "Importación de la biblioteca"
   },
   "LinksImportDialog": {
     "trigger": "Importar desde enlaces",
@@ -383,8 +375,8 @@
   },
   "LibraryTree": {
     "loadError": "No se pudo cargar la biblioteca.",
-    "empty": "La biblioteca está vacía. Sube un documento o importa tus notas desde otras aplicaciones:",
-    "emptyLink": "Ajustes → Importar biblioteca"
+    "empty": "La biblioteca está vacía. Añade un archivo o importa tus notas desde otras aplicaciones:",
+    "emptyLink": "Ajustes → Subida de archivos"
   },
   "LibraryTreeNode": {
     "needsReview": "Requiere revisión",
@@ -394,17 +386,24 @@
     "deleteFolderDescription": "Esta carpeta y todo su contenido se eliminarán de forma permanente. Esta acción no se puede deshacer.",
     "deleteFileDescription": "Este archivo se eliminará de forma permanente. Esta acción no se puede deshacer."
   },
-  "UploadDialog": {
-    "trigger": "+ Subir",
-    "dialogTitle": "Subir documento",
-    "uploading": "Subiendo...",
-    "sourceFile": "Archivo",
-    "sourceYoutube": "Vídeo (YouTube)",
-    "fileLabel": "Archivo (DOCX / PPTX / XLSX / HTML / EPUB / PDF sencillo)",
+  "AddFilesDialog": {
+    "trigger": "Añadir archivos",
+    "dialogTitle": "Añadir archivos",
+    "dialogDescription": "Si eliges un solo archivo, puedes revisar su título y su dominio antes de guardarlo. Varios archivos o una carpeta se importan directamente, y el nombre de la carpeta se convierte en el dominio.",
+    "pickFilesButton": "Elegir archivos…",
+    "pickFolderButton": "Elegir carpeta…",
+    "scanning": "Analizando carpeta…",
+    "scanFailed": "No se pudo analizar la carpeta",
+    "dropHint": "…o suelta aquí archivos o una carpeta",
+    "youtubeToggle": "Añadir un vídeo de YouTube en su lugar",
     "youtubeLabel": "Enlace de YouTube",
     "youtubePlaceholder": "https://www.youtube.com/watch?v=...",
     "youtubeRightsConfirm": "Confirmo que tengo derecho/permiso para usar el contenido de este vídeo.",
-    "upload": "Subir",
+    "youtubeUpload": "Subir",
+    "back": "Atrás"
+  },
+  "ImportFlow": {
+    "uploading": "Subiendo...",
     "stageQueued": "En cola...",
     "stageConverting": "Convirtiendo...",
     "stagePostprocessing": "Procesando...",
@@ -419,12 +418,8 @@
     "uploadFailed": "La subida falló",
     "tooLarge": "Archivo demasiado grande: el servidor rechazó una subida de este tamaño."
   },
-  "BatchUploadDialog": {
-    "trigger": "+ Subir varios / carpeta",
-    "dialogTitle": "Subir varios archivos / carpeta",
-    "dialogDescription": "Elige varios archivos o una carpeta completa; los archivos se convierten de uno en uno y, si se usa Ollama, sus modelos cargados se descargan de la VRAM antes de cada uno. No se pide confirmación por archivo: se aplican los valores predeterminados y al final se muestra un resumen.",
-    "pickFilesLabel": "Archivos (selección múltiple)",
-    "pickFolderLabel": "Carpeta (se conserva la estructura de subcarpetas)",
+  "BatchImport": {
+    "description": "Elige varios archivos o una carpeta completa; los archivos se convierten de uno en uno y, si se usa Ollama, sus modelos cargados se descargan de la VRAM antes de cada uno. No se pide confirmación por archivo: se aplican los valores predeterminados y al final se muestra un resumen.",
     "previewSummary": "Se procesarán {allowed} archivo(s), se omitirán {skipped}",
     "start": "Iniciar",
     "stop": "Detener",
@@ -435,9 +430,6 @@
     "skipJunk": "Archivo del sistema/oculto",
     "skipTooLarge": "Archivo demasiado grande (límite de 100 MB)",
     "skipUnsupported": "Tipo de archivo no admitido: {ext}",
-    "pickFolderButton": "Elegir carpeta…",
-    "scanning": "Analizando carpeta…",
-    "scanFailed": "No se pudo analizar la carpeta",
     "skipTooDeep": "Carpeta con un anidamiento demasiado profundo",
     "statusConverted": "importado",
     "statusSkipped": "omitido",
@@ -480,7 +472,7 @@
   "HomePage": {
     "title": "Vault Chat",
     "emptyTitle": "Aún no hay bóvedas",
-    "emptyDescription": "Crea primero una bóveda para poder chatear con tus notas. Después trae tus notas o documentos desde Ajustes → Importar biblioteca y su contenido se podrá buscar aquí.",
+    "emptyDescription": "Primero crea una bóveda para poder chatear con tus notas. Después trae tus notas o documentos desde Ajustes → Subida de archivos y su contenido se podrá buscar aquí.",
     "newVault": "Nueva bóveda",
     "newVaultDialogTitle": "Nueva bóveda",
     "vaultNameLabel": "Nombre de la bóveda",
@@ -498,7 +490,7 @@
     "recentChats": "Chats recientes",
     "start": "Iniciar",
     "noSourcesTitle": "Aún no hay fuentes",
-    "noSourcesDescription": "Para que tus preguntas reciban respuestas con fuentes citables, primero necesitas importar tus notas o documentos (Ajustes → Importar biblioteca); de lo contrario, cada pregunta se considerará «fuera de alcance».",
+    "noSourcesDescription": "Para que tus preguntas reciban respuestas basadas en fuentes y citables, primero debes importar tus notas o documentos (Ajustes → Subida de archivos); de lo contrario, cada pregunta devuelve «fuera de alcance».",
     "importSources": "Importar fuentes",
     "untitled": "(sin título)",
     "sourceCountBadge": "{count} fuentes",
@@ -622,7 +614,6 @@
     "appearance": "Apariencia",
     "vaults": "Bóvedas",
     "upload": "Subida de archivos",
-    "importLibrary": "Importar biblioteca",
     "skills": "Habilidades",
     "memory": "Memoria del chat",
     "progress": "Progreso",
@@ -645,9 +636,6 @@
     "advancedUploadOptions": "Opciones avanzadas de subida",
     "title": "Biblioteca",
     "saveError": "No se pudieron guardar los ajustes.",
-    "importNotesTitle": "Importar notas de otras aplicaciones",
-    "importNotesDescription": "Trae una biblioteca de notas desde otras aplicaciones de notas: en una sola página, con vista previa antes de escribir nada.",
-    "importNotesOpen": "Abrir importar biblioteca",
     "importLinksTitle": "Importar desde enlaces",
     "importLinksDescription": "Pega enlaces a PDF y páginas web: se descargan en secuencia y se añaden a la biblioteca. Los enlaces ya importados correctamente se omiten al volver a ejecutar.",
     "uploadSettingsTitle": "Ajustes de subida",
@@ -667,7 +655,9 @@
     "flattenFoldersHint": "Estas carpetas raíz se ocultan; en su lugar, las carpetas que contienen se muestran directamente en la raíz del árbol. Las rutas no cambian: solo se simplifica el aspecto del árbol.",
     "libraryTreeTitle": "Árbol de la biblioteca",
     "libraryTreeDescription": "Sube, renombra o elimina documentos. El árbol de fuentes propio de la pantalla del chat (Fase 9) usa en su lugar una copia independiente de solo lectura para seleccionar el alcance.",
-    "loadError": "No se pudieron cargar los ajustes."
+    "loadError": "No se pudieron cargar los ajustes.",
+    "addFilesTitle": "Añadir archivos",
+    "addFilesDescription": "PDF, Word, PowerPoint, Markdown, código… Elige un archivo, varios archivos o una carpeta entera; la aplicación detecta cuál es."
   },
   "ProvidersSettingsPage": {
     "title": "Proveedores de modelos",

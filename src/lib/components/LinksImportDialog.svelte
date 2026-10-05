@@ -7,7 +7,7 @@
 	import { t } from '$lib/i18n/index.svelte';
 	import { localizeError, readResponseError } from '$lib/server-error';
 
-	// Optional, unlike UploadDialog's — this dialog lives on the library
+	// Optional, unlike SingleFileImport's — this dialog lives on the library
 	// settings page next to LibraryTree, which refreshes itself on its own
 	// mount/onchange wiring; a caller with a tighter refresh loop can still
 	// pass one in.
@@ -40,7 +40,7 @@
 
 	// #10: each 'pending' item (staged, not yet in the library) gets its own
 	// editable title/domain/level draft, keyed by importId — mirrors
-	// UploadDialog's single-item confirm form, just one per pending link
+	// SingleFileImport's single-item confirm form, just one per pending link
 	// instead of one for the whole dialog. savingIds tracks in-flight
 	// confirm/cancel calls so a button can't be double-clicked mid-request.
 	let drafts = $state<Record<string, { title: string; domain: string; level: string }>>({});
@@ -184,7 +184,7 @@
 			replaceItem(item.importId, { ...item, status: 'converted', path: saved.path });
 			onImported();
 		} catch (err) {
-			replaceItem(item.importId, { ...item, status: 'failed', reason: err instanceof Error ? err.message : t('UploadDialog.saveFailed') });
+			replaceItem(item.importId, { ...item, status: 'failed', reason: err instanceof Error ? err.message : t('ImportFlow.saveFailed') });
 		} finally {
 			const next = new Set(savingIds);
 			next.delete(item.importId);
@@ -339,8 +339,8 @@
 									{/each}
 								</ul>
 							{/if}
-							<Input type="text" bind:value={draft.title} placeholder={t('UploadDialog.titleLabel')} />
-							<Input type="text" bind:value={draft.domain} placeholder={t('UploadDialog.domainPlaceholder')} />
+							<Input type="text" bind:value={draft.title} placeholder={t('ImportFlow.titleLabel')} />
+							<Input type="text" bind:value={draft.domain} placeholder={t('ImportFlow.domainPlaceholder')} />
 							<div class="flex justify-end gap-1.5">
 								<Button variant="outline" size="sm" onclick={() => cancelItem(item)} disabled={busy}>{t('Common.iptal')}</Button>
 								<Button size="sm" onclick={() => confirmItem(item)} disabled={busy || !draft.title.trim() || !draft.domain.trim()}>

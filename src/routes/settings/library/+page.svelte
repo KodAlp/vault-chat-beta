@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import AddFilesDialog from '$lib/components/AddFilesDialog.svelte';
 	import LinksImportDialog from '$lib/components/LinksImportDialog.svelte';
+	import NoteAppSourceGrid from '$lib/components/NoteAppSourceGrid.svelte';
 	import LibraryTree from '$lib/components/LibraryTree.svelte';
 	import type { LibrarySettings } from '$lib/types';
 	import { Switch } from '$lib/components/ui/switch';
-	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import * as Card from '$lib/components/ui/card';
 	import { t } from '$lib/i18n/index.svelte';
@@ -112,15 +113,17 @@
 		<p class="mb-4 text-sm text-destructive" role="alert">{loadError}</p>
 	{/if}
 
+	<!-- The single upload entry point: AddFilesDialog works out whether it got one file, several
+	     files or a folder. Same dialog the vault page's sidebar opens. -->
 	<Card.Root class="mb-6">
 		<Card.Header>
-			<Card.Title level={2}>{t('LibrarySettingsPage.importNotesTitle')}</Card.Title>
+			<Card.Title level={2}>{t('LibrarySettingsPage.addFilesTitle')}</Card.Title>
 			<Card.Description>
-				{t('LibrarySettingsPage.importNotesDescription')}
+				{t('LibrarySettingsPage.addFilesDescription')}
 			</Card.Description>
 		</Card.Header>
 		<Card.Content>
-			<Button variant="outline" href="/settings/import">{t('LibrarySettingsPage.importNotesOpen')}</Button>
+			<AddFilesDialog onImported={() => {}} />
 		</Card.Content>
 	</Card.Root>
 
@@ -133,6 +136,19 @@
 		</Card.Header>
 		<Card.Content>
 			<LinksImportDialog />
+		</Card.Content>
+	</Card.Root>
+
+	<!-- Target of the old /settings/import URL (redirected here) and of the empty-state links. -->
+	<Card.Root id="kutuphane-ice-aktar" class="mb-6 scroll-mt-6">
+		<Card.Header>
+			<Card.Title level={2}>{t('LibraryImport.sectionTitle')}</Card.Title>
+			<Card.Description>
+				{t('LibraryImport.pageIntro')}
+			</Card.Description>
+		</Card.Header>
+		<Card.Content>
+			<NoteAppSourceGrid />
 		</Card.Content>
 	</Card.Root>
 

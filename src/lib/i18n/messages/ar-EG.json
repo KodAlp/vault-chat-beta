@@ -287,18 +287,9 @@
   },
   "LibraryImport": {
     "pageIntro": "هات الملاحظات اللي عندك أصلًا على مكتبة المخزن ده. ملفاتك الأصلية عمرها ما بتتغيّر — كل حاجة بتتنسخ، واللينكات والمرفقات بتتحوّل.",
-    "appsHeading": "من تطبيقات الملاحظات",
     "badgeReady": "متاح",
     "badgeSoon": "قريبًا",
     "soonIntro": "التطبيقات دي لسه مش مدعومة. لحد ما تتدعم، صدّر ملاحظاتك بصيغة Markdown من التطبيق واستخدم بطاقة «مجلد Markdown».",
-    "filesHeading": "الملفات والروابط",
-    "filesIntro": "المستندات وصفحات الويب والروابط وفيديوهات YouTube بتعدّي على المحوّل بدل كده.",
-    "file_upload_title": "ملف واحد أو YouTube",
-    "file_upload_desc": "PDF وWord وPowerPoint وMarkdown… أو نص فيديو YouTube.",
-    "file_batch_title": "مجلد أو كذا ملف",
-    "file_batch_desc": "اختار مجلد فيه مستندات واستورده مرة واحدة.",
-    "file_links_title": "روابط الويب",
-    "file_links_desc": "الصق روابط ملفات PDF وصفحات الويب — بتتنزّل وتتضاف.",
     "source_obsidian": "Obsidian",
     "source_logseq": "Logseq",
     "source_joplin": "Joplin",
@@ -387,7 +378,8 @@
     "flavor_obsidian": "Obsidian",
     "flavor_zettlr": "Zettlr",
     "flavor_foam": "Foam",
-    "flavor_dendron": "Dendron"
+    "flavor_dendron": "Dendron",
+    "sectionTitle": "استيراد المكتبة"
   },
   "LinksImportDialog": {
     "trigger": "استيراد من روابط",
@@ -428,8 +420,8 @@
   },
   "LibraryTree": {
     "loadError": "تعذّر تحميل المكتبة.",
-    "empty": "المكتبة فاضية. ارفع مستند، أو استورد ملاحظاتك من تطبيقات تانية:",
-    "emptyLink": "الإعدادات ← استيراد المكتبة"
+    "empty": "المكتبة فاضية. ضيف ملف، أو استورد ملاحظاتك من تطبيقات تانية:",
+    "emptyLink": "الإعدادات → رفع الملفات"
   },
   "LibraryTreeNode": {
     "needsReview": "يحتاج مراجعة",
@@ -439,17 +431,24 @@
     "deleteFolderDescription": "سيُحذف هذا المجلد وكل ما فيه نهائيًا. لا يمكن التراجع عن هذا الإجراء.",
     "deleteFileDescription": "سيُحذف هذا الملف نهائيًا. لا يمكن التراجع عن هذا الإجراء."
   },
-  "UploadDialog": {
-    "trigger": "+ رفع",
-    "dialogTitle": "رفع مستند",
-    "uploading": "جارٍ الرفع...",
-    "sourceFile": "ملف",
-    "sourceYoutube": "فيديو (YouTube)",
-    "fileLabel": "الملف (DOCX / PPTX / XLSX / HTML / EPUB / PDF بسيط)",
+  "AddFilesDialog": {
+    "trigger": "إضافة ملفات",
+    "dialogTitle": "إضافة ملفات",
+    "dialogDescription": "لو اخترت ملف واحد تقدر تراجع عنوانه ومجاله قبل ما تحفظه. أما لو اخترت كذا ملف أو مجلد فبيتستوردوا على طول، واسم المجلد بيبقى هو المجال.",
+    "pickFilesButton": "اختار الملفات…",
+    "pickFolderButton": "اختيار مجلد…",
+    "scanning": "جارٍ فحص المجلد…",
+    "scanFailed": "تعذّر فحص المجلد",
+    "dropHint": "…أو اسحب الملفات أو مجلد وسيبهم هنا",
+    "youtubeToggle": "ضيف فيديو YouTube بدل كده",
     "youtubeLabel": "رابط YouTube",
     "youtubePlaceholder": "https://www.youtube.com/watch?v=...",
     "youtubeRightsConfirm": "أنا متأكّد إن عندي الحق/الإذن أستخدم محتوى الفيديو ده.",
-    "upload": "رفع",
+    "youtubeUpload": "رفع",
+    "back": "رجوع"
+  },
+  "ImportFlow": {
+    "uploading": "جارٍ الرفع...",
     "stageQueued": "في الانتظار...",
     "stageConverting": "جارٍ التحويل...",
     "stagePostprocessing": "جارٍ المعالجة...",
@@ -464,12 +463,8 @@
     "uploadFailed": "الرفع فشل",
     "tooLarge": "الملف كبير أوي — السيرفر رفض رفع ملف بالحجم ده."
   },
-  "BatchUploadDialog": {
-    "trigger": "+ رفع عدة ملفات / مجلد",
-    "dialogTitle": "رفع عدة ملفات / مجلد",
-    "dialogDescription": "اختر عدة ملفات أو مجلدًا كاملًا؛ تُحوَّل الملفات واحدًا تلو الآخر، وعند استخدام Ollama تُفرَّغ نماذجه المحمّلة من VRAM قبل كل ملف. لا تأكيد لكل ملف — تُطبَّق الإعدادات الافتراضية مع ملخّص في النهاية.",
-    "pickFilesLabel": "الملفات (تحديد متعدد)",
-    "pickFolderLabel": "المجلد (تُحفظ بنية المجلدات الفرعية)",
+  "BatchImport": {
+    "description": "اختر عدة ملفات أو مجلدًا كاملًا؛ تُحوَّل الملفات واحدًا تلو الآخر، وعند استخدام Ollama تُفرَّغ نماذجه المحمّلة من VRAM قبل كل ملف. لا تأكيد لكل ملف — تُطبَّق الإعدادات الافتراضية مع ملخّص في النهاية.",
     "previewSummary": "سيتم تحويل {allowed} ملف، وتخطّي {skipped}",
     "start": "ابدأ",
     "stop": "إيقاف",
@@ -480,9 +475,6 @@
     "skipJunk": "ملف نظام/مخفي",
     "skipTooLarge": "الملف كبير أوي (الحد 100MB)",
     "skipUnsupported": "نوع ملف غير مدعوم: {ext}",
-    "pickFolderButton": "اختيار مجلد…",
-    "scanning": "جارٍ فحص المجلد…",
-    "scanFailed": "تعذّر فحص المجلد",
     "skipTooDeep": "المجلد متداخل أوي",
     "statusConverted": "تم الاستيراد",
     "statusSkipped": "تم التخطي",
@@ -525,7 +517,7 @@
   "HomePage": {
     "title": "Vault Chat",
     "emptyTitle": "مفيش مخازن لسه",
-    "emptyDescription": "اعمل مخزن الأول عشان تقدر تدردش مع ملاحظاتك. وبعدين هات ملاحظاتك أو مستنداتك من الإعدادات ← استيراد المكتبة، ومحتواها هيبقى قابل للبحث هنا.",
+    "emptyDescription": "اعمل مخزن الأول عشان تقدر تدردش مع ملاحظاتك. وبعدين هات ملاحظاتك أو مستنداتك من الإعدادات → رفع الملفات، ومحتواها هيبقى متاح للبحث هنا.",
     "newVault": "مخزن جديد",
     "newVaultDialogTitle": "مخزن جديد",
     "vaultNameLabel": "اسم المخزن",
@@ -543,7 +535,7 @@
     "recentChats": "المحادثات الأخيرة",
     "start": "ابدأ",
     "noSourcesTitle": "مفيش مصادر لسه",
-    "noSourcesDescription": "عشان أسئلتك تاخد إجابات مبنية على المصادر وينفع تتقتبس، لازم الأول تستورد ملاحظاتك أو مستنداتك (الإعدادات ← استيراد المكتبة) — وإلا كل سؤال هيتعتبر «خارج النطاق».",
+    "noSourcesDescription": "عشان أسئلتك تاخد إجابات مبنية على المصادر وينفع تتوثّق، لازم الأول تستورد ملاحظاتك أو مستنداتك (الإعدادات → رفع الملفات) — وإلا كل سؤال هيرجع بـ«خارج النطاق».",
     "importSources": "استيراد المصادر",
     "untitled": "(بلا عنوان)",
     "sourceCountBadge": "{count} مصدر",
@@ -671,7 +663,6 @@
     "appearance": "المظهر",
     "vaults": "المخازن",
     "upload": "رفع الملفات",
-    "importLibrary": "استيراد المكتبة",
     "skills": "المهارات",
     "memory": "ذاكرة الدردشة",
     "progress": "التقدّم",
@@ -694,9 +685,6 @@
     "advancedUploadOptions": "خيارات الرفع المتقدمة",
     "title": "المكتبة",
     "saveError": "تعذّر حفظ الإعدادات.",
-    "importNotesTitle": "استيراد ملاحظات من تطبيقات تانية",
-    "importNotesDescription": "هات مكتبة ملاحظات من تطبيقات ملاحظات تانية — في صفحة واحدة، مع معاينة قبل ما يتكتب أي حاجة.",
-    "importNotesOpen": "فتح استيراد المكتبة",
     "importLinksTitle": "الاستيراد من روابط",
     "importLinksDescription": "الصق روابط PDF وصفحات الويب — تُنزَّل بالتتابع وتُضاف إلى المكتبة. تُتخطّى الروابط المستوردة بنجاح سابقًا عند إعادة التشغيل.",
     "uploadSettingsTitle": "إعدادات الرفع",
@@ -716,7 +704,9 @@
     "flattenFoldersHint": "تُخفى هذه المجلدات الجذرية نفسها، وتُعرض المجلدات التي تحتها مباشرةً في جذر الشجرة بدلًا منها. المسارات لا تتغيّر — يتبسّط شكل الشجرة فقط.",
     "libraryTreeTitle": "شجرة المكتبة",
     "libraryTreeDescription": "ارفع المستندات أو أعد تسميتها أو احذفها. أما شجرة المصادر في شاشة الدردشة (المرحلة 9) فتستخدم نسخة منفصلة للقراءة فقط من هذه الشجرة لاختيار النطاق.",
-    "loadError": "تعذّر تحميل الإعدادات."
+    "loadError": "تعذّر تحميل الإعدادات.",
+    "addFilesTitle": "إضافة ملفات",
+    "addFilesDescription": "PDF وWord وPowerPoint وMarkdown وكود… اختار ملف واحد أو كذا ملف أو مجلد كامل، والتطبيق بيفهم لوحده هو إيه."
   },
   "ProvidersSettingsPage": {
     "title": "مزوّدو النماذج",

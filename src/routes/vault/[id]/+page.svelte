@@ -362,7 +362,7 @@
 		<div class="vc-empty" style="padding-block: var(--space-6);">
 			<p class="text-[17px] leading-[22px] font-semibold text-[var(--label)]">{t('VaultChatListPage.noSourcesTitle')}</p>
 			<p>{t('VaultChatListPage.noSourcesDescription')}</p>
-			<a href="/settings/import" class="vc-btn secondary no-underline">
+			<a href="/settings/library" class="vc-btn secondary no-underline">
 				{t('VaultChatListPage.importSources')} <ArrowRightIcon class="rtl-flip" size={16} strokeWidth={1.75} aria-hidden="true" />
 			</a>
 		</div>

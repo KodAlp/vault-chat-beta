@@ -9,7 +9,7 @@ import { AppError, fail } from '$lib/server/app-error';
 
 /**
  * Folder scan for the Linux desktop app, whose webview cannot pick folders
- * (see BatchUploadDialog.svelte). The Tauri dialog gives the client an
+ * (see AddFilesDialog.svelte). The Tauri dialog gives the client an
  * absolute path; this walks it and returns the importable file list plus a
  * scanId. Files are then imported one at a time through POST /api/import/batch
  * with { scanId, relPath }, which resolves them ONLY inside the scanned root.

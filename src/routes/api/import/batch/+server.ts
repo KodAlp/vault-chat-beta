@@ -37,7 +37,7 @@ import type { ImportEvent, ImportResultItem, ImportSummary } from '$lib/types';
  * (/api/import) keeps the nicer confirm-dialog flow — see the Faz 5 plan for
  * why the two differ.
  *
- * BatchUploadDialog.svelte (multi-file/folder import) now sends ONE file per
+ * BatchImport.svelte (multi-file/folder import) now sends ONE file per
  * request — a sequential client-side loop, not a single multi-file POST —
  * so the Ollama-eviction win below (exclusiveGpu) applies file-by-file
  * rather than for a whole batch stuck behind one slow document; `files`
