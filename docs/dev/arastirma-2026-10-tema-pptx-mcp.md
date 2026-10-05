@@ -276,6 +276,12 @@ Yeni tehdit sınıfı değil, mevcut sınıflar için yeni giriş kanalları:
 
 ---
 
+### Durum (2026-10-05)
+- **C1-C3 yapıldı** (dal `claude/devam-etme-f3ce0f`, 48e9d58 + b6a6256): `mcp-endpoint.json` keşfi (dev: Vite eklentisi; Tauri: Rust, `VC_MCP_TOKEN`), `/api/mcp/*` belirteç kapısı (Origin reddi, oturum çerezinden bağımsız), `create_vault` / `import_source` / `list_pending_imports`, staging yan dosyası `<id>.json`, `/settings/library` üstünde bekleyen içe aktarmalar paneli, Vault ayarlarında izinli klasörler, URL yolu bağlantı içe aktarıcısıyla ortak `stage-url.ts`.
+- Doğrulandı: birim testler, `mcp:smoke`, `cargo check`, izole uçtan uca (stdio istemci → onay → kütüphane), yol saldırıları (kök dışı, `..`, sembolik bağlantı), belirteçsiz/Origin'li istek reddi.
+- Henüz denenmedi: gerçek Claude Desktop/Code istemcisiyle deneme, paketli Tauri'de `mcp-endpoint.json` (kapı deneyi 2), gerçek PDF + gerçek genel URL ile uçtan uca.
+- Kalan: C4 (`edit_note` + geliştirici anahtarı), C5 (okuma iyileştirmeleri).
+
 ## Önerilen sıra
 1. **C1-C2** (MCP vault + içe aktarma) — altyapısı (onay akışı, dönüştürme) hazır, en kısa yol.
 2. **B kapı deneyi** — formül ve yazı tipi belirsizliklerini erken çözer.

@@ -63,6 +63,21 @@ alınabilsin.
    anda doğru olamaz. Üreticiler ertelendi (aşağıda "Üretici araçların
    erteleme şartları").
 
+   **Güncelleme (2026-10-05, kullanıcı kararı): yazma yüzeyi eklendi, ama
+   MCP hâlâ hiçbir dosyaya kendisi yazmaz.** `create_vault`,
+   `import_source`, `list_pending_imports` araçları çalışan uygulamanın
+   yerel API'sini çağırır (`mcp/app-client.ts` → `DATA_DIR/mcp-endpoint.json`
+   → `/api/mcp/*`, `x-vc-mcp-token`, Origin taşıyan istek reddedilir).
+   Uygulama kapalıysa `APP_NOT_RUNNING`. İçe aktarmalar staging'e düşer;
+   kütüphaneye yalnız kullanıcının arayüzdeki onayıyla girer — MCP'nin
+   onaylama ya da not düzenleme aracı YOK. Yerel yol yalnız
+   `mcp-settings.json` izinli köklerinden (MCP bu dosyayı değiştiremez).
+   `mcp/no-write-import.test.ts` kilidi geçerli: `mcp/` `library.ts` /
+   `library-write.ts`'i içe aktarmaz. Aşağıdaki "salt-okunur" invaryantı
+   MCP SÜRECİ için aynen geçerlidir; yazmaları yapan uygulama sürecidir.
+   Not düzeltme (`edit_note`, geliştirici anahtarı) ayrı aşama:
+   docs/dev/arastirma-2026-10-tema-pptx-mcp.md C4.
+
 3. **Taşınabilirlik ucuz — büyük bir "core extraction" yapılmaz.** MCP
    yolundaki tek çalışma-zamanı SvelteKit bağımlılığı
    `src/lib/server/ollama.ts`'in `$env/dynamic/private` import'udur.
