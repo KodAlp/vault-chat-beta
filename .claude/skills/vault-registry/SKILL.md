@@ -32,7 +32,7 @@ alınabilsin.
    **isim** seçer. İçerik her zaman `data/vaults/<id>/library/` altında
    yaşar. Faz 5'in "yazma işlemleri asla kullanıcının gerçek klasörüne
    düşmez" duruşu (`library.ts`'teki `libraryRoot()` yorumu) burada da
-   geçerli — Obsidian vault'u içe aktarma hâlâ tek yönlü kopyalama.
+   geçerli — Markdown klasörü (örn. Obsidian vault'u) içe aktarma hâlâ tek yönlü kopyalama.
    Registry kaydındaki `path` alanı türetilmiş bir değerdir, kullanıcı
    girdisi değil.
 2. **`id` kalıcıdır.** `name`'den türetilen bir slug, oluşturulduktan sonra

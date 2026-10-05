@@ -1,11 +1,11 @@
 ---
 name: svelte-vault-chat
-description: Build and extend the local SvelteKit chat application that serves as the interactive teaching layer over the Obsidian vault, backed by Ollama (Qwen3 8B / 30B-A3B). Use this skill whenever the user works on the chat app, mentions the Svelte/SvelteKit frontend, Ollama streaming, chat UI, message rendering, LaTeX/KaTeX/math display problems (e.g. f(x) not rendering), code highlighting, model switching, or replacing Khoj. Also use it when creating new routes, components, or server endpoints inside the chat app project, even if the user does not name the skill explicitly.
+description: Build and extend the local SvelteKit chat application that serves as the interactive teaching layer over the user's own library, backed by Ollama (Qwen3 8B / 30B-A3B). Use this skill whenever the user works on the chat app, mentions the Svelte/SvelteKit frontend, Ollama streaming, chat UI, message rendering, LaTeX/KaTeX/math display problems (e.g. f(x) not rendering), code highlighting, model switching, or replacing Khoj. Also use it when creating new routes, components, or server endpoints inside the chat app project, even if the user does not name the skill explicitly.
 ---
 
 # Svelte Vault Chat
 
-A local-first SvelteKit chat application over the Obsidian vault. No Docker, no
+A local-first SvelteKit chat application over the user's own library. No Docker, no
 external services: one Node process talking to Ollama at `localhost:11434`.
 Retrieval is handled by the companion skill `vault-rag-index` — this skill owns
 the app itself: routes, streaming, rendering, and UI conventions.
@@ -148,8 +148,8 @@ question, each chunk prefixed with its source path and frontmatter summary
 - Render the assistant message progressively during streaming, but run the
   full markdown pipeline only on the accumulated text per animation frame
   (throttle ~50ms) — never per token.
-- Show RAG sources as collapsible chips under each answer, linking with the
-  `obsidian://open?vault=...&file=...` URI scheme so clicks open Obsidian.
+- Show RAG sources as collapsible chips under each answer, linking to the
+  in-app library viewer.
 - Dark/light theme via `prefers-color-scheme`; KaTeX and shiki themes must
   follow.
 - All user-facing strings in Turkish.

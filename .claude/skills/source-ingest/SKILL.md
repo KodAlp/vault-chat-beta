@@ -1,14 +1,14 @@
 ---
 name: source-ingest
-description: Build and maintain the vault-chat app's own source library (data/library/) that removes the Obsidian dependency: one-way Obsidian vault import, conversion of PDF, DOCX, PPTX, XLSX and LaTeX documents to frontmattered Markdown via Python sidecar tools (MarkItDown by default, Marker/Docling for complex or math-heavy PDFs, Pandoc for LaTeX), and YouTube transcript ingest via yt-dlp (captions only, never video/audio download or local transcription). Use this skill whenever the user works on importing sources, the left-side library tree, document conversion quality, OCR/scanned PDFs, migrating away from VAULT_PATH, YouTube transcript import, or asks which converter to use for a given file type.
+description: Build and maintain the vault-chat app's own source library (data/library/) that is independent of any note app: one-way Markdown-folder import (Obsidian, Logseq, Joplin, Zettlr exports are just import sources), conversion of PDF, DOCX, PPTX, XLSX and LaTeX documents to frontmattered Markdown via Python sidecar tools (MarkItDown by default, Marker/Docling for complex or math-heavy PDFs, Pandoc for LaTeX), and YouTube transcript ingest via yt-dlp (captions only, never video/audio download or local transcription). Use this skill whenever the user works on importing sources, the left-side library tree, document conversion quality, OCR/scanned PDFs, migrating away from VAULT_PATH, YouTube transcript import, or asks which converter to use for a given file type.
 ---
 
 # Source Ingest
 
-The app stops depending on Obsidian: it owns `data/library/` — plain
+The app does not depend on any note app: it owns `data/library/` — plain
 Markdown + frontmatter, organized in folders shown in the left tree.
-Obsidian users import their vault with one click (copy, one-way); everyone
-else imports documents directly. The indexer (`vault-rag-index`) now runs
+Users of Obsidian, Zettlr and similar apps import their Markdown folder with
+one click (copy, one-way); everyone else imports documents directly. The indexer (`vault-rag-index`) now runs
 over `LIBRARY_PATH` (keep `VAULT_PATH` as a deprecated alias for one
 release).
 
@@ -41,7 +41,7 @@ folder the user dropped the file into; `level` defaults to
 `undergraduate` — all three editable in a confirm dialog before saving.
 Files with `needs_review: true` get a badge in the tree.
 
-## Obsidian vault import
+## Markdown-folder import (Obsidian and similar sources)
 
 - One-way COPY, never move, never write back to the vault. Re-import
   re-uses sha256 to update only changed notes (pdf2md.py pattern).

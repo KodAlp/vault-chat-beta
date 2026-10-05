@@ -17,8 +17,8 @@ Every generated item MUST reference real source chunks obtained through
 is forbidden: if retrieval returns empty for the requested scope, the UI
 says so ("Bu konu için kütüphanede yeterli kaynak yok") instead of letting
 the model invent questions. Each item stores `source_path` +
-`heading_path`; the review UI renders them as `obsidian://` /
-in-app-library links. This is the local equivalent of NotebookLM's
+`heading_path`; the review UI renders them as in-app-library
+links. This is the local equivalent of NotebookLM's
 source-pinned answers and it is not negotiable.
 
 ## Generation pipeline (shared by all artifact types)

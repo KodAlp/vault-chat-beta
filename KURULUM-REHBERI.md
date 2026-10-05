@@ -141,11 +141,10 @@ python -m pip install -r requirements.txt
 ## 5. İlk açılış
 
 Uygulama ilk kez açıldığında senden bir klasör seçmeni ister — bu, notlarını
-tutacağın "kasa" için bir görünen isim belirlemek amaçlıdır (Obsidian
-kullanıyorsan o vault klasörünü seçebilirsin, ama içeriği oraya
-**kopyalanmaz**, sadece isim olarak kullanılır). İstersen boş bir klasör
+tutacağın "kasa" (vault) için bir görünen isim belirlemek amaçlıdır
+(seçtiğin klasörün içeriği **kopyalanmaz**, sadece isim olarak kullanılır). İstersen boş bir klasör
 seçip devam edebilirsin; gerçek notlarını sonradan uygulama içinden
-**Ayarlar → Kütüphane → "Obsidian'dan İçe Aktar"** ile ekleyeceksin.
+**Ayarlar → Kütüphane** içindeki içe aktarma ile ekleyeceksin.
 
 Bu seçim sadece ilk açılışta sorulur, sonra bir daha sorulmaz.
 
@@ -171,7 +170,8 @@ sayfasındaki "Kurulum sihirbazını yeniden çalıştır" bağlantısını kull
 
 ## 6. Notlarını içeri aktar ve indeksle
 
-1. Uygulama içinde **Ayarlar → Kütüphane → "Obsidian'dan İçe Aktar"** ile
+1. Uygulama içinde **Ayarlar → Kütüphane** içindeki içe aktarma ile (Obsidian, Zettlr gibi
+   uygulamalardan bir Markdown klasörü de olur)
    notlarının olduğu klasörü göster.
 2. Sohbet edebilmek için notların önce aranabilir hale getirilmesi (indeks)
    gerekiyor — bu adım şu an sadece kaynak koddan çalıştırılan geliştirici
