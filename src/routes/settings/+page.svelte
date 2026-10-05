@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { settings, persistSettings } from '$lib/settings.svelte';
-	import { i18n, persistLocale, type Locale } from '$lib/i18n/index.svelte';
+	import LanguageCombobox from '$lib/components/LanguageCombobox.svelte';
 	import { Switch } from '$lib/components/ui/switch';
 	import { t } from '$lib/i18n/index.svelte';
 
@@ -14,14 +14,6 @@
 		{ value: 'sand', label: t('SettingsPage.themeSand') },
 		{ value: 'forest', label: t('SettingsPage.themeForest') }
 	]);
-
-	// Locale names are endonyms (a language's own name for itself) — these
-	// stay as-is regardless of UI locale, same as "Français" doesn't become
-	// "French" in an English menu.
-	const localeOptions: { value: Locale; label: string }[] = [
-		{ value: 'tr', label: 'Türkçe' },
-		{ value: 'en', label: 'English' }
-	];
 
 	function pickTheme(value: ThemeValue) {
 		settings.theme = value;
@@ -38,11 +30,6 @@
 	function pickMotion(value: MotionValue) {
 		settings.motion = value;
 		persistSettings();
-	}
-
-	function pickLocale(value: Locale) {
-		i18n.locale = value;
-		persistLocale();
 	}
 </script>
 
@@ -88,7 +75,7 @@
 					{t('SettingsPage.motionTitle')}
 					<span class="text-xs text-muted-foreground">{t('SettingsPage.motionHint')}</span>
 				</span>
-				<div class="vc-seg ml-auto" role="tablist" aria-label={t('SettingsPage.motionTitle')}>
+				<div class="vc-seg ms-auto" role="tablist" aria-label={t('SettingsPage.motionTitle')}>
 					{#each motionOptions as opt (opt.value)}
 						<button type="button" role="tab" aria-selected={settings.motion === opt.value} onclick={() => pickMotion(opt.value)}>
 							{opt.label}
@@ -104,12 +91,10 @@
 		<div class="vc-list">
 			<div class="vc-list-row">
 				<span>{t('SettingsPage.languageTitle')}</span>
-				<div class="vc-seg ml-auto" role="tablist" aria-label={t('SettingsPage.languageTitle')}>
-					{#each localeOptions as opt (opt.value)}
-						<button type="button" role="tab" aria-selected={i18n.locale === opt.value} onclick={() => pickLocale(opt.value)}>
-							{opt.label}
-						</button>
-					{/each}
+				<!-- Language names inside the picker are endonyms (a language's own name for itself), so they stay
+				     as-is regardless of the UI locale, same as "Français" doesn't become "French" in an English menu. -->
+				<div class="ms-auto">
+					<LanguageCombobox />
 				</div>
 			</div>
 		</div>
@@ -185,11 +170,11 @@
 	.swatch .side {
 		width: 28%;
 		background: var(--bg-sidebar);
-		border-right: 1px solid var(--separator);
+		border-inline-end: 1px solid var(--separator);
 	}
 	.swatch .dot {
 		position: absolute;
-		right: 10px;
+		inset-inline-end: 10px;
 		bottom: 10px;
 		width: 16px;
 		height: 16px;

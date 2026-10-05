@@ -57,7 +57,7 @@ export function createChick(root, opts) {
     var px = lx, py = 272;
     var gTop = 376;
     var s = '';
-    s += '<svg class="' + uid + '" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Defter okuyan kuş" style="display:block;width:100%;height:auto;overflow:visible">';
+    s += '<svg class="' + uid + '" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="display:block;width:100%;height:auto;overflow:visible">';
     s += '<style>' +
       '.' + uid + ' .breathe{animation:' + uid + 'b 3.4s ease-in-out infinite}' +
       '.' + uid + ' .tassel{transform-origin:356px 117px;animation:' + uid + 't 2.6s ease-in-out infinite}' +

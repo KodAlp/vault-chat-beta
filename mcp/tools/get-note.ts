@@ -32,7 +32,7 @@ export function registerGetNote(server: McpServer): void {
 						raw = readLibraryFile(v, relPath);
 					} catch (err) {
 						const message = err instanceof Error ? err.message : String(err);
-						if (message.includes('library dışına çıkıyor')) {
+						if ((err as { code?: unknown }).code === 'PATH_OUTSIDE_LIBRARY') {
 							throw new ToolError('PATH_OUTSIDE_LIBRARY', message);
 						}
 						if ((err as NodeJS.ErrnoException).code === 'ENOENT') {

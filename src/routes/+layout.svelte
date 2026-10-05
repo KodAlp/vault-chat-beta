@@ -20,7 +20,8 @@
 	import PythonStatusBanner from '$lib/components/PythonStatusBanner.svelte';
 	import { requestScopeExpand } from '$lib/scope-expand.svelte';
 	import { handleExternalLinkClick } from '$lib/openExternalLink';
-	import { t } from '$lib/i18n/index.svelte';
+	import { i18n, t } from '$lib/i18n/index.svelte';
+	import { localeInfo } from '$lib/i18n/locales';
 
 	let { children } = $props();
 
@@ -77,6 +78,15 @@
 		const handler = (e: MediaQueryListEvent) => (systemReducesMotion = e.matches);
 		mql.addEventListener('change', handler);
 		return () => mql.removeEventListener('change', handler);
+	});
+
+	// <html lang/dir> follow the UI language: dir flips the whole layout for Arabic/Urdu (every physical
+	// margin/padding in the app is logical for exactly this reason), lang selects the right font stack
+	// (tokens.css :root[lang=...]) and CJK glyph variants, and lets screen readers pick the right voice.
+	$effect(() => {
+		const info = localeInfo(i18n.locale);
+		document.documentElement.lang = info.code;
+		document.documentElement.dir = info.dir;
 	});
 
 	$effect(() => {

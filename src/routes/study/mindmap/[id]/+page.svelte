@@ -147,7 +147,7 @@
 </svelte:head>
 
 <div class="mindmap-screen">
-	<a class="home-link" href={backHref}><ArrowLeftIcon size={16} strokeWidth={1.75} aria-hidden="true" /> {t('Common.geriDon')}</a>
+	<a class="home-link" href={backHref}><ArrowLeftIcon class="rtl-flip" size={16} strokeWidth={1.75} aria-hidden="true" /> {t('Common.geriDon')}</a>
 
 	<!-- See study/report/[id]/+page.svelte for why every one of these view
 	     routes gets a boundary: phase='ready' is assigned before its subtree
@@ -289,7 +289,7 @@
 	.map-controls {
 		position: absolute;
 		top: 0.6rem;
-		right: 0.6rem;
+		inset-inline-end: 0.6rem;
 		display: flex;
 		flex-direction: column;
 		gap: 0.25rem;

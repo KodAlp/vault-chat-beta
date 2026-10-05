@@ -70,7 +70,7 @@
 <div class="settings-shell">
 	<nav class="vc-sidebar settings-nav" aria-label={t('Common.ayarlar')}>
 		<a href="/" class="vc-side-row settings-back">
-			<ArrowLeftIcon size={20} strokeWidth={1.75} aria-hidden="true" />
+			<ArrowLeftIcon class="rtl-flip" size={20} strokeWidth={1.75} aria-hidden="true" />
 			{t('SettingsNav.backToApp')}
 		</a>
 		<div class="settings-nav-title">{t('Common.ayarlar')}</div>
@@ -133,7 +133,7 @@
 		outline-offset: -2px;
 	}
 	.settings-nav :global(.vc-side-row .meta) {
-		margin-left: auto;
+		margin-inline-start: auto;
 		color: var(--label-secondary);
 	}
 	.settings-main {
@@ -164,7 +164,7 @@
 			gap: 2px;
 			overflow-x: auto;
 			overflow-y: hidden;
-			border-right: none;
+			border-inline-end: none;
 			border-bottom: 1px solid var(--separator);
 			padding: var(--space-2);
 		}

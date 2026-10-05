@@ -26,6 +26,6 @@
 >
 	<SwitchPrimitive.Thumb
 		data-slot="switch-thumb"
-		class="rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.3)] group-data-[size=default]/switch:size-5 group-data-[size=sm]/switch:size-3.5 group-data-[size=default]/switch:data-[state=checked]:translate-x-[19px] group-data-[size=sm]/switch:data-[state=checked]:translate-x-[14px] group-data-[size=default]/switch:data-[state=unchecked]:translate-x-[3px] group-data-[size=sm]/switch:data-[state=unchecked]:translate-x-[2px] pointer-events-none block ring-0 transition-transform rtl:data-[state=checked]:-translate-x-[19px]"
+		class="rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.3)] group-data-[size=default]/switch:size-5 group-data-[size=sm]/switch:size-3.5 group-data-[size=default]/switch:data-[state=checked]:translate-x-[19px] group-data-[size=sm]/switch:data-[state=checked]:translate-x-[14px] group-data-[size=default]/switch:data-[state=unchecked]:translate-x-[3px] group-data-[size=sm]/switch:data-[state=unchecked]:translate-x-[2px] pointer-events-none block ring-0 transition-transform rtl:group-data-[size=default]/switch:data-[state=checked]:-translate-x-[19px] rtl:group-data-[size=sm]/switch:data-[state=checked]:-translate-x-[14px] rtl:group-data-[size=default]/switch:data-[state=unchecked]:-translate-x-[3px] rtl:group-data-[size=sm]/switch:data-[state=unchecked]:-translate-x-[2px]"
 	/>
 </SwitchPrimitive.Root>

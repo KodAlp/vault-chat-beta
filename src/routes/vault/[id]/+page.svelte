@@ -7,6 +7,7 @@
 	import { parseSelectionKey } from '$lib/model-selection';
 	import { settings } from '$lib/settings.svelte';
 	import { i18n, t } from '$lib/i18n/index.svelte';
+	import { intlLocale } from '$lib/i18n/locales';
 	import { Badge } from '$lib/components/ui/badge';
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
 	import Icon from '$lib/components/Icon.svelte';
@@ -139,7 +140,7 @@
 	// valid BCP-47 tags, so switching the UI language now actually changes
 	// this instead of leaving every timestamp Turkish regardless of setting.
 	function formatDate(iso: string): string {
-		return new Date(iso).toLocaleString(i18n.locale, {
+		return new Date(iso).toLocaleString(intlLocale(i18n.locale), {
 			day: '2-digit',
 			month: '2-digit',
 			hour: '2-digit',
@@ -228,7 +229,7 @@
 			href="/?picker=1"
 			class="flex items-center gap-1 rounded-[var(--radius-md)] px-1 text-[13px] leading-[18px] text-[var(--label-secondary)] hover:text-[var(--label)] focus-visible:outline-2 focus-visible:outline-[var(--focus-ring)] focus-visible:outline-offset-2"
 		>
-			<ArrowLeftIcon size={16} strokeWidth={1.75} aria-hidden="true" /> {t('VaultChatListPage.backToVaults')}
+			<ArrowLeftIcon class="rtl-flip" size={16} strokeWidth={1.75} aria-hidden="true" /> {t('VaultChatListPage.backToVaults')}
 		</a>
 		<span
 			class="min-w-0 flex-1 truncate px-2 text-center text-[15px] leading-5 font-semibold tracking-[-0.23px]"
@@ -301,7 +302,7 @@
 				{@const n = scopeCount(chat.included_paths_json)}
 				<li class="vc-list-row relative p-0" style="padding: 0;">
 					{#if renamingId === chat.id}
-						<div class="flex min-h-[52px] min-w-0 flex-1 items-center justify-between gap-3 py-2 pr-20 pl-4">
+						<div class="flex min-h-[52px] min-w-0 flex-1 items-center justify-between gap-3 py-2 pe-20 ps-4">
 							<input
 								type="text"
 								bind:value={renameValue}
@@ -321,7 +322,7 @@
 					{:else}
 						<a
 							href="/vault/{data.vaultId}/chat/{chat.id}"
-							class="flex min-h-[52px] min-w-0 flex-1 items-center justify-between gap-3 py-2 pr-20 pl-4 no-underline hover:bg-[var(--fill-hover)] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
+							class="flex min-h-[52px] min-w-0 flex-1 items-center justify-between gap-3 py-2 pe-20 ps-4 no-underline hover:bg-[var(--fill-hover)] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
 						>
 							<span class="truncate text-[15px] leading-5 font-medium tracking-[-0.23px] text-[var(--label)]">{chat.title ?? t('VaultChatListPage.untitled')}</span>
 							<span class="flex shrink-0 items-center gap-2 text-[13px] leading-[18px] text-[var(--label-secondary)]">
@@ -332,7 +333,7 @@
 							</span>
 						</a>
 					{/if}
-					<div class="absolute top-1/2 right-2 flex -translate-y-1/2 gap-0.5">
+					<div class="absolute top-1/2 end-2 flex -translate-y-1/2 gap-0.5">
 						<button
 							type="button"
 							onclick={() => startRename(chat)}
@@ -362,7 +363,7 @@
 			<p class="text-[17px] leading-[22px] font-semibold text-[var(--label)]">{t('VaultChatListPage.noSourcesTitle')}</p>
 			<p>{t('VaultChatListPage.noSourcesDescription')}</p>
 			<a href="/settings/library" class="vc-btn secondary no-underline">
-				{t('VaultChatListPage.importSources')} <ArrowRightIcon size={16} strokeWidth={1.75} aria-hidden="true" />
+				{t('VaultChatListPage.importSources')} <ArrowRightIcon class="rtl-flip" size={16} strokeWidth={1.75} aria-hidden="true" />
 			</a>
 		</div>
 	{:else if loadError}

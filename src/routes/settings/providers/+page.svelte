@@ -721,7 +721,7 @@
 
 							<details class="mt-2 text-xs" ontoggle={(e) => e.currentTarget.open && loadModelManage(p.id)}>
 								<summary class="cursor-pointer text-muted-foreground">{t('ProvidersSettingsPage.manageModels')}</summary>
-								<div class="mt-2 flex flex-col gap-1 pl-2">
+								<div class="mt-2 flex flex-col gap-1 ps-2">
 									{#if modelManageError[p.id]}
 										<p class="text-destructive">{modelManageError[p.id]}</p>
 									{:else if modelManage[p.id] === undefined || modelManage[p.id] === null}
@@ -765,7 +765,7 @@
 												<summary class="cursor-pointer text-muted-foreground">
 													{t('ProvidersSettingsPage.otherModels', { count: modelManage[p.id]!.other.length })}
 												</summary>
-												<div class="mt-1 flex flex-col gap-1 pl-2">
+												<div class="mt-1 flex flex-col gap-1 ps-2">
 													{#each modelManage[p.id]!.other as m (m.id)}
 														<div class="flex items-center gap-1.5">
 															<Checkbox

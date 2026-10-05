@@ -5,6 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import en from './messages/en.json';
 import tr from './messages/tr.json';
+import { LOCALES } from './locales';
 
 /**
  * The two message files must describe the same UI, and every message the code asks for by a literal key must exist. A key put in
@@ -47,3 +48,69 @@ test('every message asked for by a literal key, t(\'Block.key\'), exists in both
 	const missing = [...used].filter(([k]) => !enKeys.has(k) || !trKeys.has(k)).map(([k, f]) => `${k} (${f})`);
 	assert.deepEqual(missing, []);
 });
+
+/**
+ * Every catalog on disk (not just tr/en) is held to the same contract, so a newly dropped-in language can't ship with a
+ * missing key, a blank string, or a mangled {placeholder} (which would render as a literal "{name}"). Plural siblings
+ * `field#zero|one|two|few|many` are the one allowed extension: language-specific extra keys whose base `field` exists.
+ */
+const messagesDir = path.join(path.dirname(fileURLToPath(import.meta.url)), 'messages');
+const catalogFiles = fs.readdirSync(messagesDir).filter((f) => f.endsWith('.json')).sort();
+const PLURAL_RE = /^(.+)#(zero|one|two|few|many)$/;
+const placeholders = (s: string): string => JSON.stringify([...new Set([...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]))].sort());
+// Split on the FIRST dot only (block.field), exactly as t() does; plural field names contain '#', never '.'.
+const valueAt = (o: Record<string, Record<string, unknown>>, key: string): unknown => {
+	const dot = key.indexOf('.');
+	return o[key.slice(0, dot)]?.[key.slice(dot + 1)];
+};
+const isPluralOfExisting = (k: string) => {
+	const m = PLURAL_RE.exec(k);
+	return m !== null && enKeys.has(`${m[1]}`) && !enKeys.has(k);
+};
+
+test('every file in messages/ is a known locale code', () => {
+	const known = new Set<string>(LOCALES.map((l) => l.code));
+	for (const f of catalogFiles) assert.ok(known.has(f.replace(/\.json$/, '')), `messages/${f} is not in LOCALES`);
+	assert.ok(catalogFiles.includes('tr.json') && catalogFiles.includes('en.json'));
+});
+
+// A plural sibling inside en.json itself is optional elsewhere (another language may need different categories).
+const requiredKeys = [...enKeys].filter((k) => !PLURAL_RE.test(k) || !enKeys.has(k.replace(PLURAL_RE, '$1')));
+
+for (const file of catalogFiles) {
+	const code = file.replace(/\.json$/, '');
+	const catalog = JSON.parse(fs.readFileSync(path.join(messagesDir, file), 'utf8')) as Record<string, Record<string, unknown>>;
+	const keys = flat(catalog);
+
+	test(`${code}: has every en key and only en keys (plus plural siblings of existing keys)`, () => {
+		const have = new Set(keys);
+		assert.deepEqual(requiredKeys.filter((k) => !have.has(k)), [], 'missing');
+		assert.deepEqual(keys.filter((k) => !enKeys.has(k) && !isPluralOfExisting(k)), [], 'unknown keys (a plural sibling needs its base key)');
+	});
+
+	test(`${code}: no empty or non-string values`, () => {
+		const bad = keys.filter((k) => {
+			const v = valueAt(catalog, k);
+			return typeof v !== 'string' || v.trim() === '';
+		});
+		assert.deepEqual(bad, []);
+	});
+
+	test(`${code}: {placeholders} match en`, () => {
+		const problems: string[] = [];
+		for (const k of keys) {
+			const v = valueAt(catalog, k);
+			const variant = PLURAL_RE.exec(k);
+			const baseKey = variant && !enKeys.has(k) ? variant[1] : k;
+			const ref = valueAt(en as Record<string, Record<string, unknown>>, baseKey);
+			if (typeof v !== 'string' || typeof ref !== 'string') continue;
+			const got = placeholders(v);
+			const want = placeholders(ref);
+			// a plural variant may drop {count} ("one file") but must not invent or lose anything else
+			const wantNoCount = placeholders(ref.replace(/\{count\}/g, ''));
+			const ok = variant && !enKeys.has(k) ? got === want || got === wantNoCount : got === want;
+			if (!ok) problems.push(`${k}: ${got} vs ${want}`);
+		}
+		assert.deepEqual(problems, []);
+	});
+}

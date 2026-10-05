@@ -1,5 +1,5 @@
 import type { LayoutLoad } from './$types';
-import { applyLocale, persistLocale, STORAGE_KEY as LOCALE_STORAGE_KEY } from '$lib/i18n/index.svelte';
+import { applyLocale, ensureLocaleLoaded, i18n, persistLocale, STORAGE_KEY as LOCALE_STORAGE_KEY } from '$lib/i18n/index.svelte';
 import { applySettings, persistSettings, settings, STORAGE_KEY as SETTINGS_STORAGE_KEY } from '$lib/settings.svelte';
 import { stalePinPatch } from '$lib/settings-reconcile';
 import { applyLocalServerSetupDone } from '$lib/localServerSetup.svelte';
@@ -47,7 +47,8 @@ export const load: LayoutLoad = async ({ fetch }) => {
 			localServerSetupDone?: unknown;
 		};
 
-		if (prefs.locale !== undefined) applyLocale(prefs.locale);
+		// Awaited: a lazily-loaded catalog must be in before the first paint, otherwise every string flashes in the fallback language.
+		if (prefs.locale !== undefined) await applyLocale(prefs.locale);
 		if (prefs.settings !== undefined) applySettings(prefs.settings);
 		applyLocalServerSetupDone(prefs.localServerSetupDone);
 
@@ -79,5 +80,8 @@ export const load: LayoutLoad = async ({ fetch }) => {
 	} catch (err) {
 		console.warn('ui-prefs load failed', err);
 	}
+	// Covers every path that skipped applyLocale (server unreachable, no saved locale): a localStorage-restored
+	// non-tr/en locale still needs its catalog before first paint.
+	await ensureLocaleLoaded(i18n.locale);
 	return {};
 };

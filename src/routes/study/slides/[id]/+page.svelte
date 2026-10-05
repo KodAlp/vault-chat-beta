@@ -97,7 +97,7 @@
 </svelte:head>
 
 <div class="slides-screen">
-	<a class="home-link" href={backHref}><ArrowLeftIcon size={14} aria-hidden="true" /> {t('Common.geriDon')}</a>
+	<a class="home-link" href={backHref}><ArrowLeftIcon class="rtl-flip" size={14} aria-hidden="true" /> {t('Common.geriDon')}</a>
 
 	<!-- See study/report/[id]/+page.svelte for why every one of these view
 	     routes gets a boundary: phase='ready' is assigned before its subtree

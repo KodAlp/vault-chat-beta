@@ -127,7 +127,7 @@
 	<div class="top">
 		{#if !collapsed}
 			<a class="vault-name" href={'/vault/' + vaultId} title={t('VaultChatPage.backToChatList')}>
-				<ArrowLeftIcon size={20} strokeWidth={1.75} aria-hidden="true" />
+				<ArrowLeftIcon class="rtl-flip" size={20} strokeWidth={1.75} aria-hidden="true" />
 				<span>{vaultName}</span>
 			</a>
 		{/if}

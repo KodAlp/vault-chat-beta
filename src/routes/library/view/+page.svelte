@@ -5,6 +5,7 @@
 	import { renderMarkdown } from '$lib/markdown';
 	import { resolveBackHref } from '$lib/back-link';
 	import { t, i18n } from '$lib/i18n/index.svelte';
+	import { intlLocale } from '$lib/i18n/locales';
 	import { relativeTime } from '$lib/relative-time';
 	import { localizeError, readResponseError } from '$lib/server-error';
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
@@ -356,7 +357,7 @@
 <svelte:window onkeydown={onWindowKeydown} onbeforeunload={onBeforeUnload} />
 
 <div class="viewer" class:wide={editing}>
-	<a class="home-link" href={backHref}><ArrowLeftIcon size={14} aria-hidden="true" /> {t('Common.geriDon')}</a>
+	<a class="home-link" href={backHref}><ArrowLeftIcon class="rtl-flip" size={14} aria-hidden="true" /> {t('Common.geriDon')}</a>
 	<div class="toolbar">
 		<p class="path">{filePath}</p>
 		{#if !error}
@@ -391,7 +392,7 @@
 						<li>
 							<button type="button" class="version-row" onclick={() => openRevision(rev)}>
 								<span>{relativeTime(rev.at, i18n.locale)}</span>
-								<span class="version-meta">{new Date(rev.at).toLocaleString(i18n.locale)} · {formatSize(rev.bytes)}</span>
+								<span class="version-meta">{new Date(rev.at).toLocaleString(intlLocale(i18n.locale))} · {formatSize(rev.bytes)}</span>
 							</button>
 						</li>
 					{/each}
@@ -455,7 +456,7 @@
 		<div class="vc-banner info note">
 			<span class="dot"></span>
 			<div class="rev-banner">
-				<div class="d">{t('LibraryViewPage.previewingVersion', { when: new Date(revPreview.rev.at).toLocaleString(i18n.locale) })}</div>
+				<div class="d">{t('LibraryViewPage.previewingVersion', { when: new Date(revPreview.rev.at).toLocaleString(intlLocale(i18n.locale)) })}</div>
 				<div class="conflict-actions">
 					<button type="button" class="vc-btn primary" onclick={restoreRevision} disabled={restoring}>{t('LibraryViewPage.restore')}</button>
 					<button type="button" class="vc-btn ghost" onclick={() => (revPreview = null)}>{t('LibraryViewPage.closeVersionPreview')}</button>
@@ -585,7 +586,7 @@
 		background: transparent;
 		color: var(--label);
 		font: var(--text-subheadline);
-		text-align: left;
+		text-align: start;
 		cursor: pointer;
 	}
 

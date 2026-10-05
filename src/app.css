@@ -379,7 +379,7 @@ body {
 .markdown-body ul,
 .markdown-body ol {
 	margin: 0.6em 0;
-	padding-left: 1.5em;
+	padding-inline-start: 1.5em;
 }
 
 .markdown-body li {
@@ -400,7 +400,7 @@ body {
 .markdown-body td {
 	border: 1px solid var(--hairline);
 	padding: 0.35em 0.6em;
-	text-align: left;
+	text-align: start;
 }
 
 .markdown-body th {
@@ -410,8 +410,9 @@ body {
 
 .markdown-body blockquote {
 	margin: 0.6em 0;
-	padding: 0.2em 0 0.2em 1em;
-	border-left: 2px solid var(--hairline-strong);
+	padding: 0.2em 0;
+	padding-inline-start: 1em;
+	border-inline-start: 2px solid var(--hairline-strong);
 	color: var(--text-muted);
 }
 
@@ -431,4 +432,38 @@ body {
 
 .markdown-body > :last-child {
 	margin-bottom: 0;
+}
+
+/* Directional icons (back arrows, "go" arrows, side-panel glyphs) mirror in RTL; apply to the icon element itself. In the
+   base layer so a component class can still override it deliberately. */
+@layer base {
+	:root[dir="rtl"] .rtl-flip {
+		transform: scaleX(-1);
+	}
+
+	/* Code is always left-to-right, even inside an Arabic/Urdu answer, and a code span must not reorder the sentence around it. */
+	pre,
+	code,
+	kbd,
+	samp {
+		direction: ltr;
+		unicode-bidi: isolate;
+	}
+
+	/* Urdu Nastaliq needs generous leading (see tokens.css :root[lang="ur"]); components that set their own line-height
+	   in a font shorthand are tuned per element, this covers running text. */
+	:root[lang="ur"] body {
+		line-height: 1.9;
+	}
+}
+
+:root[lang="ur"] .markdown-body {
+	line-height: 2;
+}
+
+/* Physical side sheets: the study panel sits at the inline END (physical left in RTL, see sheet-content.svelte), so its
+   slide-in/out direction flips too. !important because the panel's own slide-in-from-right-full! is important. */
+:root[dir="rtl"] [data-slot="sheet-content"][data-side="right"] {
+	--tw-enter-translate-x: -100% !important;
+	--tw-exit-translate-x: -100% !important;
 }

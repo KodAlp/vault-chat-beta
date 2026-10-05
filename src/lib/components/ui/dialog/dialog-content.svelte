@@ -28,7 +28,7 @@
 		bind:ref
 		data-slot="dialog-content"
 		class={cn(
-			"grid max-w-[calc(100%-2rem)] gap-3 rounded-[var(--radius-xl)] bg-[var(--bg-elevated)] p-5 text-[15px] leading-5 text-popover-foreground shadow-[var(--shadow-dialog)] duration-100 sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 fixed top-1/2 left-1/2 z-50 w-full -translate-x-1/2 -translate-y-1/2 outline-none",
+			"grid max-w-[calc(100%-2rem)] gap-3 rounded-[var(--radius-xl)] bg-[var(--bg-elevated)] p-5 text-[15px] leading-5 text-popover-foreground shadow-[var(--shadow-dialog)] duration-100 sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 fixed top-1/2 start-1/2 z-50 w-full -translate-x-1/2 -translate-y-1/2 outline-none",
 			className
 		)}
 		{...restProps}
@@ -37,7 +37,7 @@
 		{#if showCloseButton}
 			<DialogPrimitive.Close data-slot="dialog-close">
 				{#snippet child({ props })}
-					<Button variant="ghost" class="absolute top-2 right-2" size="icon-sm" {...props}>
+					<Button variant="ghost" class="absolute top-2 end-2" size="icon-sm" {...props}>
 						<XIcon  />
 						<span class="sr-only">Close</span>
 					</Button>

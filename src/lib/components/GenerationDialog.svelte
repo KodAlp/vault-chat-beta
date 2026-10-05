@@ -207,7 +207,7 @@
 		<Icon size={19} aria-hidden="true" />
 		{#if badge}
 			<span
-				class="absolute -top-1.5 -right-2.5 rounded-full bg-primary px-1 text-[0.6875rem] leading-none font-bold text-primary-foreground"
+				class="absolute -top-1.5 -end-2.5 rounded-full bg-primary px-1 text-[0.6875rem] leading-none font-bold text-primary-foreground"
 			>
 				{badge > 99 ? '99+' : badge}
 			</span>

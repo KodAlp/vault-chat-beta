@@ -385,9 +385,9 @@
 				<div>
 					<Button type="button" onclick={saveVaultConfig}>{t('Common.kaydet')}</Button>
 					{#if desktopSaveStatus === 'saved'}
-						<span class="ml-2 text-sm text-[var(--success)]">{t('SettingsPage.vaultSaved')}</span>
+						<span class="ms-2 text-sm text-[var(--success)]">{t('SettingsPage.vaultSaved')}</span>
 					{:else if desktopSaveStatus === 'error'}
-						<span class="ml-2 text-sm text-destructive" role="alert">{t('SettingsPage.vaultSaveFailed')}</span>
+						<span class="ms-2 text-sm text-destructive" role="alert">{t('SettingsPage.vaultSaveFailed')}</span>
 					{/if}
 				</div>
 			</Card.Content>

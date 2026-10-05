@@ -480,7 +480,7 @@
 					{#if onFocusTree}
 						<button type="button" class="vc-btn secondary" onclick={() => onFocusTree?.()}>
 							{t('Chat.emptyStateBrowseSources')}
-							<ArrowRightIcon size={20} strokeWidth={1.75} aria-hidden="true" />
+							<ArrowRightIcon class="rtl-flip" size={20} strokeWidth={1.75} aria-hidden="true" />
 						</button>
 					{/if}
 				</div>

@@ -276,7 +276,7 @@
 	.unseen-dot {
 		position: absolute;
 		top: 5px;
-		right: 5px;
+		inset-inline-end: 5px;
 		width: 8px;
 		height: 8px;
 		border-radius: 999px;

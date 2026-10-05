@@ -221,7 +221,7 @@
 				value={selectionKey(settings.defaultProvider, settings.defaultModel)}
 				onValueChange={(v) => setModelSelection('default', v)}
 			>
-				<Select.Trigger id="{uid}-default-model" class="ml-auto w-56 max-w-[50%]">{settings.defaultModel}</Select.Trigger>
+				<Select.Trigger id="{uid}-default-model" class="ms-auto w-56 max-w-[50%]">{settings.defaultModel}</Select.Trigger>
 				<Select.Content>
 					{#each groupedModels as group (group.providerId)}
 						<Select.Group>
@@ -244,7 +244,7 @@
 				value={selectionKey(settings.fastProvider, settings.fastModel)}
 				onValueChange={(v) => setModelSelection('fast', v)}
 			>
-				<Select.Trigger id="{uid}-fast-model" class="ml-auto w-56 max-w-[50%]">{settings.fastModel}</Select.Trigger>
+				<Select.Trigger id="{uid}-fast-model" class="ms-auto w-56 max-w-[50%]">{settings.fastModel}</Select.Trigger>
 				<Select.Content>
 					{#each groupedModels as group (group.providerId)}
 						<Select.Group>
@@ -267,7 +267,7 @@
 				value={selectionKey(settings.reasoningProvider, settings.reasoningModel)}
 				onValueChange={(v) => setModelSelection('reasoning', v)}
 			>
-				<Select.Trigger id="{uid}-reasoning-model" class="ml-auto w-56 max-w-[50%]">{settings.reasoningModel}</Select.Trigger>
+				<Select.Trigger id="{uid}-reasoning-model" class="ms-auto w-56 max-w-[50%]">{settings.reasoningModel}</Select.Trigger>
 				<Select.Content>
 					{#each groupedModels as group (group.providerId)}
 						<Select.Group>

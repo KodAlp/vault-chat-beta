@@ -101,6 +101,7 @@
 
 	.chick-slot {
 		width: 112px;
-		margin: -6px 0 -10px -8px;
+		margin-block: -6px -10px;
+		margin-inline: -8px 0;
 	}
 </style>

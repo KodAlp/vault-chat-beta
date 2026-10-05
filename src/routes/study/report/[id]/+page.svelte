@@ -80,7 +80,7 @@
 </svelte:head>
 
 <div class="report-screen">
-	<a class="home-link" href={backHref}><ArrowLeftIcon size={16} strokeWidth={1.75} aria-hidden="true" /> {t('Common.geriDon')}</a>
+	<a class="home-link" href={backHref}><ArrowLeftIcon class="rtl-flip" size={16} strokeWidth={1.75} aria-hidden="true" /> {t('Common.geriDon')}</a>
 
 	{#if phase === 'loading'}
 		<p class="status">{t('Common.yukleniyor')}</p>

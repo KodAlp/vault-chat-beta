@@ -1,73 +1,145 @@
 import tr from './messages/tr.json';
 import en from './messages/en.json';
+import { DEFAULT_LOCALE, isLocale, localeInfo, type Locale } from './locales';
+import { resolveMessage, type MessageTree } from './resolve';
 
-export type Locale = 'tr' | 'en';
+export type { Locale } from './locales';
 
 /**
  * Faz 19 — i18n scaffolding. This app was built Turkish-only from Faz 1
  * (every string hardcoded inline, see any *.svelte file's template); this
  * module is the seam that lets a locale be a runtime choice instead. No
  * library (no paraglide/i18next/svelte-i18n) — a component list + one
- * JSON file per locale + a ~40-line lookup is enough for this app's scale,
+ * JSON file per locale + a small lookup is enough for this app's scale,
  * and skips a dependency the eventual Tauri desktop build would otherwise
  * carry for its whole lifetime.
  *
  * Keys are "Component.field" (e.g. `t('Chat.send')`), namespaced by the
- * .svelte file the string lives in — mirrors the exact grouping asked for
- * ("Component adı { key = value }"). A handful of strings that appear
+ * .svelte file the string lives in. A handful of strings that appear
  * verbatim in many components (Sil/Vazgeç/Kapat/İptal/Ayarlar/"Obsidian'da
  * aç"/generic error fallbacks) live under the pseudo-component "Common"
  * instead of being duplicated N times — still namespaced, just shared
  * namespace, same lookup mechanics.
  *
- * tr.json is the complete, authoritative inventory (every user-visible
- * string this app has, as of Faz 19) — filled in for every component,
- * whether or not that component has been wired to call t() yet. en.json
- * mirrors every key tr.json has, but intentionally starts empty for keys
- * nobody has translated yet (see EMPTY_MARKER below) — this is the
- * "file structure now, languages added incrementally" split the user
- * asked for. A handful of components (the main chat screen: Chat,
- * Message, the five generation dialogs, StudyPanel, SourceTree, ...) are
- * already wired to call t() as a proven, working template; the rest are
- * inventoried in tr.json but still read their Turkish text as a literal
- * string in the template — converting one of those is: replace the
- * literal with `t('ComponentName.newKey')`, add "newKey" under
- * "ComponentName" in both JSON files.
+ * The language list itself lives in locales.ts (also imported server-side,
+ * so the persisted-pref validator and the picker can never disagree).
+ *
+ * Catalogs: tr.json and en.json are statically imported — tr is the app's
+ * origin language and the last-resort fallback, en is the fallback every
+ * other language leans on, and both must be available synchronously for the
+ * very first paint. Every other messages/<code>.json is pulled in on demand
+ * through a non-eager import.meta.glob, so Vite splits each into its own
+ * chunk and a user who never leaves tr/en never downloads the other 14.
+ * Loaded catalogs live in a $state.raw map that is REPLACED (not mutated)
+ * on load: t() reads it, so every t() call site re-renders when a catalog
+ * arrives, and .raw avoids wrapping thousands of strings in deep proxies.
+ *
+ * Resolution (see resolve.ts for the pure logic and its tests): current
+ * locale -> its parent (ar-EG -> ar, pcm -> en) -> en -> tr -> the raw key.
+ * en before tr because en.json is now complete and is the more useful
+ * language for a foreign reader; tr stays as the last resort so a key only
+ * ever added to tr.json still shows real text instead of its name. A gap
+ * that survives all four shows the raw key, visibly debuggable instead of
+ * silently empty.
+ *
+ * Plurals: a catalog may carry sibling keys `field#one`, `field#few`, ...
+ * next to the base `field` (= the "other" form). When params has a numeric
+ * `count`, t() asks Intl.PluralRules for the category and prefers the
+ * matching variant — see resolve.ts.
  */
 
-type MessageTree = Record<string, Record<string, string>>;
+const lazyCatalogs = import.meta.glob<MessageTree>(['./messages/*.json', '!./messages/tr.json', '!./messages/en.json'], {
+	import: 'default'
+});
 
-const MESSAGES: Record<Locale, MessageTree> = { tr: tr as MessageTree, en: en as MessageTree };
+/** $state.raw + reassignment (never in-place mutation): see the header. */
+let catalogs = $state.raw<Record<string, MessageTree>>({ tr: tr as MessageTree, en: en as MessageTree });
+const inflight = new Map<string, Promise<boolean>>();
 
-/** en.json marks a not-yet-translated key with this exact string rather
- * than an empty "" — an empty string is indistinguishable from "someone
- * translated it to nothing", which would silently swallow a button label.
- * t() treats EMPTY_MARKER the same as a missing key (falls through to tr). */
-const EMPTY_MARKER = '';
-
-const FALLBACK_LOCALE: Locale = 'tr';
 /** Exported so +layout.ts's migration check can tell "nothing in
  * localStorage yet" apart from "loadInitial() already read it" without
  * duplicating the literal string. */
 export const STORAGE_KEY = 'vault-chat-locale';
 
-function isLocale(v: string | null): v is Locale {
-	return v === 'tr' || v === 'en';
-}
-
 function loadInitial(): Locale {
-	if (typeof localStorage === 'undefined') return FALLBACK_LOCALE;
-	const raw = localStorage.getItem(STORAGE_KEY);
-	return isLocale(raw) ? raw : FALLBACK_LOCALE;
+	if (typeof localStorage === 'undefined') return DEFAULT_LOCALE;
+	try {
+		const raw = localStorage.getItem(STORAGE_KEY);
+		return isLocale(raw) ? raw : DEFAULT_LOCALE;
+	} catch {
+		return DEFAULT_LOCALE;
+	}
 }
 
 /** Module-level $state, same pattern as settings.svelte.ts — a client
- * device preference, not conversation data. */
-export const i18n = $state<{ locale: Locale }>({ locale: loadInitial() });
+ * device preference, not conversation data. `loading` is the locale whose
+ * catalog is currently being fetched (the picker shows a subtle spinner). */
+export const i18n = $state<{ locale: Locale; loading: Locale | null }>({ locale: loadInitial(), loading: null });
+
+/** Loads one catalog (idempotent, deduplicated). Resolves false when the
+ * file doesn't exist or fails to load — callers decide the fallback. */
+function loadCatalog(code: Locale): Promise<boolean> {
+	if (catalogs[code]) return Promise.resolve(true);
+	const existing = inflight.get(code);
+	if (existing) return existing;
+	const loader = lazyCatalogs[`./messages/${code}.json`];
+	if (!loader) {
+		console.warn(`i18n: no catalog file for "${code}", falling back to en`);
+		return Promise.resolve(false);
+	}
+	const p = loader().then(
+		(tree) => {
+			catalogs = { ...catalogs, [code]: tree };
+			inflight.delete(code);
+			return true;
+		},
+		(err) => {
+			inflight.delete(code);
+			console.warn(`i18n: failed to load catalog "${code}", falling back to en`, err);
+			return false;
+		}
+	);
+	inflight.set(code, p);
+	return p;
+}
+
+/** Loads a locale's catalog plus its parent's (the fallback chain reads both).
+ * Returns whether the locale itself is usable; a missing parent is tolerated
+ * since t() still has en/tr below it. */
+export async function ensureLocaleLoaded(code: Locale): Promise<boolean> {
+	const parent = localeInfo(code).parent;
+	const [ok] = await Promise.all([loadCatalog(code), parent ? loadCatalog(parent) : Promise.resolve(true)]);
+	return ok;
+}
+
+// A locale restored from localStorage at module init has no catalog yet;
+// start fetching immediately so t() falls back to en only for a moment even
+// when +layout.ts's server round-trip fails or is slow.
+if (typeof window !== 'undefined' && i18n.locale !== 'tr' && i18n.locale !== 'en') {
+	void ensureLocaleLoaded(i18n.locale);
+}
+
+/** Latest-wins guard: two quick picks must not let the slower load of the
+ * first overwrite the second. */
+let switchToken = 0;
+
+async function switchTo(code: Locale): Promise<Locale> {
+	const token = ++switchToken;
+	i18n.loading = code;
+	const ok = await ensureLocaleLoaded(code);
+	if (token !== switchToken) return i18n.locale;
+	i18n.loading = null;
+	i18n.locale = ok ? code : 'en';
+	return i18n.locale;
+}
 
 export function persistLocale(): void {
 	if (typeof localStorage === 'undefined') return;
-	localStorage.setItem(STORAGE_KEY, i18n.locale);
+	try {
+		localStorage.setItem(STORAGE_KEY, i18n.locale);
+	} catch {
+		// Private window / blocked storage: the server copy below still works.
+	}
 	// Fire-and-forget: the server-side copy (ui-prefs-store.ts) is what
 	// survives the Tauri desktop build's random sidecar port, but a failed
 	// PUT here just means this pick won't survive the next launch — not
@@ -81,41 +153,40 @@ export function persistLocale(): void {
 	}
 }
 
+/** User-initiated switch: loads the catalog first so the UI flips in one
+ * step (no flash of raw keys / wrong language), then persists. If the
+ * catalog can't be loaded the locale becomes en (and en is what's saved). */
+export async function setLocale(code: Locale): Promise<void> {
+	await switchTo(code);
+	persistLocale();
+}
+
 /** Applied from +layout.ts's load with the server-persisted copy — validated
  * the same way loadInitial() validates localStorage, since this is untrusted
  * network data (the server already sanitizes it too, but never trust twice
- * removed). */
-export function applyLocale(locale: unknown): void {
-	if (typeof locale === 'string' && isLocale(locale)) {
-		i18n.locale = locale;
-	}
+ * removed). Async because +layout.ts awaits it: the first paint must already
+ * be in the right language. Doesn't persist — it is restoring, not choosing. */
+export async function applyLocale(locale: unknown): Promise<void> {
+	if (isLocale(locale)) await switchTo(locale);
 }
 
 /**
- * `t('Component.key', params?)`. Resolution order: current locale ->
- * FALLBACK_LOCALE (tr, never en — en.json is an intentionally incomplete
- * skeleton, falling back to IT would show blank buttons) -> the raw key
- * itself, so a translation gap is visibly a raw key in the UI (debuggable)
- * rather than silently empty. `params` does simple `{name}` substitution
- * for the handful of strings that carry dynamic values (e.g. a filename,
- * a count) — see tr.json entries containing `{...}` placeholders.
+ * `t('Component.key', params?)`. Fallback chain and plural handling are
+ * documented in the header and implemented in resolve.ts. `params` does
+ * simple `{name}` substitution for the handful of strings that carry dynamic
+ * values (e.g. a filename, a count) — see tr.json entries containing `{...}`.
  */
 export function t(key: string, params?: Record<string, string | number>): string {
-	const dot = key.indexOf('.');
-	const component = dot === -1 ? key : key.slice(0, dot);
-	const field = dot === -1 ? '' : key.slice(dot + 1);
-
-	const resolved =
-		nonEmpty(MESSAGES[i18n.locale]?.[component]?.[field]) ??
-		nonEmpty(MESSAGES[FALLBACK_LOCALE]?.[component]?.[field]) ??
-		key;
-
-	if (!params) return resolved;
-	return resolved.replace(/\{(\w+)\}/g, (match, name: string) =>
-		name in params ? String(params[name]) : match
+	const code = i18n.locale;
+	const parent = localeInfo(code).parent;
+	return resolveMessage(
+		[
+			[code, catalogs[code]],
+			...(parent ? ([[parent, catalogs[parent]]] as const) : []),
+			['en', catalogs.en],
+			['tr', catalogs.tr]
+		],
+		key,
+		params
 	);
-}
-
-function nonEmpty(v: string | undefined): string | undefined {
-	return v && v !== EMPTY_MARKER ? v : undefined;
 }

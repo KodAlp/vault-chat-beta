@@ -66,7 +66,7 @@
      the reflow the old per-phase `bottom: {1.25 + stackIndex*3}rem` couldn't
      animate, since it wasn't a single persistent element. -->
 <div
-	class="fixed right-5 z-[200]"
+	class="fixed end-5 z-[200]"
 	style="bottom: 1.25rem; --stack: {stackIndex}; transform: translateY(calc(-4.5rem * var(--stack, 0))); transition: transform var(--motion-base) var(--motion-easing);"
 >
 	<!-- A stable wrapper, not aria-live on each swapped-in phase element: the
@@ -187,7 +187,7 @@
 		appearance: none;
 		border: 0;
 		cursor: pointer;
-		text-align: left;
+		text-align: start;
 	}
 
 	.toast-action:hover {
@@ -216,6 +216,20 @@
 		to {
 			transform: translateX(250%);
 		}
+	}
+
+	/* The bar starts at the inline start, so in RTL it travels the other way. */
+	@keyframes toast-slide-rtl {
+		from {
+			transform: translateX(100%);
+		}
+		to {
+			transform: translateX(-250%);
+		}
+	}
+
+	:global(:root[dir="rtl"]) .indeterminate {
+		animation-name: toast-slide-rtl;
 	}
 
 	:global(:root[data-motion="reduce"]) .indeterminate {

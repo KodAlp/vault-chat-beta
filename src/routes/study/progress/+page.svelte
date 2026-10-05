@@ -3,6 +3,7 @@
 	import { page } from '$app/state';
 	import { resolveBackHref } from '$lib/back-link';
 	import { i18n, t } from '$lib/i18n/index.svelte';
+	import { intlLocale } from '$lib/i18n/locales';
 	import { UNKNOWN_DOMAIN, type LearnerProfile, type MasteryEstimate, type RetentionEstimate, type SkillNode } from '$lib/learner-model';
 	import type { WeakSpotErrorView, WeakSpotView } from '$lib/types';
 	import type { PageProps } from './$types';
@@ -86,7 +87,7 @@
 	const domainLabel = (n: SkillNode) => (n.name === UNKNOWN_DOMAIN ? t('ProgressPage.unknownDomain') : n.name);
 	const pct = (x: number) => Math.round(x * 100);
 	const confidenceLabel = (e: MasteryEstimate) => (e.confidence === 'high' ? t('ProgressPage.confidenceHigh') : t('ProgressPage.confidenceModerate'));
-	const day = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString(i18n.locale) : '');
+	const day = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString(intlLocale(i18n.locale)) : '');
 </script>
 
 {#snippet quizRow(label: string, e: MasteryEstimate)}
@@ -154,7 +155,7 @@
 		{/if}
 		<div class="error-meta">
 			{#if e.wrongCount > 1}<span class="muted small">{t('ProgressPage.weakSpotWrongCount', { count: e.wrongCount })}</span>{/if}
-			<span class="muted small">{t('ProgressPage.lastAnswered', { date: new Date(e.lastAt).toLocaleDateString(i18n.locale) })}</span>
+			<span class="muted small">{t('ProgressPage.lastAnswered', { date: new Date(e.lastAt).toLocaleDateString(intlLocale(i18n.locale)) })}</span>
 			{#if e.kind === 'quiz' && !e.resolved}
 				<button type="button" class="flag" onclick={() => flagQuestion(spot, e)}>{t('ProgressPage.flagQuestion')}</button>
 			{/if}
@@ -199,7 +200,7 @@
 {/snippet}
 
 <div class="progress-screen">
-	<a class="home-link" href={backHref}><ArrowLeftIcon size={16} strokeWidth={1.75} aria-hidden="true" /> {t('ProgressPage.back')}</a>
+	<a class="home-link" href={backHref}><ArrowLeftIcon class="rtl-flip" size={16} strokeWidth={1.75} aria-hidden="true" /> {t('ProgressPage.back')}</a>
 	<h1>{t('ProgressPage.title')}</h1>
 
 	{#if phase === 'loading'}

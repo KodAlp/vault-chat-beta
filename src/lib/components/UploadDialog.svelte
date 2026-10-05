@@ -235,7 +235,7 @@
 				     (broken font mapping, no headings, no paragraph breaks) where it
 				     used to emit none, and joining them ran them together into one
 				     unreadable paragraph. -->
-				<ul class="list-disc space-y-1 pl-5 text-sm text-destructive">
+				<ul class="list-disc space-y-1 ps-5 text-sm text-destructive">
 					{#each warnings as warning (warning)}
 						<!-- Our own warnings arrive as codes; converter warnings are
 						     free text and fall through localizeError unchanged. -->
