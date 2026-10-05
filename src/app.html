@@ -8,13 +8,17 @@
 		     Svelte actually mounting (+layout.svelte's own $effect sets the
 		     real data-theme, but that needs JS to have run first) — matches
 		     tokens.css's --bg-canvas so that gap reads as "still loading" in
-		     the right tone instead of a stark white flash, light or dark. -->
+		     the right tone instead of a stark white flash, light or dark.
+		     Scoped to :not([data-theme]) because this rule is unlayered and
+		     app.css's real body background lives in @layer base — unscoped,
+		     it beat the chosen theme for good (black ground on a light theme
+		     wherever a page doesn't paint its own background). -->
 		<style>
-			body {
+			html:not([data-theme]) body {
 				background: #fcfbf8;
 			}
 			@media (prefers-color-scheme: dark) {
-				body {
+				html:not([data-theme]) body {
 					background: #000000;
 				}
 			}
