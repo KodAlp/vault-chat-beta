@@ -868,6 +868,32 @@
     "deleteFailed": "Impossible de supprimer « {name} ».",
     "previewFailed": "Impossible d'obtenir l'aperçu."
   },
+  "PendingImports": {
+    "title": "Importations en attente",
+    "description": "Sources apportées par un agent IA via MCP ou restées inachevées. Rien n'entre dans votre bibliothèque tant que vous ne l'avez pas confirmé.",
+    "statusQueued": "En file d'attente",
+    "statusConverting": "Conversion en cours",
+    "statusReady": "Prêt à vérifier",
+    "statusError": "Échec",
+    "mcpBadgeTitle": "Ajouté par un agent IA via MCP",
+    "confirm": "Confirmer",
+    "remove": "Retirer",
+    "loadFailed": "Impossible de charger les importations en attente.",
+    "removeFailed": "Impossible de retirer l'importation.",
+    "navBadgeLabel": "{count} importations en attente demandent votre attention"
+  },
+  "McpImportSettings": {
+    "title": "Dossiers d'importation MCP",
+    "description": "Un agent IA connecté via MCP ne peut importer des fichiers locaux que depuis ces dossiers. Les importations attendent toujours votre confirmation. Laissez la liste vide pour bloquer l'importation de fichiers locaux ; les importations par lien (URL) sont autorisées et passent par la même confirmation.",
+    "empty": "Aucun dossier autorisé — l'importation de fichiers locaux est bloquée.",
+    "removeAria": "Retirer {path}",
+    "add": "Ajouter",
+    "addFolder": "Ajouter un dossier…",
+    "pathPlaceholder": "Chemin absolu du dossier",
+    "saveFailed": "Impossible d'enregistrer les dossiers.",
+    "loadFailed": "Impossible de charger les dossiers.",
+    "createdViaMcp": "Créé via MCP"
+  },
   "VaultsSettingsPage": {
     "title": "Coffres",
     "intro": "Chaque coffre possède sa propre bibliothèque de sources et son propre index de recherche : ils ne se mélangent jamais. L'historique des chats est séparé par coffre, et l'écran de chat opère toujours sur le coffre actif.",

@@ -60,6 +60,62 @@
 
 	onMount(loadVaults);
 
+	// MCP import folders: where an AI agent connected over MCP may read local files from (GET/PUT /api/settings/mcp).
+	let mcpRoots = $state<string[]>([]);
+	let mcpRootInput = $state('');
+	let mcpRootsBusy = $state(false);
+	let mcpRootsError = $state('');
+
+	onMount(async () => {
+		try {
+			const res = await fetch('/api/settings/mcp');
+			if (!res.ok) throw new Error();
+			mcpRoots = ((await res.json()) as { allowedImportRoots: string[] }).allowedImportRoots;
+		} catch {
+			mcpRootsError = t('McpImportSettings.loadFailed');
+		}
+	});
+
+	/** Saves the whole list; on a coded rejection (bad path) the list stays as it was. */
+	async function saveMcpRoots(next: string[]): Promise<boolean> {
+		mcpRootsBusy = true;
+		mcpRootsError = '';
+		try {
+			const res = await fetch('/api/settings/mcp', {
+				method: 'PUT',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ allowedImportRoots: next })
+			});
+			if (!res.ok) {
+				mcpRootsError = await readResponseError(res);
+				return false;
+			}
+			mcpRoots = ((await res.json()) as { allowedImportRoots: string[] }).allowedImportRoots;
+			return true;
+		} catch {
+			mcpRootsError = t('McpImportSettings.saveFailed');
+			return false;
+		} finally {
+			mcpRootsBusy = false;
+		}
+	}
+
+	async function addMcpRoot(raw: string) {
+		const p = raw.trim();
+		if (!p || mcpRootsBusy || mcpRoots.includes(p)) return;
+		if (await saveMcpRoots([...mcpRoots, p])) mcpRootInput = '';
+	}
+
+	async function pickMcpRoot() {
+		const { open } = await import('@tauri-apps/plugin-dialog');
+		const picked = await open({ directory: true, multiple: false });
+		if (typeof picked === 'string') await addMcpRoot(picked);
+	}
+
+	function removeMcpRoot(root: string) {
+		if (!mcpRootsBusy) void saveMcpRoots(mcpRoots.filter((r) => r !== root));
+	}
+
 	// Desktop (Tauri) first-run vault config — what the app launches into NEXT time
 	// (not the vault being browsed now). Moved here from the old settings home page.
 	const runningInTauri = isTauri();
@@ -288,6 +344,9 @@
 							{#if vault.id === activeVaultId}
 								<Badge variant="secondary">{t('VaultsSettingsPage.active')}</Badge>
 							{/if}
+							{#if vault.createdVia === 'mcp'}
+								<Badge variant="secondary">{t('McpImportSettings.createdViaMcp')}</Badge>
+							{/if}
 							{#if vault.unindexedCount > 0}
 								<Badge variant="outline" title={t('VaultsSettingsPage.unindexedTitle')}>
 									{t('VaultsSettingsPage.unindexedBadge', { count: vault.unindexedCount })}
@@ -340,7 +399,7 @@
 		</Card.Content>
 	</Card.Root>
 
-	<Card.Root>
+	<Card.Root class="mb-6">
 		<Card.Header>
 			<Card.Title level={2}>{t('VaultsSettingsPage.newVaultTitle')}</Card.Title>
 		</Card.Header>
@@ -358,6 +417,56 @@
 			</div>
 			{#if createError}
 				<p class="mt-2 text-sm text-destructive">{createError}</p>
+			{/if}
+		</Card.Content>
+	</Card.Root>
+
+	<Card.Root>
+		<Card.Header>
+			<Card.Title level={2}>{t('McpImportSettings.title')}</Card.Title>
+			<Card.Description>{t('McpImportSettings.description')}</Card.Description>
+		</Card.Header>
+		<Card.Content class="flex flex-col gap-3">
+			{#if mcpRoots.length === 0}
+				<p class="text-sm text-muted-foreground">{t('McpImportSettings.empty')}</p>
+			{:else}
+				<ul class="flex flex-col gap-1.5">
+					{#each mcpRoots as root (root)}
+						<li class="flex items-center justify-between gap-3 rounded-lg border px-3 py-1.5 text-sm">
+							<span class="min-w-0 flex-1 truncate font-mono text-xs" title={root}>{root}</span>
+							<Button
+								size="sm"
+								variant="ghost"
+								disabled={mcpRootsBusy}
+								aria-label={t('McpImportSettings.removeAria', { path: root })}
+								onclick={() => removeMcpRoot(root)}
+							>
+								{t('PendingImports.remove')}
+							</Button>
+						</li>
+					{/each}
+				</ul>
+			{/if}
+			{#if runningInTauri}
+				<div>
+					<Button type="button" variant="outline" disabled={mcpRootsBusy} onclick={pickMcpRoot}>{t('McpImportSettings.addFolder')}</Button>
+				</div>
+			{:else}
+				<div class="flex gap-2">
+					<Input
+						type="text"
+						placeholder={t('McpImportSettings.pathPlaceholder')}
+						aria-label={t('McpImportSettings.pathPlaceholder')}
+						bind:value={mcpRootInput}
+						class="max-w-md"
+						disabled={mcpRootsBusy}
+						onkeydown={(e) => e.key === 'Enter' && addMcpRoot(mcpRootInput)}
+					/>
+					<Button onclick={() => addMcpRoot(mcpRootInput)} disabled={!mcpRootInput.trim() || mcpRootsBusy}>{t('McpImportSettings.add')}</Button>
+				</div>
+			{/if}
+			{#if mcpRootsError}
+				<p class="text-sm text-destructive" role="alert">{mcpRootsError}</p>
 			{/if}
 		</Card.Content>
 	</Card.Root>

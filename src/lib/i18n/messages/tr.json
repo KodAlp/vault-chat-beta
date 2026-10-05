@@ -903,6 +903,32 @@
 		"previewFailed": "Önizleme alınamadı."
 	},
 
+	"PendingImports": {
+		"title": "Bekleyen içe aktarmalar",
+		"description": "MCP üzerinden bir yapay zekâ ajanının getirdiği ya da yarım kalan kaynaklar. Sen onaylamadan kütüphaneye hiçbir şey girmez.",
+		"statusQueued": "Sırada",
+		"statusConverting": "Dönüştürülüyor",
+		"statusReady": "İnceleme bekliyor",
+		"statusError": "Başarısız",
+		"mcpBadgeTitle": "MCP üzerinden bir yapay zekâ ajanı ekledi",
+		"confirm": "Onayla",
+		"remove": "Kaldır",
+		"loadFailed": "Bekleyen içe aktarmalar yüklenemedi.",
+		"removeFailed": "İçe aktarma kaldırılamadı.",
+		"navBadgeLabel": "{count} bekleyen içe aktarma senin ilgini bekliyor"
+	},
+	"McpImportSettings": {
+		"title": "MCP içe aktarma klasörleri",
+		"description": "MCP ile bağlanan bir yapay zekâ ajanı yalnızca bu klasörlerdeki yerel dosyaları içe aktarabilir. İçe aktarmalar her zaman onayını bekler. Yerel dosya içe aktarmayı engellemek için listeyi boş bırak; bağlantı (URL) içe aktarmaları serbesttir ve aynı onaydan geçer.",
+		"empty": "İzinli klasör yok — yerel dosya içe aktarma engelli.",
+		"removeAria": "{path} klasörünü kaldır",
+		"add": "Ekle",
+		"addFolder": "Klasör ekle…",
+		"pathPlaceholder": "Klasörün tam yolu",
+		"saveFailed": "Klasörler kaydedilemedi.",
+		"loadFailed": "Klasörler yüklenemedi.",
+		"createdViaMcp": "MCP ile oluşturuldu"
+	},
 	"VaultsSettingsPage": {
 		"title": "Vault'lar",
 		"intro": "Her vault kendi kaynak kütüphanesini ve arama indeksini tutar — birbirlerine karışmazlar. Sohbet geçmişi vault başına ayrılır, sohbet ekranı her zaman aktif vault üzerinde çalışır.",

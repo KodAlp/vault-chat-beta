@@ -14,6 +14,9 @@
 	<div class="flex h-full min-h-[5.5rem] flex-col gap-1 p-4">
 		<span class="truncate text-[17px] leading-[22px] font-semibold tracking-[-0.43px] text-[var(--label)]">{vault.name}</span>
 		<span class="text-[13px] leading-[18px] text-[var(--label-secondary)]">{relativeTime(vault.lastOpenedAt, i18n.locale)}</span>
+		{#if vault.createdVia === 'mcp'}
+			<Badge variant="secondary" class="mt-1 w-fit">{t('McpImportSettings.createdViaMcp')}</Badge>
+		{/if}
 		{#if vault.unindexedCount > 0}
 			<Badge
 				variant="secondary"

@@ -4,6 +4,7 @@
 	import LinksImportDialog from '$lib/components/LinksImportDialog.svelte';
 	import NoteAppSourceGrid from '$lib/components/NoteAppSourceGrid.svelte';
 	import LibraryTree from '$lib/components/LibraryTree.svelte';
+	import PendingImports from '$lib/components/PendingImports.svelte';
 	import type { LibrarySettings } from '$lib/types';
 	import { Switch } from '$lib/components/ui/switch';
 	import { Input } from '$lib/components/ui/input';
@@ -21,6 +22,8 @@
 	let hiddenFoldersInput = $state('');
 	let flattenFoldersInput = $state('');
 	let loadError = $state('');
+	// Bumped when a pending import is confirmed so the library tree below reloads.
+	let treeVersion = $state(0);
 
 	onMount(async () => {
 		try {
@@ -112,6 +115,10 @@
 	{#if loadError}
 		<p class="mb-4 text-sm text-destructive" role="alert">{loadError}</p>
 	{/if}
+
+	<!-- Staged imports (MCP agent or app) waiting for a decision; hidden when there are none. Placed first: it
+	     is the only thing on this page that needs an action from the user. -->
+	<PendingImports onConfirmed={() => treeVersion++} />
 
 	<!-- The single upload entry point: AddFilesDialog works out whether it got one file, several
 	     files or a folder. Same dialog the vault page's sidebar opens. -->
@@ -226,7 +233,9 @@
 		</Card.Header>
 		<Card.Content>
 			<div class="library-tree-wrap">
-				<LibraryTree />
+				{#key treeVersion}
+					<LibraryTree />
+				{/key}
 			</div>
 		</Card.Content>
 	</Card.Root>

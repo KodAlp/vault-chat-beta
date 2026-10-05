@@ -855,6 +855,32 @@
     "deleteFailed": "Gagal menghapus \"{name}\".",
     "previewFailed": "Gagal mengambil pratinjau."
   },
+  "PendingImports": {
+    "title": "Impor tertunda",
+    "description": "Sumber yang dibawa agen AI lewat MCP atau yang belum selesai. Tidak ada yang masuk ke pustaka Anda sebelum Anda mengonfirmasinya.",
+    "statusQueued": "Dalam antrean",
+    "statusConverting": "Sedang dikonversi",
+    "statusReady": "Siap ditinjau",
+    "statusError": "Gagal",
+    "mcpBadgeTitle": "Ditambahkan oleh agen AI lewat MCP",
+    "confirm": "Konfirmasi",
+    "remove": "Hapus",
+    "loadFailed": "Impor tertunda tidak dapat dimuat.",
+    "removeFailed": "Impor tidak dapat dihapus.",
+    "navBadgeLabel": "{count} impor tertunda memerlukan perhatian Anda"
+  },
+  "McpImportSettings": {
+    "title": "Folder impor MCP",
+    "description": "Agen AI yang terhubung lewat MCP hanya boleh mengimpor berkas lokal dari folder-folder ini. Impor selalu menunggu konfirmasi Anda. Biarkan daftar kosong untuk memblokir impor berkas lokal; impor tautan (URL) diizinkan dan melalui konfirmasi yang sama.",
+    "empty": "Tidak ada folder yang diizinkan — impor berkas lokal diblokir.",
+    "removeAria": "Hapus {path}",
+    "add": "Tambah",
+    "addFolder": "Tambah folder…",
+    "pathPlaceholder": "Jalur lengkap folder",
+    "saveFailed": "Folder tidak dapat disimpan.",
+    "loadFailed": "Folder tidak dapat dimuat.",
+    "createdViaMcp": "Dibuat lewat MCP"
+  },
   "VaultsSettingsPage": {
     "title": "Vault",
     "intro": "Setiap vault memiliki pustaka sumber dan indeks pencariannya sendiri — tidak pernah tercampur. Riwayat obrolan dipisah per vault, dan layar obrolan selalu bekerja pada vault yang aktif.",
