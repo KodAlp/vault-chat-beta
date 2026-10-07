@@ -60,7 +60,7 @@ Conversion tools are Python; the Node app shells out to
 Keep the sidecar's CLI contract stable:
 
 ```
-python ingest/convert.py --in <file> --out-dir <dir> --tool auto|markitdown|marker|docling|pandoc [--dry-run] [--source-name <name>] [--pages START-END] [--pdf-backend default|hybrid]
+python ingest/convert.py --in <file> --out-dir <dir> --tool auto|markitdown|marker|docling|pandoc [--dry-run] [--source-name <name>] [--pages START-END] [--pdf-backend default|hybrid] [--no-images]
 ```
 
 `--pdf-backend` (default `default`): which docling PDF backend to use; only
@@ -91,6 +91,62 @@ for a link import, `sourceNameFromUrl`'s URL-path-segment guess); it becomes
 `source_file` frontmatter and the title fallback when the document has no
 title of its own. Omitted by a caller that doesn't have one → old, worse
 fallback (the staged name), never a crash.
+
+**Images (2026-10-07; `ingest/images.py`, on by default, `--no-images` turns
+it off).** Before this a converted note lost every picture: docling left bare
+`<!-- image -->`, MarkItDown ignored PDF images and wrote dead `Name.jpg` links
+for PPTX (with Office's auto alt text), so a 118-image screenshot lecture lost
+nearly all its information. Now docling PDFs, PPTX and DOCX pictures are written
+to `<out-dir>/images/<sha16>.<png|jpg>` (`sha16` = first 16 hex of the sha256 of
+the re-encoded bytes), the Markdown refers to `images/<file>`, and the `done`
+event carries `"images": [file names]` and `"imageStats"` (`found`, `kept`,
+`tiny`, `unreadable`, `template`, `over_cap`, `distinctFiles`). Per kept image
+the note holds this block — the HTML comment is the hook a future VLM pass uses
+to find the image and insert/replace the description line:
+
+```
+![<alt>](images/<sha16>.<ext>)
+<!-- vc:gorsel <sha16> -->
+*Görsel:* <author alt text>        (only when trustworthy text exists)
+```
+
+- Mapping cannot drift: docling uses a custom picture serializer that writes a
+  unique token for the very PictureItem it serializes (so column_order's
+  reordering is irrelevant); PPTX/DOCX run MarkItDown with `keep_data_uris=True`
+  and each picture arrives inline at its own position. Tokens become the final
+  blocks only AFTER `postprocess()` (its HTML stripping must not see them).
+- Alt text: docling caption (first sentence; the caption paragraph stays in the
+  text, so no `*Görsel:*` line repeats it) or the author's alt text. Office's
+  auto description (suffix "Yapay zeka tarafından oluşturulan içerik yanlış
+  olabilir" / "AI-generated content may be incorrect") and shape-name fallbacks
+  ("Picture 3", "Resim4", "image1.png") are dropped. Nothing is invented.
+- Filters: < 48 px a side or < 2 KB source bytes (`tiny`); undecodable or over
+  40 MP (`unreadable`); the same bytes on >= 3 pages AND >= 30% of all pages AND
+  <= 25% of the page area is template art (`template`, dropped everywhere —
+  needs the picture's page share, so repetition alone is NOT enough: the
+  Gradyan deck is an animation of stacked full-slide frames, 89 of 118 repeat);
+  more than 400 kept -> the rest `over_cap` + a warning. The same picture twice
+  is one file, referenced at both places.
+- Safety: every image is re-encoded through PIL (JPEG stays JPEG q90, all else
+  PNG, metadata stripped, EXIF orientation applied, CMYK/P converted),
+  decompression-bomb warnings count as errors. File names are validated
+  (`^[0-9a-f]{16}\.(png|jpe?g)$`) before the Node side touches the disk.
+- Node side (`src/lib/server/converted-images.ts`): `importConvertedImages`
+  copies `images/<file>` into `_meta/attachments/` (content-addressed names make
+  `copyAttachmentIntoLibrary`'s name idempotency correct) and rewrites links
+  relative to the note being written — staged notes (`_meta/staging/<id>.md`)
+  link `../attachments/<file>`; the confirm route then applies
+  `relinkAttachmentsForMove` to the final path. The four converting callers
+  (api/import, api/import/batch, mcp-import, stage-url PDF branch) call it
+  before their workDir is removed. `indexer/chunk.ts` `stripImageMarkup` keeps
+  link targets and the marker out of the EMBEDDED text only (alt text and
+  `*Görsel:*` stay; image-only sections yield no chunk).
+- Not done / limits: PDFs via MarkItDown (fallback) get no images; docling's
+  `<!-- image -->` stays when a crop is unavailable; tiny inline DOCX images
+  (Word equations stored as pictures, often < 48 px) are dropped by the size
+  filter; an import cancelled at the confirm step leaves its (content-addressed)
+  attachments behind. Local-VLM descriptions are deferred: they will fill the
+  `*Görsel:*` slot under the marker.
 
 **Tool routing (`--tool auto`)** — decision order, based on the
 comparative research (MarkItDown/Docling/Marker/MinerU/Pandoc/Unstructured):
@@ -220,7 +276,7 @@ comparative research (MarkItDown/Docling/Marker/MinerU/Pandoc/Unstructured):
   all correct; 15 chapter headings joined; 0 real headings lost.
 
 Covered by `ingest/postprocess_test.py`, `ingest/heading_repair_test.py` and
-`ingest/convert_test.py` (title derivation, `.pptx` heading demotion,
+`ingest/images_test.py` (alt filter, noise filters, block format, PPTX and docling token mapping), `ingest/convert_test.py` (title derivation, `.pptx` heading demotion,
 `unique_output_path`, `split_existing_frontmatter`, `parse_page_range`) —
 `python ingest/<name>_test.py`, not part of `npm test`, which runs tsx.
 
