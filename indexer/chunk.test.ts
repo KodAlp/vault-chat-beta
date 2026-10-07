@@ -7,7 +7,8 @@ import {
 	findAtomicSpans,
 	findDegenerateRun,
 	replaceDegenerateMath,
-	DEGENERATE_RUN
+	DEGENERATE_RUN,
+	stripImageMarkup
 } from './chunk';
 
 // Regression coverage for the fix described in indexer/chunk.ts's
@@ -296,4 +297,30 @@ test('replaceDegenerateMath omits the latex fence when the head is empty and lea
 	assert.ok(fixed.includes('$$\nx^2\n$$'));
 	const same = 'a\n\n$$\nx^2 + y^2\n$$\n';
 	assert.equal(replaceDegenerateMath(same), same);
+});
+
+// Converted images (ingest/images.py): the link target and the vc:gorsel marker
+// must stay out of the embedded text; alt text and the Görsel line stay in.
+test('stripImageMarkup drops link target and marker, keeps alt and description', () => {
+	const md = '![Şekil 1: Ağ](../_meta/attachments/a2694c9b3808ec89.png)\n<!-- vc:gorsel a2694c9b3808ec89 -->\n*Görsel:* İki sunucu arası bağlantı';
+	assert.equal(stripImageMarkup(md), 'Şekil 1: Ağ\n*Görsel:* İki sunucu arası bağlantı');
+	assert.equal(stripImageMarkup('![](x/a.png "t")\nmetin'), '\nmetin');
+});
+
+test('chunkMarkdown: displayText keeps the image, embedText does not; image-only section yields no chunk', () => {
+	const body = [
+		'## Rota',
+		'Haritada rota gösterilir.',
+		'![](../_meta/attachments/a2694c9b3808ec89.png)',
+		'<!-- vc:gorsel a2694c9b3808ec89 -->',
+		'',
+		'## Boş slayt',
+		'![](../_meta/attachments/0123456789abcdef.png)',
+		'<!-- vc:gorsel 0123456789abcdef -->'
+	].join('\n');
+	const { chunks } = chunkMarkdown(fileWith(body));
+	assert.equal(chunks.length, 1);
+	assert.ok(chunks[0].displayText.includes('a2694c9b3808ec89.png'));
+	assert.ok(!chunks[0].embedText.includes('a2694c9b3808ec89'));
+	assert.ok(chunks[0].embedText.includes('Haritada rota gösterilir.'));
 });

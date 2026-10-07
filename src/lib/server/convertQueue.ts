@@ -20,7 +20,15 @@ function safeDataDir(): string | null {
 
 export type ConvertEvent =
 	| { type: 'progress'; stage: string; pageCount?: number; estimatedSeconds?: number }
-	| { type: 'done'; outPath: string | null; frontmatter: Record<string, unknown>; warnings: string[] }
+	| {
+		type: 'done';
+		outPath: string | null;
+		frontmatter: Record<string, unknown>;
+		warnings: string[];
+		/** File names under `<outPath dir>/images/` (convert.py --images, default on); see converted-images.ts. */
+		images?: string[];
+		imageStats?: Record<string, number> | null;
+	}
 	| { type: 'error'; message: string; code?: string };
 
 /**
