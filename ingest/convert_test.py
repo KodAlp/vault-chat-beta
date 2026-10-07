@@ -19,7 +19,9 @@ report, Aşama 6):
   outscore the title too — see test_title_from_fragments below for both.
 - A 29-slide .pptx came back with 29 top-level H1s (one per slide).
 """
+import io
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -374,6 +376,287 @@ def test_cli_pdf_backend() -> None:
         check("--pdf-backend bogus rejected", proc.returncode != 0 and "invalid choice" in proc.stderr)
 
 
+def _restore(saved: dict) -> None:
+    for name, value in saved.items():
+        setattr(convert, name, value)
+
+
+def test_primary_docling_routing() -> None:
+    """GPU machine: docling first; MarkItDown only as the fallback."""
+    names = ("pdf_primary_tool", "convert_with_docling", "convert_with_markitdown", "convert_with_marker",
+             "looks_broken", "pdf_page_count", "textless_pages_in_scope")
+    saved = {n: getattr(convert, n) for n in names}
+    calls: list[str] = []
+    try:
+        convert.pdf_primary_tool = lambda: "docling"
+        convert.pdf_page_count = lambda _p: 3
+        convert.textless_pages_in_scope = lambda _p, _r: []
+        convert.looks_broken = lambda _t, _n: False
+
+        convert.convert_with_docling = lambda _p, page_range=None, backend="default": calls.append("docling") or "DOC"
+        convert.convert_with_markitdown = lambda _p: calls.append("markitdown") or "MD" * 200
+        text, by = route_auto(Path("a.pdf"))
+        check("primary docling: docling result, MarkItDown not called", (text, by, calls) == ("DOC", "docling", ["docling"]))
+
+        # docling missing -> MarkItDown; broken text -> marker only, docling not retried
+        calls.clear()
+
+        def no_docling(_p, page_range=None, backend="default"):
+            calls.append("docling")
+            raise ImportError("no docling")
+
+        convert.convert_with_docling = no_docling
+        convert.convert_with_marker = lambda _p: calls.append("marker") or (_ for _ in ()).throw(ImportError("no marker"))
+        text, by = route_auto(Path("a.pdf"))
+        check(
+            "primary docling + ImportError: MarkItDown text, docling tried once",
+            by == "markitdown" and calls.count("docling") == 1 and convert._PRIMARY_FALLBACK == ["kurulu değil"],
+        )
+
+        calls.clear()
+        convert.looks_broken = lambda _t, _n: True
+        text, by = route_auto(Path("a.pdf"))
+        check(
+            "primary docling failed + broken MarkItDown text: marker tried, docling NOT retried",
+            by == "markitdown" and calls == ["docling", "markitdown", "marker"],
+        )
+
+        # nothing salvageable -> RuntimeError naming the docling reason
+        convert.convert_with_markitdown = lambda _p: "tiny"
+        try:
+            route_auto(Path("a.pdf"))
+            outcome = "returned"
+        except RuntimeError as err:
+            outcome = "docling: kurulu değil" in str(err)
+        check("primary docling failed + empty MarkItDown: RuntimeError names docling reason", outcome is True)
+
+        # other docling failure is recorded, not raised
+        convert.looks_broken = lambda _t, _n: False
+        convert.convert_with_markitdown = lambda _p: "MD" * 200
+        convert.convert_with_docling = lambda _p, page_range=None, backend="default": (_ for _ in ()).throw(RuntimeError("CUDA out of memory\nsatır 2"))
+        text, by = route_auto(Path("a.pdf"))
+        check("primary docling + RuntimeError: recorded (first line), MarkItDown used", by == "markitdown" and convert._PRIMARY_FALLBACK == ["CUDA out of memory"])
+
+        # damaged propagates
+        def damaged(_p, page_range=None, backend="default"):
+            raise PdfDamagedError("1/3")
+
+        convert.convert_with_docling = damaged
+        try:
+            route_auto(Path("a.pdf"))
+            outcome = "returned"
+        except PdfDamagedError:
+            outcome = "damaged"
+        except Exception:  # noqa: BLE001
+            outcome = "other"
+        check("primary docling + PdfDamagedError propagates", outcome == "damaged")
+
+        # state cleared at the start of each call
+        convert._PRIMARY_FALLBACK.append("eski")
+        convert.pdf_primary_tool = lambda: "markitdown"
+        route_auto(Path("a.pdf"))
+        check("_PRIMARY_FALLBACK cleared per route_auto call", convert._PRIMARY_FALLBACK == [])
+    finally:
+        _restore(saved)
+        convert._PRIMARY_FALLBACK.clear()
+
+
+def test_primary_markitdown_routing() -> None:
+    names = ("pdf_primary_tool", "convert_with_docling", "convert_with_markitdown", "convert_with_marker",
+             "looks_broken", "pdf_page_count", "textless_pages_in_scope")
+    saved = {n: getattr(convert, n) for n in names}
+    calls: list[str] = []
+    try:
+        convert.pdf_primary_tool = lambda: "markitdown"
+        convert.pdf_page_count = lambda _p: 2
+        convert.looks_broken = lambda _t, _n: False
+        convert.convert_with_markitdown = lambda _p: calls.append("markitdown") or "MD" * 200
+        convert.convert_with_marker = lambda _p: calls.append("marker") or (_ for _ in ()).throw(ImportError("x"))
+        convert.convert_with_docling = lambda _p, page_range=None, backend="default": calls.append("docling") or "DOC"
+
+        convert.textless_pages_in_scope = lambda _p, _r: []
+        text, by = route_auto(Path("a.pdf"))
+        check("primary markitdown, no textless pages, not broken: stays MarkItDown", by == "markitdown" and calls == ["markitdown"])
+
+        calls.clear()
+        convert.textless_pages_in_scope = lambda _p, _r: [2]
+        text, by = route_auto(Path("a.pdf"))
+        check("primary markitdown + textless page: escalates (marker then docling)", by == "docling" and calls == ["markitdown", "marker", "docling"])
+    finally:
+        _restore(saved)
+
+
+def test_pdf_primary_override() -> None:
+    saved_env = os.environ.get("VC_PDF_PRIMARY")
+    saved_acc = convert.accelerator_available
+    try:
+        convert.accelerator_available = lambda: True
+        results = {}
+        for value in (None, "docling", "MarkItDown", " markitdown ", "bogus", ""):
+            if value is None:
+                os.environ.pop("VC_PDF_PRIMARY", None)
+            else:
+                os.environ["VC_PDF_PRIMARY"] = value
+            results[value] = convert.pdf_primary_tool()
+        check("VC_PDF_PRIMARY: unset/bogus/empty -> auto (docling with accelerator)",
+              results[None] == results["bogus"] == results[""] == "docling")
+        check("VC_PDF_PRIMARY: explicit values are case/space-insensitive",
+              results["docling"] == "docling" and results["MarkItDown"] == "markitdown" and results[" markitdown "] == "markitdown")
+        convert.accelerator_available = lambda: False
+        os.environ.pop("VC_PDF_PRIMARY", None)
+        check("no accelerator -> markitdown first", convert.pdf_primary_tool() == "markitdown")
+        os.environ["VC_PDF_PRIMARY"] = "docling"
+        check("VC_PDF_PRIMARY=docling wins without accelerator", convert.pdf_primary_tool() == "docling")
+    finally:
+        convert.accelerator_available = saved_acc
+        if saved_env is None:
+            os.environ.pop("VC_PDF_PRIMARY", None)
+        else:
+            os.environ["VC_PDF_PRIMARY"] = saved_env
+    check("accelerator_available returns a bool", isinstance(convert.accelerator_available(), bool))
+
+
+def test_hf_offline_first() -> None:
+    saved_env = os.environ.get("HF_HUB_OFFLINE")
+    saved_stderr = sys.stderr
+    try:
+        sys.stderr = io.StringIO()
+        # 1. user already set it: respected, no retry even on an offline-miss error
+        for user_value in ("0", "1"):
+            os.environ["HF_HUB_OFFLINE"] = user_value
+            n = {"calls": 0}
+
+            def miss_user():
+                n["calls"] += 1
+                raise OSError("outgoing traffic has been disabled")
+
+            try:
+                convert.hf_offline_first(miss_user)
+            except OSError:
+                pass
+            check(f"HF_HUB_OFFLINE={user_value} set by user: untouched, no retry",
+                  n["calls"] == 1 and os.environ["HF_HUB_OFFLINE"] == user_value)
+
+        # 2. we set it; success keeps it for the process
+        os.environ.pop("HF_HUB_OFFLINE", None)
+        seen: list[str | None] = []
+        out = convert.hf_offline_first(lambda: seen.append(os.environ.get("HF_HUB_OFFLINE")) or "ok")
+        check("we set HF_HUB_OFFLINE=1 for the run", out == "ok" and seen == ["1"])
+
+        # 3. offline-miss error -> exactly one online retry, flag removed
+        class LocalEntryNotFoundError(FileNotFoundError):
+            pass
+
+        os.environ.pop("HF_HUB_OFFLINE", None)
+        seen = []
+
+        def flaky():
+            seen.append(os.environ.get("HF_HUB_OFFLINE"))
+            if len(seen) == 1:
+                raise RuntimeError("wrapped") from LocalEntryNotFoundError("Cannot find ...")
+            return "second"
+
+        out = convert.hf_offline_first(flaky)
+        check("offline miss (chained LocalEntryNotFoundError): one online retry", out == "second" and seen == ["1", None])
+        check("online retry announces model download on stderr", "indiriliyor" in sys.stderr.getvalue())
+
+        # 4. second failure propagates (no third attempt)
+        os.environ.pop("HF_HUB_OFFLINE", None)
+        n = {"calls": 0}
+
+        def always_miss():
+            n["calls"] += 1
+            raise OSError("We couldn't connect to 'https://huggingface.co' to load the files")
+
+        try:
+            convert.hf_offline_first(always_miss)
+            outcome = "returned"
+        except OSError:
+            outcome = "raised"
+        check("retry happens exactly once", outcome == "raised" and n["calls"] == 2)
+
+        # 5. unrelated error: no retry
+        os.environ.pop("HF_HUB_OFFLINE", None)
+        n = {"calls": 0}
+
+        def other():
+            n["calls"] += 1
+            raise ValueError("bozuk PDF")
+
+        try:
+            convert.hf_offline_first(other)
+        except ValueError:
+            pass
+        check("unrelated error: no retry", n["calls"] == 1)
+    finally:
+        sys.stderr = saved_stderr
+        if saved_env is None:
+            os.environ.pop("HF_HUB_OFFLINE", None)
+        else:
+            os.environ["HF_HUB_OFFLINE"] = saved_env
+        convert._set_hf_offline_constant(saved_env in ("1", "true", "True"))
+
+    check("_is_hf_offline_miss: OfflineModeIsEnabled by class name",
+          convert._is_hf_offline_miss(type("OfflineModeIsEnabled", (ConnectionError,), {})("x")))
+    check("_is_hf_offline_miss: plain error is not one", not convert._is_hf_offline_miss(RuntimeError("CUDA out of memory")))
+
+
+def test_textless_warning() -> None:
+    w = convert.textless_warning
+    check("textless_warning: docling + OCR ran -> OCR ile okundu", "OCR ile okundu" in (w("docling", [2], True) or ""))
+    check("textless_warning: docling without OCR -> content missing", "içeriği notta eksik" in (w("docling", [2], False) or ""))
+    check("textless_warning: markitdown -> content missing", "içeriği notta eksik" in (w("markitdown", [2, 3], True) or ""))
+    check("textless_warning: no pages / other tools -> None", w("docling", [], True) is None and w("pandoc", [1], False) is None)
+    check("textless_warning: long list shortened", "…" in (w("markitdown", list(range(1, 20)), False) or ""))
+
+
+def test_textless_pages() -> None:
+    from pypdf import PdfWriter
+
+    with tempfile.TemporaryDirectory() as d:
+        pdf = Path(d) / "mixed.pdf"
+        # Page 1 has real text (drawn via a content stream); page 2 is blank.
+        from pypdf.generic import DecodedStreamObject, DictionaryObject, NameObject
+
+        w = PdfWriter()
+        page = w.add_blank_page(width=300, height=300)
+        stream = DecodedStreamObject()
+        stream.set_data(b"BT /F1 14 Tf 20 150 Td (This page has a real text layer.) Tj ET")
+        page[NameObject("/Contents")] = w._add_object(stream)
+        font_obj = w._add_object(DictionaryObject({
+            NameObject("/Type"): NameObject("/Font"),
+            NameObject("/Subtype"): NameObject("/Type1"),
+            NameObject("/BaseFont"): NameObject("/Helvetica"),
+        }))
+        page[NameObject("/Resources")] = DictionaryObject({
+            NameObject("/Font"): DictionaryObject({NameObject("/F1"): font_obj})
+        })
+        w.add_blank_page(width=300, height=300)  # truly blank: no text, no image
+        # Page 3: image only (a "scan"), built from a one-page PIL PDF.
+        from PIL import Image
+
+        img_pdf = Path(d) / "img.pdf"
+        Image.new("RGB", (100, 100), "red").save(str(img_pdf))
+        from pypdf import PdfReader
+
+        w.add_page(PdfReader(str(img_pdf)).pages[0])
+        with pdf.open("wb") as f:
+            w.write(f)
+
+        check("textless_pages: blank page 2 NOT flagged, image-only page 3 flagged", convert.textless_pages(pdf) == [3])
+        check("textless_pages_in_scope respects --pages", convert.textless_pages_in_scope(pdf, (1, 1)) == [])
+        check("textless_pages_in_scope: range covering the image page", convert.textless_pages_in_scope(pdf, (3, 3)) == [3])
+        check("textless_pages: result is cached per path", len(convert._TEXTLESS_CACHE) >= 1)
+        check("textless_pages: unreadable file -> []", convert.textless_pages(Path(d) / "yok.pdf") == [])
+        junk = Path(d) / "junk.pdf"
+        junk.write_bytes(b"not a pdf")
+        check("textless_pages: corrupt file -> []", convert.textless_pages(junk) == [])
+
+    real = Path(r"C:\Users\Alp\Desktop\Notebook verileri\Matematik\static_resources\e5f819f98b7ab0e42a38ff9ef5960c0d_exam4sol.pdf")
+    if real.exists():
+        check("textless_pages: exam4sol.pdf (page 2 scanned) -> [2]", convert.textless_pages(real) == [2])
+
+
 if __name__ == "__main__":
     sys.stdout.reconfigure(encoding="utf-8")
     test_title_from_fragments()
@@ -389,5 +672,11 @@ if __name__ == "__main__":
     test_is_open_failure()
     test_backend_forwarded_to_docling()
     test_cli_pdf_backend()
+    test_primary_docling_routing()
+    test_primary_markitdown_routing()
+    test_pdf_primary_override()
+    test_hf_offline_first()
+    test_textless_pages()
+    test_textless_warning()
     print(f"\n{len(failures)} başarısız" if failures else "\nhepsi geçti")
     sys.exit(1 if failures else 0)
