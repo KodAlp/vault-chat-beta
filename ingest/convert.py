@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Conversion sidecar — CLI contract owned by the source-ingest skill doc:
 
-    python ingest/convert.py --in <file> --out-dir <dir> --tool auto|markitdown|marker|docling|pandoc [--dry-run] [--source-name <name>] [--pages START-END] [--pdf-backend default|hybrid]
+    python ingest/convert.py --in <file> --out-dir <dir> --tool auto|markitdown|marker|docling|pandoc [--dry-run] [--source-name <name>] [--pages START-END] [--pdf-backend default|hybrid] [--no-images]
 
 JSON-lines progress on stdout, one object per line:
     {"type": "progress", "stage": "..."}
-    {"type": "done", "outPath": "...", "warnings": [...]}
+    {"type": "done", "outPath": "...", "warnings": [...], "images": ["<sha16>.png", ...], "imageStats": {...}}
     {"type": "error", "message": "..."}
 
 Marker and Docling are implemented but remain optional heavy extras (PyTorch,
@@ -42,6 +42,21 @@ at a measured quality/speed cost. Only the docling path reads it. With
 automatically; the caller (convertQueue.ts) passes `hybrid` itself on the
 second attempt after a native crash. A conversion that used hybrid carries a
 warning (hence needs_review).
+
+Images (2026-10-07; see images.py for the full design): pictures in docling
+PDFs, PPTX and DOCX are written to `<out-dir>/images/<sha16>.<ext>` and the
+Markdown refers to them as `images/<sha16>.<ext>`; the `done` event lists the
+file names (`images`) and the per-filter counts (`imageStats`). Every kept
+picture is a three-line block, and the HTML comment is the hook a future VLM
+pass uses to find it and insert/replace the description line:
+
+    ![<alt>](images/<sha16>.<ext>)
+    <!-- vc:gorsel <sha16> -->
+    *Görsel:* <author alt text>      (only when trustworthy text exists)
+
+--no-images turns all of it off (the old output: docling placeholders, no
+PPTX/DOCX pictures). The Node side moves the files into the vault's
+_meta/attachments/ and rewrites the links (src/lib/server/converted-images.ts).
 """
 from __future__ import annotations
 
@@ -56,6 +71,7 @@ import sys
 from pathlib import Path
 from typing import Callable
 
+import images
 from column_order import repair_document_order
 from heading_repair import body_size, read_text_layer, repair_headings, restructure_headings
 from postprocess import _apply_outside_verbatim, postprocess, quality_warnings
@@ -392,8 +408,26 @@ def demote_slide_headings(text: str) -> str:
 def convert_with_markitdown(path: Path) -> str:
     from markitdown import MarkItDown
 
-    result = MarkItDown().convert(str(path))
+    # keep_data_uris makes MarkItDown hand over each PPTX/DOCX picture inline,
+    # at its own position, instead of an unresolvable `Name.jpg` link / a
+    # truncated data URI; images.py swaps them for tokens right away so the
+    # base64 never reaches the post-processing regexes.
+    collect = images.COLLECTOR.enabled and path.suffix.lower() in (".pptx", ".docx")
+    if collect:
+        images.COLLECTOR.candidates.clear()
+        result = MarkItDown().convert(str(path), keep_data_uris=True)
+    else:
+        result = MarkItDown().convert(str(path))
     text = result.text_content
+    if collect:
+        text = images.tokenize_data_uri_images(text)
+        if path.suffix.lower() == ".pptx":
+            try:
+                areas, slide_count = images.pptx_picture_areas(path)
+                images.apply_pptx_areas(images.COLLECTOR.candidates, areas)
+                images.COLLECTOR.total_pages = slide_count
+            except Exception as err:  # noqa: BLE001 — without areas nothing is treated as template art
+                print(f"images: slayt alanları okunamadı: {err}", file=sys.stderr)
     if path.suffix.lower() == ".pptx":
         text = demote_slide_headings(text)
     return text
@@ -635,6 +669,12 @@ def convert_with_docling(
     options.do_formula_enrichment = True
     options.do_code_enrichment = True
     options.accelerator_options = AcceleratorOptions(device=AcceleratorDevice.AUTO)
+    if images.COLLECTOR.enabled:
+        # Crops of the detected pictures; 2.0 keeps small-print screenshots
+        # legible (measured cost: see the images.py commit notes / SKILL.md).
+        options.generate_picture_images = True
+        options.images_scale = 2.0
+        images.COLLECTOR.candidates.clear()
 
     convert_kwargs = {"page_range": page_range} if page_range else {}
 
@@ -692,6 +732,14 @@ def convert_with_docling(
         _COLUMN_REPAIRED_PAGES.extend(repair_document_order(result.document))
     except Exception as err:  # noqa: BLE001 — repair is best-effort
         print(f"column_order: onarım atlandı: {err}", file=sys.stderr)
+    if images.COLLECTOR.enabled:
+        try:
+            md = images.docling_markdown_with_tokens(result.document)
+            images.COLLECTOR.total_pages = len(result.document.pages) or None
+            return md
+        except Exception as err:  # noqa: BLE001 — images are best-effort, the text is not
+            print(f"images: görsel çıkarma atlandı: {err}", file=sys.stderr)
+            images.COLLECTOR.candidates.clear()
     return result.document.export_to_markdown()
 
 
@@ -978,7 +1026,10 @@ def main() -> int:
     parser.add_argument("--pages", dest="pages", default=None)
     # Fallback PDF reader for docling — see the module docstring.
     parser.add_argument("--pdf-backend", dest="pdf_backend", default="default", choices=list(PDF_BACKENDS))
+    # See the module docstring's Images section.
+    parser.add_argument("--no-images", dest="images", action="store_false")
     args = parser.parse_args()
+    images.COLLECTOR.reset(enabled=args.images and not args.dry_run)
 
     in_path = Path(args.in_path)
     if not in_path.exists():
@@ -1114,10 +1165,34 @@ def main() -> int:
     out_dir.mkdir(parents=True, exist_ok=True)
     out_path = unique_output_path(out_dir, in_path.stem)
 
+    # After postprocess/quality_warnings on purpose: the final blocks hold
+    # HTML comments and link syntax those passes were not written for.
+    image_names: list[str] = []
+    image_stats: dict | None = None
+    if images.COLLECTOR.enabled and images.TOKEN_RE.search(final_text):
+        final_text, image_stats, image_names = images.resolve_tokens(
+            final_text, images.COLLECTOR.candidates, out_dir / "images", total_pages=images.COLLECTOR.total_pages
+        )
+        cap_note = images.stats_warning(image_stats)
+        if cap_note:
+            warnings.append(cap_note)
+            frontmatter["needs_review"] = True
+    elif images.TOKEN_RE.search(final_text):
+        final_text = images.TOKEN_RE.sub("", final_text)
+
     fm_lines = "\n".join(f"{k}: {json.dumps(v)}" for k, v in frontmatter.items())
     out_path.write_text(f"---\n{fm_lines}\n---\n\n{final_text}", encoding="utf-8")
 
-    emit({"type": "done", "outPath": str(out_path), "frontmatter": frontmatter, "warnings": warnings})
+    emit(
+        {
+            "type": "done",
+            "outPath": str(out_path),
+            "frontmatter": frontmatter,
+            "warnings": warnings,
+            "images": image_names,
+            "imageStats": image_stats,
+        }
+    )
     return 0
 
 

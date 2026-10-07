@@ -16,6 +16,7 @@ import {
 	politeDelay
 } from './link-import';
 import { stagingDir } from './library';
+import { importConvertedImages, libraryRelPath } from './converted-images';
 import { AppError } from './app-error';
 import type { VaultContext } from './vaults';
 
@@ -86,7 +87,10 @@ export async function stageUrl(
 		const parsed = matter(raw);
 		const title = (parsed.data.title as string) ?? url.hostname;
 		const frontmatter: Record<string, unknown> = { ...parsed.data, source_url: url.href };
-		fs.writeFileSync(path.join(stagingDir(v), `${importId}.md`), matter.stringify(parsed.content, frontmatter), 'utf-8');
+		const stagedMdPath = path.join(stagingDir(v), `${importId}.md`);
+		// Only the PDF branch produces images; a web extraction reports none and passes through unchanged.
+		const content = importConvertedImages(v, { outPath: result.outPath, images: 'images' in result ? result.images : undefined }, libraryRelPath(v, stagedMdPath), parsed.content);
+		fs.writeFileSync(stagedMdPath, matter.stringify(content, frontmatter), 'utf-8');
 
 		return { title, warnings: result.warnings ?? [] };
 	} finally {
