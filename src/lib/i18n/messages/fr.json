@@ -1062,6 +1062,7 @@
     "reason_report_sources_not_specific": "Chaque section listait toutes les sources ; elle ne devrait lister que les siennes",
     "reason_report_no_sections": "Le modèle n'a produit aucune section",
     "reason_slides_no_slides": "Le modèle n'a produit aucune diapositive",
+    "reason_embedding_unreachable": "Impossible de joindre le modèle d'embedding",
     "reason_mindmap_too_few_nodes": "Seuls {count} nœuds subsistaient après le nettoyage (au moins {min} requis)",
     "reason_mindmap_too_few_nodes#one": "Seul {count} nœud subsistait après le nettoyage (au moins {min} requis)",
     "CHAT_INVALID_BODY": "Corps de requête invalide",

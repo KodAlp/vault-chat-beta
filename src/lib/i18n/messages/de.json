@@ -1059,6 +1059,7 @@
     "reason_report_sources_not_specific": "Jeder Abschnitt listete alle Quellen auf; er sollte nur die jeweils relevanten nennen",
     "reason_report_no_sections": "Das Modell hat keine Abschnitte erzeugt",
     "reason_slides_no_slides": "Das Modell hat keine Folien erzeugt",
+    "reason_embedding_unreachable": "Das Embedding-Modell war nicht erreichbar",
     "reason_mindmap_too_few_nodes": "Nach der Bereinigung blieben nur {count} Knoten übrig (mindestens {min} nötig)",
     "reason_mindmap_too_few_nodes#one": "Nach der Bereinigung blieb nur {count} Knoten übrig (mindestens {min} nötig)",
     "CHAT_INVALID_BODY": "Ungültiger Anfragetext",

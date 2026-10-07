@@ -1063,6 +1063,7 @@
     "reason_report_sources_not_specific": "Todas as seções listaram todas as fontes; cada uma deveria listar apenas as que lhe dizem respeito",
     "reason_report_no_sections": "O modelo não produziu seções",
     "reason_slides_no_slides": "O modelo não produziu slides",
+    "reason_embedding_unreachable": "Não foi possível acessar o modelo de embeddings",
     "reason_mindmap_too_few_nodes": "Restaram apenas {count} nós após a limpeza (são necessários pelo menos {min})",
     "CHAT_INVALID_BODY": "Corpo da solicitação inválido",
     "CHAT_LAST_MESSAGE_NOT_USER": "A última mensagem deve ser do usuário",

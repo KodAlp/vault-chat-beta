@@ -1047,6 +1047,7 @@
     "reason_report_sources_not_specific": "ہر حصے نے تمام ماخذ درج کر دیے؛ ہر حصے کو صرف اپنے متعلقہ ماخذ درج کرنے چاہییں",
     "reason_report_no_sections": "ماڈل نے کوئی حصہ نہیں بنایا",
     "reason_slides_no_slides": "ماڈل نے کوئی سلائیڈ نہیں بنائی",
+    "reason_embedding_unreachable": "ایمبیڈنگ ماڈل تک رسائی نہیں ہو سکی",
     "reason_mindmap_too_few_nodes": "صفائی کے بعد صرف {count} نوڈز بچے (کم از کم {min} درکار ہیں)",
     "CHAT_INVALID_BODY": "درخواست کا مواد درست نہیں",
     "CHAT_LAST_MESSAGE_NOT_USER": "آخری پیغام صارف کی طرف سے ہونا چاہیے",

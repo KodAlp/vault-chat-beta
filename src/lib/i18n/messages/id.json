@@ -1047,6 +1047,7 @@
     "reason_report_sources_not_specific": "Setiap bagian mencantumkan semua sumber; masing-masing seharusnya hanya mencantumkan yang relevan",
     "reason_report_no_sections": "Model tidak menghasilkan bagian apa pun",
     "reason_slides_no_slides": "Model tidak menghasilkan slide apa pun",
+    "reason_embedding_unreachable": "Model embedding tidak dapat dijangkau",
     "reason_mindmap_too_few_nodes": "Hanya {count} simpul tersisa setelah pembersihan (minimal {min} diperlukan)",
     "CHAT_INVALID_BODY": "Isi permintaan tidak valid",
     "CHAT_LAST_MESSAGE_NOT_USER": "Pesan terakhir harus dari pengguna",

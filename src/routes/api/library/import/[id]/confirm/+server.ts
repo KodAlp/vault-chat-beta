@@ -7,7 +7,7 @@ import type { RequestHandler } from './$types';
 import { stagingDir, resolveLibraryPath, slugify, appendImportLog } from '$lib/server/library';
 import { indexLibraryFile } from '$lib/server/incrementalIndex';
 import { vaultFromId } from '$lib/server/requestVault';
-import { fail } from '$lib/server/app-error';
+import { AppError, fail } from '$lib/server/app-error';
 import { sanitizeDomain } from '$lib/server/domain-name';
 import { readMeta, deleteMeta } from '$lib/server/pending-imports';
 
@@ -74,6 +74,11 @@ export const POST: RequestHandler = async ({ params, request }) => {
 			tool: frontmatter.converted_by ?? 'upload',
 			...(byMcp ? { by: 'mcp' } : {})
 		});
+		// An unreachable embedding model is the common case (Ollama not running): show a localized reason
+		// instead of the raw "EMBEDDING_UNAVAILABLE {...}" text, which is English and code-shaped.
+		if (err instanceof AppError && err.code === 'EMBEDDING_UNAVAILABLE') {
+			fail('IMPORT_INDEX_FAILED', { reason: 'embedding_unreachable' }, 503);
+		}
 		fail('IMPORT_INDEX_FAILED', { detail: err instanceof Error ? err.message : 'bilinmeyen hata' }, 500);
 	}
 

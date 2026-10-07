@@ -1113,6 +1113,7 @@
     "reason_report_sources_not_specific": "Каждый раздел перечислил все источники; каждый должен перечислять только относящиеся к нему",
     "reason_report_no_sections": "Модель не создала ни одного раздела",
     "reason_slides_no_slides": "Модель не создала ни одного слайда",
+    "reason_embedding_unreachable": "Не удалось связаться с моделью эмбеддингов",
     "reason_mindmap_too_few_nodes": "После очистки осталось узлов: {count} (нужно не менее {min})",
     "reason_mindmap_too_few_nodes#one": "После очистки остался {count} узел (нужно не менее {min})",
     "reason_mindmap_too_few_nodes#few": "После очистки осталось {count} узла (нужно не менее {min})",

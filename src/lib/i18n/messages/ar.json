@@ -1139,6 +1139,7 @@
     "reason_report_sources_not_specific": "ذكر كل قسم جميع المصادر؛ والمفترض أن يذكر كل قسم المصادر ذات الصلة به فقط",
     "reason_report_no_sections": "لم ينتج النموذج أي أقسام",
     "reason_slides_no_slides": "لم ينتج النموذج أي شرائح",
+    "reason_embedding_unreachable": "تعذّر الوصول إلى نموذج التضمين",
     "reason_mindmap_too_few_nodes": "لم يتبقَّ سوى {count} عقدة بعد التنظيف (المطلوب {min} على الأقل)",
     "reason_mindmap_too_few_nodes#zero": "لم تتبقَّ أي عقدة بعد التنظيف (المطلوب {min} على الأقل)",
     "reason_mindmap_too_few_nodes#one": "لم تتبقَّ سوى عقدة واحدة بعد التنظيف (المطلوب {min} على الأقل)",
