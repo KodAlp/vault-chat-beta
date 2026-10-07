@@ -1102,6 +1102,7 @@
 		"reason_report_sources_not_specific": "Every section listed all sources; each should list only its relevant ones",
 		"reason_report_no_sections": "The model produced no sections",
 		"reason_slides_no_slides": "The model produced no slides",
+		"reason_embedding_unreachable": "Couldn't reach the embedding model",
 		"reason_mindmap_too_few_nodes": "Only {count} nodes remained after cleanup (at least {min} needed)",
 		"CHAT_INVALID_BODY": "Invalid request body",
 		"CHAT_LAST_MESSAGE_NOT_USER": "The last message must be from the user",

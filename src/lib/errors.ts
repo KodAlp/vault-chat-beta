@@ -81,7 +81,8 @@ export const REASON_KEYS = [
 	'report_sources_not_specific',
 	'report_no_sections',
 	'slides_no_slides',
-	'mindmap_too_few_nodes'
+	'mindmap_too_few_nodes',
+	'embedding_unreachable'
 ] as const;
 
 export type ReasonKey = (typeof REASON_KEYS)[number];

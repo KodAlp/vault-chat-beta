@@ -1047,6 +1047,7 @@
     "reason_report_sources_not_specific": "প্রতিটি অংশ সব উৎস তালিকাভুক্ত করেছে; প্রতিটির শুধু নিজের প্রাসঙ্গিক উৎস তালিকাভুক্ত করা উচিত",
     "reason_report_no_sections": "মডেল কোনো অংশ তৈরি করেনি",
     "reason_slides_no_slides": "মডেল কোনো স্লাইড তৈরি করেনি",
+    "reason_embedding_unreachable": "এমবেডিং মডেলে পৌঁছানো যায়নি",
     "reason_mindmap_too_few_nodes": "পরিষ্কারের পর মাত্র {count}টি নোড বাকি ছিল (কমপক্ষে {min}টি দরকার)",
     "CHAT_INVALID_BODY": "অনুরোধের বডি অবৈধ",
     "CHAT_LAST_MESSAGE_NOT_USER": "শেষ বার্তাটি ব্যবহারকারীর হতে হবে",

@@ -1047,6 +1047,7 @@
     "reason_report_sources_not_specific": "すべてのセクションが全ソースを列挙していました。各セクションには関連するものだけを列挙してください",
     "reason_report_no_sections": "モデルがセクションを生成しませんでした",
     "reason_slides_no_slides": "モデルがスライドを生成しませんでした",
+    "reason_embedding_unreachable": "埋め込みモデルに接続できませんでした",
     "reason_mindmap_too_few_nodes": "整理後に残ったノードは {count} 個のみでした（最低 {min} 個必要）",
     "CHAT_INVALID_BODY": "リクエスト本文が無効です",
     "CHAT_LAST_MESSAGE_NOT_USER": "最後のメッセージはユーザーからのものである必要があります",

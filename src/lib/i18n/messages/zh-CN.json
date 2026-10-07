@@ -1047,6 +1047,7 @@
     "reason_report_sources_not_specific": "每个章节都列出了所有来源；每个章节应只列出与其相关的来源",
     "reason_report_no_sections": "模型没有生成任何章节",
     "reason_slides_no_slides": "模型没有生成任何幻灯片",
+    "reason_embedding_unreachable": "无法连接到嵌入模型",
     "reason_mindmap_too_few_nodes": "清理后仅剩 {count} 个节点（至少需要 {min} 个）",
     "CHAT_INVALID_BODY": "请求正文无效",
     "CHAT_LAST_MESSAGE_NOT_USER": "最后一条消息必须来自用户",

@@ -1047,6 +1047,7 @@
     "reason_report_sources_not_specific": "हर खंड ने सभी स्रोत सूचीबद्ध किए; हर खंड को केवल अपने प्रासंगिक स्रोत सूचीबद्ध करने चाहिए",
     "reason_report_no_sections": "मॉडल ने कोई खंड नहीं बनाया",
     "reason_slides_no_slides": "मॉडल ने कोई स्लाइड नहीं बनाई",
+    "reason_embedding_unreachable": "एम्बेडिंग मॉडल तक नहीं पहुँचा जा सका",
     "reason_mindmap_too_few_nodes": "सफ़ाई के बाद केवल {count} नोड बचे (कम से कम {min} चाहिए)",
     "CHAT_INVALID_BODY": "अनुरोध का बॉडी अमान्य है",
     "CHAT_LAST_MESSAGE_NOT_USER": "आख़िरी संदेश उपयोगकर्ता का होना चाहिए",

@@ -1047,6 +1047,7 @@
     "reason_report_sources_not_specific": "Every section list all di sources; each one suppose list only di ones wey relate to am",
     "reason_report_no_sections": "Di model no produce any section",
     "reason_slides_no_slides": "Di model no produce any slide",
+    "reason_embedding_unreachable": "We no fit reach di embedding model",
     "reason_mindmap_too_few_nodes": "Na only {count} nodes remain afta cleanup (at least {min} dey needed)",
     "CHAT_INVALID_BODY": "Request body no correct",
     "CHAT_LAST_MESSAGE_NOT_USER": "Di last message must come from di user",
