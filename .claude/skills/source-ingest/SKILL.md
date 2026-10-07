@@ -1,6 +1,6 @@
 ---
 name: source-ingest
-description: Build and maintain the vault-chat app's own source library (data/library/) that is independent of any note app: one-way Markdown-folder import (Obsidian, Logseq, Joplin, Zettlr exports are just import sources), conversion of PDF, DOCX, PPTX, XLSX and LaTeX documents to frontmattered Markdown via Python sidecar tools (MarkItDown by default, Marker/Docling for complex or math-heavy PDFs, Pandoc for LaTeX), and YouTube transcript ingest via yt-dlp (captions only, never video/audio download or local transcription). Use this skill whenever the user works on importing sources, the left-side library tree, document conversion quality, OCR/scanned PDFs, migrating away from VAULT_PATH, YouTube transcript import, or asks which converter to use for a given file type.
+description: Build and maintain the vault-chat app's own source library (data/library/) that is independent of any note app: one-way Markdown-folder import (Obsidian, Logseq, Joplin, Zettlr exports are just import sources), conversion of PDF, DOCX, PPTX, XLSX and LaTeX documents to frontmattered Markdown via Python sidecar tools (MarkItDown for Office formats, Docling first for PDFs when a GPU is present with MarkItDown as fallback, otherwise MarkItDown first with Marker/Docling escalation, Pandoc for LaTeX), and YouTube transcript ingest via yt-dlp (captions only, never video/audio download or local transcription). Use this skill whenever the user works on importing sources, the left-side library tree, document conversion quality, OCR/scanned PDFs, migrating away from VAULT_PATH, YouTube transcript import, or asks which converter to use for a given file type.
 ---
 
 # Source Ingest
@@ -76,7 +76,7 @@ that used it adds a warning (hence `needs_review`).
 
 `--pages` (#37, Aşama 7, 2026-09-23): 1-indexed inclusive, only ever reaches
 docling (`route_auto`/`escalate_pdf`/`route_explicit`) — MarkItDown's own
-pre-pass always sees the whole file (it's fast regardless of size and has
+pass (CPU-only path or fallback) always sees the whole file (it's fast regardless of size and has
 no partial-page mode), and marker doesn't support it either (moot on
 Windows anyway, see below). For a PDF too large to convert in one sitting.
 The early `pageCount` progress event (next section) still reports the
@@ -108,9 +108,33 @@ comparative research (MarkItDown/Docling/Marker/MinerU/Pandoc/Unstructured):
    (2026-09-23, K2-7): MarkItDown makes every slide's title an H1 — a
    29-slide deck came back as 29 top-level H1s — so pptx output gets every
    H1 demoted to H2 (outside fenced/verbatim regions) after conversion.
-4. `.pdf` born-digital, simple layout → **MarkItDown** first; if the
-   output smells broken (heuristics: >30% lines are 1–2 chars, or zero
-   headings detected in >5 pages), escalate to Marker.
+4. `.pdf` under `--tool auto` (2026-10-07; `route_auto`, order set by
+   `pdf_primary_tool()`):
+   - **GPU present (CUDA or MPS)** → **Docling first**. Measured on 5 real
+     PDFs it beat MarkItDown on every one (headings, LaTeX display math);
+     MarkItDown produced junk pipe tables (62% / 63% empty cells on an
+     18-page two-column paper and a 3-page math review) and U+FFFD glyphs,
+     and never escalated PDFs of ≤5 pages. Cost: 7–24 s for short PDFs,
+     ~3.4 s/page. If docling is missing or fails, **MarkItDown** is the
+     fallback (marker is tried only if that text looks broken; docling is
+     not retried) and the result carries a `needs_review` warning naming
+     the reason (`_PRIMARY_FALLBACK`). `PdfDamagedError` still propagates.
+   - **CPU only** → **MarkItDown** first (docling is 23–79 s/page on CPU);
+     escalate to Marker/Docling if the output smells broken (heuristics:
+     >30% lines are 1–2 chars, zero headings in >5 pages, hundreds of
+     `(cid:NN)`) **or any page has no text layer** (`textless_pages`: <20
+     chars after strip, via pypdfium2, ~3 ms/page) — a scanned page used to
+     vanish silently when the other pages carried text. Pages still
+     textless in a MarkItDown result get a warning; pages that went through
+     docling OCR get an "OCR ile okundu" warning.
+   - `VC_PDF_PRIMARY=docling|markitdown` overrides the choice (anything
+     else = auto by accelerator). `.docx/.pptx/.xlsx` are unaffected.
+   - Hugging Face is **offline-first** for docling/marker: `HF_HUB_OFFLINE=1`
+     is set unless the user already set it (either value is respected), so
+     conversions make no requests to huggingface.co (measured: 3 requests
+     per run before, 0 after). If a model is missing from the local cache the
+     run retries once online with a stderr note. Trade-off: docling model
+     updates no longer arrive automatically; intended for a local app.
 5. `.pdf` complex/scanned/math-heavy → **Marker** (default escalation:
    fast, strong on book-like documents, outputs Markdown+JSON) or
    **Docling** (`--tool docling` for papers with heavy tables/formulas —
