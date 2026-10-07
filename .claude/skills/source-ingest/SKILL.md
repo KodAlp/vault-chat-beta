@@ -60,8 +60,19 @@ Conversion tools are Python; the Node app shells out to
 Keep the sidecar's CLI contract stable:
 
 ```
-python ingest/convert.py --in <file> --out-dir <dir> --tool auto|markitdown|marker|docling|pandoc [--dry-run] [--source-name <name>] [--pages START-END]
+python ingest/convert.py --in <file> --out-dir <dir> --tool auto|markitdown|marker|docling|pandoc [--dry-run] [--source-name <name>] [--pages START-END] [--pdf-backend default|hybrid]
 ```
+
+`--pdf-backend` (default `default`): which docling PDF backend to use; only
+the docling path reads it. `hybrid` (`ingest/hybrid_backend.py`: docling-parse
+text with rendering off, page images from pypdfium2) is a FALLBACK for two
+Windows bugs of the default backend — docling-parse#357 (native heap-corruption
+crash) and #354 (non-ASCII profile path: no PDF opens). It costs quality on
+image/formula-heavy PDFs (measured recall 96.5% -> 82.5% on one book, 2x
+slower on a long text), so it is never the normal path: convert.py switches to
+it by itself once when docling reports an "opening the document" failure, and
+`convertQueue.ts` passes it on the retry after a native crash. A conversion
+that used it adds a warning (hence `needs_review`).
 
 `--pages` (#37, Aşama 7, 2026-09-23): 1-indexed inclusive, only ever reaches
 docling (`route_auto`/`escalate_pdf`/`route_explicit`) — MarkItDown's own
