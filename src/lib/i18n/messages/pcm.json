@@ -1050,6 +1050,7 @@
     "UNSUPPORTED_FILE_TYPE": "File type wey we no support: {ext}",
     "CONVERSION_EMPTY": "Conversion no produce any output",
     "CONVERSION_FAILED": "Conversion fail",
+    "PDF_DAMAGED": "Dis PDF look like say e no complete or e don spoil; the download fit don cut for middle. Download am again, then try again.",
     "PROCESS_TIMEOUT": "Process time out (>{seconds}s)",
     "PYTHON_NOT_FOUND": "We no see Python. Install Python 3 from python.org, then try again.",
     "PYTHON_SPAWN_FAILED": "We no fit start Python",

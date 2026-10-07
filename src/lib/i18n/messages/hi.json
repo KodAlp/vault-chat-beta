@@ -1050,6 +1050,7 @@
     "UNSUPPORTED_FILE_TYPE": "असमर्थित फ़ाइल प्रकार: {ext}",
     "CONVERSION_EMPTY": "रूपांतरण से कोई आउटपुट नहीं मिला",
     "CONVERSION_FAILED": "रूपांतरण विफल रहा",
+    "PDF_DAMAGED": "यह PDF अधूरी या खराब लग रही है; हो सकता है डाउनलोड बीच में रुक गया हो। इसे दोबारा डाउनलोड करके फिर कोशिश करें।",
     "PROCESS_TIMEOUT": "प्रोसेस का समय समाप्त हो गया (>{seconds} सेकंड)",
     "PYTHON_NOT_FOUND": "Python नहीं मिला। python.org से Python 3 इंस्टॉल करें, फिर दोबारा कोशिश करें।",
     "PYTHON_SPAWN_FAILED": "Python शुरू नहीं हो सका",

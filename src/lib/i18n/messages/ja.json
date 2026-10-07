@@ -1050,6 +1050,7 @@
     "UNSUPPORTED_FILE_TYPE": "未対応のファイル形式：{ext}",
     "CONVERSION_EMPTY": "変換の出力が空でした",
     "CONVERSION_FAILED": "変換に失敗しました",
+    "PDF_DAMAGED": "このPDFは不完全または破損しているようです。ダウンロードが途中で切れた可能性があります。もう一度ダウンロードしてからお試しください。",
     "PROCESS_TIMEOUT": "処理がタイムアウトしました（{seconds} 秒超）",
     "PYTHON_NOT_FOUND": "Python が見つかりません。python.org から Python 3 をインストールして、もう一度お試しください。",
     "PYTHON_SPAWN_FAILED": "Python を起動できませんでした",

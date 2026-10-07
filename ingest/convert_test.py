@@ -19,18 +19,25 @@ report, Aşama 6):
   outscore the title too — see test_title_from_fragments below for both.
 - A 29-slide .pptx came back with 29 top-level H1s (one per slide).
 """
+import json
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import convert  # noqa: E402
 from convert import (  # noqa: E402
     CODE_EXTENSIONS,
+    PdfDamagedError,
     convert_code_file,
     demote_slide_headings,
+    escalate_pdf,
+    expected_page_count,
     looks_broken,
     parse_page_range,
+    pdf_open_check,
     route_auto,
     split_existing_frontmatter,
     title_from_fragments,
@@ -205,6 +212,114 @@ def test_convert_code_file() -> None:
     check(".html/.htm are not in CODE_EXTENSIONS (already routed as real documents)", ".html" not in CODE_EXTENSIONS and ".htm" not in CODE_EXTENSIONS)
 
 
+def make_pdf(path: Path, pages: int = 4) -> None:
+    from pypdf import PdfWriter
+
+    w = PdfWriter()
+    for _ in range(pages):
+        w.add_blank_page(width=200, height=200)
+    with path.open("wb") as f:
+        w.write(f)
+
+
+def test_pdf_damage_checks() -> None:
+    with tempfile.TemporaryDirectory() as d:
+        good = Path(d) / "good.pdf"
+        make_pdf(good, 4)
+        check("pdf_open_check returns the page count of a valid PDF", pdf_open_check(good) == 4)
+
+        # Cut at 60%: the xref table/trailer live at the end of the file, so
+        # pypdf cannot open it — the same failure mode as a half-downloaded file.
+        cut = Path(d) / "cut.pdf"
+        data = good.read_bytes()
+        cut.write_bytes(data[: int(len(data) * 0.6)])
+        try:
+            pdf_open_check(cut)
+            raised = False
+        except PdfDamagedError:
+            raised = True
+        check("pdf_open_check raises PdfDamagedError on a truncated PDF", raised)
+
+        garbage = Path(d) / "garbage.pdf"
+        garbage.write_bytes(b"not a pdf at all")
+        try:
+            pdf_open_check(garbage)
+            raised = False
+        except PdfDamagedError:
+            raised = True
+        check("pdf_open_check raises PdfDamagedError on a non-PDF", raised)
+
+        # CLI contract: JSON error with code on stdout, exit 1, no stray lines.
+        proc = subprocess.run(
+            [sys.executable, str(Path(__file__).resolve().parent / "convert.py"), "--in", str(cut),
+             "--out-dir", str(Path(d) / "out"), "--tool", "auto", "--dry-run"],
+            capture_output=True, text=True, encoding="utf-8",
+        )
+        lines = [l for l in proc.stdout.splitlines() if l.strip()]
+        parsed: list[dict] = []
+        all_json = True
+        for l in lines:
+            try:
+                parsed.append(json.loads(l))
+            except ValueError:
+                all_json = False
+        check("CLI: truncated PDF exits 1", proc.returncode == 1)
+        check("CLI: stdout holds only JSON lines", all_json and bool(lines))
+        last = parsed[-1] if parsed else {}
+        check("CLI: last line is type=error code=PDF_DAMAGED", last.get("type") == "error" and last.get("code") == "PDF_DAMAGED")
+        check("CLI: no progress event before the error", all(p.get("type") != "progress" for p in parsed))
+
+
+def test_expected_page_count() -> None:
+    check("expected_page_count: no range -> total", expected_page_count(8, None) == 8)
+    check("expected_page_count: full range", expected_page_count(8, (1, 8)) == 8)
+    check("expected_page_count: range past the end is clamped", expected_page_count(8, (3, 20)) == 6)
+    check("expected_page_count: start past the end -> 0", expected_page_count(8, (9, 12)) == 0)
+    check("expected_page_count: inner range", expected_page_count(8, (2, 4)) == 3)
+
+
+def test_damaged_propagates_through_escalation() -> None:
+    def raise_import(_p):
+        raise ImportError("no marker")
+
+    def raise_damaged(_p, page_range=None):
+        raise PdfDamagedError("docling 2/8 sayfa döndürdü")
+
+    saved = (
+        convert.convert_with_marker, convert.convert_with_docling,
+        convert.convert_with_markitdown, convert.looks_broken, convert.pdf_page_count,
+    )
+    try:
+        convert.convert_with_marker = raise_import
+        convert.convert_with_docling = raise_damaged
+        convert.convert_with_markitdown = lambda _p: "x" * 500  # long enough for the S9 fallback
+        convert.looks_broken = lambda _t, _n: True
+        convert.pdf_page_count = lambda _p: 8
+
+        try:
+            escalate_pdf(Path("dummy.pdf"))
+            outcome = "returned"
+        except PdfDamagedError:
+            outcome = "damaged"
+        except RuntimeError:
+            outcome = "runtime"
+        check("escalate_pdf lets PdfDamagedError through (not folded into RuntimeError)", outcome == "damaged")
+
+        try:
+            route_auto(Path("dummy.pdf"))
+            outcome = "returned"
+        except PdfDamagedError:
+            outcome = "damaged"
+        except RuntimeError:
+            outcome = "runtime"
+        check("route_auto does not fall back to MarkItDown text on PdfDamagedError", outcome == "damaged")
+    finally:
+        (
+            convert.convert_with_marker, convert.convert_with_docling,
+            convert.convert_with_markitdown, convert.looks_broken, convert.pdf_page_count,
+        ) = saved
+
+
 if __name__ == "__main__":
     sys.stdout.reconfigure(encoding="utf-8")
     test_title_from_fragments()
@@ -214,5 +329,8 @@ if __name__ == "__main__":
     test_parse_page_range()
     test_looks_broken_unaffected_by_this_pass()
     test_convert_code_file()
+    test_pdf_damage_checks()
+    test_expected_page_count()
+    test_damaged_propagates_through_escalation()
     print(f"\n{len(failures)} başarısız" if failures else "\nhepsi geçti")
     sys.exit(1 if failures else 0)

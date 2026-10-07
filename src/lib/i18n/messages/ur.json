@@ -1050,6 +1050,7 @@
     "UNSUPPORTED_FILE_TYPE": "غیر معاون فائل کی قسم: {ext}",
     "CONVERSION_EMPTY": "تبدیلی سے کوئی آؤٹ پٹ نہیں بنا",
     "CONVERSION_FAILED": "تبدیلی ناکام ہو گئی",
+    "PDF_DAMAGED": "یہ PDF نامکمل یا خراب لگ رہی ہے؛ ہو سکتا ہے ڈاؤن لوڈ بیچ میں رک گیا ہو۔ اسے دوبارہ ڈاؤن لوڈ کر کے پھر کوشش کریں۔",
     "PROCESS_TIMEOUT": "عمل کا ٹائم آؤٹ ہو گیا (>{seconds} سیکنڈ)",
     "PYTHON_NOT_FOUND": "Python نہیں ملا۔ python.org سے Python 3 انسٹال کریں، پھر دوبارہ کوشش کریں۔",
     "PYTHON_SPAWN_FAILED": "Python شروع نہیں ہو سکا",

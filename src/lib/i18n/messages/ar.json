@@ -1147,6 +1147,7 @@
     "UNSUPPORTED_FILE_TYPE": "نوع ملف غير مدعوم: {ext}",
     "CONVERSION_EMPTY": "لم ينتج التحويل أي مخرجات",
     "CONVERSION_FAILED": "فشل التحويل",
+    "PDF_DAMAGED": "يبدو أن ملف PDF ناقص أو تالف؛ ربما انقطع تنزيله. نزّله مرة أخرى وأعد المحاولة.",
     "PROCESS_TIMEOUT": "انتهت مهلة العملية (أكثر من {seconds} ث)",
     "PYTHON_NOT_FOUND": "لم يُعثر على Python. ثبّت Python 3 من python.org ثم حاول مرة أخرى.",
     "PYTHON_SPAWN_FAILED": "تعذّر تشغيل Python",

@@ -1050,6 +1050,7 @@
     "UNSUPPORTED_FILE_TYPE": "不支持的文件类型：{ext}",
     "CONVERSION_EMPTY": "转换未产生任何输出",
     "CONVERSION_FAILED": "转换失败",
+    "PDF_DAMAGED": "此 PDF 似乎不完整或已损坏，可能是下载中途中断。请重新下载后再试。",
     "PROCESS_TIMEOUT": "进程超时（>{seconds} 秒）",
     "PYTHON_NOT_FOUND": "未找到 Python。请从 python.org 安装 Python 3，然后重试。",
     "PYTHON_SPAWN_FAILED": "无法启动 Python",
