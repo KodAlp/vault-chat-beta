@@ -110,7 +110,8 @@
 	let STAGE_LABELS = $derived<Record<string, string>>({
 		queued: t('ImportFlow.stageQueued'),
 		converting: t('ImportFlow.stageConverting'),
-		postprocessing: t('ImportFlow.stagePostprocessing')
+		postprocessing: t('ImportFlow.stagePostprocessing'),
+		retrying: t('ImportFlow.stageRetrying')
 	});
 
 	let STATUS_LABELS = $derived<Record<string, string>>({
