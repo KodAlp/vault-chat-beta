@@ -29,9 +29,14 @@ test('isNativeCrash: POSIX signals', () => {
 
 function sequence(outcomes: AttemptOutcome<string>[]) {
 	let calls = 0;
+	const seen: number[] = [];
 	return {
-		attempt: async () => outcomes[calls++],
-		calls: () => calls
+		attempt: async (n: 0 | 1) => {
+			seen.push(n);
+			return outcomes[calls++];
+		},
+		calls: () => calls,
+		attemptNumbers: () => seen
 	};
 }
 
@@ -41,6 +46,18 @@ test('crash then done resolves and retries exactly once', async () => {
 	assert.equal(await runWithCrashRetry(s.attempt, () => retries++), 'ok');
 	assert.equal(s.calls(), 2);
 	assert.equal(retries, 1);
+});
+
+test('the retry gets attempt number 1 (fallback backend), the first 0', async () => {
+	const s = sequence([{ kind: 'crash', detail: 'exit 1' }, { kind: 'done', value: 'ok' }]);
+	await runWithCrashRetry(s.attempt, () => {});
+	assert.deepEqual(s.attemptNumbers(), [0, 1]);
+});
+
+test('without a crash only attempt 0 runs', async () => {
+	const s = sequence([{ kind: 'done', value: 'ok' }]);
+	await runWithCrashRetry(s.attempt, () => {});
+	assert.deepEqual(s.attemptNumbers(), [0]);
 });
 
 test('crash then crash becomes CONVERTER_CRASHED', async () => {

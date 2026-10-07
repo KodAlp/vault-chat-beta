@@ -103,7 +103,8 @@ function pdfEstimatedSeconds(pageCount: number): number {
  *
  * A native crash of the converter process (docling-parse #357, see
  * convert-crash.ts) gets exactly one automatic retry inside the same queue
- * slot; a second crash surfaces as CONVERTER_CRASHED.
+ * slot, run with `--pdf-backend hybrid` (the fallback PDF reader); a second
+ * crash surfaces as CONVERTER_CRASHED.
  */
 function runConvert(
 	inPath: string,
@@ -114,10 +115,19 @@ function runConvert(
 	pages?: string
 ): Promise<ConvertEvent & { type: 'done' }> {
 	return runWithCrashRetry(
-		() => runConvertAttempt(inPath, outDir, tool, onEvent, sourceName, pages),
+		(attemptNumber) =>
+			runConvertAttempt(
+				inPath,
+				outDir,
+				tool,
+				onEvent,
+				sourceName,
+				pages,
+				attemptNumber === 1 ? 'hybrid' : undefined
+			),
 		(crashDetail) => {
 			// Keep the diagnosis: the user only ever sees the retry notice.
-			console.warn(`[convert] converter crashed, retrying once: ${crashDetail}`);
+			console.warn(`[convert] converter crashed, retrying once with the fallback PDF backend: ${crashDetail}`);
 			onEvent?.({ type: 'progress', stage: 'retrying' });
 		}
 	);
@@ -130,7 +140,8 @@ function runConvertAttempt(
 	tool: string,
 	onEvent?: (event: ConvertEvent) => void,
 	sourceName?: string,
-	pages?: string
+	pages?: string,
+	pdfBackend?: 'hybrid'
 ): Promise<AttemptOutcome<ConvertEvent & { type: 'done' }>> {
 	return new Promise((resolve, reject) => {
 		const bin = pythonBin();
@@ -143,6 +154,9 @@ function runConvertAttempt(
 		if (sourceName) args.push('--source-name', sourceName);
 		// #37 — see convert.py's parse_page_range for the "START-END" format.
 		if (pages) args.push('--pages', pages);
+		// Fallback PDF reader, only for the retry after a native crash — see
+		// convert.py's module docstring (--pdf-backend).
+		if (pdfBackend) args.push('--pdf-backend', pdfBackend);
 		// convert.py's convert_with_pandoc/pandoc_not_installed_message check
 		// PANDOC_BIN before falling back to a bare 'pandoc' PATH lookup — same
 		// stale-server-PATH bug as pythonBin() above, see pandoc-bin.ts's doc

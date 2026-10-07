@@ -34,6 +34,7 @@ from convert import (  # noqa: E402
     convert_code_file,
     demote_slide_headings,
     escalate_pdf,
+    _is_open_failure,
     expected_page_count,
     looks_broken,
     parse_page_range,
@@ -282,7 +283,7 @@ def test_damaged_propagates_through_escalation() -> None:
     def raise_import(_p):
         raise ImportError("no marker")
 
-    def raise_damaged(_p, page_range=None):
+    def raise_damaged(_p, page_range=None, backend="default"):
         raise PdfDamagedError("docling 2/8 sayfa döndürdü")
 
     saved = (
@@ -320,6 +321,59 @@ def test_damaged_propagates_through_escalation() -> None:
         ) = saved
 
 
+def test_is_open_failure() -> None:
+    """The #354 fallback decision: only docling's ConversionError saying it
+    could not open the document triggers the hybrid retry."""
+
+    class ConversionError(RuntimeError):  # same class name as docling's
+        pass
+
+    class Sub(ConversionError):
+        pass
+
+    msg = (
+        "Conversion failed for: C:/x/original.pdf with status: failure. Errors: "
+        "An unexpected error occurred while opening the document C:/x/original.pdf."
+    )
+    check("_is_open_failure: docling open failure", _is_open_failure(ConversionError(msg)))
+    check("_is_open_failure: subclass counts", _is_open_failure(Sub(msg)))
+    check("_is_open_failure: other ConversionError", not _is_open_failure(ConversionError("Conversion failed: timeout")))
+    check("_is_open_failure: same text, other class", not _is_open_failure(RuntimeError(msg)))
+    check("_is_open_failure: ImportError", not _is_open_failure(ImportError("No module named docling")))
+
+
+def test_backend_forwarded_to_docling() -> None:
+    """escalate_pdf and route_explicit hand pdf_backend to convert_with_docling."""
+    seen: list[str] = []
+    saved = (convert.convert_with_marker, convert.convert_with_docling)
+    try:
+        convert.convert_with_marker = lambda _p: (_ for _ in ()).throw(ImportError("x"))
+        convert.convert_with_docling = lambda _p, page_range=None, backend="default": seen.append(backend) or "md"
+        escalate_pdf(Path("d.pdf"), pdf_backend="hybrid")
+        convert.route_explicit(Path("d.pdf"), "docling", pdf_backend="hybrid")
+        convert.route_explicit(Path("d.pdf"), "docling")
+    finally:
+        convert.convert_with_marker, convert.convert_with_docling = saved
+    check("pdf_backend reaches convert_with_docling (escalate, explicit, default)", seen == ["hybrid", "hybrid", "default"])
+
+
+def test_cli_pdf_backend() -> None:
+    """--pdf-backend is accepted (default/hybrid) and anything else rejected;
+    a .md input needs no PDF and no docling."""
+    script = Path(__file__).resolve().parent / "convert.py"
+    with tempfile.TemporaryDirectory() as tmp:
+        md = Path(tmp) / "note.md"
+        md.write_text("# Baslik\n\nmetin\n", encoding="utf-8")
+        base = [sys.executable, str(script), "--in", str(md), "--out-dir", tmp, "--dry-run"]
+        for value in ("default", "hybrid"):
+            proc = subprocess.run(base + ["--pdf-backend", value], capture_output=True, text=True, encoding="utf-8")
+            check(f"--pdf-backend {value} accepted", proc.returncode == 0 and '"type": "done"' in proc.stdout)
+        proc = subprocess.run(base, capture_output=True, text=True, encoding="utf-8")
+        check("--pdf-backend optional (default)", proc.returncode == 0)
+        proc = subprocess.run(base + ["--pdf-backend", "bogus"], capture_output=True, text=True, encoding="utf-8")
+        check("--pdf-backend bogus rejected", proc.returncode != 0 and "invalid choice" in proc.stderr)
+
+
 if __name__ == "__main__":
     sys.stdout.reconfigure(encoding="utf-8")
     test_title_from_fragments()
@@ -332,5 +386,8 @@ if __name__ == "__main__":
     test_pdf_damage_checks()
     test_expected_page_count()
     test_damaged_propagates_through_escalation()
+    test_is_open_failure()
+    test_backend_forwarded_to_docling()
+    test_cli_pdf_backend()
     print(f"\n{len(failures)} başarısız" if failures else "\nhepsi geçti")
     sys.exit(1 if failures else 0)
