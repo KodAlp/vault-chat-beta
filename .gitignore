@@ -37,3 +37,6 @@ ingest/.venv/
 
 # docker/linux-package.sh output (packages, launch log, screenshot).
 docker-out/
+# MCP: per-launch endpoint + token written by the app (never commit), and the user's allowed import folders.
+data/mcp-endpoint.json
+data/mcp-settings.json
