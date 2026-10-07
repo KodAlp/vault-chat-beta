@@ -4,7 +4,9 @@ import { AppError } from './app-error';
  * docling-parse (#357): on Windows the MinGW build corrupts the heap while its
  * render thread shuts down, so the converter process dies natively — most
  * often on PDFs that embed CMYK JPEGs, rarely on others. A retry usually
- * succeeds, so a native crash gets one automatic second attempt.
+ * succeeds, so a native crash gets one automatic second attempt — and that
+ * attempt uses the fallback PDF backend (convert.py --pdf-backend hybrid),
+ * whose render path does not contain the crashing code.
  */
 
 // Windows NTSTATUS exit codes of a native crash. Deliberately an explicit
@@ -35,18 +37,20 @@ export type AttemptOutcome<T> =
 	| { kind: 'crash'; detail: string };
 
 /**
- * Runs `attempt` and, only if it reports a native crash, once more. A second
- * crash becomes CONVERTER_CRASHED; done, error and timeout (an `error`
- * outcome carrying PROCESS_TIMEOUT) are never retried.
+ * Runs `attempt` and, only if it reports a native crash, once more. The
+ * attempt number (0 first, 1 retry) is passed in so the caller can switch the
+ * retry to the fallback backend. A second crash becomes CONVERTER_CRASHED;
+ * done, error and timeout (an `error` outcome carrying PROCESS_TIMEOUT) are
+ * never retried.
  */
 export async function runWithCrashRetry<T>(
-	attempt: () => Promise<AttemptOutcome<T>>,
+	attempt: (attemptNumber: 0 | 1) => Promise<AttemptOutcome<T>>,
 	onRetry: (firstCrashDetail: string) => void
 ): Promise<T> {
-	let outcome = await attempt();
+	let outcome = await attempt(0);
 	if (outcome.kind === 'crash') {
 		onRetry(outcome.detail);
-		outcome = await attempt();
+		outcome = await attempt(1);
 	}
 	if (outcome.kind === 'done') return outcome.value;
 	if (outcome.kind === 'error') throw outcome.error;
