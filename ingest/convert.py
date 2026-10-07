@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Conversion sidecar — CLI contract owned by the source-ingest skill doc:
 
-    python ingest/convert.py --in <file> --out-dir <dir> --tool auto|markitdown|marker|docling|pandoc [--dry-run] [--source-name <name>]
+    python ingest/convert.py --in <file> --out-dir <dir> --tool auto|markitdown|marker|docling|pandoc [--dry-run] [--source-name <name>] [--pages START-END] [--pdf-backend default|hybrid]
 
 JSON-lines progress on stdout, one object per line:
     {"type": "progress", "stage": "..."}
@@ -22,6 +22,15 @@ never a usable title or source record. Pass the REAL filename here; it
 becomes source_file frontmatter and the title fallback when the document has
 no usable title of its own. Callers that omit it get the old (worse)
 behavior — the staged name — never a crash.
+
+--pdf-backend (default|hybrid): which docling PDF backend to use. `default` is
+docling's own; `hybrid` (ingest/hybrid_backend.py) is the FALLBACK that avoids
+docling-parse#357 (native crash on Windows) and #354 (non-ASCII profile path),
+at a measured quality/speed cost. Only the docling path reads it. With
+`default`, an "opening the document" failure is retried once with `hybrid`
+automatically; the caller (convertQueue.ts) passes `hybrid` itself on the
+second attempt after a native crash. A conversion that used hybrid carries a
+warning (hence needs_review).
 """
 from __future__ import annotations
 
@@ -36,6 +45,7 @@ import sys
 from pathlib import Path
 from typing import Callable
 
+from column_order import repair_document_order
 from heading_repair import body_size, read_text_layer, repair_headings, restructure_headings
 from postprocess import _apply_outside_verbatim, postprocess, quality_warnings
 
@@ -86,6 +96,17 @@ MIN_FALLBACK_CHARS = 200
 
 def emit(obj: dict) -> None:
     print(json.dumps(obj), flush=True)
+
+
+class PdfDamagedError(Exception):
+    """The PDF is truncated or corrupt, or a converter returned fewer pages
+    than the file has. Deliberately NOT a RuntimeError: route_auto's S9
+    fallback catches RuntimeError and would hand back the MarkItDown text as
+    a "successful" conversion of a document that is missing pages. This must
+    propagate to main() and become a PDF_DAMAGED error instead."""
+
+
+PDF_DAMAGED_MESSAGE = "PDF eksik ya da bozuk görünüyor; dosya yarım inmiş olabilir. Yeniden indirip deneyin."
 
 
 # A line is "large" when its size exceeds the body size by this factor —
@@ -186,6 +207,34 @@ def pdf_page_count(path: Path) -> int:
         return len(PdfReader(str(path)).pages)
     except Exception:  # noqa: BLE001 — a page count is a heuristic input, not a result
         return 0
+
+
+def pdf_open_check(path: Path) -> int:
+    """Open the PDF with pypdf and return its page count; PdfDamagedError when
+    it cannot be opened or has no pages. Measured on 1753 intact PDFs: zero
+    false positives, page count identical to pypdfium2. Every truncated file
+    raises PdfStreamError in the PdfReader constructor — docling-parse
+    (#374) does not, and returns SUCCESS with pages missing. pypdf logs
+    through `logging`, whose default handler writes to stderr, so nothing here
+    can pollute the JSON-lines stdout."""
+    try:
+        from pypdf import PdfReader
+
+        count = len(PdfReader(str(path)).pages)
+    except Exception as err:  # noqa: BLE001 — any open failure means unusable
+        raise PdfDamagedError(f"{type(err).__name__}: {err}") from err
+    if count <= 0:
+        raise PdfDamagedError("PDF sayfa içermiyor")
+    return count
+
+
+def expected_page_count(total: int, page_range: tuple[int, int] | None) -> int:
+    """Pages a converter should return for `total` pages and an optional
+    1-indexed inclusive page_range (docling's convention)."""
+    if page_range is None:
+        return total
+    start, end = page_range
+    return max(0, min(end, total) - start + 1)
 
 
 def looks_broken(text: str, page_count: int) -> bool:
@@ -298,7 +347,37 @@ def pdf_has_text_layer(path: Path, sample_pages: int = 10) -> bool:
         return False
 
 
-def convert_with_docling(path: Path, page_range: tuple[int, int] | None = None) -> str:
+# Pages whose docling reading order column_order.py repaired in the most recent
+# convert_with_docling call; main() turns it into a warning. Module-level so
+# the many call sites that return only the Markdown string stay unchanged.
+_COLUMN_REPAIRED_PAGES: list[int] = []
+# docling's own error messages from the most recent PARTIAL_SUCCESS conversion
+# (shortened); main() turns them into a warning. Same pattern as above.
+_DOCLING_ERRORS: list[str] = []
+# True when the most recent convert_with_docling call ran on the hybrid
+# (fallback) backend — requested or switched to automatically. Same pattern.
+_HYBRID_BACKEND_USED: list[bool] = [False]
+
+PDF_BACKENDS = ("default", "hybrid")
+HYBRID_BACKEND_WARNING = (
+    "Yedek PDF okuyucusuyla dönüştürüldü; resim içindeki metinler ve bazı formüller eksik olabilir, gözden geçirin."
+)
+
+
+def _is_open_failure(err: BaseException) -> bool:
+    """True for docling's ConversionError saying it could not open the
+    document — the only visible symptom of docling-parse#354 (the real cause,
+    a filesystem error from the renderer on a non-ASCII profile path, is only
+    in the log). Matched by class name and message so this works without
+    importing docling. A truncated/corrupt PDF would produce the same symptom,
+    but pdf_open_check already rejects those before any converter runs."""
+    is_conversion_error = any(c.__name__ == "ConversionError" for c in type(err).__mro__)
+    return is_conversion_error and "while opening the document" in str(err)
+
+
+def convert_with_docling(
+    path: Path, page_range: tuple[int, int] | None = None, backend: str = "default"
+) -> str:
     """docling 2.x — preferred over marker when the document's value is in its
     tables, and the only one of the two that works on Windows (see
     escalate_pdf). Same optional-extra and ImportError contract as marker.
@@ -343,6 +422,10 @@ def convert_with_docling(path: Path, page_range: tuple[int, int] | None = None) 
 
     page_range (#37, Aşama 7): 1-indexed inclusive, docling's own convention
     — for a document too large to convert whole in one sitting.
+
+    backend: "default" or "hybrid" (see hybrid_backend.py and the module
+    docstring's --pdf-backend). On "default", an open failure (#354) is
+    retried once on "hybrid"; every other error propagates unchanged.
     """
     from docling.datamodel.base_models import InputFormat
     from docling.datamodel.pipeline_options import AcceleratorDevice, AcceleratorOptions, PdfPipelineOptions
@@ -354,11 +437,57 @@ def convert_with_docling(path: Path, page_range: tuple[int, int] | None = None) 
     options.do_code_enrichment = True
     options.accelerator_options = AcceleratorOptions(device=AcceleratorDevice.AUTO)
 
-    converter = DocumentConverter(
-        format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=options)}
-    )
     convert_kwargs = {"page_range": page_range} if page_range else {}
-    result = converter.convert(str(path), **convert_kwargs)
+
+    def run(use_hybrid: bool):
+        if use_hybrid:
+            # Imported here: it needs docling, which is optional.
+            from hybrid_backend import HybridDoclingParseBackend
+
+            fmt = PdfFormatOption(pipeline_options=options, backend=HybridDoclingParseBackend)
+        else:
+            fmt = PdfFormatOption(pipeline_options=options)
+        return DocumentConverter(format_options={InputFormat.PDF: fmt}).convert(str(path), **convert_kwargs)
+
+    use_hybrid = backend == "hybrid"
+    _HYBRID_BACKEND_USED[0] = False
+    try:
+        result = run(use_hybrid)
+    except Exception as err:  # noqa: BLE001 — only the open failure is handled
+        if use_hybrid or not _is_open_failure(err):
+            raise
+        print(
+            "docling: belge açılamadı (docling-parse #354 olabilir); yedek PDF okuyucusuyla yeniden deneniyor",
+            file=sys.stderr,
+        )
+        use_hybrid = True
+        result = run(True)
+    _HYBRID_BACKEND_USED[0] = use_hybrid
+    # docling-parse (#374) returns SUCCESS with an empty error list for a
+    # truncated PDF, just with pages missing — so the status is no evidence;
+    # compare the page count against what the file itself says it has.
+    got = len(result.pages)
+    expected = expected_page_count(pdf_page_count(path), page_range)
+    if expected > 0 and got < expected:
+        raise PdfDamagedError(f"docling {got}/{expected} sayfa döndürdü")
+    # PARTIAL_SUCCESS (some pages reported errors) is kept: the pages that did
+    # convert are real content; the errors become a warning instead.
+    _DOCLING_ERRORS.clear()
+    if str(getattr(result.status, "name", result.status)) == "PARTIAL_SUCCESS":
+        for item in getattr(result, "errors", None) or []:
+            msg = str(getattr(item, "error_message", item)).strip()
+            if msg:
+                _DOCLING_ERRORS.append(msg[:200])
+        if not _DOCLING_ERRORS:
+            _DOCLING_ERRORS.append("ayrıntı bildirilmedi")
+    # docling's reading-order pass sometimes swaps the columns of a two-column
+    # page although every bbox is right (column_order.py). A failure here must
+    # never fail the conversion: fall back to docling's own order.
+    _COLUMN_REPAIRED_PAGES.clear()
+    try:
+        _COLUMN_REPAIRED_PAGES.extend(repair_document_order(result.document))
+    except Exception as err:  # noqa: BLE001 — repair is best-effort
+        print(f"column_order: onarım atlandı: {err}", file=sys.stderr)
     return result.document.export_to_markdown()
 
 
@@ -390,7 +519,9 @@ def convert_code_file(path: Path) -> str:
     return f"{fence}{lang}\n{code}\n{fence}\n"
 
 
-def route_auto(path: Path, page_range: tuple[int, int] | None = None) -> tuple[str, str]:
+def route_auto(
+    path: Path, page_range: tuple[int, int] | None = None, pdf_backend: str = "default"
+) -> tuple[str, str]:
     """Returns (markdown_text, converted_by). page_range (#37) only ever
     restricts the docling escalation path below — MarkItDown's initial pass
     is fast enough on a huge document that there's nothing to save by
@@ -420,7 +551,7 @@ def route_auto(path: Path, page_range: tuple[int, int] | None = None) -> tuple[s
         page_count = pdf_page_count(path) or text.count("\f") + 1
         if looks_broken(text, page_count):
             try:
-                return escalate_pdf(path, page_range=page_range)
+                return escalate_pdf(path, page_range=page_range, pdf_backend=pdf_backend)
             except RuntimeError:
                 if len(text.strip()) >= MIN_FALLBACK_CHARS:
                     # S9: looks_broken() can be a false positive — a dense,
@@ -440,7 +571,9 @@ def route_auto(path: Path, page_range: tuple[int, int] | None = None) -> tuple[s
     raise RuntimeError(f"Desteklenmeyen dosya türü: {ext}")
 
 
-def escalate_pdf(path: Path, page_range: tuple[int, int] | None = None) -> tuple[str, str]:
+def escalate_pdf(
+    path: Path, page_range: tuple[int, int] | None = None, pdf_backend: str = "default"
+) -> tuple[str, str]:
     """Marker first, then Docling, then a clean error naming why each failed.
 
     Trying both is not belt-and-braces. An installed converter can fail at
@@ -460,13 +593,15 @@ def escalate_pdf(path: Path, page_range: tuple[int, int] | None = None) -> tuple
     reasons: list[str] = []
     attempts: list[tuple[str, Callable[[], str]]] = [
         ("marker", lambda: convert_with_marker(path)),
-        ("docling", lambda: convert_with_docling(path, page_range=page_range)),
+        ("docling", lambda: convert_with_docling(path, page_range=page_range, backend=pdf_backend)),
     ]
     for name, convert in attempts:
         try:
             return convert(), name
         except ImportError:
             reasons.append(f"{name}: kurulu değil")
+        except PdfDamagedError:
+            raise
         except Exception as err:  # noqa: BLE001 — reported, not swallowed
             reasons.append(f"{name}: {err}")
 
@@ -476,14 +611,16 @@ def escalate_pdf(path: Path, page_range: tuple[int, int] | None = None) -> tuple
     )
 
 
-def route_explicit(path: Path, tool: str, page_range: tuple[int, int] | None = None) -> tuple[str, str]:
+def route_explicit(
+    path: Path, tool: str, page_range: tuple[int, int] | None = None, pdf_backend: str = "default"
+) -> tuple[str, str]:
     try:
         if tool == "markitdown":
             return convert_with_markitdown(path), "markitdown"
         if tool == "marker":
             return convert_with_marker(path), "marker"
         if tool == "docling":
-            return convert_with_docling(path, page_range=page_range), "docling"
+            return convert_with_docling(path, page_range=page_range, backend=pdf_backend), "docling"
         if tool == "pandoc":
             if not pandoc_available():
                 raise RuntimeError(pandoc_not_installed_message())
@@ -575,6 +712,8 @@ def main() -> int:
     # #37, Aşama 7: only ever restricts the docling path — see route_auto's
     # and escalate_pdf's own doc comments for why.
     parser.add_argument("--pages", dest="pages", default=None)
+    # Fallback PDF reader for docling — see the module docstring.
+    parser.add_argument("--pdf-backend", dest="pdf_backend", default="default", choices=list(PDF_BACKENDS))
     args = parser.parse_args()
 
     in_path = Path(args.in_path)
@@ -590,19 +729,34 @@ def main() -> int:
             emit({"type": "error", "message": str(err)})
             return 1
 
+    # A truncated PDF must be rejected before any converter sees it: docling
+    # reports SUCCESS on it with pages missing. Applies to every --tool and to
+    # --dry-run, and runs before the first progress event.
+    pdf_pages = 0
+    if in_path.suffix.lower() == PDF_EXT:
+        try:
+            pdf_pages = pdf_open_check(in_path)
+        except PdfDamagedError as err:
+            print(f"pdf_open_check: {err}", file=sys.stderr)
+            emit({"type": "error", "code": "PDF_DAMAGED", "message": PDF_DAMAGED_MESSAGE})
+            return 1
+
     # Aşama 7: emitted before the (potentially many-minutes-long) conversion
     # call, not after — a caller sizing a timeout or showing an ETA needs
     # the page count before that call blocks, not once it's already done.
     if in_path.suffix.lower() == PDF_EXT:
-        emit({"type": "progress", "stage": "converting", "pageCount": pdf_page_count(in_path)})
+        emit({"type": "progress", "stage": "converting", "pageCount": pdf_pages})
     else:
         emit({"type": "progress", "stage": "converting"})
 
     try:
         if args.tool == "auto":
-            text, converted_by = route_auto(in_path, page_range=page_range)
+            text, converted_by = route_auto(in_path, page_range=page_range, pdf_backend=args.pdf_backend)
         else:
-            text, converted_by = route_explicit(in_path, args.tool, page_range=page_range)
+            text, converted_by = route_explicit(in_path, args.tool, page_range=page_range, pdf_backend=args.pdf_backend)
+    except PdfDamagedError as err:
+        emit({"type": "error", "code": "PDF_DAMAGED", "message": f"{PDF_DAMAGED_MESSAGE} ({err})"})
+        return 1
     except Exception as err:  # noqa: BLE001 — surfaced to the caller as a clean message either way
         emit({"type": "error", "message": str(err)})
         return 1
@@ -658,6 +812,15 @@ def main() -> int:
     # not something to present as if it were the note's real title.
     if is_md and existing_md_title is None and not re.search(r"^#\s+\S", text, re.MULTILINE):
         warnings.append("Başlık kaynak dosyada bulunamadı, dosya adından türetildi.")
+    if converted_by == "docling" and _COLUMN_REPAIRED_PAGES:
+        warnings.append(
+            "Sütun sırası düzeltildi (docling okuma sırası): sayfa "
+            + ", ".join(str(n) for n in _COLUMN_REPAIRED_PAGES)
+        )
+    if converted_by == "docling" and _HYBRID_BACKEND_USED[0]:
+        warnings.append(HYBRID_BACKEND_WARNING)
+    if converted_by == "docling" and _DOCLING_ERRORS:
+        warnings.append("docling bazı sayfalarda hata bildirdi: " + "; ".join(_DOCLING_ERRORS[:3]))
     if warnings and not frontmatter.get("needs_review"):
         frontmatter["needs_review"] = True
 

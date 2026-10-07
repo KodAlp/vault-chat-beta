@@ -7,6 +7,8 @@ import { resolvePandocBin } from './pandoc-bin';
 import { resolvePythonBin, defaultPythonDeps } from './python-bin';
 import { dataDir } from './env';
 import { evictForExclusiveJob } from './gpu-evict';
+import { forwardedConvertCode } from './convert-error-codes';
+import { isNativeCrash, runWithCrashRetry, type AttemptOutcome } from './convert-crash';
 
 function safeDataDir(): string | null {
 	try {
@@ -19,7 +21,7 @@ function safeDataDir(): string | null {
 export type ConvertEvent =
 	| { type: 'progress'; stage: string; pageCount?: number; estimatedSeconds?: number }
 	| { type: 'done'; outPath: string | null; frontmatter: Record<string, unknown>; warnings: string[] }
-	| { type: 'error'; message: string };
+	| { type: 'error'; message: string; code?: string };
 
 /**
  * A bare 'python' resolved via PATH lookup inside spawn() can land on the
@@ -98,6 +100,11 @@ function pdfEstimatedSeconds(pageCount: number): number {
  * Runs one conversion (never in parallel — see queue below). Rejects with a
  * readable message on failure; never leaves the caller staring at a hung
  * process or a raw stack trace.
+ *
+ * A native crash of the converter process (docling-parse #357, see
+ * convert-crash.ts) gets exactly one automatic retry inside the same queue
+ * slot, run with `--pdf-backend hybrid` (the fallback PDF reader); a second
+ * crash surfaces as CONVERTER_CRASHED.
  */
 function runConvert(
 	inPath: string,
@@ -107,6 +114,35 @@ function runConvert(
 	sourceName?: string,
 	pages?: string
 ): Promise<ConvertEvent & { type: 'done' }> {
+	return runWithCrashRetry(
+		(attemptNumber) =>
+			runConvertAttempt(
+				inPath,
+				outDir,
+				tool,
+				onEvent,
+				sourceName,
+				pages,
+				attemptNumber === 1 ? 'hybrid' : undefined
+			),
+		(crashDetail) => {
+			// Keep the diagnosis: the user only ever sees the retry notice.
+			console.warn(`[convert] converter crashed, retrying once with the fallback PDF backend: ${crashDetail}`);
+			onEvent?.({ type: 'progress', stage: 'retrying' });
+		}
+	);
+}
+
+/** One spawn of convert.py, classified into done / error / native crash. */
+function runConvertAttempt(
+	inPath: string,
+	outDir: string,
+	tool: string,
+	onEvent?: (event: ConvertEvent) => void,
+	sourceName?: string,
+	pages?: string,
+	pdfBackend?: 'hybrid'
+): Promise<AttemptOutcome<ConvertEvent & { type: 'done' }>> {
 	return new Promise((resolve, reject) => {
 		const bin = pythonBin();
 		const args = [CONVERT_PY, '--in', inPath, '--out-dir', outDir, '--tool', tool];
@@ -118,6 +154,9 @@ function runConvert(
 		if (sourceName) args.push('--source-name', sourceName);
 		// #37 — see convert.py's parse_page_range for the "START-END" format.
 		if (pages) args.push('--pages', pages);
+		// Fallback PDF reader, only for the retry after a native crash — see
+		// convert.py's module docstring (--pdf-backend).
+		if (pdfBackend) args.push('--pdf-backend', pdfBackend);
 		// convert.py's convert_with_pandoc/pandoc_not_installed_message check
 		// PANDOC_BIN before falling back to a bare 'pandoc' PATH lookup — same
 		// stale-server-PATH bug as pythonBin() above, see pandoc-bin.ts's doc
@@ -132,6 +171,7 @@ function runConvert(
 
 		let lastDone: (ConvertEvent & { type: 'done' }) | null = null;
 		let lastError: string | null = null;
+		let lastErrorCode: ReturnType<typeof forwardedConvertCode> = null;
 		let timedOut = false;
 		let currentTimeoutMs = PROCESS_TIMEOUT_MS;
 
@@ -165,7 +205,10 @@ function runConvert(
 			}
 			onEvent?.(event);
 			if (event.type === 'done') lastDone = event;
-			if (event.type === 'error') lastError = event.message;
+			if (event.type === 'error') {
+				lastError = event.message;
+				lastErrorCode = forwardedConvertCode(event.code);
+			}
 		});
 
 		let stderr = '';
@@ -178,7 +221,7 @@ function runConvert(
 			reject(new AppError('PYTHON_SPAWN_FAILED', { detail: err.message }));
 		});
 
-		child.on('exit', (code) => {
+		child.on('exit', (code, signal) => {
 			clearTimeout(timer);
 			if (timedOut) {
 				// Checked first — a killed process exits with lastDone/lastError
@@ -186,13 +229,28 @@ function runConvert(
 				// process finished writing its `done` line just as the timer
 				// fired) and would otherwise report success on a run that was
 				// actually killed for running too long.
-				reject(new AppError('PROCESS_TIMEOUT', { seconds: Math.round(currentTimeoutMs / 1000) }));
+				resolve({
+					kind: 'error',
+					error: new AppError('PROCESS_TIMEOUT', { seconds: Math.round(currentTimeoutMs / 1000) })
+				});
 			} else if (lastDone) {
-				resolve(lastDone);
+				// Also covers a crash AFTER `done` (the process dying while it shuts
+				// down) — the result was already delivered, so it counts as success.
+				resolve({ kind: 'done', value: lastDone });
 			} else if (lastError) {
-				reject(new AppError('CONVERSION_FAILED', { detail: lastError }));
+				// Only allow-listed codes pass through; anything else Python sends
+				// stays a generic CONVERSION_FAILED.
+				resolve({
+					kind: 'error',
+					error: new AppError(lastErrorCode ?? 'CONVERSION_FAILED', lastErrorCode ? undefined : { detail: lastError })
+				});
+			} else if (isNativeCrash(code, signal)) {
+				resolve({ kind: 'crash', detail: `exit ${code ?? signal}: ${stderr.slice(-300) || 'no stderr'}` });
 			} else {
-				reject(new AppError('CONVERSION_FAILED', { detail: `exit ${code}: ${stderr.slice(0, 500) || 'bilinmeyen hata'}` }));
+				resolve({
+					kind: 'error',
+					error: new AppError('CONVERSION_FAILED', { detail: `exit ${code}: ${stderr.slice(0, 500) || 'bilinmeyen hata'}` })
+				});
 			}
 		});
 	});
