@@ -8,6 +8,7 @@ import { resolvePythonBin, defaultPythonDeps } from './python-bin';
 import { dataDir } from './env';
 import { evictForExclusiveJob } from './gpu-evict';
 import { forwardedConvertCode } from './convert-error-codes';
+import { isNativeCrash, runWithCrashRetry, type AttemptOutcome } from './convert-crash';
 
 function safeDataDir(): string | null {
 	try {
@@ -99,6 +100,10 @@ function pdfEstimatedSeconds(pageCount: number): number {
  * Runs one conversion (never in parallel — see queue below). Rejects with a
  * readable message on failure; never leaves the caller staring at a hung
  * process or a raw stack trace.
+ *
+ * A native crash of the converter process (docling-parse #357, see
+ * convert-crash.ts) gets exactly one automatic retry inside the same queue
+ * slot; a second crash surfaces as CONVERTER_CRASHED.
  */
 function runConvert(
 	inPath: string,
@@ -108,6 +113,25 @@ function runConvert(
 	sourceName?: string,
 	pages?: string
 ): Promise<ConvertEvent & { type: 'done' }> {
+	return runWithCrashRetry(
+		() => runConvertAttempt(inPath, outDir, tool, onEvent, sourceName, pages),
+		(crashDetail) => {
+			// Keep the diagnosis: the user only ever sees the retry notice.
+			console.warn(`[convert] converter crashed, retrying once: ${crashDetail}`);
+			onEvent?.({ type: 'progress', stage: 'retrying' });
+		}
+	);
+}
+
+/** One spawn of convert.py, classified into done / error / native crash. */
+function runConvertAttempt(
+	inPath: string,
+	outDir: string,
+	tool: string,
+	onEvent?: (event: ConvertEvent) => void,
+	sourceName?: string,
+	pages?: string
+): Promise<AttemptOutcome<ConvertEvent & { type: 'done' }>> {
 	return new Promise((resolve, reject) => {
 		const bin = pythonBin();
 		const args = [CONVERT_PY, '--in', inPath, '--out-dir', outDir, '--tool', tool];
@@ -183,7 +207,7 @@ function runConvert(
 			reject(new AppError('PYTHON_SPAWN_FAILED', { detail: err.message }));
 		});
 
-		child.on('exit', (code) => {
+		child.on('exit', (code, signal) => {
 			clearTimeout(timer);
 			if (timedOut) {
 				// Checked first — a killed process exits with lastDone/lastError
@@ -191,15 +215,28 @@ function runConvert(
 				// process finished writing its `done` line just as the timer
 				// fired) and would otherwise report success on a run that was
 				// actually killed for running too long.
-				reject(new AppError('PROCESS_TIMEOUT', { seconds: Math.round(currentTimeoutMs / 1000) }));
+				resolve({
+					kind: 'error',
+					error: new AppError('PROCESS_TIMEOUT', { seconds: Math.round(currentTimeoutMs / 1000) })
+				});
 			} else if (lastDone) {
-				resolve(lastDone);
+				// Also covers a crash AFTER `done` (the process dying while it shuts
+				// down) — the result was already delivered, so it counts as success.
+				resolve({ kind: 'done', value: lastDone });
 			} else if (lastError) {
 				// Only allow-listed codes pass through; anything else Python sends
 				// stays a generic CONVERSION_FAILED.
-				reject(new AppError(lastErrorCode ?? 'CONVERSION_FAILED', lastErrorCode ? undefined : { detail: lastError }));
+				resolve({
+					kind: 'error',
+					error: new AppError(lastErrorCode ?? 'CONVERSION_FAILED', lastErrorCode ? undefined : { detail: lastError })
+				});
+			} else if (isNativeCrash(code, signal)) {
+				resolve({ kind: 'crash', detail: `exit ${code ?? signal}: ${stderr.slice(-300) || 'no stderr'}` });
 			} else {
-				reject(new AppError('CONVERSION_FAILED', { detail: `exit ${code}: ${stderr.slice(0, 500) || 'bilinmeyen hata'}` }));
+				resolve({
+					kind: 'error',
+					error: new AppError('CONVERSION_FAILED', { detail: `exit ${code}: ${stderr.slice(0, 500) || 'bilinmeyen hata'}` })
+				});
 			}
 		});
 	});

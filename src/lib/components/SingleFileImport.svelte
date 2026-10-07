@@ -49,6 +49,7 @@
 		queued: t('ImportFlow.stageQueued'),
 		converting: t('ImportFlow.stageConverting'),
 		postprocessing: t('ImportFlow.stagePostprocessing'),
+		retrying: t('ImportFlow.stageRetrying'),
 		fetching: t('ImportFlow.stageFetching'),
 		parsing: t('ImportFlow.stageParsing')
 	});
