@@ -1066,6 +1066,7 @@
     "UNSUPPORTED_FILE_TYPE": "Tipo de archivo no admitido: {ext}",
     "CONVERSION_EMPTY": "La conversión no produjo ninguna salida",
     "CONVERSION_FAILED": "La conversión falló",
+    "PDF_DAMAGED": "Este PDF parece incompleto o dañado; es posible que la descarga se haya cortado. Vuelve a descargarlo e inténtalo de nuevo.",
     "PROCESS_TIMEOUT": "Se agotó el tiempo del proceso (>{seconds} s)",
     "PYTHON_NOT_FOUND": "No se encontró Python. Instala Python 3 desde python.org y vuelve a intentarlo.",
     "PYTHON_SPAWN_FAILED": "No se pudo iniciar Python",

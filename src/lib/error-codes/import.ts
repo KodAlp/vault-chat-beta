@@ -8,13 +8,16 @@
 // covers both convert.py (documents/PDFs) and extract_web.py (web pages) —
 // both are "a subprocess turned bytes into Markdown and this is how it
 // failed", and a user gains nothing from a name that reveals which script
-// ran. PROCESS_TIMEOUT similarly covers convert.py, extract_web.py and
+// ran. PDF_DAMAGED is the one exception: convert.py reports it (truncated or
+// corrupt PDF) so the user is told to re-download instead of seeing a raw
+// parser message. PROCESS_TIMEOUT similarly covers convert.py, extract_web.py and
 // youtube_transcript.py's shared 120s (or page-aware) child-process budget.
 export const IMPORT_CODES = [
 	'FILE_TOO_LARGE',
 	'UNSUPPORTED_FILE_TYPE',
 	'CONVERSION_EMPTY',
 	'CONVERSION_FAILED',
+	'PDF_DAMAGED',
 	'PROCESS_TIMEOUT',
 	'PYTHON_NOT_FOUND',
 	'PYTHON_SPAWN_FAILED',

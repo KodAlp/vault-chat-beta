@@ -1050,6 +1050,7 @@
     "UNSUPPORTED_FILE_TYPE": "Jenis berkas tidak didukung: {ext}",
     "CONVERSION_EMPTY": "Konversi tidak menghasilkan keluaran",
     "CONVERSION_FAILED": "Konversi gagal",
+    "PDF_DAMAGED": "PDF ini tampak tidak lengkap atau rusak; unduhannya mungkin terputus. Unduh ulang lalu coba lagi.",
     "PROCESS_TIMEOUT": "Waktu proses habis (>{seconds} dtk)",
     "PYTHON_NOT_FOUND": "Python tidak ditemukan. Pasang Python 3 dari python.org, lalu coba lagi.",
     "PYTHON_SPAWN_FAILED": "Gagal menjalankan Python",

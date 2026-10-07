@@ -7,6 +7,7 @@ import { resolvePandocBin } from './pandoc-bin';
 import { resolvePythonBin, defaultPythonDeps } from './python-bin';
 import { dataDir } from './env';
 import { evictForExclusiveJob } from './gpu-evict';
+import { forwardedConvertCode } from './convert-error-codes';
 
 function safeDataDir(): string | null {
 	try {
@@ -19,7 +20,7 @@ function safeDataDir(): string | null {
 export type ConvertEvent =
 	| { type: 'progress'; stage: string; pageCount?: number; estimatedSeconds?: number }
 	| { type: 'done'; outPath: string | null; frontmatter: Record<string, unknown>; warnings: string[] }
-	| { type: 'error'; message: string };
+	| { type: 'error'; message: string; code?: string };
 
 /**
  * A bare 'python' resolved via PATH lookup inside spawn() can land on the
@@ -132,6 +133,7 @@ function runConvert(
 
 		let lastDone: (ConvertEvent & { type: 'done' }) | null = null;
 		let lastError: string | null = null;
+		let lastErrorCode: ReturnType<typeof forwardedConvertCode> = null;
 		let timedOut = false;
 		let currentTimeoutMs = PROCESS_TIMEOUT_MS;
 
@@ -165,7 +167,10 @@ function runConvert(
 			}
 			onEvent?.(event);
 			if (event.type === 'done') lastDone = event;
-			if (event.type === 'error') lastError = event.message;
+			if (event.type === 'error') {
+				lastError = event.message;
+				lastErrorCode = forwardedConvertCode(event.code);
+			}
 		});
 
 		let stderr = '';
@@ -190,7 +195,9 @@ function runConvert(
 			} else if (lastDone) {
 				resolve(lastDone);
 			} else if (lastError) {
-				reject(new AppError('CONVERSION_FAILED', { detail: lastError }));
+				// Only allow-listed codes pass through; anything else Python sends
+				// stays a generic CONVERSION_FAILED.
+				reject(new AppError(lastErrorCode ?? 'CONVERSION_FAILED', lastErrorCode ? undefined : { detail: lastError }));
 			} else {
 				reject(new AppError('CONVERSION_FAILED', { detail: `exit ${code}: ${stderr.slice(0, 500) || 'bilinmeyen hata'}` }));
 			}

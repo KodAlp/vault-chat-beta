@@ -1105,6 +1105,7 @@
 		"UNSUPPORTED_FILE_TYPE": "Desteklenmeyen dosya türü: {ext}",
 		"CONVERSION_EMPTY": "Dönüştürme çıktı üretmedi",
 		"CONVERSION_FAILED": "Dönüştürme başarısız",
+		"PDF_DAMAGED": "PDF eksik ya da bozuk görünüyor; dosya yarım inmiş olabilir. Yeniden indirip deneyin.",
 		"PROCESS_TIMEOUT": "İşlem zaman aşımına uğradı (>{seconds}s)",
 		"PYTHON_NOT_FOUND": "Python bulunamadı. Önce python.org adresinden Python 3 kur, sonra tekrar dene.",
 		"PYTHON_SPAWN_FAILED": "Python başlatılamadı",

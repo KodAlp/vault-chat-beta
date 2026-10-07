@@ -89,6 +89,17 @@ def emit(obj: dict) -> None:
     print(json.dumps(obj), flush=True)
 
 
+class PdfDamagedError(Exception):
+    """The PDF is truncated or corrupt, or a converter returned fewer pages
+    than the file has. Deliberately NOT a RuntimeError: route_auto's S9
+    fallback catches RuntimeError and would hand back the MarkItDown text as
+    a "successful" conversion of a document that is missing pages. This must
+    propagate to main() and become a PDF_DAMAGED error instead."""
+
+
+PDF_DAMAGED_MESSAGE = "PDF eksik ya da bozuk görünüyor; dosya yarım inmiş olabilir. Yeniden indirip deneyin."
+
+
 # A line is "large" when its size exceeds the body size by this factor —
 # same threshold heading_repair.py uses to tell a real heading from a
 # body-size run-in label, reused here for the same reason: it is the one
@@ -187,6 +198,34 @@ def pdf_page_count(path: Path) -> int:
         return len(PdfReader(str(path)).pages)
     except Exception:  # noqa: BLE001 — a page count is a heuristic input, not a result
         return 0
+
+
+def pdf_open_check(path: Path) -> int:
+    """Open the PDF with pypdf and return its page count; PdfDamagedError when
+    it cannot be opened or has no pages. Measured on 1753 intact PDFs: zero
+    false positives, page count identical to pypdfium2. Every truncated file
+    raises PdfStreamError in the PdfReader constructor — docling-parse
+    (#374) does not, and returns SUCCESS with pages missing. pypdf logs
+    through `logging`, whose default handler writes to stderr, so nothing here
+    can pollute the JSON-lines stdout."""
+    try:
+        from pypdf import PdfReader
+
+        count = len(PdfReader(str(path)).pages)
+    except Exception as err:  # noqa: BLE001 — any open failure means unusable
+        raise PdfDamagedError(f"{type(err).__name__}: {err}") from err
+    if count <= 0:
+        raise PdfDamagedError("PDF sayfa içermiyor")
+    return count
+
+
+def expected_page_count(total: int, page_range: tuple[int, int] | None) -> int:
+    """Pages a converter should return for `total` pages and an optional
+    1-indexed inclusive page_range (docling's convention)."""
+    if page_range is None:
+        return total
+    start, end = page_range
+    return max(0, min(end, total) - start + 1)
 
 
 def looks_broken(text: str, page_count: int) -> bool:
@@ -303,6 +342,9 @@ def pdf_has_text_layer(path: Path, sample_pages: int = 10) -> bool:
 # convert_with_docling call; main() turns it into a warning. Module-level so
 # the many call sites that return only the Markdown string stay unchanged.
 _COLUMN_REPAIRED_PAGES: list[int] = []
+# docling's own error messages from the most recent PARTIAL_SUCCESS conversion
+# (shortened); main() turns them into a warning. Same pattern as above.
+_DOCLING_ERRORS: list[str] = []
 
 
 def convert_with_docling(path: Path, page_range: tuple[int, int] | None = None) -> str:
@@ -366,6 +408,23 @@ def convert_with_docling(path: Path, page_range: tuple[int, int] | None = None) 
     )
     convert_kwargs = {"page_range": page_range} if page_range else {}
     result = converter.convert(str(path), **convert_kwargs)
+    # docling-parse (#374) returns SUCCESS with an empty error list for a
+    # truncated PDF, just with pages missing — so the status is no evidence;
+    # compare the page count against what the file itself says it has.
+    got = len(result.pages)
+    expected = expected_page_count(pdf_page_count(path), page_range)
+    if expected > 0 and got < expected:
+        raise PdfDamagedError(f"docling {got}/{expected} sayfa döndürdü")
+    # PARTIAL_SUCCESS (some pages reported errors) is kept: the pages that did
+    # convert are real content; the errors become a warning instead.
+    _DOCLING_ERRORS.clear()
+    if str(getattr(result.status, "name", result.status)) == "PARTIAL_SUCCESS":
+        for item in getattr(result, "errors", None) or []:
+            msg = str(getattr(item, "error_message", item)).strip()
+            if msg:
+                _DOCLING_ERRORS.append(msg[:200])
+        if not _DOCLING_ERRORS:
+            _DOCLING_ERRORS.append("ayrıntı bildirilmedi")
     # docling's reading-order pass sometimes swaps the columns of a two-column
     # page although every bbox is right (column_order.py). A failure here must
     # never fail the conversion: fall back to docling's own order.
@@ -482,6 +541,8 @@ def escalate_pdf(path: Path, page_range: tuple[int, int] | None = None) -> tuple
             return convert(), name
         except ImportError:
             reasons.append(f"{name}: kurulu değil")
+        except PdfDamagedError:
+            raise
         except Exception as err:  # noqa: BLE001 — reported, not swallowed
             reasons.append(f"{name}: {err}")
 
@@ -605,11 +666,23 @@ def main() -> int:
             emit({"type": "error", "message": str(err)})
             return 1
 
+    # A truncated PDF must be rejected before any converter sees it: docling
+    # reports SUCCESS on it with pages missing. Applies to every --tool and to
+    # --dry-run, and runs before the first progress event.
+    pdf_pages = 0
+    if in_path.suffix.lower() == PDF_EXT:
+        try:
+            pdf_pages = pdf_open_check(in_path)
+        except PdfDamagedError as err:
+            print(f"pdf_open_check: {err}", file=sys.stderr)
+            emit({"type": "error", "code": "PDF_DAMAGED", "message": PDF_DAMAGED_MESSAGE})
+            return 1
+
     # Aşama 7: emitted before the (potentially many-minutes-long) conversion
     # call, not after — a caller sizing a timeout or showing an ETA needs
     # the page count before that call blocks, not once it's already done.
     if in_path.suffix.lower() == PDF_EXT:
-        emit({"type": "progress", "stage": "converting", "pageCount": pdf_page_count(in_path)})
+        emit({"type": "progress", "stage": "converting", "pageCount": pdf_pages})
     else:
         emit({"type": "progress", "stage": "converting"})
 
@@ -618,6 +691,9 @@ def main() -> int:
             text, converted_by = route_auto(in_path, page_range=page_range)
         else:
             text, converted_by = route_explicit(in_path, args.tool, page_range=page_range)
+    except PdfDamagedError as err:
+        emit({"type": "error", "code": "PDF_DAMAGED", "message": f"{PDF_DAMAGED_MESSAGE} ({err})"})
+        return 1
     except Exception as err:  # noqa: BLE001 — surfaced to the caller as a clean message either way
         emit({"type": "error", "message": str(err)})
         return 1
@@ -678,6 +754,8 @@ def main() -> int:
             "Sütun sırası düzeltildi (docling okuma sırası): sayfa "
             + ", ".join(str(n) for n in _COLUMN_REPAIRED_PAGES)
         )
+    if converted_by == "docling" and _DOCLING_ERRORS:
+        warnings.append("docling bazı sayfalarda hata bildirdi: " + "; ".join(_DOCLING_ERRORS[:3]))
     if warnings and not frontmatter.get("needs_review"):
         frontmatter["needs_review"] = True
 

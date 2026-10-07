@@ -1050,6 +1050,7 @@
     "UNSUPPORTED_FILE_TYPE": "অসমর্থিত ফাইলের ধরন: {ext}",
     "CONVERSION_EMPTY": "রূপান্তরে কোনো আউটপুট পাওয়া যায়নি",
     "CONVERSION_FAILED": "রূপান্তর ব্যর্থ হয়েছে",
+    "PDF_DAMAGED": "PDF-টি অসম্পূর্ণ বা ক্ষতিগ্রস্ত মনে হচ্ছে; ডাউনলোড হয়তো মাঝপথে থেমে গিয়েছিল। আবার ডাউনলোড করে চেষ্টা করুন।",
     "PROCESS_TIMEOUT": "প্রক্রিয়ার সময় শেষ হয়ে গেছে (>{seconds} সেকেন্ড)",
     "PYTHON_NOT_FOUND": "Python পাওয়া যায়নি। python.org থেকে Python 3 ইনস্টল করুন, তারপর আবার চেষ্টা করুন।",
     "PYTHON_SPAWN_FAILED": "Python চালু করা যায়নি",
