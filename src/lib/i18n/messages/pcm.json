@@ -489,6 +489,11 @@
     "deleting": "E dey delete..."
   },
   "LibraryViewPage": {
+    "reimport": "Import am again",
+    "reimportUnavailable": "Una no fit re-import: dem no keep di original file",
+    "reimportFrom": "Original file: {name}",
+    "reimporting": "E dey re-import…",
+    "reimportReady": "Dem don convert di original file again. Dem neva save am — check am den press Save; di old version go still dey for history.",
     "missingPath": "Dem need di 'path' parameter.",
     "loadFailed": "File no load.",
     "fallbackTitle": "Source",
@@ -1010,6 +1015,8 @@
     "notFoundBody": "Dem fit don delete am."
   },
   "ServerErrors": {
+    "REIMPORT_NO_ORIGINAL": "Una no fit re-import dis note because dem no keep im original file",
+    "REIMPORT_BUSY": "Dem dey re-import dis note already",
     "UNKNOWN": "Error wey we no expect happen",
     "INTERNAL": "Wahala dey for di server",
     "ROUTE_NOT_FOUND": "We no find di page",

@@ -489,6 +489,11 @@
     "deleting": "削除中…"
   },
   "LibraryViewPage": {
+    "reimport": "再インポート",
+    "reimportUnavailable": "再インポートできません：元のファイルが保存されていません",
+    "reimportFrom": "元のファイル：{name}",
+    "reimporting": "再インポート中…",
+    "reimportReady": "元のファイルを再変換しました。まだ保存されていません。内容を確認して「保存」を押してください。以前のバージョンは履歴に残ります。",
     "missingPath": "「path」パラメーターが必要です。",
     "loadFailed": "ファイルを読み込めませんでした。",
     "fallbackTitle": "ソース",
@@ -1010,6 +1015,8 @@
     "notFoundBody": "削除された可能性があります。"
   },
   "ServerErrors": {
+    "REIMPORT_NO_ORIGINAL": "このノートは元のファイルが保存されていないため再インポートできません",
+    "REIMPORT_BUSY": "このノートはすでに再インポート中です",
     "UNKNOWN": "予期しないエラーが発生しました",
     "INTERNAL": "サーバーで問題が発生しました",
     "ROUTE_NOT_FOUND": "ページが見つかりません",
