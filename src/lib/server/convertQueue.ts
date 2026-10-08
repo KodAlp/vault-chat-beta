@@ -86,7 +86,11 @@ const PROCESS_TIMEOUT_MS = 120_000;
 // docling — MarkItDown is far faster in practice, so it only ever gets more
 // slack, never less; Node can't know in advance which tool route_auto will
 // actually pick.
-const DOCLING_BASE_TIMEOUT_MS = 45_000;
+// Base raised 45 -> 90 s (2026-10-08): the timer starts at the pageCount
+// event, BEFORE docling loads its models, and a cold load (models read from
+// disk for the first time in a fresh server) timed a 2-page PDF out at 69 s
+// while the same file converted in 41 s warm.
+const DOCLING_BASE_TIMEOUT_MS = 90_000;
 const DOCLING_MS_PER_PAGE_TIMEOUT = 12_000;
 
 // Optimistic (Ollama-idle) rate for the UI's "yaklaşık N saniye" estimate —
