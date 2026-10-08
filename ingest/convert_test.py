@@ -668,6 +668,29 @@ def test_hf_offline_first() -> None:
     check("_is_hf_offline_miss: plain error is not one", not convert._is_hf_offline_miss(RuntimeError("CUDA out of memory")))
 
 
+def test_ocr_segments() -> None:
+    """Per-page OCR: contiguous textless runs get OCR, the rest do not."""
+    seg = convert.ocr_segments
+    check("ocr_segments: no textless -> one non-OCR segment", seg((1, 12), []) == [(1, 12, False)])
+    check("ocr_segments: cover only", seg((1, 12), [1]) == [(1, 1, True), (2, 12, False)])
+    check("ocr_segments: last page only", seg((1, 12), {12}) == [(1, 11, False), (12, 12, True)])
+    check(
+        "ocr_segments: alternating pages",
+        seg((1, 5), [2, 4]) == [(1, 1, False), (2, 2, True), (3, 3, False), (4, 4, True), (5, 5, False)],
+    )
+    check("ocr_segments: contiguous run is one segment", seg((1, 6), [3, 4]) == [(1, 2, False), (3, 4, True), (5, 6, False)])
+    check("ocr_segments: all pages textless -> one OCR segment", seg((1, 4), [1, 2, 3, 4]) == [(1, 4, True)])
+    check(
+        "ocr_segments: range not starting at 1, outside pages ignored",
+        seg((5, 8), [1, 2, 6, 20]) == [(5, 5, False), (6, 6, True), (7, 8, False)],
+    )
+    check("ocr_segments: range starting on a textless page", seg((3, 6), [3, 4]) == [(3, 4, True), (5, 6, False)])
+    check("ocr_segments: single page", seg((7, 7), [7]) == [(7, 7, True)] and seg((7, 7), []) == [(7, 7, False)])
+    check("ocr_segments: segments tile the range exactly", all(
+        a[1] + 1 == b[0] for a, b in zip(seg((1, 30), [2, 3, 9, 30]), seg((1, 30), [2, 3, 9, 30])[1:])
+    ))
+
+
 def test_textless_warning() -> None:
     w = convert.textless_warning
     check("textless_warning: docling + OCR ran -> OCR ile okundu", "OCR ile okundu" in (w("docling", [2], True) or ""))
@@ -746,5 +769,6 @@ if __name__ == "__main__":
     test_hf_offline_first()
     test_textless_pages()
     test_textless_warning()
+    test_ocr_segments()
     print(f"\n{len(failures)} başarısız" if failures else "\nhepsi geçti")
     sys.exit(1 if failures else 0)
