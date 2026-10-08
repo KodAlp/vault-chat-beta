@@ -33,6 +33,16 @@ py-asciimath==0.3.0
 # directly.
 pypdf==6.14.2
 
+# pdf_tounicode.py: reads glyph names from the embedded fonts of old TeX PDFs
+# (CFF tables via fontTools.cffLib, Adobe Glyph List via fontTools.agl) to give
+# them a correct /ToUnicode before conversion. Pure Python wheel. Pinned under
+# its canonical casing on purpose: src/lib/server/pythonModules.ts derives the
+# import name from this file by replacing "-" with "_", and the import name is
+# "fontTools" (a lower-case "fonttools" line would be checked as "fonttools"
+# and always look missing). Without it the repair degrades (fewer glyph names
+# resolve), it never fails the conversion.
+fontTools==4.63.0
+
 # Marker and Docling are implemented in convert.py but stay OPTIONAL: they pull
 # PyTorch and multi-GB model weights, and the user's RAM belongs to Ollama
 # first (.claude/skills/source-ingest/SKILL.md). convert.py detects their
