@@ -76,6 +76,7 @@ from typing import Callable
 import images
 import pdf_tounicode
 from column_order import repair_document_order
+from reading_order import repair_reading_order
 from heading_repair import body_size, read_text_layer, repair_headings, restructure_headings
 from postprocess import _apply_outside_verbatim, postprocess, quality_warnings
 
@@ -692,6 +693,11 @@ def pdf_has_text_layer(path: Path, sample_pages: int = 10) -> bool:
 # convert_with_docling call; main() turns it into a warning. Module-level so
 # the many call sites that return only the Markdown string stay unchanged.
 _COLUMN_REPAIRED_PAGES: list[int] = []
+# Same pattern for reading_order.py: pages whose order it repaired, and pages
+# that still disagree with both independent references after the gate refused
+# them (a warning only — the order is left as docling produced it).
+_READING_REPAIRED_PAGES: list[int] = []
+_READING_SUSPICIOUS_PAGES: list[int] = []
 # docling's own error messages from the most recent PARTIAL_SUCCESS conversion
 # (shortened); main() turns them into a warning. Same pattern as above.
 _DOCLING_ERRORS: list[str] = []
@@ -851,6 +857,18 @@ def convert_with_docling(
         _COLUMN_REPAIRED_PAGES.extend(repair_document_order(result.document))
     except Exception as err:  # noqa: BLE001 — repair is best-effort
         print(f"column_order: onarım atlandı: {err}", file=sys.stderr)
+    # Short left-aligned lines between centred display formulas get sorted
+    # after unrelated blocks (reading_order.py). `path` is the file docling
+    # actually read (the TeX-patched copy when there is one), so its text
+    # stream matches docling's page geometry. Best-effort like the pass above.
+    _READING_REPAIRED_PAGES.clear()
+    _READING_SUSPICIOUS_PAGES.clear()
+    try:
+        repaired, suspicious = repair_reading_order(result.document, path)
+        _READING_REPAIRED_PAGES.extend(repaired)
+        _READING_SUSPICIOUS_PAGES.extend(suspicious)
+    except Exception as err:  # noqa: BLE001 — repair is best-effort
+        print(f"reading_order: onarım atlandı: {err}", file=sys.stderr)
     if images.COLLECTOR.enabled:
         try:
             md = images.docling_markdown_with_tokens(result.document)
@@ -1276,6 +1294,10 @@ def main() -> int:
             "Sütun sırası düzeltildi (docling okuma sırası): sayfa "
             + ", ".join(str(n) for n in _COLUMN_REPAIRED_PAGES)
         )
+    if converted_by == "docling" and _READING_SUSPICIOUS_PAGES:
+        warnings.append(
+            f"Okuma sırası şüpheli: sayfa {_page_list(_READING_SUSPICIOUS_PAGES)} — kaynakla karşılaştırın."
+        )
     if converted_by == "docling" and _HYBRID_BACKEND_USED[0]:
         warnings.append(HYBRID_BACKEND_WARNING)
     if converted_by == "docling" and _DOCLING_ERRORS:
@@ -1286,6 +1308,8 @@ def main() -> int:
     # decision so it does not flag an otherwise clean note for review.
     if tex_fix["fonts"]:
         warnings.append(f"{tex_fix['fonts']} yazı tipinin karakter eşlemesi onarıldı (eski TeX PDF'i)")
+    if converted_by == "docling" and _READING_REPAIRED_PAGES:
+        warnings.append(f"Okuma sırası düzeltildi (docling): sayfa {_page_list(_READING_REPAIRED_PAGES)}")
 
     # E5: the idempotency key and provenance record for the WHOLE pipeline
     # (knowledge-editor's schemas/frontmatter.yaml documents source_sha256
