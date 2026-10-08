@@ -457,8 +457,13 @@ export function normalizeFrontmatter(
 	return { frontmatter, needsReview };
 }
 
+/**
+ * Library notes are always written with LF. gray-matter emits the frontmatter
+ * with LF but keeps the body's own line endings, so a CRLF source (any file
+ * saved on Windows) would otherwise come out with mixed line endings.
+ */
 export function stringifyNote(body: string, frontmatter: Record<string, unknown>): string {
-	return matter.stringify(body, frontmatter);
+	return matter.stringify(body.replace(/\r\n?/g, '\n'), frontmatter);
 }
 
 // ---------------------------------------------------------------------------
