@@ -94,6 +94,12 @@ def test_warnings() -> None:
         "clean document is silent",
         quality_warnings("# Ok\n\n## Bir\n\npara\n\n## Iki\n\npara\n", is_pdf=True) == [],
     )
+    bad = "# Ok\n\n## Bir\n\nf" + chr(0xFFFD) + "(a) ve g" + chr(0xFFFD) + "\n"
+    check(
+        "U+FFFD residue warns for PDFs only",
+        any("bozuk karakter" in w and w.startswith("2 ") for w in quality_warnings(bad, is_pdf=True))
+        and not any("bozuk karakter" in w for w in quality_warnings(bad, is_pdf=False)),
+    )
     check(
         "oversize atomic block detected",
         any("2048" in w for w in quality_warnings("# Ok\n\n$$ " + "x" * 3000 + " $$\n", is_pdf=True)),

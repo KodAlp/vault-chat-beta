@@ -203,6 +203,16 @@ def quality_warnings(text: str, *, is_pdf: bool) -> list[str]:
             "metnin bir kısmı (çoğunlukla formüller) kayıp olabilir"
         )
 
+    # Old TeX PDFs (CMSY/CMMI fonts embedded without /ToUnicode) make every
+    # extractor emit U+FFFD for primes, Delta etc. (measured 2026-10-08: 67 of
+    # 702 course PDFs). The note otherwise reads as clean, so say it plainly.
+    bad_chars = text.count("\ufffd") if is_pdf else 0
+    if bad_chars:
+        warnings.append(
+            f"{bad_chars} bozuk karakter (\ufffd) kaldı: kaynak PDF'te yazı tipi eşlemesi eksik "
+            "(genelde eski TeX yazı tipleri); bu yerleri kaynakla karşılaştırın."
+        )
+
     if is_pdf and len(lines) > 200 and not re.search(r"^##\s", text, re.MULTILINE):
         warnings.append(
             "hiç ## başlığı yok — indeksleyici tüm dosyayı tek bir bölüm olarak "
