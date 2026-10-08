@@ -28,8 +28,19 @@ export const PROCESS_TIMEOUT_MS = 120_000;
 // event, BEFORE docling loads its models, and a cold load (models read from
 // disk for the first time in a fresh server) timed a 2-page PDF out at 69 s
 // while the same file converted in 41 s warm.
+// Per-page 12 -> 40 s (2026-10-09): the Notebook Fizik run timed out three
+// formula-dense arXiv papers in a row (10/40/47 pages at 90+12 s/page) with
+// the GPU free and no chat model loaded — dense math pages run well past 15
+// s/page in formula enrichment. There is no per-page progress event to time a
+// stall instead, so the total budget has to cover the slowest real page rate.
+// VC_PDF_TIMEOUT_PER_PAGE_MS overrides it without a rebuild.
 const DOCLING_BASE_TIMEOUT_MS = 90_000;
-const DOCLING_MS_PER_PAGE_TIMEOUT = 12_000;
+const DEFAULT_MS_PER_PAGE_TIMEOUT = 40_000;
+
+function msPerPageTimeout(): number {
+	const raw = Number(process.env.VC_PDF_TIMEOUT_PER_PAGE_MS);
+	return Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_MS_PER_PAGE_TIMEOUT;
+}
 
 // Optimistic (Ollama-idle) rate for the UI's "yaklaşık N saniye" estimate —
 // a different number than the timeout above on purpose: most uploads don't
@@ -39,7 +50,7 @@ const DOCLING_BASE_ESTIMATE_MS = 15_000;
 const DOCLING_MS_PER_PAGE_ESTIMATE = 4_000;
 
 export function pdfTimeoutMs(pageCount: number): number {
-	return DOCLING_BASE_TIMEOUT_MS + pageCount * DOCLING_MS_PER_PAGE_TIMEOUT;
+	return DOCLING_BASE_TIMEOUT_MS + pageCount * msPerPageTimeout();
 }
 
 export function pdfEstimatedSeconds(pageCount: number): number {

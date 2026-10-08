@@ -499,3 +499,18 @@ test('releaseConverterWorker: delegates to the registered worker, no-op without 
 		setSharedConvertWorker(null);
 	}
 });
+
+test('pdfTimeoutMs: VC_PDF_TIMEOUT_PER_PAGE_MS overrides the per-page budget, junk falls back', () => {
+	const prev = process.env.VC_PDF_TIMEOUT_PER_PAGE_MS;
+	try {
+		delete process.env.VC_PDF_TIMEOUT_PER_PAGE_MS;
+		assert.equal(pdfTimeoutMs(10), 90_000 + 10 * 40_000);
+		process.env.VC_PDF_TIMEOUT_PER_PAGE_MS = '60000';
+		assert.equal(pdfTimeoutMs(10), 90_000 + 10 * 60_000);
+		process.env.VC_PDF_TIMEOUT_PER_PAGE_MS = 'abc';
+		assert.equal(pdfTimeoutMs(10), 90_000 + 10 * 40_000);
+	} finally {
+		if (prev === undefined) delete process.env.VC_PDF_TIMEOUT_PER_PAGE_MS;
+		else process.env.VC_PDF_TIMEOUT_PER_PAGE_MS = prev;
+	}
+});
