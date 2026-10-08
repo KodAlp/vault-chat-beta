@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Conversion sidecar — CLI contract owned by the source-ingest skill doc:
 
-    python ingest/convert.py --in <file> --out-dir <dir> --tool auto|markitdown|marker|docling|pandoc [--dry-run] [--source-name <name>] [--pages START-END] [--pdf-backend default|hybrid]
+    python ingest/convert.py --in <file> --out-dir <dir> --tool auto|markitdown|marker|docling|pandoc [--dry-run] [--source-name <name>] [--pages START-END] [--pdf-backend default|hybrid] [--no-images]
 
 JSON-lines progress on stdout, one object per line:
     {"type": "progress", "stage": "..."}
-    {"type": "done", "outPath": "...", "warnings": [...]}
+    {"type": "done", "outPath": "...", "warnings": [...], "images": ["<sha16>.png", ...], "imageStats": {...}}
     {"type": "error", "message": "..."}
 
 Marker and Docling are implemented but remain optional heavy extras (PyTorch,
@@ -14,6 +14,17 @@ one that is not installed, or auto-routing a PDF that needs it, reports a clear
 "not installed" message instead of crashing or silently emitting garbage.
 Detection is by ImportError at call time, not a hardcoded capability flag, so
 installing them later needs no change here.
+
+PDF routing under `--tool auto` (2026-10-07, measured on 5 real PDFs): on a
+machine with a GPU (CUDA/MPS) docling runs FIRST and MarkItDown is only the
+fallback; without one, MarkItDown runs first and escalates when its output
+looks broken or a page has no text layer. `VC_PDF_PRIMARY=docling|markitdown`
+overrides the choice. See route_auto for the numbers behind it. PPTX/DOCX/XLSX
+stay MarkItDown-first.
+
+Hugging Face is offline-first for docling/marker (see hf_offline_first): the
+models are already in the local cache, and without the flag every conversion
+process still made network requests to huggingface.co.
 
 --source-name (2026-09-23, E5/K2-5): every caller (upload, batch upload, link
 import) stages the input under a generic name (`original.pdf`) before calling
@@ -31,6 +42,21 @@ at a measured quality/speed cost. Only the docling path reads it. With
 automatically; the caller (convertQueue.ts) passes `hybrid` itself on the
 second attempt after a native crash. A conversion that used hybrid carries a
 warning (hence needs_review).
+
+Images (2026-10-07; see images.py for the full design): pictures in docling
+PDFs, PPTX and DOCX are written to `<out-dir>/images/<sha16>.<ext>` and the
+Markdown refers to them as `images/<sha16>.<ext>`; the `done` event lists the
+file names (`images`) and the per-filter counts (`imageStats`). Every kept
+picture is a three-line block, and the HTML comment is the hook a future VLM
+pass uses to find it and insert/replace the description line:
+
+    ![<alt>](images/<sha16>.<ext>)
+    <!-- vc:gorsel <sha16> -->
+    *Görsel:* <author alt text>      (only when trustworthy text exists)
+
+--no-images turns all of it off (the old output: docling placeholders, no
+PPTX/DOCX pictures). The Node side moves the files into the vault's
+_meta/attachments/ and rewrites the links (src/lib/server/converted-images.ts).
 """
 from __future__ import annotations
 
@@ -45,6 +71,7 @@ import sys
 from pathlib import Path
 from typing import Callable
 
+import images
 from column_order import repair_document_order
 from heading_repair import body_size, read_text_layer, repair_headings, restructure_headings
 from postprocess import _apply_outside_verbatim, postprocess, quality_warnings
@@ -209,6 +236,111 @@ def pdf_page_count(path: Path) -> int:
         return 0
 
 
+# Pages with fewer extracted characters than this count as "no text layer".
+TEXTLESS_MIN_CHARS = 20
+_TEXTLESS_CACHE: dict[tuple[str, int, int], list[int]] = {}
+
+
+def textless_pages(path: Path, min_chars: int = TEXTLESS_MIN_CHARS) -> list[int]:
+    """1-indexed IMAGE-ONLY pages: extractable text shorter than `min_chars`
+    after strip AND at least one image object (a scan). A truly blank page (a
+    separator page in a book) has neither and is not reported — flagging it
+    produced false "no text layer" warnings and needless escalation.
+    looks_broken() judges the whole
+    document, so a 2-page PDF whose page 2 was a scanned image (0 chars) came
+    back as the cover page alone, status ready, no warning (2026-10-07).
+
+    pypdfium2 first (a docling dependency, ~2.7 ms/page measured: 18 p in 0.06 s,
+    769 p in 2.1 s), pypdf as the fallback. No page cap: even a 1200-page book
+    costs ~3 s against minutes of conversion. Any error -> [] (a heuristic
+    input, never a reason to fail a conversion). Cached per process so main()
+    and route_auto() do not scan twice.
+    """
+    try:
+        st = path.stat()
+        key = (str(path.resolve()), st.st_mtime_ns, st.st_size)
+    except OSError:
+        return []
+    if key in _TEXTLESS_CACHE and min_chars == TEXTLESS_MIN_CHARS:
+        return list(_TEXTLESS_CACHE[key])
+    result: list[int] = []
+    try:
+        import pypdfium2 as pdfium
+
+        pdf = pdfium.PdfDocument(str(path))
+        try:
+            for i in range(len(pdf)):
+                page = pdf[i]
+                try:
+                    textpage = page.get_textpage()
+                    try:
+                        text = textpage.get_text_range()
+                    finally:
+                        textpage.close()
+                    # 3 == FPDF_PAGEOBJ_IMAGE; only looked up for short pages.
+                    has_image = len(text.strip()) < min_chars and any(
+                        True for _ in page.get_objects(filter=[3])
+                    )
+                finally:
+                    page.close()
+                if has_image:
+                    result.append(i + 1)
+        finally:
+            pdf.close()
+    except Exception:  # noqa: BLE001 — try pypdf below
+        try:
+            from pypdf import PdfReader
+
+            result = []
+            for i, p in enumerate(PdfReader(str(path)).pages):
+                if len((p.extract_text() or "").strip()) >= min_chars:
+                    continue
+                try:
+                    has_image = len(p.images) > 0
+                except Exception:  # noqa: BLE001 — unknown = do not flag
+                    has_image = False
+                if has_image:
+                    result.append(i + 1)
+        except Exception:  # noqa: BLE001 — a heuristic input, not a result
+            return []
+    if min_chars == TEXTLESS_MIN_CHARS:
+        _TEXTLESS_CACHE[key] = list(result)
+    return result
+
+
+def textless_pages_in_scope(path: Path, page_range: tuple[int, int] | None) -> list[int]:
+    """textless_pages restricted to the pages actually converted (--pages)."""
+    pages = textless_pages(path)
+    if page_range is None:
+        return pages
+    start, end = page_range
+    return [n for n in pages if start <= n <= end]
+
+
+def accelerator_available() -> bool:
+    """True when torch can see a CUDA or Apple MPS device. Any import or
+    runtime error means False (docling would not be usable at a sane speed)."""
+    try:
+        import torch
+
+        if torch.cuda.is_available():
+            return True
+        mps = getattr(torch.backends, "mps", None)
+        return bool(mps is not None and mps.is_available())
+    except Exception:  # noqa: BLE001 — no torch / broken install = no accelerator
+        return False
+
+
+def pdf_primary_tool() -> str:
+    """Which converter runs FIRST for a PDF under --tool auto: "docling" or
+    "markitdown". VC_PDF_PRIMARY overrides; anything else/unset = auto by
+    accelerator (docling costs 23-79 s/page on CPU, ~3 s/page on GPU)."""
+    forced = os.environ.get("VC_PDF_PRIMARY", "").strip().lower()
+    if forced in ("docling", "markitdown"):
+        return forced
+    return "docling" if accelerator_available() else "markitdown"
+
+
 def pdf_open_check(path: Path) -> int:
     """Open the PDF with pypdf and return its page count; PdfDamagedError when
     it cannot be opened or has no pages. Measured on 1753 intact PDFs: zero
@@ -273,12 +405,146 @@ def demote_slide_headings(text: str) -> str:
     return _apply_outside_verbatim(text, lambda chunk: _H1_LINE.sub(lambda m: f"## {m.group(1)}", chunk))
 
 
+_SLIDE_MARKER = re.compile(r"^<!--\s*Slide number:\s*(\d+)\s*-->\s*$")
+_NOTES_HEADING = re.compile(r"^#{1,6}[ \t]*Notes:?[ \t]*$")
+_FENCE_LINE = re.compile(r"^\s*(```|~~~)")
+# A repeated line must be on this share of slides AND on at least this many.
+_BOILERPLATE_SHARE = 0.6
+_BOILERPLATE_MIN_SLIDES = 4
+_BOILERPLATE_MAX_CHARS = 200
+
+
+def clean_pptx_noise(text: str) -> tuple[str, dict]:
+    """Strips MarkItDown's PPTX-specific noise (measured on the Gradyan İniş
+    deck): an empty `### Notes:` after every slide that merely has a notes
+    slide, the bare slide-number line, and the footer repeated on every slide.
+
+    Why the Notes heading matters beyond clutter: on a deck whose first slide
+    has no title shape it was the FIRST heading of the whole document, so
+    postprocess.fix_heading_jumps lifted `###` to `#` (previous level 0, so
+    at most level 1): the note was titled "Notes:" and every later Notes
+    heading cascaded to `##`, `###`. Non-empty notes keep their text under a
+    plain bold label so they can never become a heading or the title.
+
+    Fence-aware (a slide may show code as plain text) and marker-safe: the
+    `<!-- Slide number: N -->` comments and images.py's `<!-- vc:... -->`
+    tokens/markers are never touched. Returns (text, stats)."""
+    stats = {"notes_removed": 0, "notes_relabeled": 0, "slide_numbers": 0, "footers": 0}
+    lines = text.split("\n")
+    # One entry per slide marker: (slide number, indexes of its lines).
+    sections: list[tuple[int, list[int]]] = []
+    in_fence = False
+    for i, line in enumerate(lines):
+        if _FENCE_LINE.match(line):
+            in_fence = not in_fence
+        m = None if in_fence else _SLIDE_MARKER.match(line)
+        if m:
+            sections.append((int(m.group(1)), [i]))
+        elif sections:
+            sections[-1][1].append(i)
+    if not sections:  # no slide markers at all: not a MarkItDown deck
+        return text, stats
+
+    def next_to_number(idxs: list[int], i: int) -> bool:
+        # A code listing's line-number gutter (1, 2, ... 24 as separate
+        # lines, measured in slides.04) also contains the slide's own number;
+        # a real slide-number box stands alone, so a bare-integer neighbour
+        # means "content", not footer.
+        pos = idxs.index(i)
+        before = [lines[j].strip() for j in idxs[:pos] if lines[j].strip()]
+        after = [lines[j].strip() for j in idxs[pos + 1 :] if lines[j].strip()]
+        return bool((before and before[-1].isdigit()) or (after and after[0].isdigit()))
+
+    drop: set[int] = set()
+    replace: dict[int, str] = {}
+    body_of: list[list[int]] = []  # per slide: candidate lines for the footer pass
+    for number, idxs in sections:
+        in_fence = False
+        notes_at = None
+        body: list[int] = []
+        for i in idxs[1:]:  # idxs[0] is the marker comment itself
+            line = lines[i]
+            if _FENCE_LINE.match(line):
+                in_fence = not in_fence
+                continue
+            if in_fence or notes_at is not None:
+                continue
+            if _NOTES_HEADING.match(line.strip()):
+                notes_at = i
+                continue
+            if line.strip() == str(number) and not next_to_number(idxs, i):
+                drop.add(i)
+                stats["slide_numbers"] += 1
+                continue
+            body.append(i)
+        body_of.append(body)
+        if notes_at is not None:
+            if any(lines[i].strip() for i in idxs if i > notes_at):
+                replace[notes_at] = "**Konuşmacı notu:**"
+                stats["notes_relabeled"] += 1
+            else:
+                drop.add(notes_at)
+                stats["notes_removed"] += 1
+
+    def boilerplate_candidate(line: str) -> str | None:
+        t = line.strip()
+        if not t or len(t) > _BOILERPLATE_MAX_CHARS:
+            return None
+        if t.startswith(("#", "<!--", "![", "|")):
+            return None
+        return t
+
+    slide_count = len(body_of)
+    if slide_count >= _BOILERPLATE_MIN_SLIDES:
+        seen_in: dict[str, int] = {}
+        for body in body_of:
+            for t in {boilerplate_candidate(lines[i]) for i in body} - {None}:
+                seen_in[t] = seen_in.get(t, 0) + 1
+        repeated = {
+            t
+            for t, n in seen_in.items()
+            if n >= _BOILERPLATE_MIN_SLIDES and n >= _BOILERPLATE_SHARE * slide_count
+        }
+        kept: set[str] = set()
+        for body in body_of:
+            for i in body:
+                t = boilerplate_candidate(lines[i])
+                if t in repeated:
+                    if t in kept:
+                        drop.add(i)
+                        stats["footers"] += 1
+                    else:
+                        kept.add(t)  # first occurrence stays: the info is not lost
+
+    out = [replace.get(i, line) for i, line in enumerate(lines) if i not in drop]
+    return "\n".join(out), stats
+
+
 def convert_with_markitdown(path: Path) -> str:
     from markitdown import MarkItDown
 
-    result = MarkItDown().convert(str(path))
+    # keep_data_uris makes MarkItDown hand over each PPTX/DOCX picture inline,
+    # at its own position, instead of an unresolvable `Name.jpg` link / a
+    # truncated data URI; images.py swaps them for tokens right away so the
+    # base64 never reaches the post-processing regexes.
+    collect = images.COLLECTOR.enabled and path.suffix.lower() in (".pptx", ".docx")
+    if collect:
+        images.COLLECTOR.candidates.clear()
+        result = MarkItDown().convert(str(path), keep_data_uris=True)
+    else:
+        result = MarkItDown().convert(str(path))
     text = result.text_content
+    if collect:
+        text = images.tokenize_data_uri_images(text)
+        if path.suffix.lower() == ".pptx":
+            try:
+                areas, slide_count = images.pptx_picture_areas(path)
+                images.apply_pptx_areas(images.COLLECTOR.candidates, areas)
+                images.COLLECTOR.total_pages = slide_count
+            except Exception as err:  # noqa: BLE001 — without areas nothing is treated as template art
+                print(f"images: slayt alanları okunamadı: {err}", file=sys.stderr)
     if path.suffix.lower() == ".pptx":
+        text, _noise = clean_pptx_noise(text)
         text = demote_slide_headings(text)
     return text
 
@@ -308,6 +574,75 @@ def convert_with_pandoc(path: Path) -> str:
     return proc.stdout
 
 
+_HF_OFFLINE_CLASSES = ("LocalEntryNotFoundError", "OfflineModeIsEnabled")
+_HF_OFFLINE_MARKERS = (
+    "outgoing traffic has been disabled",
+    "offline mode is enabled",
+    "HF_HUB_OFFLINE",
+    "couldn't connect to",
+)
+
+
+def _is_hf_offline_miss(err: BaseException) -> bool:
+    """True when `err` (or anything in its cause/context chain) says a model
+    was not in the local cache while offline mode was on. Verified against
+    huggingface_hub 1.32 / transformers 5.17: snapshot_download raises
+    LocalEntryNotFoundError ("...outgoing traffic has been disabled..."),
+    a raw request raises OfflineModeIsEnabled, transformers raises OSError
+    "We couldn't connect to ... and couldn't find them in the cached files".
+    Matched by class name/message so huggingface_hub need not be importable."""
+    seen: set[int] = set()
+    cur: BaseException | None = err
+    while cur is not None and id(cur) not in seen:
+        seen.add(id(cur))
+        if any(c.__name__ in _HF_OFFLINE_CLASSES for c in type(cur).__mro__):
+            return True
+        text = str(cur)
+        if any(m in text for m in _HF_OFFLINE_MARKERS):
+            return True
+        cur = cur.__cause__ or cur.__context__
+    return False
+
+
+def _set_hf_offline_constant(value: bool) -> None:
+    """huggingface_hub reads HF_HUB_OFFLINE from the environment ONCE, at
+    import, into huggingface_hub.constants.HF_HUB_OFFLINE (transformers 5.x
+    imports is_offline_mode from it, so this is the only constant). When the
+    package is already imported, changing os.environ alone does nothing."""
+    mod = sys.modules.get("huggingface_hub.constants")
+    if mod is not None:
+        mod.HF_HUB_OFFLINE = value
+
+
+def hf_offline_first(run: Callable[[], object]):
+    """Run `run` with Hugging Face in offline mode; if it fails ONLY because a
+    model is missing from the local cache, retry exactly once online.
+
+    Why: docling loads its models via huggingface_hub.snapshot_download()
+    without local_files_only, so every conversion process made requests to
+    huggingface.co (a revision lookup per model) even with all weights cached
+    — a privacy leak and a startup delay for a local-first app. Trade-off:
+    docling model updates no longer arrive on their own; that is intended
+    here. An explicit user-set HF_HUB_OFFLINE (either value) is respected and
+    never retried."""
+    if "HF_HUB_OFFLINE" in os.environ:
+        return run()
+    os.environ["HF_HUB_OFFLINE"] = "1"
+    _set_hf_offline_constant(True)
+    try:
+        return run()
+    except Exception as err:  # noqa: BLE001 — only the offline-miss case is handled
+        if not _is_hf_offline_miss(err):
+            raise
+        print(
+            "Modeller yerel önbellekte bulunamadı; Hugging Face'ten indiriliyor (yalnızca bir kez)...",
+            file=sys.stderr,
+        )
+        os.environ.pop("HF_HUB_OFFLINE", None)
+        _set_hf_offline_constant(False)
+        return run()
+
+
 def convert_with_marker(path: Path) -> str:
     """marker-pdf 2.x. Loads several hundred MB of model weights on first call,
     which is why it is an optional extra and why conversions are queued one at
@@ -320,10 +655,13 @@ def convert_with_marker(path: Path) -> str:
     from marker.models import create_model_dict
     from marker.output import text_from_rendered
 
-    converter = PdfConverter(artifact_dict=create_model_dict())
-    rendered = converter(str(path))
-    text, _, _images = text_from_rendered(rendered)
-    return text
+    def run() -> str:
+        converter = PdfConverter(artifact_dict=create_model_dict())
+        rendered = converter(str(path))
+        text, _, _images = text_from_rendered(rendered)
+        return text
+
+    return hf_offline_first(run)
 
 
 def pdf_has_text_layer(path: Path, sample_pages: int = 10) -> bool:
@@ -357,6 +695,12 @@ _DOCLING_ERRORS: list[str] = []
 # True when the most recent convert_with_docling call ran on the hybrid
 # (fallback) backend — requested or switched to automatically. Same pattern.
 _HYBRID_BACKEND_USED: list[bool] = [False]
+# True when the most recent convert_with_docling call ran with OCR enabled;
+# decides which textless-page warning main() shows. Same pattern as above.
+_OCR_RAN: list[bool] = [False]
+# Why docling (the primary converter on a GPU machine) was skipped and
+# MarkItDown/marker produced the text instead; main() turns it into a warning.
+_PRIMARY_FALLBACK: list[str] = []
 
 PDF_BACKENDS = ("default", "hybrid")
 HYBRID_BACKEND_WARNING = (
@@ -402,7 +746,10 @@ def convert_with_docling(
       sources in this library.
     - `do_ocr` is on by default. That book is born-digital, so all 404 pages
       were OCR'd for nothing — on CPU, because onnxruntime-gpu did not match
-      the installed CUDA. OCR now runs only when there is no text layer.
+      the installed CUDA. OCR now runs only when it is needed: the sampled
+      middle pages have no text layer, OR some page is image-only
+      (textless_pages_in_scope). The sample alone missed a mostly born-digital
+      PDF with a few scanned pages — those came back silently empty.
 
     Device (Aşama 7, 2026-09-23, measured on an RTX 4050 6GB against an
     8-page arXiv paper and a 12-page OSTEP chapter): CPU is categorically
@@ -431,15 +778,23 @@ def convert_with_docling(
     from docling.datamodel.pipeline_options import AcceleratorDevice, AcceleratorOptions, PdfPipelineOptions
     from docling.document_converter import DocumentConverter, PdfFormatOption
 
+    _OCR_RAN[0] = False
     options = PdfPipelineOptions()
-    options.do_ocr = not pdf_has_text_layer(path)
+    options.do_ocr = (not pdf_has_text_layer(path)) or bool(textless_pages_in_scope(path, page_range))
+    _OCR_RAN[0] = options.do_ocr
     options.do_formula_enrichment = True
     options.do_code_enrichment = True
     options.accelerator_options = AcceleratorOptions(device=AcceleratorDevice.AUTO)
+    if images.COLLECTOR.enabled:
+        # Crops of the detected pictures; 2.0 keeps small-print screenshots
+        # legible (measured cost: see the images.py commit notes / SKILL.md).
+        options.generate_picture_images = True
+        options.images_scale = 2.0
+        images.COLLECTOR.candidates.clear()
 
     convert_kwargs = {"page_range": page_range} if page_range else {}
 
-    def run(use_hybrid: bool):
+    def run_once(use_hybrid: bool):
         if use_hybrid:
             # Imported here: it needs docling, which is optional.
             from hybrid_backend import HybridDoclingParseBackend
@@ -448,6 +803,11 @@ def convert_with_docling(
         else:
             fmt = PdfFormatOption(pipeline_options=options)
         return DocumentConverter(format_options={InputFormat.PDF: fmt}).convert(str(path), **convert_kwargs)
+
+    def run(use_hybrid: bool):
+        # Model loading happens inside .convert(), so the offline-first retry
+        # wraps exactly this call (see hf_offline_first).
+        return hf_offline_first(lambda: run_once(use_hybrid))
 
     use_hybrid = backend == "hybrid"
     _HYBRID_BACKEND_USED[0] = False
@@ -488,6 +848,14 @@ def convert_with_docling(
         _COLUMN_REPAIRED_PAGES.extend(repair_document_order(result.document))
     except Exception as err:  # noqa: BLE001 — repair is best-effort
         print(f"column_order: onarım atlandı: {err}", file=sys.stderr)
+    if images.COLLECTOR.enabled:
+        try:
+            md = images.docling_markdown_with_tokens(result.document)
+            images.COLLECTOR.total_pages = len(result.document.pages) or None
+            return md
+        except Exception as err:  # noqa: BLE001 — images are best-effort, the text is not
+            print(f"images: görsel çıkarma atlandı: {err}", file=sys.stderr)
+            images.COLLECTOR.candidates.clear()
     return result.document.export_to_markdown()
 
 
@@ -523,10 +891,22 @@ def route_auto(
     path: Path, page_range: tuple[int, int] | None = None, pdf_backend: str = "default"
 ) -> tuple[str, str]:
     """Returns (markdown_text, converted_by). page_range (#37) only ever
-    restricts the docling escalation path below — MarkItDown's initial pass
-    is fast enough on a huge document that there's nothing to save by
-    partial-converting it too, and MarkItDown has no partial-page mode to
-    give it anyway."""
+    restricts the docling path below — MarkItDown's pass is fast enough on a
+    huge document that there's nothing to save by partial-converting it too,
+    and MarkItDown has no partial-page mode to give it anyway.
+
+    PDF order (2026-10-07, 5 real PDFs): docling was clearly better on every
+    one (headings, LaTeX display math, no junk tables) while MarkItDown
+    produced pipe tables that were 62% empty cells (18-page two-column paper)
+    and 63% (3-page math review), U+FFFD glyphs, and — for PDFs of <= 5 pages —
+    was never escalated (looks_broken skips the heading check there). A 2-page
+    PDF whose page 2 was a scanned image came back as the cover alone with no
+    warning. So when pdf_primary_tool() == "docling" (a GPU is present:
+    7-24 s for short PDFs, ~3.4 s/page; CPU is 23-79 s/page) docling runs
+    first and MarkItDown (then marker) is only the fallback if docling is
+    missing or fails — recorded in _PRIMARY_FALLBACK for a warning.
+    Otherwise MarkItDown runs first and escalates when looks_broken() fires
+    or any page has no text layer (textless_pages)."""
     ext = path.suffix.lower()
 
     if ext in CODE_EXTENSIONS:
@@ -547,12 +927,27 @@ def route_auto(
         return path.read_text(encoding="utf-8", errors="replace"), "already-markdown"
 
     if ext == PDF_EXT:
+        _PRIMARY_FALLBACK.clear()
+        skip: tuple[str, ...] = ()
+        if pdf_primary_tool() == "docling":
+            try:
+                return convert_with_docling(path, page_range=page_range, backend=pdf_backend), "docling"
+            except PdfDamagedError:
+                raise
+            except ImportError:
+                _PRIMARY_FALLBACK.append("kurulu değil")
+            except Exception as err:  # noqa: BLE001 — reported as a warning, MarkItDown follows
+                msg = str(err).strip()
+                _PRIMARY_FALLBACK.append(msg.splitlines()[0][:150] if msg else type(err).__name__)
+            skip = ("docling",)  # already failed: do not retry it in escalate_pdf
         text = convert_with_markitdown(path)
         page_count = pdf_page_count(path) or text.count("\f") + 1
-        if looks_broken(text, page_count):
+        # A page with no text layer is invisible to looks_broken(): the other
+        # pages carry the text it judges (2-page PDF, page 2 scanned).
+        if looks_broken(text, page_count) or textless_pages_in_scope(path, page_range):
             try:
-                return escalate_pdf(path, page_range=page_range, pdf_backend=pdf_backend)
-            except RuntimeError:
+                return escalate_pdf(path, page_range=page_range, pdf_backend=pdf_backend, skip=skip)
+            except RuntimeError as err:
                 if len(text.strip()) >= MIN_FALLBACK_CHARS:
                     # S9: looks_broken() can be a false positive — a dense,
                     # multi-column or figure-heavy layout with a real text
@@ -565,6 +960,8 @@ def route_auto(
                     # extraction has nothing worth salvaging, so it still
                     # raises.
                     return text, "markitdown"
+                if skip:
+                    raise RuntimeError(f"docling: {'; '.join(_PRIMARY_FALLBACK)}; {err}") from err
                 raise
         return text, "markitdown"
 
@@ -572,9 +969,15 @@ def route_auto(
 
 
 def escalate_pdf(
-    path: Path, page_range: tuple[int, int] | None = None, pdf_backend: str = "default"
+    path: Path,
+    page_range: tuple[int, int] | None = None,
+    pdf_backend: str = "default",
+    skip: tuple[str, ...] = (),
 ) -> tuple[str, str]:
     """Marker first, then Docling, then a clean error naming why each failed.
+    Used when MarkItDown ran first (CPU-only machines, VC_PDF_PRIMARY=markitdown)
+    or when the primary docling attempt already failed — then route_auto passes
+    skip=("docling",) so docling is not retried here.
 
     Trying both is not belt-and-braces. An installed converter can fail at
     conversion time rather than import time, and for a platform reason that has
@@ -596,6 +999,8 @@ def escalate_pdf(
         ("docling", lambda: convert_with_docling(path, page_range=page_range, backend=pdf_backend)),
     ]
     for name, convert in attempts:
+        if name in skip:
+            continue
         try:
             return convert(), name
         except ImportError:
@@ -694,6 +1099,29 @@ def parse_page_range(raw: str) -> tuple[int, int]:
     return start, end
 
 
+def textless_warning(converted_by: str, textless: list[int], ocr_ran: bool) -> str | None:
+    """Warning for image-only pages. "OCR ile okundu" is only true when docling
+    ran with OCR on; a docling run without OCR (or MarkItDown) left them empty."""
+    if not textless:
+        return None
+    if converted_by == "docling" and ocr_ran:
+        return (
+            f"{len(textless)} sayfa OCR ile okundu (sayfa {_page_list(textless)}): "
+            "el yazısı veya taramada metin ve formüller hatalı olabilir, kaynakla karşılaştırın."
+        )
+    if converted_by in ("markitdown", "docling"):
+        return (
+            f"{len(textless)} sayfada metin katmanı yok (taranmış ya da görsel olabilir; sayfa "
+            f"{_page_list(textless)}): bu sayfaların içeriği notta eksik, gözden geçirin."
+        )
+    return None
+
+
+def _page_list(pages: list[int], limit: int = 10) -> str:
+    shown = ", ".join(str(n) for n in pages[:limit])
+    return shown + ", …" if len(pages) > limit else shown
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--in", dest="in_path", required=True)
@@ -714,7 +1142,10 @@ def main() -> int:
     parser.add_argument("--pages", dest="pages", default=None)
     # Fallback PDF reader for docling — see the module docstring.
     parser.add_argument("--pdf-backend", dest="pdf_backend", default="default", choices=list(PDF_BACKENDS))
+    # See the module docstring's Images section.
+    parser.add_argument("--no-images", dest="images", action="store_false")
     args = parser.parse_args()
+    images.COLLECTOR.reset(enabled=args.images and not args.dry_run)
 
     in_path = Path(args.in_path)
     if not in_path.exists():
@@ -812,6 +1243,15 @@ def main() -> int:
     # not something to present as if it were the note's real title.
     if is_md and existing_md_title is None and not re.search(r"^#\s+\S", text, re.MULTILINE):
         warnings.append("Başlık kaynak dosyada bulunamadı, dosya adından türetildi.")
+    if is_pdf and _PRIMARY_FALLBACK:
+        warnings.append(
+            f"docling çalışmadı ({'; '.join(_PRIMARY_FALLBACK[:2])}); "
+            f"{converted_by} ile dönüştürüldü — formüller ve tablolar bozuk olabilir, gözden geçirin."
+        )
+    textless = textless_pages_in_scope(in_path, page_range) if is_pdf else []
+    textless_note = textless_warning(converted_by, textless, _OCR_RAN[0])
+    if textless_note:
+        warnings.append(textless_note)
     if converted_by == "docling" and _COLUMN_REPAIRED_PAGES:
         warnings.append(
             "Sütun sırası düzeltildi (docling okuma sırası): sayfa "
@@ -841,10 +1281,34 @@ def main() -> int:
     out_dir.mkdir(parents=True, exist_ok=True)
     out_path = unique_output_path(out_dir, in_path.stem)
 
+    # After postprocess/quality_warnings on purpose: the final blocks hold
+    # HTML comments and link syntax those passes were not written for.
+    image_names: list[str] = []
+    image_stats: dict | None = None
+    if images.COLLECTOR.enabled and images.TOKEN_RE.search(final_text):
+        final_text, image_stats, image_names = images.resolve_tokens(
+            final_text, images.COLLECTOR.candidates, out_dir / "images", total_pages=images.COLLECTOR.total_pages
+        )
+        cap_note = images.stats_warning(image_stats)
+        if cap_note:
+            warnings.append(cap_note)
+            frontmatter["needs_review"] = True
+    elif images.TOKEN_RE.search(final_text):
+        final_text = images.TOKEN_RE.sub("", final_text)
+
     fm_lines = "\n".join(f"{k}: {json.dumps(v)}" for k, v in frontmatter.items())
     out_path.write_text(f"---\n{fm_lines}\n---\n\n{final_text}", encoding="utf-8")
 
-    emit({"type": "done", "outPath": str(out_path), "frontmatter": frontmatter, "warnings": warnings})
+    emit(
+        {
+            "type": "done",
+            "outPath": str(out_path),
+            "frontmatter": frontmatter,
+            "warnings": warnings,
+            "images": image_names,
+            "imageStats": image_stats,
+        }
+    )
     return 0
 
 

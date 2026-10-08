@@ -29,11 +29,13 @@ export function attachmentsDir(v: VaultContext): string {
  *
  * Idempotent by destination name, not content hash: a second call with the
  * same `base` is a no-op if the file already exists (same as the original
- * importObsidian.ts logic this was extracted from) — good enough while the
- * only caller is Obsidian import, where `base` already comes from a
- * content-addressed-ish vault attachment name. A future caller with
- * colliding names from different sources would need its own disambiguation
- * before calling this.
+ * importObsidian.ts logic this was extracted from). That is only correct
+ * while `base` identifies the content. Obsidian import passes the vault's own
+ * attachment names (content-addressed-ish); converted documents
+ * (converted-images.ts) pass `<sha16>.<ext>`, the first 16 hex chars of the
+ * sha256 of the exact bytes, so the same name always means the same bytes.
+ * A future caller with free-form names from different sources would need its
+ * own disambiguation before calling this.
  */
 export function copyAttachmentIntoLibrary(v: VaultContext, srcAbs: string, base: string): string | null {
 	const ext = path.extname(base).toLowerCase();

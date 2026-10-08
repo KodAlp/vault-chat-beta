@@ -385,6 +385,20 @@ function splitOnParagraphs(text: string): string[] {
 const LINK_ONLY_LINE = /^[-*+]\s*\[\[[^\]]+\]\]\s*$|^[-*+]\s*\[[^\]]*\]\([^)]*\)\s*$/;
 const NAV_LINE_RATIO = 0.7;
 
+/**
+ * Converted documents carry images as `![alt](../_meta/attachments/<sha16>.png)`
+ * followed by an `<!-- vc:gorsel <sha16> -->` marker (ingest/images.py). For
+ * the embedding only: the link target and the marker are hex noise that would
+ * drag every figure-heavy chunk toward the same vector, while the alt text and
+ * the `*Görsel:*` description line are real words and stay. display_text (what
+ * the chat quotes and FTS searches) is left as written.
+ */
+export function stripImageMarkup(text: string): string {
+	return text
+		.replace(/^[ \t]*<!-- vc:gorsel [0-9a-f]+ -->[ \t]*\r?\n?/gm, '')
+		.replace(/!\[([^\]\n]*)\]\([^)\s]*(?:\s+"[^"\n]*")?\)/g, '$1');
+}
+
 function isNavigationOnly(displayText: string): boolean {
 	const body = displayText
 		.split(/\r?\n/)
@@ -456,14 +470,16 @@ export function chunkMarkdown(rawFile: string): { frontmatter: Frontmatter; chun
 		const flush = () => {
 			const displayText = buffer.trim();
 			if (!displayText) return;
-			if (isNavigationOnly(displayText)) {
+			// An image-only section (a figure slide with no text yet) has nothing to embed.
+			const embedBody = stripImageMarkup(displayText);
+			if (isNavigationOnly(displayText) || isNavigationOnly(embedBody)) {
 				buffer = '';
 				return;
 			}
 			chunks.push({
 				headingPath: section.headingPath,
 				displayText,
-				embedText: `[${topicLabel} | ${section.headingPath}] ${displayText}`
+				embedText: `[${topicLabel} | ${section.headingPath}] ${embedBody}`
 			});
 			buffer = '';
 		};
