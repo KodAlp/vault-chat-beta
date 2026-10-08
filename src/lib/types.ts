@@ -483,6 +483,8 @@ export interface VaultRecord {
 	mcpExposed?: boolean;
 	/** Set when an MCP client created the vault (server VaultRecord.createdVia). */
 	createdVia?: 'mcp';
+	/** Auto-confirm mode for MCP imports (server VaultRecord.mcpAutoConfirm); absent means 'off'. */
+	mcpAutoConfirm?: 'off' | 'clean' | 'all';
 }
 
 /** VaultRecord plus a computed, non-persisted field — api/vaults/+server.ts

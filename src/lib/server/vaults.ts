@@ -3,6 +3,7 @@ import path from 'node:path';
 import { foldToSlug } from './slug';
 import { dataDir } from './env';
 import { AppError } from './app-error';
+import { parseAutoConfirmMode, type AutoConfirmMode } from '../mcp-auto-confirm-policy';
 
 export interface VaultRecord {
 	id: string;
@@ -28,6 +29,9 @@ export interface VaultRecord {
 	/** Set when an MCP client created the vault (create_vault -> POST /api/mcp/vaults) so the
 	 * UI can mark it "created via MCP". Absent for every vault made in the app. */
 	createdVia?: 'mcp';
+	/** Opt-in standing instruction: the APP (never the MCP client) confirms finished MCP imports by itself.
+	 * Absent means 'off'. Only ever written from the session-gated PATCH /api/vaults/[id], never under /api/mcp/*. */
+	mcpAutoConfirm?: AutoConfirmMode;
 }
 
 export interface VaultContext {
@@ -252,8 +256,33 @@ export function setVaultMcpExposed(id: string, exposed: boolean): VaultRecord {
 	const record = reg.vaults.find((v) => v.id === id);
 	if (!record) throw new AppError('NOT_FOUND', { entity: 'vault', detail: id }, 404);
 	record.mcpExposed = exposed;
+	// Closing a vault to MCP also withdraws the standing auto-confirm instruction, so re-opening it later
+	// can never silently resume confirming agent-fetched content the user no longer remembers allowing.
+	if (!exposed) delete record.mcpAutoConfirm;
 	writeRegistry(reg);
 	return record;
+}
+
+/** Per-vault auto-confirm mode for MCP imports. The value is validated strictly (VALIDATION_INVALID otherwise)
+ * and can only be set while the vault is open to MCP; 'off' removes the field. */
+export function setVaultMcpAutoConfirm(id: string, raw: unknown): VaultRecord {
+	const mode = parseAutoConfirmMode(raw);
+	if (!mode) throw new AppError('VALIDATION_INVALID', { field: 'mcpAutoConfirm' });
+	const reg = readRegistry();
+	const record = reg.vaults.find((v) => v.id === id);
+	if (!record) throw new AppError('NOT_FOUND', { entity: 'vault', detail: id }, 404);
+	if (mode !== 'off' && record.mcpExposed !== true) throw new AppError('MCP_VAULT_NOT_EXPOSED', { vault: id }, 403);
+	if (mode === 'off') delete record.mcpAutoConfirm;
+	else record.mcpAutoConfirm = mode;
+	writeRegistry(reg);
+	return record;
+}
+
+/** Effective mode: fails closed to 'off' for an unknown vault, a closed vault, or a stored value that is not one of the three modes. */
+export function getVaultMcpAutoConfirm(id: string): AutoConfirmMode {
+	const record = listVaults().find((v) => v.id === id);
+	if (!record || record.mcpExposed !== true) return 'off';
+	return parseAutoConfirmMode(record.mcpAutoConfirm) ?? 'off';
 }
 
 export function isVaultMcpExposed(id: string): boolean {

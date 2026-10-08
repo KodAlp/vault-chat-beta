@@ -59,6 +59,8 @@ export const IMPORT_CODES = [
 	'IMPORT_DUPLICATE_CONTENT',
 	'IMPORT_DUPLICATE_URL',
 	'IMPORT_INTERRUPTED',
+	// The app tried to auto-confirm an MCP import (vault setting) and failed; the note stays pending for the user.
+	'IMPORT_AUTO_CONFIRM_FAILED',
 	// MCP write surface (api/mcp/**, mcp-import-path.ts): the import-path allowlist and vault exposure.
 	'MCP_VAULT_NOT_EXPOSED',
 	'MCP_IMPORT_ROOTS_EMPTY',
