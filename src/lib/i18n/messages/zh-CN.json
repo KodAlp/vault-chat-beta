@@ -489,6 +489,11 @@
     "deleting": "正在删除…"
   },
   "LibraryViewPage": {
+    "reimport": "重新导入",
+    "reimportUnavailable": "无法重新导入：未保留原始文件",
+    "reimportFrom": "原始文件：{name}",
+    "reimporting": "正在重新导入…",
+    "reimportReady": "已重新转换原始文件。尚未保存——请检查后点击“保存”；之前的版本会保留在历史记录中。",
     "missingPath": "必须提供“path”参数。",
     "loadFailed": "无法加载文件。",
     "fallbackTitle": "来源",
@@ -1010,6 +1015,8 @@
     "notFoundBody": "它可能已被删除。"
   },
   "ServerErrors": {
+    "REIMPORT_NO_ORIGINAL": "此笔记未保留原始文件，无法重新导入",
+    "REIMPORT_BUSY": "此笔记正在重新导入",
     "UNKNOWN": "发生了意外错误",
     "INTERNAL": "服务器出错了",
     "ROUTE_NOT_FOUND": "页面未找到",

@@ -502,6 +502,11 @@
     "deleting": "Excluindo..."
   },
   "LibraryViewPage": {
+    "reimport": "Reimportar",
+    "reimportUnavailable": "Não é possível reimportar: o arquivo original não foi mantido",
+    "reimportFrom": "Arquivo original: {name}",
+    "reimporting": "Reimportando…",
+    "reimportReady": "O arquivo original foi convertido novamente. Ainda não foi salvo — revise e clique em Salvar; a versão anterior continua no histórico.",
     "missingPath": "O parâmetro 'path' é obrigatório.",
     "loadFailed": "Não foi possível carregar o arquivo.",
     "fallbackTitle": "Fonte",
@@ -1026,6 +1031,8 @@
     "notFoundBody": "Ele pode ter sido excluído."
   },
   "ServerErrors": {
+    "REIMPORT_NO_ORIGINAL": "Esta nota não pode ser reimportada porque seu arquivo original não foi mantido",
+    "REIMPORT_BUSY": "Esta nota já está sendo reimportada",
     "UNKNOWN": "Ocorreu um erro inesperado",
     "INTERNAL": "Algo deu errado no servidor",
     "ROUTE_NOT_FOUND": "Página não encontrada",

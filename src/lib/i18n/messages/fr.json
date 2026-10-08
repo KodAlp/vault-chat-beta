@@ -500,6 +500,11 @@
     "deleting": "Suppression…"
   },
   "LibraryViewPage": {
+    "reimport": "Réimporter",
+    "reimportUnavailable": "Réimportation impossible : le fichier d'origine n'a pas été conservé",
+    "reimportFrom": "Fichier d'origine : {name}",
+    "reimporting": "Réimportation en cours…",
+    "reimportReady": "Le fichier d'origine a été reconverti. Pas encore enregistré : relisez-le puis cliquez sur Enregistrer ; la version précédente reste dans l'historique.",
     "missingPath": "Le paramètre « path » est obligatoire.",
     "loadFailed": "Impossible de charger le fichier.",
     "fallbackTitle": "Source",
@@ -1024,6 +1029,8 @@
     "notFoundBody": "Elle a peut-être été supprimée."
   },
   "ServerErrors": {
+    "REIMPORT_NO_ORIGINAL": "Cette note ne peut pas être réimportée car son fichier d'origine n'a pas été conservé",
+    "REIMPORT_BUSY": "Cette note est déjà en cours de réimportation",
     "UNKNOWN": "Une erreur inattendue s'est produite",
     "INTERNAL": "Une erreur s'est produite sur le serveur",
     "ROUTE_NOT_FOUND": "Page introuvable",
