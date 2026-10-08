@@ -489,6 +489,11 @@
     "deleting": "Menghapus…"
   },
   "LibraryViewPage": {
+    "reimport": "Impor ulang",
+    "reimportUnavailable": "Tidak dapat mengimpor ulang: file asli tidak disimpan",
+    "reimportFrom": "File asli: {name}",
+    "reimporting": "Mengimpor ulang…",
+    "reimportReady": "File asli telah dikonversi ulang. Belum disimpan — tinjau lalu tekan Simpan; versi sebelumnya tetap ada di riwayat.",
     "missingPath": "Parameter 'path' wajib diisi.",
     "loadFailed": "Gagal memuat berkas.",
     "fallbackTitle": "Sumber",
@@ -1010,6 +1015,8 @@
     "notFoundBody": "Mungkin sudah dihapus."
   },
   "ServerErrors": {
+    "REIMPORT_NO_ORIGINAL": "Catatan ini tidak dapat diimpor ulang karena file aslinya tidak disimpan",
+    "REIMPORT_BUSY": "Catatan ini sedang diimpor ulang",
     "UNKNOWN": "Terjadi kesalahan yang tidak terduga",
     "INTERNAL": "Terjadi masalah di server",
     "ROUTE_NOT_FOUND": "Halaman tidak ditemukan",

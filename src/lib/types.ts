@@ -620,6 +620,12 @@ export type ImportEvent =
 	| { type: 'done'; summary?: ImportSummary }
 	| { type: 'error'; message: string; code?: string; params?: Record<string, string | number> };
 
+/** SSE event shapes streamed by POST /api/library/reimport (the re-converted note text, not yet saved). */
+export type ReimportEvent =
+	| { type: 'progress'; stage: string; pageCount?: number; estimatedSeconds?: number }
+	| { type: 'ready'; content: string; warnings: string[] }
+	| { type: 'error'; message: string; code?: string; params?: Record<string, string | number> };
+
 /** SSE event shapes streamed by POST /api/library/import-source/run (and the older /import-obsidian wrapper). */
 export type LibraryImportEvent =
 	| { type: 'progress'; stage: string; fileName?: string }

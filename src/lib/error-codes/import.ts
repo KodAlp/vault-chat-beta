@@ -50,6 +50,9 @@ export const IMPORT_CODES = [
 	'RENAME_FOLDER_UNSUPPORTED',
 	'FILE_EXISTS',
 	'IMPORT_EXPIRED',
+	// Re-import of a note (api/library/reimport): its original was not kept, or a conversion of the note is already running.
+	'REIMPORT_NO_ORIGINAL',
+	'REIMPORT_BUSY',
 	'IMPORT_INDEX_FAILED',
 	'IMPORT_SOURCE_INVALID',
 	'IMPORT_NOTHING_TO_IMPORT',

@@ -521,6 +521,11 @@
 	},
 
 	"LibraryViewPage": {
+		"reimport": "Yeniden içe aktar",
+		"reimportUnavailable": "Orijinal dosya saklanmadığı için yeniden içe aktarılamaz",
+		"reimportFrom": "Orijinal dosya: {name}",
+		"reimporting": "Yeniden içe aktarılıyor…",
+		"reimportReady": "Orijinal dosya yeniden dönüştürüldü. Henüz kaydedilmedi — gözden geçirip Kaydet'e basın; önceki sürüm geçmişte kalır.",
 		"missingPath": "path parametresi gerekli.",
 		"loadFailed": "Dosya yüklenemedi.",
 		"fallbackTitle": "Kaynak",
@@ -1111,6 +1116,8 @@
 	},
 
 	"ServerErrors": {
+		"REIMPORT_NO_ORIGINAL": "Bu notun orijinal dosyası saklanmadığı için yeniden içe aktarılamaz",
+		"REIMPORT_BUSY": "Bu not şu anda yeniden içe aktarılıyor",
 		"UNKNOWN": "Beklenmeyen bir hata oluştu",
 		"INTERNAL": "Sunucuda bir hata oluştu",
 		"ROUTE_NOT_FOUND": "Sayfa bulunamadı",
