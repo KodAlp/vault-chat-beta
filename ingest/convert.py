@@ -8,6 +8,16 @@ JSON-lines progress on stdout, one object per line:
     {"type": "done", "outPath": "...", "warnings": [...], "images": ["<sha16>.png", ...], "imageStats": {...}}
     {"type": "error", "message": "..."}
 
+Serve mode (2026-10-08): `python convert.py --serve` is a long-lived worker for
+the Node side (src/lib/server/convert-worker.ts). It reads one JSON request per
+stdin line, {"id": "...", "args": [<the CLI args above>]}, runs main(args), and
+stamps "id" on every event it emits; after main returns it emits
+{"type": "end", "id": "...", "exit": 0|1}. A failing request never stops the
+worker (an escaping exception becomes an `error` + `end`); EOF on stdin exits
+0. Why: docling's models (the formula recognizer alone is ~20-45 s on the
+RTX 4050) were reloaded for every file; the worker keeps one DocumentConverter
+(see _shared_converter) so only the first PDF pays for the load.
+
 Marker and Docling are implemented but remain optional heavy extras (PyTorch,
 multi-GB model weights) — they are commented out of requirements.txt. Requesting
 one that is not installed, or auto-routing a PDF that needs it, reports a clear
@@ -125,7 +135,15 @@ CID_ARTIFACT_THRESHOLD = 50
 MIN_FALLBACK_CHARS = 200
 
 
+# Serve mode (--serve): id of the request being handled. Every emitted event
+# carries it so the Node side can route lines to the right request. None in
+# the plain CLI, where the output is exactly what it always was.
+_REQUEST_ID: list[str | None] = [None]
+
+
 def emit(obj: dict) -> None:
+    if _REQUEST_ID[0] is not None:
+        obj = {**obj, "id": _REQUEST_ID[0]}
     print(json.dumps(obj), flush=True)
 
 
@@ -711,6 +729,77 @@ _OCR_RAN: list[bool] = [False]
 # MarkItDown/marker produced the text instead; main() turns it into a warning.
 _PRIMARY_FALLBACK: list[str] = []
 
+
+def reset_run_state() -> None:
+    """Clear every per-run module global at the start of main(). The CLI runs
+    main() once per process so this is a no-op there; the --serve worker runs
+    many conversions in ONE process and a stale value from the previous file
+    (a column-repair page list, a hybrid flag) would leak into the next file's
+    warnings. _TEXTLESS_CACHE is only valid within one run (it is keyed by
+    path/mtime/size) and would otherwise grow for the worker's whole life."""
+    _COLUMN_REPAIRED_PAGES.clear()
+    _READING_REPAIRED_PAGES.clear()
+    _READING_SUSPICIOUS_PAGES.clear()
+    _DOCLING_ERRORS.clear()
+    _HYBRID_BACKEND_USED[0] = False
+    _OCR_RAN[0] = False
+    _PRIMARY_FALLBACK.clear()
+    _TEXTLESS_CACHE.clear()
+
+
+# Serve mode keeps ONE docling DocumentConverter alive between conversions: its
+# models (layout, tables, and above all the formula recognizer, ~20-45 s to
+# load on the RTX 4050) are loaded once per worker instead of once per file.
+# Only the CLI-per-file mode leaves this False and builds a converter per call.
+_REUSE_CONVERTER: list[bool] = [False]
+# At most ONE entry: a second converter (e.g. hybrid backend after a default
+# one) would hold a second copy of the models in a 6 GB card, so a different
+# key evicts the old converter first. Key = (hybrid backend, images enabled):
+# those are the only inputs that change the pipeline options (see
+# convert_with_docling); OCR is toggled on the model, not part of the key.
+_CONVERTER_CACHE: dict[tuple[bool, bool], object] = {}
+
+
+def _release_cached_converters() -> None:
+    _CONVERTER_CACHE.clear()
+    try:
+        import gc
+
+        gc.collect()
+        import torch
+
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+    except Exception:  # noqa: BLE001 — best-effort memory release
+        pass
+
+
+def _shared_converter(key: tuple[bool, bool], build: Callable[[], object]):
+    """Return (converter, ocr_model) for `key`, building and caching it on a
+    miss. ocr_model is the pipeline's OCR model whose `.enabled` flag is the
+    per-document/segment toggle (see _convert_ocr_segments). Returns None when
+    docling's internals do not allow it — the caller then builds an uncached
+    converter exactly as the CLI does. Model-loading errors (offline cache
+    miss, ...) are NOT swallowed here: they must reach hf_offline_first."""
+    from docling.datamodel.base_models import InputFormat
+
+    hit = _CONVERTER_CACHE.get(key)
+    if hit is not None:
+        return hit
+    conv = build()
+    get_pipeline = getattr(conv, "_get_pipeline", None)
+    if get_pipeline is None:
+        return None
+    pipeline = get_pipeline(InputFormat.PDF)  # loads the models
+    ocr_model = getattr(pipeline, "ocr_model", None)
+    if ocr_model is None or not isinstance(getattr(ocr_model, "enabled", None), bool):
+        return None
+    if _CONVERTER_CACHE:
+        _release_cached_converters()
+    _CONVERTER_CACHE[key] = (conv, ocr_model)
+    return conv, ocr_model
+
+
 PDF_BACKENDS = ("default", "hybrid")
 HYBRID_BACKEND_WARNING = (
     "Yedek PDF okuyucusuyla dönüştürüldü; resim içindeki metinler ve bazı formüller eksik olabilir, gözden geçirin."
@@ -864,8 +953,13 @@ def convert_with_docling(
     # unknown page count (scope None) keeps the old whole-document OCR.
     segments = ocr_segments(scope, textless) if (textless and scope) else []
     per_page = len(segments) > 1
-    options.do_ocr = need_all or bool(textless)
-    _OCR_RAN[0] = options.do_ocr
+    want_ocr = need_all or bool(textless)
+    # Serve mode: the cached converter is always built with OCR on and the
+    # OCR model is switched off per document/segment instead (ONE pipeline,
+    # ONE copy of the models); a converter with do_ocr=False would be a second
+    # pipeline. The CLI keeps building exactly the pipeline it needs.
+    options.do_ocr = True if _REUSE_CONVERTER[0] else want_ocr
+    _OCR_RAN[0] = want_ocr
     options.do_formula_enrichment = True
     options.do_code_enrichment = True
     options.accelerator_options = AcceleratorOptions(device=AcceleratorDevice.AUTO)
@@ -886,15 +980,35 @@ def convert_with_docling(
             fmt = PdfFormatOption(pipeline_options=options, backend=HybridDoclingParseBackend)
         else:
             fmt = PdfFormatOption(pipeline_options=options)
-        conv = DocumentConverter(format_options={InputFormat.PDF: fmt})
+        def build():
+            return DocumentConverter(format_options={InputFormat.PDF: fmt})
+
+        ocr_model = None
+        conv = None
+        if _REUSE_CONVERTER[0]:
+            shared = _shared_converter((use_hybrid, images.COLLECTOR.enabled), build)
+            if shared is not None:
+                conv, ocr_model = shared
+            else:
+                # Toggle internals unavailable: behave like the CLI (own
+                # converter with exactly the OCR setting this file needs).
+                options.do_ocr = want_ocr
+        if conv is None:
+            conv = build()
         if per_page:
             # (results, document, ocr_ran), or None when the per-page route is
             # unavailable and the whole document must be OCR'd.
             seg_run = _convert_ocr_segments(conv, path, segments)
             if seg_run is not None:
                 return seg_run
-        result = conv.convert(str(path), **convert_kwargs)
-        return [result], result.document, options.do_ocr
+        try:
+            if ocr_model is not None:
+                ocr_model.enabled = want_ocr
+            result = conv.convert(str(path), **convert_kwargs)
+        finally:
+            if ocr_model is not None:
+                ocr_model.enabled = True
+        return [result], result.document, want_ocr
 
     def run(use_hybrid: bool):
         # Model loading happens inside .convert(), so the offline-first retry
@@ -1231,7 +1345,17 @@ def _page_list(pages: list[int], limit: int = 10) -> str:
     return shown + ", …" if len(pages) > limit else shown
 
 
-def main() -> int:
+# Temp dirs main() created (TeX-fixed PDF copies). The CLI removes them at exit;
+# the serve worker removes them after every request (cleanup_work_dirs).
+_WORK_DIRS: list[str] = []
+
+
+def cleanup_work_dirs() -> None:
+    while _WORK_DIRS:
+        shutil.rmtree(_WORK_DIRS.pop(), ignore_errors=True)
+
+
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--in", dest="in_path", required=True)
     parser.add_argument("--out-dir", dest="out_dir", required=True)
@@ -1253,7 +1377,12 @@ def main() -> int:
     parser.add_argument("--pdf-backend", dest="pdf_backend", default="default", choices=list(PDF_BACKENDS))
     # See the module docstring's Images section.
     parser.add_argument("--no-images", dest="images", action="store_false")
-    args = parser.parse_args()
+    return parser.parse_args(argv)
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = parse_args(argv)
+    reset_run_state()
     images.COLLECTOR.reset(enabled=args.images and not args.dry_run)
 
     in_path = Path(args.in_path)
@@ -1293,7 +1422,9 @@ def main() -> int:
     tex_fix = {"fonts": 0, "codes": 0}
     if in_path.suffix.lower() == PDF_EXT:
         work_dir = tempfile.mkdtemp(prefix="vault-chat-tounicode-")
-        atexit.register(shutil.rmtree, work_dir, ignore_errors=True)
+        if not _REUSE_CONVERTER[0]:
+            atexit.register(shutil.rmtree, work_dir, ignore_errors=True)
+        _WORK_DIRS.append(work_dir)
         work_path, tex_fix = pdf_tounicode.prepare_pdf(in_path, work_dir)
         work_path = Path(work_path)
 
@@ -1447,5 +1578,51 @@ def main() -> int:
     return 0
 
 
+def serve() -> int:
+    """--serve: a long-lived worker. One JSON request per stdin line,
+    {"id": "...", "args": [<the CLI args>]}; each request runs main(args) with
+    `id` stamped on every event, then {"type": "end", "id": ..., "exit": N}.
+    A failing request never ends the worker; EOF on stdin does (exit 0). The
+    point is _REUSE_CONVERTER: docling's models load once for the whole run."""
+    for stream in (sys.stdin, sys.stdout):
+        try:
+            # Paths arrive as JSON text; the Windows ANSI default would mangle them.
+            stream.reconfigure(encoding="utf-8")
+        except Exception:  # noqa: BLE001
+            pass
+    _REUSE_CONVERTER[0] = True
+    for line in sys.stdin:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            request = json.loads(line)
+            request_id = str(request["id"])
+            argv = [str(a) for a in request["args"]]
+        except Exception as err:  # noqa: BLE001 — no id to answer to
+            print(f"serve: geçersiz istek yok sayıldı: {err}", file=sys.stderr, flush=True)
+            continue
+        _REQUEST_ID[0] = request_id
+        code = 1
+        try:
+            code = main(argv)
+        except SystemExit as err:  # argparse rejected the arguments
+            emit({"type": "error", "message": "Geçersiz dönüştürücü argümanları"})
+            code = err.code if isinstance(err.code, int) and err.code else 2
+        except Exception as err:  # noqa: BLE001 — the worker must keep serving
+            import traceback
+
+            traceback.print_exc(file=sys.stderr)
+            emit({"type": "error", "message": f"{type(err).__name__}: {err}"})
+            code = 1
+        finally:
+            cleanup_work_dirs()
+        emit({"type": "end", "exit": code})
+        _REQUEST_ID[0] = None
+    return 0
+
+
 if __name__ == "__main__":
+    if sys.argv[1:] == ["--serve"]:
+        sys.exit(serve())
     sys.exit(main())

@@ -443,6 +443,71 @@ def test_cli_pdf_backend() -> None:
         check("--pdf-backend bogus rejected", proc.returncode != 0 and "invalid choice" in proc.stderr)
 
 
+def test_reset_run_state() -> None:
+    """Per-run globals are cleared between conversions of a long-lived worker."""
+    convert._COLUMN_REPAIRED_PAGES.append(3)
+    convert._READING_REPAIRED_PAGES.append(4)
+    convert._READING_SUSPICIOUS_PAGES.append(5)
+    convert._DOCLING_ERRORS.append("x")
+    convert._HYBRID_BACKEND_USED[0] = True
+    convert._OCR_RAN[0] = True
+    convert._PRIMARY_FALLBACK.append("y")
+    convert._TEXTLESS_CACHE[("p", 1, 2)] = [1]
+    convert.reset_run_state()
+    check(
+        "reset_run_state clears every per-run global",
+        not (
+            convert._COLUMN_REPAIRED_PAGES or convert._READING_REPAIRED_PAGES
+            or convert._READING_SUSPICIOUS_PAGES or convert._DOCLING_ERRORS
+            or convert._HYBRID_BACKEND_USED[0] or convert._OCR_RAN[0]
+            or convert._PRIMARY_FALLBACK or convert._TEXTLESS_CACHE
+        ),
+    )
+
+
+def test_serve_mode() -> None:
+    """--serve: several requests on one process, ids on every event, an `end`
+    per request, a failing request does not stop the worker, EOF exits 0.
+    Only .md/.py inputs, so no docling is needed."""
+    script = Path(__file__).resolve().parent / "convert.py"
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_path = Path(tmp)
+        md = tmp_path / "not.md"
+        md.write_text("# Başlık\n\nmetin\n", encoding="utf-8")
+        py = tmp_path / "ornek.py"
+        py.write_text("print('merhaba')\n", encoding="utf-8")
+        out_a, out_b = tmp_path / "out_a", tmp_path / "out_b"
+        requests = [
+            {"id": "r1", "args": ["--in", str(md), "--out-dir", str(out_a), "--tool", "auto", "--source-name", "şəkil.md"]},
+            {"id": "r2", "args": ["--in", str(tmp_path / "yok.md"), "--out-dir", str(out_a)]},
+            {"id": "r3", "args": ["--in", str(py), "--out-dir", str(out_b), "--tool", "auto"]},
+            {"id": "r4", "args": ["--tool", "bogus"]},
+            {"id": "r5", "args": ["--in", str(md), "--out-dir", str(out_b), "--dry-run"]},
+        ]
+        # Garbage and blank lines are skipped, not fatal.
+        payload = "not json\n\n" + "\n".join(json.dumps(r) for r in requests) + "\n"
+        proc = subprocess.run(
+            [sys.executable, str(script), "--serve"], input=payload.encode("utf-8"), capture_output=True, timeout=120
+        )
+        check("serve: exits 0 on stdin EOF", proc.returncode == 0)
+        events: dict[str, list[dict]] = {}
+        for raw in proc.stdout.decode("utf-8").splitlines():
+            ev = json.loads(raw)
+            events.setdefault(ev.get("id"), []).append(ev)
+        check("serve: every event carries an id", None not in events)
+        for rid in ("r1", "r2", "r3", "r4", "r5"):
+            check(f"serve: {rid} ends with an end event", events.get(rid, [{}])[-1].get("type") == "end")
+        types1 = [e["type"] for e in events["r1"]]
+        check("serve: r1 progress -> done -> end", types1[0] == "progress" and "done" in types1 and events["r1"][-1]["exit"] == 0)
+        done1 = next(e for e in events["r1"] if e["type"] == "done")
+        check("serve: r1 wrote its output (non-ASCII source name intact)", Path(done1["outPath"]).exists() and done1["frontmatter"]["source_file"] == "şəkil.md")
+        check("serve: r2 (missing file) -> error, exit 1", events["r2"][0]["type"] == "error" and events["r2"][-1]["exit"] == 1)
+        check("serve: worker survives the error (r3 converted)", any(e["type"] == "done" for e in events["r3"]) and events["r3"][-1]["exit"] == 0)
+        check("serve: r4 (bad args) -> error, exit nonzero", events["r4"][0]["type"] == "error" and events["r4"][-1]["exit"] != 0)
+        check("serve: r5 dry-run after the bad args still works", any(e["type"] == "done" and e["outPath"] is None for e in events["r5"]))
+        check("serve: no state leak between requests (r5 warnings empty)", next(e for e in events["r5"] if e["type"] == "done")["warnings"] == [])
+
+
 def _restore(saved: dict) -> None:
     for name, value in saved.items():
         setattr(convert, name, value)
@@ -770,5 +835,7 @@ if __name__ == "__main__":
     test_textless_pages()
     test_textless_warning()
     test_ocr_segments()
+    test_reset_run_state()
+    test_serve_mode()
     print(f"\n{len(failures)} başarısız" if failures else "\nhepsi geçti")
     sys.exit(1 if failures else 0)
