@@ -47,6 +47,20 @@ Notebook'ta ~18 saat (13.747 karma sayfa × ~4,7 sn).
 
 ## 4. Açık kalanlar
 
-- Toplu içe aktarmada her dosyada model yükleme (formül modeli dahil); sonraki iş.
 - OCR dili: Almanca–Bengalce listede Bengalce satırlar çöp karakter. Ayrı iş.
 - Formül çözme maliyeti (2,5–8 sn/sayfa) kalite için gerekli; azaltılmadı.
+
+## 5. Açık tutulan dönüştürücü süreci (aynı gün, dal model-acik-tutma)
+
+| docling, 12'şer sayfa | Süreç başına (eski) | Açık süreç (yeni) |
+|---|---|---|
+| Tong (ilk, model yükleme) | 59,6 sn | 61,0 sn |
+| Tong EM | 38,8 sn | 23,7 sn |
+| Trefethen | 88,4 sn | 71,7 sn |
+| Karma Almanca | 26,1 sn | 10,9 sn |
+| Toplam | 213 sn | 167 sn |
+
+Model yükleme dosya başına ~15 sn çıktı (tahmin 20–45 sn idi). Çıktılar bayt boyutu ve başlık
+sayısıyla aynı. GPU belleği süreç açıkken 2,6–3,4 GB, büyüme yok. Uygulama üzerinden toplu içe
+aktarma (yalıtılmış sunucu, 3 küçük PDF): 19,5 / 3,5 / 4,2 sn, tek Python süreci; 2 dk sonra süreç
+kapandı. Notebook'un 702 PDF'inde tahmini kazanç ~3 saat.
