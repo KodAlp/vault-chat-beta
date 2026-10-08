@@ -728,6 +728,66 @@ def _is_open_failure(err: BaseException) -> bool:
     return is_conversion_error and "while opening the document" in str(err)
 
 
+def ocr_segments(page_range: tuple[int, int], textless: set[int] | list[int]) -> list[tuple[int, int, bool]]:
+    """Split `page_range` (1-indexed, inclusive) into contiguous runs of
+    (start, end, needs_ocr): a run of textless pages gets OCR, the runs between
+    them do not. Textless pages outside the range are ignored.
+
+    Why: docling's default OCR mode runs on every layout region not covered by
+    PDF text cells (pictures included), so enabling OCR for the whole document
+    because ONE page is a scan is very slow. Measured 2026-10-08 on a 12-page
+    German story book whose only scanned page was the cover: 57 s with
+    whole-document OCR, 1.5 s without, 9.4 s for OCR on page 1 alone; segmented
+    (OCR page 1, none for 2-12) 5.3 s. Across the 702-PDF corpus, 64 mixed PDFs
+    / 13,747 pages, whole-document OCR was estimated to waste ~18 h."""
+    start, end = page_range
+    if end < start:
+        return []
+    tl = set(textless)
+    out: list[tuple[int, int, bool]] = []
+    cur, cur_ocr = start, start in tl
+    for p in range(start + 1, end + 1):
+        if (p in tl) != cur_ocr:
+            out.append((cur, p - 1, cur_ocr))
+            cur, cur_ocr = p, p in tl
+    out.append((cur, end, cur_ocr))
+    return out
+
+
+def _convert_ocr_segments(conv, path: Path, segments: list[tuple[int, int, bool]]):
+    """Convert each (start, end, ocr) segment on the SAME DocumentConverter,
+    toggling the pipeline's OCR model between them, and concatenate the
+    segment documents. Returns (results, merged_document, ocr_ran), or None
+    when docling's internals do not allow it (the caller then converts the
+    whole document with OCR, as before). A conversion error from docling
+    itself is NOT swallowed — only the optimization is best-effort."""
+    from docling.datamodel.base_models import InputFormat
+
+    try:
+        ocr_model = conv._get_pipeline(InputFormat.PDF).ocr_model
+        if not isinstance(ocr_model.enabled, bool):
+            raise AttributeError("ocr_model.enabled")
+        from docling_core.types.doc import DoclingDocument
+
+        concatenate = DoclingDocument.concatenate
+    except Exception as err:  # noqa: BLE001 — optimization only
+        print(f"ocr: sayfa bazlı OCR kullanılamadı, tüm belge OCR'lanıyor: {err}", file=sys.stderr)
+        return None
+    results = []
+    try:
+        for start, end, ocr in segments:
+            ocr_model.enabled = ocr
+            results.append(conv.convert(str(path), page_range=(start, end)))
+    finally:
+        ocr_model.enabled = True
+    try:
+        document = concatenate([r.document for r in results])
+    except Exception as err:  # noqa: BLE001 — optimization only
+        print(f"ocr: sayfa bazlı OCR kullanılamadı, tüm belge OCR'lanıyor: {err}", file=sys.stderr)
+        return None
+    return results, document, any(ocr for _s, _e, ocr in segments)
+
+
 def convert_with_docling(
     path: Path, page_range: tuple[int, int] | None = None, backend: str = "default"
 ) -> str:
@@ -755,10 +815,17 @@ def convert_with_docling(
       sources in this library.
     - `do_ocr` is on by default. That book is born-digital, so all 404 pages
       were OCR'd for nothing — on CPU, because onnxruntime-gpu did not match
-      the installed CUDA. OCR now runs only when it is needed: the sampled
-      middle pages have no text layer, OR some page is image-only
-      (textless_pages_in_scope). The sample alone missed a mostly born-digital
-      PDF with a few scanned pages — those came back silently empty.
+      the installed CUDA. OCR now runs only where it is needed: on every page
+      when the sampled middle pages have no text layer, otherwise only on the
+      image-only pages (textless_pages_in_scope). The sample alone missed a
+      mostly born-digital PDF with a few scanned pages — those came back
+      silently empty. Per-page OCR (2026-10-08): enabling OCR for the whole
+      document because one page is a scan took 57 s vs 5.3 s for a 12-page
+      book (see ocr_segments). The textless runs are converted as separate
+      page-range segments on ONE DocumentConverter (the formula model takes
+      ~45 s to load), toggling the pipeline's OCR model between segments, and
+      the segment documents are concatenated. If docling's internals do not
+      allow that, the whole document is OCR'd as before.
 
     Device (Aşama 7, 2026-09-23, measured on an RTX 4050 6GB against an
     8-page arXiv paper and a 12-page OSTEP chapter): CPU is categorically
@@ -789,7 +856,15 @@ def convert_with_docling(
 
     _OCR_RAN[0] = False
     options = PdfPipelineOptions()
-    options.do_ocr = (not pdf_has_text_layer(path)) or bool(textless_pages_in_scope(path, page_range))
+    need_all = not pdf_has_text_layer(path)
+    textless = [] if need_all else textless_pages_in_scope(path, page_range)
+    total_pages = pdf_page_count(path)
+    scope = page_range or ((1, total_pages) if total_pages > 0 else None)
+    # More than one segment = a mix of scanned and born-digital pages; an
+    # unknown page count (scope None) keeps the old whole-document OCR.
+    segments = ocr_segments(scope, textless) if (textless and scope) else []
+    per_page = len(segments) > 1
+    options.do_ocr = need_all or bool(textless)
     _OCR_RAN[0] = options.do_ocr
     options.do_formula_enrichment = True
     options.do_code_enrichment = True
@@ -811,7 +886,15 @@ def convert_with_docling(
             fmt = PdfFormatOption(pipeline_options=options, backend=HybridDoclingParseBackend)
         else:
             fmt = PdfFormatOption(pipeline_options=options)
-        return DocumentConverter(format_options={InputFormat.PDF: fmt}).convert(str(path), **convert_kwargs)
+        conv = DocumentConverter(format_options={InputFormat.PDF: fmt})
+        if per_page:
+            # (results, document, ocr_ran), or None when the per-page route is
+            # unavailable and the whole document must be OCR'd.
+            seg_run = _convert_ocr_segments(conv, path, segments)
+            if seg_run is not None:
+                return seg_run
+        result = conv.convert(str(path), **convert_kwargs)
+        return [result], result.document, options.do_ocr
 
     def run(use_hybrid: bool):
         # Model loading happens inside .convert(), so the offline-first retry
@@ -821,7 +904,7 @@ def convert_with_docling(
     use_hybrid = backend == "hybrid"
     _HYBRID_BACKEND_USED[0] = False
     try:
-        result = run(use_hybrid)
+        results, document, ocr_ran = run(use_hybrid)
     except Exception as err:  # noqa: BLE001 — only the open failure is handled
         if use_hybrid or not _is_open_failure(err):
             raise
@@ -830,31 +913,36 @@ def convert_with_docling(
             file=sys.stderr,
         )
         use_hybrid = True
-        result = run(True)
+        results, document, ocr_ran = run(True)
     _HYBRID_BACKEND_USED[0] = use_hybrid
+    _OCR_RAN[0] = ocr_ran
     # docling-parse (#374) returns SUCCESS with an empty error list for a
     # truncated PDF, just with pages missing — so the status is no evidence;
     # compare the page count against what the file itself says it has.
-    got = len(result.pages)
-    expected = expected_page_count(pdf_page_count(path), page_range)
+    got = sum(len(r.pages) for r in results)
+    expected = expected_page_count(total_pages, page_range)
     if expected > 0 and got < expected:
         raise PdfDamagedError(f"docling {got}/{expected} sayfa döndürdü")
     # PARTIAL_SUCCESS (some pages reported errors) is kept: the pages that did
     # convert are real content; the errors become a warning instead.
     _DOCLING_ERRORS.clear()
-    if str(getattr(result.status, "name", result.status)) == "PARTIAL_SUCCESS":
+    partial = False
+    for result in results:
+        if str(getattr(result.status, "name", result.status)) != "PARTIAL_SUCCESS":
+            continue
+        partial = True
         for item in getattr(result, "errors", None) or []:
             msg = str(getattr(item, "error_message", item)).strip()
             if msg:
                 _DOCLING_ERRORS.append(msg[:200])
-        if not _DOCLING_ERRORS:
-            _DOCLING_ERRORS.append("ayrıntı bildirilmedi")
+    if partial and not _DOCLING_ERRORS:
+        _DOCLING_ERRORS.append("ayrıntı bildirilmedi")
     # docling's reading-order pass sometimes swaps the columns of a two-column
     # page although every bbox is right (column_order.py). A failure here must
     # never fail the conversion: fall back to docling's own order.
     _COLUMN_REPAIRED_PAGES.clear()
     try:
-        _COLUMN_REPAIRED_PAGES.extend(repair_document_order(result.document))
+        _COLUMN_REPAIRED_PAGES.extend(repair_document_order(document))
     except Exception as err:  # noqa: BLE001 — repair is best-effort
         print(f"column_order: onarım atlandı: {err}", file=sys.stderr)
     # Short left-aligned lines between centred display formulas get sorted
@@ -864,20 +952,20 @@ def convert_with_docling(
     _READING_REPAIRED_PAGES.clear()
     _READING_SUSPICIOUS_PAGES.clear()
     try:
-        repaired, suspicious = repair_reading_order(result.document, path)
+        repaired, suspicious = repair_reading_order(document, path)
         _READING_REPAIRED_PAGES.extend(repaired)
         _READING_SUSPICIOUS_PAGES.extend(suspicious)
     except Exception as err:  # noqa: BLE001 — repair is best-effort
         print(f"reading_order: onarım atlandı: {err}", file=sys.stderr)
     if images.COLLECTOR.enabled:
         try:
-            md = images.docling_markdown_with_tokens(result.document)
-            images.COLLECTOR.total_pages = len(result.document.pages) or None
+            md = images.docling_markdown_with_tokens(document)
+            images.COLLECTOR.total_pages = len(document.pages) or None
             return md
         except Exception as err:  # noqa: BLE001 — images are best-effort, the text is not
             print(f"images: görsel çıkarma atlandı: {err}", file=sys.stderr)
             images.COLLECTOR.candidates.clear()
-    return result.document.export_to_markdown()
+    return document.export_to_markdown()
 
 
 def not_installed_message(tool: str) -> str:
