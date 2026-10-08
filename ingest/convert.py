@@ -405,6 +405,121 @@ def demote_slide_headings(text: str) -> str:
     return _apply_outside_verbatim(text, lambda chunk: _H1_LINE.sub(lambda m: f"## {m.group(1)}", chunk))
 
 
+_SLIDE_MARKER = re.compile(r"^<!--\s*Slide number:\s*(\d+)\s*-->\s*$")
+_NOTES_HEADING = re.compile(r"^#{1,6}[ \t]*Notes:?[ \t]*$")
+_FENCE_LINE = re.compile(r"^\s*(```|~~~)")
+# A repeated line must be on this share of slides AND on at least this many.
+_BOILERPLATE_SHARE = 0.6
+_BOILERPLATE_MIN_SLIDES = 4
+_BOILERPLATE_MAX_CHARS = 200
+
+
+def clean_pptx_noise(text: str) -> tuple[str, dict]:
+    """Strips MarkItDown's PPTX-specific noise (measured on the Gradyan İniş
+    deck): an empty `### Notes:` after every slide that merely has a notes
+    slide, the bare slide-number line, and the footer repeated on every slide.
+
+    Why the Notes heading matters beyond clutter: on a deck whose first slide
+    has no title shape it was the FIRST heading of the whole document, so
+    postprocess.fix_heading_jumps lifted `###` to `#` (previous level 0, so
+    at most level 1): the note was titled "Notes:" and every later Notes
+    heading cascaded to `##`, `###`. Non-empty notes keep their text under a
+    plain bold label so they can never become a heading or the title.
+
+    Fence-aware (a slide may show code as plain text) and marker-safe: the
+    `<!-- Slide number: N -->` comments and images.py's `<!-- vc:... -->`
+    tokens/markers are never touched. Returns (text, stats)."""
+    stats = {"notes_removed": 0, "notes_relabeled": 0, "slide_numbers": 0, "footers": 0}
+    lines = text.split("\n")
+    # One entry per slide marker: (slide number, indexes of its lines).
+    sections: list[tuple[int, list[int]]] = []
+    in_fence = False
+    for i, line in enumerate(lines):
+        if _FENCE_LINE.match(line):
+            in_fence = not in_fence
+        m = None if in_fence else _SLIDE_MARKER.match(line)
+        if m:
+            sections.append((int(m.group(1)), [i]))
+        elif sections:
+            sections[-1][1].append(i)
+    if not sections:  # no slide markers at all: not a MarkItDown deck
+        return text, stats
+
+    def next_to_number(idxs: list[int], i: int) -> bool:
+        # A code listing's line-number gutter (1, 2, ... 24 as separate
+        # lines, measured in slides.04) also contains the slide's own number;
+        # a real slide-number box stands alone, so a bare-integer neighbour
+        # means "content", not footer.
+        pos = idxs.index(i)
+        before = [lines[j].strip() for j in idxs[:pos] if lines[j].strip()]
+        after = [lines[j].strip() for j in idxs[pos + 1 :] if lines[j].strip()]
+        return bool((before and before[-1].isdigit()) or (after and after[0].isdigit()))
+
+    drop: set[int] = set()
+    replace: dict[int, str] = {}
+    body_of: list[list[int]] = []  # per slide: candidate lines for the footer pass
+    for number, idxs in sections:
+        in_fence = False
+        notes_at = None
+        body: list[int] = []
+        for i in idxs[1:]:  # idxs[0] is the marker comment itself
+            line = lines[i]
+            if _FENCE_LINE.match(line):
+                in_fence = not in_fence
+                continue
+            if in_fence or notes_at is not None:
+                continue
+            if _NOTES_HEADING.match(line.strip()):
+                notes_at = i
+                continue
+            if line.strip() == str(number) and not next_to_number(idxs, i):
+                drop.add(i)
+                stats["slide_numbers"] += 1
+                continue
+            body.append(i)
+        body_of.append(body)
+        if notes_at is not None:
+            if any(lines[i].strip() for i in idxs if i > notes_at):
+                replace[notes_at] = "**Konuşmacı notu:**"
+                stats["notes_relabeled"] += 1
+            else:
+                drop.add(notes_at)
+                stats["notes_removed"] += 1
+
+    def boilerplate_candidate(line: str) -> str | None:
+        t = line.strip()
+        if not t or len(t) > _BOILERPLATE_MAX_CHARS:
+            return None
+        if t.startswith(("#", "<!--", "![", "|")):
+            return None
+        return t
+
+    slide_count = len(body_of)
+    if slide_count >= _BOILERPLATE_MIN_SLIDES:
+        seen_in: dict[str, int] = {}
+        for body in body_of:
+            for t in {boilerplate_candidate(lines[i]) for i in body} - {None}:
+                seen_in[t] = seen_in.get(t, 0) + 1
+        repeated = {
+            t
+            for t, n in seen_in.items()
+            if n >= _BOILERPLATE_MIN_SLIDES and n >= _BOILERPLATE_SHARE * slide_count
+        }
+        kept: set[str] = set()
+        for body in body_of:
+            for i in body:
+                t = boilerplate_candidate(lines[i])
+                if t in repeated:
+                    if t in kept:
+                        drop.add(i)
+                        stats["footers"] += 1
+                    else:
+                        kept.add(t)  # first occurrence stays: the info is not lost
+
+    out = [replace.get(i, line) for i, line in enumerate(lines) if i not in drop]
+    return "\n".join(out), stats
+
+
 def convert_with_markitdown(path: Path) -> str:
     from markitdown import MarkItDown
 
@@ -429,6 +544,7 @@ def convert_with_markitdown(path: Path) -> str:
             except Exception as err:  # noqa: BLE001 — without areas nothing is treated as template art
                 print(f"images: slayt alanları okunamadı: {err}", file=sys.stderr)
     if path.suffix.lower() == ".pptx":
+        text, _noise = clean_pptx_noise(text)
         text = demote_slide_headings(text)
     return text
 

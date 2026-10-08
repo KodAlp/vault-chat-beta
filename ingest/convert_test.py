@@ -122,6 +122,73 @@ def test_demote_slide_headings() -> None:
     check("the fenced comment was not itself demoted to ##", "## not a heading" not in out2)
 
 
+def _deck(slides: list[str]) -> str:
+    return "\n\n".join(f"<!-- Slide number: {i} -->\n{body}" for i, body in enumerate(slides, 1))
+
+
+def test_clean_pptx_noise() -> None:
+    footer = "Dr. Öğr. Üyesi Ad Soyad – Üniversite Bölümü"
+
+    # Empty notes: heading removed, nothing else lost.
+    deck = _deck([f"# A\n\nbir\n\n{footer}\n1\n\n### Notes:\n", f"# B\n\niki\n\n{footer}\n2\n\n### Notes:\n",
+                  f"# C\n\nüç\n\n{footer}\n3", f"# D\n\ndört\n\n{footer}\n4"])
+    out, st = convert.clean_pptx_noise(deck)
+    check("empty Notes headings removed", "Notes" not in out and st["notes_removed"] == 2)
+    check("slide-number comments kept", all(f"<!-- Slide number: {i} -->" in out for i in range(1, 5)))
+    check("bare slide numbers dropped", st["slide_numbers"] == 4 and "\n1\n" not in out and "\n4" not in out.split("dört")[1])
+    check("footer kept once (first occurrence)", out.count(footer) == 1 and st["footers"] == 3)
+    check("content untouched", all(w in out for w in ("bir", "iki", "üç", "dört")))
+
+    # Non-empty notes: relabeled, never a heading.
+    out2, st2 = convert.clean_pptx_noise(_deck(["# A\n\nx\n\n### Notes:\nKonuş şunu söyle", "# B\n\ny"]))
+    check("non-empty notes relabeled", "**Konuşmacı notu:**\nKonuş şunu söyle" in out2 and st2["notes_relabeled"] == 1)
+    check("no Notes heading remains", "Notes:" not in out2)
+
+    # A slide number only goes from its own slide: "2" on slide 1 is content.
+    out3, _ = convert.clean_pptx_noise(_deck(["# A\n\n2\n\ntext\n\n1", "# B\n\n2", "# C", "# D"]))
+    s1, s2 = out3.split("<!-- Slide number: 2 -->")
+    check("number of another slide is kept", "\n2\n" in s1 and "\n1" not in s1.split("# A")[1])
+    check("own number dropped on slide 2", "2" not in s2.replace("# B", ""))
+
+    # A line-number gutter that happens to contain the slide's own number.
+    gutter = "\n".join(str(n) for n in range(1, 6))
+    out8, st8 = convert.clean_pptx_noise(_deck(["# A", "# B", f"# C\n\n{gutter}\ncode"]))
+    check("gutter number inside a listing kept", "\n3\n" in out8 and st8["slide_numbers"] == 0)
+
+    # Fewer than 4 slides: footer untouched.
+    out4, st4 = convert.clean_pptx_noise(_deck([f"# A\n\n{footer}", f"# B\n\n{footer}", f"# C\n\n{footer}"]))
+    check("<4 slides: footer untouched", out4.count(footer) == 3 and st4["footers"] == 0)
+
+    # A line on only 50% of slides is content, not a footer.
+    half = _deck([f"# S{i}\n\n{'ortak satır' if i <= 4 else 'başka'}" for i in range(1, 9)])
+    out5, st5 = convert.clean_pptx_noise(half)
+    check("line on 50% of slides kept", out5.count("ortak satır") == 4 and st5["footers"] == 0)
+
+    # Headings, tables, image lines and markers are never footer candidates.
+    rep = "\n".join(["![x](a.png)", "<!-- vc:img 0 -->", "| a | b |", "## Alt başlık"])
+    out6, st6 = convert.clean_pptx_noise(_deck([f"# T{i}\n\n{rep}" for i in range(1, 6)]))
+    check("headings/tables/images/markers kept", out6.count("<!-- vc:img 0 -->") == 5 and out6.count("| a | b |") == 5
+          and out6.count("![x](a.png)") == 5 and out6.count("## Alt başlık") == 5 and st6["footers"] == 0)
+
+    # Fenced code with a Notes-looking line or repeated lines is left alone.
+    code = "```\n### Notes:\nprint(1)\n```"
+    out7, _ = convert.clean_pptx_noise(_deck([f"# T{i}\n\n{code}" for i in range(1, 6)]))
+    check("fenced code untouched", out7.count("### Notes:") == 5 and out7.count("print(1)") == 5)
+
+    # No slide markers: not a MarkItDown deck, returned verbatim.
+    plain = "# X\n\n### Notes:\n"
+    check("no markers -> unchanged", convert.clean_pptx_noise(plain)[0] == plain)
+
+    # Title: with the bogus heading gone the first real slide title wins.
+    from postprocess import postprocess
+    raw = _deck(["Kapak yazısı\n\n### Notes:\n", "# İkinci\n\nx\n\n### Notes:\n"])
+    cleaned, _ = convert.clean_pptx_noise(raw)
+    _, fm = postprocess(demote_slide_headings(cleaned), title_fallback="dosya", converted_by="markitdown", needs_review=False)
+    check("title is never 'Notes:'", fm["title"] != "Notes:")
+    _, fm_old = postprocess(demote_slide_headings(raw), title_fallback="dosya", converted_by="markitdown", needs_review=False)
+    check("(old behaviour reproduced: Notes: title)", fm_old["title"] == "Notes:")
+
+
 def test_unique_output_path() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         d = Path(tmp)
@@ -661,6 +728,7 @@ if __name__ == "__main__":
     sys.stdout.reconfigure(encoding="utf-8")
     test_title_from_fragments()
     test_demote_slide_headings()
+    test_clean_pptx_noise()
     test_unique_output_path()
     test_split_existing_frontmatter()
     test_parse_page_range()
