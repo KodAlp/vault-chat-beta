@@ -1,99 +1,24 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import crypto from 'node:crypto';
-import matter from 'gray-matter';
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { stagingDir, resolveLibraryPath, slugify, appendImportLog } from '$lib/server/library';
-import { indexLibraryFile } from '$lib/server/incrementalIndex';
 import { vaultFromId } from '$lib/server/requestVault';
 import { AppError, fail } from '$lib/server/app-error';
-import { sanitizeDomain } from '$lib/server/domain-name';
-import { readMeta, deleteMeta, IMPORT_ID_RE } from '$lib/server/pending-imports';
-import { relinkAttachmentsForMove, libraryRelPath } from '$lib/server/converted-images';
+import { IMPORT_ID_RE } from '$lib/server/pending-imports';
+import { confirmStagedImport } from '$lib/server/import-confirm';
 
+/** The user's confirm click. The work itself lives in import-confirm.ts, shared with the app's auto-confirm of MCP imports. */
 export const POST: RequestHandler = async ({ params, request }) => {
-	// params.id goes straight into path.join(stagingDir(v), `${id}.md`) below; every real id is a
+	// params.id goes straight into path.join(stagingDir(v), `${id}.md`) in the shared function; every real id is a
 	// crypto.randomUUID(), so requiring that shape (shared with the cancel route) rejects a traversal id.
 	if (!IMPORT_ID_RE.test(params.id)) fail('VALIDATION_INVALID', { field: 'importId' });
 
 	const body = (await request.json()) as { title: string; domain: string; level: string; vault?: string };
 	const v = vaultFromId(body.vault);
 
-	const stagedPath = path.join(stagingDir(v), `${params.id}.md`);
-	if (!fs.existsSync(stagedPath)) fail('IMPORT_EXPIRED', undefined, 404);
-
-	// Imports staged by an MCP client are marked in the import log, so the library's history shows who brought them in.
-	const byMcp = readMeta(v, params.id)?.by === 'mcp';
-
-	if (!body.title?.trim()) fail('VALIDATION_REQUIRED', { field: 'title' });
-	if (!body.domain?.trim()) fail('VALIDATION_REQUIRED', { field: 'domain' });
-
-	// Same normalization as the batch import: NFC, no Windows-invalid or
-	// control characters, no indexer-excluded / reserved folder names.
-	const domain = sanitizeDomain(body.domain);
-
-	const raw = fs.readFileSync(stagedPath, 'utf-8');
-	const parsed = matter(raw);
-	const frontmatter: Record<string, unknown> = {
-		...parsed.data,
-		title: body.title.trim(),
-		domain,
-		level: body.level || 'undergraduate'
-	};
-
-	const filename = `${slugify(v, body.title, domain)}.md`;
-	const relPath = `${domain}/${filename}`;
-	const destAbs = resolveLibraryPath(v, relPath);
-	fs.mkdirSync(path.dirname(destAbs), { recursive: true });
-	// Image links in a staged note are relative to _meta/staging/; re-point them for the final folder.
-	const content = relinkAttachmentsForMove(parsed.content, libraryRelPath(v, stagedPath), relPath);
-	const finalRaw = matter.stringify(content, frontmatter);
-	fs.writeFileSync(destAbs, finalRaw, 'utf-8');
-
-	// #11: indexLibraryFile can fail (a corrupt DB handle, an Ollama call that
-	// errors mid-embedding) after the file already landed in the library tree
-	// — until now that left an unindexed orphan behind with no signal at all:
-	// not in the index, not back in staging, no log entry either way, and
-	// nothing in the UI to say it needed a retry.
 	try {
-		await indexLibraryFile(v, destAbs, relPath);
+		const { path: relPath } = await confirmStagedImport(v, params.id, { title: body.title, domain: body.domain, level: body.level });
+		return json({ ok: true, path: relPath });
 	} catch (err) {
-		fs.rmSync(destAbs, { force: true });
-		// The staged note goes back with its original links, so its converted images stay referenced by it:
-		// nothing to delete here (deleting them would break the restored note). Only a later cancel may.
-		fs.writeFileSync(stagedPath, raw, 'utf-8');
-		appendImportLog(v, {
-			sourcePath: relPath,
-			sourceUrl: frontmatter.source_url,
-			sha256: crypto.createHash('sha256').update(finalRaw).digest('hex'),
-			sourceSha256: frontmatter.source_sha256,
-			importedAt: new Date().toISOString(),
-			status: 'indekslenmedi',
-			tool: frontmatter.converted_by ?? 'upload',
-			...(byMcp ? { by: 'mcp' } : {})
-		});
-		// An unreachable embedding model is the common case (Ollama not running): show a localized reason
-		// instead of the raw "EMBEDDING_UNAVAILABLE {...}" text, which is English and code-shaped.
-		if (err instanceof AppError && err.code === 'EMBEDDING_UNAVAILABLE') {
-			fail('IMPORT_INDEX_FAILED', { reason: 'embedding_unreachable' }, 503);
-		}
-		fail('IMPORT_INDEX_FAILED', { detail: err instanceof Error ? err.message : 'bilinmeyen hata' }, 500);
+		if (err instanceof AppError) fail(err.code, err.params, err.status);
+		throw err;
 	}
-
-	appendImportLog(v, {
-		sourcePath: relPath,
-		sourceUrl: frontmatter.source_url,
-		sha256: crypto.createHash('sha256').update(finalRaw).digest('hex'),
-		sourceSha256: frontmatter.source_sha256,
-		importedAt: new Date().toISOString(),
-		status: 'converted',
-		tool: frontmatter.converted_by ?? 'upload',
-		...(byMcp ? { by: 'mcp' } : {})
-	});
-
-	fs.rmSync(stagedPath, { force: true });
-	deleteMeta(v, params.id);
-
-	return json({ ok: true, path: relPath });
 };
