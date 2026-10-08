@@ -1,4 +1,5 @@
 import { sharedJobMutex, type JobMutex } from '../jobMutex';
+import { releaseConverterWorker } from '../convert-worker';
 import { getEmbeddingConfig, getOllamaBaseUrl } from './config-store';
 
 export interface OllamaGate {
@@ -162,6 +163,10 @@ export function createOllamaGate(
 				incRef(model);
 				return;
 			}
+			// We hold the exclusive slot, so no conversion is running: stop the
+			// idle converter worker (its docling models sit in the GPU memory
+			// the chat model is about to load into). No-op when none exists.
+			await releaseConverterWorker();
 			if (currentModel) {
 				await waitForDrain(currentModel);
 				const residentNow = await deps.reconcile();
