@@ -637,6 +637,7 @@
     "importLinksDescription": "Füge Links zu PDFs und Webseiten ein – sie werden nacheinander heruntergeladen und der Bibliothek hinzugefügt. Bereits erfolgreich importierte Links werden bei einem erneuten Lauf übersprungen.",
     "uploadSettingsTitle": "Upload-Einstellungen",
     "keepOriginals": "Originaldateien konvertierter Dokumente behalten ({path})",
+    "keepOriginalsHint": "Originale belegen zusätzlichen Speicherplatz; identischer Inhalt wird nur einmal gespeichert, auch bei erneutem Import. Aktiviert lassen, um eine Notiz später erneut importieren zu können.",
     "allowedLanguages": "Im Chat erlaubte Sprachen",
     "allowedLanguagesPlaceholder": "Türkisch, Koreanisch",
     "allowedLanguagesHint": "Die erste Sprache ist die Hauptsprache bzw. Rückfallsprache des Tresors: Bei „In der Sprache der Frage antworten“ wird sie verwendet, wenn die Sprache der letzten Nachricht nicht erkannt werden kann; bei „Immer in der Hauptsprache antworten“ wird sie immer verwendet. Weitere Sprachen (z. B. für einen Sprachlern-Tresor) dürfen in der Antwort vorkommen und werden vom Leak-Detektor nicht als Fehler markiert.",

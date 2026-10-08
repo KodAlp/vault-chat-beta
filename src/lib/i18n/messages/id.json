@@ -628,6 +628,7 @@
     "importLinksDescription": "Tempelkan tautan PDF dan halaman web — diunduh berurutan dan ditambahkan ke pustaka. Tautan yang sudah berhasil diimpor dilewati saat dijalankan ulang.",
     "uploadSettingsTitle": "Pengaturan Unggahan",
     "keepOriginals": "Simpan berkas asli dari dokumen yang dikonversi ({path})",
+    "keepOriginalsHint": "File asli memakai ruang disk tambahan; konten yang identik hanya disimpan sekali, meski diimpor lagi. Biarkan aktif agar catatan dapat diimpor ulang nanti.",
     "allowedLanguages": "Bahasa yang diizinkan di obrolan",
     "allowedLanguagesPlaceholder": "Turki, Korea",
     "allowedLanguagesHint": "Bahasa pertama adalah bahasa utama/cadangan vault: dengan \"Jawab dalam bahasa pertanyaan\" bahasa ini dipakai saat bahasa pesan terakhir tidak dapat ditentukan; dengan \"Selalu jawab dalam bahasa utama\" bahasa ini selalu dipakai. Bahasa tambahan (mis. untuk vault belajar bahasa) boleh muncul dalam jawaban dan tidak ditandai sebagai kerusakan oleh pendeteksi kebocoran.",

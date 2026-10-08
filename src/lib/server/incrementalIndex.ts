@@ -8,6 +8,7 @@ import { DOC_PREFIX } from './embed-config';
 import { getEmbeddingConfig } from './providers/config-store';
 import { AppError } from './app-error';
 import { isReindexing } from './reindex';
+import { scheduleConvertedImageSweep } from './converted-image-cleanup';
 import type { VaultContext } from './vaults';
 
 /** Mirrors indexer/index-vault.ts's own batching call — embedTexts() already
@@ -92,6 +93,8 @@ export async function indexLibraryFile(v: VaultContext, absPath: string, relPath
 	} finally {
 		db.close();
 	}
+	// Library content just changed: let the (throttled, off-request-path) orphan-image sweep look at this vault.
+	scheduleConvertedImageSweep(v);
 }
 
 export function removeLibraryFileFromIndex(v: VaultContext, relPath: string): void {

@@ -641,6 +641,7 @@
     "importLinksDescription": "Cole links de PDFs e páginas da web: eles são baixados em sequência e adicionados à biblioteca. Links já importados com sucesso são ignorados em uma nova execução.",
     "uploadSettingsTitle": "Configurações de envio",
     "keepOriginals": "Manter os arquivos originais dos documentos convertidos ({path})",
+    "keepOriginalsHint": "Os originais ocupam espaço extra em disco; conteúdo idêntico é guardado apenas uma vez, mesmo que seja importado de novo. Deixe ativado para poder reimportar uma nota mais tarde.",
     "allowedLanguages": "Idiomas permitidos no chat",
     "allowedLanguagesPlaceholder": "Turco, coreano",
     "allowedLanguagesHint": "O primeiro idioma é o idioma principal/de reserva do cofre: com \"Responder no idioma da pergunta\" ele é usado quando não é possível determinar o idioma da última mensagem; com \"Sempre responder no idioma principal\" ele é sempre usado. Idiomas adicionais (ex.: para um cofre de aprendizado de idiomas) podem aparecer na resposta e não são sinalizados como corrupção pelo detector de vazamento.",

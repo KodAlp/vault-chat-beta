@@ -77,7 +77,10 @@ export interface AppLogRecord {
 		 * itself threw (`reason: 'unavailable'` — consent/network/dims-mismatch
 		 * at the provider). `message` carries the raw AppError detail for
 		 * 'unavailable'; never the query text (this file's content rule). */
-		| 'embedding_issue';
+		| 'embedding_issue'
+		/** Converted-image cleanup (converted-image-cleanup.ts) deleted orphaned pictures: `message` carries
+		 * counts only, never a file name or path. */
+		| 'image_cleanup';
 	chatId?: string;
 	provider?: string;
 	model?: string;

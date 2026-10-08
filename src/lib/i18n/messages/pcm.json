@@ -628,6 +628,7 @@
     "importLinksDescription": "Paste PDF and web page links — dem go download one by one and join di library. Links wey we don import well before go skip if you run am again.",
     "uploadSettingsTitle": "Upload Settings",
     "keepOriginals": "Keep di original files of converted documents ({path})",
+    "keepOriginalsHint": "Original files dey use extra disk space; di same content go save only once, even if you import am again. Make e dey on so you fit import di note again later.",
     "allowedLanguages": "Languages wey dem allow for chat",
     "allowedLanguagesPlaceholder": "Turkish, Korean",
     "allowedLanguagesHint": "Di first language na di vault main/fallback language: with \"Answer in the question's language\", dem go use am when we no fit know di language of di last message; with \"Always answer in the primary language\", dem go always use am. Extra languages (e.g. for language-learning vault) fit show for di response and di leak detector no go flag dem as corruption.",

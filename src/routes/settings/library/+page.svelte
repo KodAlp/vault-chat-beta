@@ -12,7 +12,7 @@
 	import { t } from '$lib/i18n/index.svelte';
 
 	let settings = $state<LibrarySettings>({
-		keepOriginals: false,
+		keepOriginals: true,
 		allowedLanguages: ['Türkçe'],
 		responseLanguage: 'match',
 		hiddenFolders: ['raw', 'cards', 'frontier', 'notes'],
@@ -164,10 +164,13 @@
 			<Card.Title level={2}>{t('LibrarySettingsPage.uploadSettingsTitle')}</Card.Title>
 		</Card.Header>
 		<Card.Content class="flex flex-col gap-4">
-			<label class="flex cursor-pointer items-center gap-2 text-sm">
-				<Switch checked={settings.keepOriginals} onCheckedChange={persistKeepOriginals} />
-				{t('LibrarySettingsPage.keepOriginals', { path: 'data/library/_meta/originals/' })}
-			</label>
+			<div class="flex flex-col gap-1">
+				<label class="flex cursor-pointer items-center gap-2 text-sm">
+					<Switch checked={settings.keepOriginals} onCheckedChange={persistKeepOriginals} />
+					{t('LibrarySettingsPage.keepOriginals', { path: 'data/library/_meta/originals/' })}
+				</label>
+				<p class="text-muted-foreground text-xs">{t('LibrarySettingsPage.keepOriginalsHint')}</p>
+			</div>
 			<div class="flex flex-col gap-1 text-sm">
 				{t('LibrarySettingsPage.responseLanguage')}
 				<label class="flex cursor-pointer items-center gap-2">

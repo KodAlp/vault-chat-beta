@@ -639,6 +639,7 @@
     "importLinksDescription": "Collez des liens vers des PDF et des pages web : ils sont téléchargés séquentiellement et ajoutés à la bibliothèque. Les liens déjà importés avec succès sont ignorés lors d'une nouvelle exécution.",
     "uploadSettingsTitle": "Réglages de téléversement",
     "keepOriginals": "Conserver les fichiers originaux des documents convertis ({path})",
+    "keepOriginalsHint": "Les originaux occupent de l’espace disque supplémentaire ; un contenu identique n’est stocké qu’une fois, même s’il est réimporté. Laissez cette option activée pour pouvoir réimporter une note plus tard.",
     "allowedLanguages": "Langues autorisées dans le chat",
     "allowedLanguagesPlaceholder": "turc, coréen",
     "allowedLanguagesHint": "La première langue est la langue principale/de repli du coffre : avec « Répondre dans la langue de la question », elle sert lorsque la langue du dernier message ne peut pas être déterminée ; avec « Toujours répondre dans la langue principale », elle est toujours utilisée. Les langues supplémentaires (par ex. pour un coffre d'apprentissage des langues) peuvent apparaître dans la réponse et ne sont pas signalées comme corruption par le détecteur de fuite.",
