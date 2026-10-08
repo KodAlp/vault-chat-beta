@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { copyAttachmentIntoLibrary, META_DIR, ATTACHMENTS_SUBDIR } from './attachments';
+import { copyAttachmentIntoLibrary, attachmentsDir, META_DIR, ATTACHMENTS_SUBDIR } from './attachments';
 import { libraryRoot } from './library';
 import { resolveRelativeLibraryPath, ABSOLUTE_SRC_RE } from '../attachment-link';
 import type { VaultContext } from './vaults';
@@ -119,7 +119,13 @@ export function importConvertedImages(
 				const st = fs.lstatSync(src);
 				if (!st.isFile() || st.size === 0 || st.size > MAX_IMAGE_BYTES) continue;
 				// Content-addressed name: an existing file of that name has these exact bytes.
-				if (copyAttachmentIntoLibrary(v, src, name)) kept.add(name);
+				if (copyAttachmentIntoLibrary(v, src, name)) {
+					kept.add(name);
+					// A dedupe hit leaves an old orphan's mtime alone; refresh it so the 24 h sweep floor protects
+					// this import until its note is written and links the picture.
+					const now = new Date();
+					fs.utimesSync(path.join(attachmentsDir(v), name), now, now);
+				}
 			} catch {
 				// missing/unreadable image: dropped below
 			}

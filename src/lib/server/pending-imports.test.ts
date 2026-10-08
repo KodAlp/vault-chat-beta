@@ -12,6 +12,7 @@ import {
 	listPending,
 	markImportActive,
 	markImportInactive,
+	IMPORT_ID_RE,
 	type PendingImportMeta
 } from './pending-imports';
 import type { VaultContext } from './vaults';
@@ -147,4 +148,11 @@ test('queued/converting metas nobody is working on are reported as interrupted e
 
 test('an empty or missing staging dir lists nothing', () => {
 	assert.deepEqual(listPending(tmpVault()), []);
+});
+
+test('IMPORT_ID_RE accepts a randomUUID and rejects anything that could escape the staging folder', () => {
+	assert.ok(IMPORT_ID_RE.test(crypto.randomUUID()));
+	for (const bad of ['', '..', '../../x', '..\\..\\x','a/b', crypto.randomUUID() + '/..', crypto.randomUUID() + '.md', ' ' + crypto.randomUUID()]) {
+		assert.equal(IMPORT_ID_RE.test(bad), false, bad);
+	}
 });

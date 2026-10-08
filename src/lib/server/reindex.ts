@@ -5,6 +5,7 @@ import { rebuildIndex, type RebuildProgress } from '../../../indexer/rebuild';
 import { getEmbeddingConfig } from './providers/config-store';
 import { closeVaultIndexDb } from './retrieve';
 import { AppError } from './app-error';
+import { scheduleConvertedImageSweep } from './converted-image-cleanup';
 import type { VaultContext } from './vaults';
 
 /**
@@ -207,6 +208,7 @@ export async function reindexVault(v: VaultContext, opts: ReindexOptions = {}): 
 		// is for — this process has no way to close that one.
 		closeVaultIndexDb(v.id);
 		await swapIndexIntoPlace(v.indexDbPath, tempPath);
+		scheduleConvertedImageSweep(v);
 
 		return { files: stats.indexed, chunks: stats.chunks, ms: stats.ms };
 	} catch (err) {
