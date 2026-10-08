@@ -10,6 +10,7 @@ import { vaultFromId } from '$lib/server/requestVault';
 import { AppError, fail } from '$lib/server/app-error';
 import { sanitizeDomain } from '$lib/server/domain-name';
 import { readMeta, deleteMeta } from '$lib/server/pending-imports';
+import { relinkAttachmentsForMove, libraryRelPath } from '$lib/server/converted-images';
 
 /** params.id is never checked against resolveLibraryPath-style containment
  * before this — it goes straight into path.join(stagingDir(v), \`${id}.md\`)
@@ -51,7 +52,9 @@ export const POST: RequestHandler = async ({ params, request }) => {
 	const relPath = `${domain}/${filename}`;
 	const destAbs = resolveLibraryPath(v, relPath);
 	fs.mkdirSync(path.dirname(destAbs), { recursive: true });
-	const finalRaw = matter.stringify(parsed.content, frontmatter);
+	// Image links in a staged note are relative to _meta/staging/; re-point them for the final folder.
+	const content = relinkAttachmentsForMove(parsed.content, libraryRelPath(v, stagedPath), relPath);
+	const finalRaw = matter.stringify(content, frontmatter);
 	fs.writeFileSync(destAbs, finalRaw, 'utf-8');
 
 	// #11: indexLibraryFile can fail (a corrupt DB handle, an Ollama call that

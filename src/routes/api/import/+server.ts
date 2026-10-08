@@ -15,6 +15,7 @@ import {
 	MAX_UPLOAD_BYTES
 } from '$lib/server/library';
 import { vaultFromId } from '$lib/server/requestVault';
+import { importConvertedImages, libraryRelPath } from '$lib/server/converted-images';
 import { sseStream } from '$lib/server/sse';
 import { logAppEvent } from '$lib/server/app-log';
 import { AppError, errorPayload } from '$lib/server/app-error';
@@ -103,7 +104,12 @@ export const POST: RequestHandler = async ({ request }) => {
 			if (!result.outPath) throw new AppError('CONVERSION_EMPTY');
 
 			const stagedMdPath = path.join(stagingDir(v), `${importId}.md`);
-			fs.copyFileSync(result.outPath, stagedMdPath);
+			// Images are copied into the vault before workDir is removed below.
+			fs.writeFileSync(
+				stagedMdPath,
+				importConvertedImages(v, result, libraryRelPath(v, stagedMdPath), fs.readFileSync(result.outPath, 'utf-8')),
+				'utf-8'
+			);
 
 			if (getLibrarySettings(v).keepOriginals) {
 				fs.mkdirSync(originalsDir(v), { recursive: true });

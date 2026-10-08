@@ -7,6 +7,7 @@ import { AppError, errorPayload, fail } from './app-error';
 import { logAppEvent } from './app-log';
 import { isVaultMcpExposed, type VaultContext } from './vaults';
 import { vaultFromId } from './requestVault';
+import { importConvertedImages, libraryRelPath } from './converted-images';
 import type { ValidatedImportPath } from './mcp-import-path';
 import { markImportActive, markImportInactive, readMeta, updateMeta, type PendingImportMeta } from './pending-imports';
 
@@ -67,7 +68,12 @@ export async function stageLocalFile(
 		const result = await enqueueConversion(tempIn, workDir, 'auto', undefined, file.name);
 		if (!result.outPath) throw new AppError('CONVERSION_EMPTY');
 
-		fs.copyFileSync(result.outPath, path.join(stagingDir(v), `${importId}.md`));
+		const stagedMdPath = path.join(stagingDir(v), `${importId}.md`);
+		fs.writeFileSync(
+			stagedMdPath,
+			importConvertedImages(v, result, libraryRelPath(v, stagedMdPath), fs.readFileSync(result.outPath, 'utf-8')),
+			'utf-8'
+		);
 
 		if (getLibrarySettings(v).keepOriginals) {
 			fs.mkdirSync(originalsDir(v), { recursive: true });

@@ -4,6 +4,7 @@ import crypto from 'node:crypto';
 import matter from 'gray-matter';
 import type { RequestHandler } from './$types';
 import { enqueueConversion } from '$lib/server/convertQueue';
+import { importConvertedImages } from '$lib/server/converted-images';
 import { relDirToSegments } from '$lib/server/batch-paths';
 import { sanitizeDomain } from '$lib/server/domain-name';
 import { scanRegistry } from '$lib/server/scan-registry';
@@ -204,7 +205,9 @@ export const POST: RequestHandler = async ({ request }) => {
 				const relPath = `${dir}/${filename}`;
 				const destAbs = resolveLibraryPath(v, relPath);
 				fs.mkdirSync(path.dirname(destAbs), { recursive: true });
-				const finalRaw = matter.stringify(parsed.content, frontmatter);
+				// Images go into the vault now (workDir is removed in `finally`); links are written for the final path.
+				const content = importConvertedImages(v, result, relPath, parsed.content);
+				const finalRaw = matter.stringify(content, frontmatter);
 				fs.writeFileSync(destAbs, finalRaw, 'utf-8');
 				await indexLibraryFile(v, destAbs, relPath);
 
