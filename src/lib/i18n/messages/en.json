@@ -521,6 +521,11 @@
 	},
 
 	"LibraryViewPage": {
+		"reimport": "Re-import",
+		"reimportUnavailable": "Cannot re-import: the original file was not kept",
+		"reimportFrom": "Original file: {name}",
+		"reimporting": "Re-importing…",
+		"reimportReady": "The original file was converted again. Not saved yet — review it and press Save; the previous version stays in history.",
 		"missingPath": "The 'path' parameter is required.",
 		"loadFailed": "Couldn't load the file.",
 		"fallbackTitle": "Source",
@@ -1111,6 +1116,8 @@
 	},
 
 	"ServerErrors": {
+		"REIMPORT_NO_ORIGINAL": "This note cannot be re-imported because its original file was not kept",
+		"REIMPORT_BUSY": "This note is already being re-imported",
 		"UNKNOWN": "An unexpected error occurred",
 		"INTERNAL": "Something went wrong on the server",
 		"ROUTE_NOT_FOUND": "Page not found",

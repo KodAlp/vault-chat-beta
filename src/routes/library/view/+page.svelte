@@ -16,6 +16,8 @@
 	import PencilIcon from '@lucide/svelte/icons/pencil';
 	import ClockIcon from '@lucide/svelte/icons/clock';
 	import CheckIcon from '@lucide/svelte/icons/check';
+	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
+	import type { ReimportEvent } from '$lib/types';
 
 	type Revision = { id: string; at: string; bytes: number };
 	type EditorProps = { value: string; onchange: (next: string) => void };
@@ -51,6 +53,13 @@
 	let editMode = $state<'visual' | 'source'>('visual');
 	let modeNote = $state('');
 
+	// "Yeniden içe aktar": the kept original converted again, loaded as an unsaved draft.
+	let reimportAvailable = $state(false);
+	let reimportOriginal = $state('');
+	let reimporting = $state(false);
+	let reimportStage = $state('');
+	let reimportNote = $state(false);
+
 	let showVersions = $state(false);
 	let versionsLoading = $state(false);
 	let revisions = $state<Revision[]>([]);
@@ -67,6 +76,13 @@
 	// whenever a study page or SourceChip links here, so this returns to
 	// the exact artifact the citation was clicked from, not a hardcoded
 	// home link.
+	// $derived, not a plain const: t() must re-run when the locale changes.
+	let reimportStages = $derived<Record<string, string>>({
+		queued: t('ImportFlow.stageQueued'),
+		converting: t('ImportFlow.stageConverting'),
+		postprocessing: t('ImportFlow.stagePostprocessing'),
+		retrying: t('ImportFlow.stageRetrying')
+	});
 	let backHref = $derived(resolveBackHref(page.url.searchParams.get('from'), vaultId ? `/vault/${vaultId}` : '/'));
 
 	// Reload whenever the target file changes (also covers first mount).
@@ -105,6 +121,9 @@
 		saveError = '';
 		revPreview = null;
 		showVersions = false;
+		reimportAvailable = false;
+		reimportOriginal = '';
+		reimportNote = false;
 		if (!filePath) {
 			error = t('LibraryViewPage.missingPath');
 			return;
@@ -116,6 +135,23 @@
 			html = await render(raw);
 		} catch {
 			error = t('LibraryViewPage.loadFailed');
+			return;
+		}
+		void loadReimportInfo();
+	}
+
+	// Only a lookup: whether the note's original was kept. A failure just leaves the button disabled.
+	async function loadReimportInfo() {
+		const forPath = filePath;
+		try {
+			const res = await fetch(fileUrl('/api/library/reimport'));
+			if (!res.ok) return;
+			const info = (await res.json()) as { available: boolean; originalName?: string };
+			if (forPath !== filePath) return;
+			reimportAvailable = info.available;
+			reimportOriginal = info.originalName ?? '';
+		} catch {
+			// leave unavailable
 		}
 	}
 
@@ -191,6 +227,7 @@
 
 	function leaveEdit() {
 		editing = false;
+		reimportNote = false;
 		conflict = false;
 		saveError = '';
 	}
@@ -198,6 +235,81 @@
 	function cancelEdit() {
 		if (dirty) askConfirm(t('LibraryViewPage.unsavedConfirm'), t('LibraryViewPage.leave'), leaveEdit);
 		else leaveEdit();
+	}
+
+	// ---- re-import: convert the kept original again, review it as a draft ----
+	// Reads the SSE stream of POST /api/library/reimport. Never saves: the draft goes through the normal Save.
+	async function runReimport() {
+		reimporting = true;
+		reimportStage = reimportStages.queued;
+		saveError = '';
+		try {
+			const res = await fetch('/api/library/reimport', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ path: filePath, vault: vaultId || undefined })
+			});
+			if (!res.ok) {
+				saveError = await readResponseError(res);
+				return;
+			}
+			if (!res.body) {
+				saveError = t('Common.istekBasarisiz', { status: res.status });
+				return;
+			}
+			const reader = res.body.getReader();
+			const decoder = new TextDecoder();
+			let buffer = '';
+			while (true) {
+				const { done, value } = await reader.read();
+				if (done) break;
+				buffer += decoder.decode(value, { stream: true });
+				const parts = buffer.split('\n\n');
+				buffer = parts.pop() ?? '';
+				for (const part of parts) {
+					const line = part.trim();
+					if (!line.startsWith('data:')) continue;
+					const event = JSON.parse(line.slice(5)) as ReimportEvent;
+					if (event.type === 'progress') {
+						reimportStage = reimportStages[event.stage] ?? event.stage;
+					} else if (event.type === 'ready') {
+						await loadReimportDraft(event.content);
+					} else if (event.type === 'error') {
+						saveError = localizeError(event);
+					}
+				}
+			}
+		} catch (e) {
+			saveError = localizeError(e as Error);
+		} finally {
+			reimporting = false;
+			reimportStage = '';
+		}
+	}
+
+	// Like startEdit(), but the draft is the re-converted text and the raw Markdown editor is shown,
+	// so the differences from the saved note are easy to read. `raw`/`hash` stay what is on disk.
+	async function loadReimportDraft(content: string) {
+		if (editing && editMode === 'visual') visualRef?.flush();
+		draft = content;
+		previewHtml = await render(content);
+		saveError = '';
+		conflict = false;
+		savedFlash = '';
+		indexNote = null;
+		revPreview = null;
+		showVersions = false;
+		modeNote = '';
+		editMode = 'source';
+		editing = true;
+		reimportNote = true;
+		await ensureEditor();
+	}
+
+	function startReimport() {
+		if (reimporting || !reimportAvailable) return;
+		if (dirty) askConfirm(t('LibraryViewPage.discardConfirm'), t('LibraryViewPage.discard'), runReimport);
+		else void runReimport();
 	}
 
 	// Live preview, debounced so typing doesn't re-run the markdown pipeline
@@ -424,6 +536,15 @@
 						<button type="button" aria-pressed={editMode === 'source'} onclick={() => switchMode('source')}>{t('WysiwygEditor.modeSource')}</button>
 					</div>
 					{#if dirty}<span class="dirty-note">{t('LibraryViewPage.unsavedChanges')}</span>{/if}
+					<button
+						type="button"
+						class="vc-btn ghost"
+						onclick={startReimport}
+						disabled={!reimportAvailable || reimporting || saving}
+						title={reimportAvailable ? t('LibraryViewPage.reimportFrom', { name: reimportOriginal }) : t('LibraryViewPage.reimportUnavailable')}
+					>
+						<RefreshCwIcon size={14} aria-hidden="true" /> {reimporting ? t('LibraryViewPage.reimporting') : t('LibraryViewPage.reimport')}
+					</button>
 					<button type="button" class="vc-btn ghost" onclick={cancelEdit} disabled={saving}>{t('LibraryViewPage.cancel')}</button>
 					<button type="button" class="vc-btn primary" onclick={save} disabled={!dirty || saving}>
 						{saving ? t('LibraryViewPage.saving') : t('LibraryViewPage.save')}
@@ -431,6 +552,15 @@
 				{:else}
 					<button type="button" class="vc-btn ghost" onclick={toggleVersions} aria-expanded={showVersions}>
 						<ClockIcon size={14} aria-hidden="true" /> {t('LibraryViewPage.versions')}
+					</button>
+					<button
+						type="button"
+						class="vc-btn ghost"
+						onclick={startReimport}
+						disabled={!reimportAvailable || reimporting || saving}
+						title={reimportAvailable ? t('LibraryViewPage.reimportFrom', { name: reimportOriginal }) : t('LibraryViewPage.reimportUnavailable')}
+					>
+						<RefreshCwIcon size={14} aria-hidden="true" /> {reimporting ? t('LibraryViewPage.reimporting') : t('LibraryViewPage.reimport')}
 					</button>
 					<button type="button" class="vc-btn secondary" onclick={startEdit}>
 						<PencilIcon size={14} aria-hidden="true" /> {t('LibraryViewPage.edit')}
@@ -461,6 +591,15 @@
 		</div>
 	{/if}
 
+	{#if reimporting}
+		<p class="mode-note reimport-status" role="status">{t('LibraryViewPage.reimporting')} {reimportStage}</p>
+	{/if}
+	{#if reimportNote && editing}
+		<div class="vc-banner info note" role="status">
+			<span class="dot"></span>
+			<div class="d">{t('LibraryViewPage.reimportReady')}</div>
+		</div>
+	{/if}
 	{#if savedFlash}
 		<p class="saved-flash" role="status"><CheckIcon size={14} aria-hidden="true" /> {savedFlash}</p>
 	{/if}
@@ -723,6 +862,10 @@
 	.visual {
 		height: calc(100dvh - 13rem);
 		min-height: 420px;
+	}
+
+	.reimport-status {
+		margin: 0 0 1rem;
 	}
 
 	.mode-note {

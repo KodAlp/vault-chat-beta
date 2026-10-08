@@ -53,7 +53,7 @@ export function findOriginalName(names: readonly string[], sha: string): string 
 /**
  * Absolute path of the kept original whose content hash starts like `sha`
  * (typically a note's `source_sha256`), or null when none was kept. The
- * future "re-import" action calls this.
+ * "Yeniden içe aktar" action (api/library/reimport) uses it to find the file to convert again.
  */
 export function originalPathForSourceSha(v: VaultContext, sha: string): string | null {
 	let names: string[];

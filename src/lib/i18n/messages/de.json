@@ -498,6 +498,11 @@
     "deleting": "Wird gelöscht…"
   },
   "LibraryViewPage": {
+    "reimport": "Erneut importieren",
+    "reimportUnavailable": "Erneuter Import nicht möglich: Die Originaldatei wurde nicht aufbewahrt",
+    "reimportFrom": "Originaldatei: {name}",
+    "reimporting": "Wird erneut importiert…",
+    "reimportReady": "Die Originaldatei wurde neu konvertiert. Noch nicht gespeichert – prüfen und auf Speichern klicken; die vorherige Version bleibt im Verlauf.",
     "missingPath": "Der Parameter „path“ ist erforderlich.",
     "loadFailed": "Die Datei konnte nicht geladen werden.",
     "fallbackTitle": "Quelle",
@@ -1021,6 +1026,8 @@
     "notFoundBody": "Sie wurde möglicherweise gelöscht."
   },
   "ServerErrors": {
+    "REIMPORT_NO_ORIGINAL": "Diese Notiz kann nicht erneut importiert werden, weil ihre Originaldatei nicht aufbewahrt wurde",
+    "REIMPORT_BUSY": "Diese Notiz wird bereits erneut importiert",
     "UNKNOWN": "Ein unerwarteter Fehler ist aufgetreten",
     "INTERNAL": "Auf dem Server ist etwas schiefgelaufen",
     "ROUTE_NOT_FOUND": "Seite nicht gefunden",
