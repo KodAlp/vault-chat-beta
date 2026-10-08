@@ -61,6 +61,7 @@ _meta/attachments/ and rewrites the links (src/lib/server/converted-images.ts).
 from __future__ import annotations
 
 import argparse
+import atexit
 import hashlib
 import json
 import os
@@ -68,10 +69,12 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 from typing import Callable
 
 import images
+import pdf_tounicode
 from column_order import repair_document_order
 from heading_repair import body_size, read_text_layer, repair_headings, restructure_headings
 from postprocess import _apply_outside_verbatim, postprocess, quality_warnings
@@ -1172,6 +1175,22 @@ def main() -> int:
             emit({"type": "error", "code": "PDF_DAMAGED", "message": PDF_DAMAGED_MESSAGE})
             return 1
 
+    # Old TeX PDFs: CM fonts whose /ToUnicode is missing or wrong make every
+    # converter emit U+FFFD for primes, Delta, <=, integral signs and ≈ for ∞
+    # (pdf_tounicode.py). When such a font exists, the converters and the text
+    # layer readers below read a corrected COPY; the original stays the source
+    # for hashing, title metadata and the damaged-PDF checks above. The copy
+    # lives in the system temp dir, not the out-dir: a killed run must not
+    # leave a stray PDF where the app looks for staged output. Any failure
+    # inside prepare_pdf returns the original path.
+    work_path = in_path
+    tex_fix = {"fonts": 0, "codes": 0}
+    if in_path.suffix.lower() == PDF_EXT:
+        work_dir = tempfile.mkdtemp(prefix="vault-chat-tounicode-")
+        atexit.register(shutil.rmtree, work_dir, ignore_errors=True)
+        work_path, tex_fix = pdf_tounicode.prepare_pdf(in_path, work_dir)
+        work_path = Path(work_path)
+
     # Aşama 7: emitted before the (potentially many-minutes-long) conversion
     # call, not after — a caller sizing a timeout or showing an ETA needs
     # the page count before that call blocks, not once it's already done.
@@ -1182,9 +1201,9 @@ def main() -> int:
 
     try:
         if args.tool == "auto":
-            text, converted_by = route_auto(in_path, page_range=page_range, pdf_backend=args.pdf_backend)
+            text, converted_by = route_auto(work_path, page_range=page_range, pdf_backend=args.pdf_backend)
         else:
-            text, converted_by = route_explicit(in_path, args.tool, page_range=page_range, pdf_backend=args.pdf_backend)
+            text, converted_by = route_explicit(work_path, args.tool, page_range=page_range, pdf_backend=args.pdf_backend)
     except PdfDamagedError as err:
         emit({"type": "error", "code": "PDF_DAMAGED", "message": f"{PDF_DAMAGED_MESSAGE} ({err})"})
         return 1
@@ -1198,7 +1217,7 @@ def main() -> int:
     # docling drops spaces from PDF headings (98/194 on Trentelman); the PDF's
     # own text layer has them. MarkItDown emits no headings, so skip it there.
     if is_pdf and converted_by in ("docling", "marker"):
-        lines, fragments = read_text_layer(in_path)
+        lines, fragments = read_text_layer(work_path)
         text, _repaired = repair_headings(text, lines)
         # It also makes body-size labels (Theorem 2.19, Proof :) headings; demote those.
         text, _stats = restructure_headings(text, fragments)
@@ -1248,7 +1267,7 @@ def main() -> int:
             f"docling çalışmadı ({'; '.join(_PRIMARY_FALLBACK[:2])}); "
             f"{converted_by} ile dönüştürüldü — formüller ve tablolar bozuk olabilir, gözden geçirin."
         )
-    textless = textless_pages_in_scope(in_path, page_range) if is_pdf else []
+    textless = textless_pages_in_scope(work_path, page_range) if is_pdf else []
     textless_note = textless_warning(converted_by, textless, _OCR_RAN[0])
     if textless_note:
         warnings.append(textless_note)
@@ -1263,6 +1282,10 @@ def main() -> int:
         warnings.append("docling bazı sayfalarda hata bildirdi: " + "; ".join(_DOCLING_ERRORS[:3]))
     if warnings and not frontmatter.get("needs_review"):
         frontmatter["needs_review"] = True
+    # Informational: a deterministic repair, appended AFTER the needs_review
+    # decision so it does not flag an otherwise clean note for review.
+    if tex_fix["fonts"]:
+        warnings.append(f"{tex_fix['fonts']} yazı tipinin karakter eşlemesi onarıldı (eski TeX PDF'i)")
 
     # E5: the idempotency key and provenance record for the WHOLE pipeline
     # (knowledge-editor's schemas/frontmatter.yaml documents source_sha256
