@@ -2,7 +2,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { enqueueConversion } from './convertQueue';
-import { stagingDir, originalsDir, getLibrarySettings, importLogPath, loadImportedSourceHashes } from './library';
+import { stagingDir, importLogPath, loadImportedSourceHashes } from './library';
+import { keepOriginalCopy } from './originals';
+import { discardStagedNote } from './converted-image-cleanup';
 import { AppError, errorPayload, fail } from './app-error';
 import { logAppEvent } from './app-log';
 import { isVaultMcpExposed, type VaultContext } from './vaults';
@@ -10,6 +12,7 @@ import { vaultFromId } from './requestVault';
 import { importConvertedImages, libraryRelPath } from './converted-images';
 import type { ValidatedImportPath } from './mcp-import-path';
 import { markImportActive, markImportInactive, readMeta, updateMeta, type PendingImportMeta } from './pending-imports';
+import { autoConfirmIfEligible } from './mcp-auto-confirm';
 
 /**
  * Orchestration for the MCP import routes (api/mcp/imports): the request
@@ -75,10 +78,7 @@ export async function stageLocalFile(
 			'utf-8'
 		);
 
-		if (getLibrarySettings(v).keepOriginals) {
-			fs.mkdirSync(originalsDir(v), { recursive: true });
-			fs.copyFileSync(tempIn, path.join(originalsDir(v), `${importId}-${file.name}`));
-		}
+		await keepOriginalCopy(v, tempIn, file.name);
 
 		const warnings = [...(result.warnings ?? [])];
 		if (alreadyImportedHash) warnings.push('IMPORT_DUPLICATE_CONTENT');
@@ -116,7 +116,18 @@ export function startDetachedImport(
 				proposed: { ...meta.proposed, title: result.title },
 				warnings: [...meta.warnings, ...result.warnings]
 			});
-			if (!done) fs.rmSync(stagedMd, { force: true });
+			// Cancelled meanwhile: drop the note AND the converted images only it used.
+			if (!done) await discardStagedNote(v, stagedMd);
+			else {
+				// The vault's standing auto-confirm setting (off by default) is applied by the APP here, not the
+				// MCP client. Isolated in its own try: whatever happens, a finished conversion must stay 'ready'
+				// (the outer catch would turn it into an error and delete the staged note).
+				try {
+					await autoConfirmIfEligible(v, importId);
+				} catch {
+					// autoConfirmIfEligible reports its own failures through the sidecar; nothing more to do.
+				}
+			}
 		} catch (err) {
 			const payload = errorPayload(err);
 			logAppEvent({ kind: 'fatal_error', message: `mcp import failed: ${payload.code}` });

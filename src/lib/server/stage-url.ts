@@ -17,6 +17,7 @@ import {
 } from './link-import';
 import { stagingDir } from './library';
 import { importConvertedImages, libraryRelPath } from './converted-images';
+import { keepOriginalCopy } from './originals';
 import { AppError } from './app-error';
 import type { VaultContext } from './vaults';
 
@@ -91,6 +92,12 @@ export async function stageUrl(
 		// Only the PDF branch produces images; a web extraction reports none and passes through unchanged.
 		const content = importConvertedImages(v, { outPath: result.outPath, images: 'images' in result ? result.images : undefined }, libraryRelPath(v, stagedMdPath), parsed.content);
 		fs.writeFileSync(stagedMdPath, matter.stringify(content, frontmatter), 'utf-8');
+
+		// Keep the downloaded PDF like an uploaded one: links rot (course pages, preprints get withdrawn) and a
+		// kept file is what a later re-import can use. An HTML page is NOT kept: the extraction is the product,
+		// a page snapshot is volatile and unbounded, and source_url already lets a re-import fetch it again.
+		// YouTube has no file at all.
+		if (isPdf) await keepOriginalCopy(v, tempIn, sourceNameFromUrl(url).replace(/(.pdf)?$/i, '.pdf'));
 
 		return { title, warnings: result.warnings ?? [] };
 	} finally {

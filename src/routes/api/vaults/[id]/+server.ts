@@ -1,6 +1,13 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { describeVaultDeletion, deleteVault, listVaults, renameVault, setVaultMcpExposed } from '$lib/server/vaults';
+import {
+	describeVaultDeletion,
+	deleteVault,
+	listVaults,
+	renameVault,
+	setVaultMcpExposed,
+	setVaultMcpAutoConfirm
+} from '$lib/server/vaults';
 import { countChatsForVault, deleteChatsForVault } from '$lib/server/chats-db';
 import { closeVaultIndexDb } from '$lib/server/retrieve';
 import { closeVaultStudyDb } from '$lib/server/study-db';
@@ -21,9 +28,9 @@ export const GET: RequestHandler = async ({ params }) => {
 };
 
 export const PATCH: RequestHandler = async ({ params, request }) => {
-	const body = (await request.json()) as { name?: string; mcpExposed?: boolean };
-	if (body.name === undefined && body.mcpExposed === undefined) {
-		fail('VALIDATION_REQUIRED_ANY', { fields: "'name', 'mcpExposed'" });
+	const body = (await request.json()) as { name?: string; mcpExposed?: boolean; mcpAutoConfirm?: unknown };
+	if (body.name === undefined && body.mcpExposed === undefined && body.mcpAutoConfirm === undefined) {
+		fail('VALIDATION_REQUIRED_ANY', { fields: "'name', 'mcpExposed', 'mcpAutoConfirm'" });
 	}
 	if (body.name !== undefined && !body.name.trim()) fail('VAULT_NAME_EMPTY');
 
@@ -34,6 +41,9 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
 		// İ6: a separate field, not folded into the name-rename above — a
 		// caller flipping exposure alone must not also need to resend name.
 		if (body.mcpExposed !== undefined) vault = setVaultMcpExposed(params.id, body.mcpExposed);
+		// This route is session-gated and not under /api/mcp/*: an MCP token can never reach it, so only the
+		// user (settings page) can switch the app's auto-confirm on. The value is validated strictly there.
+		if (body.mcpAutoConfirm !== undefined) vault = setVaultMcpAutoConfirm(params.id, body.mcpAutoConfirm);
 		return json({ vault });
 	} catch (err) {
 		if (err instanceof AppError) fail(err.code, err.params, err.status);

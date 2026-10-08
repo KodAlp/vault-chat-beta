@@ -133,3 +133,16 @@ test('getLibrarySettings merges a partial saved file over the defaults', () => {
 	assert.deepEqual(settings.hiddenFolders, ['raw']); // overridden
 	assert.deepEqual(settings.flattenFolders, ['wiki']); // still the default
 });
+
+test('keepOriginals defaults to on, but an explicit false in the settings file stays off', () => {
+	const fresh = tmpVault();
+	assert.equal(getLibrarySettings(fresh).keepOriginals, true);
+	const off = tmpVault();
+	fs.mkdirSync(path.join(off.libraryRoot, '_meta'), { recursive: true });
+	fs.writeFileSync(path.join(off.libraryRoot, '_meta', 'settings.json'), JSON.stringify({ keepOriginals: false }));
+	assert.equal(getLibrarySettings(off).keepOriginals, false);
+	const partial = tmpVault();
+	fs.mkdirSync(path.join(partial.libraryRoot, '_meta'), { recursive: true });
+	fs.writeFileSync(path.join(partial.libraryRoot, '_meta', 'settings.json'), JSON.stringify({ allowedLanguages: ['Türkçe'] }));
+	assert.equal(getLibrarySettings(partial).keepOriginals, true);
+});

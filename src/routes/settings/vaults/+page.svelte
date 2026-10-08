@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { isTauri, invoke } from '@tauri-apps/api/core';
 	import type { VaultRecord, VaultWithStatus } from '$lib/types';
+	import { AUTO_CONFIRM_MODES, type AutoConfirmMode } from '$lib/mcp-auto-confirm-policy';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
@@ -40,6 +41,15 @@
 	let showMcpMigration = $state(false);
 	let mcpMigrationBusy = $state(false);
 	let mcpToggleBusy = $state<string | null>(null);
+	// Per-vault "the app confirms MCP imports for me" choice. Written only through PATCH /api/vaults/[id] (session-gated);
+	// no MCP tool or /api/mcp/* route can reach it, so an agent can never switch it on for itself.
+	let autoConfirmBusy = $state<string | null>(null);
+	let autoConfirmError = $state('');
+	const autoConfirmLabels: Record<AutoConfirmMode, string> = {
+		off: 'VaultsSettingsPage.autoConfirmOff',
+		clean: 'VaultsSettingsPage.autoConfirmClean',
+		all: 'VaultsSettingsPage.autoConfirmAll'
+	};
 
 	async function loadVaults() {
 		try {
@@ -182,6 +192,25 @@
 			loadError = t('VaultsSettingsPage.mcpToggleFailed');
 		} finally {
 			mcpToggleBusy = null;
+		}
+	}
+
+	async function setAutoConfirm(vault: VaultWithStatus, mode: AutoConfirmMode) {
+		if (autoConfirmBusy || (vault.mcpAutoConfirm ?? 'off') === mode) return;
+		autoConfirmBusy = vault.id;
+		autoConfirmError = '';
+		try {
+			const res = await fetch(`/api/vaults/${vault.id}`, {
+				method: 'PATCH',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ mcpAutoConfirm: mode })
+			});
+			if (!res.ok) autoConfirmError = await readResponseError(res);
+			await loadVaults();
+		} catch {
+			autoConfirmError = t('VaultsSettingsPage.autoConfirmFailed');
+		} finally {
+			autoConfirmBusy = null;
 		}
 	}
 
@@ -394,6 +423,31 @@
 							onCheckedChange={() => toggleMcpExposed(vault)}
 						/>
 					</div>
+					{#if vault.mcpExposed === true}
+						<fieldset class="flex flex-col gap-2 border-t pt-2" disabled={autoConfirmBusy === vault.id}>
+							<legend class="text-xs font-medium">{t('VaultsSettingsPage.autoConfirmLabel')}</legend>
+							<p class="text-xs text-muted-foreground">{t('VaultsSettingsPage.autoConfirmHelp')}</p>
+							{#each AUTO_CONFIRM_MODES as mode (mode)}
+								<label class="flex items-start gap-2 text-xs">
+									<input
+										type="radio"
+										class="mt-0.5"
+										name="auto-confirm-{vault.id}"
+										value={mode}
+										checked={(vault.mcpAutoConfirm ?? 'off') === mode}
+										onchange={() => setAutoConfirm(vault, mode)}
+									/>
+									<span>{t(autoConfirmLabels[mode])}</span>
+								</label>
+							{/each}
+							{#if vault.mcpAutoConfirm === 'all'}
+								<p class="text-xs text-destructive" role="note">{t('VaultsSettingsPage.autoConfirmAllWarning')}</p>
+							{/if}
+							{#if autoConfirmError}
+								<p class="text-xs text-destructive" role="alert">{autoConfirmError}</p>
+							{/if}
+						</fieldset>
+					{/if}
 				</div>
 			{/each}
 		</Card.Content>

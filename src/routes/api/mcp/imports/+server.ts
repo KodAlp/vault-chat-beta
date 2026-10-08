@@ -12,6 +12,8 @@ import { readMcpSettings } from '$lib/server/mcp-settings';
 import { validateImportPath } from '$lib/server/mcp-import-path';
 import { failFrom, requireMcpVault, stageLocalFile, startDetachedImport } from '$lib/server/mcp-import';
 import { activeImportCount, listPending, writeMeta, type PendingImportMeta } from '$lib/server/pending-imports';
+import { getVaultMcpAutoConfirm } from '$lib/server/vaults';
+import { listRecentlyConfirmed } from '$lib/server/mcp-auto-confirm';
 
 /** Beyond this many conversions in flight an agent loop gets a 429 instead of an unbounded fetch/convert pile. */
 const MAX_ACTIVE_IMPORTS = 25;
@@ -77,17 +79,25 @@ export const POST: RequestHandler = async ({ request }) => {
 			const result = await job();
 			return titleOverride ? { ...result, title: titleOverride } : result;
 		});
-		return json({ vault: v.id, importId, status: 'queued' });
+		// Read-only: the agent is told what the user's setting will do with the import, it cannot change it.
+		return json({ vault: v.id, importId, status: 'queued', autoConfirm: getVaultMcpAutoConfirm(v.id) });
 	} catch (err) {
 		failFrom(err);
 	}
 };
 
-/** list_pending_imports: the vault's staging area, newest first (queued / converting / ready / error). */
+/** list_pending_imports: the vault's staging area, newest first (queued / converting / ready / error), plus the
+ * imports the app auto-confirmed in the last day (status 'confirmed', with the library path) so a polling agent
+ * sees them enter the library instead of just vanishing from the pending list. */
 export const GET: RequestHandler = async ({ url }) => {
 	try {
 		const v = requireMcpVault(url.searchParams.get('vault'));
-		return json({ vault: v.id, imports: listPending(v) });
+		return json({
+			vault: v.id,
+			autoConfirm: getVaultMcpAutoConfirm(v.id),
+			imports: listPending(v),
+			confirmed: listRecentlyConfirmed(v).map((c) => ({ ...c, status: 'confirmed' as const }))
+		});
 	} catch (err) {
 		failFrom(err);
 	}

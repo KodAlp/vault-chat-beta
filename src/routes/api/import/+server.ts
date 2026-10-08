@@ -5,8 +5,6 @@ import type { RequestHandler } from './$types';
 import { enqueueConversion } from '$lib/server/convertQueue';
 import {
 	stagingDir,
-	originalsDir,
-	getLibrarySettings,
 	safeBasename,
 	importLogPath,
 	loadImportedSourceHashes,
@@ -14,6 +12,7 @@ import {
 	CODE_EXTENSIONS,
 	MAX_UPLOAD_BYTES
 } from '$lib/server/library';
+import { keepOriginalCopy } from '$lib/server/originals';
 import { vaultFromId } from '$lib/server/requestVault';
 import { importConvertedImages, libraryRelPath } from '$lib/server/converted-images';
 import { sseStream } from '$lib/server/sse';
@@ -111,10 +110,8 @@ export const POST: RequestHandler = async ({ request }) => {
 				'utf-8'
 			);
 
-			if (getLibrarySettings(v).keepOriginals) {
-				fs.mkdirSync(originalsDir(v), { recursive: true });
-				fs.copyFileSync(tempIn, path.join(originalsDir(v), `${importId}-${safeName}`));
-			}
+			// Content-addressed (<sha16>-<name>) so the note can be linked back to its original by source_sha256.
+			await keepOriginalCopy(v, tempIn, safeName, crypto.createHash('sha256').update(fileBytes).digest('hex'));
 			fs.rmSync(workDir, { recursive: true, force: true });
 
 			const proposedTitle = (result.frontmatter.title as string) ?? path.parse(safeName).name;
