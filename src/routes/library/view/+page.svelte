@@ -3,6 +3,8 @@
 	import { beforeNavigate, goto } from '$app/navigation';
 	import { onDestroy, untrack, type Component } from 'svelte';
 	import { renderMarkdown } from '$lib/markdown';
+	import { planBySize } from '$lib/wysiwyg/block-safety';
+	import { detectEol } from '$lib/wysiwyg/note-blocks';
 	import { resolveBackHref } from '$lib/back-link';
 	import { t, i18n } from '$lib/i18n/index.svelte';
 	import { intlLocale } from '$lib/i18n/locales';
@@ -17,6 +19,14 @@
 
 	type Revision = { id: string; at: string; bytes: number };
 	type EditorProps = { value: string; onchange: (next: string) => void };
+	type VisualProps = {
+		value: string;
+		onchange: (next: string) => void;
+		vaultId: string;
+		currentPath: string;
+		onfallback: (reason: 'too-many-unsafe', count: number) => void;
+	};
+	type VisualApi = { flush: () => string };
 
 	// What the disk holds (as last fetched/saved) and its hash — the hash is
 	// the optimistic-lock token sent back as baseHash on save.
@@ -34,7 +44,12 @@
 	let savedFlash = $state('');
 	let indexNote = $state<{ kind: 'pending' } | { kind: 'failed'; detail: string } | null>(null);
 	let EditorComp = $state<Component<EditorProps> | null>(null);
+	let VisualComp = $state<Component<VisualProps, VisualApi> | null>(null);
+	let visualRef = $state<VisualApi | undefined>();
 	let editorLoading = $state(false);
+	// "visual" = Milkdown WYSIWYG (default), "source" = CodeMirror + live preview.
+	let editMode = $state<'visual' | 'source'>('visual');
+	let modeNote = $state('');
 
 	let showVersions = $state(false);
 	let versionsLoading = $state(false);
@@ -121,17 +136,57 @@
 		revPreview = null;
 		showVersions = false;
 		editing = true;
-		if (!EditorComp) {
-			// CodeMirror is heavy: pulled in only now, never with the read view.
-			editorLoading = true;
-			try {
-				EditorComp = (await import('$lib/components/MarkdownEditor.svelte')).default as Component<EditorProps>;
-			} catch {
-				saveError = t('LibraryViewPage.editorLoadFailed');
-			} finally {
-				editorLoading = false;
-			}
+		modeNote = '';
+		// Book-sized notes would take many seconds to build as a visual document.
+		if (planBySize(new Blob([raw]).size).mode === 'source') {
+			editMode = 'source';
+			modeNote = t('WysiwygEditor.fallbackTooLarge');
+		} else {
+			editMode = 'visual';
 		}
+		await ensureEditor();
+	}
+
+	// Editors are heavy (CodeMirror, Milkdown + KaTeX): pulled in only when the
+	// mode is actually shown, never with the read view.
+	async function ensureEditor() {
+		const needVisual = editMode === 'visual' && !VisualComp;
+		const needSource = editMode === 'source' && !EditorComp;
+		if (!needVisual && !needSource) return;
+		editorLoading = true;
+		try {
+			if (needVisual) VisualComp = (await import('$lib/components/WysiwygEditor.svelte')).default as unknown as Component<VisualProps, VisualApi>;
+			else EditorComp = (await import('$lib/components/MarkdownEditor.svelte')).default as Component<EditorProps>;
+		} catch {
+			saveError = t('LibraryViewPage.editorLoadFailed');
+		} finally {
+			editorLoading = false;
+		}
+	}
+
+	async function switchMode(next: 'visual' | 'source') {
+		if (next === editMode) return;
+		// pull any debounced visual edit into `draft` before the other editor takes over
+		if (editMode === 'visual') visualRef?.flush();
+		modeNote = '';
+		if (next === 'visual' && planBySize(new Blob([draft]).size).mode === 'source') {
+			modeNote = t('WysiwygEditor.fallbackTooLarge');
+			return;
+		}
+		// CodeMirror hands back LF text; a CRLF note must go back to the visual editor as CRLF,
+		// otherwise merely peeking at the source would rewrite every line ending on save.
+		if (next === 'visual' && detectEol(raw) === '\r\n' && !draft.includes('\r')) draft = draft.replace(/\n/g, '\r\n');
+		if (next === 'source') previewHtml = await render(draft);
+		editMode = next;
+		await ensureEditor();
+	}
+
+	// The visual editor found too many blocks it cannot edit safely: hand the note to CodeMirror.
+	async function visualFallback(_reason: 'too-many-unsafe', count: number) {
+		modeNote = t('WysiwygEditor.fallbackUnsafe', { count });
+		previewHtml = await render(draft);
+		editMode = 'source';
+		await ensureEditor();
 	}
 
 	function leaveEdit() {
@@ -150,7 +205,7 @@
 	// slow render that finishes after a newer one was already requested.
 	let previewSeq = 0;
 	$effect(() => {
-		if (!editing) return;
+		if (!editing || editMode !== 'source') return;
 		const text = draft;
 		const timer = setTimeout(async () => {
 			const seq = ++previewSeq;
@@ -212,6 +267,7 @@
 	}
 
 	async function save() {
+		if (editing && editMode === 'visual') visualRef?.flush();
 		if (!editing || saving || !dirty) return;
 		saving = true;
 		saveError = '';
@@ -363,6 +419,10 @@
 		{#if !error}
 			<div class="actions">
 				{#if editing}
+					<div class="mode-switch" role="group" aria-label={t('WysiwygEditor.modeLabel')}>
+						<button type="button" aria-pressed={editMode === 'visual'} onclick={() => switchMode('visual')}>{t('WysiwygEditor.modeVisual')}</button>
+						<button type="button" aria-pressed={editMode === 'source'} onclick={() => switchMode('source')}>{t('WysiwygEditor.modeSource')}</button>
+					</div>
 					{#if dirty}<span class="dirty-note">{t('LibraryViewPage.unsavedChanges')}</span>{/if}
 					<button type="button" class="vc-btn ghost" onclick={cancelEdit} disabled={saving}>{t('LibraryViewPage.cancel')}</button>
 					<button type="button" class="vc-btn primary" onclick={save} disabled={!dirty || saving}>
@@ -439,7 +499,24 @@
 			<TriangleAlertIcon size={16} aria-hidden="true" />
 			<p>{error}</p>
 		</div>
+	{:else if editing && editMode === 'visual'}
+		{#if modeNote}<p class="mode-note" role="status">{modeNote}</p>{/if}
+		<div class="visual">
+			{#if VisualComp}
+				<VisualComp
+					bind:this={visualRef}
+					value={draft}
+					onchange={(next) => (draft = next)}
+					{vaultId}
+					currentPath={filePath}
+					onfallback={visualFallback}
+				/>
+			{:else if editorLoading}
+				<p class="pane-note">{t('WysiwygEditor.loading')}</p>
+			{/if}
+		</div>
 	{:else if editing}
+		{#if modeNote}<p class="mode-note" role="status">{modeNote}</p>{/if}
 		<div class="split">
 			<section class="pane editor-pane" aria-label={t('LibraryViewPage.editorLabel')}>
 				{#if EditorComp}
@@ -641,6 +718,46 @@
 	.pane {
 		min-height: 0;
 		min-width: 0;
+	}
+
+	.visual {
+		height: calc(100dvh - 13rem);
+		min-height: 420px;
+	}
+
+	.mode-note {
+		margin: -0.5rem 0 0.75rem;
+		font: var(--text-footnote);
+		color: var(--label-secondary);
+	}
+
+	.mode-switch {
+		display: inline-flex;
+		padding: 2px;
+		border-radius: var(--radius-md);
+		background: var(--fill-control);
+		box-shadow: inset 0 0 0 1px var(--separator);
+	}
+
+	.mode-switch button {
+		padding: 0.25rem 0.7rem;
+		border: 0;
+		border-radius: var(--radius-sm);
+		background: transparent;
+		color: var(--label-secondary);
+		font: var(--text-footnote);
+		cursor: pointer;
+	}
+
+	.mode-switch button[aria-pressed='true'] {
+		background: var(--bg-elevated);
+		color: var(--label);
+		box-shadow: 0 0 0 1px var(--separator-strong);
+	}
+
+	.mode-switch button:focus-visible {
+		outline: 2px solid var(--focus-ring);
+		outline-offset: 1px;
 	}
 
 	.preview-pane {
