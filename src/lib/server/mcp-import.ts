@@ -2,7 +2,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { enqueueConversion } from './convertQueue';
-import { stagingDir, originalsDir, getLibrarySettings, importLogPath, loadImportedSourceHashes } from './library';
+import { stagingDir, importLogPath, loadImportedSourceHashes } from './library';
+import { keepOriginalCopy } from './originals';
+import { discardStagedNote } from './converted-image-cleanup';
 import { AppError, errorPayload, fail } from './app-error';
 import { logAppEvent } from './app-log';
 import { isVaultMcpExposed, type VaultContext } from './vaults';
@@ -75,10 +77,7 @@ export async function stageLocalFile(
 			'utf-8'
 		);
 
-		if (getLibrarySettings(v).keepOriginals) {
-			fs.mkdirSync(originalsDir(v), { recursive: true });
-			fs.copyFileSync(tempIn, path.join(originalsDir(v), `${importId}-${file.name}`));
-		}
+		await keepOriginalCopy(v, tempIn, file.name);
 
 		const warnings = [...(result.warnings ?? [])];
 		if (alreadyImportedHash) warnings.push('IMPORT_DUPLICATE_CONTENT');
@@ -116,7 +115,8 @@ export function startDetachedImport(
 				proposed: { ...meta.proposed, title: result.title },
 				warnings: [...meta.warnings, ...result.warnings]
 			});
-			if (!done) fs.rmSync(stagedMd, { force: true });
+			// Cancelled meanwhile: drop the note AND the converted images only it used.
+			if (!done) await discardStagedNote(v, stagedMd);
 		} catch (err) {
 			const payload = errorPayload(err);
 			logAppEvent({ kind: 'fatal_error', message: `mcp import failed: ${payload.code}` });

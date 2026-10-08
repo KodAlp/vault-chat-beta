@@ -670,6 +670,7 @@
 		"importLinksDescription": "Paste PDF and web page links — they're downloaded in sequence and added to the library. Links already imported successfully are skipped on a re-run.",
 		"uploadSettingsTitle": "Upload Settings",
 		"keepOriginals": "Keep the original files of converted documents ({path})",
+		"keepOriginalsHint": "Originals use extra disk space; identical content is stored only once, even if imported again. Leaving this on makes it possible to re-import a note later.",
 		"allowedLanguages": "Allowed languages in chat",
 		"allowedLanguagesPlaceholder": "Turkish, Korean",
 		"allowedLanguagesHint": "The first language is the vault's primary/fallback language: with \"Answer in the question's language\" it's used when the last message's language can't be determined; with \"Always answer in the primary language\" it's always used. Additional languages (e.g. for a language-learning vault) may appear in the response and aren't flagged as corruption by the leak detector.",

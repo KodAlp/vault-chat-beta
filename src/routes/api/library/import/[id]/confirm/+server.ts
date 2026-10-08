@@ -9,19 +9,13 @@ import { indexLibraryFile } from '$lib/server/incrementalIndex';
 import { vaultFromId } from '$lib/server/requestVault';
 import { AppError, fail } from '$lib/server/app-error';
 import { sanitizeDomain } from '$lib/server/domain-name';
-import { readMeta, deleteMeta } from '$lib/server/pending-imports';
+import { readMeta, deleteMeta, IMPORT_ID_RE } from '$lib/server/pending-imports';
 import { relinkAttachmentsForMove, libraryRelPath } from '$lib/server/converted-images';
 
-/** params.id is never checked against resolveLibraryPath-style containment
- * before this — it goes straight into path.join(stagingDir(v), \`${id}.md\`)
- * below. Every real id is a crypto.randomUUID() minted by
- * POST /api/import (see that route), so requiring the UUID shape rejects a
- * traversal id (e.g. "../../../../Users/alp/belgeler/gizli") before it ever
- * reaches the filesystem, without narrowing what a legitimate request can do. */
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 export const POST: RequestHandler = async ({ params, request }) => {
-	if (!UUID_RE.test(params.id)) fail('VALIDATION_INVALID', { field: 'importId' });
+	// params.id goes straight into path.join(stagingDir(v), `${id}.md`) below; every real id is a
+	// crypto.randomUUID(), so requiring that shape (shared with the cancel route) rejects a traversal id.
+	if (!IMPORT_ID_RE.test(params.id)) fail('VALIDATION_INVALID', { field: 'importId' });
 
 	const body = (await request.json()) as { title: string; domain: string; level: string; vault?: string };
 	const v = vaultFromId(body.vault);
@@ -66,6 +60,8 @@ export const POST: RequestHandler = async ({ params, request }) => {
 		await indexLibraryFile(v, destAbs, relPath);
 	} catch (err) {
 		fs.rmSync(destAbs, { force: true });
+		// The staged note goes back with its original links, so its converted images stay referenced by it:
+		// nothing to delete here (deleting them would break the restored note). Only a later cancel may.
 		fs.writeFileSync(stagedPath, raw, 'utf-8');
 		appendImportLog(v, {
 			sourcePath: relPath,

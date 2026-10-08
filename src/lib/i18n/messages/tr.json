@@ -670,6 +670,7 @@
 		"importLinksDescription": "PDF ve web sayfası bağlantılarını yapıştır — sırayla indirilip kütüphaneye eklenir. Daha önce başarıyla içe aktarılmış bağlantılar tekrar çalıştırmada atlanır.",
 		"uploadSettingsTitle": "Yükleme Ayarları",
 		"keepOriginals": "Dönüştürülen belgelerin orijinal dosyalarını sakla ({path})",
+		"keepOriginalsHint": "Orijinaller ek disk alanı kullanır; aynı içerik tekrar içe aktarılsa da yalnızca bir kez saklanır. Notu sonradan yeniden içe aktarabilmek için açık bırakılması önerilir.",
 		"allowedLanguages": "Sohbette izinli diller",
 		"allowedLanguagesPlaceholder": "Türkçe, Korece",
 		"allowedLanguagesHint": "İlk dil, kasanın birincil/yedek dilidir: \"Soru dilinde cevap ver\" modunda son mesajın dili anlaşılamadığında bu dile düşülür, \"Her zaman birincil dilde cevap ver\" modunda ise her zaman bu dil kullanılır. Ek diller (dil öğrenme vault'ları gibi) yanıt içinde kullanılabilir ve sızıntı algılayıcı tarafından bozukluk sayılmaz.",

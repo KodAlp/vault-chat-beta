@@ -628,6 +628,7 @@
     "importLinksDescription": "粘贴 PDF 和网页链接——它们将依次下载并添加到资料库。重新运行时，已成功导入的链接会被跳过。",
     "uploadSettingsTitle": "上传设置",
     "keepOriginals": "保留已转换文档的原始文件（{path}）",
+    "keepOriginalsHint": "原始文件会占用额外的磁盘空间；相同内容即使再次导入也只保存一份。保持开启，以便日后重新导入该笔记。",
     "allowedLanguages": "聊天中允许的语言",
     "allowedLanguagesPlaceholder": "土耳其语、韩语",
     "allowedLanguagesHint": "第一种语言是仓库的主要/备用语言：选择“用提问的语言回答”时，若无法判断最后一条消息的语言，则使用该语言；选择“始终使用主要语言回答”时，则始终使用该语言。其他语言（例如语言学习仓库）可以出现在回复中，不会被泄漏检测器判定为乱码。",

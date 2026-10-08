@@ -23,6 +23,7 @@ import {
 } from '$lib/server/library';
 import { indexLibraryFile } from '$lib/server/incrementalIndex';
 import { inflightImportHashes } from '$lib/server/inflight-hashes';
+import { keepOriginalCopy } from '$lib/server/originals';
 import { vaultFromId } from '$lib/server/requestVault';
 import { sseStream } from '$lib/server/sse';
 import { logAppEvent } from '$lib/server/app-log';
@@ -219,6 +220,9 @@ export const POST: RequestHandler = async ({ request }) => {
 					status: needsReview ? 'needs_review' : 'converted',
 					tool: frontmatter.converted_by ?? 'upload-batch'
 				});
+
+				// Only after the note is indexed, so a failed import leaves no stray original behind.
+				await keepOriginalCopy(v, tempIn, safeName, sourceSha256);
 
 				const item: ImportResultItem = {
 					id: crypto.randomUUID(),

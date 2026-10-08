@@ -20,7 +20,9 @@ export class PathOutsideLibraryError extends Error {
 }
 
 const DEFAULT_SETTINGS: LibrarySettings = {
-	keepOriginals: false,
+	// On by default: a kept original is what lets a note be re-imported later. A vault whose settings file
+	// explicitly says false keeps false (the spread in getLibrarySettings only fills what is missing).
+	keepOriginals: true,
 	allowedLanguages: ['Türkçe'],
 	responseLanguage: 'match',
 	// Path prefixes, not just root names (see sourceTree.ts applyDisplayRules
