@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import matter from 'gray-matter';
 import { AppError } from '../app-error';
 import { detectAll, ADAPTERS } from './adapters';
-import { resolveSourceRoot, runImport, walkSource, rewriteEmbedsWith, rewriteWikilinksWith, normalizePrefix, type Indexer } from './common';
+import { resolveSourceRoot, runImport, walkSource, rewriteEmbedsWith, rewriteWikilinksWith, normalizePrefix, stringifyNote, type Indexer } from './common';
 import { scanSource, runScanned } from './service';
 import { createImportScanRegistry } from './scan-registry';
 import type { VaultContext } from '../vaults';
@@ -286,6 +286,12 @@ test('joplin import: relative and :/id links, html img, frontmatter mapping, unr
 	assert.equal(kok.data.domain, 'genel');
 	assert.equal(kok.data.needs_review, true);
 	assert.ok(fs.existsSync(path.join(v.libraryRoot, '_meta', 'attachments', '0123456789abcdef0123456789abcdef.png')));
+});
+
+test('imported notes are written with LF even from a CRLF source (regression)', () => {
+	const out = stringifyNote('satir 1\r\nsatir 2\r\n\r\nson\r', { title: 'x' });
+	assert.equal(out.includes('\r'), false);
+	assert.match(out, /\nsatir 1\nsatir 2\n\nson\n/);
 });
 
 test('an embed of an attachment is not eaten by the wikilink pass (regression)', () => {
