@@ -10,8 +10,10 @@ formülde döngüye girer (aynı 1-4 token'lık grup yüzlerce kez); grup birlik
 çoktan gitmiş. Burada:
 
 1. LoopDetector (StoppingCriteria): yalnız üretilen son WINDOW token'ı 1-4'lük
-   bir periyotla birebir tekrarlıyorsa O satırı bitirir, diğer satırlar sürer.
-   max_new_tokens'a dokunulmaz.
+   bir periyotla birebir tekrarlıyorsa, ya da son tokenlar 5-32'lik bir grubun
+   >= 8 kez (toplam >= 64 token) arka arkaya tekrarıysa O satırı bitirir, diğer
+   satırlar sürer. Uzun periyot: formülden sonra yanlışlıkla okunan "(5.29) +
+   kenar etiketi" gibi ~20 tokenlık grup döngüsü. max_new_tokens'a dokunulmaz.
 2. Döngüden kesilen satırlar tek seferde, repetition_penalty ile yeniden
    üretilir. Temiz biterse (EOS, döngü yok) onu kullanırız. Olmazsa ilk
    denemenin kesik çıktısı kalır ve döngü, postprocess.py'nin eskiden olduğu
@@ -26,6 +28,9 @@ from __future__ import annotations
 import json
 import os
 import sys
+from typing import Any
+
+from postprocess import long_repeats
 
 # Son WINDOW token tamamen p-periyotlu (p = 1..4) ise döngü. 96 token 1-4'lük
 # grupla en az 24 tekrar demek. `} {`, `\quad \quad` gibi gerçek LaTeX kısa
@@ -33,11 +38,18 @@ import sys
 # matrisi — o da yeniden denemede aynı çıkarsa eskisi gibi uyarıya düşer.
 WINDOW = 96
 MAX_PERIOD = 4
+# Uzun periyot (5..32 token): kural postprocess.long_repeats ile ortak (>= 8 tekrar
+# VE toplam >= 64 token). 8 tekrar: 8 satırlık özdeş matris satırı / 8 kez aynı
+# \frac{1}{2} terimi gerçek LaTeX'te çok nadir; döngü ise token tavanına kadar
+# sürer, bu yüzden 8 tekrar beklemenin maliyeti (en çok 256 token) ihmal edilir.
+MIN_LONG_PERIOD = 5
+MAX_LONG_PERIOD = 32
+LONG_CHECK_EVERY = 4  # uzun periyot kontrolü her 4 adımda (28 küçük karşılaştırma/adım)
 REPETITION_PENALTY = 1.15  # 1.1-1.2; no_repeat_ngram_size LaTeX'e zarar verir (`} {`)
 # Kurtarılamayan satırın döngüsü bu kadar * DEGENERATE_RUN tekrar uzatılır.
 _EXTEND_FACTOR = 2
 
-STATS: dict[str, int] = {}
+STATS: dict[str, Any] = {}
 _INSTALLED = [False]
 _WARNED = [False]
 
@@ -48,11 +60,13 @@ def enabled() -> bool:
 
 def reset_stats() -> None:
     STATS.clear()
-    STATS.update(rows_stopped=0, retries=0, retries_ok=0, tokens_saved_est=0, retry_skipped=0)
+    STATS.update(rows_stopped=0, retries=0, retries_ok=0, tokens_saved_est=0, retry_skipped=0, periods={})
 
 
-def snapshot() -> dict[str, int]:
-    return dict(STATS)
+def snapshot() -> dict[str, Any]:
+    out = dict(STATS)
+    out["periods"] = dict(STATS.get("periods", {}))  # kesilen satırların periyot histogramı
+    return out
 
 
 def _warn_once(msg: str) -> None:
@@ -67,15 +81,39 @@ def _ids(value) -> list[int]:
     return [int(v) for v in (value if isinstance(value, (list, tuple)) else [value])]
 
 
+def long_window(p: int) -> int:
+    """p-periyotlu uzun döngü için bakılan son token sayısı (p * tekrar)."""
+    return p * long_repeats(p)
+
+
+MIN_LONG_WINDOW = min(long_window(p) for p in range(MIN_LONG_PERIOD, MAX_LONG_PERIOD + 1))
+
+
+def _min_period(tail, p: int) -> int:
+    """`tail` p-periyotluysa gerçek (en küçük) periyodu: p'nin bölenlerinden en küçüğü."""
+    for d in range(1, p):
+        if p % d == 0 and bool((tail[d:] == tail[:-d]).all()):
+            return d
+    return p
+
+
 def loop_period(row, window: int = WINDOW) -> int:
-    """Satırın (yalnız üretilen kısım, 1B tensör) son `window` token'ının
-    periyodu (1..MAX_PERIOD); döngü yoksa 0."""
-    if row.shape[0] < window:
-        return 0
-    tail = row[-window:]
-    for p in range(1, MAX_PERIOD + 1):
-        if bool((tail[p:] == tail[:-p]).all()):
-            return p
+    """Satırın (yalnız üretilen kısım, 1B tensör) döngü periyodu; yoksa 0.
+    1..MAX_PERIOD: son `window` token tamamen periyotlu. MIN_LONG_PERIOD..
+    MAX_LONG_PERIOD: son long_window(p) token p'lik grubun birebir tekrarı.
+    Döndürülen değer en küçük gerçek periyottur."""
+    n = row.shape[0]
+    if n >= window:
+        tail = row[-window:]
+        for p in range(1, MAX_PERIOD + 1):
+            if bool((tail[p:] == tail[:-p]).all()):
+                return p
+    for p in range(MIN_LONG_PERIOD, MAX_LONG_PERIOD + 1):
+        w = long_window(p)
+        if n >= w:
+            tail = row[-w:]
+            if bool((tail[p:] == tail[:-p]).all()):
+                return _min_period(tail, p)
     return 0
 
 
@@ -87,6 +125,7 @@ def make_detector(prompt_len: int, stop_ids: list[int]):
         def __init__(self):
             self.hit = None  # [batch] bool, yapışkan
             self.stop_len: dict[int, int] = {}  # satır -> kesildiği üretilmiş token sayısı
+            self.period: dict[int, int] = {}  # satır -> tetikleyen (en küçük) periyot
 
         def __call__(self, input_ids, scores, **kwargs):
             gen = input_ids[:, prompt_len:]  # prompt hariç
@@ -98,11 +137,18 @@ def make_detector(prompt_len: int, stop_ids: list[int]):
                 tail = gen[:, -WINDOW:]
                 for p in range(1, MAX_PERIOD + 1):
                     res |= (tail[:, p:] == tail[:, :-p]).all(dim=1)
-                if stop_ids:
-                    # EOS/pad ile bitmiş (pad'le doldurulan) satır döngü sayılmaz.
-                    res &= ~torch.isin(tail[:, -1], torch.tensor(stop_ids, device=input_ids.device))
+            if n >= MIN_LONG_WINDOW and n % LONG_CHECK_EVERY == 0:
+                for p in range(MIN_LONG_PERIOD, MAX_LONG_PERIOD + 1):
+                    w = long_window(p)
+                    if n >= w:
+                        tail = gen[:, -w:]
+                        res |= (tail[:, p:] == tail[:, :-p]).all(dim=1)
+            if stop_ids and n:
+                # EOS/pad ile bitmiş (pad'le doldurulan) satır döngü sayılmaz.
+                res &= ~torch.isin(gen[:, -1], torch.tensor(stop_ids, device=input_ids.device))
             for i in torch.nonzero(res & ~self.hit).flatten().tolist():
                 self.stop_len[i] = n
+                self.period[i] = loop_period(gen[i])
             self.hit |= res
             return res
 
@@ -160,6 +206,9 @@ def wrap_generate(orig, model):
         looped = sorted(det.stop_len)
         max_new = int(kwargs.get("max_new_tokens") or (out.shape[1] - plen))
         STATS["rows_stopped"] += len(looped)
+        for i in looped:
+            key = str(det.period.get(i, 0))
+            STATS["periods"][key] = STATS["periods"].get(key, 0) + 1
         STATS["tokens_saved_est"] += sum(max(0, max_new - det.stop_len[i]) for i in looped)
 
         rows = [out[i, plen:] for i in range(batch)]

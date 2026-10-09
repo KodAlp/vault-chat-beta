@@ -71,6 +71,20 @@ HARD_MAX_CHARS = 2048
 # change both together.
 DEGENERATE_RUN = 100
 _MAX_DEGENERATE_GROUP = 4
+# Long-period loops (the generator keeps re-reading e.g. "formula (5.29) margin
+# label" as one ~20 token group). Needs >= LONG_MIN_REPEATS back-to-back repeats
+# AND >= LONG_MIN_TOKENS tokens in total; ingest/formula_early_stop.py applies the
+# same rule while generating (periods 5..32 model tokens). Here the group is
+# counted in LaTeX tokens, which are finer than model tokens, hence the larger
+# cap. A loop runs until the token cap, so after the fact it must also reach the
+# end of the block (a legit repeated matrix row is followed by \end{...}), with
+# _LONG_TAIL_SLACK trailing tokens allowed to differ (0: a single trailing token
+# after the repeats, e.g. `+ c`, already means it is not a runaway loop).
+LONG_MIN_REPEATS = 8
+LONG_MIN_TOKENS = 64
+_MIN_LONG_GROUP = 5
+_MAX_LONG_GROUP = 48
+_LONG_TAIL_SLACK = 0
 _DEGENERATE_HEAD_MAX = 500
 _LATEX_TOKEN = re.compile(r"\\[a-zA-Z]+|\\.|[^\s]", re.DOTALL)
 DEGENERATE_NOTE = (
@@ -86,9 +100,36 @@ _LINE_FENCE_OR_MATH = re.compile(
 )
 
 
+def long_repeats(group: int) -> int:
+    """Back-to-back repeats of a `group`-token group that make a long-period loop."""
+    return max(LONG_MIN_REPEATS, -(-LONG_MIN_TOKENS // group))
+
+
+def _find_long_period_run(toks: list[tuple[str, int]]) -> int:
+    """Source offset where a loop of a 5..48 token group that runs to the end of
+    the block begins, or -1."""
+    best = -1
+    for trim in range(_LONG_TAIL_SLACK + 1):
+        end = len(toks) - trim
+        for g in range(_MIN_LONG_GROUP, _MAX_LONG_GROUP + 1):
+            need = g * (long_repeats(g) - 1)
+            if end - g < need:
+                continue
+            i = end - g - 1
+            while i >= 0 and toks[i][0] == toks[i + g][0]:
+                i -= 1
+            if end - g - 1 - i >= need:
+                at = toks[i + 1][1]
+                if best == -1 or at < best:
+                    best = at
+    return best
+
+
 def find_degenerate_run(latex: str) -> int:
-    """Source offset where a back-to-back repeat (>= DEGENERATE_RUN times) of a
-    1-4 token group begins, or -1 when the formula is not degenerate."""
+    """Source offset where a back-to-back repeat of a token group begins, or -1
+    when the formula is not degenerate: a 1-4 token group >= DEGENERATE_RUN
+    times anywhere, or a 5..48 token group >= long_repeats() times running to
+    the end of the block."""
     toks = [(m.group(0), m.start()) for m in _LATEX_TOKEN.finditer(latex)]
     best = -1
     for g in range(1, _MAX_DEGENERATE_GROUP + 1):
@@ -107,6 +148,9 @@ def find_degenerate_run(latex: str) -> int:
                     break
             else:
                 run = 0
+    long_at = _find_long_period_run(toks)
+    if long_at != -1 and (best == -1 or long_at < best):
+        best = long_at
     return best
 
 

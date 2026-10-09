@@ -227,6 +227,30 @@ def test_signature() -> None:
     check("needs_review omitted when false", "needs_review" not in frontmatter)
 
 
+def test_long_period_loops():
+    print("long-period formula loops (5..48 tokens)")
+    head = r"\nabla \cdot \mathbf{B} = 0"
+    group = r" \quad ( 5 . 2 9 ) \text{ margin } \frac{1}{2}"  # 18 LaTeX tokens
+    loop = head + group * 60
+    check("long loop detected", find_degenerate_run(loop) == len(head) + 1)
+    check("also with a cut-off last group", find_degenerate_run(loop + r" \quad ( 5") == len(head) + 1)
+    check("7 repeats of an 18-token group is fine", find_degenerate_run(head + group * 7) == -1)
+    check("8 repeats running to the end -> loop", find_degenerate_run(head + group * 8) == len(head) + 1)
+    check("long repeat followed by more content is fine", find_degenerate_run(head + group * 40 + r" + c \end{aligned}") == -1)
+    row = r"0 & 0 & 0 & 0 & 0 \ "  # 10 tokens
+    check("legit zero matrix is fine", find_degenerate_run(r"\begin{pmatrix} " + row * 20 + r"\end{pmatrix}") == -1)
+    check("5-token group x12 (60 tokens) is too short", find_degenerate_run("a " + "p q r s t " * 12) == -1)
+    check("5-token group x13 (65 tokens) is a loop", find_degenerate_run("a " + "p q r s t " * 13) == 2)
+
+    doc = "# T\n\nÖnce.\n\n$$" + loop + "$$\n\nSonra.\n"
+    out = truncate_degenerate_math(doc)
+    check("note present", DEGENERATE_NOTE in out)
+    check("head kept", "```latex\n" + head + "\n```" in out and len(out) < 400)
+    check("surrounding text untouched", "Önce." in out and "Sonra." in out)
+    final, _ = postprocess("# T\n\n$$" + loop + "$$\n", title_fallback="x", converted_by="t", needs_review=False)
+    check("warning counted", any("döngü" in w for w in quality_warnings(final, is_pdf=True)))
+
+
 def test_degenerate_math():
     print("degenerate formula loops")
     loop = "\\begin{array}{l} \\text {for (i = 1;i <   100;i = i + 1) \\{} \\\\ " + "\\quad " * 3900
@@ -263,6 +287,7 @@ if __name__ == "__main__":
     test_warnings()
     test_derive_title()
     test_signature()
+    test_long_period_loops()
     test_degenerate_math()
     print(f"\n{len(failures)} başarısız" if failures else "\nhepsi geçti")
     sys.exit(1 if failures else 0)
