@@ -54,6 +54,23 @@ _STORED = [0]  # _CROPS toplam bayt
 UNSUPPORTED_COMMANDS = {"intertext", "eqno", "leqno", "homotopy", "label", "qedhere"}
 # \\ ve & içeriğini barındırabilen, ortam olmayan gruplar.
 _STACK_GROUP_COMMANDS = {"substack", "shortstack"}
+# Argümanı metin kipinde dizilen komutlar (içinde yalnız KaTeX'in metin kipi komutları geçerli).
+_TEXT_GROUP_COMMANDS = {"text", "textbf", "textit", "textrm", "textsf", "texttt", "textnormal", "textup", "textmd", "mbox", "hbox", "emph"}
+
+
+def _load_katex_commands() -> tuple[frozenset, frozenset] | None:
+    """ingest/katex_commands.json: KaTeX'in (uygulamanın kullandığı sürüm) tanıdığı komutlar, matematik ve
+    metin kipi için ayrı. KaTeX'in kendisine karşı denenerek üretildi (bkz. dosyadaki "katex" sürümü). Dosya
+    yoksa bilinmeyen komut sınaması atlanır."""
+    try:
+        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "katex_commands.json"), encoding="utf-8") as f:
+            d = json.load(f)
+        return frozenset(d["math"]), frozenset(d["text"])
+    except Exception:
+        return None
+
+
+_KATEX = _load_katex_commands()
 
 _TOKEN = re.compile(
     r"\\begin\s*\{([^{}]*)\}"
@@ -97,12 +114,14 @@ def _warn_once(msg: str) -> None:
 # --------------------------------------------------------------------------- geçerlilik
 def check_latex(latex: str) -> str | None:
     """Saf Python yapısal sınama. Geçerliyse None; değilse nedeni: "empty", "braces", "left_right",
-    "begin_end", "toplevel_align", "unsupported". KaTeX'in reddettiği en sık CodeFormula hatalarını yakalar;
+    "begin_end", "toplevel_align", "unsupported", "unknown_cmd" (KaTeX bilmiyor), "text_mode" (\text{} içinde
+    yalnız matematik kipinde geçerli komut). KaTeX'in reddettiği en sık CodeFormula hatalarını yakalar;
     KaTeX'in tam ayrıştırıcısı değildir."""
     if not latex or not latex.strip():
         return "empty"
     stack: list[tuple[str, str]] = []  # (tür, ad): brace | left | env | sub
     pending_sub = False
+    pending_text = False
 
     def in_table() -> bool:
         return any(k in ("env", "sub") for k, _ in stack)
@@ -125,16 +144,24 @@ def check_latex(latex: str) -> str | None:
         elif cmd is not None:
             if cmd in UNSUPPORTED_COMMANDS:
                 return "unsupported"
+            if _KATEX is not None:
+                if any(k == "text" for k, _ in stack):
+                    if cmd not in _KATEX[1]:
+                        return "text_mode"
+                elif cmd not in _KATEX[0]:
+                    return "unknown_cmd"
             if cmd in _STACK_GROUP_COMMANDS:
                 pending_sub = True
+            elif cmd in _TEXT_GROUP_COMMANDS:
+                pending_text = True
         elif sym is not None:
             if sym == "\\" and not in_table():
                 return "toplevel_align"
         elif ch == "{":
-            stack.append(("sub" if pending_sub else "brace", ""))
-            pending_sub = False
+            stack.append(("sub" if pending_sub else "text" if pending_text else "brace", ""))
+            pending_sub = pending_text = False
         elif ch == "}":
-            if not stack or stack[-1][0] not in ("brace", "sub"):
+            if not stack or stack[-1][0] not in ("brace", "sub", "text"):
                 return "braces"
             stack.pop()
         elif ch == "&":
