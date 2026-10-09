@@ -85,6 +85,7 @@ from typing import Callable
 
 import formula_crop
 import formula_early_stop
+import formula_fallback
 import images
 import pdf_tounicode
 from column_order import repair_document_order
@@ -731,6 +732,8 @@ _OCR_RAN: list[bool] = [False]
 _FORMULA_STATS: list[dict | None] = [None]
 # formula_crop sayaçları (son docling dönüşümü); done olayına "formulaCrop" olarak girer.
 _FORMULA_CROP_STATS: list[dict | None] = [None]
+# formula_fallback sayaçları (son docling dönüşümü); done olayına "formulaFallback" olarak girer.
+_FORMULA_FALLBACK_STATS: list[dict | None] = [None]
 # Why docling (the primary converter on a GPU machine) was skipped and
 # MarkItDown/marker produced the text instead; main() turns it into a warning.
 _PRIMARY_FALLBACK: list[str] = []
@@ -750,6 +753,7 @@ def reset_run_state() -> None:
     _HYBRID_BACKEND_USED[0] = False
     _OCR_RAN[0] = False
     _FORMULA_STATS[0] = None
+    _FORMULA_FALLBACK_STATS[0] = None
     _PRIMARY_FALLBACK.clear()
     _TEXTLESS_CACHE.clear()
 
@@ -961,6 +965,12 @@ def convert_with_docling(
         formula_crop.reset_stats()
     except Exception as err:  # noqa: BLE001 — kalite iyileştirmesi; dönüşümü asla bozmaz
         print(f"formula_crop: kurulamadı: {err}", file=sys.stderr)
+    try:
+        # formula_crop.install()'dan SONRA: crop kancasının ürettiği kırpımı saklar (MinerU yedeği için)
+        formula_fallback.install()
+        formula_fallback.reset_stats()
+    except Exception as err:  # noqa: BLE001 — kalite iyileştirmesi; dönüşümü asla bozmaz
+        print(f"formula_fallback: kurulamadı: {err}", file=sys.stderr)
     options = PdfPipelineOptions()
     need_all = not pdf_has_text_layer(path)
     textless = [] if need_all else textless_pages_in_scope(path, page_range)
@@ -1055,6 +1065,15 @@ def convert_with_docling(
         _FORMULA_CROP_STATS[0] = formula_crop.report()
     except Exception:  # noqa: BLE001
         _FORMULA_CROP_STATS[0] = None
+    # CodeFormula'nın boş/döngülü/geçersiz LaTeX'ini MinerU ile yeniden oku (CUDA yoksa atlanır; modeli
+    # işi bitince boşaltır). Sütun/okuma sırası onarımından ve markdown dışa aktarımından ÖNCE: sonraki
+    # adımlar düzeltilmiş metni görür. Hata dönüşümü bozmaz (CodeFormula metni kalır).
+    try:
+        formula_fallback.apply(document)
+        _FORMULA_FALLBACK_STATS[0] = formula_fallback.report()
+    except Exception as err:  # noqa: BLE001
+        print(f"formula_fallback: atlandı: {err}", file=sys.stderr)
+        _FORMULA_FALLBACK_STATS[0] = None
     # docling-parse (#374) returns SUCCESS with an empty error list for a
     # truncated PDF, just with pages missing — so the status is no evidence;
     # compare the page count against what the file itself says it has.
@@ -1600,6 +1619,7 @@ def main(argv: list[str] | None = None) -> int:
             "imageStats": image_stats,
             "formulaEarlyStop": _FORMULA_STATS[0],
             "formulaCrop": _FORMULA_CROP_STATS[0],
+            "formulaFallback": _FORMULA_FALLBACK_STATS[0],
         }
     )
     return 0
