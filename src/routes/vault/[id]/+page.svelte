@@ -15,6 +15,7 @@
 	import SettingsIcon from '@lucide/svelte/icons/settings';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 	import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';
+	import LibraryIcon from '@lucide/svelte/icons/library-big';
 	import PencilIcon from '@lucide/svelte/icons/pencil';
 	import Trash2Icon from '@lucide/svelte/icons/trash-2';
 	import type { PageProps } from './$types';
@@ -71,6 +72,10 @@
 	// /api/library/tree read SourceTree.svelte already uses — no new
 	// server code.
 	let sourceCount = $state<number | null>(null);
+	// Imports with status 'ready' (user must review/confirm) — reuses the
+	// existing /api/library/pending-imports list; drives the badge next to
+	// the "view sources" link. 0 until fetched / on any failure.
+	let readyImports = $state(0);
 
 	onMount(() => {
 		refresh();
@@ -91,7 +96,10 @@
 			const res = await fetch(`/api/chats?vault=${encodeURIComponent(data.vaultId)}`);
 			if (!res.ok) throw new Error();
 			chats = (await res.json()) as ChatSummary[];
-			if (chats.length === 0) await checkSources();
+			if (chats.length === 0) {
+				await checkSources();
+				await checkPendingImports();
+			}
 		} catch {
 			loadError = t('VaultChatListPage.loadError');
 		}
@@ -106,6 +114,17 @@
 		} catch {
 			// The import-nudge empty state just won't show — not worth its
 			// own error path on top of the chat-list one above.
+		}
+	}
+
+	async function checkPendingImports() {
+		try {
+			const res = await fetch(`/api/library/pending-imports?vault=${encodeURIComponent(data.vaultId)}`);
+			if (!res.ok) return;
+			const { imports } = (await res.json()) as { imports: { status: string }[] };
+			readyImports = imports.filter((i) => i.status === 'ready').length;
+		} catch {
+			// Badge simply stays hidden.
 		}
 	}
 
@@ -256,6 +275,20 @@
 		<h1 style="max-width: 16ch;">{t('VaultChatListPage.heroTitle')}</h1>
 		<p>{t('VaultChatListPage.heroSubtitle')}</p>
 	</div>
+
+	{#if chats.length === 0}
+		<div class="mx-auto mb-4 flex shrink-0 flex-wrap items-center justify-center gap-2">
+			<a href="/settings/library" class="vc-btn secondary no-underline">
+				<LibraryIcon size={16} strokeWidth={1.75} aria-hidden="true" />
+				{t('VaultChatListPage.viewSources')}
+			</a>
+			{#if readyImports > 0}
+				<a href="/settings/library" class="no-underline">
+					<Badge variant="secondary">{t('VaultChatListPage.pendingConfirmBadge', { count: readyImports })}</Badge>
+				</a>
+			{/if}
+		</div>
+	{/if}
 
 	<div class="vc-composer mx-auto mb-6 shrink-0">
 		<textarea

@@ -538,6 +538,8 @@
     "noSourcesTitle": "لا مصادر بعد",
     "noSourcesDescription": "لكي تحصل أسئلتك على إجابات قائمة على المصادر وقابلة للاستشهاد، عليك أولًا استيراد ملاحظاتك أو مستنداتك (الإعدادات → رفع الملفات) — وإلا فسيعود كل سؤال بعبارة «خارج النطاق».",
     "importSources": "استيراد المصادر",
+    "viewSources": "عرض المصادر",
+    "pendingConfirmBadge": "{count} بانتظار التأكيد",
     "untitled": "(بلا عنوان)",
     "sourceCountBadge": "{count} مصدر",
     "sourceCountBadge#zero": "لا مصادر",

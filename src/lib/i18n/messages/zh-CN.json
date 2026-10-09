@@ -481,6 +481,8 @@
     "noSourcesTitle": "还没有来源",
     "noSourcesDescription": "为了让你的问题得到基于来源、可引用的回答，需要先导入你的笔记或文档（设置 → 文件上传）——否则每个问题都会返回“超出范围”。",
     "importSources": "导入来源",
+    "viewSources": "查看来源",
+    "pendingConfirmBadge": "{count} 项待确认",
     "untitled": "（无标题）",
     "sourceCountBadge": "{count} 个来源",
     "rename": "重命名",

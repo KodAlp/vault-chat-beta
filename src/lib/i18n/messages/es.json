@@ -493,6 +493,8 @@
     "noSourcesTitle": "Aún no hay fuentes",
     "noSourcesDescription": "Para que tus preguntas reciban respuestas basadas en fuentes y citables, primero debes importar tus notas o documentos (Ajustes → Subida de archivos); de lo contrario, cada pregunta devuelve «fuera de alcance».",
     "importSources": "Importar fuentes",
+    "viewSources": "Ver fuentes",
+    "pendingConfirmBadge": "{count} pendientes de confirmar",
     "untitled": "(sin título)",
     "sourceCountBadge": "{count} fuentes",
     "sourceCountBadge#one": "{count} fuente",

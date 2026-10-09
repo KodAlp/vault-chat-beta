@@ -481,6 +481,8 @@
     "noSourcesTitle": "No source yet",
     "noSourcesDescription": "Make your questions fit get source-based answers wey you fit cite, you first need to import your notes or documents (Settings → File upload) — if no, every question go come back \"out of scope\".",
     "importSources": "Import sources",
+    "viewSources": "See sources",
+    "pendingConfirmBadge": "{count} dey wait for confirmation",
     "untitled": "(no title)",
     "sourceCountBadge": "{count} sources",
     "rename": "Rename",

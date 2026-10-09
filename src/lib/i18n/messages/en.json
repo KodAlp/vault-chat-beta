@@ -512,6 +512,8 @@
 		"noSourcesTitle": "No sources yet",
 		"noSourcesDescription": "For your questions to get source-grounded, citable answers, you first need to import your notes or documents (Settings → File upload) — otherwise every question comes back \"out of scope\".",
 		"importSources": "Import sources",
+		"viewSources": "View sources",
+		"pendingConfirmBadge": "{count} awaiting confirmation",
 		"untitled": "(untitled)",
 		"sourceCountBadge": "{count} sources",
 		"rename": "Rename",

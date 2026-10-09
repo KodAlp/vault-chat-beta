@@ -481,6 +481,8 @@
     "noSourcesTitle": "ソースがまだありません",
     "noSourcesDescription": "質問に対して出典に基づいた引用可能な回答を得るには、まずノートやドキュメントをインポートする必要があります（設定 → ファイルのアップロード）。そうしないと、どの質問も「対象外」と返されます。",
     "importSources": "ソースをインポート",
+    "viewSources": "ソースを表示",
+    "pendingConfirmBadge": "{count} 件が確認待ち",
     "untitled": "（無題）",
     "sourceCountBadge": "{count} 件のソース",
     "rename": "名前を変更",

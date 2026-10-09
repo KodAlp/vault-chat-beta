@@ -512,6 +512,8 @@
 		"noSourcesTitle": "Henüz kaynak yok",
 		"noSourcesDescription": "Sorularının kaynağa dayalı, gösterilebilir cevaplar alması için önce notlarını ya da belgelerini içe aktarman gerekiyor (Ayarlar → Dosya yükleme) — aksi halde her soru \"kapsamda yok\" döner.",
 		"importSources": "Kaynakları içe aktar",
+		"viewSources": "Kaynakları görüntüle",
+		"pendingConfirmBadge": "{count} onay bekliyor",
 		"untitled": "(başlıksız)",
 		"sourceCountBadge": "{count} kaynak",
 		"rename": "Yeniden adlandır",
