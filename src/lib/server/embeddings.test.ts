@@ -87,7 +87,7 @@ test('embedTexts (ollama) does not set cpuOnly for a document', async () => {
 	const { seen, restore } = fakeFetch(() => embedResponse([0.1, 0.2, 0.3]));
 	try {
 		await embedTexts(['bir paragraf'], { purpose: 'document' });
-		const body = JSON.parse(String(seen[0].init?.body));
+		const body = JSON.parse(String(seen.find((r) => r.url.endsWith('/api/embed'))?.init?.body));
 		assert.equal('options' in body, false);
 	} finally {
 		restore();
@@ -158,9 +158,11 @@ test('embedTexts batches documents in groups of 32', async () => {
 		const texts = Array.from({ length: 65 }, (_, i) => `t${i}`);
 		const out = await embedTexts(texts, { purpose: 'document' });
 		assert.equal(out.length, 65);
-		assert.equal(seen.length, 3); // 32 + 32 + 1
-		assert.equal(JSON.parse(String(seen[0].init?.body)).input.length, 32);
-		assert.equal(JSON.parse(String(seen[2].init?.body)).input.length, 1);
+		const embeds = seen.filter((r) => r.url.endsWith('/api/embed'));
+		assert.equal(embeds.length, 3); // 32 + 32 + 1
+		assert.equal(seen.filter((r) => r.url.endsWith('/api/ps')).length, 1, 'runner check happens once per call');
+		assert.equal(JSON.parse(String(embeds[0].init?.body)).input.length, 32);
+		assert.equal(JSON.parse(String(embeds[2].init?.body)).input.length, 1);
 	} finally {
 		restore();
 	}
@@ -284,4 +286,72 @@ test('embeddingKey returns the legacy EMBED_MODEL constant for the default ollam
 test('embeddingKey returns a provider/model/dims identity for any non-default config', () => {
 	assert.equal(embeddingKey({ providerId: 'deepseek', model: 'embed-1', dims: 768 }), 'deepseek/embed-1/768');
 	assert.equal(embeddingKey({ providerId: 'ollama', model: 'other-model', dims: EMBED_DIMS }), 'ollama/other-model/1024');
+});
+
+// --- CPU-only runner reuse pitfall (purpose: 'document') ---
+
+function psHandler(models: unknown, psStatus = 200) {
+	return (url: string) =>
+		url.endsWith('/api/ps')
+			? new Response(JSON.stringify({ models }), { status: psStatus })
+			: embedResponse([0.1, 0.2, 0.3]);
+}
+
+test('embedTexts (document) unloads a CPU-resident embed runner, then embeds', async () => {
+	useTmpEnv([OLLAMA]);
+	setEmbeddingConfig({ providerId: 'ollama', model: 'bge-m3', dims: 3 });
+	const { seen, restore } = fakeFetch(psHandler([{ name: 'bge-m3:latest', model: 'bge-m3:latest', size_vram: 0 }]));
+	try {
+		await embedTexts(['x'], { purpose: 'document' });
+		const urls = seen.map((r) => r.url.replace(/^.*\/api/, '/api'));
+		assert.deepEqual(urls, ['/api/ps', '/api/embed', '/api/embed']);
+		assert.deepEqual(JSON.parse(String(seen[1].init?.body)), { model: 'bge-m3', input: [], keep_alive: 0 });
+		assert.deepEqual(JSON.parse(String(seen[2].init?.body)), { model: 'bge-m3', input: ['x'] });
+	} finally {
+		restore();
+	}
+});
+
+test('embedTexts (document) leaves a GPU-resident embed runner alone', async () => {
+	useTmpEnv([OLLAMA]);
+	setEmbeddingConfig({ providerId: 'ollama', model: 'bge-m3', dims: 3 });
+	const { seen, restore } = fakeFetch(psHandler([{ name: 'bge-m3:latest', size_vram: 1200000000 }]));
+	try {
+		await embedTexts(['x'], { purpose: 'document' });
+		assert.equal(seen.filter((r) => r.url.endsWith('/api/embed')).length, 1);
+	} finally {
+		restore();
+	}
+});
+
+test('embedTexts (document) still embeds when /api/ps fails', async () => {
+	useTmpEnv([OLLAMA]);
+	setEmbeddingConfig({ providerId: 'ollama', model: 'bge-m3', dims: 3 });
+	const real = globalThis.fetch;
+	const seen: string[] = [];
+	globalThis.fetch = (async (url: unknown) => {
+		seen.push(String(url));
+		if (String(url).endsWith('/api/ps')) throw new Error('ECONNRESET');
+		return embedResponse([0.1, 0.2, 0.3]);
+	}) as typeof fetch;
+	try {
+		const out = await embedTexts(['x'], { purpose: 'document' });
+		assert.deepEqual(out, [[0.1, 0.2, 0.3]]);
+		assert.equal(seen.filter((u) => u.endsWith('/api/embed')).length, 1);
+	} finally {
+		globalThis.fetch = real;
+	}
+});
+
+test('embedTexts (query) never calls /api/ps', async () => {
+	useTmpEnv([OLLAMA]);
+	setEmbeddingConfig({ providerId: 'ollama', model: 'bge-m3', dims: 3 });
+	const { seen, restore } = fakeFetch(psHandler([{ name: 'bge-m3:latest', size_vram: 0 }]));
+	try {
+		await embedTexts(['x'], { purpose: 'query' });
+		assert.equal(seen.some((r) => r.url.endsWith('/api/ps')), false);
+		assert.equal(seen.length, 1);
+	} finally {
+		restore();
+	}
 });
