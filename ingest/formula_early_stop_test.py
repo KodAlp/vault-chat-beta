@@ -12,6 +12,7 @@ only be measured on a GPU run with VC_FORMULA_EARLY_STOP=1 vs 0.
 """
 import io
 import os
+import random
 import sys
 import types
 from contextlib import redirect_stderr
@@ -36,7 +37,9 @@ def loop_row(period, head=(7, 8, 9), n=400):
 
 
 def clean_row(n=40):
-    return [10 + (i * 7) % 23 for i in range(n)] + [EOS]
+    # not periodic (a short period would now be a long-period loop)
+    rnd = random.Random(n)
+    return [10 + rnd.randrange(900) for _ in range(n)] + [EOS]
 
 
 class FakeModel:
@@ -100,8 +103,19 @@ def test_loop_period():
     # a run shorter than the window does not count
     assert fes.loop_period(torch.tensor([1, 2] * (W // 2 - 1) + [9])) == 0
     assert fes.loop_period(torch.tensor([1, 2, 3])) == 0
-    # period 5 is not a "1-4 token group"
-    assert fes.loop_period(torch.tensor([1, 2, 3, 4, 5] * 40)) == 0
+    # long periods 5..32: >= 8 repeats and >= 64 tokens in total
+    for p in (5, 8, 11, 20, 32):
+        reps = max(8, -(-64 // p))
+        assert fes.loop_period(torch.tensor(clean_row(30) + loop_row(p, n=p * reps)[3:])) == p, p
+        assert fes.loop_period(torch.tensor(clean_row(30) + loop_row(p, n=p * (reps - 1))[3:])) == 0, p
+    assert fes.loop_period(torch.tensor([1, 2, 3, 4, 5] * 40)) == 5
+    # a true 3-period loop reports 3 even when the 6-window trips first
+    assert fes.loop_period(torch.tensor(clean_row(10) + [4, 5, 6] * 30)) == 3
+    # period 33 is out of range
+    assert fes.loop_period(torch.tensor(clean_row(20) + list(range(1, 34)) * 12)) == 0
+    # legit LaTeX: 6 identical matrix rows of 6 tokens, then other content
+    rows = [3, 4, 5, 4, 6, 7] * 6
+    assert fes.loop_period(torch.tensor(clean_row(20) + rows + clean_row(40))) == 0
 
 
 def test_detector_per_row_and_prompt_excluded():
@@ -118,6 +132,37 @@ def test_detector_per_row_and_prompt_excluded():
     # a row that already finished (pad tail) is not a loop
     det3 = fes.make_detector(5, [EOS, PAD])
     assert not det3(torch.tensor([[7] * 5 + [PAD] * W]), None).any()
+
+
+def test_detector_long_period():
+    det = fes.make_detector(PLEN, [EOS, PAD])
+    prompt = torch.full((1, PLEN), 55)
+    seen = None
+    row = clean_row(25)[:-1] + [31 + k for k in range(20)] * 12
+    for n in range(1, len(row) + 1):  # step by step, like generate()
+        res = det(torch.cat([prompt, torch.tensor([row[:n]])], dim=1), None)
+        if bool(res[0]):
+            seen = n
+            break
+    # 25 clean tokens + 8 repeats of 20 = 185; checked every LONG_CHECK_EVERY steps
+    assert seen is not None and 25 + 160 <= seen < 25 + 160 + fes.LONG_CHECK_EVERY, seen
+    assert det.period == {0: 20} and det.stop_len == {0: seen}
+    # a clean row of the same length is never flagged
+    det2 = fes.make_detector(PLEN, [EOS, PAD])
+    clean = torch.tensor([clean_row(300)])
+    for n in range(1, 301):
+        assert not det2(torch.cat([prompt, clean[:, :n]], dim=1), None).any()
+
+
+def test_long_loop_stopped_and_flagged():
+    # batch of 2: row 0 loops with period 12 and the retry loops again; row 1 clean
+    m, out = run([[clean_row(30)[:-1] + loop_row(12)[3:], clean_row(60)], [loop_row(12)]], 2)
+    s = fes.snapshot()
+    assert (s["rows_stopped"], s["retries_ok"]) == (1, 0) and s["periods"] == {"12": 1}, s
+    assert gen_of(out, 1) == clean_row(60)
+    # stock-mode output must still trip postprocess (the extended loop runs to the end)
+    text = " ".join(f"t{t}" for t in gen_of(out, 0))
+    assert find_degenerate_run(text) >= 0 and len(gen_of(out, 0)) > DEGENERATE_RUN * 3
 
 
 def test_no_loop_passthrough():
@@ -146,6 +191,7 @@ def test_retry_also_loops_keeps_first_and_warns():
     m, out = run([[loop_row(3), clean_row(10)], [loop_row(1)]], 2)
     s = fes.snapshot()
     assert (s["rows_stopped"], s["retries"], s["retries_ok"]) == (1, 1, 0), s
+    assert s["periods"] == {"3": 1}, s
     assert gen_of(out, 1) == clean_row(10)
     # the first attempt's loop is extended so postprocess still flags it
     text = " ".join(chr(ord("a") + t % 26) for t in gen_of(out, 0))
