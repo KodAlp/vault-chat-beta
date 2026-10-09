@@ -67,6 +67,9 @@ CONDITIONS = {
         Cond("batch1", STOCK_EXPANSION, 1, "keep"),
         Cond("noeq", STOCK_EXPANSION, STOCK_BATCH, "white"),
         Cond("adaptive_noeq", "adaptive", STOCK_BATCH, "white"),
+        # adaptive_box_v2: docling kutusu formülden küçük olabilir -> önce büyüt, düzyazı/numarayı dışla
+        Cond("adaptive2", "adaptive2", STOCK_BATCH, "keep"),
+        Cond("adaptive2_noeq", "adaptive2", STOCK_BATCH, "white"),
         Cond("adaptive_noeq_b1", "adaptive", 1, "white"),
         Cond("exp005_noeq_b1", 0.05, 1, "white"),
         # dtype değişkeni: aynı koşul fp32 motorla (üretim bf16; fp32 yalnız deney, GPU'da daha çok VRAM)
@@ -281,6 +284,300 @@ def adaptive_box(bbox, chars, page_wh, margin: float):
     W, H = page_wh
     return BoundingBox(
         l=max(0.0, l - left), r=min(W, r + right), b=max(0.0, b - bot), t=min(H, t + top), coord_origin=CoordOrigin.BOTTOMLEFT
+    )
+
+
+V2_PROSE_GAP = 1.3  # satır içi bölme: komşu karakterler arası boşluk > bu * satır medyan yüksekliği -> ayrı parça
+V2_VERT_ATTACH = 0.5  # (i) dikey ekleme: kutuya boşluk < bu * formül karakter medyan yüksekliği
+V2_HORIZ_ATTACH = 2.0  # (ii) yatay ekleme: kutuya boşluk < bu * medyan yükseklik
+V2_PIX_GAP = 0.12  # piksel büyütmede kopuk sayılmayan DÜŞEY boşluk (* medyan yükseklik)
+V2_PIX_GAP_X = 0.6  # ... YATAY boşluk (sonda kalan nokta/virgül, ince parantez)
+V2_PIX_REACH = 1.2  # piksel büyütmenin kutudan en çok uzaklaşabileceği (* medyan yükseklik)
+
+
+def _v2_segments(chars):
+    """Karakterleri yazı dizilerine (parçalara) böler: iki karakter, dikey aralıkları küçüğünün >= %50'si
+    kadar örtüşüyor ve yatay boşluk < V2_PROSE_GAP * (büyük yükseklik) ise bağlıdır (birleşik bileşenler).
+    Sözcük boşluğu (~0.4-0.75 h) bağlar; matris sütunu / ayrık yazı (> 1.3 h) bağlamaz.
+    Dönüş: [(parça karakterleri, medyan yükseklik)]."""
+    n = len(chars)
+    order = sorted(range(n), key=lambda i: chars[i][1])
+    par = list(range(n))
+
+    def find(x):
+        while par[x] != x:
+            par[x] = par[par[x]]
+            x = par[x]
+        return x
+
+    maxgap = 0.0
+    for c in chars:
+        maxgap = max(maxgap, V2_PROSE_GAP * (c[4] - c[2]))
+    for a in range(n):
+        ca = chars[order[a]]
+        for b in range(a + 1, n):
+            cb_ = chars[order[b]]
+            if cb_[1] - ca[3] > maxgap and cb_[1] - ca[1] > 3 * maxgap:
+                break
+            ha, hb = ca[4] - ca[2], cb_[4] - cb_[2]
+            gap = max(cb_[1] - ca[3], ca[1] - cb_[3], 0.0)
+            if gap >= V2_PROSE_GAP * max(ha, hb):
+                continue
+            ov = min(ca[4], cb_[4]) - max(ca[2], cb_[2])
+            if ov >= 0.5 * min(ha, hb):
+                par[find(order[a])] = find(order[b])
+    comps: dict[int, list] = {}
+    for i in range(n):
+        comps.setdefault(find(i), []).append(chars[i])
+    return [(cs, statistics.median([c[4] - c[2] for c in cs])) for cs in comps.values()]
+
+
+V2_MATH_WORDS = {
+    "sin", "cos", "tan", "cot", "sec", "csc", "sinh", "cosh", "tanh", "coth", "log", "exp", "lim", "max", "min", "det", "ln",
+    "sup", "inf", "arg", "mod", "div", "rot", "sgn", "erf", "dim", "ker", "curl", "grad", "diag", "span", "rank", "tr",
+    "arcsin", "arccos", "arctan", "limsup", "liminf", "var", "cov", "const", "sign", "real", "imag",
+}
+
+
+def _v2_is_prose(seg):
+    """Sözcüklerden oluşan parça: >=4 ardışık küçük harf ya da >=2 ayrı >=3 harflik koşu;
+    sin/cos/lim... gibi matematik işlev adları sayılmaz."""
+    cs = sorted(seg, key=lambda c: c[1])
+    runs, cur = [], []
+    for c in cs:
+        if c[0].isalpha() and c[0].islower() and c[0].isascii():
+            cur.append(c[0])
+        else:
+            if cur:
+                runs.append("".join(cur))
+            cur = []
+    if cur:
+        runs.append("".join(cur))
+    runs = [len(r) for r in runs if r not in V2_MATH_WORDS]
+    denom = sum(1 for c in cs if not c[0].isascii() or c[0].isalpha())  # rakam/parantez/noktalama sayılmaz
+    if sum(r for r in runs if r >= 3) < 0.5 * denom:  # satırın en az yarısı sözcük harfi olmalı (satır içi formül ağırlıklıysa düzyazı değil)
+        return False
+    return any(r >= 4 for r in runs) or sum(1 for r in runs if r >= 3) >= 2
+
+
+def _v2_prose_pieces(chars):
+    """Düzyazı satır parçaları: bağlı bileşenler (_v2_segments) satırlara ayrılır (satır merkezi farkı
+    < 0.5 h), her satır soldan sağa sıralanıp _v2_is_prose ile sınanır. Dönüş: [(karakterler, medyan h)]."""
+    out = []
+    for comp, mh in _v2_segments(chars):
+        lines: list[list] = []
+        for c in sorted(comp, key=lambda c: -(c[2] + c[4])):
+            cy = (c[2] + c[4]) / 2
+            for ln in lines:
+                if abs(cy - statistics.mean((x[2] + x[4]) / 2 for x in ln)) < 0.5 * mh:
+                    ln.append(c)
+                    break
+            else:
+                lines.append([c])
+        for ln in lines:
+            if len(ln) >= 4 and _v2_is_prose(ln):
+                out.append((ln, statistics.median([c[4] - c[2] for c in ln])))
+    return out
+
+
+def find_eq_number_v2(chars, bbox, region):
+    """find_eq_number + matris girdisi ("0 0", "1") gibi yalın rakamları numara saymayan süzgeç:
+    kutu ya formül kutusunun sağında ya da parantez/nokta/tire içermeli."""
+    eq = find_eq_number(chars, bbox, region)
+    if not eq.get("found"):
+        return eq
+    keep = []
+    for bx in eq["boxes"]:
+        txt = "".join(c[0] for c in sorted(chars, key=lambda c: c[1]) if bx[0] - 0.3 <= (c[1] + c[3]) / 2 <= bx[2] + 0.3 and bx[1] - 0.3 <= (c[2] + c[4]) / 2 <= bx[3] + 0.3)
+        if bx[0] >= bbox[2] - 1 or re.search(r"[().\-]", txt):
+            keep.append(bx)
+    if not keep:
+        return {"found": False}
+    return {**eq, "boxes": keep}
+
+
+def adaptive_box_v2(bbox, chars, page_wh, margin: float, page_img=None, eq: dict | None = None):
+    """Düzeltilmiş adaptif kırpım. docling kutusu bazen formülden KÜÇÜK olduğundan kutu önce
+    formüle ait karakterlerle (ve çizimle) BÜYÜTÜLÜR, sonra komşu metne değmeden bir kenar payı
+    eklenir.
+      a. büyütme: (i) kutunun yatay bandında ve dikey boşluğu < 0.5 h olan karakterler (kesir parçaları,
+         üst/alt indisler, limitler); (ii) dikey bandı örtüşen ve yatay boşluğu < 2.0 h olan karakterler
+         (matris girdileri, parantez, işleç); (iii) sayfa görüntüsünde kutuya bitişik koyu piksel
+         bileşenleri (kesir çizgisi, büyük parantez; boşluk <= 0.12 h, en çok 1.2 h uzağa).
+         h = formülün kendi karakterlerinin medyan yüksekliği.
+      b. dışlama: sözcüklerden oluşan satır parçaları (düzyazı) ve denklem numarası büyütmeye girmez.
+      c. kenar payı <= margin pt: büyütülmüş kutunun dışındaki HER karakterin 0.5 pt önünde durur.
+    `eq`: find_eq_number çıktısı (numara karakterleri dışlanır)."""
+    import numpy as np
+    from docling_core.types.doc import BoundingBox, CoordOrigin
+
+    W, H = page_wh
+    l, b, r, t = bbox
+    own = [c for c in chars if l <= (c[1] + c[3]) / 2 <= r and b <= (c[2] + c[4]) / 2 <= t]
+    excl_ids = set()
+    # docling kutusu bazen düzyazı/numara da içerir (örn. "(polarizer with ... ) (6.19)"): uzun sözcük
+    # parçaları ve gerçek numara, formülün başka karakteri varsa kutudan ÇIKARILIR.
+    removed = []
+    if own:
+        keep = []
+        pieces = _v2_prose_pieces(own)
+        for comp, mh in _v2_segments(own):  # parantezli denklem numarası "(7.4)": ayrı parça olarak
+            if re.match(r"^\(\d+(?:[.\-]\d+)*[a-z]?\)$", "".join(c[0] for c in sorted(comp, key=lambda c: c[1]))):
+                pieces.append((comp, mh))
+        piece_ids = set()
+        cand_ids = {id(c) for seg, _ in pieces for c in seg}
+        for comp, mh in _v2_segments(own):  # "Wave" gibi saf harf sözcükleri de aday say (uzaklık hesabında yok sayılır)
+            txt = "".join(c[0] for c in sorted(comp, key=lambda c: c[1]))
+            if len(txt) >= 3 and txt.isascii() and txt.isalpha() and txt.lower() not in V2_MATH_WORDS:
+                cand_ids |= {id(c) for c in comp}
+        rest_all = [c for c in own if id(c) not in cand_ids]
+        for seg, mh in pieces:
+            ids = {id(c) for c in seg}
+            sl, sr = min(c[1] for c in seg), max(c[3] for c in seg)
+            gap = min((max(c[1] - sr, sl - c[3], 0.0) for c in rest_all), default=0.0)
+            # uzun düzyazı VEYA kısa ama formülden >= 3 h uzak sözcük/numara
+            sb_, st_ = min(c[2] for c in seg), max(c[4] for c in seg)
+            # kısa parça yalnız bir yanında formül yoksa (kenar etiketi / numara) çıkarılır; ardından formül
+            # gelen "for any |x|<1" gibi metin formülün parçasıdır
+            row = [c for c in rest_all if min(c[4], st_) - max(c[2], sb_) > 0.3 * (st_ - sb_)]
+            free = not any(c[1] >= sr for c in row) or not any(c[3] <= sl for c in row)
+            if len(seg) >= 10 or (gap >= 3 * mh and free):
+                removed += seg
+                piece_ids |= ids
+        keep = [c for c in own if id(c) not in piece_ids]
+        if piece_ids and keep:
+            # düzyazı satırının sözcük kuyruğu ("Re", ayrı parça kalmış): aynı satır bandında, parçaya yakın ve
+            # formül gövdesinin satırından >= 1 h dışta olan karakterler
+            cys = sorted((c[2] + c[4]) / 2 for c in keep)
+            mcy = cys[len(cys) // 2]
+            for seg, mh in pieces:
+                if id(seg[0]) not in piece_ids:
+                    continue
+                pb, pt = min(c[2] for c in seg), max(c[4] for c in seg)
+                pl, pr_ = min(c[1] for c in seg), max(c[3] for c in seg)
+                if pb <= mcy <= pt:
+                    continue  # formülün kendi satırındaki parça
+                tail = []
+                while True:  # zincirleme: eklenen karakter kapsamı büyütür ("Re" + "calling" gibi)
+                    new = [c for c in keep if c not in tail and pb <= (c[2] + c[4]) / 2 <= pt and max(c[1] - pr_, pl - c[3], 0.0) < 3 * mh]
+                    if not new:
+                        break
+                    tail += new
+                    pl, pr_ = min(pl, *(c[1] for c in new)), max(pr_, *(c[3] for c in new))
+                removed += tail
+                tail_ids = {id(c) for c in tail}
+                keep = [c for c in keep if id(c) not in tail_ids]
+        if piece_ids and keep:
+            # kenar etiketinin düzyazı olmayan kalıntıları ("2nd and 3rd"): çıkarılan parçanın bulunduğu
+            # yandaki, onun sol/sağ sınırından ötedeki tüm karakterler de çıkar
+            xs = sorted(c[1] for c in keep)
+            med = xs[len(xs) // 2]
+            rm_r = [min(c[1] for c in seg) for seg, _ in pieces if id(seg[0]) in piece_ids and min(c[1] for c in seg) > med]
+            rm_l = [max(c[3] for c in seg) for seg, _ in pieces if id(seg[0]) in piece_ids and max(c[3] for c in seg) < med]
+            if rm_r:
+                lim = min(rm_r)
+                removed += [c for c in keep if c[1] >= lim]
+                keep = [c for c in keep if c[1] < lim]
+            if rm_l and keep:
+                lim = max(rm_l)
+                removed += [c for c in keep if c[3] <= lim]
+                keep = [c for c in keep if c[3] > lim]
+        if eq and eq.get("found"):
+            for c in list(keep):
+                cx, cy = (c[1] + c[3]) / 2, (c[2] + c[4]) / 2
+                if any(el - 0.5 <= cx <= er + 0.5 and eb - 0.5 <= cy <= et + 0.5 for el, eb, er, et in eq["boxes"]):
+                    keep.remove(c)
+                    removed.append(c)
+        if keep and removed:
+            own = keep
+            l, b = min(c[1] for c in own), min(c[2] for c in own)
+            r, t = max(c[3] for c in own), max(c[4] for c in own)
+            excl_ids.update(id(c) for c in removed)
+        else:
+            removed = []
+    hs = [c[4] - c[2] for c in own]
+    h = statistics.median(hs) if hs else (t - b)
+    h = max(h, 3.0)
+    own_ids = {id(c) for c in own}
+    outside = [c for c in chars if id(c) not in own_ids and not (not removed and l <= (c[1] + c[3]) / 2 <= r and b <= (c[2] + c[4]) / 2 <= t)]
+    if outside:
+        for seg, _mh in _v2_prose_pieces(outside):
+            excl_ids.update(id(c) for c in seg)
+    if eq and eq.get("found"):
+        for el, eb, er, et in eq["boxes"]:
+            for c in outside:
+                cx, cy = (c[1] + c[3]) / 2, (c[2] + c[4]) / 2
+                if el - 0.5 <= cx <= er + 0.5 and eb - 0.5 <= cy <= et + 0.5:
+                    excl_ids.add(id(c))
+    cand = [c for c in outside if id(c) not in excl_ids]
+    L, B, R, T = l, b, r, t
+    dx = 0.3 * h
+    for _ in range(6):
+        grown = False
+        for c in cand:
+            cl, cb, cr, ct = c[1:5]
+            cx, cy = (cl + cr) / 2, (cb + ct) / 2
+            vgap = max(B - ct, cb - T, 0.0)
+            hgap = max(L - cr, cl - R, 0.0)
+            ok = (L - dx <= cx <= R + dx and vgap < V2_VERT_ATTACH * h) or (cb < T and ct > B and hgap < V2_HORIZ_ATTACH * h)
+            if ok and (cl < L or cr > R or cb < B or ct > T):
+                L, B, R, T = min(L, cl), min(B, cb), max(R, cr), max(T, ct)
+                grown = True
+        if page_img is not None:
+            # dışlanan karakterleri beyazla, kutuya bitişik koyu bileşenleri kutuya kat
+            from scipy import ndimage
+
+            S = IMAGES_SCALE
+            reach = V2_PIX_REACH * h
+            x0, x1 = max(0, int((L - reach) * S)), min(page_img.width, int((R + reach) * S) + 1)
+            y0, y1 = max(0, int((H - T - reach) * S)), min(page_img.height, int((H - B + reach) * S) + 1)
+            if x1 > x0 and y1 > y0:
+                g = np.asarray(page_img.crop((x0, y0, x1, y1)).convert("L"))
+                dark = g < 160
+                # dışlananların kutularını (ve ancak onların) sil; formüle dahil edilebilir karakterlere dokunma
+                for c in outside:
+                    if id(c) in excl_ids:
+                        xa, xb = int((c[1] - 1.2) * S) - x0, int((c[3] + 1.2) * S) - x0 + 1
+                        ya, yb = int((H - c[4] - 1.2) * S) - y0, int((H - c[2] + 1.2) * S) - y0 + 1
+                        dark[max(ya, 0) : max(yb, 0), max(xa, 0) : max(xb, 0)] = False
+                gv = max(1, int(round(V2_PIX_GAP * h * S)))
+                gh = max(1, int(round(V2_PIX_GAP_X * h * S)))
+                dil = ndimage.binary_dilation(dark, structure=np.ones((2 * gv + 1, 2 * gh + 1), bool))
+                lab, n = ndimage.label(dil)
+                bx0, bx1 = int(L * S) - x0, int(R * S) - x0
+                by0, by1 = int((H - T) * S) - y0, int((H - B) * S) - y0
+                sub = lab[max(by0, 0) : max(by1, 0) + 1, max(bx0, 0) : max(bx1, 0) + 1]
+                ids = set(np.unique(sub[sub > 0]).tolist())
+                for i in ids:
+                    ys, xs = np.nonzero((lab == i) & dark)
+                    if xs.size == 0:
+                        continue
+                    nl, nr = (x0 + xs.min()) / S, (x0 + xs.max() + 1) / S
+                    nt, nb = H - (y0 + ys.min()) / S, H - (y0 + ys.max() + 1) / S
+                    nl, nr = max(nl, L - reach), min(nr, R + reach)
+                    nb, nt = max(nb, B - reach), min(nt, T + reach)
+                    # bileşen, formülle ilgisiz bir dışlanmayan karakteri çekmesin: yalnız yeni kutu genişlemesi
+                    if nl < L - 0.01 or nr > R + 0.01 or nb < B - 0.01 or nt > T + 0.01:
+                        L, R, B, T = min(L, nl), max(R, nr), min(B, nb), max(T, nt)
+                        grown = True
+        if not grown:
+            break
+    top = bot = left = right = margin
+    for ch, cl, cb, cr, ct in chars:
+        cx, cy = (cl + cr) / 2, (cb + ct) / 2
+        if L <= cx <= R and B <= cy <= T:
+            continue
+        if cy > T and cr > L - margin and cl < R + margin:
+            top = min(top, max(0.0, cb - T - 0.5))
+        elif cy < B and cr > L - margin and cl < R + margin:
+            bot = min(bot, max(0.0, B - ct - 0.5))
+        if ct > B and cb < T:
+            if cx > R:
+                right = min(right, max(0.0, cl - R - 0.5))
+            elif cx < L:
+                left = min(left, max(0.0, L - cr - 0.5))
+    return BoundingBox(
+        l=max(0.0, L - left), r=min(W, R + right), b=max(0.0, B - bot), t=min(H, T + top), coord_origin=CoordOrigin.BOTTOMLEFT
     )
 
 
@@ -602,10 +899,11 @@ def cmd_run(a) -> None:
         W, H = pc["docling_page_size"]
         page_img = render_page(pdfs[(src, page)], page)
         chars = pc["chars"]
-        eqinfo = {}
+        eqinfo, eqinfo2 = {}, {}
         for it in items:
             sb = stock_box(it["bbox"], STOCK_EXPANSION, H)
             eqinfo[it["idx"]] = find_eq_number(chars, it["bbox"], (sb.l, sb.b, sb.r, sb.t)) if it["kind"] == "formula" else {"found": False}
+            eqinfo2[it["idx"]] = find_eq_number_v2(chars, it["bbox"], (sb.l, sb.b, sb.r, sb.t)) if it["kind"] == "formula" else {"found": False}
         crops_dir = out / "crops" / key
         crops_dir.mkdir(parents=True, exist_ok=True)
         stock_out: dict[int, dict] = {}
@@ -616,10 +914,12 @@ def cmd_run(a) -> None:
             for it in items:
                 if cond.expansion == "adaptive":
                     box = adaptive_box(it["bbox"], chars, (W, H), a.adaptive_margin)
+                elif cond.expansion == "adaptive2":
+                    box = adaptive_box_v2(it["bbox"], chars, (W, H), a.adaptive_margin, page_img, eqinfo2[it["idx"]])
                 else:
                     box = stock_box(it["bbox"], float(cond.expansion), H)
                 boxes[it["idx"]] = box
-                eq = eqinfo[it["idx"]] if cond.eqnum == "white" else None
+                eq = (eqinfo2 if cond.expansion == "adaptive2" else eqinfo)[it["idx"]] if cond.eqnum == "white" else None
                 im = make_crop(page_img, box, H, eq)
                 im.save(crops_dir / f"i{it['idx']}_{cond.name}.png")
                 images[it["idx"]] = im
@@ -631,7 +931,7 @@ def cmd_run(a) -> None:
                 rows_, secs = decode_batch(engine, inner, [images[i["idx"]] for i in b], [i["kind"] for i in b], max_new, a.cap_after_hit, a.device)
                 for it, r in zip(b, rows_):
                     r["postprocess"] = postprocess_loop(r["docling_text"])
-                    eq = eqinfo[it["idx"]]
+                    eq = (eqinfo2 if cond.expansion == "adaptive2" else eqinfo)[it["idx"]]
                     bx = boxes[it["idx"]]
                     recs.append(
                         {
@@ -646,7 +946,7 @@ def cmd_run(a) -> None:
                             "crop_box_pt": [round(bx.l, 2), round(bx.b, 2), round(bx.r, 2), round(bx.t, 2)],
                             "formula_bbox_pt": it["bbox"],
                             "expansion": cond.expansion,
-                            "adaptive_margin_pt": a.adaptive_margin if cond.expansion == "adaptive" else None,
+                            "adaptive_margin_pt": a.adaptive_margin if str(cond.expansion).startswith("adaptive") else None,
                             "batch_size": cond.batch,
                             "batch_members": [i["idx"] for i in b],
                             "batch_seconds": round(secs, 3),
@@ -860,6 +1160,64 @@ def cmd_review(a) -> None:
     print(f"{out / 'review.html'}: {len(targets)} hedef")
 
 
+def cmd_debug_v2(a) -> None:
+    """Her formül için: sol yarı sayfa üstünde üç kutu (stok kırmızı, adaptive mavi, adaptive2 yeşil),
+    sağda üç kırpım yan yana. out/debug_v2/<anahtar>_i<öğe>.png"""
+    from PIL import Image, ImageDraw
+
+    out = Path(a.out)
+    only = {int(x) for x in a.items.split(",")} if a.items else None
+    for f in sorted((out / "located").glob("*.json")):
+        pc = json.loads(f.read_text(encoding="utf-8"))
+        if a.pages:
+            sub, _, pg = a.pages.partition(":")
+            if sub not in pc["src"] or (pg and int(pg) != pc["page"]):
+                continue
+        pdf = find_pdf(Path(a.pdf_root), pc["src"])
+        W, H = pc["docling_page_size"]
+        page_img = render_page(pdf, pc["page"])
+        chars = pc["chars"]
+        for it in pc["items"]:
+            if it["kind"] != "formula" or (only is not None and it["idx"] not in only):
+                continue
+            sb = stock_box(it["bbox"], STOCK_EXPANSION, H)
+            eq = find_eq_number_v2(chars, it["bbox"], (sb.l, sb.b, sb.r, sb.t))
+            boxes = [
+                ("stock", sb, (220, 0, 0)),
+                ("adaptive", adaptive_box(it["bbox"], chars, (W, H), a.adaptive_margin), (0, 90, 255)),
+                ("adaptive2", adaptive_box_v2(it["bbox"], chars, (W, H), a.adaptive_margin, page_img, eq), (0, 160, 0)),
+            ]
+            ov = page_img.copy()
+            d = ImageDraw.Draw(ov)
+            ll, bb_, rr, tt = it["bbox"]
+            d.rectangle([ll * IMAGES_SCALE, (H - tt) * IMAGES_SCALE, rr * IMAGES_SCALE, (H - bb_) * IMAGES_SCALE], outline=(255, 160, 0), width=1)
+            for _n, bx, col in boxes:
+                tl = bx.to_top_left_origin(page_height=H).scaled(scale=IMAGES_SCALE)
+                d.rectangle(tl.as_tuple(), outline=col, width=2)
+            # sayfadan formül çevresi (stok kutusunun 120 pt çevresi)
+            cx0, cx1 = max(0, int((sb.l - 60) * IMAGES_SCALE)), min(ov.width, int((sb.r + 60) * IMAGES_SCALE))
+            cy0, cy1 = max(0, int((H - sb.t - 50) * IMAGES_SCALE)), min(ov.height, int((H - sb.b + 50) * IMAGES_SCALE))
+            ctx = ov.crop((cx0, cy0, cx1, cy1))
+            crops = []
+            for _n, bx, col in boxes:
+                im = make_crop(page_img, bx, H, None)
+                bd = Image.new("RGB", (im.width + 6, im.height + 6), col)
+                bd.paste(im, (3, 3))
+                crops.append(bd)
+            wtot = max(ctx.width, sum(c.width for c in crops) + 10 * 2)
+            htot = ctx.height + 10 + max(c.height for c in crops)
+            canvas = Image.new("RGB", (wtot, htot), "white")
+            canvas.paste(ctx, (0, 0))
+            x = 0
+            for c in crops:
+                canvas.paste(c, (x, ctx.height + 10))
+                x += c.width + 10
+            dst = out / "debug_v2" / f"{f.stem}_i{it['idx']}.png"
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            canvas.save(dst)
+            print(dst.name, [f"{n}:{bx.r - bx.l:.0f}x{bx.t - bx.b:.0f}" for n, bx, _ in boxes])
+
+
 # --------------------------------------------------------------------------- CLI
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -883,13 +1241,19 @@ def main() -> None:
     r.add_argument("--max-new-tokens", type=int, help=f"varsayılan {STOCK_MAX_NEW_TOKENS} (üretim)")
     r.add_argument("--cap-after-hit", type=int, default=256, help="döngü tespitinden N token sonra satırı kes (0 = kesme, ham)")
     r.add_argument("--locate-only", action="store_true")
+    d = sub.add_parser("debug-v2", help="stok/adaptive/adaptive2 kutularını sayfa üzerinde çizer (debug_v2/*.png)")
+    common(d)
+    d.add_argument("--pdf-root", required=True)
+    d.add_argument("--pages", help="süzgeç 'altdizge[:sayfa]'")
+    d.add_argument("--items", help="virgülle öğe indeksleri (yoksa hepsi)")
+    d.add_argument("--adaptive-margin", type=float, default=3.5)
     s = sub.add_parser("summary")
     common(s)
     s.add_argument("--judgments", help="review sayfasından inen judgments.json")
     v = sub.add_parser("review")
     common(v)
     a = ap.parse_args()
-    {"run": cmd_run, "summary": cmd_summary, "review": cmd_review}[a.cmd](a)
+    {"run": cmd_run, "summary": cmd_summary, "review": cmd_review, "debug-v2": cmd_debug_v2}[a.cmd](a)
 
 
 if __name__ == "__main__":
