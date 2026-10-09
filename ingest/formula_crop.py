@@ -17,7 +17,9 @@ görüntü ölçeği parametre oldu). Bağlama install() ile yapılır (formula_
 CodeFormulaVlmModel.prepare_element sarılır; herhangi bir uyuşmazlıkta stok kırpım kullanılır,
 dönüşüm asla bozulmaz.
 
-VC_FORMULA_CROP=adaptive3 (varsayılan) | stock.   VC_FORMULA_CROP_DEBUG=<klasör>: pipeline'ın modele
+VC_FORMULA_CROP=adaptive3 (varsayılan) | stock.   VC_FORMULA_RENDER=pdfium (varsayılan) | docling:
+kırpımın çizileceği sayfa görüntüsü. docling'in kendi çizimi bazı MathType simge yazı tiplerinde glifleri
+(ör. "=") çizmiyor (Likharev); pypdfium2 çiziyor. İkisi birbirinden bağımsızdır.   VC_FORMULA_CROP_DEBUG=<klasör>: pipeline'ın modele
 gönderdiği kırpımları (+ stok karşılığını ve kutuları) oraya yazar (varsayılan kapalı).
 """
 from __future__ import annotations
@@ -298,6 +300,7 @@ _WARNED = [False]
 _PDF: dict[str, Any] = {"path": None, "doc": None}  # tek belgelik pdfium tutamağı
 _CHARS: dict[tuple[str, int], dict | None] = {}  # (pdf, sayfa) -> {"chars", "rotation"}
 _DEBUG_SEQ = [0]
+_RENDER: dict[str, Any] = {"key": None, "img": None}  # son pdfium sayfa çizimi
 
 
 def mode() -> str:
@@ -305,9 +308,15 @@ def mode() -> str:
     return "stock" if m in ("stock", "0", "off", "") else "adaptive3"
 
 
+def render_mode() -> str:
+    m = os.environ.get("VC_FORMULA_RENDER", "pdfium").strip().lower()
+    return "docling" if m in ("docling", "0", "off", "stock") else "pdfium"
+
+
 def reset_stats() -> None:
     STATS.clear()
-    STATS.update(mode=mode(), cropped=0, grown=0, fallbacks=0, eq_blocked=0)
+    STATS.update(mode=mode(), render_mode=render_mode(), render=0, cropped=0, grown=0, fallbacks=0, render_fallbacks=0, eq_blocked=0)
+    _RENDER.update(key=None, img=None)
     _close_pdf()
     _CHARS.clear()
     _DEBUG_SEQ[0] = 0
@@ -395,39 +404,80 @@ def _debug_dir() -> Path | None:
     return Path(d) if d else None
 
 
+def _pdfium_page_image(src, ident: str, page_no: int, scale: float):
+    """Sayfayı pypdfium2 ile RGB olarak çizer (docling sayfa görüntüsüyle aynı boyut/ölçek; docling
+    get_page_image(...).convert("RGB") verir). Docling'in kendi çizimi bazı MathType simge yazı
+    tiplerinde glifleri (ör. "=") ÇİZMİYOR; pdfium çiziyor. Belge/sayfa başına önbellekli (tek sayfa)."""
+    key = (ident, page_no, round(scale, 4))
+    if _RENDER["key"] == key:
+        return _RENDER["img"]
+    import pypdfium2 as pdfium
+
+    if _PDF["path"] != ident:
+        _close_pdf()
+        _CHARS.clear()
+        _PDF.update(path=ident, doc=pdfium.PdfDocument(src.getvalue() if hasattr(src, "getvalue") else src))
+    pg = _PDF["doc"][page_no - 1]
+    img = pg.render(scale=scale, rotation=0, may_draw_forms=False, draw_annots=False).to_pil().convert("RGB")
+    _RENDER.update(key=key, img=img)
+    return img
+
+
+def _resolve_src(conv_res):
+    src = getattr(getattr(conv_res.input, "_backend", None), "path_or_stream", None)
+    if isinstance(src, (str, Path)):
+        src = str(src)
+        return src if os.path.isfile(src) else None
+    return src if hasattr(src, "getvalue") else None
+
+
 def _prepare(orig, self, conv_res, element):
     el = orig(self, conv_res, element)  # stok kırpım (ve yedek)
-    if el is None or STATS.get("mode") != "adaptive3" or not hasattr(el, "image"):
+    cm, rm = STATS.get("mode"), STATS.get("render_mode")
+    if el is None or not hasattr(el, "image") or (cm != "adaptive3" and rm != "pdfium"):
         return el
     from docling_core.types.doc import DocItemLabel, TextItem
 
     if not (isinstance(element, TextItem) and element.label == DocItemLabel.FORMULA and element.prov):
         return el  # kod blokları stok kalır
+    info: dict = {}
     try:
         prov = element.prov[0]
         page = conv_res.pages[prov.page_no - conv_res.pages[0].page_no]
         # kaynak PDF: docling girdisinin arka ucu (convert.py ToUnicode-onarımlı geçici dosyayı verir;
         # input.file yalnız dosya adı olabilir). Yol/BytesIO dışı -> stok.
-        src = getattr(getattr(conv_res.input, "_backend", None), "path_or_stream", None)
-        if isinstance(src, (str, Path)):
-            src = str(src)
-            if not os.path.isfile(src):
-                src = None
-        elif not hasattr(src, "getvalue"):
-            src = None
+        src = _resolve_src(conv_res)
         if src is None or page.size is None:
             raise RuntimeError("kaynak PDF/sayfa boyutu yok")
         ident = getattr(conv_res.input, "document_hash", None) or str(getattr(conv_res.input, "file", ""))
-        pc = extract_page_chars(src, prov.page_no, ident)
-        if pc is None or pc["rotation"] or not pc["chars"]:
-            raise RuntimeError("sayfa karakterleri yok/döndürülmüş sayfa")
         scale = float(getattr(self, "images_scale", IMAGES_SCALE))
-        page_img = page.get_image(scale=scale)
-        if page_img is None:
-            raise RuntimeError("sayfa görüntüsü yok")
         W, H = page.size.width, page.size.height
         bb = prov.bbox.to_bottom_left_origin(page_height=H)
-        img, info = crop_formula(page_img, (bb.l, bb.b, bb.r, bb.t), pc["chars"], (W, H), page_img.width / W)
+        page_img = None
+        if rm == "pdfium":
+            try:
+                page_img = _pdfium_page_image(src, ident, prov.page_no, scale)
+                if not (abs(page_img.width - W * scale) <= 2 and abs(page_img.height - H * scale) <= 2):
+                    raise RuntimeError(f"pdfium boyutu uyuşmuyor ({page_img.size} != {W * scale:.0f}x{H * scale:.0f})")
+                STATS["render"] += 1
+            except Exception as err:  # noqa: BLE001
+                page_img = None
+                STATS["render_fallbacks"] += 1
+                _warn_once(f"pdfium çizimi başarısız ({err}); docling sayfa görüntüsü")
+        if page_img is None:
+            if cm != "adaptive3":
+                return el  # stok kırpım + docling çizimi = değişiklik yok
+            page_img = page.get_image(scale=scale)
+            if page_img is None:
+                raise RuntimeError("sayfa görüntüsü yok")
+        if cm == "adaptive3":
+            pc = extract_page_chars(src, prov.page_no, ident)
+            if pc is None or pc["rotation"] or not pc["chars"]:
+                raise RuntimeError("sayfa karakterleri yok/döndürülmüş sayfa")
+            img, info = crop_formula(page_img, (bb.l, bb.b, bb.r, bb.t), pc["chars"], (W, H), page_img.width / W)
+        else:  # stok geometri, pdfium çizimi
+            exp = prov.bbox.expand_by_scale(self.expansion_factor, self.expansion_factor)
+            img = page_img.crop(exp.to_top_left_origin(page_height=H).scaled(scale=page_img.width / W).as_tuple())
         if img.width < 2 or img.height < 2:
             raise RuntimeError("boş kırpım")
     except Exception as err:  # noqa: BLE001 — hızlandırma/kalite; dönüşümü asla bozmaz
@@ -443,7 +493,7 @@ def _prepare(orig, self, conv_res, element):
             dbg.mkdir(parents=True, exist_ok=True)
             _DEBUG_SEQ[0] += 1
             stem = f"{Path(str(getattr(conv_res.input, 'file', 'doc'))).stem[:40]}_p{prov.page_no}_{_DEBUG_SEQ[0]:03d}"
-            img.save(dbg / f"{stem}_adaptive3.png")
+            img.save(dbg / f"{stem}_{cm if cm == 'adaptive3' else 'pdfium'}.png")
             el.image.save(dbg / f"{stem}_stock.png")
             with open(dbg / "crops.jsonl", "a", encoding="utf-8") as f:
                 f.write(json.dumps({"id": stem, "page": prov.page_no, "ref": element.self_ref, "bbox": [round(v, 2) for v in (bb.l, bb.b, bb.r, bb.t)], **info}, ensure_ascii=False) + "\n")
@@ -454,9 +504,9 @@ def _prepare(orig, self, conv_res, element):
 
 
 def install() -> bool:
-    """CodeFormulaVlmModel.prepare_element'i sarar. VC_FORMULA_CROP=stock ise kurmaz. Hiçbir sınıf
-    uymazsa False döner (stok kırpım)."""
-    if mode() == "stock":
+    """CodeFormulaVlmModel.prepare_element'i sarar. VC_FORMULA_CROP=stock VE VC_FORMULA_RENDER=docling
+    ise kurmaz. Hiçbir sınıf uymazsa False döner (stok kırpım)."""
+    if mode() == "stock" and render_mode() == "docling":
         return False
     if _INSTALLED[0]:
         return True
@@ -478,7 +528,7 @@ def install() -> bool:
 
 def report() -> dict | None:
     """Belge başına sayaçları stderr'e tek JSON satırı olarak yazar; stok/kurulmadıysa None."""
-    if not _INSTALLED[0] or STATS.get("mode") != "adaptive3":
+    if not _INSTALLED[0] or (STATS.get("mode") != "adaptive3" and STATS.get("render_mode") != "pdfium"):
         return None
     stats = snapshot()
     _close_pdf()

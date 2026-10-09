@@ -84,18 +84,103 @@ def test_prose_does_not_block_math_line_with_greek():
     assert info["grown"] is True and box.r >= 225, box
 
 
-def test_mode_env():
-    saved = os.environ.get("VC_FORMULA_CROP")
-    try:
-        os.environ.pop("VC_FORMULA_CROP", None)
-        assert fc.mode() == "adaptive3"
-        os.environ["VC_FORMULA_CROP"] = "stock"
-        assert fc.mode() == "stock" and fc.install() is False
-    finally:
-        if saved is None:
-            os.environ.pop("VC_FORMULA_CROP", None)
+def _with_env(**kv):
+    saved = {k: os.environ.get(k) for k in kv}
+    for k, v in kv.items():
+        if v is None:
+            os.environ.pop(k, None)
         else:
-            os.environ["VC_FORMULA_CROP"] = saved
+            os.environ[k] = v
+    return saved
+
+
+def _restore(saved):
+    for k, v in saved.items():
+        if v is None:
+            os.environ.pop(k, None)
+        else:
+            os.environ[k] = v
+
+
+def test_mode_env():
+    saved = _with_env(VC_FORMULA_CROP=None, VC_FORMULA_RENDER=None)
+    saved_inst = fc._INSTALLED[0]
+    try:
+        assert fc.mode() == "adaptive3" and fc.render_mode() == "pdfium"
+        os.environ["VC_FORMULA_RENDER"] = "docling"
+        assert fc.render_mode() == "docling"
+        os.environ["VC_FORMULA_CROP"] = "stock"
+        fc._INSTALLED[0] = False
+        assert fc.mode() == "stock" and fc.install() is False  # stok kırpım + docling çizimi: kurulmaz
+        os.environ["VC_FORMULA_RENDER"] = "pdfium"
+        assert fc.render_mode() == "pdfium"
+    finally:
+        _restore(saved)
+        fc._INSTALLED[0] = saved_inst
+        fc.reset_stats()
+
+
+def test_stock_crop_with_pdfium_render_installs_and_crops():
+    """stock + pdfium: install() artık kurar; gerçek bir PDF'ten stok geometri kırpımı pdfium çiziminden gelir."""
+    import tempfile
+
+    import pypdfium2 as pdfium
+    from docling.models.stages.code_formula.code_formula_vlm_model import CodeFormulaVlmModel as cls
+    from docling_core.types.doc import DocItemLabel, FormulaItem, ProvenanceItem
+    from docling_core.types.doc.base import BoundingBox, CoordOrigin
+    from PIL import Image
+
+    saved_pe, saved_inst = cls.prepare_element, fc._INSTALLED[0]
+    saved = _with_env(VC_FORMULA_CROP="stock", VC_FORMULA_RENDER="pdfium")
+    fc._INSTALLED[0] = False
+    try:
+        with tempfile.TemporaryDirectory() as td:
+            pdf = pdfium.PdfDocument.new()
+            pdf.new_page(200, 100)
+            path = os.path.join(td, "t.pdf")
+            pdf.save(path)
+            pdf.close()
+            sentinel = types.SimpleNamespace(image=Image.new("RGB", (1, 1)), item=None)
+            cls.prepare_element = lambda self, conv_res, element: sentinel
+            assert fc.install() is True
+            fc.reset_stats()
+            item = FormulaItem(
+                self_ref="#/texts/0", label=DocItemLabel.FORMULA, text="", orig="",
+                prov=[ProvenanceItem(page_no=1, bbox=BoundingBox(l=50, b=40, r=100, t=60, coord_origin=CoordOrigin.BOTTOMLEFT), charspan=(0, 0))],
+            )
+            page = types.SimpleNamespace(page_no=1, size=types.SimpleNamespace(width=200.0, height=100.0))
+            conv = types.SimpleNamespace(
+                pages=[page], input=types.SimpleNamespace(_backend=types.SimpleNamespace(path_or_stream=path), document_hash="h", file="t.pdf")
+            )
+            model = types.SimpleNamespace(images_scale=1.67, expansion_factor=0.18)
+            out = cls.prepare_element(model, conv, item)
+            assert out is sentinel and fc.STATS["cropped"] == 1 and fc.STATS["render"] == 1, fc.snapshot()
+            assert fc.STATS["render_fallbacks"] == 0 and fc.STATS["fallbacks"] == 0
+            # 50x20 pt kutu, %18 her yönde -> 68x27.2 pt * 1.67 ~ 114x45 px
+            assert abs(out.image.width - 68 * 1.67) <= 2 and abs(out.image.height - 27.2 * 1.67) <= 2, out.image.size
+            # ikinci çağrı aynı sayfa çizimini önbellekten alır
+            before = fc._RENDER["img"]
+            cls.prepare_element(model, conv, item)
+            assert fc._RENDER["img"] is before and fc.STATS["render"] == 2
+            # pdfium başarısız (bozuk dosya yolu): stok kırpım korunur, render_fallbacks sayılır
+            conv.input._backend.path_or_stream = path
+            fc._RENDER.update(key=None, img=None)
+            real = fc._pdfium_page_image
+            fc._pdfium_page_image = lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom"))
+            buf = io.StringIO()
+            try:
+                with redirect_stderr(buf):
+                    out = cls.prepare_element(model, conv, item)
+            finally:
+                fc._pdfium_page_image = real
+            assert out is sentinel and fc.STATS["render_fallbacks"] == 1 and fc.STATS["cropped"] == 2
+            assert out.image is not None
+            fc._close_pdf()
+    finally:
+        cls.prepare_element = saved_pe
+        fc._INSTALLED[0] = saved_inst
+        _restore(saved)
+        fc.reset_stats()
 
 
 def test_install_patches_pipeline_class_and_falls_back():
