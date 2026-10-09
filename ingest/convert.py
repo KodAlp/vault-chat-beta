@@ -83,6 +83,7 @@ import tempfile
 from pathlib import Path
 from typing import Callable
 
+import formula_early_stop
 import images
 import pdf_tounicode
 from column_order import repair_document_order
@@ -725,6 +726,8 @@ _HYBRID_BACKEND_USED: list[bool] = [False]
 # True when the most recent convert_with_docling call ran with OCR enabled;
 # decides which textless-page warning main() shows. Same pattern as above.
 _OCR_RAN: list[bool] = [False]
+# formula_early_stop sayaçları (son docling dönüşümü); done olayına "formulaEarlyStop" olarak girer.
+_FORMULA_STATS: list[dict | None] = [None]
 # Why docling (the primary converter on a GPU machine) was skipped and
 # MarkItDown/marker produced the text instead; main() turns it into a warning.
 _PRIMARY_FALLBACK: list[str] = []
@@ -743,6 +746,7 @@ def reset_run_state() -> None:
     _DOCLING_ERRORS.clear()
     _HYBRID_BACKEND_USED[0] = False
     _OCR_RAN[0] = False
+    _FORMULA_STATS[0] = None
     _PRIMARY_FALLBACK.clear()
     _TEXTLESS_CACHE.clear()
 
@@ -944,6 +948,11 @@ def convert_with_docling(
     from docling.document_converter import DocumentConverter, PdfFormatOption
 
     _OCR_RAN[0] = False
+    try:
+        formula_early_stop.install()
+        formula_early_stop.reset_stats()
+    except Exception as err:  # noqa: BLE001 — hızlandırma; dönüşümü asla bozmaz
+        print(f"formula_early_stop: kurulamadı: {err}", file=sys.stderr)
     options = PdfPipelineOptions()
     need_all = not pdf_has_text_layer(path)
     textless = [] if need_all else textless_pages_in_scope(path, page_range)
@@ -1030,6 +1039,10 @@ def convert_with_docling(
         results, document, ocr_ran = run(True)
     _HYBRID_BACKEND_USED[0] = use_hybrid
     _OCR_RAN[0] = ocr_ran
+    try:
+        _FORMULA_STATS[0] = formula_early_stop.report()
+    except Exception:  # noqa: BLE001
+        _FORMULA_STATS[0] = None
     # docling-parse (#374) returns SUCCESS with an empty error list for a
     # truncated PDF, just with pages missing — so the status is no evidence;
     # compare the page count against what the file itself says it has.
@@ -1573,6 +1586,7 @@ def main(argv: list[str] | None = None) -> int:
             "warnings": warnings,
             "images": image_names,
             "imageStats": image_stats,
+            "formulaEarlyStop": _FORMULA_STATS[0],
         }
     )
     return 0
