@@ -64,9 +64,10 @@ _GLUED_WORDS = re.compile(r"[A-Za-zÇĞİÖŞÜçğıöşü]{15,}")
 HARD_MAX_CHARS = 2048
 
 
-# Docling's formula model sometimes loops until its token cap, emitting a
-# one-line display-math block of ~24k chars made of one 1-4 token group
-# repeated thousands of times. Structural rule, mirrored by DEGENERATE_RUN in
+# Docling's formula model sometimes loops until its token cap (2048 new tokens
+# in docling 2.130's CodeFormulaVlmModel; older versions ~8192), emitting a
+# one-line display-math block of several thousand chars made of one 1-4 token
+# group repeated hundreds of times. Structural rule, mirrored by DEGENERATE_RUN in
 # indexer/chunk.ts (which also repairs already-converted files at index time) —
 # change both together.
 DEGENERATE_RUN = 100

@@ -55,6 +55,7 @@ class Cond:
     expansion: object  # 0.18 | 0.05 | "adaptive"
     batch: int
     eqnum: str  # "keep" | "white"
+    dtype: str = ""  # "" = --dtype (varsayılan auto = üretimdeki bfloat16); "float32" = fp32 motoru
 
 
 CONDITIONS = {
@@ -68,6 +69,9 @@ CONDITIONS = {
         Cond("adaptive_noeq", "adaptive", STOCK_BATCH, "white"),
         Cond("adaptive_noeq_b1", "adaptive", 1, "white"),
         Cond("exp005_noeq_b1", 0.05, 1, "white"),
+        # dtype değişkeni: aynı koşul fp32 motorla (üretim bf16; fp32 yalnız deney, GPU'da daha çok VRAM)
+        Cond("stock_fp32", STOCK_EXPANSION, STOCK_BATCH, "keep", "float32"),
+        Cond("adaptive_noeq_b1_fp32", "adaptive", 1, "white", "float32"),
     ]
 }
 DEFAULT_CONDS = ["stock", "exp005", "adaptive", "batch1", "noeq", "adaptive_noeq", "adaptive_noeq_b1"]
@@ -573,8 +577,17 @@ def cmd_run(a) -> None:
     for r in read_jsonl(res_f):
         done_counts[(r["key"], r["cond"])] = done_counts.get((r["key"], r["cond"]), 0) + 1
 
-    engine, inner = load_engine(a.device, a.dtype, a.threads)
-    print(f"[motor] {type(inner).__name__}, cihaz={a.device}, dtype={getattr(inner.vlm_model, 'dtype', '?')}", flush=True)
+    engines: dict[str, tuple] = {}
+
+    def engine_for(cond):
+        """Koşulun dtype'ına göre motor (tembel yüklenir, önbelleğe alınır)."""
+        dt = cond.dtype or a.dtype
+        if dt not in engines:
+            engines[dt] = load_engine(a.device, dt, a.threads)
+            inner_ = engines[dt][1]
+            print(f"[motor] {type(inner_).__name__}, cihaz={a.device}, dtype={getattr(inner_.vlm_model, 'dtype', '?')}", flush=True)
+        return engines[dt]
+
     max_new = a.max_new_tokens or STOCK_MAX_NEW_TOKENS
     only = {int(x) for x in a.only_items.split(",")} if a.only_items else None
 
@@ -610,6 +623,7 @@ def cmd_run(a) -> None:
                 im = make_crop(page_img, box, H, eq)
                 im.save(crops_dir / f"i{it['idx']}_{cond.name}.png")
                 images[it["idx"]] = im
+            engine, inner = engine_for(cond)
             batches = [items[i : i + cond.batch] for i in range(0, len(items), cond.batch)]
             t_cond = time.time()
             recs = []

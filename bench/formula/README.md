@@ -48,6 +48,16 @@ Kesilirse aynı komut kaldığı yerden sürer (tamamlanmış sayfa/koşul atlan
 | adaptive_noeq | adaptif | 5 | beyazla |
 | adaptive_noeq_b1 | adaptif | 1 | beyazla |
 | exp005_noeq_b1 | 0.05 | 1 | beyazla (varsayılanda yok) |
+| stock_fp32 | 0.18 | 5 | bırak |
+| adaptive_noeq_b1_fp32 | adaptif | 1 | beyazla |
+
+- dtype değişkeni: her koşulun `dtype` alanı vardır; boşsa `--dtype` (varsayılan `auto` = üretimdeki
+  bfloat16), `float32` ise o koşul için ayrı bir fp32 motoru tembel yüklenip önbelleğe alınır (iki motor
+  birlikte bellekte durur). Üretim bf16 olduğundan döngü oranını ölçen karşılaştırma `stock` (bf16) ile
+  `stock_fp32` ve `adaptive_noeq_b1` ile `adaptive_noeq_b1_fp32` çiftleridir. GPU'da çalıştırma örneği:
+  `... run --device cuda --conditions stock,stock_fp32,adaptive_noeq_b1,adaptive_noeq_b1_fp32`.
+  CPU'da `--dtype float32` zaten tek motordur; `_fp32` koşulları CPU'da stok ile aynıdır. Sonuç
+  satırlarının `decoding.dtype` alanı gerçek dtype'ı kaydeder.
 
 - Adaptif: formül bbox'ı + her yönde en çok `--adaptive-margin` (3.5 pt); üst/alt satırdaki ve yandaki
   komşu karaktere değmeden durur (0.5 pt pay). bbox'ın kendisi asla kesilmez, sayfa dışına çıkmaz.
