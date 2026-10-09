@@ -83,6 +83,7 @@ import tempfile
 from pathlib import Path
 from typing import Callable
 
+import formula_crop
 import formula_early_stop
 import images
 import pdf_tounicode
@@ -728,6 +729,8 @@ _HYBRID_BACKEND_USED: list[bool] = [False]
 _OCR_RAN: list[bool] = [False]
 # formula_early_stop sayaçları (son docling dönüşümü); done olayına "formulaEarlyStop" olarak girer.
 _FORMULA_STATS: list[dict | None] = [None]
+# formula_crop sayaçları (son docling dönüşümü); done olayına "formulaCrop" olarak girer.
+_FORMULA_CROP_STATS: list[dict | None] = [None]
 # Why docling (the primary converter on a GPU machine) was skipped and
 # MarkItDown/marker produced the text instead; main() turns it into a warning.
 _PRIMARY_FALLBACK: list[str] = []
@@ -953,6 +956,11 @@ def convert_with_docling(
         formula_early_stop.reset_stats()
     except Exception as err:  # noqa: BLE001 — hızlandırma; dönüşümü asla bozmaz
         print(f"formula_early_stop: kurulamadı: {err}", file=sys.stderr)
+    try:
+        formula_crop.install()
+        formula_crop.reset_stats()
+    except Exception as err:  # noqa: BLE001 — kalite iyileştirmesi; dönüşümü asla bozmaz
+        print(f"formula_crop: kurulamadı: {err}", file=sys.stderr)
     options = PdfPipelineOptions()
     need_all = not pdf_has_text_layer(path)
     textless = [] if need_all else textless_pages_in_scope(path, page_range)
@@ -1043,6 +1051,10 @@ def convert_with_docling(
         _FORMULA_STATS[0] = formula_early_stop.report()
     except Exception:  # noqa: BLE001
         _FORMULA_STATS[0] = None
+    try:
+        _FORMULA_CROP_STATS[0] = formula_crop.report()
+    except Exception:  # noqa: BLE001
+        _FORMULA_CROP_STATS[0] = None
     # docling-parse (#374) returns SUCCESS with an empty error list for a
     # truncated PDF, just with pages missing — so the status is no evidence;
     # compare the page count against what the file itself says it has.
@@ -1587,6 +1599,7 @@ def main(argv: list[str] | None = None) -> int:
             "images": image_names,
             "imageStats": image_stats,
             "formulaEarlyStop": _FORMULA_STATS[0],
+            "formulaCrop": _FORMULA_CROP_STATS[0],
         }
     )
     return 0
