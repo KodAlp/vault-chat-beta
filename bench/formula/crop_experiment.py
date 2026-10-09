@@ -70,6 +70,8 @@ CONDITIONS = {
         # adaptive_box_v2: docling kutusu formülden küçük olabilir -> önce büyüt, düzyazı/numarayı dışla
         Cond("adaptive2", "adaptive2", STOCK_BATCH, "keep"),
         Cond("adaptive2_noeq", "adaptive2", STOCK_BATCH, "white"),
+        # adaptive_box_v3: docling kutusu asla küçülmez; yalnız büyütme (düzyazı/numara büyümeyi engeller)
+        Cond("adaptive3", "adaptive3", STOCK_BATCH, "keep"),
         Cond("adaptive_noeq_b1", "adaptive", 1, "white"),
         Cond("exp005_noeq_b1", 0.05, 1, "white"),
         # dtype değişkeni: aynı koşul fp32 motorla (üretim bf16; fp32 yalnız deney, GPU'da daha çok VRAM)
@@ -581,6 +583,105 @@ def adaptive_box_v2(bbox, chars, page_wh, margin: float, page_img=None, eq: dict
     )
 
 
+def adaptive_box_v3(bbox, chars, page_wh, margin: float, page_img=None, eq: dict | None = None):
+    """v1 + v2'nin yalnız BÜYÜTME adımı. docling kutusu asla küçültülmez (v2'nin düzyazı/numara
+    çıkarma adımı pdfium karakter kutuları güvenilmez olduğunda kutuyu çökertiyordu). Kutunun dışındaki
+    karakterler/pikseller büyütmeye girer; yalnız dışarıdaki düzyazı satırları ve sağ yan denklem numarası
+    büyümeyi ENGELLER (kutunun içindekine dokunulmaz). Sonra v1 kenar payı (<= margin pt, dışarıdaki
+    her karakterin 0.5 pt önünde durur)."""
+    import numpy as np
+    from docling_core.types.doc import BoundingBox, CoordOrigin
+
+    W, H = page_wh
+    l, b, r, t = bbox
+    own = [c for c in chars if l <= (c[1] + c[3]) / 2 <= r and b <= (c[2] + c[4]) / 2 <= t]
+    outside = [c for c in chars if not (l <= (c[1] + c[3]) / 2 <= r and b <= (c[2] + c[4]) / 2 <= t)]
+    hs = [c[4] - c[2] for c in own]
+    h = max(statistics.median(hs) if hs else (t - b), 3.0)
+    excl_ids = set()
+    if outside:
+        for seg, _mh in _v2_prose_pieces(outside):
+            # "ntcosθt" gibi kısa/yunanca-matematik satırlar düzyazı değil: uzun ve matematik simgesiz olmalı
+            if len(seg) >= 10 and not any(("Ͱ" <= c[0] <= "Ͽ") or ("∀" <= c[0] <= "⋿") or c[0] == "−" for c in seg):
+                excl_ids.update(id(c) for c in seg)
+        # parantezli denklem numarası parçaları ("(7.4)") da engellenir
+        for comp, _mh in _v2_segments(outside):
+            if re.match(r"^\(\d+(?:[.\-]\d+)*[a-z]?\)$", "".join(c[0] for c in sorted(comp, key=lambda c: c[1]))):
+                excl_ids.update(id(c) for c in comp)
+    if eq and eq.get("found"):
+        for el, eb, er, et in eq["boxes"]:
+            for c in outside:
+                cx, cy = (c[1] + c[3]) / 2, (c[2] + c[4]) / 2
+                if el - 0.5 <= cx <= er + 0.5 and eb - 0.5 <= cy <= et + 0.5:
+                    excl_ids.add(id(c))
+    cand = [c for c in outside if id(c) not in excl_ids]
+    L, B, R, T = l, b, r, t
+    dx = 0.3 * h
+    for _ in range(6):
+        grown = False
+        for c in cand:
+            cl, cb, cr, ct = c[1:5]
+            cx, cy = (cl + cr) / 2, (cb + ct) / 2
+            vgap = max(B - ct, cb - T, 0.0)
+            hgap = max(L - cr, cl - R, 0.0)
+            ok = (L - dx <= cx <= R + dx and vgap < V2_VERT_ATTACH * h) or (cb < T and ct > B and hgap < V2_HORIZ_ATTACH * h)
+            if ok and (cl < L or cr > R or cb < B or ct > T):
+                L, B, R, T = min(L, cl), min(B, cb), max(R, cr), max(T, ct)
+                grown = True
+        if page_img is not None:
+            from scipy import ndimage
+
+            S = IMAGES_SCALE
+            reach = V2_PIX_REACH * h
+            x0, x1 = max(0, int((L - reach) * S)), min(page_img.width, int((R + reach) * S) + 1)
+            y0, y1 = max(0, int((H - T - reach) * S)), min(page_img.height, int((H - B + reach) * S) + 1)
+            if x1 > x0 and y1 > y0:
+                g = np.asarray(page_img.crop((x0, y0, x1, y1)).convert("L"))
+                dark = g < 160
+                for c in outside:  # engellenen (düzyazı/numara) karakterlerin pikselleri silinir
+                    if id(c) in excl_ids:
+                        xa, xb = int((c[1] - 1.2) * S) - x0, int((c[3] + 1.2) * S) - x0 + 1
+                        ya, yb = int((H - c[4] - 1.2) * S) - y0, int((H - c[2] + 1.2) * S) - y0 + 1
+                        dark[max(ya, 0) : max(yb, 0), max(xa, 0) : max(xb, 0)] = False
+                gv = max(1, int(round(V2_PIX_GAP * h * S)))
+                gh = max(1, int(round(V2_PIX_GAP_X * h * S)))
+                dil = ndimage.binary_dilation(dark, structure=np.ones((2 * gv + 1, 2 * gh + 1), bool))
+                lab, n = ndimage.label(dil)
+                bx0, bx1 = int(L * S) - x0, int(R * S) - x0
+                by0, by1 = int((H - T) * S) - y0, int((H - B) * S) - y0
+                sub = lab[max(by0, 0) : max(by1, 0) + 1, max(bx0, 0) : max(bx1, 0) + 1]
+                for i in set(np.unique(sub[sub > 0]).tolist()):
+                    ys, xs = np.nonzero((lab == i) & dark)
+                    if xs.size == 0:
+                        continue
+                    nl, nr = (x0 + xs.min()) / S, (x0 + xs.max() + 1) / S
+                    nt, nb = H - (y0 + ys.min()) / S, H - (y0 + ys.max() + 1) / S
+                    nl, nr = max(nl, L - reach), min(nr, R + reach)
+                    nb, nt = max(nb, B - reach), min(nt, T + reach)
+                    if nl < L - 0.01 or nr > R + 0.01 or nb < B - 0.01 or nt > T + 0.01:
+                        L, R, B, T = min(L, nl), max(R, nr), min(B, nb), max(T, nt)
+                        grown = True
+        if not grown:
+            break
+    top = bot = left = right = margin
+    for ch, cl, cb, cr, ct in chars:
+        cx, cy = (cl + cr) / 2, (cb + ct) / 2
+        if L <= cx <= R and B <= cy <= T:
+            continue
+        if cy > T and cr > L - margin and cl < R + margin:
+            top = min(top, max(0.0, cb - T - 0.5))
+        elif cy < B and cr > L - margin and cl < R + margin:
+            bot = min(bot, max(0.0, B - ct - 0.5))
+        if ct > B and cb < T:
+            if cx > R:
+                right = min(right, max(0.0, cl - R - 0.5))
+            elif cx < L:
+                left = min(left, max(0.0, L - cr - 0.5))
+    return BoundingBox(
+        l=max(0.0, L - left), r=min(W, R + right), b=max(0.0, B - bot), t=min(H, T + top), coord_origin=CoordOrigin.BOTTOMLEFT
+    )
+
+
 def find_eq_number(chars, bbox, region):
     """Formülle aynı satırdaki denklem numarası ("(5.29)", "3.12", "(4a)").
     `region` (sol,alt,sağ,üst): stok kırpımı. Dönüş: {found, text, boxes, inside_formula}."""
@@ -916,10 +1017,12 @@ def cmd_run(a) -> None:
                     box = adaptive_box(it["bbox"], chars, (W, H), a.adaptive_margin)
                 elif cond.expansion == "adaptive2":
                     box = adaptive_box_v2(it["bbox"], chars, (W, H), a.adaptive_margin, page_img, eqinfo2[it["idx"]])
+                elif cond.expansion == "adaptive3":
+                    box = adaptive_box_v3(it["bbox"], chars, (W, H), a.adaptive_margin, page_img, eqinfo2[it["idx"]])
                 else:
                     box = stock_box(it["bbox"], float(cond.expansion), H)
                 boxes[it["idx"]] = box
-                eq = (eqinfo2 if cond.expansion == "adaptive2" else eqinfo)[it["idx"]] if cond.eqnum == "white" else None
+                eq = (eqinfo2 if cond.expansion in ("adaptive2", "adaptive3") else eqinfo)[it["idx"]] if cond.eqnum == "white" else None
                 im = make_crop(page_img, box, H, eq)
                 im.save(crops_dir / f"i{it['idx']}_{cond.name}.png")
                 images[it["idx"]] = im
@@ -931,8 +1034,8 @@ def cmd_run(a) -> None:
                 rows_, secs = decode_batch(engine, inner, [images[i["idx"]] for i in b], [i["kind"] for i in b], max_new, a.cap_after_hit, a.device)
                 for it, r in zip(b, rows_):
                     r["postprocess"] = postprocess_loop(r["docling_text"])
-                    eq = (eqinfo2 if cond.expansion == "adaptive2" else eqinfo)[it["idx"]]
-                    bx = boxes[it["idx"]]
+                    eq = (eqinfo2 if cond.expansion in ("adaptive2", "adaptive3") else eqinfo)[it["idx"]]
+                    bx =boxes[it["idx"]]
                     recs.append(
                         {
                             "key": key,
