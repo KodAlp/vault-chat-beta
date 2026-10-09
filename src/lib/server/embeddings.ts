@@ -1,5 +1,5 @@
 import { ollamaGate } from './providers/ollama-gate';
-import { embed as ollamaEmbed } from './ollama';
+import { embed as ollamaEmbed, releaseCpuOnlyEmbedRunner } from './ollama';
 import { EMBED_MODEL, EMBED_DIMS } from './embed-config';
 import { getEmbeddingConfig, isCloud, readProvidersFile, type EmbeddingConfig, type ProviderConfigEntry } from './providers/config-store';
 import { secretStore } from './providers/secrets';
@@ -146,6 +146,11 @@ export async function embedTexts(texts: string[], opts: EmbedTextsOptions): Prom
 	if (!config) throw new AppError('EMBEDDING_NOT_CONFIGURED');
 	const entry = resolveProviderEntry(config.providerId);
 	assertConsented(entry);
+
+	// Once per call (not per batch): see releaseCpuOnlyEmbedRunner.
+	if (opts.purpose === 'document' && entry.kind === 'ollama') {
+		await releaseCpuOnlyEmbedRunner(config.model, entry.baseUrl);
+	}
 
 	const results: number[][] = [];
 	for (let i = 0; i < texts.length; i += BATCH_SIZE) {

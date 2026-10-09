@@ -56,3 +56,41 @@ export async function embed(texts: string[], model: string, opts: EmbedOptions):
 		return data.embeddings;
 	});
 }
+
+/**
+ * Pitfall: Ollama reuses an already-loaded runner when a request does not
+ * specify num_gpu. Per-query embeddings load bge-m3 with `num_gpu: 0` (see
+ * above), so after any chat turn the resident runner is CPU-only and a bulk
+ * indexing run (no num_gpu) silently inherits it: measured 40-55 s per
+ * 32-chunk batch on CPU vs ~1 s on GPU. For bulk indexing, call this once
+ * before embedding: if the model is resident with size_vram === 0 it is
+ * unloaded (keep_alive: 0) so the next request re-places it with Ollama's
+ * automatic placement. num_gpu is deliberately NOT forced for documents:
+ * during PDF conversion docling holds ~4.2 GB of a 6 GB GPU and a forced full
+ * offload could OOM. Every failure is swallowed; indexing must never break
+ * because of this optimisation.
+ */
+export async function releaseCpuOnlyEmbedRunner(model: string, baseUrl: string): Promise<boolean> {
+	try {
+		const base = baseUrl.trim().replace(/\/+$/, '');
+		const bare = (s: string) => s.replace(/:latest$/, '');
+		return await ollamaGate.withModel(model, async () => {
+			const ps = await fetch(`${base}/api/ps`, { signal: AbortSignal.timeout(3000) });
+			if (!ps.ok) return false;
+			const data = (await ps.json()) as { models?: { name?: string; model?: string; size_vram?: number }[] };
+			const entry = (data.models ?? []).find(
+				(m) => bare(m.name ?? '') === bare(model) || bare(m.model ?? '') === bare(model)
+			);
+			if (!entry || entry.size_vram !== 0) return false;
+			const res = await fetch(`${base}/api/embed`, {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ model, input: [], keep_alive: 0 }),
+				signal: AbortSignal.timeout(10000)
+			});
+			return res.ok;
+		});
+	} catch {
+		return false;
+	}
+}
