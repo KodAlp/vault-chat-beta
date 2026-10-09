@@ -538,6 +538,8 @@
     "noSourcesTitle": "مفيش مصادر لسه",
     "noSourcesDescription": "عشان أسئلتك تاخد إجابات مبنية على المصادر وينفع تتوثّق، لازم الأول تستورد ملاحظاتك أو مستنداتك (الإعدادات → رفع الملفات) — وإلا كل سؤال هيرجع بـ«خارج النطاق».",
     "importSources": "استيراد المصادر",
+    "viewSources": "عرض المصادر",
+    "pendingConfirmBadge": "{count} مستنية التأكيد",
     "untitled": "(بلا عنوان)",
     "sourceCountBadge": "{count} مصدر",
     "sourceCountBadge#zero": "لا مصادر",

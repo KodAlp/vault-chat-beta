@@ -481,6 +481,8 @@
     "noSourcesTitle": "Belum ada sumber",
     "noSourcesDescription": "Agar pertanyaan Anda mendapat jawaban yang berdasarkan sumber dan dapat dikutip, Anda perlu mengimpor catatan atau dokumen terlebih dahulu (Pengaturan → Unggah berkas) — jika tidak, setiap pertanyaan akan dijawab \"di luar cakupan\".",
     "importSources": "Impor sumber",
+    "viewSources": "Lihat sumber",
+    "pendingConfirmBadge": "{count} menunggu konfirmasi",
     "untitled": "(tanpa judul)",
     "sourceCountBadge": "{count} sumber",
     "rename": "Ganti nama",

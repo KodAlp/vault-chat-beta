@@ -491,6 +491,8 @@
     "noSourcesTitle": "Aucune source pour l'instant",
     "noSourcesDescription": "Pour que vos questions obtiennent des réponses fondées sur les sources et citables, vous devez d'abord importer vos notes ou documents (Paramètres → Téléversement de fichiers) — sinon chaque question renvoie « hors périmètre ».",
     "importSources": "Importer des sources",
+    "viewSources": "Voir les sources",
+    "pendingConfirmBadge": "{count} en attente de confirmation",
     "untitled": "(sans titre)",
     "sourceCountBadge": "{count} sources",
     "sourceCountBadge#one": "{count} source",

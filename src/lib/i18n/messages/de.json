@@ -489,6 +489,8 @@
     "noSourcesTitle": "Noch keine Quellen",
     "noSourcesDescription": "Damit deine Fragen quellenbasierte, zitierbare Antworten bekommen, musst du zuerst deine Notizen oder Dokumente importieren (Einstellungen → Datei-Upload) – sonst lautet die Antwort auf jede Frage „außerhalb des Bereichs“.",
     "importSources": "Quellen importieren",
+    "viewSources": "Quellen anzeigen",
+    "pendingConfirmBadge": "{count} warten auf Bestätigung",
     "untitled": "(ohne Titel)",
     "sourceCountBadge": "{count} Quellen",
     "sourceCountBadge#one": "{count} Quelle",
