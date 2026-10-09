@@ -4,7 +4,10 @@
     python ingest/formula_early_stop_test.py
 
 Not part of `npm test`. Only CPU, tiny tensors and a fake model: no docling
-model is loaded and nothing touches the GPU. The fake `generate` runs the real
+model is loaded and nothing touches the GPU. The fakes follow the real call path
+of docling 2.130 (TransformersVlmEngine.predict_batch): left-padded input_ids,
+`generation_config` object carrying eos/pad/max_new_tokens (no max_new_tokens
+kwarg), output sliced by the caller as `generated_ids[:, input_ids.shape[1]:]`. The fake `generate` runs the real
 transformers StoppingCriteriaList step by step, the way `_sample` does, so the
 per-row plumbing (unfinished rows keep going, stopped rows get pad) is tested
 end to end. Real-model behaviour (CodeFormulaV2 loop rate, seconds saved) can
@@ -29,6 +32,8 @@ EOS, PAD = 2, 0
 PLEN = 5
 W = fes.WINDOW
 PKG = "docling.models.stages.code_formula.code_formula_model"
+VPKG = "docling.models.stages.code_formula.code_formula_vlm_model"
+MAX_NEW = 300
 
 
 def loop_row(period, head=(7, 8, 9), n=400):
@@ -58,7 +63,7 @@ class FakeModel:
         assert ids.shape[0] == len(rows), (ids.shape, len(rows))
         crit = kw.get("stopping_criteria")
         done = torch.zeros(ids.shape[0], dtype=torch.bool)
-        for t in range(kw["max_new_tokens"]):
+        for t in range(kw.get("max_new_tokens") or kw["generation_config"].max_new_tokens):
             nxt = torch.tensor([PAD if done[i] or t >= len(r) else r[t] for i, r in enumerate(rows)])
             ids = torch.cat([ids, nxt[:, None]], dim=1)
             done = done | (nxt == EOS)
@@ -70,19 +75,26 @@ class FakeModel:
 
 
 def make_inputs(batch):
+    # left padding like the real processor: row i has i % 3 pad tokens in front
+    ids = torch.arange(batch * PLEN).reshape(batch, PLEN) + 100
+    mask = torch.ones(batch, PLEN, dtype=torch.long)
+    for i in range(batch):
+        ids[i, : i % 3] = PAD
+        mask[i, : i % 3] = 0
     return dict(
-        input_ids=torch.arange(batch * PLEN).reshape(batch, PLEN) + 100,
-        attention_mask=torch.ones(batch, PLEN, dtype=torch.long),
+        input_ids=ids,
+        attention_mask=mask,
         pixel_values=torch.arange(batch, dtype=torch.float).reshape(batch, 1, 1, 1, 1),
-        max_new_tokens=300,
-        use_cache=True,
-        do_sample=False,
+        generation_config=types.SimpleNamespace(
+            eos_token_id=EOS, pad_token_id=PAD, max_new_tokens=MAX_NEW, do_sample=False, use_cache=True
+        ),
     )
 
 
 def run(scripts, batch):
     fes.reset_stats()
     m = FakeModel(scripts)
+    m.generation_config = None  # real path: eos/pad come from kwargs["generation_config"]
     out = fes.wrap_generate(m.generate, m)(**make_inputs(batch))
     return m, out
 
@@ -165,6 +177,20 @@ def test_long_loop_stopped_and_flagged():
     assert find_degenerate_run(text) >= 0 and len(gen_of(out, 0)) > DEGENERATE_RUN * 3
 
 
+def test_slicing_like_predict_batch():
+    # predict_batch decodes generated_ids[:, input_len:]; the reassembled tensor
+    # must keep the (left-padded) prompt width and pad rows on the right
+    m, out = run([[clean_row(30), loop_row(2), clean_row(50)], [clean_row(33)]], 3)
+    ids = make_inputs(3)["input_ids"]
+    assert out.shape[0] == 3 and out[:, :PLEN].equal(ids)
+    trimmed = out[:, ids.shape[1]:]
+    for i, want in enumerate([clean_row(30), clean_row(33), clean_row(50)]):
+        row = trimmed[i].tolist()
+        assert row[: len(want)] == want and set(row[len(want):]) <= {PAD}
+    # stats use generation_config.max_new_tokens, not the realised width
+    assert fes.snapshot()["tokens_saved_est"] > MAX_NEW - 150
+
+
 def test_no_loop_passthrough():
     m, out = run([[clean_row(), clean_row(20), clean_row(5)]], 3)
     assert len(m.calls) == 1 and fes.snapshot()["rows_stopped"] == 0
@@ -178,7 +204,8 @@ def test_rescue_and_order():
     retry = m.calls[1]
     assert retry["repetition_penalty"] == fes.REPETITION_PENALTY
     assert retry["input_ids"].equal(make_inputs(3)["input_ids"][1:2])
-    assert retry["pixel_values"].flatten().tolist() == [1.0] and retry["max_new_tokens"] == 300
+    assert retry["attention_mask"].equal(make_inputs(3)["attention_mask"][1:2])  # left padding kept
+    assert retry["pixel_values"].flatten().tolist() == [1.0] and retry["generation_config"].max_new_tokens == MAX_NEW
     assert "repetition_penalty" not in m.calls[0] and "no_repeat_ngram_size" not in retry
     assert gen_of(out, 0) == clean_row(30) and gen_of(out, 2) == clean_row(50)
     assert gen_of(out, 1) == clean_row(33)
@@ -220,20 +247,46 @@ def test_env_off():
         del os.environ["VC_FORMULA_EARLY_STOP"]
 
 
-def _fake_docling(has_model):
+def _fake_docling(kind):
+    """Stub docling modules. kind: 'vlm' (CodeFormulaVlmModel -> AutoInline -> Transformers
+    engine -> vlm_model), 'vlm_lazy' (model loads on engine.initialize), 'legacy'."""
+
+    class Transformers:
+        def __init__(self):
+            self.vlm_model = FakeModel([])
+
+    class AutoInline:
+        def __init__(self, loaded):
+            self.actual_engine = Transformers() if loaded else None
+            self._initialized = loaded
+
+        def initialize(self):
+            self.actual_engine = Transformers()
+            self._initialized = True
+
+    class CodeFormulaVlmModel:
+        def __init__(self):
+            self.engine = AutoInline(kind == "vlm")
+
     class CodeFormulaModel:
         def __init__(self):
-            if has_model:
-                self._model = FakeModel([])
+            self._model = FakeModel([])
 
     saved = {}
-    parts = PKG.split(".")
-    for i in range(1, len(parts) + 1):
-        name = ".".join(parts[:i])
-        saved[name] = sys.modules.get(name)
-        sys.modules[name] = types.ModuleType(name)
-    sys.modules[PKG].CodeFormulaModel = CodeFormulaModel
-    return CodeFormulaModel, saved
+    for pkg in (PKG, VPKG):
+        parts = pkg.split(".")
+        for k in range(1, len(parts) + 1):
+            name = ".".join(parts[:k])
+            if name not in saved:
+                saved[name] = sys.modules.get(name)
+                sys.modules[name] = types.ModuleType(name)
+    if kind == "legacy":
+        sys.modules[VPKG] = None  # newer module missing -> ImportError
+        sys.modules[PKG].CodeFormulaModel = CodeFormulaModel
+        return CodeFormulaModel, saved
+    sys.modules[PKG] = None
+    sys.modules[VPKG].CodeFormulaVlmModel = CodeFormulaVlmModel
+    return CodeFormulaVlmModel, saved
 
 
 def _restore(saved):
@@ -244,24 +297,57 @@ def _restore(saved):
             sys.modules[name] = mod
 
 
-def test_install_wraps_generate():
-    cls, saved = _fake_docling(True)
+def test_install_wraps_pipeline_model():
+    # the object the pipeline really uses: CodeFormulaVlmModel.engine.actual_engine.vlm_model
+    cls, saved = _fake_docling("vlm")
     fes._INSTALLED[0] = False
     try:
         assert fes.install() is True and fes.install() is True
         inst = cls()
-        assert inst._model._vc_early_stop
-        assert inst._model.generate.__qualname__.startswith("wrap_generate")
+        model = inst.engine.actual_engine.vlm_model
+        assert model._vc_early_stop and model.generate.__qualname__.startswith("wrap_generate")
         assert fes.report() is not None
+        # and it works through that object, with predict_batch-style kwargs
+        fes.reset_stats()
+        model.scripts = [[loop_row(1), clean_row(6)], [clean_row(9)]]
+        model.generation_config = None
+        out = model.generate(**make_inputs(2))
+        assert fes.snapshot()["retries_ok"] == 1 and gen_of(out, 0) == clean_row(9)
+    finally:
+        _restore(saved)
+        fes._INSTALLED[0] = False
+
+
+def test_install_wraps_lazy_engine():
+    cls, saved = _fake_docling("vlm_lazy")
+    fes._INSTALLED[0] = False
+    try:
+        assert fes.install() is True
+        inst = cls()
+        assert inst.engine.actual_engine is None
+        inst.engine.initialize()  # predict_batch does this on first use
+        assert inst.engine.actual_engine.vlm_model._vc_early_stop
+    finally:
+        _restore(saved)
+        fes._INSTALLED[0] = False
+
+
+def test_install_wraps_legacy_model():
+    cls, saved = _fake_docling("legacy")
+    fes._INSTALLED[0] = False
+    try:
+        assert fes.install() is True
+        assert cls()._model._vc_early_stop
     finally:
         _restore(saved)
         fes._INSTALLED[0] = False
 
 
 def test_graceful_fallback():
-    # target missing: warns once, never raises, stock behaviour
-    saved = {PKG: sys.modules.get(PKG)}
+    # both targets missing: warns once, never raises, stock behaviour
+    saved = {PKG: sys.modules.get(PKG), VPKG: sys.modules.get(VPKG)}
     sys.modules[PKG] = None  # import -> ImportError
+    sys.modules[VPKG] = None
     fes._INSTALLED[0] = False
     fes._WARNED[0] = False
     buf = io.StringIO()
@@ -271,13 +357,23 @@ def test_graceful_fallback():
         assert buf.getvalue().count("formula_early_stop:") == 1 and fes.report() is None
     finally:
         _restore(saved)
-    # model attribute missing: init still succeeds, nothing wrapped
-    cls, saved = _fake_docling(False)
+    # engine without an HF model (API/vLLM/MLX): construction still succeeds, one warning
+    cls, saved = _fake_docling("vlm")
     fes._INSTALLED[0] = False
+    fes._WARNED[0] = False
+    buf = io.StringIO()
     try:
-        with redirect_stderr(io.StringIO()):
+        class Api:
+            _initialized = True
+
+        def init(self):
+            self.engine = Api()
+
+        cls.__init__ = init
+        with redirect_stderr(buf):
             assert fes.install() is True
-            cls()
+            inst = cls()
+        assert isinstance(inst.engine, Api) and buf.getvalue().count("formula_early_stop:") == 1, buf.getvalue()
     finally:
         _restore(saved)
         fes._INSTALLED[0] = False

@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 """docling formül zenginleştirmesi için satır başına döngü kesici + tek yeniden deneme.
 
-docling'in CodeFormulaModel'i formül kırpıntılarını 5'erli gruplar halinde
-`model.generate(..., do_sample=False)` ile çözer. Açgözlü çözme bazen bir
+docling 2.130'un StandardPdfPipeline'ı formül kırpıntılarını CodeFormulaVlmModel
+ile, 5'erli gruplar halinde, TransformersVlmEngine.predict_batch üzerinden
+`vlm_model.generate(**inputs, generation_config=..., stopping_criteria=...)`
+(açgözlü, max_new_tokens 2048, sol dolgu) ile çözer. Açgözlü çözme bazen bir
 formülde döngüye girer (aynı 1-4 token'lık grup yüzlerce kez); grup birlikte
-üretildiği için TEK döngülü formül 5'ini de max_new_tokens'a kadar tutar
+üretildiği için TEK döngülü formül 5'ini de max_new_tokens'a (stok 2048) kadar tutar
 (Notebook fizik ölçümü: formül yoğun PDF'te sayfa başına 15-25 sn, kitap başına
 2-15 döngülü formül). postprocess.py döngüyü sonradan kesiyor ama zaman
 çoktan gitmiş. Burada:
@@ -19,6 +21,13 @@ formülde döngüye girer (aynı 1-4 token'lık grup yüzlerce kez); grup birlik
    denemenin kesik çıktısı kalır ve döngü, postprocess.py'nin eskiden olduğu
    gibi uyarı notuna dönüşmesi için DEGENERATE_RUN kadar uzatılır
    (kesilmiş 24 tekrar tek başına postprocess eşiğinin altında kalırdı).
+
+Kanca: CodeFormulaVlmModel.__init__ sarılır; model oluşunca motorun (engine)
+tuttuğu HF modelinin `generate`'i örnek düzeyinde sarılır (yalnız formül
+motoru; başka VLM aşamaları etkilenmez). predict_batch çıktıyı
+`generated_ids[:, input_ids.shape[1]:]` ile dilimler; biz de aynı genişlikte
+(sol dolgulu girdinin tamamı = plen) ve sağdan pad'li bir tensör döndürürüz.
+Eski CodeFormulaModel (docling < 2.130) için de aynı sarma denenir.
 
 VC_FORMULA_EARLY_STOP=0 kapatır (A/B ölçümü). docling'in iç yapısı farklıysa
 bir kez stderr'e yazıp stok davranışa dönülür; dönüşüm asla bozulmaz.
@@ -195,8 +204,10 @@ def wrap_generate(orig, model):
         input_ids = kwargs.get("input_ids")
         if not enabled() or args or not isinstance(input_ids, torch.Tensor):
             return orig(*args, **kwargs)
-        gc = getattr(model, "generation_config", None)
-        eos, pad = _ids(getattr(gc, "eos_token_id", None)), _ids(getattr(gc, "pad_token_id", None))
+        # predict_batch eos/pad'i ve max_new_tokens'ı kwargs["generation_config"] içinde verir.
+        gcs = [kwargs.get("generation_config"), getattr(model, "generation_config", None)]
+        eos = next((e for e in (_ids(getattr(g, "eos_token_id", None)) for g in gcs) if e), [])
+        pad = next((e for e in (_ids(getattr(g, "pad_token_id", None)) for g in gcs) if e), [])
         batch, plen = input_ids.shape
         det = make_detector(plen, eos + pad)
         out = orig(**_with_detector(kwargs, det))
@@ -204,7 +215,11 @@ def wrap_generate(orig, model):
             return out
 
         looped = sorted(det.stop_len)
-        max_new = int(kwargs.get("max_new_tokens") or (out.shape[1] - plen))
+        max_new = int(
+            kwargs.get("max_new_tokens")
+            or getattr(kwargs.get("generation_config"), "max_new_tokens", None)
+            or (out.shape[1] - plen)
+        )
         STATS["rows_stopped"] += len(looped)
         for i in looped:
             key = str(det.period.get(i, 0))
@@ -243,34 +258,96 @@ def wrap_generate(orig, model):
     return generate
 
 
+def _wrap_model(model) -> bool:
+    if model is None or getattr(model, "_vc_early_stop", False) or not callable(getattr(model, "generate", None)):
+        return False
+    model.generate = wrap_generate(model.generate, model)
+    model._vc_early_stop = True
+    return True
+
+
+def _inner_model(engine):
+    """AutoInlineVlmEngine -> .actual_engine (TransformersVlmEngine) -> .vlm_model
+    (HF model); doğrudan TransformersVlmEngine de olabilir. Yoksa None."""
+    inner = getattr(engine, "actual_engine", None) or engine
+    return getattr(inner, "vlm_model", None)
+
+
+def _wrap_engine(engine) -> None:
+    """Formül motorunun HF modelinin generate'ini sarar; model henüz yüklenmediyse
+    (lazy initialize) yüklendikten sonra sarılır. Transformers dışı motor (vLLM,
+    MLX, API) sarılamaz: bir kez uyarı, stok davranış."""
+    if engine is None:
+        return
+    model = _inner_model(engine)
+    if model is not None:
+        _wrap_model(model)
+        return
+    init = getattr(engine, "initialize", None)
+    if not callable(init) or getattr(engine, "_vc_early_stop_init", False):
+        return
+
+    def initialize(*a, **kw):
+        res = init(*a, **kw)
+        try:
+            if not _wrap_model(_inner_model(engine)):
+                _warn_once("formül motoru Transformers değil (HF model bulunamadı)")
+        except Exception as err:  # noqa: BLE001
+            _warn_once(f"generate sarılamadı ({err})")
+        return res
+
+    engine.initialize = initialize
+    engine._vc_early_stop_init = True
+
+
+def _patch_init(cls, getter) -> None:
+    orig_init = cls.__init__
+
+    def patched_init(self, *a, **kw):
+        orig_init(self, *a, **kw)
+        try:
+            getter(self)
+        except Exception as err:  # noqa: BLE001
+            _warn_once(f"generate sarılamadı ({err})")
+
+    cls.__init__ = patched_init
+
+
 def install() -> bool:
-    """CodeFormulaModel.__init__'i sarar: oluşan modelin generate'i değişir.
-    Bir kez kurulur; bir şey uymazsa False döner (stok davranış)."""
+    """Formül motorunun HF modelinin generate'ini sarar: gerçek hat
+    CodeFormulaVlmModel(.engine.vlm_model), eski hat CodeFormulaModel(._model).
+    Bir kez kurulur; hiçbiri uymazsa False döner (stok davranış)."""
     if not enabled():
         return False
     if _INSTALLED[0]:
         return True
+    errors = []
+    ok = False
+    try:
+        from docling.models.stages.code_formula.code_formula_vlm_model import CodeFormulaVlmModel
+
+        def hook(self):
+            eng = getattr(self, "engine", None)
+            _wrap_engine(eng)
+            if eng is not None and _inner_model(eng) is None and getattr(eng, "_initialized", False):
+                _warn_once("formül motoru Transformers değil (HF model bulunamadı)")
+
+        _patch_init(CodeFormulaVlmModel, hook)
+        ok = True
+    except Exception as err:  # noqa: BLE001 — docling iç yapısı farklı olabilir
+        errors.append(err)
     try:
         from docling.models.stages.code_formula.code_formula_model import CodeFormulaModel
 
-        orig_init = CodeFormulaModel.__init__
-
-        def patched_init(self, *a, **kw):
-            orig_init(self, *a, **kw)
-            try:
-                model = self._model
-                if model is not None and not getattr(model, "_vc_early_stop", False):
-                    model.generate = wrap_generate(model.generate, model)
-                    model._vc_early_stop = True
-            except Exception as err:  # noqa: BLE001
-                _warn_once(f"generate sarılamadı ({err})")
-
-        CodeFormulaModel.__init__ = patched_init
-        _INSTALLED[0] = True
-        return True
-    except Exception as err:  # noqa: BLE001 — docling iç yapısı farklı olabilir
-        _warn_once(f"kurulamadı ({err})")
+        _patch_init(CodeFormulaModel, lambda self: _wrap_model(getattr(self, "_model", None)))
+        ok = True
+    except Exception as err:  # noqa: BLE001
+        errors.append(err)
+    if not ok:
+        _warn_once(f"kurulamadı ({'; '.join(str(e) for e in errors)})")
         return False
+    _INSTALLED[0] = True
+    return True
 
 
 def report() -> dict | None:
