@@ -1,6 +1,6 @@
 import tr from './messages/tr.json';
 import en from './messages/en.json';
-import { DEFAULT_LOCALE, isLocale, localeInfo, type Locale } from './locales';
+import { DEFAULT_LOCALE, localeInfo, migrateLocale, type Locale } from './locales';
 import { resolveMessage, type MessageTree } from './resolve';
 
 export type { Locale } from './locales';
@@ -64,8 +64,7 @@ export const STORAGE_KEY = 'vault-chat-locale';
 function loadInitial(): Locale {
 	if (typeof localStorage === 'undefined') return DEFAULT_LOCALE;
 	try {
-		const raw = localStorage.getItem(STORAGE_KEY);
-		return isLocale(raw) ? raw : DEFAULT_LOCALE;
+		return migrateLocale(localStorage.getItem(STORAGE_KEY)) ?? DEFAULT_LOCALE;
 	} catch {
 		return DEFAULT_LOCALE;
 	}
@@ -167,7 +166,8 @@ export async function setLocale(code: Locale): Promise<void> {
  * removed). Async because +layout.ts awaits it: the first paint must already
  * be in the right language. Doesn't persist — it is restoring, not choosing. */
 export async function applyLocale(locale: unknown): Promise<void> {
-	if (isLocale(locale)) await switchTo(locale);
+	const resolved = migrateLocale(locale);
+	if (resolved) await switchTo(resolved);
 }
 
 /**

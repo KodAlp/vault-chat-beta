@@ -5,7 +5,7 @@ import { intlLocale } from './i18n/locales';
  * i18n.locale (every Locale code is a BCP-47 tag: zh-CN, ar-EG, ...), not a
  * hardcoded value, so this reflects the UI language setting rather than
  * staying stuck in one language. intlLocale() degrades codes the engine's ICU
- * doesn't know (pcm in older WebViews) to en instead of the OS default. */
+ * doesn't know (a minority language in older WebViews) to en instead of the OS default. */
 export function relativeTime(iso: string, locale: string): string {
 	let rtf: Intl.RelativeTimeFormat;
 	try {

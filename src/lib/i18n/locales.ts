@@ -8,9 +8,10 @@
  * Order is the picker order: the two languages with complete hand-maintained
  * catalogs first (tr, en), then the rest.
  *
- * `parent` is the regional-variant fallback: ar-EG catalogs only carry what
- * differs from Modern Standard Arabic, and Nigerian Pidgin leans on English
- * for anything untranslated (t() walks current -> parent -> en -> tr).
+ * The set favours where computers are used heavily for technical work (high
+ * household computer access, large developer populations) over raw speaker
+ * counts. `parent` is the regional-variant fallback (t() walks
+ * current -> parent -> en -> tr); no shipped locale needs one right now.
  */
 export const LOCALES = [
 	{ code: 'tr', nativeName: 'Türkçe', englishName: 'Turkish', dir: 'ltr' },
@@ -27,8 +28,15 @@ export const LOCALES = [
 	{ code: 'ru', nativeName: 'Русский', englishName: 'Russian', dir: 'ltr' },
 	{ code: 'de', nativeName: 'Deutsch', englishName: 'German', dir: 'ltr' },
 	{ code: 'ja', nativeName: '日本語', englishName: 'Japanese', dir: 'ltr' },
-	{ code: 'pcm', nativeName: 'Naijá (Nigerian Pidgin)', englishName: 'Nigerian Pidgin', dir: 'ltr', parent: 'en' },
-	{ code: 'ar-EG', nativeName: 'العربية (مصر)', englishName: 'Arabic (Egypt)', dir: 'rtl', parent: 'ar' }
+	{ code: 'ko', nativeName: '한국어', englishName: 'Korean', dir: 'ltr' },
+	{ code: 'it', nativeName: 'Italiano', englishName: 'Italian', dir: 'ltr' },
+	{ code: 'nl', nativeName: 'Nederlands', englishName: 'Dutch', dir: 'ltr' },
+	{ code: 'pl', nativeName: 'Polski', englishName: 'Polish', dir: 'ltr' },
+	{ code: 'cs', nativeName: 'Čeština', englishName: 'Czech', dir: 'ltr' },
+	{ code: 'sv', nativeName: 'Svenska', englishName: 'Swedish', dir: 'ltr' },
+	{ code: 'nb', nativeName: 'Norsk bokmål', englishName: 'Norwegian Bokmål', dir: 'ltr' },
+	{ code: 'da', nativeName: 'Dansk', englishName: 'Danish', dir: 'ltr' },
+	{ code: 'fi', nativeName: 'Suomi', englishName: 'Finnish', dir: 'ltr' }
 ] as const;
 
 export type Locale = (typeof LOCALES)[number]['code'];
@@ -49,9 +57,21 @@ export function isLocale(v: unknown): v is Locale {
 	return typeof v === 'string' && BY_CODE.has(v);
 }
 
+/** Locales that were offered once and later removed, mapped to the closest one
+ * still shipped. A saved preference for one of them must land on its relative,
+ * not silently fall back to the default (Turkish). */
+export const LEGACY_LOCALES: Readonly<Record<string, Locale>> = { pcm: 'en', 'ar-EG': 'ar' };
+
+/** A saved locale value -> a shipped Locale: exact codes pass, retired codes
+ * map to their replacement, anything else is undefined. */
+export function migrateLocale(v: unknown): Locale | undefined {
+	if (isLocale(v)) return v;
+	return typeof v === 'string' && Object.prototype.hasOwnProperty.call(LEGACY_LOCALES, v) ? LEGACY_LOCALES[v] : undefined;
+}
+
 /** The tag to hand to Intl.*. Intl silently falls back to the OS default
- * locale for a tag the engine has no data for (pcm on an older WebView2 ICU),
- * which would mix e.g. German dates into a Naijá UI; resolve to the parent or
+ * locale for a tag the engine has no data for (a minority language on an older
+ * WebView2 ICU), which would mix e.g. German dates into that UI; resolve to the parent or
  * en instead. */
 export function intlLocale(code: string): string {
 	const candidates = [code, BY_CODE.get(code)?.parent, 'en'];

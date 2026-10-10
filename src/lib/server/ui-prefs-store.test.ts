@@ -33,16 +33,26 @@ test('an invalid locale is dropped, a valid one is kept', () => {
 	assert.deepEqual(readUiPrefs(), { locale: 'tr' });
 });
 
-test('every catalog language is accepted, including regional codes like ar-EG', () => {
+test('every catalog language is accepted, including regional codes like zh-CN', () => {
 	useTmpDataDir();
 	writeUiPrefs({ locale: 'de' });
 	assert.deepEqual(readUiPrefs(), { locale: 'de' });
-	writeUiPrefs({ locale: 'ar-EG' });
-	assert.deepEqual(readUiPrefs(), { locale: 'ar-EG' });
+	writeUiPrefs({ locale: 'zh-CN' });
+	assert.deepEqual(readUiPrefs(), { locale: 'zh-CN' });
 	// Codes are case-sensitive as listed in LOCALES; an unknown spelling is dropped and the stored value survives.
 	// @ts-expect-error — intentionally invalid
-	writeUiPrefs({ locale: 'ar-eg' });
-	assert.deepEqual(readUiPrefs(), { locale: 'ar-EG' });
+	writeUiPrefs({ locale: 'zh-cn' });
+	assert.deepEqual(readUiPrefs(), { locale: 'zh-CN' });
+});
+
+test('a retired locale is migrated to its replacement, not dropped', () => {
+	useTmpDataDir();
+	// @ts-expect-error — pcm is no longer a Locale, but an old ui-prefs.json or client may still send it
+	writeUiPrefs({ locale: 'pcm' });
+	assert.deepEqual(readUiPrefs(), { locale: 'en' });
+	// @ts-expect-error — same for ar-EG
+	writeUiPrefs({ locale: 'ar-EG' });
+	assert.deepEqual(readUiPrefs(), { locale: 'ar' });
 });
 
 test('an invalid theme is dropped but other valid settings fields survive', () => {
