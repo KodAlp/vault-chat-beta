@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import AddFilesDialog from '$lib/components/AddFilesDialog.svelte';
 	import LinksImportDialog from '$lib/components/LinksImportDialog.svelte';
 	import NoteAppSourceGrid from '$lib/components/NoteAppSourceGrid.svelte';
 	import LibraryTree from '$lib/components/LibraryTree.svelte';
@@ -120,17 +119,21 @@
 	     is the only thing on this page that needs an action from the user. -->
 	<PendingImports onConfirmed={() => treeVersion++} />
 
-	<!-- The single upload entry point: AddFilesDialog works out whether it got one file, several
-	     files or a folder. Same dialog the vault page's sidebar opens. -->
+	<!-- The single upload entry point: LibraryTree carries its own AddFilesDialog (one file,
+	     several files or a folder), so a separate "add files" card here only repeated it. -->
 	<Card.Root class="mb-6">
 		<Card.Header>
-			<Card.Title level={2}>{t('LibrarySettingsPage.addFilesTitle')}</Card.Title>
+			<Card.Title level={2}>{t('LibrarySettingsPage.libraryTreeTitle')}</Card.Title>
 			<Card.Description>
-				{t('LibrarySettingsPage.addFilesDescription')}
+				{t('LibrarySettingsPage.libraryTreeDescription')}
 			</Card.Description>
 		</Card.Header>
 		<Card.Content>
-			<AddFilesDialog onImported={() => {}} />
+			<div class="library-tree-wrap">
+				{#key treeVersion}
+					<LibraryTree />
+				{/key}
+			</div>
 		</Card.Content>
 	</Card.Root>
 
@@ -224,22 +227,6 @@
 					</label>
 				</div>
 			</details>
-		</Card.Content>
-	</Card.Root>
-
-	<Card.Root>
-		<Card.Header>
-			<Card.Title level={2}>{t('LibrarySettingsPage.libraryTreeTitle')}</Card.Title>
-			<Card.Description>
-				{t('LibrarySettingsPage.libraryTreeDescription')}
-			</Card.Description>
-		</Card.Header>
-		<Card.Content>
-			<div class="library-tree-wrap">
-				{#key treeVersion}
-					<LibraryTree />
-				{/key}
-			</div>
 		</Card.Content>
 	</Card.Root>
 </div>

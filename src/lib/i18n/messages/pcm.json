@@ -651,9 +651,7 @@
     "flattenFoldersHint": "Dis root folders demself go hide; di folders wey dey under dem go show direct for di root of di tree instead. Di paths no change — na only how di tree look dem simplify.",
     "libraryTreeTitle": "Library Tree",
     "libraryTreeDescription": "Upload, rename, or delete documents. Di chat screen own source tree (Faz 9) dey use separate, read-only copy of dis one for scope selection instead.",
-    "loadError": "Settings no load.",
-    "addFilesTitle": "Add files",
-    "addFilesDescription": "PDF, Word, PowerPoint, Markdown, code… Choose one file, plenty files or one whole folder — di app go sabi which one e be."
+    "loadError": "Settings no load."
   },
   "ProvidersSettingsPage": {
     "title": "Model Providers",

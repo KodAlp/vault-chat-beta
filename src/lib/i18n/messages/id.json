@@ -651,9 +651,7 @@
     "flattenFoldersHint": "Folder akar ini sendiri disembunyikan; folder di bawahnya langsung ditampilkan di akar pohon. Jalur tidak berubah — hanya tampilan pohon yang disederhanakan.",
     "libraryTreeTitle": "Pohon Pustaka",
     "libraryTreeDescription": "Unggah, ganti nama, atau hapus dokumen. Pohon sumber milik layar obrolan (Fase 9) menggunakan salinan terpisah yang hanya-baca untuk pemilihan cakupan.",
-    "loadError": "Gagal memuat pengaturan.",
-    "addFilesTitle": "Tambah berkas",
-    "addFilesDescription": "PDF, Word, PowerPoint, Markdown, kode… Pilih satu berkas, beberapa berkas, atau satu folder penuh — aplikasi akan menentukan sendiri mana yang dimaksud."
+    "loadError": "Gagal memuat pengaturan."
   },
   "ProvidersSettingsPage": {
     "title": "Penyedia Model",

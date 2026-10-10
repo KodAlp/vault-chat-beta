@@ -664,9 +664,7 @@
     "flattenFoldersHint": "Essas pastas raiz são ocultadas; as pastas dentro delas passam a ser exibidas diretamente na raiz da árvore. Os caminhos não mudam: apenas a aparência da árvore é simplificada.",
     "libraryTreeTitle": "Árvore da biblioteca",
     "libraryTreeDescription": "Envie, renomeie ou exclua documentos. A árvore de fontes própria da tela do chat (Fase 9) usa, em vez disso, uma cópia separada, somente leitura, para a seleção de escopo.",
-    "loadError": "Não foi possível carregar as configurações.",
-    "addFilesTitle": "Adicionar arquivos",
-    "addFilesDescription": "PDF, Word, PowerPoint, Markdown, código… Escolha um arquivo, vários arquivos ou uma pasta inteira; o app descobre qual é."
+    "loadError": "Não foi possível carregar as configurações."
   },
   "ProvidersSettingsPage": {
     "title": "Provedores de modelos",

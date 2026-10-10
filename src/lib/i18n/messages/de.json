@@ -660,9 +660,7 @@
     "flattenFoldersHint": "Diese Stammordner selbst werden ausgeblendet; die darunterliegenden Ordner erscheinen stattdessen direkt an der Wurzel des Baums. Die Pfade bleiben unverändert – nur die Darstellung des Baums wird vereinfacht.",
     "libraryTreeTitle": "Bibliotheksbaum",
     "libraryTreeDescription": "Dokumente hochladen, umbenennen oder löschen. Der Quellenbaum des Chat-Bildschirms (Phase 9) nutzt für die Umfangsauswahl stattdessen eine separate, schreibgeschützte Kopie davon.",
-    "loadError": "Die Einstellungen konnten nicht geladen werden.",
-    "addFilesTitle": "Dateien hinzufügen",
-    "addFilesDescription": "PDF, Word, PowerPoint, Markdown, Code… Wähle eine Datei, mehrere Dateien oder einen ganzen Ordner – die App erkennt selbst, was es ist."
+    "loadError": "Die Einstellungen konnten nicht geladen werden."
   },
   "ProvidersSettingsPage": {
     "title": "Modellanbieter",
