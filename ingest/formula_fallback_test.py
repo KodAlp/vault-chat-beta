@@ -354,7 +354,7 @@ def test_apply_marks_fatal_with_crop():
     assert items[0].text == r"\frac{a}{b}" and items[2].text == "BAD two"
     assert items[1].text == "<!-- vc:fimg 0 -->" and items[3].text == "<!-- vc:fimg 1 -->"
     assert st["fatal"] == 3 and st["fatal_images"] == 2 and st["katex_check"] == "node"
-    assert len(calls) == 1
+    assert len(calls) <= 3  # toplu çağrılar: ön tarama, MinerU kabulü, son sınama — formül başına değil
     info = ff.FATAL_IMAGES[0]
     import hashlib
 
@@ -364,6 +364,33 @@ def test_apply_marks_fatal_with_crop():
     md = doc.export_to_markdown()
     assert "$$<!-- vc:fimg 0 -->$$" in md and "BAD one" not in md
     assert ff._CROPS == {}
+
+
+def test_apply_katex_rejected_goes_to_mineru_first():
+    # Sezgisel sınamayı geçen ("BAD one" yapısal olarak geçerli) ama KaTeX'in reddettiği formül önce MinerU'ya
+    # gider; MinerU'nun KaTeX'e uyan çıktısı kabul edilir, görsele düşmez.
+    fresh("auto", "1")
+    doc, items = make_doc(["BAD one", r"\frac{a}{b}"])
+    store(items)
+    seen = []
+
+    def rec(imgs):
+        seen.append(len(imgs))
+        return ["x + y"] * len(imgs)
+
+    st = ff.apply(doc, recognizer=rec, katex=fake_katex())
+    assert seen == [1] and st["reasons"].get("katex") == 1
+    assert items[0].text == "x + y" and items[1].text == r"\frac{a}{b}"
+    assert st["replaced"] == 1 and st["fatal"] == 0
+
+
+def test_apply_mineru_output_must_pass_katex():
+    fresh("auto", "1")
+    doc, items = make_doc(["BAD one"])
+    store(items)
+    st = ff.apply(doc, recognizer=lambda imgs: ["BAD two"] * len(imgs), katex=fake_katex())
+    assert st["replaced"] == 0 and st["kept"] == 1 and st["fatal_images"] == 1
+    assert ff.FATAL_IMAGES[0]["latex"] == "BAD one"  # en iyi deneme CodeFormula'nınki kalır
 
 
 def test_apply_fatal_runs_without_flagged_and_after_mineru_failure():
@@ -390,7 +417,8 @@ def test_image_mode_off_keeps_text():
     store(items)
     called = []
     st = ff.apply(doc, recognizer=lambda i: [], katex=fake_katex(called))
-    assert items[0].text == "BAD one" and st["fatal"] == 0 and st["fatal_images"] == 0 and not called
+    # KaTeX ön taraması MinerU'ya yönlendirme içindir (görsel kipinden bağımsız); görsel yer tutucusu yok
+    assert items[0].text == "BAD one" and st["fatal"] == 0 and st["fatal_images"] == 0
     assert ff.image_mode() is False
     os.environ["VC_FORMULA_IMAGE"] = "1"
     assert ff.image_mode() is True
