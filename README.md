@@ -1,19 +1,127 @@
 <p align="center">
-  <img src="static/logo.png" alt="vault-chat logosu" width="160" />
+  <img src="static/logo.png" alt="vault-chat logosu" width="140" />
 </p>
 
-# Vault Chat — Kurulum
+<h1 align="center">Vault Chat</h1>
+
+<p align="center">
+  <b>Kendi notlarınla konuşan, yerelde çalışan bir çalışma asistanı.</b><br />
+  Belgelerini içe aktar, sorularına kaynak göstererek cevap alsın; aynı kaynaklardan test, kart, rapor ve slayt üretsin.
+</p>
+
+<p align="center">
+  <img alt="Lisans: MIT" src="https://img.shields.io/badge/lisans-MIT-blue" />
+  <img alt="Sürüm 0.3.0" src="https://img.shields.io/badge/s%C3%BCr%C3%BCm-0.3.0-informational" />
+  <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey" />
+  <img alt="Node.js 22" src="https://img.shields.io/badge/Node.js-22-339933?logo=nodedotjs&logoColor=white" />
+  <img alt="SvelteKit" src="https://img.shields.io/badge/SvelteKit-FF3E00?logo=svelte&logoColor=white" />
+  <img alt="Tauri" src="https://img.shields.io/badge/Tauri-24C8DB?logo=tauri&logoColor=white" />
+  <img alt="Yerel öncelikli" src="https://img.shields.io/badge/veri-yerelde%20kal%C4%B1r-success" />
+</p>
+
+<p align="center">
+  <img src="docs/assets/demo-sohbet.gif" alt="Kasaya soru sorulur; yerel model ikili aramayı notlardaki kod ve formülle, kaynak çipleriyle açıklar" width="860" />
+</p>
+
+## Ne yapar?
+
+- **Kaynağa dayalı sohbet (RAG).** Cevaplar yalnızca kasandaki notlardan gelir; her cevabın altında hangi notun hangi bölümünün kullanıldığı görünür. Formüller KaTeX ile, kod sözdizimi renklendirmesiyle gösterilir.
+- **Her türden kaynağı içe aktarır.** PDF, DOCX, PPTX, XLSX, HTML, EPUB, TeX ve Markdown dosyaları, ayrıca bağlantılar ve Obsidian/Logseq/Joplin/Zettlr klasörleri Markdown'a dönüştürülüp kütüphaneye eklenir. Formül yoğun PDF'ler için docling ve MinerU yedekli bir hat kullanılır.
+- **Çalışma araçları.** Aynı kaynaklardan çoktan seçmeli test, SM-2 aralıklı tekrar kartları, kavram haritası, atıflı rapor ve slayt üretir; ilerlemeni konu konu izler.
+- **Birden fazla kasa.** Her kasanın kendi kütüphanesi ve arama indeksi vardır, birbirine karışmaz.
+- **Yerel öncelikli.** Varsayılan yol Ollama ya da OpenAI uyumlu herhangi bir yerel sunucudur (LM Studio, llama.cpp, vLLM, Jan). Bulut sağlayıcılar isteğe bağlıdır, varsayılan olarak kapalıdır ve her sohbette ayrıca onay ister.
+- **MCP sunucusu.** Claude Code/Desktop gibi MCP istemcileri kasanda arama yapabilir, not okuyabilir ve kaynak içe aktarabilir; içe aktarma, uygulamada onaylayınca (ya da kasa için otomatik onayı açarsan) kütüphaneye girer.
+- **16 arayüz dili**, açık/koyu ve sıcak tonlu temalar, masaüstü paketi (Tauri) ya da tarayıcıdan kullanım.
+
+## Ekran görüntüleri
+
+<table>
+  <tr>
+    <td width="50%">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshots/ana-koyu.webp" />
+        <img src="docs/assets/screenshots/ana-acik.webp" alt="Kasa ana ekranı: soru kutusu ve geçmiş sohbetler" />
+      </picture>
+      <p align="center"><sub>Kasa ana ekranı (açık ve koyu tema)</sub></p>
+    </td>
+    <td width="50%">
+      <img src="docs/assets/screenshots/sohbet-kod.webp" alt="Kod bloğu ve formül içeren, kaynak çipli bir cevap" />
+      <p align="center"><sub>Kaynak çipli cevap: kod ve formül birlikte</sub></p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <img src="docs/assets/screenshots/calisma-paneli.webp" alt="Çalışma paneli: test, kartlar, rapor, harita, slayt, ilerleme" />
+      <p align="center"><sub>Çalışma paneli: test, kart, rapor, harita, slayt</sub></p>
+    </td>
+    <td width="50%">
+      <img src="docs/assets/screenshots/kaynak-goruntuleyici.webp" alt="Uygulama içi kaynak görüntüleyici, KaTeX ile işlenmiş formüller" />
+      <p align="center"><sub>Kaynak görüntüleyici: düzenleme ve önceki sürümler</sub></p>
+    </td>
+  </tr>
+</table>
+
+<sub>Görüntüler, örnek notlardan oluşan bir demo kasasında yerel <code>qwen3:8b</code> modeliyle alındı.</sub>
+
+## Nasıl çalışır?
+
+```mermaid
+flowchart TD
+    K["Kaynaklar<br/>PDF · DOCX · PPTX · XLSX · HTML · EPUB · TeX · MD<br/>bağlantılar, Obsidian/Logseq klasörleri"]
+    D["Dönüştürücü<br/>docling · MinerU · markitdown · pandoc"]
+    K --> D
+
+    subgraph Kasa["Kasa (her biri izole)"]
+        L[("library/<br/>Markdown notlar")]
+        I[("index.db<br/>sqlite-vec + FTS5")]
+        L -- "parçalama +<br/>bge-m3 embedding" --> I
+    end
+    D --> L
+
+    subgraph Sunucu["SvelteKit sunucusu (localhost)"]
+        R["Arama<br/>anlamsal + anahtar kelime"]
+        C["Sohbet<br/>kaynak atıflı cevap"]
+        A["Çalışma araçları<br/>test · kart · rapor · harita · slayt"]
+        R --> C
+        R --> A
+    end
+    I --> R
+
+    M["Model sağlayıcı<br/>Ollama / OpenAI uyumlu yerel sunucu<br/>bulut isteğe bağlı, varsayılan kapalı"]
+    C <--> M
+    A <--> M
+
+    UI["Arayüz<br/>Tauri masaüstü ya da tarayıcı"]
+    MCP["MCP istemcileri<br/>Claude Code / Desktop"]
+    C --> UI
+    A --> UI
+    MCP -. "search_library · get_note · import_source" .-> R
+```
+
+Her şey tek bir Node sürecinde, `localhost`'ta çalışır. Docker ya da harici bir sunucu gerekmez. Notların, indeksin ve sohbet geçmişin kendi makinende kalır.
+
+## Hızlı başlangıç
+
+```bash
+git clone https://github.com/KodAlp/vault-chat.git
+cd vault-chat
+npm install
+npm run dev
+```
+
+Ardından `http://localhost:5173` adresini aç. İlk açılıştaki kurulum sihirbazı yerel model sunucusunu bulur ve sohbet ile embedding modelini seçmene yardım eder. Ön koşullar (Node.js 22 ve bir model kaynağı), masaüstü paketi, MCP kurulumu ve sorun giderme aşağıdaki ayrıntılı bölümlerde.
+
+Katkıda bulunmak için [`CONTRIBUTING.md`](CONTRIBUTING.md); gizlilik, güvenlik ve kullanım koşulları için [`PRIVACY.md`](PRIVACY.md), [`SECURITY.md`](SECURITY.md) ve [`TERMS.md`](TERMS.md). Proje MIT lisanslıdır ([`LICENSE`](LICENSE)).
+
+---
+
+# Ayrıntılı kurulum
 
 Yerel, Docker'sız bir SvelteKit çalışma/sohbet uygulaması. Kendi kütüphanendeki
 notlar ve belgeler üzerinde RAG yapar; yerel bir model sunucusuyla (Ollama önerilir ama zorunlu değil —
 LM Studio, llama.cpp, vLLM, Jan gibi herhangi bir OpenAI uyumlu sunucu da olur)
 ya da isteğe bağlı bir bulut sağlayıcıyla konuşur. Tek Node süreci,
 `localhost`'a bağlı.
-
-Bu proje kişisel bir öğrenme aracı olarak başladı, artık açık kaynak
-(MIT — bkz. `LICENSE`). Katkıda bulunmak isterseniz `CONTRIBUTING.md`'ye,
-gizlilik/güvenlik/kullanım koşulları için `PRIVACY.md`/`SECURITY.md`/
-`TERMS.md`'ye bakın.
 
 ## Ön koşullar
 
