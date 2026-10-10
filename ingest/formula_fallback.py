@@ -579,9 +579,17 @@ def apply(
     session = None
     try:
         todo = []  # (item, neden, PNG)
-        for item in _formula_items(document):
-            text = item.text or ""
-            reason = flag_reason(text)
+        items = list(_formula_items(document))
+        pre = [flag_reason(it.text or "") for it in items]
+        if m == "auto":
+            # Sezgisel sınamayı geçip KaTeX'in reddettiği formüller de MinerU'ya gider (görsele düşmeden önce).
+            rest = [i for i, r in enumerate(pre) if r is None]
+            if rest:
+                found, _src = find_fatal([items[i].text or "" for i in rest], katex)
+                for i, r in zip(rest, found):
+                    if r == "katex":
+                        pre[i] = "katex"
+        for item, reason in zip(items, pre):
             if reason is None and m == "all":
                 reason = "all"
             if reason is None:
@@ -609,6 +617,7 @@ def apply(
         from PIL import Image
 
         t0 = time.time()
+        candidates = []  # (item, MinerU metni) — kabulü KaTeX'le topluca verilir
         for start in range(0, len(todo), BATCH_SIZE * 4):
             chunk = todo[start : start + BATCH_SIZE * 4]
             try:
@@ -624,6 +633,14 @@ def apply(
             for (item, _reason, _png), raw in zip(chunk, outs):
                 new = normalize_mineru(raw)
                 if new and check_latex(new) is None and not _has_loop(new):
+                    candidates.append((item, new))
+                else:
+                    STATS["kept"] += 1
+        if candidates:
+            # MinerU çıktısı da notta görüneceği biçimde KaTeX'ten geçmeli (node yoksa sezgisel sınama yeter).
+            found, _src = find_fatal([new for _item, new in candidates], katex)
+            for (item, new), r in zip(candidates, found):
+                if r is None:
                     item.text = new
                     STATS["replaced"] += 1
                 else:
