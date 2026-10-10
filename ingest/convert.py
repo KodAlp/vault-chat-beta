@@ -754,6 +754,7 @@ def reset_run_state() -> None:
     _OCR_RAN[0] = False
     _FORMULA_STATS[0] = None
     _FORMULA_FALLBACK_STATS[0] = None
+    formula_fallback.reset_images()
     _PRIMARY_FALLBACK.clear()
     _TEXTLESS_CACHE.clear()
 
@@ -1565,6 +1566,9 @@ def main(argv: list[str] | None = None) -> int:
         warnings.append(HYBRID_BACKEND_WARNING)
     if converted_by == "docling" and _DOCLING_ERRORS:
         warnings.append("docling bazı sayfalarda hata bildirdi: " + "; ".join(_DOCLING_ERRORS[:3]))
+    fatal_formulas = int((_FORMULA_FALLBACK_STATS[0] or {}).get("fatal_images", 0)) if converted_by == "docling" else 0
+    if fatal_formulas:
+        warnings.append(formula_fallback.fatal_warning(fatal_formulas, images_on=args.images))
     if warnings and not frontmatter.get("needs_review"):
         frontmatter["needs_review"] = True
     # Informational: a deterministic repair, appended AFTER the needs_review
@@ -1605,6 +1609,13 @@ def main(argv: list[str] | None = None) -> int:
             frontmatter["needs_review"] = True
     elif images.TOKEN_RE.search(final_text):
         final_text = images.TOKEN_RE.sub("", final_text)
+    # Okunamayan formüllerin yer tutucuları (formula_fallback.mark_fatal): kırpım PNG'si images/ altına
+    # yazılır ve adı `images` listesine girer (Node tarafı onu _meta/attachments/'a taşır).
+    if formula_fallback.FATAL_MARKER.search(final_text):
+        final_text, formula_image_names = formula_fallback.resolve_markers(
+            final_text, out_dir / "images" if images.COLLECTOR.enabled else None
+        )
+        image_names = image_names + [n for n in formula_image_names if n not in image_names]
 
     fm_lines = "\n".join(f"{k}: {json.dumps(v)}" for k, v in frontmatter.items())
     out_path.write_text(f"---\n{fm_lines}\n---\n\n{final_text}", encoding="utf-8")

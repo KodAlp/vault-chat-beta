@@ -327,6 +327,14 @@ def test_latex_artifacts() -> None:
     check("short formula text kept in math", fix_latex_artifacts(keep) == keep)
 
 
+def test_fatal_formula_token():
+    """formula_fallback.mark_fatal'ın yer tutucusu ($$<!-- vc:fimg N -->$$) postprocess'ten aynen geçer;
+    resolve_markers sonradan değiştirir."""
+    src = "# B\n\nmetin\n\n$$<!-- vc:fimg 0 -->$$\n\nson\n"
+    out, _ = postprocess(src, title_fallback="t", converted_by="docling", needs_review=False)
+    check("okunamayan formül yer tutucusu postprocess'te korunur", "$$<!-- vc:fimg 0 -->$$" in out)
+
+
 if __name__ == "__main__":
     sys.stdout.reconfigure(encoding="utf-8")
     test_wrapping()
@@ -339,5 +347,6 @@ if __name__ == "__main__":
     test_long_period_loops()
     test_degenerate_math()
     test_latex_artifacts()
+    test_fatal_formula_token()
     print(f"\n{len(failures)} başarısız" if failures else "\nhepsi geçti")
     sys.exit(1 if failures else 0)

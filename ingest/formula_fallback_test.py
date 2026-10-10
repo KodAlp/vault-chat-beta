@@ -8,6 +8,7 @@ gerçek sınıfını sahte `prepare_element` ile sarar.
 """
 import io
 import os
+import shutil
 import sys
 import types
 from contextlib import redirect_stderr
@@ -35,9 +36,12 @@ def make_doc(texts):
     return doc, items
 
 
-def fresh(mode="auto"):
+def fresh(mode="auto", image="0"):
+    """Eski testler görsel adımını kapalı çalıştırır (gerçek node çağrılmasın); görsel testleri image="1" ister."""
     os.environ["VC_FORMULA_FALLBACK"] = mode
+    os.environ["VC_FORMULA_IMAGE"] = image
     ff.reset_stats()
+    ff.reset_images()
 
 
 def store(items):
@@ -306,6 +310,179 @@ def test_install_records_crop_image():
         cls.prepare_element = saved_pe
         ff._INSTALLED[0] = saved_inst
         fresh("auto")
+
+
+LOOP = "E = mc^2 + " + "a " * 150
+
+
+def fake_katex(calls=None, source="node"):
+    """KaTeX yerine: gövdesinde BAD geçen formül derlenmez."""
+
+    def run(bodies):
+        if calls is not None:
+            calls.append(list(bodies))
+        return [("BAD" not in b) for b in bodies], source
+
+    return run
+
+
+def test_note_blocks_apply_note_repairs():
+    # postprocess'in notta yapacağı düzeltmeler KaTeX'ten ÖNCE uygulanır: hbar üst simgesi, üst düzey &
+    assert ff.note_blocks(r"\hbar { ^ } { 2 } p") == [r"\hbar ^ { 2 } p"]
+    (body,) = ff.note_blocks(r"a & = b \\ c & = d")
+    assert body.startswith(r"\begin{aligned}") and body.endswith(r"\end{aligned}")
+    assert ff.note_blocks(r"\frac{a}{b}") == [r"\frac{a}{b}"]
+
+
+def test_find_fatal_reasons_and_single_batch():
+    fresh("auto", "1")
+    calls = []
+    reasons, src = ff.find_fatal(["", LOOP, r"\frac{a}{b}", "BAD x"], fake_katex(calls))
+    assert reasons == ["empty", "loop", None, "katex"] and src == "node"
+    assert len(calls) == 1 and calls[0] == [r"\frac{a}{b}", "BAD x"]  # tek çağrı, boş/döngülü gönderilmez
+    # node yoksa sezgisel check_latex
+    reasons, src = ff.find_fatal([r"\frac{a}{b}", r"\frac{a}{b"], lambda b: (None, "heuristic"))
+    assert reasons == [None, "heuristic"] and src == "heuristic"
+
+
+def test_apply_marks_fatal_with_crop():
+    fresh("auto", "1")
+    doc, items = make_doc([r"\frac{a}{b}", "BAD one", "BAD two", LOOP])
+    store([items[0], items[1], items[3]])  # [2]'nin kırpımı yok
+    calls = []
+    st = ff.apply(doc, recognizer=lambda imgs: [LOOP] * len(imgs), katex=fake_katex(calls))
+    assert items[0].text == r"\frac{a}{b}" and items[2].text == "BAD two"
+    assert items[1].text == "<!-- vc:fimg 0 -->" and items[3].text == "<!-- vc:fimg 1 -->"
+    assert st["fatal"] == 3 and st["fatal_images"] == 2 and st["katex_check"] == "node"
+    assert len(calls) == 1
+    info = ff.FATAL_IMAGES[0]
+    import hashlib
+
+    assert info["sha"] == hashlib.sha256(info["png"]).hexdigest()[:16] and info["page"] == 1
+    assert info["latex"] == "BAD one"
+    assert ff.FATAL_IMAGES[1]["latex"] == "E = mc^2 +"  # döngü kuyruğu kesildi
+    md = doc.export_to_markdown()
+    assert "$$<!-- vc:fimg 0 -->$$" in md and "BAD one" not in md
+    assert ff._CROPS == {}
+
+
+def test_apply_fatal_runs_without_flagged_and_after_mineru_failure():
+    # MinerU hiç çalışmasa da (CUDA yok) okunamayan formül görsele çevrilir
+    fresh("auto", "1")
+    doc, items = make_doc([r"\frac{x}{y"])
+    store(items)
+    st = ff.apply(doc, has_cuda=lambda: False, katex=lambda b: ([False] * len(b), "node"))
+    assert st["skipped_no_cuda"] == 1 and st["fatal_images"] == 1 and items[0].text == "<!-- vc:fimg 0 -->"
+    fresh("auto", "1")
+    doc, items = make_doc([r"\frac{x}{y", "BAD z"])
+    store(items)
+
+    def boom(imgs):
+        raise RuntimeError("boom")
+
+    st = ff.apply(doc, recognizer=boom, katex=lambda b: ([False] * len(b), "node"))
+    assert st["errors"] == 1 and st["fatal_images"] == 2 and all(i.text.startswith("<!-- vc:fimg") for i in items)
+
+
+def test_image_mode_off_keeps_text():
+    fresh("auto", "0")
+    doc, items = make_doc(["BAD one"])
+    store(items)
+    called = []
+    st = ff.apply(doc, recognizer=lambda i: [], katex=fake_katex(called))
+    assert items[0].text == "BAD one" and st["fatal"] == 0 and st["fatal_images"] == 0 and not called
+    assert ff.image_mode() is False
+    os.environ["VC_FORMULA_IMAGE"] = "1"
+    assert ff.image_mode() is True
+    os.environ["VC_FORMULA_IMAGE"] = "0"
+
+
+def test_mode_off_does_nothing():
+    fresh("off", "1")
+    doc, items = make_doc(["BAD one"])
+    assert ff.apply(doc, katex=fake_katex()) is None and items[0].text == "BAD one"
+    fresh("auto")
+
+
+def test_resolve_markers_writes_image_and_block():
+    import tempfile
+    from postprocess import postprocess
+
+    fresh("auto", "1")
+    doc, items = make_doc(["ok", LOOP])
+    store(items)
+    ff.apply(doc, recognizer=lambda imgs: [LOOP] * len(imgs), katex=fake_katex())
+    md = "# Başlık\n\n" + doc.export_to_markdown() + "\n\nSon paragraf.\n"
+    text, _fm = postprocess(md, title_fallback="t", converted_by="docling", needs_review=False)
+    assert "<!-- vc:fimg 0 -->" in text  # postprocess yer tutucuya dokunmaz
+    with tempfile.TemporaryDirectory() as d:
+        out, names = ff.resolve_markers(text, Path(d) / "images")
+        sha = ff.FATAL_IMAGES[0]["sha"]
+        assert names == [f"{sha}.png"]
+        assert (Path(d) / "images" / f"{sha}.png").read_bytes() == ff.FATAL_IMAGES[0]["png"]
+    want = (
+        f"![Okunamayan formül — s. 1](images/{sha}.png)\n<!-- vc:formul-gorsel {sha} s.1 -->\n\n"
+        "```latex\nE = mc^2 +\n```"
+    )
+    assert want in out and "$$$$" not in out and "$$ok$$" in out and "vc:fimg" not in out and "a a a" not in out
+    assert "\n\n\n" not in out and out.rstrip().endswith("Son paragraf.")
+    # görsel kapalıysa (--no-images): dosya yok, uyarı + LaTeX
+    out2, names2 = ff.resolve_markers(text, None)
+    assert names2 == [] and "Okunamayan formül (s. 1)" in out2 and "![" not in out2 and "```latex" in out2
+    # satır içi ($..$) ve çıplak yer tutucu, bilinmeyen kimlik
+    out3, _ = ff.resolve_markers("a $<!-- vc:fimg 0 -->$ b <!-- vc:fimg 9 -->", None)
+    assert "vc:fimg" not in out3 and "$" not in out3
+    # bir kodlama çiti içeren LaTeX daha uzun çit alır
+    ff.FATAL_IMAGES[5] = {"png": b"x", "sha": "0" * 16, "page": 3, "latex": "a ``` b"}
+    assert "````latex\na ``` b\n````" in ff.resolve_markers("<!-- vc:fimg 5 -->", None)[0]
+    fresh("auto")
+
+
+def test_fatal_warning_text():
+    assert ff.fatal_warning(3) == "3 formül okunamadı; görseli (sayfa numarasıyla) nota eklendi — kaynakla karşılaştırın."
+    assert "görseli" not in ff.fatal_warning(3, images_on=False)
+
+
+def test_katex_batch_unavailable_paths():
+    saved = {k: os.environ.get(k) for k in ("VC_NODE_BIN", "VC_KATEX_DIR")}
+    try:
+        os.environ["VC_NODE_BIN"] = str(Path(__file__).parent / "yok-node.exe")
+        assert ff.katex_batch(["a"]) == (None, "heuristic")
+        assert ff.katex_batch([]) == ([], "node")
+        node = shutil.which("node")
+        if node:
+            os.environ["VC_NODE_BIN"] = node
+            os.environ["VC_KATEX_DIR"] = str(Path(__file__).parent / "yok-katex")
+            assert ff.katex_batch(["a"]) == (None, "heuristic")  # katex_check.mjs çıkış kodu 2
+    finally:
+        for k, v in saved.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
+
+
+def test_katex_batch_real_node():
+    node = shutil.which("node")
+    katex_dir = Path(os.environ.get("VC_KATEX_DIR") or Path(__file__).resolve().parent.parent / "node_modules" / "katex")
+    if not node or not (katex_dir / "dist" / "katex.mjs").exists():
+        print("  (atlandı: node ya da node_modules/katex yok)")
+        return
+    saved = (os.environ.get("VC_NODE_BIN"), os.environ.get("VC_KATEX_DIR"))
+    os.environ["VC_NODE_BIN"], os.environ["VC_KATEX_DIR"] = node, str(katex_dir)
+    try:
+        cases = [r"\frac{a}{b}", r"\frac{1}{", r"x & y", r"\begin{aligned} a &= b \end{aligned}", r"\foo", "", r"\text{\alpha}"]
+        valid, src = ff.katex_batch(cases)
+        assert src == "node" and valid == [True, False, False, True, False, True, False], valid
+        # gerçek KaTeX ile uçtan uca: aligned'a sarılan & geçerli, bozuk \frac ölümcül
+        reasons, src = ff.find_fatal([r"a & = b", r"\frac{1}{", r"\hbar { ^ } { 2 }"])
+        assert src == "node" and reasons == [None, "katex", None], reasons
+    finally:
+        for k, v in zip(("VC_NODE_BIN", "VC_KATEX_DIR"), saved):
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
 
 
 def main():

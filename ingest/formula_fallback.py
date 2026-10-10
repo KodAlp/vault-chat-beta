@@ -26,16 +26,30 @@ Akış:
   5. DEĞİŞTİRME: `item.text` yerinde değişir; postprocess ve uyarılar düzeltilmiş LaTeX'i görür (döngüden
      kurtarılan formül "döngü nedeniyle kısaltıldı" sayacına girmez).
 
+  6. OKUNAMAYAN FORMÜL GÖRSELİ (VC_FORMULA_IMAGE=1 varsayılan | 0): MinerU adımından sonra (MinerU çalışmasa
+     da) her formülün notta görüneceği hâli (fix_latex_artifacts + wrap_alignment_math uygulanmış $$ blokları)
+     GERÇEK KaTeX ile sınanır (katex_check.mjs, belge başına tek node çağrısı; node/katex yoksa check_latex
+     sezgiseli, STATS["katex_check"] = "node" | "heuristic" | "error"). KaTeX'in derlemediği ya da döngü
+     içeren (find_degenerate_run) formül ölümcüldür; kırpımı varsa item.text, `<!-- vc:fimg N -->` yer
+     tutucusuyla değiştirilir (docling onu $$..$$ içinde dışa aktarır, postprocess'e dokunmaz) ve kırpım
+     PNG'si FATAL_IMAGES'ta tutulur. Dönüşümün sonunda convert.py `resolve_markers()` ile yer tutucuyu
+     `![Okunamayan formül — s. N](images/<sha16>.png)` + `<!-- vc:formul-gorsel <sha16> s.N -->` + ```latex
+     bloğuyla (en iyi LaTeX denemesi, döngü kuyruğu kesilmiş) değiştirir ve PNG'yi images/ klasörüne yazar;
+     dosya adları done olayının `images` listesine girer (Node tarafı onları _meta/attachments/'a taşır).
+
 Her hata stderr'e bir kez yazılır, CodeFormula metni kalır; dönüşüm asla bozulmaz.
 VC_FORMULA_FALLBACK_MODEL=<HF kimliği> MinerU modelini değiştirir (yalnız yerel önbellekten yüklenir, indirme yok).
 """
 from __future__ import annotations
 
 import gc
+import hashlib
 import io
 import json
 import os
 import re
+import shutil
+import subprocess
 import sys
 import time
 from typing import Any, Callable
@@ -43,12 +57,21 @@ from typing import Any, Callable
 MODEL_ID = "opendatalab/MinerU2.5-Pro-2605-1.2B"
 MAX_STORE_BYTES = 256 * 1024 * 1024
 BATCH_SIZE = 4
+KATEX_TIMEOUT_S = 60
+FATAL_LATEX_MAX_CHARS = 2000
 
 STATS: dict[str, Any] = {}
 _INSTALLED = [False]
 _WARNED = [False]
 _CROPS: dict[tuple, bytes] = {}  # (sayfa, l, t, r, b) -> PNG baytı
 _STORED = [0]  # _CROPS toplam bayt
+# Okunamayan formül görselleri. Koşu boyunca (reset_images'a kadar) kalır, reset_stats'ta SİLİNMEZ: bir
+# dönüşümde docling birden çok kez çalışabilir ve notta kalan metin hangisinden geldiyse yer tutucu
+# kimlikleri benzersiz olmalı.
+FATAL_IMAGES: dict[int, dict] = {}  # kimlik -> {"png", "sha", "page", "latex"}
+_NEXT_FATAL_ID = [0]
+FATAL_MARKER = re.compile(r"<!-- vc:fimg (\d+) -->")
+_FATAL_WRAPPED = re.compile(r"\${1,2}[ \t\r\n]*<!-- vc:fimg (\d+) -->[ \t\r\n]*\${1,2}")
 
 # KaTeX'in desteklemediği (veya markdown hattında anlamsız) komutlar.
 UNSUPPORTED_COMMANDS = {"intertext", "eqno", "leqno", "homotopy", "label", "qedhere"}
@@ -93,10 +116,33 @@ def mode() -> str:
 def reset_stats() -> None:
     STATS.clear()
     STATS.update(
-        mode=mode(), flagged=0, reasons={}, replaced=0, kept=0, load_s=0.0, run_s=0.0, skipped_no_cuda=0, no_image=0, errors=0
+        mode=mode(),
+        flagged=0,
+        reasons={},
+        replaced=0,
+        kept=0,
+        load_s=0.0,
+        run_s=0.0,
+        skipped_no_cuda=0,
+        no_image=0,
+        errors=0,
+        fatal=0,
+        fatal_images=0,
+        katex_check="off",
     )
     _CROPS.clear()
     _STORED[0] = 0
+
+
+def reset_images() -> None:
+    """Koşu başında (convert.py reset_run_state) okunamayan formül görsellerini boşaltır."""
+    FATAL_IMAGES.clear()
+    _NEXT_FATAL_ID[0] = 0
+
+
+def image_mode() -> bool:
+    """VC_FORMULA_IMAGE=0|off|false|no kapatır; varsayılan açık."""
+    return os.environ.get("VC_FORMULA_IMAGE", "1").strip().lower() not in ("0", "off", "false", "no")
 
 
 def snapshot() -> dict[str, Any]:
@@ -353,6 +399,161 @@ def _open_session():
     return MineruSession()
 
 
+# --------------------------------------------------------------------------- KaTeX sınaması
+def _node_bin() -> str | None:
+    return os.environ.get("VC_NODE_BIN", "").strip() or shutil.which("node")
+
+
+def katex_batch(latexes: list[str]) -> tuple[list[bool] | None, str]:
+    """Hepsini tek `node katex_check.mjs` çağrısıyla gerçek KaTeX'e (displayMode) sınatır.
+    Dönüş: (geçerlilik listesi | None, "node" | "heuristic" | "error"). node ya da katex yoksa
+    "heuristic" (çağıran check_latex'e düşer), node çalıştı ama başarısızsa/zaman aşımında "error"."""
+    if not latexes:
+        return [], "node"
+    node = _node_bin()
+    script = os.path.join(os.path.dirname(os.path.abspath(__file__)), "katex_check.mjs")
+    if not node or not os.path.exists(script):
+        return None, "heuristic"
+    try:
+        proc = subprocess.run(
+            [node, script],
+            input=json.dumps(latexes).encode("utf-8"),
+            capture_output=True,
+            timeout=KATEX_TIMEOUT_S,
+            creationflags=0x08000000 if os.name == "nt" else 0,  # CREATE_NO_WINDOW
+        )
+    except FileNotFoundError:
+        return None, "heuristic"
+    except Exception as err:  # noqa: BLE001 — zaman aşımı vb.
+        _warn_once(f"KaTeX sınaması çalışmadı ({err})")
+        return None, "error"
+    if proc.returncode == 2:  # katex bulunamadı
+        return None, "heuristic"
+    try:
+        out = json.loads(proc.stdout.decode("utf-8"))
+        if proc.returncode != 0 or not isinstance(out, list) or len(out) != len(latexes):
+            raise ValueError(f"çıkış {proc.returncode}")
+        return [bool(x) for x in out], "node"
+    except Exception as err:  # noqa: BLE001
+        _warn_once(f"KaTeX sınaması geçersiz çıktı verdi ({err})")
+        return None, "error"
+
+
+def note_blocks(text: str) -> list[str]:
+    """Formülün nota gireceği hâldeki $$ gövdeleri: postprocess'in fix_latex_artifacts (düzeltmeler, kaçak
+    düzyazıyı bloktan çıkarma) ve wrap_alignment_math (üst düzey & -> aligned) adımları uygulanmış."""
+    from postprocess import fix_latex_artifacts, wrap_alignment_math
+
+    out = wrap_alignment_math(fix_latex_artifacts("$$" + text + "$$"))
+    return [m.group(1) for m in re.finditer(r"\$\$(.*?)\$\$", out, re.DOTALL)]
+
+
+def _best_attempt(text: str) -> str:
+    """Görselin altındaki ```latex bloğu için: döngü kuyruğu kesilmiş, uzunluğu sınırlı LaTeX."""
+    from postprocess import _DEGENERATE_HEAD_MAX, find_degenerate_run
+
+    s = text.strip()
+    at = find_degenerate_run(s)
+    if at != -1:
+        s = s[:at][:_DEGENERATE_HEAD_MAX]
+    s = re.sub(r"(\s|\\\\)+$", "", s)[:FATAL_LATEX_MAX_CHARS]
+    return s.strip()
+
+
+def find_fatal(texts: list[str], katex: Callable | None = None) -> tuple[list[str | None], str]:
+    """Her metin için ölümcül neden ("empty" | "loop" | "katex" | "heuristic") ya da None (okunabilir)
+    ve kullanılan sınama ("node" | "heuristic" | "error"). Tek toplu KaTeX çağrısı."""
+    reasons: list[str | None] = [None] * len(texts)
+    flat: list[str] = []
+    owner: list[int] = []
+    for i, text in enumerate(texts):
+        if not text or not text.strip():
+            reasons[i] = "empty"
+        elif _has_loop(text):
+            reasons[i] = "loop"
+        else:
+            for body in note_blocks(text):
+                flat.append(body)
+                owner.append(i)
+    valid, source = (katex or katex_batch)(flat) if flat else ([], "node")
+    if valid is None:
+        valid = [check_latex(b) is None for b in flat]
+    elif not flat:
+        source = "node"
+    for ok, i in zip(valid, owner):
+        if not ok and reasons[i] is None:
+            reasons[i] = "katex" if source == "node" else "heuristic"
+    return reasons, source
+
+
+def mark_fatal(document, katex: Callable | None = None) -> None:
+    """Son metni KaTeX'e uymayan ya da döngülü formülleri (kırpımı varsa) yer tutucuyla değiştirir."""
+    items = list(_formula_items(document))
+    if not items:
+        return
+    reasons, source = find_fatal([it.text or "" for it in items], katex)
+    STATS["katex_check"] = source
+    for item, reason in zip(items, reasons):
+        if reason is None:
+            continue
+        STATS["fatal"] += 1
+        png = _CROPS.get(_key(item))
+        if png is None:
+            continue
+        fid = _NEXT_FATAL_ID[0]
+        _NEXT_FATAL_ID[0] += 1
+        FATAL_IMAGES[fid] = {
+            "png": png,
+            "sha": hashlib.sha256(png).hexdigest()[:16],
+            "page": int(item.prov[0].page_no),
+            "latex": _best_attempt(item.text or ""),
+        }
+        item.text = f"<!-- vc:fimg {fid} -->"
+        STATS["fatal_images"] += 1
+
+
+def fatal_warning(count: int, *, images_on: bool = True) -> str:
+    """İçe aktarma penceresi ve import-log için Türkçe uyarı (Python'dan düz metin gelir, i18n kodu yok)."""
+    if images_on:
+        return f"{count} formül okunamadı; görseli (sayfa numarasıyla) nota eklendi — kaynakla karşılaştırın."
+    return f"{count} formül okunamadı; sayfa numarası notta belirtildi — kaynakla karşılaştırın."
+
+
+def resolve_markers(md: str, images_dir=None) -> tuple[str, list[str]]:
+    """Yer tutucuları son bloğa çevirir ve (images_dir verildiyse) PNG'leri yazar. Dönüş: (markdown,
+    yazılan dosya adları). images_dir=None (--no-images / --dry-run): görsel yok, yalnız uyarı + LaTeX."""
+    names: list[str] = []
+    done = [False]
+
+    def block(fid: int) -> str:
+        info = FATAL_IMAGES.get(fid)
+        if info is None:
+            return ""
+        done[0] = True
+        sha, page = info["sha"], info["page"]
+        if images_dir is not None:
+            name = f"{sha}.png"
+            if name not in names:
+                images_dir.mkdir(parents=True, exist_ok=True)
+                (images_dir / name).write_bytes(info["png"])
+                names.append(name)
+            parts = [f"![Okunamayan formül — s. {page}](images/{name})\n<!-- vc:formul-gorsel {sha} s.{page} -->"]
+        else:
+            parts = [f"> ⚠️ Okunamayan formül (s. {page}) — kaynak sayfaya bakın."]
+        latex = info["latex"]
+        if latex:
+            runs = re.findall(r"`+", latex)
+            fence = "`" * max(3, max((len(r) for r in runs), default=0) + 1)
+            parts.append(f"{fence}latex\n{latex}\n{fence}")
+        return "\n\n" + "\n\n".join(parts) + "\n\n"
+
+    md = _FATAL_WRAPPED.sub(lambda m: block(int(m.group(1))), md)
+    md = FATAL_MARKER.sub(lambda m: block(int(m.group(1))), md)
+    if done[0]:
+        md = re.sub(r"\n{3,}", "\n\n", md)
+    return md, names
+
+
 # --------------------------------------------------------------------------- uygulama
 def _formula_items(document):
     from docling_core.types.doc import DocItemLabel
@@ -362,10 +563,16 @@ def _formula_items(document):
             yield item
 
 
-def apply(document, recognizer: Callable[[list], list] | None = None, has_cuda: Callable[[], bool] | None = None) -> dict | None:
-    """Belgedeki bayraklı formüllerin metnini MinerU çıktısıyla değiştirir. `recognizer`
-    (PIL listesi -> LaTeX listesi) testlerde sahte verilir; verilmezse MinerU yüklenir ve boşaltılır.
-    Dönüş: snapshot() veya kapalıysa None. Hata durumunda belge değişmez."""
+def apply(
+    document,
+    recognizer: Callable[[list], list] | None = None,
+    has_cuda: Callable[[], bool] | None = None,
+    katex: Callable[[list], tuple] | None = None,
+) -> dict | None:
+    """Belgedeki bayraklı formüllerin metnini MinerU çıktısıyla değiştirir; ardından hâlâ okunamayan
+    formülleri görsel yer tutucusuna çevirir (mark_fatal). `recognizer` (PIL listesi -> LaTeX listesi) ve
+    `katex` (LaTeX listesi -> (bool listesi | None, kaynak)) testlerde sahte verilir; recognizer verilmezse
+    MinerU yüklenir ve boşaltılır. Dönüş: snapshot() veya kapalıysa None. Hata durumunda belge değişmez."""
     m = STATS.get("mode") or mode()
     if m == "off":
         return None
@@ -388,12 +595,12 @@ def apply(document, recognizer: Callable[[list], list] | None = None, has_cuda: 
                 continue
             todo.append((item, reason, png))
         if not todo:
-            return snapshot()
+            return _finish(document, katex)
         if recognizer is None:
             if not (has_cuda or _cuda_available)():
                 STATS["skipped_no_cuda"] += len(todo)
                 STATS["kept"] += len(todo)
-                return snapshot()
+                return _finish(document, katex)
             t0 = time.time()
             session = _open_session()
             session.load()
@@ -422,9 +629,17 @@ def apply(document, recognizer: Callable[[list], list] | None = None, has_cuda: 
                 else:
                     STATS["kept"] += 1
         STATS["run_s"] = round(time.time() - t0, 2)
+        if session is not None:  # VRAM'i KaTeX sınamasından önce bırak
+            try:
+                session.close()
+            except Exception:  # noqa: BLE001
+                pass
+            session = None
+        return _finish(document, katex)
     except Exception as err:  # noqa: BLE001 — yedek; dönüşümü asla bozmaz
         STATS["errors"] += 1
         _warn_once(f"başarısız ({err})")
+        _finish(document, katex)  # MinerU çökse de okunamayan formüller görsele çevrilir
     finally:
         if session is not None:
             try:
@@ -433,6 +648,18 @@ def apply(document, recognizer: Callable[[list], list] | None = None, has_cuda: 
                 pass
         _CROPS.clear()
         _STORED[0] = 0
+    return snapshot()
+
+
+def _finish(document, katex) -> dict:
+    """MinerU adımından sonra: hâlâ okunamayan formülleri görsele çevirir. Hata dönüşümü bozmaz.
+    (Kırpımlar çağıranın finally'sinde boşaltılır.)"""
+    if image_mode():
+        try:
+            mark_fatal(document, katex)
+        except Exception as err:  # noqa: BLE001
+            STATS["errors"] += 1
+            _warn_once(f"okunamayan formül görseli eklenemedi ({err})")
     return snapshot()
 
 
