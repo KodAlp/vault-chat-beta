@@ -322,6 +322,85 @@ def wrap_alignment_math(text: str) -> str:
     return re.sub(r"\$\$(.*?)\$\$", fix, text, flags=re.DOTALL)
 
 
+_HBAR_SCRIPT = re.compile(r"\\hbar\s*\{\s*([\^_])\s*\}")
+_ACCENT_AFTER_FONT = re.compile(
+    r"\\(mathbf|boldsymbol|bm|mathrm|mathit|mathsf|mathcal)\s+\\(dot|ddot|hat|tilde|bar|vec|widehat|widetilde|overline)\s*\{"
+)
+_DISPLAY_BREAK = re.compile(r"\\\]\s*\\\[")
+_DISPLAY_DELIM = re.compile(r"\\[\[\]]")
+# Prose = at least two real words ("where we", "is the"); backslashes only inside $...$.
+_DISPLAY_PROSE = re.compile(
+    r"\\\]\s*((?=(?:[^\\$]|\$[^$]*\$)*?[A-Za-z]{3,}\s+[A-Za-z]{2,})[^\\$]*(?:\$[^$]*\$[^\\$]*)*)\s*\\\[", re.DOTALL
+)
+_INTERTEXT = re.compile(r"\\intertext(?![A-Za-z])")
+
+
+def _group_end(s: str, i: int) -> int:
+    """Index just past the brace group opening at s[i] == '{' (escaped characters skipped); -1 if unbalanced."""
+    depth = 0
+    j = i
+    while j < len(s):
+        c = s[j]
+        if c == "\\":
+            j += 2
+            continue
+        if c == "{":
+            depth += 1
+        elif c == "}":
+            depth -= 1
+            if depth == 0:
+                return j + 1
+        j += 1
+    return -1
+
+
+def fix_latex_artifacts(text: str) -> str:
+    r"""Deterministic repairs of recurring formula-model artifacts inside $$ blocks (each is a KaTeX error).
+
+    Measured on the 18 Fizik notes after the 2026-10-10 re-conversion (466 KaTeX errors left):
+      * CodeFormulaV2 emits `\hbar {` as one unit, so hbar squared comes out as `\hbar { ^ } { 2 }`
+        (947 occurrences, 361 failing blocks): `{ ^ }` / `{ _ }` -> `^` / `_`. Other `\hbar { x }` forms
+        render correctly and are left alone.
+      * A font command whose argument is an accent, `\mathbf \dot { p }` -> `\mathbf { \dot { p } }`.
+      * MinerU (formula fallback) separates several equations with `\] \[` inside one block -> row break;
+        any other stray `\[` / `\]` is dropped (never valid inside math).
+    """
+
+    def fix(match: re.Match) -> str:
+        body = _HBAR_SCRIPT.sub(r"\\hbar \1", match.group(1))
+        out = []
+        pos = 0
+        for m in _ACCENT_AFTER_FONT.finditer(body):
+            end = _group_end(body, m.end() - 1)
+            if end < 0 or m.start() < pos:
+                continue
+            out.append(body[pos:m.start()])
+            out.append("\\" + m.group(1) + " { \\" + m.group(2) + " " + body[m.end() - 1:end] + " }")
+            pos = end
+        body = "".join(out) + body[pos:]
+        body = _INTERTEXT.sub(r"\\text", body)
+        if "\\[" in body or "\\]" in body:
+            body = _DISPLAY_BREAK.sub(r" \\\\ ", body)
+            # `\] prose \[`: the crop caught a line of running text between two displays (or after the last /
+            # before the first one) -> move it out of math.
+            if body.rfind("\\]") > body.rfind("\\["):
+                body += " \\["
+            if 0 <= body.find("\\[") < (body.find("\\]") if "\\]" in body else len(body)):
+                body = "\\] " + body
+            parts = _DISPLAY_PROSE.split(body)
+            if len(parts) > 1:
+                blocks = []
+                for k, part in enumerate(parts):
+                    part = _DISPLAY_DELIM.sub(" ", part).strip()
+                    if part:
+                        blocks.append(part if k % 2 else "$$" + part + "$$")
+                return "\n\n".join(blocks)
+            body = _DISPLAY_DELIM.sub(" ", body)
+        return "$$" + body + "$$"
+
+    return re.sub(r"\$\$(.*?)\$\$", fix, text, flags=re.DOTALL)
+
+
 def decode_html_entities(text: str) -> str:
     """Converters leak entities into prose and into math: docling wrote
     `|λ| &lt; 1` into the body verbatim.
@@ -410,6 +489,7 @@ def build_frontmatter(title: str, converted_by: str, needs_review: bool) -> dict
 def postprocess(text: str, *, title_fallback: str, converted_by: str, needs_review: bool) -> tuple[str, dict]:
     text = normalize_math_delimiters(text)
     text = truncate_degenerate_math(text)
+    text = fix_latex_artifacts(text)
     text = wrap_bare_math_environments(text)
     text = wrap_alignment_math(text)
     text = strip_html_remnants(text)
