@@ -3,7 +3,7 @@ import path from 'node:path';
 import { dataDir } from './env';
 import type { Settings } from '$lib/settings.svelte';
 // Relative, not $lib: this module also runs under plain tsx --test where the alias isn't resolved.
-import { isLocale, type Locale } from '../i18n/locales';
+import { migrateLocale, type Locale } from '../i18n/locales';
 
 /**
  * Desktop launches spawn the Node sidecar with PORT=0 (src-tauri/src/lib.rs's
@@ -62,7 +62,7 @@ function isNonEmptyShortString(v: unknown): v is string {
 }
 
 function sanitizeLocale(raw: unknown): Locale | undefined {
-	return isLocale(raw) ? raw : undefined;
+	return migrateLocale(raw);
 }
 
 /** Strict boolean only — anything else (a string "true", a number, null) is

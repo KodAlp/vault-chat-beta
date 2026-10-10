@@ -455,6 +455,12 @@ body {
 	:root[lang="ur"] body {
 		line-height: 1.9;
 	}
+
+	/* Korean breaks between syllables by default, which splits words in narrow headings ("배 / 우고");
+	   keep-all breaks only at spaces, the way Korean UI text is normally set. */
+	:root[lang="ko"] body {
+		word-break: keep-all;
+	}
 }
 
 :root[lang="ur"] .markdown-body {

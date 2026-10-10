@@ -23,7 +23,7 @@ Kararlar bir kez verilir, her dilde aynı uygulanır. Kaynak katalog `messages/e
 
 | Kavram (en) | Karar | Gerekçe |
 |---|---|---|
-| vault | Dilde yerleşik, kişisel not koleksiyonu anlamındaki karşılık (de *Tresor*, es *bóveda*, fr *coffre*, pt *cofre*, ru *хранилище*, ja *保管庫*, zh-CN *仓库*). Yerleşik karşılık yoksa *vault*. | Kavram kullanıcıların not uygulamalarından aşina olduğu "kasa / depo" fikridir; uygulama adı (Vault Chat) ile tutarlı kalır. |
+| vault | Dilde yerleşik, kişisel not koleksiyonu anlamındaki karşılık (de *Tresor*, es *bóveda*, fr *coffre*, pt *cofre*, ru *хранилище*, ja *保管庫*, zh-CN *仓库*, ko *보관함*, it *archivio*, nl *kluis*, pl *sejf*, cs *trezor*, sv *valv*, nb *hvelv*, da *vault* ("boks" yalnız "kutu" demek), fi *holvi*). Yerleşik karşılık yoksa *vault*. | Kavram kullanıcıların not uygulamalarından aşina olduğu "kasa / depo" fikridir; uygulama adı (Vault Chat) ile tutarlı kalır. |
 | library | "kütüphane"nin doğal karşılığı | Vault içindeki not ağacı. |
 | source | doğal karşılık (kaynak) | Sohbette alıntılanan not. |
 | library import | "kütüphane içe aktarma" anlamı (tr *Kütüphane içe aktar*) | Başka not uygulamalarından (Obsidian, Logseq, Joplin…) not kütüphanesi getirme sayfası; "import" burada kopyalama + dönüştürme demektir. |
@@ -45,11 +45,13 @@ Kararlar bir kez verilir, her dilde aynı uygulanır. Kaynak katalog `messages/e
 - Arayüz dili kısa ve doğrudan; düğmeler eylem fiili (Kaydet, Sil).
 - Kullanıcıya hitap: dilin yazılım arayüzlerindeki olağan biçimi — de "du",
   fr "vous", es "tú", pt "você" (Brezilya), ru "вы", hi/ur/bn saygılı biçim,
-  ja/zh nötr-kibar, id "Anda", ar/ar-EG ikinci tekil eril-nötr.
-- `pcm` (Nijerya Pidgini) ve `ar-EG` (Mısır Arapçası): arayüz metinlerinde bu
-  diller nadir; çeviri model üretimidir, ana dil konuşanı denetimi önerilir.
-  `ar-EG` günlük Mısır kullanımına yaslanır ama teknik terimlerde MSA ile aynı
-  kalır.
+  ja/zh nötr-kibar, id "Anda", ar ikinci tekil eril-nötr, ko 해요체/합니다체
+  (düğmede sade fiil), it "tu", nl "je", pl ve cs bezosobowo/neosobně ya da
+  2. tekil (yerleşik yazılım alışkanlığı), sv/nb/da "du", fi "sinä" yerine
+  mümkün olduğunca kişisiz yapı.
+- Çeviriler model üretimidir; ana dil konuşanı denetimi önerilir. Daha önce
+  sunulan `pcm` (Nijerya Pidgini) ve `ar-EG` güven düşük olduğu için
+  kaldırıldı; kayıtlı tercihleri `en` ve `ar`'a taşınır (`LEGACY_LOCALES`).
 
 ## Çoğul biçimler
 
@@ -57,3 +59,8 @@ Kararlar bir kez verilir, her dilde aynı uygulanır. Kaynak katalog `messages/e
 `anahtar#one`, `anahtar#two`, `anahtar#few`, `anahtar#many`, `anahtar#zero`
 varyantları eklenir (`Intl.PluralRules` kategorileri). Taban `anahtar` her zaman
 bulunur ve `other` biçimidir.
+
+Varyant yalnız `{count}` adlı yer tutucu için seçilir (`{dueCount}`, `{seconds}` gibi başka adlar için `#one` eklenmez).
+
+Gerekli kategoriler: pl ve cs `#one`/`#few`/`#many`; ru `#one`/`#few`/`#many`;
+it, nl, sv, nb, da, fi, de, es, fr, pt `#one`; ko, ja, zh-CN, id, tr yok.
