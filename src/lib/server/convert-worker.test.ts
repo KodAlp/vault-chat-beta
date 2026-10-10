@@ -7,6 +7,7 @@ import {
 	applyEvent,
 	classifyEnd,
 	classifyExit,
+	convertProcessEnv,
 	createConvertWorker,
 	newJobProgress,
 	parseWorkerLine,
@@ -513,4 +514,16 @@ test('pdfTimeoutMs: VC_PDF_TIMEOUT_PER_PAGE_MS overrides the per-page budget, ju
 		if (prev === undefined) delete process.env.VC_PDF_TIMEOUT_PER_PAGE_MS;
 		else process.env.VC_PDF_TIMEOUT_PER_PAGE_MS = prev;
 	}
+});
+
+test('convertProcessEnv: always passes VC_NODE_BIN (the server node), PANDOC_BIN only when resolved', () => {
+	const base = { PATH: '/usr/bin', KEEP: '1' };
+	const withPandoc = convertProcessEnv('/opt/pandoc', '/app/node', base);
+	assert.equal(withPandoc.VC_NODE_BIN, '/app/node');
+	assert.equal(withPandoc.PANDOC_BIN, '/opt/pandoc');
+	assert.equal(withPandoc.KEEP, '1');
+	const without = convertProcessEnv(null, '/app/node', base);
+	assert.equal(without.VC_NODE_BIN, '/app/node');
+	assert.equal('PANDOC_BIN' in without, false);
+	assert.equal(convertProcessEnv(null, undefined, base).VC_NODE_BIN, process.execPath);
 });

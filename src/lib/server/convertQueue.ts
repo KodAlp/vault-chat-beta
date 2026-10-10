@@ -11,6 +11,7 @@ import { forwardedConvertCode } from './convert-error-codes';
 import { isNativeCrash, runWithCrashRetry, type AttemptOutcome } from './convert-crash';
 import { PROCESS_TIMEOUT_MS, pdfEstimatedSeconds, pdfTimeoutMs } from './convert-timeouts';
 import {
+	convertProcessEnv,
 	createConvertWorker,
 	setSharedConvertWorker,
 	spawnConvertWorker,
@@ -201,7 +202,7 @@ function runConvertAttemptSpawn(
 		const pandocBin = resolvePandocBin();
 		const child = spawn(bin, args, {
 			windowsHide: true,
-			env: pandocBin ? { ...process.env, PANDOC_BIN: pandocBin } : process.env
+			env: convertProcessEnv(pandocBin)
 		});
 
 		let lastDone: (ConvertEvent & { type: 'done' }) | null = null;

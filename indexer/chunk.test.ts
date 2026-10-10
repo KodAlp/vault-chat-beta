@@ -307,6 +307,11 @@ test('stripImageMarkup drops link target and marker, keeps alt and description',
 	assert.equal(stripImageMarkup('![](x/a.png "t")\nmetin'), '\nmetin');
 });
 
+test('stripImageMarkup also drops the unreadable-formula marker (ingest/formula_fallback.py)', () => {
+	const md = '![Okunamayan formül — s. 12](../_meta/attachments/a2694c9b3808ec89.png)\n<!-- vc:formul-gorsel a2694c9b3808ec89 s.12 -->\n\n```latex\nx^2\n```';
+	assert.equal(stripImageMarkup(md), 'Okunamayan formül — s. 12\n\n```latex\nx^2\n```');
+});
+
 test('chunkMarkdown: displayText keeps the image, embedText does not; image-only section yields no chunk', () => {
 	const body = [
 		'## Rota',

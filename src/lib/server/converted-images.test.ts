@@ -40,6 +40,15 @@ test('staged note links to ../attachments/, final note to ../_meta/attachments/'
 	assert.equal(top.split('\n')[0], `![fig](_meta/attachments/${A})`);
 });
 
+test('unreadable-formula block (ingest/formula_fallback.py): link rewritten, marker and latex fence kept', () => {
+	const md =
+		'![Okunamayan formül — s. 12](images/0123456789abcdef.png)\n<!-- vc:formul-gorsel 0123456789abcdef s.12 -->\n\n```latex\n![x](images/0123456789abcdef.png)\n```';
+	const out = rewriteConvertedImageLinks(md, 'dersler/fizik/not.md', () => true).split('\n');
+	assert.equal(out[0], '![Okunamayan formül — s. 12](../../_meta/attachments/0123456789abcdef.png)');
+	assert.equal(out[1], '<!-- vc:formul-gorsel 0123456789abcdef s.12 -->');
+	assert.equal(out[4], '![x](images/0123456789abcdef.png)');
+});
+
 test('not-kept images lose the link; foreign links and fences are untouched', () => {
 	const md = ['![x](images/' + A + ')', '![y](https://e.com/images/' + A + ')', '![z](images/evil.png)', '```', '![c](images/' + A + ')', '```'].join('\n');
 	const out = rewriteConvertedImageLinks(md, 'n.md', () => false).split('\n');
