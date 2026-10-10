@@ -5,6 +5,7 @@ through the exact same normalization step.
 """
 from __future__ import annotations
 
+import difflib
 import html
 import re
 from datetime import date
@@ -333,6 +334,16 @@ _DISPLAY_PROSE = re.compile(
     r"\\\]\s*((?=(?:[^\\$]|\$[^$]*\$)*?[A-Za-z]{3,}\s+[A-Za-z]{2,})[^\\$]*(?:\$[^$]*\$[^\\$]*)*)\s*\\\[", re.DOTALL
 )
 _INTERTEXT = re.compile(r"\\intertext(?![A-Za-z])")
+# `\hbar {` as one unit followed by a command that needs an argument: `\hbar { \hat } { y }`.
+_HBAR_CMD = re.compile(r"\\hbar\s*\{\s*(\\(?:hat|widehat|sqrt|tilde|widetilde|bar|overline|vec|dot|ddot|frac|mathbf|mathrm|boldsymbol))\s*\}")
+# `\Big { | }`: KaTeX wants the delimiter itself, not a group.
+_SIZED_DELIM = re.compile(r"\\(big|Big|bigg|Bigg)([lrm]?)\s*\{\s*(\\[|{}]|\\langle|\\rangle|\\vert|\\Vert|[|()\[\]/.])\s*\}")
+_SCRIPT = re.compile(r"\s*([_^])\s*")
+_COMMAND = re.compile(r"\\(?:[A-Za-z]+|.)?", re.DOTALL)  # a lone trailing backslash matches as itself
+_MATH_ENV = re.compile(r"\s*\\begin\{(aligned|align\*?|gathered|gather\*?|array|split)\}(\{[^{}]*\})?(.*)\\end\{\1\}\s*$", re.DOTALL)
+_PROSE_WORDS = re.compile(r"[A-Za-z]{2,}[,.;:]?\s+[A-Za-z]{2,}[,.;:]?\s+[A-Za-z]{2,}")
+_SPACED_LETTERS = re.compile(r"(?:\b[A-Za-z] ){6,}")
+_ROW_FILLER = re.compile(r"^(?:\s|&|\\quad|\\qquad|\\[,;:! ])*|(?:\s|&|\\quad|\\qquad|\\[,;:! ])*$")
 
 
 def _group_end(s: str, i: int) -> int:
@@ -352,6 +363,140 @@ def _group_end(s: str, i: int) -> int:
                 return j + 1
         j += 1
     return -1
+
+
+def _script_end(s: str, i: int) -> int:
+    """End of the script argument starting at s[i] (a group, a command or one character); -1 if none."""
+    if i >= len(s):
+        return -1
+    if s[i] == "{":
+        return _group_end(s, i)
+    if s[i] == "\\":
+        return _COMMAND.match(s, i).end()
+    return i + 1
+
+
+def _separate_double_scripts(body: str) -> str:
+    """`x _ {a} ^ {b} _ {c}` / `z ^ {\\prime} ^ {2}` (tensor indices, primes) are "Double subscript/superscript"
+    errors in KaTeX; an empty group before the repeated script fixes them: `x_{a}^{b}{}_{c}`."""
+    out = []
+    i = 0
+    seen: set[str] = set()
+    while i < len(body):
+        m = _SCRIPT.match(body, i)
+        if m:
+            end = _script_end(body, m.end())
+            if end > 0:
+                kind = m.group(1)
+                if kind in seen:
+                    out.append("{}")
+                    seen = set()
+                seen.add(kind)
+                out.append(body[i:end])
+                i = end
+                continue
+        c = body[i]
+        if not c.isspace():
+            seen = set()
+        if c == "\\":
+            n = _COMMAND.match(body, i).end() - i
+            out.append(body[i:i + n])
+            i += n
+            continue
+        if c == "{":
+            end = _group_end(body, i)
+            if end > 0:
+                out.append("{" + _separate_double_scripts(body[i + 1:end - 1]) + "}")
+                i = end
+                continue
+        out.append(c)
+        i += 1
+    return "".join(out)
+
+
+def _split_rows(inner: str) -> list[str]:
+    """Rows of an alignment body, split on `\\\\` at brace depth 0 outside nested environments."""
+    rows, depth, env, start, i = [], 0, 0, 0, 0
+    while i < len(inner):
+        if inner.startswith("\\begin{", i):
+            env += 1
+        elif inner.startswith("\\end{", i):
+            env -= 1
+        c = inner[i]
+        if c == "\\" and i + 1 < len(inner) and inner[i + 1] == "\\" and depth == 0 and env == 0:
+            rows.append(inner[start:i])
+            i += 2
+            start = i
+            continue
+        if c == "\\":
+            i += 2
+            continue
+        depth += c == "{"
+        depth -= c == "}"
+        i += 1
+    rows.append(inner[start:])
+    return rows
+
+
+def _prose_row(row: str) -> str | None:
+    r"""The sentence, if the row is nothing but one `\text{...}` holding running text (the crop caught a line of
+    the page); None for formula rows and for short text that belongs to the formula (`\text{for all } x`)."""
+    core = _ROW_FILLER.sub("", row)
+    m = re.match(r"\\(?:text|textrm|mbox)\s*\{", core)
+    if not m or _group_end(core, m.end() - 1) != len(core):
+        return None
+    content = core[m.end():-1].strip()
+    if _PROSE_WORDS.search(content) or _SPACED_LETTERS.search(content + " "):
+        return content
+    return None
+
+
+def _letters(s: str) -> str:
+    return re.sub(r"[^a-z]", "", s.lower())
+
+
+def _already_in(prose: str, nearby: str) -> bool:
+    """Is this caught line already in the note's own text around the block? The crop usually catches a line
+    docling ALSO extracted as text, often misread ("string signal model" for "string sigma-model"), so moving
+    it out would duplicate it. Present = at least 70% of the line's letters fall in in-order runs of >= 4
+    letters of the nearby text (97 of 103 Fizik lines; the 6 below 0.65 were truly absent). Fragments under
+    12 letters count as present."""
+    a = _letters(prose)
+    if len(a) < 12:
+        return True
+    b = _letters(nearby)
+    blocks = difflib.SequenceMatcher(None, a, b, autojunk=False).get_matching_blocks()
+    return sum(x.size for x in blocks if x.size >= 4) >= 0.7 * len(a)
+
+
+def _move_prose_out(body: str, nearby: str = "") -> str | None:
+    """Splits an alignment block whose rows include running text into math blocks and plain paragraphs;
+    None when nothing is prose. Each math part keeps the original environment. A caught line that the
+    surrounding text already contains is dropped instead of duplicated."""
+    m = _MATH_ENV.match(body)
+    env, spec, inner = (m.group(1), m.group(2) or "", m.group(3)) if m else (None, "", body)
+    rows = _split_rows(inner)
+    prose = [_prose_row(r) for r in rows]
+    if not any(p is not None for p in prose):
+        return None
+    parts, math_rows = [], []
+
+    def flush() -> None:
+        kept = [r for r in math_rows if r.strip()]
+        if kept:
+            joined = " \\\\ ".join(r.strip() for r in kept)
+            parts.append("$$" + (f"\\begin{{{env}}}{spec}{joined}\\end{{{env}}}" if env else joined) + "$$")
+        math_rows.clear()
+
+    for row, p in zip(rows, prose):
+        if p is None:
+            math_rows.append(row)
+        else:
+            flush()
+            if not _already_in(p, nearby):
+                parts.append(p)
+    flush()
+    return "\n\n".join(parts)
 
 
 def fix_latex_artifacts(text: str) -> str:
@@ -379,6 +524,10 @@ def fix_latex_artifacts(text: str) -> str:
             pos = end
         body = "".join(out) + body[pos:]
         body = _INTERTEXT.sub(r"\\text", body)
+        body = _HBAR_CMD.sub(r"\\hbar \1", body)
+        body = _SIZED_DELIM.sub(r"\\\1\2\3", body)
+        if re.search(r"[_^]\s*(?:\{[^{}]*\}|\\[A-Za-z]+|\S)\s*[_^]", body):
+            body = _separate_double_scripts(body)
         if "\\[" in body or "\\]" in body:
             body = _DISPLAY_BREAK.sub(r" \\\\ ", body)
             # `\] prose \[`: the crop caught a line of running text between two displays (or after the last /
@@ -392,11 +541,30 @@ def fix_latex_artifacts(text: str) -> str:
                 blocks = []
                 for k, part in enumerate(parts):
                     part = _DISPLAY_DELIM.sub(" ", part).strip()
-                    if part:
+                    if part and not (k % 2 and _already_in(part, nearby(match))):
                         blocks.append(part if k % 2 else "$$" + part + "$$")
                 return "\n\n".join(blocks)
             body = _DISPLAY_DELIM.sub(" ", body)
+        if "\\text" in body:
+            split = _move_prose_out(body, nearby(match))
+            if split is not None:
+                return split
         return "$$" + body + "$$"
+
+    spans = [m.span() for m in re.finditer(r"\$\$.*?\$\$", text, flags=re.DOTALL)]
+
+    def nearby(match: re.Match) -> str:
+        """Plain text within ~2000 characters of the block, every math block cut out by its position (a regex
+        over a window that starts inside a block would pair the wrong `$$` and swallow real text)."""
+        lo, hi = max(0, match.start() - 2000), min(len(text), match.end() + 2000)
+        out, pos = [], lo
+        for s, e in spans:
+            if e <= lo or s >= hi:
+                continue
+            out.append(text[pos:max(pos, s)])
+            pos = max(pos, e)
+        out.append(text[pos:hi])
+        return " ".join(out)
 
     return re.sub(r"\$\$(.*?)\$\$", fix, text, flags=re.DOTALL)
 

@@ -306,6 +306,26 @@ def test_latex_artifacts() -> None:
     once = fix_latex_artifacts(r"$$\hbar { ^ } { 2 } \mathbf \dot { p }$$")
     check("idempotent", fix_latex_artifacts(once) == once)
 
+    out = fix_latex_artifacts(r"$$- i \hbar { \hat } { y } + \hbar { \sqrt } { j ( j + 1 ) }$$")
+    check("hbar + argument command", out == r"$$- i \hbar \hat { y } + \hbar \sqrt { j ( j + 1 ) }$$")
+    check("\\Big { | } -> \\Big|", fix_latex_artifacts(r"$$\pi \Big { | } a \Big { | }$$") == r"$$\pi \Big| a \Big|$$")
+    out = fix_latex_artifacts(r"$$\omega_ {\mu} ^ {a} _ {c} X , \ z ^ { \prime } ^ { 2 }$$")
+    check("tensor index / prime-square get an empty group", r"^ {a}{} _ {c}" in out and r"^ { \prime }{} ^ { 2 }" in out)
+    plain = r"$$\sum _ { i = 1 } ^ { N } x _ { i } ^ { 2 }$$"
+    check("ordinary sub+superscript untouched", fix_latex_artifacts(plain) == plain)
+
+    # A caught page line the surrounding text already has is dropped; one it lacks is moved out of math.
+    note = (
+        "Proof. First note that, by Minkowski's inequality for integrals, Condition 2 holds.\n\n"
+        r"$$\begin{aligned}x & = 1 , \\ & \text { Proof. First note that, by Minkowski's inequality for integrals, } \\ y & = 2\end{aligned}$$"
+    )
+    out = fix_latex_artifacts(note)
+    check("duplicated caught line dropped", out.count("Minkowski") == 1 and r"\begin{aligned}y & = 2\end{aligned}" in out)
+    out = fix_latex_artifacts(r"$$a = b \\ \text { the kinematical scalar product is defined by }$$")
+    check("unique caught line moved out", out == "$$a = b$$\n\nthe kinematical scalar product is defined by")
+    keep = r"$$\begin{aligned}x & = 1 \quad \text {for all } x \\ y & = 2\end{aligned}$$"
+    check("short formula text kept in math", fix_latex_artifacts(keep) == keep)
+
 
 if __name__ == "__main__":
     sys.stdout.reconfigure(encoding="utf-8")
