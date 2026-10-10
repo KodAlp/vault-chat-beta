@@ -23,6 +23,7 @@ from postprocess import (  # noqa: E402
     DEGENERATE_NOTE,
     DEGENERATE_RUN,
     derive_title,
+    fix_latex_artifacts,
     find_degenerate_run,
     truncate_degenerate_math,
     postprocess,
@@ -278,6 +279,34 @@ def test_degenerate_math():
     check("warning emitted", any("döngüsü nedeniyle kısaltıldı" in w for w in warns))
 
 
+def test_latex_artifacts() -> None:
+    # Verbatim CodeFormulaV2 output (Piattella, Likharev SM): hbar squared as `\hbar { ^ } { 2 }`.
+    out = fix_latex_artifacts(r"$$a / ( \hbar { ^ } { 2 } \omega ) + \hbar { _ } { 0 }$$")
+    check("hbar { ^ } -> hbar ^", r"\hbar ^ { 2 }" in out and r"\hbar _ { 0 }" in out and "{ ^ }" not in out)
+    keep = r"$$E = \hbar { \omega } + \hbar { ) }$$"
+    check("other hbar groups untouched", fix_latex_artifacts(keep) == keep)
+
+    out = fix_latex_artifacts(r"$$\equiv \mathbf \dot { p } ( t ) , \mathbf \dot { \beta }$$")
+    check("font + accent grouped", r"\mathbf { \dot { p } }" in out and r"\mathbf { \dot { \beta } }" in out)
+
+    out = fix_latex_artifacts(r"$$\begin{array}{rl} a & = b \] \[ c & = d \end{array}$$")
+    check("MinerU display break -> row break", r"\]" not in out and r"\[" not in out and r"\\" in out)
+
+    out = fix_latex_artifacts(r"$$a = b , \] where we drop $\nabla_{\mu}V$ since $x$ is symmetric \[ c = d$$")
+    check("prose between displays moved out of math",
+          out.startswith("$$a = b ,$$") and "\n\n" + r"where we drop $\nabla_{\mu}V$ since $x$ is symmetric" + "\n\n" in out
+          and out.endswith("$$c = d$$"))
+    out = fix_latex_artifacts(r"$$c = d \] where $g_{\mu\nu}$ is the metric.$$")
+    check("trailing prose moved out", out == "$$c = d$$\n\n" + r"where $g_{\mu\nu}$ is the metric.")
+    check("math-only break is not prose", fix_latex_artifacts(r"$$x + y \] \[ z = w$$").count("$$") == 2)
+
+    check("intertext -> text", fix_latex_artifacts(r"$$a \ \intertext { and } b$$") == r"$$a \ \text { and } b$$")
+    plain = r"$$x_{[a]} \left[ b \right] \{ c \}$$"
+    check("brackets and escaped braces untouched", fix_latex_artifacts(plain) == plain)
+    once = fix_latex_artifacts(r"$$\hbar { ^ } { 2 } \mathbf \dot { p }$$")
+    check("idempotent", fix_latex_artifacts(once) == once)
+
+
 if __name__ == "__main__":
     sys.stdout.reconfigure(encoding="utf-8")
     test_wrapping()
@@ -289,5 +318,6 @@ if __name__ == "__main__":
     test_signature()
     test_long_period_loops()
     test_degenerate_math()
+    test_latex_artifacts()
     print(f"\n{len(failures)} başarısız" if failures else "\nhepsi geçti")
     sys.exit(1 if failures else 0)
