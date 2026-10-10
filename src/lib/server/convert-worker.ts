@@ -414,11 +414,27 @@ export function createConvertWorker(deps: ConvertWorkerDeps): ConvertWorker {
 	};
 }
 
+/**
+ * Environment of the Python converter process (per-file and --serve alike). PANDOC_BIN only when
+ * resolved (an unset one must not shadow convert.py's own PATH lookup). VC_NODE_BIN is the Node
+ * binary running this server: ingest/formula_fallback.py runs ingest/katex_check.mjs with it to
+ * validate formulas against the real KaTeX, and a packaged app has no `node` on PATH.
+ */
+export function convertProcessEnv(
+	pandocBin: string | null,
+	nodeBin: string = process.execPath,
+	base: NodeJS.ProcessEnv = process.env
+): NodeJS.ProcessEnv {
+	const env: NodeJS.ProcessEnv = { ...base, VC_NODE_BIN: nodeBin };
+	if (pandocBin) env.PANDOC_BIN = pandocBin;
+	return env;
+}
+
 /** Real worker: `python <script> --serve`. Same PANDOC_BIN logic as the per-file path. */
 export function spawnConvertWorker(pythonBin: string, script: string, pandocBin: string | null): WorkerChild {
 	return spawn(pythonBin, [script, '--serve'], {
 		windowsHide: true,
-		env: pandocBin ? { ...process.env, PANDOC_BIN: pandocBin } : process.env
+		env: convertProcessEnv(pandocBin)
 	}) as unknown as WorkerChild;
 }
 
