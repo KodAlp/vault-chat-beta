@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/assets/demo-sohbet.gif" alt="Kasaya soru sorulur; yerel model ikili aramayı notlardaki kod ve formülle, kaynak çipleriyle açıklar" width="860" />
+  <img src="docs/assets/demo-chat.gif" alt="Kasaya soru sorulur; yerel model ikili aramayı notlardaki kod ve formülle, kaynak çipleriyle açıklar" width="860" />
 </p>
 
 ## Ne yapar?
@@ -39,64 +39,36 @@
   <tr>
     <td width="50%">
       <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshots/ana-koyu.webp" />
-        <img src="docs/assets/screenshots/ana-acik.webp" alt="Kasa ana ekranı: soru kutusu ve geçmiş sohbetler" />
+        <source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshots/home-dark.webp" />
+        <img src="docs/assets/screenshots/home-light.webp" alt="Kasa ana ekranı: soru kutusu ve geçmiş sohbetler" />
       </picture>
       <p align="center"><sub>Kasa ana ekranı (açık ve koyu tema)</sub></p>
     </td>
     <td width="50%">
-      <img src="docs/assets/screenshots/sohbet-kod.webp" alt="Kod bloğu ve formül içeren, kaynak çipli bir cevap" />
+      <img src="docs/assets/screenshots/chat-code.webp" alt="Kod bloğu ve formül içeren, kaynak çipli bir cevap" />
       <p align="center"><sub>Kaynak çipli cevap: kod ve formül birlikte</sub></p>
     </td>
   </tr>
   <tr>
     <td width="50%">
-      <img src="docs/assets/screenshots/calisma-paneli.webp" alt="Çalışma paneli: test, kartlar, rapor, harita, slayt, ilerleme" />
+      <img src="docs/assets/screenshots/study-panel.webp" alt="Çalışma paneli: test, kartlar, rapor, harita, slayt, ilerleme" />
       <p align="center"><sub>Çalışma paneli: test, kart, rapor, harita, slayt</sub></p>
     </td>
     <td width="50%">
-      <img src="docs/assets/screenshots/kaynak-goruntuleyici.webp" alt="Uygulama içi kaynak görüntüleyici, KaTeX ile işlenmiş formüller" />
+      <img src="docs/assets/screenshots/source-viewer.webp" alt="Uygulama içi kaynak görüntüleyici, KaTeX ile işlenmiş formüller" />
       <p align="center"><sub>Kaynak görüntüleyici: düzenleme ve önceki sürümler</sub></p>
     </td>
   </tr>
 </table>
 
-<sub>Görüntüler, örnek notlardan oluşan bir demo kasasında yerel <code>qwen3:8b</code> modeliyle alındı.</sub>
+<sub>Görüntüler, örnek notlardan oluşan bir demo kasasında yerel <code>qwen3:8b</code> modeliyle, İngilizce arayüzde alındı.</sub>
 
 ## Nasıl çalışır?
 
-```mermaid
-flowchart TD
-    K["Kaynaklar<br/>PDF · DOCX · PPTX · XLSX · HTML · EPUB · TeX · MD<br/>bağlantılar, Obsidian/Logseq klasörleri"]
-    D["Dönüştürücü<br/>docling · MinerU · markitdown · pandoc"]
-    K --> D
-
-    subgraph Kasa["Kasa (her biri izole)"]
-        L[("library/<br/>Markdown notlar")]
-        I[("index.db<br/>sqlite-vec + FTS5")]
-        L -- "parçalama +<br/>bge-m3 embedding" --> I
-    end
-    D --> L
-
-    subgraph Sunucu["SvelteKit sunucusu (localhost)"]
-        R["Arama<br/>anlamsal + anahtar kelime"]
-        C["Sohbet<br/>kaynak atıflı cevap"]
-        A["Çalışma araçları<br/>test · kart · rapor · harita · slayt"]
-        R --> C
-        R --> A
-    end
-    I --> R
-
-    M["Model sağlayıcı<br/>Ollama / OpenAI uyumlu yerel sunucu<br/>bulut isteğe bağlı, varsayılan kapalı"]
-    C <--> M
-    A <--> M
-
-    UI["Arayüz<br/>Tauri masaüstü ya da tarayıcı"]
-    MCP["MCP istemcileri<br/>Claude Code / Desktop"]
-    C --> UI
-    A --> UI
-    MCP -. "search_library · get_note · import_source" .-> R
-```
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/architecture-dark.webp" />
+  <img src="docs/assets/architecture-light.webp" alt="Vault Chat mimarisi: kaynaklar, dönüştürücü, kasa, uygulama, model sağlayıcılar ve istemciler" />
+</picture>
 
 Her şey tek bir Node sürecinde, `localhost`'ta çalışır. Docker ya da harici bir sunucu gerekmez. Notların, indeksin ve sohbet geçmişin kendi makinende kalır.
 

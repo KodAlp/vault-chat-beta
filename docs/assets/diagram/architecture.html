@@ -1,0 +1,293 @@
+<!doctype html>
+<!--
+  Source for docs/assets/architecture-{light,dark}.webp (the README diagram).
+  Drawn with the app's own tokens (DESIGN.md) and fonts (static/fonts), then
+  captured at 2x with a transparent background so it sits on GitHub's light
+  and dark canvases. Serve the repo root over HTTP (fonts do not load from
+  file://), open this page with ?theme=light or ?theme=dark, and capture #diagram.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Vault Chat architecture</title>
+<style>
+	@font-face {
+		font-family: 'Satoshi';
+		src: url('../../../static/fonts/Satoshi-Variable.woff2') format('woff2');
+		font-weight: 300 900;
+	}
+	@font-face {
+		font-family: 'Gambetta';
+		src: url('../../../static/fonts/Gambetta-Variable.woff2') format('woff2');
+		font-weight: 300 700;
+	}
+
+	:root {
+		--card: #ffffff;
+		--card-quiet: #f7f4ed;
+		--line: rgba(0, 0, 0, 0.11);
+		--line-strong: rgba(0, 0, 0, 0.2);
+		--label: #1c1c1c;
+		--label-2: #5f5f5d;
+		--label-3: #767570;
+		--accent: #c0803c;
+		--accent-text: #8a5418;
+		--accent-soft: rgba(212, 150, 83, 0.16);
+		--arrow: #9a9892;
+	}
+	:root[data-theme='dark'] {
+		--card: #1c1c1c;
+		--card-quiet: #141414;
+		--line: rgba(255, 255, 255, 0.12);
+		--line-strong: rgba(255, 255, 255, 0.22);
+		--label: #ffffff;
+		--label-2: #bfbfbf;
+		--label-3: #8c8c8c;
+		--accent: #d49653;
+		--accent-text: #e0a868;
+		--accent-soft: rgba(212, 150, 83, 0.16);
+		--arrow: #6e6e6e;
+	}
+
+	html, body { margin: 0; background: transparent; }
+	body { font-family: 'Satoshi', system-ui, sans-serif; color: var(--label); -webkit-font-smoothing: antialiased; }
+
+	#diagram {
+		position: relative;
+		width: 1480px;
+		padding: 36px 40px 40px;
+		box-sizing: border-box;
+	}
+
+	header { display: flex; align-items: center; gap: 14px; margin-bottom: 30px; }
+	header img { width: 44px; height: 44px; }
+	header h1 { font-family: 'Gambetta', serif; font-weight: 400; font-size: 30px; margin: 0; letter-spacing: -0.01em; }
+	header p { margin: 2px 0 0; font-size: 15px; color: var(--label-2); }
+
+	.row { display: grid; grid-template-columns: 1fr 1fr 1.1fr 1.25fr 1fr; column-gap: 52px; align-items: start; }
+	.row > section:nth-child(5) { margin-left: 44px; }
+	.models-row > .models { margin-left: 0; }
+
+	.col-title {
+		font-size: 11.5px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
+		color: var(--label-3); margin: 0 0 10px 2px;
+	}
+
+	.card {
+		position: relative;
+		background: var(--card);
+		border: 1px solid var(--line);
+		border-radius: 14px;
+		padding: 14px 16px;
+		margin-bottom: 12px;
+	}
+	.card.quiet { background: var(--card-quiet); }
+	.card.accent { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+	.card h3 { margin: 0 0 4px; font-size: 16px; font-weight: 600; }
+	.card p { margin: 0; font-size: 13.5px; line-height: 1.45; color: var(--label-2); }
+	.card code { font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace; font-size: 12.5px; color: var(--label); }
+
+	.group {
+		border: 1px dashed var(--line-strong);
+		border-radius: 18px;
+		padding: 12px 12px 0;
+	}
+	.group .col-title { margin-left: 4px; }
+
+	.tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+	.tag {
+		font-size: 12px; padding: 2px 9px; border-radius: 999px;
+		border: 1px solid var(--line); color: var(--label-2);
+	}
+
+	.models-row { margin-top: 34px; }
+	.models { grid-column: 3 / span 3; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding-bottom: 12px; }
+	.models .col-title { grid-column: 1 / -1; margin-bottom: 0; }
+	.models .card { margin-bottom: 0; }
+
+	svg#wires { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+	.wire { fill: none; stroke: var(--arrow); stroke-width: 1.5; }
+	.wire.accent { stroke: var(--accent); stroke-width: 2; }
+	.wire-label { font-size: 11.5px; fill: var(--label-3); font-family: 'Satoshi', sans-serif; }
+	.wire-label.accent { fill: var(--accent-text); font-weight: 600; }
+</style>
+</head>
+<body>
+<div id="diagram">
+	<header>
+		<img src="../../../static/logo.png" alt="" />
+		<div>
+			<h1>How Vault Chat works</h1>
+			<p>One Node process on <code>localhost</code>. Notes, index and chat history never leave your machine unless you opt in to a cloud model.</p>
+		</div>
+	</header>
+
+	<div class="row">
+		<section>
+			<div class="col-title">Sources</div>
+			<div class="card quiet" id="src">
+				<h3>Your files</h3>
+				<div class="tags">
+					<span class="tag">PDF</span><span class="tag">DOCX</span><span class="tag">PPTX</span><span class="tag">XLSX</span>
+					<span class="tag">HTML</span><span class="tag">EPUB</span><span class="tag">TeX</span><span class="tag">Markdown</span>
+				</div>
+			</div>
+			<div class="card quiet" id="links">
+				<h3>Links &amp; note apps</h3>
+				<p>Web pages, YouTube transcripts, Obsidian · Logseq · Joplin · Zettlr folders</p>
+			</div>
+		</section>
+
+		<section>
+			<div class="col-title">Ingest</div>
+			<div class="card" id="conv">
+				<h3>Converter</h3>
+				<p>docling · MinerU · markitdown · pandoc, picked per file; OCR for scanned pages</p>
+			</div>
+			<div class="card" id="check">
+				<h3>Formula checks</h3>
+				<p>Every equation is validated with KaTeX; broken ones fall back to a second engine or an image</p>
+			</div>
+		</section>
+
+		<section class="group" id="vault">
+			<div class="col-title">Vault · each one isolated</div>
+			<div class="card" id="lib">
+				<h3>Library</h3>
+				<p>Clean Markdown notes, editable in the app, with version history</p>
+			</div>
+			<div class="card" id="idx">
+				<h3>Search index</h3>
+				<p><code>sqlite-vec</code> + <code>FTS5</code> in one file; embeddings optional (<code>bge-m3</code>)</p>
+			</div>
+			<div class="card" id="study">
+				<h3>Study data</h3>
+				<p>Quiz results, SM-2 card schedule, per-topic progress</p>
+			</div>
+		</section>
+
+		<section>
+			<div class="col-title">App</div>
+			<div class="card" id="ret">
+				<h3>Retrieval</h3>
+				<p>Semantic + keyword search over the active vault</p>
+			</div>
+			<div class="card accent" id="chat">
+				<h3>Grounded chat</h3>
+				<p>Answers only from retrieved notes; every claim links back to its source</p>
+			</div>
+			<div class="card" id="tools">
+				<h3>Study tools</h3>
+				<p>Quizzes, flashcards, mind maps, reports and slides, all cited</p>
+			</div>
+		</section>
+
+		<section>
+			<div class="col-title">Use it from</div>
+			<div class="card" id="ui">
+				<h3>Desktop or browser</h3>
+				<p>Tauri app on Windows, Linux, macOS, or any browser</p>
+			</div>
+			<div class="card" id="mcp">
+				<h3>MCP clients</h3>
+				<p>Claude Code, Claude Desktop…<br /><code>search_library</code> · <code>get_note</code> · <code>import_source</code></p>
+			</div>
+		</section>
+	</div>
+
+	<div class="row models-row">
+		<section class="group models" id="models">
+			<div class="col-title">Models</div>
+			<div class="card" id="local">
+				<h3>Local model server</h3>
+				<p>Ollama, LM Studio, llama.cpp, vLLM, Jan: anything OpenAI-compatible</p>
+			</div>
+			<div class="card quiet" id="cloud">
+				<h3>Cloud models</h3>
+				<p>Optional, off by default, asked for consent in every chat</p>
+			</div>
+		</section>
+	</div>
+
+	<svg id="wires" aria-hidden="true">
+		<defs>
+			<marker id="head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" markerUnits="strokeWidth" orient="auto-start-reverse">
+				<path d="M0,0.8 L9,5 L0,9.2 z" style="fill: var(--arrow)" />
+			</marker>
+			<marker id="head-accent" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" markerUnits="strokeWidth" orient="auto-start-reverse">
+				<path d="M0,0.8 L9,5 L0,9.2 z" style="fill: var(--accent)" />
+			</marker>
+		</defs>
+	</svg>
+</div>
+
+<script>
+	const theme = new URLSearchParams(location.search).get('theme') ?? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+	document.documentElement.dataset.theme = theme;
+
+	const svg = document.getElementById('wires');
+	const root = document.getElementById('diagram');
+	const box = (id) => {
+		const r = document.getElementById(id).getBoundingClientRect();
+		const o = root.getBoundingClientRect();
+		return { l: r.left - o.left, r: r.right - o.left, t: r.top - o.top, b: r.bottom - o.top, cx: (r.left + r.right) / 2 - o.left, cy: (r.top + r.bottom) / 2 - o.top };
+	};
+	const NS = 'http://www.w3.org/2000/svg';
+	function wire(d, { accent = false, label, lx, ly, both = false } = {}) {
+		const p = document.createElementNS(NS, 'path');
+		p.setAttribute('d', d);
+		p.setAttribute('class', 'wire' + (accent ? ' accent' : ''));
+		const head = accent ? 'url(#head-accent)' : 'url(#head)';
+		p.setAttribute('marker-end', head);
+		if (both) p.setAttribute('marker-start', head);
+		svg.appendChild(p);
+		if (label) {
+			const t = document.createElementNS(NS, 'text');
+			t.setAttribute('x', lx);
+			t.setAttribute('y', ly);
+			t.setAttribute('class', 'wire-label' + (accent ? ' accent' : ''));
+			t.setAttribute('text-anchor', 'middle');
+			t.textContent = label;
+			svg.appendChild(t);
+		}
+	}
+	// horizontal connector between two boxes, routed with one bend when the rows differ
+	function h(a, b, opts = {}) {
+		const A = box(a), B = box(b);
+		const x1 = A.r + 4, x2 = B.l - 6, y1 = opts.y1 ?? A.cy, y2 = opts.y2 ?? B.cy, mx = (x1 + x2) / 2;
+		wire(y1 === y2 ? `M${x1},${y1} H${x2}` : `M${x1},${y1} H${mx} V${y2} H${x2}`, opts);
+	}
+	function v(a, b, opts = {}) {
+		const A = box(a), B = box(b);
+		const x = opts.x ?? A.cx;
+		wire(`M${x},${A.b + 4} V${B.t - 6}`, opts);
+	}
+
+	document.fonts.ready.then(() => {
+		h('src', 'conv');
+		h('links', 'conv', { y2: box('conv').cy + 14 });
+		h('conv', 'lib', { y1: box('conv').cy });
+		v('conv', 'check');
+		v('lib', 'idx', { label: 'index', lx: box('lib').cx + 30, ly: (box('lib').b + box('idx').t) / 2 + 4 });
+		h('idx', 'ret');
+		v('ret', 'chat', { accent: true });
+		h('tools', 'study', { both: false, y1: box('tools').cy, y2: box('study').cy });
+		// tools writes to study: draw right-to-left
+		svg.lastChild.remove();
+		const T = box('tools'), S = box('study');
+		wire(`M${T.l - 4},${T.cy} H${S.r + 6}`, {});
+		// question in, answer out
+		const U = box('ui'), C = box('chat'), R = box('ret');
+		const gx = (U.l + R.r) / 2;
+		wire(`M${U.l - 4},${R.cy - 10} H${R.r + 6}`, { accent: true, label: 'question', lx: gx, ly: R.cy - 18 });
+		wire(`M${C.r + 4},${C.cy} H${U.l - 6}`, { accent: true, label: 'cited answer', lx: gx - 14, ly: C.cy - 9 });
+		const M = box('mcp');
+		wire(`M${M.l - 4},${M.cy} H${gx + 30} V${R.cy + 14} H${R.r + 6}`, { label: 'MCP tools', lx: gx + 4, ly: M.cy + 18 });
+		// chat and study tools <-> models
+		const G = box('models');
+		wire(`M${T.cx},${T.b + 4} V${G.t - 6}`, { both: true, label: 'prompt → tokens', lx: T.cx + 52, ly: (T.b + G.t) / 2 + 4 });
+		document.body.dataset.ready = '1';
+	});
+</script>
+</body>
+</html>
