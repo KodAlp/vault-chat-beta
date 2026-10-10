@@ -739,9 +739,7 @@
 		"flattenFoldersHint": "Bu kök klasörlerin kendisi gizlenir, altındaki klasörler doğrudan ağacın kökünde gösterilir. Yollar değişmez, sadece ağacın görünümü sadeleşir.",
 		"libraryTreeTitle": "Kütüphane Ağacı",
 		"libraryTreeDescription": "Belge yükle, yeniden adlandır veya sil. Sohbet ekranındaki kaynak ağacı (Faz 9) bunun yerine kapsam seçimi için ayrı, salt-görüntüleme bir kopyasını kullanır.",
-		"loadError": "Ayarlar alınamadı.",
-		"addFilesTitle": "Dosya ekle",
-		"addFilesDescription": "PDF, Word, PowerPoint, Markdown, kod… Tek dosya, birden çok dosya ya da bir klasör seç; hangisi olduğunu uygulama kendisi anlar."
+		"loadError": "Ayarlar alınamadı."
 	},
 
 	"ProvidersSettingsPage": {

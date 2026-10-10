@@ -651,9 +651,7 @@
     "flattenFoldersHint": "これらのルートフォルダ自体は非表示になり、その下のフォルダがツリーのルートに直接表示されます。パスは変わらず、ツリーの見た目が簡素化されるだけです。",
     "libraryTreeTitle": "ライブラリツリー",
     "libraryTreeDescription": "ドキュメントのアップロード、名前の変更、削除ができます。チャット画面独自のソースツリー（フェーズ 9）は、範囲の選択用に、このツリーとは別の読み取り専用のコピーを使用します。",
-    "loadError": "設定を読み込めませんでした。",
-    "addFilesTitle": "ファイルを追加",
-    "addFilesDescription": "PDF、Word、PowerPoint、Markdown、コード… 1つのファイル、複数のファイル、またはフォルダごと選べます。どれなのかはアプリが自動で判断します。"
+    "loadError": "設定を読み込めませんでした。"
   },
   "ProvidersSettingsPage": {
     "title": "モデルプロバイダー",
