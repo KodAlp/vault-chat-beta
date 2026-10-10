@@ -96,10 +96,9 @@
 			const res = await fetch(`/api/chats?vault=${encodeURIComponent(data.vaultId)}`);
 			if (!res.ok) throw new Error();
 			chats = (await res.json()) as ChatSummary[];
-			if (chats.length === 0) {
-				await checkSources();
-				await checkPendingImports();
-			}
+			if (chats.length === 0) await checkSources();
+			// Always: the "view sources" link and its badge show whether or not the vault has chats.
+			await checkPendingImports();
 		} catch {
 			loadError = t('VaultChatListPage.loadError');
 		}
@@ -276,19 +275,17 @@
 		<p>{t('VaultChatListPage.heroSubtitle')}</p>
 	</div>
 
-	{#if chats.length === 0}
-		<div class="mx-auto mb-4 flex shrink-0 flex-wrap items-center justify-center gap-2">
-			<a href="/settings/library" class="vc-btn secondary no-underline">
-				<LibraryIcon size={16} strokeWidth={1.75} aria-hidden="true" />
-				{t('VaultChatListPage.viewSources')}
+	<div class="mx-auto mb-4 flex shrink-0 flex-wrap items-center justify-center gap-2">
+		<a href="/settings/library" class="vc-btn secondary no-underline">
+			<LibraryIcon size={16} strokeWidth={1.75} aria-hidden="true" />
+			{t('VaultChatListPage.viewSources')}
+		</a>
+		{#if readyImports > 0}
+			<a href="/settings/library" class="no-underline">
+				<Badge variant="secondary">{t('VaultChatListPage.pendingConfirmBadge', { count: readyImports })}</Badge>
 			</a>
-			{#if readyImports > 0}
-				<a href="/settings/library" class="no-underline">
-					<Badge variant="secondary">{t('VaultChatListPage.pendingConfirmBadge', { count: readyImports })}</Badge>
-				</a>
-			{/if}
-		</div>
-	{/if}
+		{/if}
+	</div>
 
 	<div class="vc-composer mx-auto mb-6 shrink-0">
 		<textarea
