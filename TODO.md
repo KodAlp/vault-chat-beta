@@ -30,8 +30,6 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 ## Acil
 
 ### 1. Bakım ve temizlik
-- [ ] **Test artıklarını sil.** "Formül Testi" kasası ve `Notebook verileri/_formul-testi/` silinecek (kullanıcı kararı); silmeden önce içeriği göster. `K` · #22
-- [ ] **Yanlış adlı arXiv PDF'leri.** SystemsControl, Probabilistic, TeoBanica. `K` · #23 (çekildi)
 
 ### 2. Kurulum ve veri sağlamlığı
 - [ ] **Ollama ilk sohbete kadar başlamıyor.** Uygulama yeniden açılınca dış betikler `indexPending` alıyor. `K` · #87
@@ -150,6 +148,7 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 
 Yalnız son iki haftanın kaydı tutulur; daha eskisi git geçmişindedir.
 
+- 2026-10-12: "Formül Testi" kasası ve `_formul-testi/` silindi (#22). #23 elendi.
 - 2026-10-12: disk temizliği; 14 worktree, 7 yarım kalmış worktree klasörü ve ana `src-tauri/target` silindi, ~25 GB. Dallar yer kaplamadığı için kaldı (#58).
 - 2026-10-12: sürüm artırma betiği `npm run version:bump -- 0.3.1` (#54). `49f343b`
 - 2026-10-12: stage-server package-lock değişmediyse `npm ci`'yi atlıyor; `STAGE_FORCE_INSTALL=1` ile zorlanır (#57). `628fa74`

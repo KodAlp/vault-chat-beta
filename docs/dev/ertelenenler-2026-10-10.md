@@ -55,7 +55,7 @@ Her madde git geçmişi ve kodla karşılaştırıldı.
 | 20 | Notebook verileri dönüşümü: 12 klasör → ayrı kasalar. Fizik bitti, dil ve bilim klasörleri kaldı | sonraki-oturum notu, durum notu | açık | B | — | | yapılabilir
 | 21 | Rusça kasası onarımı (14 uyarılı bekleyen); İngilizce/Mandarin/İspanyolca kasa sorusu | formul-dongu notu | açık | O | — | | yapılabilir
 | 22 | Test artıkları: "Formül Testi" kasası ve `Notebook verileri/_formul-testi/` silinsin mi | aynı | açık (karar) | K | — | |acil silinsin
-| 23 | Yanlış adlı arXiv PDF'leri (SystemsControl, Probabilistic, TeoBanica) | aynı | belirsiz | K | — | | yapılabilir
+| 23 | Yanlış adlı arXiv PDF'leri (SystemsControl, Probabilistic, TeoBanica) | aynı | belirsiz | K | — | | yapılabilir · elendi 2026-10-12: içerik adla alakasız (yanlış arXiv numaraları), kullanıcı gerek görmedi
 | 24 | İspanyolca kasa kimliğinde yazım hatası (`isoanyolca`) | durum notu | açık | K | — | | gereksiz
 | 25 | Chollet docling çıktısını `yapay-zeka` kasasında yeniden indeksle | f5 notu | belirsiz | K | — | | daha sonra.
 | 26 | Kolay Matematik kasasındaki 16 "ready" içe aktarmanın onayı | Kolay Matematik notu | açık (karar) | K | — | | daha sonra.
