@@ -758,6 +758,7 @@
     "add": "إضافة",
     "local": "محلي",
     "cloud": "سحابي",
+    "ollamaLocal": "Ollama (محلي)",
     "keyConnected": "متصل · {mask}",
     "keyMissing": "لا مفتاح",
     "apiKeyPlaceholder": "مفتاح API",

@@ -709,6 +709,7 @@
     "add": "Adicionar",
     "local": "local",
     "cloud": "nuvem",
+    "ollamaLocal": "Ollama (local)",
     "keyConnected": "conectado · {mask}",
     "keyMissing": "sem chave",
     "apiKeyPlaceholder": "Chave de API",

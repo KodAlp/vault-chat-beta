@@ -785,6 +785,7 @@
 		"add": "Ekle",
 		"local": "yerel",
 		"cloud": "bulut",
+		"ollamaLocal": "Ollama (yerel)",
 		"keyConnected": "bağlı · {mask}",
 		"keyMissing": "anahtar yok",
 		"apiKeyPlaceholder": "API anahtarı",

@@ -751,6 +751,7 @@
 		"add": "Dodaj",
 		"local": "lokalny",
 		"cloud": "chmura",
+		"ollamaLocal": "Ollama (lokalny)",
 		"keyConnected": "połączono · {mask}",
 		"keyMissing": "brak klucza",
 		"apiKeyPlaceholder": "Klucz API",

@@ -112,7 +112,14 @@ console.log('\nYapılandırma');
 let providersConfig = null;
 {
 	const dataDir = path.resolve(root, nonEmpty(process.env.DATA_DIR) ?? 'data');
-	const providersPath = nonEmpty(process.env.PROVIDERS_PATH) ?? path.join(dataDir, 'providers.json');
+	let providersPath = nonEmpty(process.env.PROVIDERS_PATH) ?? path.join(dataDir, 'providers.json');
+	// Sihirbaz atlanınca providers.json hiç yazılmaz; uygulama (config-store.ts) o zaman
+	// providers.default.json'a düşer — doctor da aynısını yapsın, hata saymasın.
+	const defaultsPath = path.join(root, 'data', 'providers.default.json');
+	if (!existsSync(providersPath) && existsSync(defaultsPath)) {
+		warn(`data/providers.json yok, varsayılanlar kullanılıyor (${defaultsPath})`, 'Kurulum sihirbazını tamamlayınca ya da Ayarlar > Sağlayıcılar\'da bir değişiklik kaydedince dosya oluşur.');
+		providersPath = defaultsPath;
+	}
 	if (!existsSync(providersPath)) {
 		fail(`data/providers.json bulunamadı (${providersPath})`, 'Bu dosya repo ile gelir — git clone/pull ile geldiğinden emin olun, ya da DATA_DIR farklı bir yeri gösteriyorsa oraya elle kopyalayın.');
 	} else {

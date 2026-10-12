@@ -10,6 +10,8 @@
 	import * as Select from '$lib/components/ui/select';
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
 	import { t } from '$lib/i18n/index.svelte';
+	import { providerDisplayLabel } from '$lib/provider-label';
+	const pLabel = (id: string, label: string) => providerDisplayLabel(id, label, t);
 	import { localizeError, readResponseError } from '$lib/server-error';
 	import DownloadIcon from '@lucide/svelte/icons/download';
 	import TrashIcon from '@lucide/svelte/icons/trash';
@@ -225,7 +227,7 @@
 				<Select.Content>
 					{#each groupedModels as group (group.providerId)}
 						<Select.Group>
-							<Select.GroupHeading>{group.providerLabel}</Select.GroupHeading>
+							<Select.GroupHeading>{pLabel(group.providerId, group.providerLabel)}</Select.GroupHeading>
 							{#each group.models as m (m.id)}
 								<Select.Item value={selectionKey(group.providerId, m.id)} label={m.id}>{m.id}</Select.Item>
 							{/each}
@@ -248,7 +250,7 @@
 				<Select.Content>
 					{#each groupedModels as group (group.providerId)}
 						<Select.Group>
-							<Select.GroupHeading>{group.providerLabel}</Select.GroupHeading>
+							<Select.GroupHeading>{pLabel(group.providerId, group.providerLabel)}</Select.GroupHeading>
 							{#each group.models as m (m.id)}
 								<Select.Item value={selectionKey(group.providerId, m.id)} label={m.id}>{m.id}</Select.Item>
 							{/each}
@@ -271,7 +273,7 @@
 				<Select.Content>
 					{#each groupedModels as group (group.providerId)}
 						<Select.Group>
-							<Select.GroupHeading>{group.providerLabel}</Select.GroupHeading>
+							<Select.GroupHeading>{pLabel(group.providerId, group.providerLabel)}</Select.GroupHeading>
 							{#each group.models as m (m.id)}
 								<Select.Item value={selectionKey(group.providerId, m.id)} label={m.id}>{m.id}</Select.Item>
 							{/each}

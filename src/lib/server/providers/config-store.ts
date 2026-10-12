@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import path from 'node:path';
 import { providersPath } from '../env';
 import { AppError } from '../app-error';
 import { EMBED_MODEL, EMBED_DIMS } from '../embed-config';
@@ -172,8 +173,40 @@ export interface ProvidersFile {
 	embedding?: EmbeddingConfig | null;
 }
 
+/** Where the shipped defaults live when the user's providers.json does not exist yet (the setup wizard
+ * was skipped, or nothing seeded it): the repo's providers.default.json, else the bundled providers.json
+ * the desktop build stages next to the server (a byte copy of the default). Both sit under cwd/data,
+ * the same base dataDir() uses without a DATA_DIR override. */
+function defaultProvidersCandidates(): string[] {
+	const base = path.resolve(process.cwd(), 'data');
+	return [path.join(base, 'providers.default.json'), path.join(base, 'providers.json')];
+}
+
+/** True when `err` is the "file does not exist" failure — the ONLY read error that falls back to the
+ * defaults; malformed JSON or a permission error must still surface. */
+function isMissingFile(err: unknown): boolean {
+	return (err as NodeJS.ErrnoException)?.code === 'ENOENT';
+}
+
+/** Reads providers.json, falling back to the shipped defaults when the file is missing (#64: a skipped
+ * wizard left no file and indexing died with ENOENT). Read-only: the file is created by the first
+ * writer (writeFile), not by a read. */
 function readFile(): ProvidersFile {
-	return JSON.parse(fs.readFileSync(providersPath(), 'utf-8')) as ProvidersFile;
+	const target = providersPath();
+	try {
+		return JSON.parse(fs.readFileSync(target, 'utf-8')) as ProvidersFile;
+	} catch (err) {
+		if (!isMissingFile(err)) throw err;
+	}
+	for (const candidate of defaultProvidersCandidates()) {
+		if (path.resolve(candidate) === path.resolve(target)) continue;
+		try {
+			return JSON.parse(fs.readFileSync(candidate, 'utf-8')) as ProvidersFile;
+		} catch (err) {
+			if (!isMissingFile(err)) throw err;
+		}
+	}
+	throw new AppError('PROVIDERS_FILE_UNREADABLE', { detail: `${target}: file not found and no default config available` });
 }
 
 function writeFile(data: ProvidersFile): void {

@@ -696,6 +696,7 @@
     "add": "追加",
     "local": "ローカル",
     "cloud": "クラウド",
+    "ollamaLocal": "Ollama(ローカル)",
     "keyConnected": "接続済み · {mask}",
     "keyMissing": "キーなし",
     "apiKeyPlaceholder": "API キー",

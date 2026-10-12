@@ -760,6 +760,7 @@
 		"add": "Tilføj",
 		"local": "lokal",
 		"cloud": "cloud",
+		"ollamaLocal": "Ollama (lokal)",
 		"keyConnected": "forbundet · {mask}",
 		"keyMissing": "ingen nøgle",
 		"apiKeyPlaceholder": "API-nøgle",

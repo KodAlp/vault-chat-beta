@@ -753,6 +753,7 @@
 		"add": "Toevoegen",
 		"local": "lokaal",
 		"cloud": "cloud",
+		"ollamaLocal": "Ollama (lokaal)",
 		"keyConnected": "verbonden · {mask}",
 		"keyMissing": "geen sleutel",
 		"apiKeyPlaceholder": "API-sleutel",

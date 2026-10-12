@@ -696,6 +696,7 @@
     "add": "شامل کریں",
     "local": "مقامی",
     "cloud": "کلاؤڈ",
+    "ollamaLocal": "Ollama (مقامی)",
     "keyConnected": "جڑا ہوا · {mask}",
     "keyMissing": "کوئی کلید نہیں",
     "apiKeyPlaceholder": "API کلید",

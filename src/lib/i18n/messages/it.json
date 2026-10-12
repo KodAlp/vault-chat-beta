@@ -757,6 +757,7 @@
 		"add": "Aggiungi",
 		"local": "locale",
 		"cloud": "cloud",
+		"ollamaLocal": "Ollama (locale)",
 		"keyConnected": "connesso · {mask}",
 		"keyMissing": "nessuna chiave",
 		"apiKeyPlaceholder": "Chiave API",

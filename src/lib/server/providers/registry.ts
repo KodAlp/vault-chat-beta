@@ -23,23 +23,22 @@ let adapters = new Map<string, ProviderAdapter>();
  * config-store.ts's writers). */
 function loadConfig(): ProvidersFile {
 	const p = providersPath();
-	let stat: fs.Stats;
+	let stat: fs.Stats | null = null;
 	try {
 		stat = fs.statSync(p);
 	} catch (err) {
-		// fs.statSync's raw ENOENT ("ENOENT: no such file or directory,
-		// stat 'C:\...\providers.json'") reached every chat/generation call
-		// as an unexplained 500 if this file was ever missing (a DATA_DIR
-		// override pointing nowhere, the file deleted by hand) — nothing
-		// seeds it at runtime outside the Tauri desktop build. This at
-		// least says which file and why, instead of a bare stat failure.
-		const reason = err instanceof Error ? err.message : String(err);
-		throw new AppError('PROVIDERS_FILE_UNREADABLE', { detail: `${p}: ${reason}` });
+		// A missing providers.json (setup wizard skipped, DATA_DIR override pointing nowhere) is not an
+		// error: readProvidersFile() falls back to the shipped defaults. Anything else (EACCES, ...) is
+		// still reported with the file path instead of a bare stat failure.
+		if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
+			const reason = err instanceof Error ? err.message : String(err);
+			throw new AppError('PROVIDERS_FILE_UNREADABLE', { detail: `${p}: ${reason}` });
+		}
 	}
 	// Path + mtime + ctime + size, not mtime alone: two writes inside one timestamp tick (coarse on some
 	// Linux filesystems), or a different PROVIDERS_PATH whose file happens to share the mtime, must not
 	// serve the previous config.
-	const signature = `${p}|${stat.mtimeMs}|${stat.ctimeMs}|${stat.size}`;
+	const signature = stat ? `${p}|${stat.mtimeMs}|${stat.ctimeMs}|${stat.size}` : `${p}|missing`;
 	if (cachedConfig && signature === cachedSignature) return cachedConfig;
 	cachedConfig = readProvidersFile();
 	cachedSignature = signature;

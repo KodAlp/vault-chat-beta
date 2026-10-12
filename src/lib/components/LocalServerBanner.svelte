@@ -6,6 +6,8 @@
 	import { isTauri, invoke } from '@tauri-apps/api/core';
 	import { afterNavigate } from '$app/navigation';
 	import { t } from '$lib/i18n/index.svelte';
+	import { providerDisplayLabel } from '$lib/provider-label';
+	const pLabel = (id: string, label: string) => providerDisplayLabel(id, label, t);
 	import { settings } from '$lib/settings.svelte';
 	import { resolveBannerTarget, findLauncherId, type BannerTarget } from '$lib/localServerBanner';
 	import type { LauncherConfig, ProviderStatus } from '$lib/types';
@@ -36,7 +38,7 @@
 
 	let targetProvider = $derived(target.state === 'local' ? target.provider : null);
 	let targetId = $derived(targetProvider?.id ?? null);
-	let targetLabel = $derived(targetProvider?.label ?? '');
+	let targetLabel = $derived(targetProvider ? pLabel(targetProvider.id, targetProvider.label) : '');
 	let targetKind = $derived(targetProvider?.kind ?? null);
 
 	// mount, visibilitychange, navigation, the 15 s poll and the retry button all call check() independently

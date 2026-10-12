@@ -9,6 +9,8 @@
 	import * as Select from '$lib/components/ui/select';
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
 	import { t } from '$lib/i18n/index.svelte';
+	import { providerDisplayLabel } from '$lib/provider-label';
+	const pLabel = (id: string, label: string) => providerDisplayLabel(id, label, t);
 	import { selectionKey, parseSelectionKey } from '$lib/model-selection';
 	import type { ProviderModelOption } from '$lib/types';
 
@@ -231,7 +233,7 @@
 			<Select.Root type="single" value={selectionKeyState} onValueChange={handleModelSelect}>
 				<Select.Trigger class="w-full">
 					{selectedOption
-						? `${selectedOption.providerLabel} · ${selectedOption.id}`
+						? `${pLabel(selectedOption.providerId, selectedOption.providerLabel)} · ${selectedOption.id}`
 						: parseSelectionKey(selectionKeyState).modelId || t('ModelPickerRow.autoModel')}
 				</Select.Trigger>
 				<Select.Content>
@@ -244,8 +246,8 @@
 						</Select.Item>
 					{/if}
 					{#each modelOptions as m (m.providerId + '/' + m.id)}
-						<Select.Item value={selectionKey(m.providerId, m.id)} label={`${m.providerLabel} · ${m.id}`}>
-							{m.providerLabel} · {m.id}
+						<Select.Item value={selectionKey(m.providerId, m.id)} label={`${pLabel(m.providerId, m.providerLabel)} · ${m.id}`}>
+							{pLabel(m.providerId, m.providerLabel)} · {m.id}
 						</Select.Item>
 					{/each}
 				</Select.Content>
@@ -297,7 +299,7 @@
 			<AlertDialog.Header>
 				<AlertDialog.Title>{t('GenerationDialog.consentTitle')}</AlertDialog.Title>
 				<AlertDialog.Description>
-					{t('GenerationDialog.consentDescription', { provider: pendingModel.providerLabel })}
+					{t('GenerationDialog.consentDescription', { provider: pLabel(pendingModel.providerId, pendingModel.providerLabel) })}
 				</AlertDialog.Description>
 			</AlertDialog.Header>
 			<AlertDialog.Footer>
