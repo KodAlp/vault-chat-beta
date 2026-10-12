@@ -411,6 +411,9 @@
     "domainLabel": "Fachgebiet",
     "domainPlaceholder": "z. B. Mathe",
     "levelLabel": "Niveau",
+    "levelUndergraduate": "Bachelor",
+    "levelGraduate": "Master",
+    "levelPhd": "Promotion",
     "saveFailed": "Speichern fehlgeschlagen",
     "uploadFailed": "Hochladen fehlgeschlagen",
     "tooLarge": "Datei zu groß – der Server hat einen Upload dieser Größe abgelehnt."

@@ -403,6 +403,9 @@
     "domainLabel": "领域",
     "domainPlaceholder": "例如：数学",
     "levelLabel": "级别",
+    "levelUndergraduate": "本科",
+    "levelGraduate": "研究生",
+    "levelPhd": "博士",
     "saveFailed": "无法保存",
     "uploadFailed": "上传失败",
     "tooLarge": "文件过大——服务器拒绝了此大小的上传。"

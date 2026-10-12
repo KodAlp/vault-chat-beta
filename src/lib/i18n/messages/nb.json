@@ -412,6 +412,9 @@
 		"domainLabel": "Fagområde",
 		"domainPlaceholder": "f.eks. matte",
 		"levelLabel": "Nivå",
+		"levelUndergraduate": "Bachelor",
+		"levelGraduate": "Master",
+		"levelPhd": "Doktorgrad",
 		"saveFailed": "Kunne ikke lagre",
 		"uploadFailed": "Opplastingen mislyktes",
 		"tooLarge": "Filen er for stor – serveren avviste en opplasting av denne størrelsen."

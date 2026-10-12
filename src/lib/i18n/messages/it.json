@@ -413,6 +413,9 @@
 		"domainLabel": "Ambito",
 		"domainPlaceholder": "es. matematica",
 		"levelLabel": "Livello",
+		"levelUndergraduate": "Laurea triennale",
+		"levelGraduate": "Laurea magistrale",
+		"levelPhd": "Dottorato",
 		"saveFailed": "Impossibile salvare",
 		"uploadFailed": "Caricamento non riuscito",
 		"tooLarge": "File troppo grande: il server ha rifiutato un caricamento di queste dimensioni."

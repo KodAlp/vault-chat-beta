@@ -409,6 +409,9 @@
 		"domainLabel": "Dziedzina",
 		"domainPlaceholder": "np. matematyka",
 		"levelLabel": "Poziom",
+		"levelUndergraduate": "Studia licencjackie",
+		"levelGraduate": "Studia magisterskie",
+		"levelPhd": "Doktorat",
 		"saveFailed": "Nie udało się zapisać",
 		"uploadFailed": "Wysyłanie nie powiodło się",
 		"tooLarge": "Plik jest za duży — serwer odrzucił wysyłkę tego rozmiaru."

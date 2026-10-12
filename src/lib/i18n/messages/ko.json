@@ -403,6 +403,9 @@
 		"domainLabel": "분야",
 		"domainPlaceholder": "예: 수학",
 		"levelLabel": "수준",
+		"levelUndergraduate": "학부",
+		"levelGraduate": "대학원",
+		"levelPhd": "박사",
 		"saveFailed": "저장하지 못했어요",
 		"uploadFailed": "업로드 실패",
 		"tooLarge": "파일이 너무 커요. 서버가 이 크기의 업로드를 거부했어요."

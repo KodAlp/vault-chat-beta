@@ -412,6 +412,9 @@
 		"domainLabel": "Oblast",
 		"domainPlaceholder": "např. matematika",
 		"levelLabel": "Úroveň",
+		"levelUndergraduate": "Bakalářské",
+		"levelGraduate": "Magisterské",
+		"levelPhd": "Doktorské",
 		"saveFailed": "Uložení se nezdařilo",
 		"uploadFailed": "Nahrání selhalo",
 		"tooLarge": "Soubor je příliš velký – server nahrání takové velikosti odmítl."

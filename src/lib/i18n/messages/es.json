@@ -415,6 +415,9 @@
     "domainLabel": "Dominio",
     "domainPlaceholder": "p. ej., matemáticas",
     "levelLabel": "Nivel",
+    "levelUndergraduate": "Grado",
+    "levelGraduate": "Posgrado",
+    "levelPhd": "Doctorado",
     "saveFailed": "No se pudo guardar",
     "uploadFailed": "La subida falló",
     "tooLarge": "Archivo demasiado grande: el servidor rechazó una subida de este tamaño."

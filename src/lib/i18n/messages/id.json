@@ -403,6 +403,9 @@
     "domainLabel": "Bidang",
     "domainPlaceholder": "mis. matematika",
     "levelLabel": "Tingkat",
+    "levelUndergraduate": "Sarjana",
+    "levelGraduate": "Pascasarjana",
+    "levelPhd": "Doktor",
     "saveFailed": "Gagal menyimpan",
     "uploadFailed": "Unggahan gagal",
     "tooLarge": "Berkas terlalu besar — server menolak unggahan dengan ukuran ini."

@@ -438,6 +438,9 @@
 		"domainLabel": "Område",
 		"domainPlaceholder": "t.ex. matematik",
 		"levelLabel": "Nivå",
+		"levelUndergraduate": "Kandidat",
+		"levelGraduate": "Master",
+		"levelPhd": "Doktor",
 		"saveFailed": "Kunde inte spara",
 		"uploadFailed": "Uppladdningen misslyckades",
 		"tooLarge": "Filen är för stor – servern avvisade en uppladdning av den här storleken."

@@ -91,6 +91,9 @@
 	// A folder pick names the domain; loose files leave it for the user to type.
 	let domain = $state(initial.folderName);
 	let level = $state('undergraduate');
+	// Level values are stored as English enums; the shown label is translated (ImportFlow.level*).
+	const levelLabel = (v: string) =>
+		v === 'graduate' ? t('ImportFlow.levelGraduate') : v === 'phd' ? t('ImportFlow.levelPhd') : t('ImportFlow.levelUndergraduate');
 
 	type Phase = 'idle' | 'running' | 'done';
 	let phase = $state<Phase>('idle');
@@ -278,11 +281,11 @@
 	<label class="flex flex-col gap-1.5 text-[13px] leading-[18px] font-medium">
 		{t('ImportFlow.levelLabel')}
 		<Select.Root type="single" bind:value={level}>
-			<Select.Trigger class="w-full">{level}</Select.Trigger>
+			<Select.Trigger class="w-full">{levelLabel(level)}</Select.Trigger>
 			<Select.Content>
-				<Select.Item value="undergraduate" label="undergraduate">undergraduate</Select.Item>
-				<Select.Item value="graduate" label="graduate">graduate</Select.Item>
-				<Select.Item value="phd" label="phd">phd</Select.Item>
+				<Select.Item value="undergraduate" label={t('ImportFlow.levelUndergraduate')}>{t('ImportFlow.levelUndergraduate')}</Select.Item>
+				<Select.Item value="graduate" label={t('ImportFlow.levelGraduate')}>{t('ImportFlow.levelGraduate')}</Select.Item>
+				<Select.Item value="phd" label={t('ImportFlow.levelPhd')}>{t('ImportFlow.levelPhd')}</Select.Item>
 			</Select.Content>
 		</Select.Root>
 	</label>
