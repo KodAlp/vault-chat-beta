@@ -2,9 +2,7 @@ import { chatWithFallback } from './providers/registry';
 import type { ChatMessage } from './providers/types';
 import { setChatTitle } from './chats-db';
 import { logAppEvent } from './app-log';
-
-const SYSTEM_PROMPT =
-	'Kullanıcının sorduğu soruyu 3-6 kelimelik kısa bir Türkçe başlığa dönüştür. Sadece başlığı yaz, tırnak işareti veya açıklama ekleme.';
+import { buildTitleSystemPrompt } from './title-prompt';
 
 /**
  * Fire-and-forget from the /api/chat handler — never awaited, never allowed
@@ -24,11 +22,12 @@ export async function generateTitle(
 	chatId: string,
 	question: string,
 	model: string,
-	provider?: string
+	provider?: string,
+	primaryLanguage?: string
 ): Promise<void> {
 	try {
 		const messages: ChatMessage[] = [
-			{ role: 'system', content: SYSTEM_PROMPT },
+			{ role: 'system', content: buildTitleSystemPrompt(question, primaryLanguage) },
 			{ role: 'user', content: question }
 		];
 		let title = '';

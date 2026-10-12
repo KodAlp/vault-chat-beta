@@ -721,7 +721,8 @@ export const POST: RequestHandler = async ({ request }) => {
 							chatId,
 							lastUser.content,
 							body.titleModel ?? body.model,
-							body.titleProvider ?? body.provider
+							body.titleProvider ?? body.provider,
+							allowedLanguages.length ? allowedLanguages[0] : undefined
 						);
 					}
 				} catch (err) {
