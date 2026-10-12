@@ -426,47 +426,73 @@ macOS ilk açılışta engeller ("geliştirici doğrulanamadı" ya da "hasarlı"
 xattr -dr com.apple.quarantine /Applications/vault-chat.app
 ```
 
-## MCP Sunucusu (Faz 10)
+## MCP Sunucusu
 
-Kasandaki notları Claude Code/Desktop gibi MCP istemcilerine salt-okunur
-olarak açan yerel bir sunucu — ayrı bir paket veya kurulum gerektirmez,
-`mcp/` bu repo'nun içinde `indexer/` ile aynı desende yaşar.
+Kasandaki notları Claude Code/Desktop gibi MCP istemcilerine açan yerel bir
+sunucu — ayrı bir paket veya kurulum gerektirmez, `mcp/` bu repo'nun içinde
+`indexer/` ile aynı desende yaşar.
 
-**v1 kapsamı:** `list_vaults`, `search_library`, `get_note`,
-`list_sources`. Hiçbir aracın DB'ye yazma izni yok; `generate_quiz`/
-`generate_flashcards` gibi üretici araçlar bilinçli olarak ertelendi —
-gerekçe `.claude/skills/mcp-server/SKILL.md`'de.
+**Araçlar:**
 
-Claude Code'a eklemek için (en hızlı yol — `--scope user` olmadan kayıt
-yalnızca komutun çalıştırıldığı dizine bağlanır):
+- `list_vaults` — MCP'ye açık kasaları listeler (kasa başına açma/kapama: **Ayarlar → Kasalar**).
+- `search_library` — kasada arar; vektör araması, embedding yoksa ya da sonuç vermezse anahtar kelime (FTS5) yedeğiyle. `domain`/`level` süzgeci alır.
+- `get_note` — bir notu okur.
+- `list_sources` — kasadaki kaynakları, domain ve seviye değerleriyle listeler.
+- `create_vault` — yeni kasa oluşturur.
+- `import_source` — yerel dosya ya da URL'yi içe aktarmak üzere **bekleyenlere** ekler.
+- `list_pending_imports` — bekleyen içe aktarmaların durumunu gösterir.
+
+Yazma araçları uygulamanın API'si üzerinden çalışır, bu yüzden **uygulamanın
+açık olması** gerekir (uygulama, `DATA_DIR` içine `mcp-endpoint.json` yazar).
+İçe aktarılan kaynak, sen uygulamada onaylayana kadar kütüphaneye girmez; ajan
+bunu kendisi onaylayamaz ya da ayarı değiştiremez. Yerel dosyalar yalnızca
+**Ayarlar**'da izin verdiğin klasörlerden okunur; URL'ler normal web
+içe aktarmasından geçer. İstersen kasa başına **MCP içe aktarmalarını
+otomatik onayla** ayarını açabilirsin: `off` (varsayılan, her şeyi sen
+onaylarsın), `clean` (yalnızca uyarısız, inceleme işaretsiz, kopya olmayanlar)
+ya da `all` (başarılı her içe aktarma). `all` ajanın getirdiği içeriği sen
+görmeden aramaya katar — prompt injection riskini göz önünde bulundur.
+
+**Bağlanmak.** Kurulu masaüstü uygulamasının verisi `%APPDATA%\Roaming\app.vaultchat.desktop\`
+altındadır (bkz. "Masaüstü (Tauri)"); `DATA_DIR` bu klasörü göstermelidir.
+Kaynak koddan çalıştırıyorsan varsayılan repo'nun `data/` klasörüdür. Claude
+Code için (`--scope user` olmadan kayıt yalnızca komutun çalıştırıldığı dizine
+bağlanır):
 
 ```bash
 claude mcp add --scope user vault-chat -- node "<bu repo>\mcp\launch.mjs"
 ```
 
-Claude Desktop için, `%APPDATA%\Claude\claude_desktop_config.json`'a
-eklenecek hazır bloğu üretmek üzere:
+Claude Desktop için `%APPDATA%\Claude\claude_desktop_config.json`'a eklenecek
+bloğu, **mutlak** `DATA_DIR` ve `node` yoluyla hazır üretmek için:
 
 ```bash
 npm run mcp:config
 ```
 
-Bu komut, çözümlenmiş **mutlak** `DATA_DIR` yolunu içeren bir JSON bloğu
-yazdırır — elle path yazmaya gerek yok. Masaüstü (Tauri) uygulamasını
-kullanıyorsan `DATA_DIR`'ın `%APPDATA%\Roaming\app.vaultchat.desktop\`'ı
-değil, bu repo'nun `data/` klasörünü gösterdiğine dikkat et; ikisi ayrı
-veri kümeleridir (bkz. yukarıdaki "Masaüstü (Tauri)" bölümü) — MCP
-sunucusu şu an yalnızca tarayıcı akışının `data/`'sını okuyabiliyor,
-paketlenmiş uygulamanın verisini okuma Faz 10.5'e bırakıldı.
+Çıktı şu biçimdedir; kurulu uygulamanın verisini okutmak için `DATA_DIR`'ı
+yukarıdaki AppData klasörüyle değiştir:
 
-`claude_desktop_config.json`'da `"command"` her zaman `"node"` olmalı,
-`"npx"`/`"tsx"` değil — Windows'ta ikisi de `.cmd` shim'i ve shell'siz
+```json
+{
+  "mcpServers": {
+    "vault-chat": {
+      "command": "node",
+      "args": ["<repo>\mcp\launch.mjs"],
+      "env": { "DATA_DIR": "<veri klasörü>" }
+    }
+  }
+}
+```
+
+`"command"` `node` (ya da `npm run mcp:config`'in yazdığı mutlak `node` yolu)
+olmalı, `"npx"`/`"tsx"` değil — Windows'ta ikisi de `.cmd` shim'i ve shell'siz
 spawn eden istemcilerde `ENOENT` verir.
 
 Doğrulama:
 
 ```bash
-npm run mcp:smoke   # 4 aracı tek süreçte, gerçek bir model sunucusuna dokunmadan test eder
+npm run mcp:smoke   # araçları tek süreçte, gerçek bir model sunucusuna dokunmadan test eder
 ```
 
 Sunucu ayaktayken tanı için tek stderr satırı yeterli: `DATA_DIR=... vaults=N`.
