@@ -1,4 +1,5 @@
 import { ollamaGate } from './providers/ollama-gate';
+import { fetchWithStartupWait } from './ollama-startup-wait';
 
 /**
  * Embeddings are explicitly out of scope for the provider layer
@@ -46,7 +47,7 @@ export interface EmbedOptions {
 
 export async function embed(texts: string[], model: string, opts: EmbedOptions): Promise<number[][]> {
 	return ollamaGate.withModel(model, async () => {
-		const res = await fetch(`${opts.baseUrl.trim().replace(/\/+$/, '')}/api/embed`, {
+		const res = await fetchWithStartupWait(`${opts.baseUrl.trim().replace(/\/+$/, '')}/api/embed`, {
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify({ model, input: texts, ...(opts.cpuOnly ? { options: { num_gpu: 0 } } : {}) })
