@@ -19,8 +19,9 @@ export function registerSearchLibrary(server: McpServer): void {
 		{
 			title: 'Search library',
 			description:
-				'Semantic (vector) search over one vault\'s indexed notes. Not full-text/hybrid search — ' +
-				'v1 is vector-only. Returns the vault id you actually searched, so you never have to guess ' +
+				'Semantic (vector) search over one vault\'s indexed notes. When vector search cannot run (no or ' +
+				'unavailable embedding provider, or an FTS-only index), it falls back to full-text (SQLite FTS5 ' +
+				'keyword) search over the same notes; the two are never merged. Returns the vault id you actually searched, so you never have to guess ' +
 				'which one answered. Call list_vaults first if you don\'t already know the vault id, or ' +
 				'list_sources to see which domain/level values actually exist before filtering by them.',
 			inputSchema: {
