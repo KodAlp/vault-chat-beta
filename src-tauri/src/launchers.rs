@@ -1370,6 +1370,16 @@ fn read_log_tail(path: &Path) -> String {
 /// port — that check happens unconditionally, first thing, for every
 /// caller.
 async fn start_launcher_by_id(app: &AppHandle, id: &str) -> Result<(), String> {
+    start_launcher_with_fallback(app, id, None).await
+}
+
+/// `fallback_cfg` is used only when launchers.json has no entry for `id`
+/// (the implicit-Ollama startup path); a stored entry always wins.
+async fn start_launcher_with_fallback(
+    app: &AppHandle,
+    id: &str,
+    fallback_cfg: Option<LauncherConfig>,
+) -> Result<(), String> {
     let entry = catalog_entry(id).ok_or_else(|| format!("Bilinmeyen sunucu türü: {id}"))?;
     if !entry.launchable {
         return Err(format!(
@@ -1392,6 +1402,7 @@ async fn start_launcher_by_id(app: &AppHandle, id: &str) -> Result<(), String> {
     let cfg = launchers
         .into_iter()
         .find(|l| l.id == id)
+        .or(fallback_cfg)
         .ok_or_else(|| format!("{} için önce bir program seçin.", entry.display_name))?;
     validate_launcher_config(entry, &cfg)?;
 
@@ -1638,6 +1649,18 @@ pub(crate) async fn startup(app: AppHandle) {
         }
     };
 
+    // #87: a user whose providers.json uses a local Ollama but who has NO
+    // "ollama" launcher entry at all (installed Ollama after the first-run
+    // seed, or the seed never found it) used to get no server until they
+    // started it by hand. Start it for this session only — nothing is written
+    // to launchers.json. An existing entry (even with auto_start off) is the
+    // user's explicit choice and is never overridden.
+    let implicit_ollama = if !launchers.iter().any(|l| l.id == "ollama") && providers_use_ollama(&app) {
+        implicit_ollama_config().await
+    } else {
+        None
+    };
+
     // Run every auto_start launcher's start attempt in parallel — each one
     // already skips cleanly if its port is externally occupied
     // (start_launcher_by_id's own check), so there's no ordering
@@ -1651,9 +1674,71 @@ pub(crate) async fn startup(app: AppHandle) {
             }
         }));
     }
+    if let Some(cfg) = implicit_ollama {
+        log_line(&app, "launcher startup: providers use Ollama but no launcher entry exists, starting it for this session");
+        if let Err(e) = start_launcher_with_fallback(&app, "ollama", Some(cfg)).await {
+            log_line(&app, &format!("implicit Ollama start failed: {e}"));
+        }
+    }
     for h in handles {
         let _ = h.await;
     }
+}
+
+/// True when providers.json says the local Ollama is actually in use: an
+/// ENABLED ollama-kind provider that heads the chat chain or is the embedding
+/// provider (absent `embedding` key + an ollama entry = the legacy ollama
+/// default, same rule as config-store.ts's getEmbeddingConfig). Cloud-only
+/// configs return false.
+fn providers_use_ollama_raw(raw: &str) -> bool {
+    let Ok(v) = serde_json::from_str::<serde_json::Value>(raw) else {
+        return false;
+    };
+    let Some(providers) = v.get("providers").and_then(|p| p.as_array()) else {
+        return false;
+    };
+    let is_enabled_ollama = |id: &str| {
+        providers.iter().any(|p| {
+            p.get("id").and_then(|x| x.as_str()) == Some(id)
+                && p.get("kind").and_then(|x| x.as_str()) == Some("ollama")
+                && p.get("enabled").and_then(|x| x.as_bool()).unwrap_or(false)
+        })
+    };
+    let chat_head = v
+        .get("chains")
+        .and_then(|c| c.get("chat"))
+        .and_then(|c| c.as_array())
+        .and_then(|c| c.first())
+        .and_then(|x| x.as_str());
+    if chat_head.is_some_and(is_enabled_ollama) {
+        return true;
+    }
+    match v.get("embedding") {
+        None => providers.iter().any(|p| p.get("id").and_then(|x| x.as_str()) == Some("ollama")) && is_enabled_ollama("ollama"),
+        Some(e) if e.is_null() => false,
+        Some(e) => e.get("providerId").and_then(|x| x.as_str()).is_some_and(is_enabled_ollama),
+    }
+}
+
+fn providers_use_ollama(app: &AppHandle) -> bool {
+    let Ok(dir) = app.path().app_data_dir() else {
+        return false;
+    };
+    std::fs::read_to_string(dir.join("providers.json")).map(|raw| providers_use_ollama_raw(&raw)).unwrap_or(false)
+}
+
+async fn implicit_ollama_config() -> Option<LauncherConfig> {
+    let path = tauri::async_runtime::spawn_blocking(|| detect_installed_path("ollama")).await.ok().flatten()?;
+    let entry = catalog_entry("ollama")?;
+    Some(LauncherConfig {
+        id: entry.id.to_string(),
+        program: path.to_string_lossy().to_string(),
+        args: entry.default_args.iter().map(|s| s.to_string()).collect(),
+        port: entry.port,
+        auto_start: true,
+        model_path: None,
+        model: None,
+    })
 }
 
 /// Called from lib.rs's `RunEvent::ExitRequested` handler, alongside (not
@@ -1695,6 +1780,25 @@ mod tests {
     use super::*;
     use std::io::BufRead;
     use std::net::TcpListener;
+
+    #[test]
+    fn providers_use_ollama_cases() {
+        let ollama_on = r#"{"providers":[{"id":"ollama","kind":"ollama","enabled":true},{"id":"x","kind":"openai-compat","enabled":true}]"#;
+        assert!(providers_use_ollama_raw(&format!(r#"{ollama_on},"chains":{{"chat":["ollama"]}}}}"#)));
+        // cloud chat head, embedding key absent -> legacy ollama embedding default
+        assert!(providers_use_ollama_raw(&format!(r#"{ollama_on},"chains":{{"chat":["x"]}}}}"#)));
+        // explicit FTS-only
+        assert!(!providers_use_ollama_raw(&format!(r#"{ollama_on},"chains":{{"chat":["x"]}},"embedding":null}}"#)));
+        // embedding on cloud provider
+        assert!(!providers_use_ollama_raw(&format!(
+            r#"{ollama_on},"chains":{{"chat":["x"]}},"embedding":{{"providerId":"x"}}}}"#
+        )));
+        // ollama disabled
+        assert!(!providers_use_ollama_raw(
+            r#"{"providers":[{"id":"ollama","kind":"ollama","enabled":false}],"chains":{"chat":["ollama"]}}"#
+        ));
+        assert!(!providers_use_ollama_raw("not json"));
+    }
 
     // -- winget install-dir fallback -------------------------------------
 
