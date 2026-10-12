@@ -2,7 +2,7 @@
 
 Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncellenir.
 
-**Son güncelleme:** 2026-10-12 · Acil'in 8 küçük maddesi bitti (#1, #36, #44, #46, #54, #57, #64, #73)
+**Son güncelleme:** 2026-10-12 · Acil'den 2. tur: #7, #10, #11, #13, #31, #66, #71, #72, #87 bitti
 
 ## Kurallar
 
@@ -32,7 +32,6 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 ### 1. Bakım ve temizlik
 
 ### 2. Kurulum ve veri sağlamlığı
-- [ ] **Ollama ilk sohbete kadar başlamıyor.** Uygulama yeniden açılınca dış betikler `indexPending` alıyor. `K` · #87
 - [ ] **"Veriyi yedekle" ayarı.** Bugün yalnız CLI betiği var. `O` · #61
 
 ### 3. Test ve doğrulama
@@ -41,13 +40,9 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 - [ ] **Erişilebilirlik, e2e form testleri, kırık link taraması.** `O` · #62
 
 ### 4. Sohbet ve dil tutarlılığı
-- [ ] **Seviye seçici ham İngilizce.** `K` · #66 (çekildi)
-- [ ] **Small-talk eşikleri yalnız bge-m3 için.** Diğer embedding modellerinde kapı kapalı. `K` · #31
 - [ ] **Yanlış "Kaynaklar alakasız" rozeti.** Kaynaklar doğruyken çıkıyor (küçük kasada iki kez görüldü). `K–O` · #35
 
 ### 5. Düzenleyici ve sohbet görünümü
-- [ ] **Sohbetteki kod bloğunda gri şerit.** Her satırın arkasında şerit, sonda artık; kaynak görüntüleyicide yok. `K` · #72
-- [ ] **CodeMirror CRLF'yi LF'ye çeviriyor.** `K` · #71
 - [ ] **Slaytta quote ve two-column düzenleri.** Uygun içerikle dene. `K` · #74
 - [ ] **Düzenleyicide görsel yükleme.** Görsel düğmesi yalnız bağlantı ekliyor. `K–O` · #70
 - [ ] **`@milkdown/plugin-math` deprecated.** Yerine geçecek paketi seç. `O` · #69
@@ -57,10 +52,6 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 - [ ] **Formül yoğun klasörlerin hızı.** Sayfa başına 15–25 sn; 200+ saatlik klasörler. `B` · #82
 
 ### 7. İçe aktarmada sessiz bozulma
-- [ ] **Taranmış PDF'e yanlış `PDF_DAMAGED`.** `convert.py` sayfa sayısı kontrolü. `K` · #7 (çekildi)
-- [ ] **Anlamsız önerilen başlıklar.** "******", "PowerPoint Sunusu". `K` · #10 (çekildi)
-- [ ] **Uzun taramada `updatedAt` güncellenmiyor.** Görsel sayacı da tutarsız (538 ≠ 486). `K` · #11
-- [ ] **Word denklem görselleri süzgece takılıyor.** `ingest/images.py` `MIN_SIDE_PX = 48`. `K` · #13
 - [ ] **Sessiz glif bozulması.** docling virgülü ↪, `|` işaretini ♣ yapıyor, uyarı yok; pypdf ile karşılaştır. `O` · #6
 - [ ] **OCR dil seçimi.** Türkçe karakterler bozuluyor; Bengalce çöp çıktı. `O` · #8
 - [ ] **OCR'da geçerli ama yanlış LaTeX.** Σ → `\S`, uyarı yok. `O` · #9
@@ -116,6 +107,10 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 
 ## Öneriler
 
+- [ ] **#87'yi paketli sürümde doğrula.** `launchers.json`'dan ollama kaydını sil, uygulamayı aç: `launch.log`'da "starting it for this session" görünmeli; açılış anında MCP `search_library` 30 sn içinde yanıt vermeli. `K`
+- [ ] **#31'i gerçek bir modelle doğrula.** Kalibrasyon yalnız sentetik vektörlerle sınandı; nomic/qwen3 embedding ile 2016 negatiflik setinde yanlış pozitif ölç. `O`
+- [ ] **#7'yi asıl dosyayla dene.** 34 sayfalık taranmış Sinyaller final PDF'i (Kolay Matematik testi). `K`
+- [ ] **Çok kısa gerçek başlıklar dosya adına düşüyor.** #10'un yan etkisi: "Go", "R" gibi başlıklar artık reddediliyor. `K`
 - [ ] **`chat-fallback.ts` yedek mesajı sabit Türkçe.** Ham sağlayıcı etiketini de kullanıyor; #73'ün devamı. `K`
 - [ ] **`npx tsc --noEmit -p mcp` hatası.** `src/lib/server/app-error.ts:47` TS2769; eski bir hata gibi görünüyor, doğrula. `K`
 
@@ -148,6 +143,12 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 
 Yalnız son iki haftanın kaydı tutulur; daha eskisi git geçmişindedir.
 
+- 2026-10-12: Word denklemi gibi geniş-alçak görseller süzgeçten geçiyor (#13). `51b868f`
+- 2026-10-12: taranmış PDF'e yanlış PDF_DAMAGED yok (#7, savunmacı; asıl 34 sayfalık dosyayla denenmedi), anlamsız başlıklar eleniyor (#10), MCP içe aktarmada updatedAt nabızla güncelleniyor ve görsel sayacı tutarlı (#11). `84f822f`
+- 2026-10-12: içe aktarmadaki seviye seçici 23 dilde (#66). `18d84d8`
+- 2026-10-12: sohbet kapısı bge-m3 dışı modellerde çalışırken kalibre ediliyor (#31). `d029955`
+- 2026-10-12: launcher kaydı yoksa da Ollama açılışta başlıyor; açılışta embedding 30 sn'ye kadar bekliyor (#87). `5576744`
+- 2026-10-12: sohbetteki kod bloğunda şerit/artık yok (#72, koyu ve açık temada denetlendi); CodeMirror CRLF'yi koruyor (#71). `d65894d`
 - 2026-10-12: "Formül Testi" kasası ve `_formul-testi/` silindi (#22). #23 elendi.
 - 2026-10-12: disk temizliği; 14 worktree, 7 yarım kalmış worktree klasörü ve ana `src-tauri/target` silindi, ~25 GB. Dallar yer kaplamadığı için kaldı (#58).
 - 2026-10-12: sürüm artırma betiği `npm run version:bump -- 0.3.1` (#54). `49f343b`
