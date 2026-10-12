@@ -2,7 +2,7 @@
 
 Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncellenir.
 
-**Son güncelleme:** 2026-10-12 · Acil'den 2. tur: #7, #10, #11, #13, #31, #66, #71, #72, #87 bitti
+**Son güncelleme:** 2026-10-12 · Acil 3. tur: #35, #38, #70 bitti, #5 betiği hazır
 
 ## Kurallar
 
@@ -38,11 +38,9 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 - [ ] **Erişilebilirlik, e2e form testleri, kırık link taraması.** `O` · #62
 
 ### 3. Sohbet ve dil tutarlılığı
-- [ ] **Yanlış "Kaynaklar alakasız" rozeti.** Kaynaklar doğruyken çıkıyor (küçük kasada iki kez görüldü). `K–O` · #35
 
 ### 4. Düzenleyici ve sohbet görünümü
 - [ ] **Slaytta quote ve two-column düzenleri.** Uygun içerikle dene. `K` · #74
-- [ ] **Düzenleyicide görsel yükleme.** Görsel düğmesi yalnız bağlantı ekliyor. `K–O` · #70
 - [ ] **`@milkdown/plugin-math` deprecated.** Yerine geçecek paketi seç. `O` · #69
 
 ### 5. Büyük belgelerde bellek ve hız
@@ -55,13 +53,12 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 - [ ] **OCR'da geçerli ama yanlış LaTeX.** Σ → `\S`, uyarı yok. `O` · #9
 
 ### 7. MCP araçları ve belgeleri
-- [ ] **Ayarlar'da "MCP istemcisine bağla".** Claude Desktop, LM Studio, Jan ve genel JSON. `K–O` · #38
 - [ ] **`edit_note` aracı.** Geliştirici anahtarıyla, varsayılan kapalı. `O` · #40
 - [ ] **MCP okuma iyileştirmeleri.** Araştırma C5. `O` · #41
 - [ ] **Yerel modellerle MCP deneyi.** Qwen3 8B/4B, LM Studio. `O` · #39 (çekildi)
 
 ### 8. Formül doğruluğu
-- [ ] **MinerU ham kitaplarında KaTeX temizliği.** Çift `\tag`, sözde kod, `\Ss` için mekanik betik. `K–O` · #5 (çekildi)
+- [ ] **MinerU KaTeX temizliğini uygula.** Betik hazır (`scripts/katex-cleanup.mjs`, deneme: 296 düzeltilebilir / 236 düzeltilemez / 42 kod sanılmış); kalan: kullanıcı kararı (son `	ag` korunsun mu, entity/makro düzeltmeleri) ve kasa dışı yedekle `--write`. `K` · #5 (çekildi)
 - [ ] **Fizik'te kalan 48 geçersiz formül.** Kısmen yapıldı; kalan: onarım betiği, sonra 0.3.0 ile yeniden içe aktarma. `O` · #2
 - [ ] **Model kapasitesi hataları (♯, ∝).** MinerU yedeğiyle düzeldi mi, ölç. `O` · #4
 - [ ] **"Yalnız hatalı formülü onar".** Sayfa + kutu; belgenin tamamını yeniden okumadan. `B` · #3
@@ -141,6 +138,9 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 
 Yalnız son iki haftanın kaydı tutulur; daha eskisi git geçmişindedir.
 
+- 2026-10-12: "Kaynaklar alakasız" düğmesi yalnız güçlü kaynak yoksa çıkıyor (#35; eşik 0,5 ölçülmedi). `b012c15`
+- 2026-10-12: düzenleyicide görsel yükleme (#70) ve Ayarlar → Kasalar'da "MCP istemcisine bağla" kartı (#38). `46c4994`
+- 2026-10-12: KaTeX temizlik betiği, yalnız deneme modunda çalıştırıldı (#5'in ilk yarısı). `30e0e86`
 - 2026-10-12: Word denklemi gibi geniş-alçak görseller süzgeçten geçiyor (#13). `51b868f`
 - 2026-10-12: taranmış PDF'e yanlış PDF_DAMAGED yok (#7, savunmacı; asıl 34 sayfalık dosyayla denenmedi), anlamsız başlıklar eleniyor (#10), MCP içe aktarmada updatedAt nabızla güncelleniyor ve görsel sayacı tutarlı (#11). `84f822f`
 - 2026-10-12: içe aktarmadaki seviye seçici 23 dilde (#66). `18d84d8`
