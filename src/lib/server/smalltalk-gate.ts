@@ -19,7 +19,8 @@
  * unrelated-text cosines sit much higher), and a false "small talk" flag silently removes
  * grounding. So the gate is active only for that family (isGateCalibratedFor, whichever server
  * serves it) and OFF for any other embedding model — retrieval then proceeds normally. Using
- * another model requires re-running the validation below and extending the check.
+ * another model has its thresholds derived at runtime from the seed/probe separation
+ * (smalltalk-calibration.ts) and stays OFF until that succeeds.
  *
  * Measured on the real vault with bge-m3, against 2016 negatives (252 note titles
  * x 8 shapes: bare, "X nedir", "what is X", ..., with and without a greeting
@@ -75,6 +76,28 @@ export const NEGATIVE_SIM = 0.85;
 /** At or above this a message is "the same phrase" — not worth storing again. */
 export const DUPLICATE_SIM = 0.95;
 
+/**
+ * The numbers decideSmallTalk and the store compare against. DEFAULT_THRESHOLDS are the bge-m3
+ * measurements above (byte-identical to the constants); any other model gets thresholds derived
+ * at runtime by smalltalk-calibration.ts. `seedMinCorpusDist: null` = the corpus-distance
+ * condition is not applied (its 0.45 was measured with bge-m3's distance distribution only; a
+ * derived seedSim already carries extra margin instead).
+ */
+export interface GateThresholds {
+	seedSim: number;
+	seedMinCorpusDist: number | null;
+	personalSim: number;
+	negativeSim: number;
+	duplicateSim: number;
+}
+export const DEFAULT_THRESHOLDS: GateThresholds = {
+	seedSim: SEED_SIM,
+	seedMinCorpusDist: SEED_MIN_CORPUS_DIST,
+	personalSim: PERSONAL_SIM,
+	negativeSim: NEGATIVE_SIM,
+	duplicateSim: DUPLICATE_SIM
+};
+
 export type PhraseSource = 'seed' | 'auto' | 'user';
 export type PhraseKind = 'smalltalk' | 'question';
 
@@ -127,7 +150,8 @@ export function dot(a: ArrayLike<number>, b: ArrayLike<number>): number {
 export function decideSmallTalk(
 	query: ArrayLike<number>,
 	corpusDist: number | undefined,
-	phrases: readonly GatePhrase[]
+	phrases: readonly GatePhrase[],
+	t: GateThresholds = DEFAULT_THRESHOLDS
 ): GateDecision {
 	const q = normalize(query);
 
@@ -150,11 +174,11 @@ export function decideSmallTalk(
 	// A phrase the user or a seed matches at PERSONAL_SIM+ is "the same thing again";
 	// a seed further away also needs the corpus to have nothing close.
 	let via: 'personal' | 'seed' | undefined;
-	if (best && best.sim >= PERSONAL_SIM) via = best.source === 'seed' ? 'seed' : 'personal';
-	else if (bestSeed && bestSeed.sim >= SEED_SIM && (corpusDist === undefined || corpusDist >= SEED_MIN_CORPUS_DIST)) via = 'seed';
+	if (best && best.sim >= t.personalSim) via = best.source === 'seed' ? 'seed' : 'personal';
+	else if (bestSeed && bestSeed.sim >= t.seedSim && (t.seedMinCorpusDist === null || corpusDist === undefined || corpusDist >= t.seedMinCorpusDist)) via = 'seed';
 
 	if (!via) return { smallTalk: false, ...base };
-	if (negative >= NEGATIVE_SIM) return { smallTalk: false, vetoed: true, ...base };
+	if (negative >= t.negativeSim) return { smallTalk: false, vetoed: true, ...base };
 	return { smallTalk: true, via, ...base };
 }
 

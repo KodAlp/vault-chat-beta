@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { checkSmallTalk, teachSmallTalk, afterSmallTalkGate, learnFromMessage, smallTalkGateActive } from './smalltalk-runtime';
+import { _setEmbedFnForTests, checkSmallTalk, teachSmallTalk, afterSmallTalkGate, learnFromMessage, smallTalkGateActive } from './smalltalk-runtime';
 import { setEmbeddingConfig, type ProvidersFile } from './providers/config-store';
 
 // Aşama 4a — FTS-only mode (embedding null): every entry point of the small-talk glue must be a quiet no-op.
@@ -42,6 +42,9 @@ function useEmbeddingConfig(model: string, dims: number): void {
 }
 
 test('gate is inactive and all entry points are no-ops for a non-bge-m3 embedding model', async () => {
+	_setEmbedFnForTests(async () => {
+		throw new Error('no real model in tests');
+	});
 	useEmbeddingConfig('nomic-embed-text', 768);
 	assert.equal(smallTalkGateActive(), false);
 	assert.equal(checkSmallTalk([1, 0, 0], 0.1), null);

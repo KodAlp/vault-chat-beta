@@ -1,10 +1,10 @@
 import type Database from 'better-sqlite3';
 import {
-	DUPLICATE_SIM,
-	NEGATIVE_SIM,
+	DEFAULT_THRESHOLDS,
 	dot,
 	normalize,
 	type GatePhrase,
+	type GateThresholds,
 	type PhraseKind,
 	type PhraseSource
 } from './smalltalk-gate';
@@ -47,6 +47,12 @@ export function initSmallTalkSchema(db: Database.Database): void {
 			last_hit_at TEXT
 		);
 		CREATE INDEX IF NOT EXISTS idx_smalltalk_model ON smalltalk_phrases(embed_model);
+		CREATE TABLE IF NOT EXISTS smalltalk_calibration (
+			embed_model TEXT PRIMARY KEY,
+			signature TEXT NOT NULL,
+			thresholds_json TEXT NOT NULL,
+			created_at TEXT NOT NULL
+		);
 	`);
 }
 
@@ -192,23 +198,24 @@ export function learn(
 	text: string,
 	vec: ArrayLike<number>,
 	source: 'auto' | 'user',
-	opts: { maxLearned?: number } = {}
+	opts: { maxLearned?: number; thresholds?: GateThresholds } = {}
 ): LearnResult | null {
 	const clean = tidy(text);
 	if (!clean || clean.length > MAX_PHRASE_CHARS) return null;
+	const { negativeSim, duplicateSim } = opts.thresholds ?? DEFAULT_THRESHOLDS;
 	const v = normalize(vec);
 	const phrases = loadPhrases(db, model);
 	const veto = nearest(phrases, v, 'question');
-	if (veto && veto.sim >= NEGATIVE_SIM) return null;
+	if (veto && veto.sim >= negativeSim) return null;
 	const dup = nearest(phrases.filter((p) => !p.blocked), v, 'smalltalk');
-	if (dup && dup.sim >= DUPLICATE_SIM) {
+	if (dup && dup.sim >= duplicateSim) {
 		recordHit(db, dup.id);
 		return { id: dup.id, created: false };
 	}
 	// The user explicitly teaching a phrase overrides an earlier block on a near-duplicate.
 	if (source === 'user') {
 		const blockedDup = nearest(phrases.filter((p) => p.blocked && p.source !== 'seed'), v, 'smalltalk');
-		if (blockedDup && blockedDup.sim >= DUPLICATE_SIM) {
+		if (blockedDup && blockedDup.sim >= duplicateSim) {
 			db.prepare('UPDATE smalltalk_phrases SET blocked = 0 WHERE id = ?').run(blockedDup.id);
 			invalidate(db);
 			return { id: blockedDup.id, created: false };
@@ -226,7 +233,8 @@ export function confirmQuestion(
 	model: string,
 	text: string,
 	vec: ArrayLike<number>,
-	blockPhraseId?: number
+	blockPhraseId?: number,
+	thresholds: GateThresholds = DEFAULT_THRESHOLDS
 ): void {
 	if (blockPhraseId !== undefined) {
 		db.prepare("UPDATE smalltalk_phrases SET blocked = 1 WHERE id = ? AND source != 'seed'").run(blockPhraseId);
@@ -236,7 +244,7 @@ export function confirmQuestion(
 	if (!clean) return;
 	const v = normalize(vec);
 	const dup = nearest(loadPhrases(db, model), v, 'question');
-	if (dup && dup.sim >= DUPLICATE_SIM) return;
+	if (dup && dup.sim >= thresholds.duplicateSim) return;
 	// question texts are stored truncated: they are only a label for the settings list
 	insert(db, model, clean.slice(0, 200), v, 'user', 'question');
 	evictOverflow(db, MAX_LEARNED);
@@ -281,4 +289,27 @@ export function clearLearned(db: Database.Database): number {
 	db.prepare("UPDATE smalltalk_phrases SET blocked = 0 WHERE source = 'seed'").run();
 	invalidate(db);
 	return removed;
+}
+
+/** The calibration stored for `model`, only if it was derived from the same seeds/probes (`signature`). */
+export function loadCalibration(db: Database.Database, model: string, signature: string): GateThresholds | null {
+	const row = db.prepare('SELECT signature, thresholds_json FROM smalltalk_calibration WHERE embed_model = ?').get(model) as
+		| { signature: string; thresholds_json: string }
+		| undefined;
+	if (!row || row.signature !== signature) return null;
+	try {
+		const t = JSON.parse(row.thresholds_json) as GateThresholds;
+		return typeof t.seedSim === 'number' && typeof t.personalSim === 'number' && typeof t.negativeSim === 'number' && typeof t.duplicateSim === 'number' ? t : null;
+	} catch {
+		return null;
+	}
+}
+
+export function saveCalibration(db: Database.Database, model: string, signature: string, t: GateThresholds): void {
+	db.prepare('INSERT OR REPLACE INTO smalltalk_calibration (embed_model, signature, thresholds_json, created_at) VALUES (?, ?, ?, ?)').run(
+		model,
+		signature,
+		JSON.stringify(t),
+		new Date().toISOString()
+	);
 }

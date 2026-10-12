@@ -4,7 +4,9 @@ import { QUERY_PREFIX } from './embed-config';
 import { getChatsDb } from './chats-db';
 import { logAppEvent } from './app-log';
 import * as store from './smalltalk-store';
-import { decideSmallTalk, isGateCalibratedFor, smallTalkGateEnabled, type GateDecision } from './smalltalk-gate';
+import { DEFAULT_THRESHOLDS, decideSmallTalk, isGateCalibratedFor, smallTalkGateEnabled, type GateDecision, type GateThresholds } from './smalltalk-gate';
+import { PROBE_QUESTIONS, calibrationSignature, deriveThresholds } from './smalltalk-calibration';
+import { SMALLTALK_SEEDS } from './smalltalk-seeds';
 import type { RetrieveResult } from '$lib/types';
 
 /**
@@ -21,10 +23,65 @@ import type { RetrieveResult } from '$lib/types';
 
 // Same call as retrieve()'s query embedding: CPU-only (on the Ollama path) so the embedding model
 // never evicts the chat model — see embeddings.ts's EmbedTextsOptions.purpose.
-const embedFn: store.EmbedFn = (texts) => embedTexts(texts.map((t) => `${QUERY_PREFIX}${t}`), { purpose: 'query' });
+let embedFn: store.EmbedFn = (texts) => embedTexts(texts.map((t) => `${QUERY_PREFIX}${t}`), { purpose: 'query' });
+
+/** Test seam: swap the embedding call so tests never reach a real model. */
+export function _setEmbedFnForTests(fn: store.EmbedFn | null): void {
+	embedFn = fn ?? ((texts) => embedTexts(texts.map((t) => `${QUERY_PREFIX}${t}`), { purpose: 'query' }));
+	derived.clear();
+	calibrating.clear();
+}
 
 let readyFor: string | null = null;
 let notCalibratedLogged: string | null = null;
+/** Thresholds derived at runtime per embedding key (model + dims); null = tried and refused. */
+const derived = new Map<string, GateThresholds | null>();
+const calibrating = new Set<string>();
+const SIGNATURE = calibrationSignature(SMALLTALK_SEEDS);
+
+/**
+ * The thresholds in force for the configured model: bge-m3's measured ones, or the ones derived
+ * for this model (memory, then chats.db), or null = not calibrated (gate off).
+ */
+function currentThresholds(): GateThresholds | null {
+	const cfg = getEmbeddingConfig();
+	if (cfg === null) return null;
+	if (isGateCalibratedFor(cfg.model, cfg.dims)) return DEFAULT_THRESHOLDS;
+	const key = embeddingKey();
+	if (derived.has(key)) return derived.get(key) ?? null;
+	try {
+		const stored = store.loadCalibration(getChatsDb(), key, SIGNATURE);
+		if (stored) {
+			derived.set(key, stored);
+			return stored;
+		}
+	} catch {
+		/* fail soft: treated as not calibrated */
+	}
+	return null;
+}
+
+/** Background: seed the phrases, embed the probe questions, derive and persist thresholds. At most once per key per run. */
+function startCalibration(key: string): void {
+	if (calibrating.has(key) || derived.has(key)) return;
+	calibrating.add(key);
+	const db = getChatsDb();
+	void (async () => {
+		await store.ensureReady(db, embedFn, key);
+		const seeds = store.loadPhrases(db, key).filter((p) => p.source === 'seed').map((p) => p.vec);
+		const probes = await embedFn([...PROBE_QUESTIONS]);
+		const t = deriveThresholds(seeds, probes);
+		derived.set(key, t);
+		if (t) {
+			store.saveCalibration(db, key, SIGNATURE, t);
+			logAppEvent({ kind: 'smalltalk', message: `küçük konuşma kapısı bu gömme modeli için ayarlandı (seed ${t.seedSim.toFixed(2)}, kişisel ${t.personalSim.toFixed(2)})` });
+		} else {
+			logAppEvent({ kind: 'smalltalk', message: 'küçük konuşma kapısı: bu gömme modeli sohbet cümleleriyle soruları yeterince ayıramıyor, kapalı' });
+		}
+	})()
+		.catch((err) => logError('kalibrasyon', err))
+		.finally(() => calibrating.delete(key));
+}
 
 /**
  * Whether the gate may run: an embedding model is configured AND it is the family the thresholds
@@ -34,11 +91,11 @@ let notCalibratedLogged: string | null = null;
 export function smallTalkGateActive(): boolean {
 	const cfg = getEmbeddingConfig();
 	if (cfg === null) return false;
-	if (isGateCalibratedFor(cfg.model, cfg.dims)) return true;
+	if (currentThresholds() !== null) return true;
 	const id = `${cfg.providerId}/${cfg.model}/${cfg.dims}`;
 	if (notCalibratedLogged !== id) {
 		notCalibratedLogged = id;
-		logAppEvent({ kind: 'smalltalk', message: `küçük konuşma kapısı kapalı: gömme modeli (${cfg.model}, ${cfg.dims} boyut) eşikleri ölçülen bge-m3 ailesi değil` });
+		logAppEvent({ kind: 'smalltalk', message: `küçük konuşma kapısı kapalı: gömme modeli (${cfg.model}, ${cfg.dims} boyut) eşikleri henüz ayarlanmadı (bge-m3 değil; arka planda ayarlanıyor)` });
 	}
 	return false;
 }
@@ -57,7 +114,17 @@ function logError(action: string, err: unknown): void {
 export function checkSmallTalk(vector: number[], bestDistance: number | undefined): GateDecision | null {
 	if (!smallTalkGateEnabled(process.env.CHAT_SMALLTALK_GATE)) return null;
 	// FTS-only mode or an embedding model the thresholds were not measured with: no decision.
-	if (!smallTalkGateActive()) return null;
+	const thresholds = currentThresholds();
+	if (!thresholds) {
+		// another model: derive its thresholds in the background; gate off until that finishes
+		try {
+			if (getEmbeddingConfig() !== null) startCalibration(embeddingKey());
+		} catch (err) {
+			logError('kalibrasyon', err);
+		}
+		smallTalkGateActive(); // logs once per model
+		return null;
+	}
 	try {
 		const db = getChatsDb();
 		const key = embeddingKey();
@@ -73,7 +140,7 @@ export function checkSmallTalk(vector: number[], bestDistance: number | undefine
 			}
 			readyFor = key;
 		}
-		return decideSmallTalk(vector, bestDistance, store.loadPhrases(db, key));
+		return decideSmallTalk(vector, bestDistance, store.loadPhrases(db, key), thresholds);
 	} catch (err) {
 		logError('karar', err);
 		return null;
@@ -87,7 +154,7 @@ export async function learnFromMessage(text: string, source: 'auto' | 'user'): P
 	// Nothing to embed with in FTS-only mode, or the gate is off for this model: a silent no-op, not an error.
 	if (!smallTalkGateActive()) return null;
 	const [vec] = await embedFn([clean]);
-	return store.learn(getChatsDb(), embeddingKey(), clean, vec, source);
+	return store.learn(getChatsDb(), embeddingKey(), clean, vec, source, { thresholds: currentThresholds() ?? DEFAULT_THRESHOLDS });
 }
 
 /**
@@ -107,7 +174,7 @@ export function afterSmallTalkGate(gate: NonNullable<RetrieveResult['gate']>, te
 			const blockId = gate.phraseSource && gate.phraseSource !== 'seed' ? gate.phraseId : undefined;
 			void embedFn([text.trim()])
 				.then(([vec]) => {
-					store.confirmQuestion(db, embeddingKey(), text, vec, blockId);
+					store.confirmQuestion(db, embeddingKey(), text, vec, blockId, currentThresholds() ?? DEFAULT_THRESHOLDS);
 					logAppEvent({ kind: 'smalltalk', message: 'soru olarak onaylandı', smallTalkAction: 'confirmed_question', gatePhraseId: blockId });
 				})
 				.catch((err) => logError('soru onayı', err));
