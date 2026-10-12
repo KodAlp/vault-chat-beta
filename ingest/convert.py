@@ -91,7 +91,7 @@ import pdf_tounicode
 from column_order import repair_document_order
 from reading_order import repair_reading_order
 from heading_repair import body_size, read_text_layer, repair_headings, restructure_headings
-from postprocess import _apply_outside_verbatim, postprocess, quality_warnings
+from postprocess import _apply_outside_verbatim, is_junk_title, postprocess, quality_warnings
 
 MARKITDOWN_EXTS = {".docx", ".pptx", ".xlsx", ".html", ".htm", ".epub"}
 PDF_EXT = ".pdf"
@@ -243,7 +243,13 @@ def derive_pdf_title(path: Path) -> str | None:
     filename (never in_path.stem, which is the staged "original"/"input").
     Only consulted when the converted body has no H1 of its own
     (postprocess.py's derive_title already prefers a real H1)."""
-    return pdf_title_from_metadata(path) or pdf_title_from_first_large_line(path)
+    # Each candidate must survive is_junk_title (metadata Title "******",
+    # "PowerPoint Presentation", "Microsoft Word - x.doc", ...) or the next
+    # tier is tried.
+    for candidate in (pdf_title_from_metadata(path), pdf_title_from_first_large_line(path)):
+        if not is_junk_title(candidate):
+            return candidate
+    return None
 
 
 def pdf_page_count(path: Path) -> int:
@@ -392,6 +398,42 @@ def expected_page_count(total: int, page_range: tuple[int, int] | None) -> int:
         return total
     start, end = page_range
     return max(0, min(end, total) - start + 1)
+
+
+def scope_page_numbers(total: int, page_range: tuple[int, int] | None) -> set[int]:
+    """1-indexed page numbers a converter should return (see expected_page_count)."""
+    if page_range is None:
+        return set(range(1, total + 1))
+    start, end = page_range
+    return set(range(max(1, start), min(end, total) + 1))
+
+
+def docling_page_numbers(results) -> set[int] | None:
+    """Page numbers docling returned, or None when it exposes none (then the
+    caller cannot tell which pages are missing and must treat a shortfall as
+    damage). `result.pages` is a list of Page objects with `page_no`."""
+    nums: set[int] = set()
+    for r in results:
+        for page in r.pages:
+            n = getattr(page, "page_no", None)
+            if not isinstance(n, int):
+                return None
+            nums.add(n)
+    return nums
+
+
+def classify_page_shortfall(
+    expected: set[int], got: set[int] | None, image_only: set[int]
+) -> tuple[str, list[int]]:
+    """("damaged"|"scan", missing pages). "scan" only when every missing page is
+    an image-only page; unknown page numbers or any missing page that is not
+    image-only keeps the truncation verdict (docling-parse #374)."""
+    if got is None:
+        return "damaged", []
+    missing = sorted(expected - got)
+    if missing and all(m in image_only for m in missing):
+        return "scan", missing
+    return "damaged", missing
 
 
 def looks_broken(text: str, page_count: int) -> bool:
@@ -1080,11 +1122,34 @@ def convert_with_docling(
     # compare the page count against what the file itself says it has.
     got = sum(len(r.pages) for r in results)
     expected = expected_page_count(total_pages, page_range)
+    shortfall_note: str | None = None
     if expected > 0 and got < expected:
-        raise PdfDamagedError(f"docling {got}/{expected} sayfa döndürdü")
+        # main() already proved the file opens (pdf_open_check), so a shortfall
+        # is only "damaged" when the missing pages could have carried text. A
+        # page that is an image-only scan and that docling dropped is an OCR /
+        # pipeline failure on that page, not a truncated file (2026-10-10: a
+        # 34-page scan was reported PDF_DAMAGED although pypdf opened it).
+        kind, missing = classify_page_shortfall(
+            scope_page_numbers(total_pages, page_range),
+            docling_page_numbers(results),
+            set(textless_pages(path)),
+        )
+        if kind == "damaged":
+            raise PdfDamagedError(f"docling {got}/{expected} sayfa döndürdü")
+        if got == 0:
+            raise RuntimeError(
+                f"docling taranmış PDF'den hiç sayfa döndürmedi (OCR başarısız olmuş olabilir); "
+                f"sayfa {_page_list(missing)}"
+            )
+        shortfall_note = (
+            f"{len(missing)} taranmış sayfa dönüştürülemedi (sayfa {_page_list(missing)}): "
+            "bu sayfaların içeriği notta eksik."
+        )
     # PARTIAL_SUCCESS (some pages reported errors) is kept: the pages that did
     # convert are real content; the errors become a warning instead.
     _DOCLING_ERRORS.clear()
+    if shortfall_note:
+        _DOCLING_ERRORS.append(shortfall_note)
     partial = False
     for result in results:
         if str(getattr(result.status, "name", result.status)) != "PARTIAL_SUCCESS":
@@ -1385,6 +1450,25 @@ def textless_warning(converted_by: str, textless: list[int], ocr_ran: bool) -> s
     return None
 
 
+def image_cap_warning(stats: dict) -> str | None:
+    """Warning for pictures dropped by the keep-cap, with numbers that add up.
+    The old images.stats_warning() (removed) printed stats["found"] as the document's picture
+    count, but "found" also counts pictures filtered on purpose (tiny / template
+    / unreadable): a real import said "538 görsel var; yalnız ilk 400 ... 86
+    atlandı" and 400 + 86 = 486 (the other 52 were filtered noise). Here the
+    count is kept + over_cap, the pictures the cap actually decided on, and the
+    filtered ones are named separately."""
+    over = int(stats.get("over_cap") or 0)
+    if not over:
+        return None
+    kept = int(stats.get("kept") or 0)
+    filtered = sum(int(stats.get(k) or 0) for k in ("tiny", "template", "unreadable"))
+    msg = f"Belgede {kept + over} içerik görseli var; yalnız ilk {kept} tanesi eklendi, {over} görsel atlandı."
+    if filtered:
+        msg += f" ({filtered} küçük/tekrarlayan görsel zaten süzüldü.)"
+    return msg
+
+
 def _page_list(pages: list[int], limit: int = 10) -> str:
     shown = ", ".join(str(n) for n in pages[:limit])
     return shown + ", …" if len(pages) > limit else shown
@@ -1512,7 +1596,9 @@ def main(argv: list[str] | None = None) -> int:
     if is_md:
         existing_frontmatter, text = split_existing_frontmatter(text)
         candidate = existing_frontmatter.get("title")
-        existing_md_title = candidate.strip() if isinstance(candidate, str) and candidate.strip() else None
+        existing_md_title = (
+            candidate.strip() if isinstance(candidate, str) and not is_junk_title(candidate) else None
+        )
 
     # K2-5: in_path.stem is never a usable title or filename — every caller
     # stages the real file under a generic name ("original.pdf") before
@@ -1603,7 +1689,7 @@ def main(argv: list[str] | None = None) -> int:
         final_text, image_stats, image_names = images.resolve_tokens(
             final_text, images.COLLECTOR.candidates, out_dir / "images", total_pages=images.COLLECTOR.total_pages
         )
-        cap_note = images.stats_warning(image_stats)
+        cap_note = image_cap_warning(image_stats)
         if cap_note:
             warnings.append(cap_note)
             frontmatter["needs_review"] = True

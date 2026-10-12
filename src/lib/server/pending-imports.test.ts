@@ -8,6 +8,8 @@ import {
 	writeMeta,
 	readMeta,
 	updateMeta,
+	touchMeta,
+	throttledTouch,
 	deleteMeta,
 	listPending,
 	markImportActive,
@@ -155,4 +157,39 @@ test('IMPORT_ID_RE accepts a randomUUID and rejects anything that could escape t
 	for (const bad of ['', '..', '../../x', '..\\..\\x','a/b', crypto.randomUUID() + '/..', crypto.randomUUID() + '.md', ' ' + crypto.randomUUID()]) {
 		assert.equal(IMPORT_ID_RE.test(bad), false, bad);
 	}
+});
+
+test('touchMeta bumps updatedAt only while queued/converting', () => {
+	const v = tmpVault();
+	staging(v);
+	const old = '2020-01-01T00:00:00.000Z';
+	const m = meta({ status: 'converting', updatedAt: old });
+	writeMeta(v, m);
+	assert.equal(touchMeta(v, m.importId), true);
+	const bumped = readMeta(v, m.importId)!;
+	assert.notEqual(bumped.updatedAt, old);
+	assert.equal(bumped.status, 'converting');
+
+	const done = meta({ status: 'ready', updatedAt: old });
+	writeMeta(v, done);
+	assert.equal(touchMeta(v, done.importId), false);
+	assert.equal(readMeta(v, done.importId)!.updatedAt, old);
+
+	deleteMeta(v, m.importId);
+	assert.equal(touchMeta(v, m.importId), false); // a cancelled record is not resurrected
+	assert.equal(readMeta(v, m.importId), null);
+});
+
+test('throttledTouch runs at most once per interval', () => {
+	let t = 1000;
+	let calls = 0;
+	const touch = throttledTouch(() => calls++, 3000, () => t);
+	touch();
+	touch();
+	t += 2999;
+	touch();
+	assert.equal(calls, 1);
+	t += 1;
+	touch();
+	assert.equal(calls, 2);
 });

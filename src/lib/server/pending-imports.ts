@@ -111,6 +111,29 @@ export function updateMeta(v: VaultContext, importId: string, patch: Partial<Omi
 	return next;
 }
 
+/** Bumps updatedAt of a record that is still being worked on (queued/converting);
+ * a finished, failed or vanished record is left untouched, so a late tick can
+ * never overwrite a final state. Returns whether it wrote. */
+export function touchMeta(v: VaultContext, importId: string): boolean {
+	const current = readMeta(v, importId);
+	if (!current || (current.status !== 'queued' && current.status !== 'converting')) return false;
+	return updateMeta(v, importId, {}) !== null;
+}
+
+/** Default throttle for progress-driven touches: converter events are cheap, disk writes are not. */
+export const PROGRESS_TOUCH_INTERVAL_MS = 3_000;
+
+/** Wraps `touch` so it runs at most once per `intervalMs` (the first call always runs). */
+export function throttledTouch(touch: () => void, intervalMs = PROGRESS_TOUCH_INTERVAL_MS, now: () => number = Date.now): () => void {
+	let last = Number.NEGATIVE_INFINITY;
+	return () => {
+		const t = now();
+		if (t - last < intervalMs) return;
+		last = t;
+		touch();
+	};
+}
+
 export function deleteMeta(v: VaultContext, importId: string): void {
 	if (!IMPORT_ID_RE.test(importId)) return;
 	fs.rmSync(metaPath(v, importId), { force: true });

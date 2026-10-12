@@ -11,7 +11,8 @@ import { isVaultMcpExposed, type VaultContext } from './vaults';
 import { vaultFromId } from './requestVault';
 import { importConvertedImages, libraryRelPath } from './converted-images';
 import type { ValidatedImportPath } from './mcp-import-path';
-import { markImportActive, markImportInactive, readMeta, updateMeta, type PendingImportMeta } from './pending-imports';
+import { markImportActive, markImportInactive, readMeta, throttledTouch, touchMeta, updateMeta, type PendingImportMeta } from './pending-imports';
+import type { ConvertEvent } from './convertQueue';
 import { autoConfirmIfEligible } from './mcp-auto-confirm';
 
 /**
@@ -21,6 +22,9 @@ import { autoConfirmIfEligible } from './mcp-auto-confirm';
  * below runs after the response, reporting through the sidecar
  * (pending-imports.ts) instead of a stream.
  */
+
+/** Liveness tick while a conversion runs without emitting events. */
+const HEARTBEAT_MS = 5_000;
 
 /** Rethrows any error as a coded HTTP error (the route's `catch` shape used across this app). */
 export function failFrom(err: unknown): never {
@@ -57,7 +61,8 @@ function sha256OfFile(file: string): Promise<string> {
 export async function stageLocalFile(
 	v: VaultContext,
 	importId: string,
-	file: ValidatedImportPath
+	file: ValidatedImportPath,
+	onEvent?: (event: ConvertEvent) => void
 ): Promise<{ title: string; warnings: string[] }> {
 	const workDir = path.join(stagingDir(v), importId);
 	fs.mkdirSync(workDir, { recursive: true });
@@ -68,7 +73,7 @@ export async function stageLocalFile(
 		// E5: content-addressed duplicate check — a warning, not a block (the user decides at confirm time).
 		const alreadyImportedHash = loadImportedSourceHashes(importLogPath(v)).has(await sha256OfFile(tempIn));
 
-		const result = await enqueueConversion(tempIn, workDir, 'auto', undefined, file.name);
+		const result = await enqueueConversion(tempIn, workDir, 'auto', onEvent, file.name);
 		if (!result.outPath) throw new AppError('CONVERSION_EMPTY');
 
 		const stagedMdPath = path.join(stagingDir(v), `${importId}.md`);
@@ -102,14 +107,27 @@ export async function stageLocalFile(
 export function startDetachedImport(
 	v: VaultContext,
 	meta: PendingImportMeta,
-	job: () => Promise<{ title: string; warnings: string[] }>
+	job: (onEvent: (event: ConvertEvent) => void) => Promise<{ title: string; warnings: string[] }>
 ): void {
 	const { importId } = meta;
 	markImportActive(importId);
 	void (async () => {
+		// updatedAt is what the UI/agent reads as "still alive". The converter only emits a handful of
+		// progress events per file (one per stage, none while docling runs for minutes), so every event
+		// bumps it (throttled) AND a heartbeat covers the silent stretches. touchMeta never writes to a
+		// record that already left queued/converting.
+		const touch = throttledTouch(() => {
+			try {
+				touchMeta(v, importId);
+			} catch {
+				// A failed heartbeat write must not fail the import; the final status write reports real problems.
+			}
+		});
+		const heartbeat = setInterval(touch, HEARTBEAT_MS);
+		heartbeat.unref?.();
 		try {
 			if (!updateMeta(v, importId, { status: 'converting' })) return;
-			const result = await job();
+			const result = await job(touch);
 			const stagedMd = path.join(stagingDir(v), `${importId}.md`);
 			const done = updateMeta(v, importId, {
 				status: 'ready',
@@ -140,6 +158,7 @@ export function startDetachedImport(
 				// Nothing more to do — the sidecar stays at 'converting' and listPending() reports it as interrupted.
 			}
 		} finally {
+			clearInterval(heartbeat);
 			markImportInactive(importId);
 		}
 	})();

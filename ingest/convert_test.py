@@ -33,6 +33,12 @@ import convert  # noqa: E402
 from convert import (  # noqa: E402
     CODE_EXTENSIONS,
     PdfDamagedError,
+    image_cap_warning,
+    classify_page_shortfall,
+    docling_page_numbers,
+    scope_page_numbers,
+    derive_pdf_title,
+    textless_pages,
     convert_code_file,
     demote_slide_headings,
     escalate_pdf,
@@ -338,6 +344,72 @@ def test_pdf_damage_checks() -> None:
         last = parsed[-1] if parsed else {}
         check("CLI: last line is type=error code=PDF_DAMAGED", last.get("type") == "error" and last.get("code") == "PDF_DAMAGED")
         check("CLI: no progress event before the error", all(p.get("type") != "progress" for p in parsed))
+
+
+def test_scanned_pdf_not_damaged() -> None:
+    """#7: an image-only scan opens in pypdf; a docling page shortfall on image-only
+    pages is a conversion failure, not PDF_DAMAGED."""
+    from PIL import Image, ImageDraw
+
+    with tempfile.TemporaryDirectory() as d:
+        scan = Path(d) / "scan.pdf"
+        imgs = []
+        for i in range(4):
+            im = Image.new("RGB", (400, 500), "white")
+            ImageDraw.Draw(im).text((20, 20), f"scan {i}", fill="black")
+            imgs.append(im)
+        imgs[0].save(scan, save_all=True, append_images=imgs[1:], resolution=100)
+        check("scanned PDF passes pdf_open_check", pdf_open_check(scan) == 4)
+        check("scanned PDF: every page is image-only", textless_pages(scan) == [1, 2, 3, 4])
+        image_only = set(textless_pages(scan))
+        expected = scope_page_numbers(4, None)
+        check("shortfall on scan pages is not damage", classify_page_shortfall(expected, {1, 2}, image_only) == ("scan", [3, 4]))
+        check("zero pages on a scan is not damage", classify_page_shortfall(expected, set(), image_only) == ("scan", [1, 2, 3, 4]))
+        check("missing text page stays damaged", classify_page_shortfall(expected, {1, 2}, {3}) == ("damaged", [3, 4]))
+        check("unknown page numbers stay damaged", classify_page_shortfall(expected, None, image_only)[0] == "damaged")
+        check("scope_page_numbers honours page_range", scope_page_numbers(10, (3, 5)) == {3, 4, 5})
+
+    class _P:
+        def __init__(self, n): self.page_no = n
+
+    class _R:
+        def __init__(self, ns): self.pages = [_P(n) for n in ns]
+
+    check("docling_page_numbers collects page_no", docling_page_numbers([_R([1, 2]), _R([5])]) == {1, 2, 5})
+
+    class _NoNo:
+        pages = [object()]
+
+    check("docling_page_numbers None without page_no", docling_page_numbers([_NoNo()]) is None)
+
+
+def test_pdf_title_rejects_junk() -> None:
+    """#10: junk /Title falls through to the next candidate."""
+    with tempfile.TemporaryDirectory() as d:
+        pdf = Path(d) / "t.pdf"
+        make_pdf(pdf, 1)
+        orig = convert.pdf_title_from_metadata, convert.pdf_title_from_first_large_line
+        try:
+            convert.pdf_title_from_metadata = lambda _p: "PowerPoint Presentation"
+            convert.pdf_title_from_first_large_line = lambda _p: "Gerçek Başlık"
+            check("junk metadata title -> large-line title", derive_pdf_title(pdf) == "Gerçek Başlık")
+            convert.pdf_title_from_first_large_line = lambda _p: "******"
+            check("all candidates junk -> None (filename fallback)", derive_pdf_title(pdf) is None)
+            convert.pdf_title_from_metadata = lambda _p: "Kontrol Teorisi"
+            check("good metadata title wins", derive_pdf_title(pdf) == "Kontrol Teorisi")
+        finally:
+            convert.pdf_title_from_metadata, convert.pdf_title_from_first_large_line = orig
+
+
+def test_image_cap_warning() -> None:
+    """#11: 538 found = 400 kept + 86 over_cap + 52 filtered; the numbers must add up."""
+    stats = {"found": 538, "kept": 400, "tiny": 30, "unreadable": 2, "template": 20, "over_cap": 86}
+    msg = image_cap_warning(stats) or ""
+    check("cap warning: total = kept + over_cap (486)", "486" in msg and "538" not in msg)
+    check("cap warning: names kept and skipped", "400" in msg and "86" in msg)
+    check("cap warning: filtered reported separately", "52" in msg)
+    check("no cap hit -> no warning", image_cap_warning({"found": 9, "kept": 5, "tiny": 4, "over_cap": 0}) is None)
+    check("cap warning without filtered has no note", "süzüldü" not in (image_cap_warning({"kept": 400, "over_cap": 3}) or ""))
 
 
 def test_expected_page_count() -> None:
@@ -824,6 +896,9 @@ if __name__ == "__main__":
     test_convert_code_file()
     test_pdf_damage_checks()
     test_expected_page_count()
+    test_scanned_pdf_not_damaged()
+    test_image_cap_warning()
+    test_pdf_title_rejects_junk()
     test_damaged_propagates_through_escalation()
     test_is_open_failure()
     test_backend_forwarded_to_docling()

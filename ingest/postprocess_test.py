@@ -19,6 +19,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from postprocess import (  # noqa: E402
+    is_junk_title,
     decode_html_entities,
     DEGENERATE_NOTE,
     DEGENERATE_RUN,
@@ -201,6 +202,23 @@ def test_html_stripping() -> None:
     )
 
 
+def test_junk_titles() -> None:
+    junk = ["******", "I", "", "  ", "—", "II", "PowerPoint Sunusu", "PowerPoint Presentation",
+            "Microsoft PowerPoint", "Microsoft Word - rapor.doc", "Untitled", "untitled document 2",
+            "Slide 1", "Başlıksız", "Expanded Edition", "Second Edition", "Revised and Expanded Edition",
+            "3rd Edition", "Genişletilmiş Baskı", "ders.pdf", "sunu.pptx"]
+    for j in junk:
+        check(f"is_junk_title rejects {j!r}", is_junk_title(j))
+    good = ["Linear Algebra Done Right", "Kontrol Teorisi", "Attention Is All You Need",
+            "Introduction to Algorithms, Third Edition", "Fizik 101", "PowerPoint ile Sunum Hazırlama"]
+    for g in good:
+        check(f"is_junk_title keeps {g!r}", not is_junk_title(g))
+    check("is_junk_title(None)", is_junk_title(None))
+    # derive_title skips junk H1s and uses the next real one, else the fallback.
+    check("derive_title skips junk H1", derive_title("# I\n\n# ******\n\n# Gerçek Başlık\n", "dosya") == "Gerçek Başlık")
+    check("derive_title junk-only -> fallback", derive_title("# PowerPoint Sunusu\n\ntext\n", "dosya") == "dosya")
+
+
 def test_derive_title() -> None:
     # K3-7: craftinginterpreters' scanning.html converted with a self-
     # referencing anchor wrapped around its H1 — the title used to come out
@@ -343,6 +361,7 @@ if __name__ == "__main__":
     test_html_stripping()
     test_warnings()
     test_derive_title()
+    test_junk_titles()
     test_signature()
     test_long_period_loops()
     test_degenerate_math()

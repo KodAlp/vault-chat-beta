@@ -8,6 +8,7 @@ import { sanitizeDomain } from '$lib/server/domain-name';
 import { importLogPath } from '$lib/server/library';
 import { validateLinkUrl, rewriteArxivAbsToPdf, loadImportedUrls } from '$lib/server/link-import';
 import { stageUrl } from '$lib/server/stage-url';
+import type { ConvertEvent } from '$lib/server/convertQueue';
 import { readMcpSettings } from '$lib/server/mcp-settings';
 import { validateImportPath } from '$lib/server/mcp-import-path';
 import { failFrom, requireMcpVault, stageLocalFile, startDetachedImport } from '$lib/server/mcp-import';
@@ -51,7 +52,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			updatedAt: now
 		};
 		let meta: PendingImportMeta;
-		let job: () => Promise<{ title: string; warnings: string[] }>;
+		let job: (onEvent: (event: ConvertEvent) => void) => Promise<{ title: string; warnings: string[] }>;
 
 		if (hasPath) {
 			const file = validateImportPath(body.path, readMcpSettings().allowedImportRoots, [dataDir(), v.dir]);
@@ -60,7 +61,7 @@ export const POST: RequestHandler = async ({ request }) => {
 				source: { kind: 'path', name: file.name },
 				proposed: { title: titleOverride ?? path.parse(file.name).name, domain, level: 'undergraduate' }
 			};
-			job = () => stageLocalFile(v, importId, file);
+			job = (onEvent) => stageLocalFile(v, importId, file, onEvent);
 		} else {
 			const url = rewriteArxivAbsToPdf(validateLinkUrl(body.url as string));
 			// Same duplicate rule as the browser importer, but as a warning: the user decides at confirm time.
@@ -71,12 +72,12 @@ export const POST: RequestHandler = async ({ request }) => {
 				source: { kind: 'url', name: url.hostname },
 				proposed: { title: titleOverride ?? url.hostname, domain, level: 'undergraduate' }
 			};
-			job = () => stageUrl(v, url, importId);
+			job = (onEvent) => stageUrl(v, url, importId, onEvent);
 		}
 
 		writeMeta(v, meta);
-		startDetachedImport(v, meta, async () => {
-			const result = await job();
+		startDetachedImport(v, meta, async (onEvent) => {
+			const result = await job(onEvent);
 			return titleOverride ? { ...result, title: titleOverride } : result;
 		});
 		// Read-only: the agent is told what the user's setting will do with the import, it cannot change it.
