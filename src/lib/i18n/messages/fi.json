@@ -574,6 +574,9 @@
 		"imageAlt": "Kuvaus",
 		"imageNote": "Käytä suhteellista polkua, kuten attachments/photo.png, tämän kirjaston tiedostoille, tai verkko-osoitetta.",
 		"imageApply": "Lisää",
+		"imageUpload": "Lataa tiedostosta",
+		"imageUploading": "Ladataan…",
+		"imageUploadFailed": "Kuvaa ei voitu ladata",
 		"cancel": "Peruuta",
 		"mathTitle": "Muokkaa kaavaa",
 		"mathApply": "Käytä",
@@ -943,6 +946,20 @@
 		"removeFailed": "Tuontia ei voitu poistaa.",
 		"navBadgeLabel": "{count} odottavaa tuontia vaatii huomiosi",
 		"navBadgeLabel#one": "{count} odottava tuonti vaatii huomiosi"
+	},
+	"McpConnect": {
+		"title": "Yhdistä MCP-asiakas",
+		"description": "Anna tekoälysovelluksen, kuten Clauden, LM Studion tai Janin, hakea holveistasi. Kopioi asiakkaasi pätkä — siinä on jo tämän tietokoneen oikeat polut.",
+		"notBundled": "MCP-palvelinta ei ole vielä sisällytetty työpöytäsovellukseen — toistaiseksi se ajetaan lähdekoodin kopiosta Node.js:llä (katso README:n kohta \"MCP-palvelin\"). Käynnistä vault-chat lähdekoodivarastosta saadaksesi tähän valmiin pätkän.",
+		"loadFailed": "Yhteyspätkää ei voitu ladata.",
+		"copy": "Kopioi",
+		"copied": "Kopioitu",
+		"claudeDesktopSteps": "Lisää tämä alla olevaan asetustiedostoon (luo se, jos sitä ei ole, ja yhdistä olemassa oleviin mcpServers-kohtiin) ja käynnistä Claude Desktop uudelleen.",
+		"claudeCodeSteps": "Suorita tämä komento päätteessä. --scope user tekee siitä käytettävissä olevan kaikissa projekteissa.",
+		"lmStudioSteps": "Avaa LM Studiossa Program-välilehti → Install → Edit mcp.json, liitä tämä lohko ja tallenna.",
+		"janSteps": "Avaa Janissa Settings → MCP Servers ja lisää palvelin tällä komennolla, argumentilla ja ympäristömuuttujalla (tai liitä JSON, jos versiosi sallii sen).",
+		"genericSteps": "Mikä tahansa MCP-asiakas, joka osaa käynnistää stdio-palvelimia, hyväksyy tämän vakio-mcpServers-lohkon. Katso asiakkaasi ohjeista, minne se kuuluu.",
+		"secretsNote": "Pätkä ei sisällä salaisuuksia. Kirjoitustyökalut (kuten tuonti) vaativat lisäksi, että tämä sovellus on käynnissä."
 	},
 	"McpImportSettings": {
 		"title": "MCP-tuontikansiot",

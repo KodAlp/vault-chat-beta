@@ -83,6 +83,8 @@ export interface VisualEditorOptions {
 	host: HTMLElement;
 	vaultId: string;
 	currentPath: string;
+	/** Image files pasted or dropped into the editor (the owner uploads them and calls insertImage). */
+	onImageFiles?: (files: File[]) => void;
 	/** Tooltip on locked raw blocks (already localized). */
 	rawBlockTitle: string;
 	onChange: (raw: string) => void;
@@ -470,8 +472,26 @@ export async function createVisualEditor(opts: VisualEditorOptions) {
 			opts.onMath(targetFor(sel.from, sel.node.type.name === 'math_inline' ? 'inline' : 'block', sel.node));
 		}
 	}
+	// Capture phase so ProseMirror's own paste/drop handling does not also run for an image file.
+	const imageFilesOf = (dt: DataTransfer | null) => Array.from(dt?.files ?? []).filter((f) => f.type.startsWith('image/'));
+	function onHostPaste(e: ClipboardEvent) {
+		const files = imageFilesOf(e.clipboardData);
+		if (!files.length || !opts.onImageFiles) return;
+		e.preventDefault();
+		e.stopPropagation();
+		opts.onImageFiles(files);
+	}
+	function onHostDrop(e: DragEvent) {
+		const files = imageFilesOf(e.dataTransfer);
+		if (!files.length || !opts.onImageFiles) return;
+		e.preventDefault();
+		e.stopPropagation();
+		opts.onImageFiles(files);
+	}
 	opts.host.addEventListener('click', onHostClick);
 	opts.host.addEventListener('keydown', onHostKeydown);
+	opts.host.addEventListener('paste', onHostPaste, true);
+	opts.host.addEventListener('drop', onHostDrop, true);
 
 	return {
 		load,
@@ -487,6 +507,8 @@ export async function createVisualEditor(opts: VisualEditorOptions) {
 			clearTimeout(changeTimer);
 			opts.host.removeEventListener('click', onHostClick);
 			opts.host.removeEventListener('keydown', onHostKeydown);
+			opts.host.removeEventListener('paste', onHostPaste, true);
+			opts.host.removeEventListener('drop', onHostDrop, true);
 			void ed.destroy();
 		}
 	};

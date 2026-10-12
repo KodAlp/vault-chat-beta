@@ -570,6 +570,9 @@
 		"imageAlt": "Beschrijving",
 		"imageNote": "Gebruik een relatief pad zoals attachments/photo.png voor bestanden in deze bibliotheek, of een webadres.",
 		"imageApply": "Invoegen",
+		"imageUpload": "Uploaden vanuit bestand",
+		"imageUploading": "Uploaden…",
+		"imageUploadFailed": "Afbeelding kon niet worden geüpload",
 		"cancel": "Annuleren",
 		"mathTitle": "Formule bewerken",
 		"mathApply": "Toepassen",
@@ -938,6 +941,20 @@
 		"removeFailed": "De import kon niet worden verwijderd.",
 		"navBadgeLabel": "{count} openstaande imports hebben je aandacht nodig",
 		"navBadgeLabel#one": "{count} openstaande import heeft je aandacht nodig"
+	},
+	"McpConnect": {
+		"title": "Een MCP-client verbinden",
+		"description": "Laat een AI-app zoals Claude, LM Studio of Jan in je kluizen zoeken. Kopieer het fragment voor jouw client — het bevat al de juiste paden voor deze computer.",
+		"notBundled": "De MCP-server zit nog niet in de desktop-app — voorlopig draait hij vanuit een checkout van de broncode met Node.js (zie \"MCP-server\" in de README). Start vault-chat vanuit de bronrepository om hier een kant-en-klaar fragment te krijgen.",
+		"loadFailed": "Het verbindingsfragment kon niet worden geladen.",
+		"copy": "Kopiëren",
+		"copied": "Gekopieerd",
+		"claudeDesktopSteps": "Voeg dit toe aan het configuratiebestand hieronder (maak het aan als het niet bestaat en voeg het samen met bestaande mcpServers) en herstart Claude Desktop.",
+		"claudeCodeSteps": "Voer deze opdracht uit in een terminal. Met --scope user is hij in elk project beschikbaar.",
+		"lmStudioSteps": "Open in LM Studio het tabblad Program → Install → Edit mcp.json, plak dit blok en sla op.",
+		"janSteps": "Open in Jan Settings → MCP Servers en voeg een server toe met deze opdracht, dit argument en deze omgevingsvariabele (of plak de JSON als je versie dat accepteert).",
+		"genericSteps": "Elke MCP-client die stdio-servers kan starten accepteert dit standaard mcpServers-blok. Raadpleeg de documentatie van je client voor de plek.",
+		"secretsNote": "Het fragment bevat geen geheimen. Schrijftools (zoals importeren) vereisen ook dat deze app draait."
 	},
 	"McpImportSettings": {
 		"title": "MCP-importmappen",

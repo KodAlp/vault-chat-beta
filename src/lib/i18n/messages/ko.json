@@ -563,6 +563,9 @@
 		"imageAlt": "설명",
 		"imageNote": "이 라이브러리의 파일에는 attachments/photo.png 같은 상대 경로를, 그 밖에는 웹 주소를 사용하세요.",
 		"imageApply": "삽입",
+		"imageUpload": "파일에서 업로드",
+		"imageUploading": "업로드 중…",
+		"imageUploadFailed": "이미지를 업로드할 수 없습니다",
 		"cancel": "취소",
 		"mathTitle": "수식 편집",
 		"mathApply": "적용",
@@ -928,6 +931,20 @@
 		"loadFailed": "대기 중인 가져오기를 불러오지 못했어요.",
 		"removeFailed": "가져오기를 제거하지 못했어요.",
 		"navBadgeLabel": "확인이 필요한 대기 중인 가져오기 {count}개"
+	},
+	"McpConnect": {
+		"title": "MCP 클라이언트 연결",
+		"description": "Claude, LM Studio, Jan 같은 AI 앱이 보관함을 검색하도록 허용하세요. 사용하는 클라이언트용 스니펫을 복사하세요. 이 컴퓨터에 맞는 경로가 이미 들어 있습니다.",
+		"notBundled": "MCP 서버는 아직 데스크톱 앱에 포함되어 있지 않습니다. 지금은 소스 체크아웃에서 Node.js로 실행합니다(README의 \"MCP 서버\" 참고). 여기에 바로 붙여넣을 스니펫을 보려면 소스 저장소에서 vault-chat을 실행하세요.",
+		"loadFailed": "연결 스니펫을 불러오지 못했습니다.",
+		"copy": "복사",
+		"copied": "복사됨",
+		"claudeDesktopSteps": "아래 설정 파일에 이 내용을 추가한 뒤(없으면 만들고, 기존 mcpServers와 병합) Claude Desktop을 다시 시작하세요.",
+		"claudeCodeSteps": "터미널에서 이 명령을 실행하세요. --scope user는 모든 프로젝트에서 사용할 수 있게 합니다.",
+		"lmStudioSteps": "LM Studio에서 Program 탭 → Install → Edit mcp.json을 열고 이 블록을 붙여넣은 다음 저장하세요.",
+		"janSteps": "Jan에서 Settings → MCP Servers를 열고 이 명령, 인수, 환경 변수로 서버를 추가하세요(사용 중인 버전이 지원하면 JSON을 붙여넣어도 됩니다).",
+		"genericSteps": "stdio 서버를 시작할 수 있는 MCP 클라이언트라면 이 표준 mcpServers 블록을 받아들입니다. 넣을 위치는 클라이언트 문서를 확인하세요.",
+		"secretsNote": "스니펫에는 비밀 정보가 없습니다. 쓰기 도구(예: 가져오기)는 이 앱이 실행 중이어야 합니다."
 	},
 	"McpImportSettings": {
 		"title": "MCP 가져오기 폴더",

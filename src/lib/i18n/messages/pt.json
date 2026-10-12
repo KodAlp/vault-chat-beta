@@ -895,6 +895,20 @@
     "removeFailed": "Não foi possível remover a importação.",
     "navBadgeLabel": "{count} importações pendentes precisam da sua atenção"
   },
+  "McpConnect": {
+    "title": "Conectar um cliente MCP",
+    "description": "Deixe um app de IA como Claude, LM Studio ou Jan pesquisar nos seus cofres. Copie o trecho do seu cliente — ele já traz os caminhos certos deste computador.",
+    "notBundled": "O servidor MCP ainda não está incluído no app de desktop — por enquanto ele roda a partir de uma cópia do código-fonte com Node.js (veja \"Servidor MCP\" no README). Execute o vault-chat a partir do repositório de código-fonte para obter aqui um trecho pronto para colar.",
+    "loadFailed": "Não foi possível carregar o trecho de conexão.",
+    "copy": "Copiar",
+    "copied": "Copiado",
+    "claudeDesktopSteps": "Adicione isto ao arquivo de configuração abaixo (crie-o se não existir e mescle com os mcpServers existentes) e reinicie o Claude Desktop.",
+    "claudeCodeSteps": "Execute este comando em um terminal. --scope user o deixa disponível em todos os projetos.",
+    "lmStudioSteps": "No LM Studio, abra a aba Program → Install → Edit mcp.json, cole este bloco e salve.",
+    "janSteps": "No Jan, abra Settings → MCP Servers e adicione um servidor com este comando, argumento e variável de ambiente (ou cole o JSON se sua versão aceitar).",
+    "genericSteps": "Qualquer cliente MCP capaz de iniciar servidores stdio aceita este bloco mcpServers padrão. Consulte a documentação do seu cliente para saber onde colocá-lo.",
+    "secretsNote": "O trecho não contém segredos. Ferramentas de escrita (como importar) também exigem que este app esteja aberto."
+  },
   "McpImportSettings": {
     "title": "Pastas de importação MCP",
     "description": "Um agente de IA conectado via MCP só pode importar arquivos locais destas pastas. As importações aguardam a sua confirmação, a menos que você ative a confirmação automática do cofre. Deixe a lista vazia para bloquear a importação de arquivos locais; importações por link (URL) são permitidas e passam pela mesma confirmação.",
@@ -1392,6 +1406,9 @@
     "imageAlt": "Descrição",
     "imageNote": "Use um caminho relativo como attachments/foto.png para arquivos desta biblioteca, ou um endereço da web.",
     "imageApply": "Inserir",
+    "imageUpload": "Enviar de um arquivo",
+    "imageUploading": "Enviando…",
+    "imageUploadFailed": "Não foi possível enviar a imagem",
     "cancel": "Cancelar",
     "mathTitle": "Editar fórmula",
     "mathApply": "Aplicar",

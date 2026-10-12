@@ -30,3 +30,17 @@ export function resolveRelativeLibraryPath(currentPath: string, src: string): st
 	}
 	return stack.join('/');
 }
+
+/**
+ * Inverse of resolveRelativeLibraryPath: the markdown link from the note at
+ * `currentPath` to the library-root-relative `targetRel`, with each segment
+ * URL-encoded (the editor and viewer decodeURI the src before resolving it).
+ */
+export function relativeLibraryLink(currentPath: string, targetRel: string): string {
+	const from = currentPath.split('/').slice(0, -1);
+	const to = targetRel.split('/').filter((p) => p !== '' && p !== '.');
+	let i = 0;
+	while (i < from.length && i < to.length - 1 && from[i] === to[i]) i++;
+	const parts = [...from.slice(i).map(() => '..'), ...to.slice(i)];
+	return parts.map((p) => (p === '..' ? p : encodeURIComponent(p))).join('/');
+}

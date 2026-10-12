@@ -890,6 +890,20 @@
     "removeFailed": "Der Import konnte nicht entfernt werden.",
     "navBadgeLabel": "{count} ausstehende Importe brauchen deine Aufmerksamkeit"
   },
+  "McpConnect": {
+    "title": "MCP-Client verbinden",
+    "description": "Lass eine KI-App wie Claude, LM Studio oder Jan in deinen Tresoren suchen. Kopiere den Ausschnitt für deinen Client — er enthält bereits die richtigen Pfade für diesen Computer.",
+    "notBundled": "Der MCP-Server ist noch nicht in der Desktop-App enthalten — derzeit läuft er aus dem Quellcode-Checkout mit Node.js (siehe „MCP-Server“ in der README). Starte vault-chat aus dem Quell-Repository, um hier einen fertigen Ausschnitt zu erhalten.",
+    "loadFailed": "Der Verbindungsausschnitt konnte nicht geladen werden.",
+    "copy": "Kopieren",
+    "copied": "Kopiert",
+    "claudeDesktopSteps": "Füge dies in die untenstehende Konfigurationsdatei ein (lege sie an, falls sie fehlt, und führe es mit vorhandenen mcpServers zusammen) und starte Claude Desktop neu.",
+    "claudeCodeSteps": "Führe diesen Befehl in einem Terminal aus. --scope user macht ihn in jedem Projekt verfügbar.",
+    "lmStudioSteps": "Öffne in LM Studio den Tab Program → Install → Edit mcp.json, füge diesen Block ein und speichere.",
+    "janSteps": "Öffne in Jan Settings → MCP Servers und füge einen Server mit diesem Befehl, Argument und dieser Umgebungsvariable hinzu (oder füge das JSON ein, falls deine Version es akzeptiert).",
+    "genericSteps": "Jeder MCP-Client, der stdio-Server starten kann, akzeptiert diesen Standard-mcpServers-Block. Wohin er gehört, steht in der Dokumentation deines Clients.",
+    "secretsNote": "Der Ausschnitt enthält keine Geheimnisse. Schreibwerkzeuge (z. B. Import) benötigen außerdem, dass diese App läuft."
+  },
   "McpImportSettings": {
     "title": "MCP-Importordner",
     "description": "Ein über MCP verbundener KI-Agent darf lokale Dateien nur aus diesen Ordnern importieren. Importe warten auf deine Bestätigung, solange du die automatische Bestätigung für den Tresor nicht einschaltest. Lass die Liste leer, um lokale Dateiimporte zu sperren; Link-Importe (URL) sind erlaubt und laufen über dieselbe Bestätigung.",
@@ -1389,6 +1403,9 @@
     "imageAlt": "Beschreibung",
     "imageNote": "Für Dateien dieser Bibliothek einen relativen Pfad wie attachments/foto.png verwenden, sonst eine Webadresse.",
     "imageApply": "Einfügen",
+    "imageUpload": "Aus Datei hochladen",
+    "imageUploading": "Wird hochgeladen…",
+    "imageUploadFailed": "Bild konnte nicht hochgeladen werden",
     "cancel": "Abbrechen",
     "mathTitle": "Formel bearbeiten",
     "mathApply": "Übernehmen",

@@ -577,6 +577,9 @@
 		"imageAlt": "Beskrivelse",
 		"imageNote": "Brug en relativ sti som attachments/photo.png til filer i dette bibliotek, eller en webadresse.",
 		"imageApply": "Indsæt",
+		"imageUpload": "Upload fra fil",
+		"imageUploading": "Uploader…",
+		"imageUploadFailed": "Billedet kunne ikke uploades",
 		"cancel": "Annuller",
 		"mathTitle": "Rediger formel",
 		"mathApply": "Anvend",
@@ -946,6 +949,20 @@
 		"removeFailed": "Kunne ikke fjerne importen.",
 		"navBadgeLabel": "{count} afventende importer kræver din opmærksomhed",
 		"navBadgeLabel#one": "{count} afventende import kræver din opmærksomhed"
+	},
+	"McpConnect": {
+		"title": "Tilslut en MCP-klient",
+		"description": "Lad en AI-app som Claude, LM Studio eller Jan søge i dine bokse. Kopiér uddraget til din klient — det har allerede de rigtige stier til denne computer.",
+		"notBundled": "MCP-serveren er endnu ikke inkluderet i desktop-appen — indtil videre kører den fra et udtjekket kildekodearkiv med Node.js (se \"MCP-server\" i README). Kør vault-chat fra kildekodearkivet for at få et færdigt uddrag her.",
+		"loadFailed": "Forbindelsesuddraget kunne ikke indlæses.",
+		"copy": "Kopiér",
+		"copied": "Kopieret",
+		"claudeDesktopSteps": "Tilføj dette til konfigurationsfilen nedenfor (opret den, hvis den ikke findes, og flet med eksisterende mcpServers), og genstart derefter Claude Desktop.",
+		"claudeCodeSteps": "Kør denne kommando i en terminal. --scope user gør den tilgængelig i alle projekter.",
+		"lmStudioSteps": "Åbn fanen Program → Install → Edit mcp.json i LM Studio, indsæt denne blok og gem.",
+		"janSteps": "Åbn Settings → MCP Servers i Jan, og tilføj en server med denne kommando, dette argument og denne miljøvariabel (eller indsæt JSON, hvis din version understøtter det).",
+		"genericSteps": "Enhver MCP-klient, der kan starte stdio-servere, accepterer denne standardblok for mcpServers. Se din klients dokumentation for, hvor den skal placeres.",
+		"secretsNote": "Uddraget indeholder ingen hemmeligheder. Skriveværktøjer (som import) kræver desuden, at denne app kører."
 	},
 	"McpImportSettings": {
 		"title": "MCP-importmapper",

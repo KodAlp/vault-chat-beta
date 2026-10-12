@@ -880,6 +880,20 @@
     "removeFailed": "无法移除该导入。",
     "navBadgeLabel": "有 {count} 项待处理的导入需要你处理"
   },
+  "McpConnect": {
+    "title": "连接 MCP 客户端",
+    "description": "让 Claude、LM Studio 或 Jan 等 AI 应用搜索你的知识库。复制适合你客户端的片段——其中已包含这台电脑上的正确路径。",
+    "notBundled": "MCP 服务器尚未随桌面应用打包——目前需要在源码检出目录中使用 Node.js 运行（参见 README 中的“MCP 服务器”）。请从源码仓库运行 vault-chat，即可在此获得可直接粘贴的片段。",
+    "loadFailed": "无法加载连接片段。",
+    "copy": "复制",
+    "copied": "已复制",
+    "claudeDesktopSteps": "将此内容添加到下方的配置文件中（若不存在则创建，并与已有的 mcpServers 合并），然后重启 Claude Desktop。",
+    "claudeCodeSteps": "在终端中运行此命令。--scope user 可使其在所有项目中可用。",
+    "lmStudioSteps": "在 LM Studio 中打开 Program 标签页 → Install → Edit mcp.json，粘贴此代码块并保存。",
+    "janSteps": "在 Jan 中打开 Settings → MCP Servers，用此命令、参数和环境变量添加一个服务器（如果你的版本支持，也可以直接粘贴 JSON）。",
+    "genericSteps": "任何能启动 stdio 服务器的 MCP 客户端都接受这个标准的 mcpServers 代码块。放置位置请查阅客户端文档。",
+    "secretsNote": "该片段不含任何机密信息。写入类工具（如导入）还要求此应用保持运行。"
+  },
   "McpImportSettings": {
     "title": "MCP 导入文件夹",
     "description": "通过 MCP 连接的 AI 代理只能从这些文件夹导入本地文件。除非你为该仓库开启自动确认，否则导入会等待你的确认。将列表留空即可禁止导入本地文件；链接（URL）导入是允许的，并经过同样的确认。",
@@ -1375,6 +1389,9 @@
     "imageAlt": "说明",
     "imageNote": "本库内的文件请使用相对路径，例如 attachments/photo.png，或使用网址。",
     "imageApply": "插入",
+    "imageUpload": "从文件上传",
+    "imageUploading": "上传中…",
+    "imageUploadFailed": "无法上传图片",
     "cancel": "取消",
     "mathTitle": "编辑公式",
     "mathApply": "应用",

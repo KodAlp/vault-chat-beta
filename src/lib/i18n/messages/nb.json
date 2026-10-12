@@ -573,6 +573,9 @@
 		"imageAlt": "Beskrivelse",
 		"imageNote": "Bruk en relativ sti som attachments/photo.png for filer i dette biblioteket, eller en nettadresse.",
 		"imageApply": "Sett inn",
+		"imageUpload": "Last opp fra fil",
+		"imageUploading": "Laster opp…",
+		"imageUploadFailed": "Kunne ikke laste opp bildet",
 		"cancel": "Avbryt",
 		"mathTitle": "Rediger formel",
 		"mathApply": "Bruk",
@@ -942,6 +945,20 @@
 		"removeFailed": "Kunne ikke fjerne importen.",
 		"navBadgeLabel": "{count} ventende importer trenger oppmerksomheten din",
 		"navBadgeLabel#one": "{count} ventende import trenger oppmerksomheten din"
+	},
+	"McpConnect": {
+		"title": "Koble til en MCP-klient",
+		"description": "La en AI-app som Claude, LM Studio eller Jan søke i hvelvene dine. Kopier utdraget for klienten din — det har allerede riktige stier for denne datamaskinen.",
+		"notBundled": "MCP-serveren er ikke inkludert i skrivebordsappen ennå — foreløpig kjører den fra en utsjekket kildekode med Node.js (se «MCP-server» i README). Kjør vault-chat fra kildekodelageret for å få et ferdig utdrag her.",
+		"loadFailed": "Kunne ikke laste tilkoblingsutdraget.",
+		"copy": "Kopier",
+		"copied": "Kopiert",
+		"claudeDesktopSteps": "Legg dette til i konfigurasjonsfilen nedenfor (opprett den hvis den ikke finnes, og slå sammen med eksisterende mcpServers), og start Claude Desktop på nytt.",
+		"claudeCodeSteps": "Kjør denne kommandoen i en terminal. --scope user gjør den tilgjengelig i alle prosjekter.",
+		"lmStudioSteps": "Åpne fanen Program → Install → Edit mcp.json i LM Studio, lim inn denne blokken og lagre.",
+		"janSteps": "Åpne Settings → MCP Servers i Jan og legg til en server med denne kommandoen, dette argumentet og denne miljøvariabelen (eller lim inn JSON hvis versjonen din støtter det).",
+		"genericSteps": "Alle MCP-klienter som kan starte stdio-servere, godtar denne standardblokken for mcpServers. Se klientens dokumentasjon for hvor den hører hjemme.",
+		"secretsNote": "Utdraget inneholder ingen hemmeligheter. Skriveverktøy (som import) krever i tillegg at denne appen kjører."
 	},
 	"McpImportSettings": {
 		"title": "MCP-importmapper",
