@@ -32,7 +32,7 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 ### 1. Bakım ve temizlik
 - [ ] **Test artıklarını sil.** "Formül Testi" kasası ve `Notebook verileri/_formul-testi/` silinecek (kullanıcı kararı); silmeden önce içeriği göster. `K` · #22
 - [ ] **Yanlış adlı arXiv PDF'leri.** SystemsControl, Probabilistic, TeoBanica. `K` · #23 (çekildi)
-- [ ] **Disk ve dal temizliği.** 16 worktree, eski `claude/*` ve `feat/*` dalları, `target` ~17,5 GB. `K` · #58
+- [ ] **Disk temizliği.** 9 worktree kaldırıldı (2026-10-12); kalan: artık dosyalı 5 worktree (`--force`) ve ana `src-tauri/target` 8,7 GB (`cargo clean`). Dallar yer kaplamadığı için kalıyor (kullanıcı kararı). `K` · #58
 
 ### 2. Kurulum ve veri sağlamlığı
 - [ ] **Ollama ilk sohbete kadar başlamıyor.** Uygulama yeniden açılınca dış betikler `indexPending` alıyor. `K` · #87
