@@ -893,6 +893,20 @@
     "removeFailed": "Impossible de retirer l'importation.",
     "navBadgeLabel": "{count} importations en attente demandent votre attention"
   },
+  "McpConnect": {
+    "title": "Connecter un client MCP",
+    "description": "Laissez une application d'IA comme Claude, LM Studio ou Jan chercher dans vos coffres. Copiez l'extrait de votre client — il contient déjà les bons chemins pour cet ordinateur.",
+    "notBundled": "Le serveur MCP n'est pas encore inclus dans l'application de bureau — pour l'instant il s'exécute depuis une copie du code source avec Node.js (voir « Serveur MCP » dans le README). Lancez vault-chat depuis le dépôt source pour obtenir ici un extrait prêt à coller.",
+    "loadFailed": "Impossible de charger l'extrait de connexion.",
+    "copy": "Copier",
+    "copied": "Copié",
+    "claudeDesktopSteps": "Ajoutez ceci au fichier de configuration ci-dessous (créez-le s'il n'existe pas et fusionnez avec les mcpServers existants), puis redémarrez Claude Desktop.",
+    "claudeCodeSteps": "Exécutez cette commande dans un terminal. --scope user la rend disponible dans tous les projets.",
+    "lmStudioSteps": "Dans LM Studio, ouvrez l'onglet Program → Install → Edit mcp.json, collez ce bloc et enregistrez.",
+    "janSteps": "Dans Jan, ouvrez Settings → MCP Servers et ajoutez un serveur avec cette commande, cet argument et cette variable d'environnement (ou collez le JSON si votre version l'accepte).",
+    "genericSteps": "Tout client MCP capable de lancer des serveurs stdio accepte ce bloc mcpServers standard. Consultez la documentation de votre client pour savoir où le placer.",
+    "secretsNote": "L'extrait ne contient aucun secret. Les outils d'écriture (comme l'import) exigent aussi que cette application soit ouverte."
+  },
   "McpImportSettings": {
     "title": "Dossiers d'importation MCP",
     "description": "Un agent IA connecté via MCP ne peut importer des fichiers locaux que depuis ces dossiers. Les importations attendent votre confirmation, sauf si vous activez la confirmation automatique du coffre. Laissez la liste vide pour bloquer l'importation de fichiers locaux ; les importations par lien (URL) sont autorisées et passent par la même confirmation.",
@@ -1392,6 +1406,9 @@
     "imageAlt": "Description",
     "imageNote": "Utilisez un chemin relatif comme attachments/photo.png pour les fichiers de cette bibliothèque, ou une adresse web.",
     "imageApply": "Insérer",
+    "imageUpload": "Importer depuis un fichier",
+    "imageUploading": "Importation…",
+    "imageUploadFailed": "Impossible d’importer l’image",
     "cancel": "Annuler",
     "mathTitle": "Modifier la formule",
     "mathApply": "Appliquer",

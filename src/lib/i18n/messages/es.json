@@ -895,6 +895,20 @@
     "removeFailed": "No se pudo quitar la importación.",
     "navBadgeLabel": "{count} importaciones pendientes requieren tu atención"
   },
+  "McpConnect": {
+    "title": "Conectar un cliente MCP",
+    "description": "Deja que una app de IA como Claude, LM Studio o Jan busque en tus bóvedas. Copia el fragmento de tu cliente — ya incluye las rutas correctas de este equipo.",
+    "notBundled": "El servidor MCP aún no viene incluido en la aplicación de escritorio — por ahora se ejecuta desde una copia del código fuente con Node.js (consulta «Servidor MCP» en el README). Ejecuta vault-chat desde el repositorio de código fuente para obtener aquí un fragmento listo para pegar.",
+    "loadFailed": "No se pudo cargar el fragmento de conexión.",
+    "copy": "Copiar",
+    "copied": "Copiado",
+    "claudeDesktopSteps": "Añade esto al archivo de configuración de abajo (créalo si no existe y combínalo con los mcpServers existentes) y reinicia Claude Desktop.",
+    "claudeCodeSteps": "Ejecuta este comando en una terminal. --scope user lo deja disponible en todos los proyectos.",
+    "lmStudioSteps": "En LM Studio abre la pestaña Program → Install → Edit mcp.json, pega este bloque y guarda.",
+    "janSteps": "En Jan abre Settings → MCP Servers y añade un servidor con este comando, argumento y variable de entorno (o pega el JSON si tu versión lo admite).",
+    "genericSteps": "Cualquier cliente MCP que pueda iniciar servidores stdio acepta este bloque mcpServers estándar. Consulta la documentación de tu cliente para saber dónde va.",
+    "secretsNote": "El fragmento no contiene secretos. Las herramientas de escritura (como importar) también necesitan que esta app esté abierta."
+  },
   "McpImportSettings": {
     "title": "Carpetas de importación MCP",
     "description": "Un agente de IA conectado por MCP solo puede importar archivos locales de estas carpetas. Las importaciones esperan tu confirmación salvo que actives la confirmación automática de la bóveda. Deja la lista vacía para bloquear la importación de archivos locales; las importaciones por enlace (URL) están permitidas y pasan por la misma confirmación.",
@@ -1392,6 +1406,9 @@
     "imageAlt": "Descripción",
     "imageNote": "Usa una ruta relativa como attachments/foto.png para archivos de esta biblioteca, o una dirección web.",
     "imageApply": "Insertar",
+    "imageUpload": "Subir desde archivo",
+    "imageUploading": "Subiendo…",
+    "imageUploadFailed": "No se pudo subir la imagen",
     "cancel": "Cancelar",
     "mathTitle": "Editar fórmula",
     "mathApply": "Aplicar",

@@ -596,6 +596,9 @@
 		"imageAlt": "Description",
 		"imageNote": "Use a relative path such as attachments/photo.png for files in this library, or a web address.",
 		"imageApply": "Insert",
+		"imageUpload": "Upload from file",
+		"imageUploading": "Uploading…",
+		"imageUploadFailed": "Could not upload the image",
 		"cancel": "Cancel",
 		"mathTitle": "Edit formula",
 		"mathApply": "Apply",
@@ -973,6 +976,20 @@
 		"loadFailed": "Couldn't load pending imports.",
 		"removeFailed": "Couldn't remove the import.",
 		"navBadgeLabel": "{count} pending imports need your attention"
+	},
+	"McpConnect": {
+		"title": "Connect an MCP client",
+		"description": "Let an AI app like Claude, LM Studio or Jan search your vaults. Copy the snippet for your client — it already has the right paths for this computer.",
+		"notBundled": "The MCP server isn't bundled with the desktop app yet — for now it runs from the source checkout with Node.js (see \"MCP Server\" in the README). Run vault-chat from the source repository to get a ready-to-paste snippet here.",
+		"loadFailed": "Couldn't load the connection snippet.",
+		"copy": "Copy",
+		"copied": "Copied",
+		"claudeDesktopSteps": "Add this to the config file below (create it if it doesn't exist, and merge it with any existing mcpServers), then restart Claude Desktop.",
+		"claudeCodeSteps": "Run this command in a terminal. --scope user makes it available in every project.",
+		"lmStudioSteps": "In LM Studio open the Program tab → Install → Edit mcp.json, paste this block and save.",
+		"janSteps": "In Jan open Settings → MCP Servers and add a server with this command, argument and environment variable (or paste the JSON if your version accepts it).",
+		"genericSteps": "Any MCP client that can start stdio servers accepts this standard mcpServers block. Check your client's docs for where it goes.",
+		"secretsNote": "The snippet contains no secrets. Write tools (such as import) also need this app to be running."
 	},
 	"McpImportSettings": {
 		"title": "MCP import folders",

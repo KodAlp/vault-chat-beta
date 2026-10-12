@@ -880,6 +880,20 @@
     "removeFailed": "インポートを削除できませんでした。",
     "navBadgeLabel": "対応が必要な保留中のインポートが {count} 件あります"
   },
+  "McpConnect": {
+    "title": "MCPクライアントを接続",
+    "description": "Claude、LM Studio、Jan などのAIアプリがあなたのボールトを検索できるようにします。お使いのクライアント用のスニペットをコピーしてください。このコンピューター用の正しいパスがすでに入っています。",
+    "notBundled": "MCPサーバーはまだデスクトップアプリに同梱されていません。現時点ではソースのチェックアウトから Node.js で実行します（READMEの「MCPサーバー」を参照）。ここで貼り付け可能なスニペットを表示するには、ソースリポジトリから vault-chat を実行してください。",
+    "loadFailed": "接続スニペットを読み込めませんでした。",
+    "copy": "コピー",
+    "copied": "コピーしました",
+    "claudeDesktopSteps": "以下の設定ファイルに追加し（なければ作成し、既存の mcpServers とマージ）、Claude Desktop を再起動してください。",
+    "claudeCodeSteps": "ターミナルでこのコマンドを実行します。--scope user を付けるとすべてのプロジェクトで使えます。",
+    "lmStudioSteps": "LM Studio で Program タブ → Install → Edit mcp.json を開き、このブロックを貼り付けて保存します。",
+    "janSteps": "Jan で Settings → MCP Servers を開き、このコマンド・引数・環境変数でサーバーを追加します（お使いのバージョンが対応していればJSONを貼り付けられます）。",
+    "genericSteps": "stdioサーバーを起動できるMCPクライアントなら、この標準の mcpServers ブロックを受け付けます。配置場所はクライアントのドキュメントを確認してください。",
+    "secretsNote": "スニペットに機密情報は含まれません。書き込み系ツール（インポートなど）には、このアプリが起動している必要もあります。"
+  },
   "McpImportSettings": {
     "title": "MCP インポート用フォルダ",
     "description": "MCP で接続した AI エージェントは、これらのフォルダにあるローカルファイルだけをインポートできます。保管庫の自動承認をオンにしない限り、インポートはあなたの確認を待ちます。ローカルファイルのインポートを禁止するにはリストを空にしてください。リンク（URL）のインポートは許可され、同じ確認を経ます。",
@@ -1375,6 +1389,9 @@
     "imageAlt": "説明",
     "imageNote": "このライブラリ内のファイルには attachments/photo.png のような相対パス、またはウェブアドレスを使います。",
     "imageApply": "挿入",
+    "imageUpload": "ファイルからアップロード",
+    "imageUploading": "アップロード中…",
+    "imageUploadFailed": "画像をアップロードできませんでした",
     "cancel": "キャンセル",
     "mathTitle": "数式を編集",
     "mathApply": "適用",

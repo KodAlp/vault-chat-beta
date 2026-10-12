@@ -596,6 +596,9 @@
 		"imageAlt": "Açıklama",
 		"imageNote": "Bu kütüphanedeki dosyalar için attachments/foto.png gibi göreli bir yol ya da bir web adresi kullan.",
 		"imageApply": "Ekle",
+		"imageUpload": "Dosyadan yükle",
+		"imageUploading": "Yükleniyor…",
+		"imageUploadFailed": "Görsel yüklenemedi",
 		"cancel": "Vazgeç",
 		"mathTitle": "Formülü düzenle",
 		"mathApply": "Uygula",
@@ -973,6 +976,20 @@
 		"loadFailed": "Bekleyen içe aktarmalar yüklenemedi.",
 		"removeFailed": "İçe aktarma kaldırılamadı.",
 		"navBadgeLabel": "{count} bekleyen içe aktarma senin ilgini bekliyor"
+	},
+	"McpConnect": {
+		"title": "Bir MCP istemcisine bağlan",
+		"description": "Claude, LM Studio veya Jan gibi bir yapay zekâ uygulamasının kasalarında arama yapmasına izin ver. İstemcin için olan parçayı kopyala — bu bilgisayara uygun yollar zaten içinde.",
+		"notBundled": "MCP sunucusu henüz masaüstü uygulamasına dahil değil — şimdilik kaynak kod klasöründen Node.js ile çalışıyor (README'deki \"MCP Sunucusu\" bölümüne bak). Burada yapıştırmaya hazır parça görmek için vault-chat'i kaynak depodan çalıştır.",
+		"loadFailed": "Bağlantı parçası yüklenemedi.",
+		"copy": "Kopyala",
+		"copied": "Kopyalandı",
+		"claudeDesktopSteps": "Bunu aşağıdaki yapılandırma dosyasına ekle (yoksa oluştur, varsa mevcut mcpServers ile birleştir), sonra Claude Desktop'ı yeniden başlat.",
+		"claudeCodeSteps": "Bu komutu bir terminalde çalıştır. --scope user, her projede kullanılabilir olmasını sağlar.",
+		"lmStudioSteps": "LM Studio'da Program sekmesi → Install → Edit mcp.json yolunu aç, bu bloğu yapıştır ve kaydet.",
+		"janSteps": "Jan'da Settings → MCP Servers'ı aç ve bu komut, argüman ve ortam değişkeniyle bir sunucu ekle (sürümün kabul ediyorsa JSON'u yapıştırabilirsin).",
+		"genericSteps": "stdio sunucusu başlatabilen her MCP istemcisi bu standart mcpServers bloğunu kabul eder. Nereye gideceği için istemcinin belgelerine bak.",
+		"secretsNote": "Parçada gizli bilgi yok. Yazma araçları (içe aktarma gibi) ayrıca bu uygulamanın açık olmasını gerektirir."
 	},
 	"McpImportSettings": {
 		"title": "MCP içe aktarma klasörleri",

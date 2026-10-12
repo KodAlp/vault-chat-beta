@@ -11,6 +11,7 @@
 	import * as Card from '$lib/components/ui/card';
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
 	import ReindexDialog from '$lib/components/ReindexDialog.svelte';
+	import McpClientConnect from '$lib/components/McpClientConnect.svelte';
 	import { t } from '$lib/i18n/index.svelte';
 	import { readResponseError } from '$lib/server-error';
 	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
@@ -524,6 +525,10 @@
 			{/if}
 		</Card.Content>
 	</Card.Root>
+
+	<div class="mt-6">
+		<McpClientConnect />
+	</div>
 
 	{#if runningInTauri}
 		<Card.Root class="mt-6">

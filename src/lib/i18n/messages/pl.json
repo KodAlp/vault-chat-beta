@@ -569,6 +569,9 @@
 		"imageAlt": "Opis",
 		"imageNote": "Dla plików z tej biblioteki użyj ścieżki względnej, np. attachments/photo.png, lub adresu WWW.",
 		"imageApply": "Wstaw",
+		"imageUpload": "Prześlij z pliku",
+		"imageUploading": "Przesyłanie…",
+		"imageUploadFailed": "Nie udało się przesłać obrazu",
 		"cancel": "Anuluj",
 		"mathTitle": "Edytuj wzór",
 		"mathApply": "Zastosuj",
@@ -934,6 +937,20 @@
 		"loadFailed": "Nie udało się wczytać oczekujących importów.",
 		"removeFailed": "Nie udało się usunąć importu.",
 		"navBadgeLabel": "Oczekujące importy wymagające uwagi: {count}"
+	},
+	"McpConnect": {
+		"title": "Połącz klienta MCP",
+		"description": "Pozwól aplikacji AI, takiej jak Claude, LM Studio lub Jan, przeszukiwać Twoje sejfy. Skopiuj fragment dla swojego klienta — ma już poprawne ścieżki dla tego komputera.",
+		"notBundled": "Serwer MCP nie jest jeszcze dołączony do aplikacji desktopowej — na razie działa z kopii kodu źródłowego przy użyciu Node.js (zobacz „Serwer MCP” w README). Uruchom vault-chat z repozytorium źródłowego, aby otrzymać tutaj gotowy fragment.",
+		"loadFailed": "Nie udało się wczytać fragmentu połączenia.",
+		"copy": "Kopiuj",
+		"copied": "Skopiowano",
+		"claudeDesktopSteps": "Dodaj to do poniższego pliku konfiguracyjnego (utwórz go, jeśli nie istnieje, i połącz z istniejącymi mcpServers), a następnie uruchom ponownie Claude Desktop.",
+		"claudeCodeSteps": "Uruchom to polecenie w terminalu. --scope user udostępnia je w każdym projekcie.",
+		"lmStudioSteps": "W LM Studio otwórz kartę Program → Install → Edit mcp.json, wklej ten blok i zapisz.",
+		"janSteps": "W Jan otwórz Settings → MCP Servers i dodaj serwer z tym poleceniem, argumentem i zmienną środowiskową (lub wklej JSON, jeśli Twoja wersja to obsługuje).",
+		"genericSteps": "Każdy klient MCP, który potrafi uruchamiać serwery stdio, akceptuje ten standardowy blok mcpServers. Gdzie go umieścić, sprawdź w dokumentacji klienta.",
+		"secretsNote": "Fragment nie zawiera sekretów. Narzędzia zapisu (np. import) wymagają dodatkowo, aby ta aplikacja była uruchomiona."
 	},
 	"McpImportSettings": {
 		"title": "Foldery importu MCP",

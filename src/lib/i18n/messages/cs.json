@@ -572,6 +572,9 @@
 		"imageAlt": "Popis",
 		"imageNote": "Pro soubory v této knihovně použijte relativní cestu, např. attachments/photo.png, nebo webovou adresu.",
 		"imageApply": "Vložit",
+		"imageUpload": "Nahrát ze souboru",
+		"imageUploading": "Nahrávání…",
+		"imageUploadFailed": "Obrázek se nepodařilo nahrát",
 		"cancel": "Zrušit",
 		"mathTitle": "Upravit vzorec",
 		"mathApply": "Použít",
@@ -937,6 +940,20 @@
 		"loadFailed": "Čekající importy se nepodařilo načíst.",
 		"removeFailed": "Import se nepodařilo odebrat.",
 		"navBadgeLabel": "Čekající importy vyžadující vaši pozornost: {count}"
+	},
+	"McpConnect": {
+		"title": "Připojit klienta MCP",
+		"description": "Nechte AI aplikaci jako Claude, LM Studio nebo Jan prohledávat vaše trezory. Zkopírujte úryvek pro svého klienta — už obsahuje správné cesty pro tento počítač.",
+		"notBundled": "Server MCP zatím není součástí desktopové aplikace — prozatím běží ze zdrojového checkoutu s Node.js (viz „Server MCP“ v README). Spusťte vault-chat ze zdrojového repozitáře a získáte zde hotový úryvek.",
+		"loadFailed": "Úryvek připojení se nepodařilo načíst.",
+		"copy": "Kopírovat",
+		"copied": "Zkopírováno",
+		"claudeDesktopSteps": "Přidejte to do konfiguračního souboru níže (pokud neexistuje, vytvořte ho a sloučte s existujícími mcpServers) a poté restartujte Claude Desktop.",
+		"claudeCodeSteps": "Spusťte tento příkaz v terminálu. --scope user ho zpřístupní ve všech projektech.",
+		"lmStudioSteps": "V LM Studiu otevřete kartu Program → Install → Edit mcp.json, vložte tento blok a uložte.",
+		"janSteps": "V Janu otevřete Settings → MCP Servers a přidejte server s tímto příkazem, argumentem a proměnnou prostředí (nebo vložte JSON, pokud to vaše verze podporuje).",
+		"genericSteps": "Každý klient MCP, který umí spouštět servery stdio, přijímá tento standardní blok mcpServers. Kam patří, zjistíte v dokumentaci klienta.",
+		"secretsNote": "Úryvek neobsahuje žádná tajemství. Nástroje pro zápis (například import) navíc vyžadují, aby tato aplikace běžela."
 	},
 	"McpImportSettings": {
 		"title": "Složky pro import přes MCP",

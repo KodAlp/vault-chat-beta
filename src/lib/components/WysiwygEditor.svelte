@@ -27,6 +27,8 @@
 	import ListOrderedIcon from '@lucide/svelte/icons/list-ordered';
 	import QuoteIcon from '@lucide/svelte/icons/quote';
 	import LinkIcon from '@lucide/svelte/icons/link';
+	import { readResponseError } from '$lib/server-error';
+	import { relativeLibraryLink } from '$lib/attachment-link';
 	import ImageIcon from '@lucide/svelte/icons/image';
 	import TableIcon from '@lucide/svelte/icons/table';
 	import SquareCodeIcon from '@lucide/svelte/icons/square-code';
@@ -65,6 +67,9 @@
 	let imageOpen = $state(false);
 	let imageSrc = $state('');
 	let imageAlt = $state('');
+	let uploading = $state(false);
+	let uploadError = $state('');
+	let fileInput: HTMLInputElement | undefined;
 	// What we last told the parent; an incoming `value` equal to it is just our own echo.
 	let lastEmitted = value;
 	let loadedFor: string | null = null;
@@ -100,6 +105,7 @@
 			vaultId,
 			currentPath,
 			rawBlockTitle: t('WysiwygEditor.rawBlockTitle'),
+			onImageFiles: (files) => void uploadImages(files),
 			onChange: emit,
 			onFormat: (s) => (fmt = s),
 			onMath: (target) => (math = target)
@@ -154,6 +160,7 @@
 	function openImage() {
 		imageSrc = '';
 		imageAlt = '';
+		uploadError = '';
 		linkOpen = false;
 		imageOpen = true;
 	}
@@ -162,6 +169,36 @@
 		imageOpen = false;
 		if (src) editor?.insertImage(src, imageAlt.trim());
 		else editor?.focus();
+	}
+	/** Uploads image files as vault attachments and inserts a note-relative link to each. */
+	async function uploadImages(files: File[]) {
+		if (!editor || uploading) return;
+		uploading = true;
+		uploadError = '';
+		try {
+			for (const file of files) {
+				const body = new FormData();
+				body.append('file', file);
+				body.append('vault', vaultId);
+				const res = await fetch('/api/library/attachment', { method: 'POST', body });
+				if (res.status === 413) throw new Error(t('ImportFlow.tooLarge'));
+				if (!res.ok) throw new Error(await readResponseError(res));
+				const { path } = (await res.json()) as { path: string };
+				editor?.insertImage(relativeLibraryLink(currentPath, path), imageAlt.trim() || file.name.replace(/[.][^.]*$/, ''));
+			}
+			imageOpen = false;
+		} catch (err) {
+			uploadError = err instanceof Error ? err.message : t('WysiwygEditor.imageUploadFailed');
+			imageOpen = true;
+		} finally {
+			uploading = false;
+		}
+	}
+	function onPickFile(e: Event) {
+		const input = e.currentTarget as HTMLInputElement;
+		const files = Array.from(input.files ?? []);
+		input.value = '';
+		if (files.length) void uploadImages(files);
 	}
 	function insertFormula(kind: 'inline' | 'block') {
 		const target = editor?.insertMath(kind);
@@ -241,7 +278,10 @@
 			<input id="vc-img-alt" type="text" bind:value={imageAlt} />
 			<button type="submit" class="vc-btn primary">{t('WysiwygEditor.imageApply')}</button>
 			<button type="button" class="vc-btn ghost" onclick={() => { imageOpen = false; editor?.focus(); }}>{t('WysiwygEditor.cancel')}</button>
+			<input bind:this={fileInput} type="file" accept="image/png,image/jpeg,image/gif,image/webp" multiple hidden onchange={onPickFile} />
+			<button type="button" class="vc-btn" disabled={uploading} onclick={() => fileInput?.click()}>{uploading ? t('WysiwygEditor.imageUploading') : t('WysiwygEditor.imageUpload')}</button>
 			<p class="hint">{t('WysiwygEditor.imageNote')}</p>
+			{#if uploadError}<p class="hint" role="alert">{uploadError}</p>{/if}
 		</form>
 	{/if}
 

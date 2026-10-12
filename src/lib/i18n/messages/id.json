@@ -880,6 +880,20 @@
     "removeFailed": "Impor tidak dapat dihapus.",
     "navBadgeLabel": "{count} impor tertunda memerlukan perhatian Anda"
   },
+  "McpConnect": {
+    "title": "Hubungkan klien MCP",
+    "description": "Izinkan aplikasi AI seperti Claude, LM Studio, atau Jan mencari di brankas Anda. Salin cuplikan untuk klien Anda — sudah berisi jalur yang benar untuk komputer ini.",
+    "notBundled": "Server MCP belum disertakan dalam aplikasi desktop — untuk saat ini berjalan dari checkout kode sumber dengan Node.js (lihat \"Server MCP\" di README). Jalankan vault-chat dari repositori kode sumber untuk mendapatkan cuplikan siap tempel di sini.",
+    "loadFailed": "Gagal memuat cuplikan koneksi.",
+    "copy": "Salin",
+    "copied": "Tersalin",
+    "claudeDesktopSteps": "Tambahkan ini ke berkas konfigurasi di bawah (buat jika belum ada dan gabungkan dengan mcpServers yang sudah ada), lalu mulai ulang Claude Desktop.",
+    "claudeCodeSteps": "Jalankan perintah ini di terminal. --scope user membuatnya tersedia di semua proyek.",
+    "lmStudioSteps": "Di LM Studio buka tab Program → Install → Edit mcp.json, tempel blok ini lalu simpan.",
+    "janSteps": "Di Jan buka Settings → MCP Servers dan tambahkan server dengan perintah, argumen, dan variabel lingkungan ini (atau tempel JSON jika versi Anda mendukungnya).",
+    "genericSteps": "Klien MCP apa pun yang dapat menjalankan server stdio menerima blok mcpServers standar ini. Lihat dokumentasi klien Anda untuk tempat menaruhnya.",
+    "secretsNote": "Cuplikan tidak berisi rahasia. Alat tulis (seperti impor) juga memerlukan aplikasi ini berjalan."
+  },
   "McpImportSettings": {
     "title": "Folder impor MCP",
     "description": "Agen AI yang terhubung lewat MCP hanya boleh mengimpor berkas lokal dari folder-folder ini. Impor menunggu konfirmasi Anda kecuali Anda mengaktifkan konfirmasi otomatis untuk Vault itu. Biarkan daftar kosong untuk memblokir impor berkas lokal; impor tautan (URL) diizinkan dan melalui konfirmasi yang sama.",
@@ -1375,6 +1389,9 @@
     "imageAlt": "Deskripsi",
     "imageNote": "Gunakan jalur relatif seperti attachments/foto.png untuk berkas di pustaka ini, atau alamat web.",
     "imageApply": "Sisipkan",
+    "imageUpload": "Unggah dari berkas",
+    "imageUploading": "Mengunggah…",
+    "imageUploadFailed": "Gambar tidak dapat diunggah",
     "cancel": "Batal",
     "mathTitle": "Edit rumus",
     "mathApply": "Terapkan",

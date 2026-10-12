@@ -574,6 +574,9 @@
 		"imageAlt": "Descrizione",
 		"imageNote": "Usa un percorso relativo come attachments/photo.png per i file di questa biblioteca, oppure un indirizzo web.",
 		"imageApply": "Inserisci",
+		"imageUpload": "Carica da file",
+		"imageUploading": "Caricamento…",
+		"imageUploadFailed": "Impossibile caricare l'immagine",
 		"cancel": "Annulla",
 		"mathTitle": "Modifica formula",
 		"mathApply": "Applica",
@@ -943,6 +946,20 @@
 		"removeFailed": "Impossibile rimuovere l'importazione.",
 		"navBadgeLabel": "{count} importazioni in sospeso richiedono la tua attenzione",
 		"navBadgeLabel#one": "{count} importazione in sospeso richiede la tua attenzione"
+	},
+	"McpConnect": {
+		"title": "Collega un client MCP",
+		"description": "Lascia che un'app di IA come Claude, LM Studio o Jan cerchi nei tuoi vault. Copia lo snippet per il tuo client — contiene già i percorsi giusti per questo computer.",
+		"notBundled": "Il server MCP non è ancora incluso nell'app desktop — per ora viene eseguito da una copia del codice sorgente con Node.js (vedi «Server MCP» nel README). Avvia vault-chat dal repository sorgente per ottenere qui uno snippet pronto da incollare.",
+		"loadFailed": "Impossibile caricare lo snippet di connessione.",
+		"copy": "Copia",
+		"copied": "Copiato",
+		"claudeDesktopSteps": "Aggiungi questo al file di configurazione qui sotto (crealo se non esiste e uniscilo ai mcpServers esistenti), poi riavvia Claude Desktop.",
+		"claudeCodeSteps": "Esegui questo comando in un terminale. --scope user lo rende disponibile in ogni progetto.",
+		"lmStudioSteps": "In LM Studio apri la scheda Program → Install → Edit mcp.json, incolla questo blocco e salva.",
+		"janSteps": "In Jan apri Settings → MCP Servers e aggiungi un server con questo comando, argomento e variabile d'ambiente (oppure incolla il JSON se la tua versione lo accetta).",
+		"genericSteps": "Qualsiasi client MCP in grado di avviare server stdio accetta questo blocco mcpServers standard. Controlla la documentazione del tuo client per sapere dove inserirlo.",
+		"secretsNote": "Lo snippet non contiene segreti. Gli strumenti di scrittura (come l'importazione) richiedono inoltre che questa app sia in esecuzione."
 	},
 	"McpImportSettings": {
 		"title": "Cartelle di importazione MCP",

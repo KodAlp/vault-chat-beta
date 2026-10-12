@@ -4,7 +4,9 @@ import type { RequestHandler } from './$types';
 import { resolveLibraryPath } from '$lib/server/library-read';
 import { ATTACHMENT_EXT, META_DIR, ATTACHMENTS_SUBDIR, sniffAttachmentContentType } from '$lib/server/attachments';
 import { vaultFromUrl } from '$lib/server/requestVault';
-import { fail } from '$lib/server/app-error';
+import { AppError, fail } from '$lib/server/app-error';
+import { storeUploadedImage, MAX_IMAGE_UPLOAD_BYTES } from '$lib/server/attachment-upload';
+import { vaultFromId } from '$lib/server/requestVault';
 
 const ATTACHMENT_PREFIX = `${META_DIR}/${ATTACHMENTS_SUBDIR}/`;
 
@@ -53,4 +55,29 @@ export const GET: RequestHandler = async ({ url }) => {
 			'Cache-Control': 'private, max-age=31536000, immutable'
 		}
 	});
+};
+
+/**
+ * Image upload for the note editor (multipart: `file`, optional `vault`).
+ * Type comes from the bytes, never the name/MIME; size is checked from
+ * File.size before the body is read. Returns the library-root-relative path
+ * `_meta/attachments/up_<sha16>.<ext>` for the editor to link to.
+ */
+export const POST: RequestHandler = async ({ request }) => {
+	const form = await request.formData();
+	const file = form.get('file');
+	if (!(file instanceof File)) fail('VALIDATION_REQUIRED', { field: 'file' });
+	if (file.size > MAX_IMAGE_UPLOAD_BYTES) {
+		fail('FILE_TOO_LARGE', { limitMb: Math.round(MAX_IMAGE_UPLOAD_BYTES / (1024 * 1024)) }, 413);
+	}
+	const vaultField = form.get('vault');
+	const v = vaultFromId(typeof vaultField === 'string' && vaultField ? vaultField : null);
+	let rel: string;
+	try {
+		rel = storeUploadedImage(v, Buffer.from(await file.arrayBuffer()));
+	} catch (e) {
+		if (e instanceof AppError) fail(e.code, e.params, e.status);
+		throw e;
+	}
+	return new Response(JSON.stringify({ path: rel }), { headers: { 'Content-Type': 'application/json' } });
 };
