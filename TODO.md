@@ -29,46 +29,44 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 
 ## Acil
 
-### 1. Bakım ve temizlik
-
-### 2. Kurulum ve veri sağlamlığı
+### 1. Kurulum ve veri sağlamlığı
 - [ ] **"Veriyi yedekle" ayarı.** Bugün yalnız CLI betiği var. `O` · #61
 
-### 3. Test ve doğrulama
+### 2. Test ve doğrulama
 - [ ] **Paketli sürümde negatif testler.** `invoke('check_and_start')` reddi, `curl` 401. `K` · #59 (çekildi)
 - [ ] **Faz 11 canlı doğrulamaları.** Paketli sürümde sağlayıcı aç/kapa, `chats.db` bozma testi. `K` · #56 (çekildi)
 - [ ] **Erişilebilirlik, e2e form testleri, kırık link taraması.** `O` · #62
 
-### 4. Sohbet ve dil tutarlılığı
+### 3. Sohbet ve dil tutarlılığı
 - [ ] **Yanlış "Kaynaklar alakasız" rozeti.** Kaynaklar doğruyken çıkıyor (küçük kasada iki kez görüldü). `K–O` · #35
 
-### 5. Düzenleyici ve sohbet görünümü
+### 4. Düzenleyici ve sohbet görünümü
 - [ ] **Slaytta quote ve two-column düzenleri.** Uygun içerikle dene. `K` · #74
 - [ ] **Düzenleyicide görsel yükleme.** Görsel düğmesi yalnız bağlantı ekliyor. `K–O` · #70
 - [ ] **`@milkdown/plugin-math` deprecated.** Yerine geçecek paketi seç. `O` · #69
 
-### 6. Büyük belgelerde bellek ve hız
+### 5. Büyük belgelerde bellek ve hız
 - [ ] **1000+ sayfalık kitaplarda bellek ölçümü.** `K` · #83
 - [ ] **Formül yoğun klasörlerin hızı.** Sayfa başına 15–25 sn; 200+ saatlik klasörler. `B` · #82
 
-### 7. İçe aktarmada sessiz bozulma
+### 6. İçe aktarmada sessiz bozulma
 - [ ] **Sessiz glif bozulması.** docling virgülü ↪, `|` işaretini ♣ yapıyor, uyarı yok; pypdf ile karşılaştır. `O` · #6
 - [ ] **OCR dil seçimi.** Türkçe karakterler bozuluyor; Bengalce çöp çıktı. `O` · #8
 - [ ] **OCR'da geçerli ama yanlış LaTeX.** Σ → `\S`, uyarı yok. `O` · #9
 
-### 8. MCP araçları ve belgeleri
+### 7. MCP araçları ve belgeleri
 - [ ] **Ayarlar'da "MCP istemcisine bağla".** Claude Desktop, LM Studio, Jan ve genel JSON. `K–O` · #38
 - [ ] **`edit_note` aracı.** Geliştirici anahtarıyla, varsayılan kapalı. `O` · #40
 - [ ] **MCP okuma iyileştirmeleri.** Araştırma C5. `O` · #41
 - [ ] **Yerel modellerle MCP deneyi.** Qwen3 8B/4B, LM Studio. `O` · #39 (çekildi)
 
-### 9. Formül doğruluğu
+### 8. Formül doğruluğu
 - [ ] **MinerU ham kitaplarında KaTeX temizliği.** Çift `\tag`, sözde kod, `\Ss` için mekanik betik. `K–O` · #5 (çekildi)
 - [ ] **Fizik'te kalan 48 geçersiz formül.** Kısmen yapıldı; kalan: onarım betiği, sonra 0.3.0 ile yeniden içe aktarma. `O` · #2
 - [ ] **Model kapasitesi hataları (♯, ∝).** MinerU yedeğiyle düzeldi mi, ölç. `O` · #4
 - [ ] **"Yalnız hatalı formülü onar".** Sayfa + kutu; belgenin tamamını yeniden okumadan. `B` · #3
 
-### 10. MCP paketleme ve kurulum
+### 9. MCP paketleme ve kurulum
 - [ ] **Paketli Tauri'de `mcp-endpoint.json` kapı deneyi.** `K` · #45
 - [ ] **`npx` ile tek komut MCP kurulumu + örnek kasa.** `O` · #43
 - [ ] **MCP sunucusunu Tauri paketine dahil et.** Tek dosya ya da gömülü Node. `O–B` · #37
