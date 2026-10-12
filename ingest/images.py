@@ -50,6 +50,14 @@ from pathlib import Path
 
 MIN_SIDE_PX = 48
 MIN_BYTES = 2048
+# Inline equations (Word OMML/MathType exported as PNG, or WMF/EMF converted)
+# are short but wide, e.g. 300x30 px, and often under 2 KB. 48 px was chosen to
+# drop bullets, logos and spacer gifs, which are small in BOTH directions. A
+# landscape strip with a real height and a clearly wide aspect is a formula
+# line, not decoration, so it is exempt from the min-side and min-bytes rules.
+EQ_MIN_HEIGHT_PX = 12
+EQ_MIN_WIDTH_PX = 96
+EQ_MIN_ASPECT = 3.0
 # Pictures identical on this many distinct pages/slides are template art
 # (university logo, page ornament) -- but only when they are small on the
 # page. Measured on a real lecture (Gradyan pptx): it is an animation exported
@@ -228,6 +236,15 @@ class SkipImage(Exception):
         self.reason = reason
 
 
+def is_equation_like(width: int, height: int) -> bool:
+    """Short-but-wide strip (inline equation image), exempt from the tiny filter."""
+    return (
+        height >= EQ_MIN_HEIGHT_PX
+        and width >= EQ_MIN_WIDTH_PX
+        and width >= EQ_MIN_ASPECT * height
+    )
+
+
 def reencode(data: bytes) -> tuple[bytes, str]:
     """Decode through PIL and write a clean copy: JPEG stays JPEG (quality
     90), everything else becomes PNG, all metadata (EXIF, ICC, XMP, text
@@ -248,7 +265,9 @@ def reencode(data: bytes) -> tuple[bytes, str]:
             img.load()
     except Exception:  # noqa: BLE001 — truncated, bomb, unsupported (EMF off Windows), ...
         raise SkipImage("unreadable")
-    if img.width < MIN_SIDE_PX or img.height < MIN_SIDE_PX or len(data) < MIN_BYTES:
+    if not is_equation_like(img.width, img.height) and (
+        img.width < MIN_SIDE_PX or img.height < MIN_SIDE_PX or len(data) < MIN_BYTES
+    ):
         raise SkipImage("tiny")
     try:
         if fmt == "JPEG":
@@ -389,17 +408,6 @@ def resolve_tokens(
     md = re.sub(r"\n{3,}", "\n\n", md)
     stats["distinctFiles"] = len(names)
     return md, stats, names
-
-
-def stats_warning(stats: dict, max_kept: int = MAX_KEPT) -> str | None:
-    """Only the cap is worth a warning (content is missing); the other
-    filters drop noise by design and are reported in the done event."""
-    if stats.get("over_cap"):
-        return (
-            f"Belgede {stats['found']} görsel var; yalnız ilk {max_kept} tanesi eklendi, "
-            f"{stats['over_cap']} görsel atlandı."
-        )
-    return None
 
 
 def _short_caption(caption: str) -> str:

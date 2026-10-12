@@ -114,6 +114,26 @@ def test_reencode() -> None:
         images.MAX_PIXELS = old
 
 
+def test_equation_images() -> None:
+    from PIL import Image
+
+    blob, ext = images.reencode(noise_png(300, 30, seed=7))
+    check("300x30 equation-like image is kept", ext == "png" and bool(blob))
+    flat = io.BytesIO()
+    Image.new("RGB", (200, 24), (255, 255, 255)).save(flat, "PNG")
+    check("small-bytes wide equation strip is kept", len(flat.getvalue()) < images.MIN_BYTES and bool(images.reencode(flat.getvalue())[0]))
+    for name, data in [
+        ("30x30 icon", noise_png(30, 30, seed=8)),
+        ("tiny wide 100x6 rule", noise_png(100, 6, seed=9)),
+        ("small near-square 100x47", noise_png(100, 47, seed=10)),
+    ]:
+        try:
+            images.reencode(data)
+            check(f"{name} is dropped", False)
+        except images.SkipImage as skip:
+            check(f"{name} is dropped", skip.reason == "tiny")
+
+
 def test_select_filters() -> None:
     logo = noise_png(100, 100, seed=1)
     frame = noise_png(120, 90, seed=2)
@@ -250,6 +270,7 @@ if __name__ == "__main__":
     sys.stdout.reconfigure(encoding="utf-8")
     test_alt_filter()
     test_reencode()
+    test_equation_images()
     test_select_filters()
     test_format_block()
     test_tokenize_and_resolve()
