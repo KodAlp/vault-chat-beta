@@ -10,7 +10,7 @@
 	import { providerDisplayLabel } from '$lib/provider-label';
 	import { localizeError, readResponseError } from '$lib/server-error';
 	import { takePendingMessage } from '$lib/pending-message';
-	import { MAX_PHRASE_CHARS } from '$lib/smalltalk-limits';
+	import { shouldOfferNotRelevant } from '$lib/smalltalk-limits';
 	import ArrowDownIcon from '@lucide/svelte/icons/arrow-down';
 	import Icon from '$lib/components/Icon.svelte';
 	import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';
@@ -200,10 +200,10 @@
 		}
 	}
 
-	/** Only a short message can be small talk (smalltalk-limits.ts) — otherwise no button. */
+	/** Only a short message with weakly matching sources can be missed small talk (smalltalk-limits.ts) — otherwise no button. */
 	function canTeach(i: number): boolean {
 		const question = questionBefore(i);
-		return question !== null && question.length > 0 && question.length <= MAX_PHRASE_CHARS;
+		return question !== null && shouldOfferNotRelevant(messages[i].sources, question.length);
 	}
 
 	async function ask(question: string, forceSources = false) {
