@@ -629,15 +629,60 @@ def fix_heading_jumps(text: str) -> str:
 _TITLE_MD_LINK = re.compile(r"\[([^\]]*)\]\([^)]*\)")
 
 
+# Titles that no human wrote: what a generator puts in /Title or on a default
+# slide (2026-10-10 real imports: "PowerPoint Sunusu", "PowerPoint Presentation").
+_GENERIC_TITLE = re.compile(
+    r"^(?:"
+    r"(?:microsoft\s+)?power\s?point(?:\s+(?:presentation|sunusu))?(?:\s*\d+)?"
+    r"|(?:microsoft\s+)?word(?:\s+document)?"
+    r"|untitled(?:\s+(?:document|presentation|slide))?(?:\s*\d+)?"
+    r"|ba[sş]l[ıi]ks[ıi]z(?:\s+(?:belge|sunu))?(?:\s*\d+)?"
+    r"|(?:document|presentation|sunum|belge|slide|slayt|folie)\s*\d*"
+    r"|slide\s+title|click\s+to\s+add\s+title|title(?:\s+(?:page|slide))?|cover(?:\s+page)?"
+    r")$",
+    re.IGNORECASE,
+)
+# "Microsoft Word - report.doc", "Microsoft PowerPoint - [deck.ppt]"
+_GENERATOR_PREFIX = re.compile(r"^microsoft\s+(?:word|powerpoint|excel)\s*-\s", re.IGNORECASE)
+# An edition label with at most three qualifying words is a cover line, not a title.
+_EDITION_ONLY = re.compile(
+    r"^(?:[^\W\d_]+\s+){0,3}(?:edition|ed\.|bask[ıi]s[ıi]|bask[ıi]|s[üu]r[üu]m[üu]?)$"
+    r"|^\d+(?:st|nd|rd|th)\s+(?:edition|ed\.)$",
+    re.IGNORECASE,
+)
+_FILE_NAME_TITLE = re.compile(r"\.(?:pdf|docx?|pptx?|xlsx?|tex|md|txt)$", re.IGNORECASE)
+_TITLE_MIN_ALNUM = 3
+
+
+def is_junk_title(title: str | None) -> bool:
+    """True when `title` cannot serve as a note title: empty, no real
+    characters (``******``), fewer than 3 letters/digits (``I``), a generator
+    default (PowerPoint Presentation / Sunusu, Untitled, Slide 1, "Microsoft
+    Word - ..."), an edition label alone (Expanded Edition), or a file name.
+    The caller then tries its next candidate (next heading, metadata, file name)."""
+    if not title:
+        return True
+    t = " ".join(title.split())
+    if sum(1 for ch in t if ch.isalnum()) < _TITLE_MIN_ALNUM:
+        return True
+    return bool(
+        _GENERIC_TITLE.match(t)
+        or _GENERATOR_PREFIX.match(t)
+        or _EDITION_ONLY.match(t)
+        or _FILE_NAME_TITLE.search(t)
+    )
+
+
 def derive_title(text: str, fallback: str) -> str:
-    m = re.search(r"^#\s+(.+)$", text, re.MULTILINE)
-    if not m:
-        return fallback
     # K3-7: some web-book HTML wraps a self-referencing anchor around the
     # H1 (e.g. `# [Scanning4](#top)`), which without this would put the
     # literal "[Scanning4](#top)" — brackets, target and all — in the title.
-    title = _TITLE_MD_LINK.sub(lambda mm: mm.group(1), m.group(1)).strip()
-    return title or fallback
+    # The first H1 that is not junk wins; a junk-only body falls back.
+    for m in re.finditer(r"^#\s+(.+)$", text, re.MULTILINE):
+        title = _TITLE_MD_LINK.sub(lambda mm: mm.group(1), m.group(1)).strip()
+        if not is_junk_title(title):
+            return title
+    return fallback
 
 
 def build_frontmatter(title: str, converted_by: str, needs_review: bool) -> dict:

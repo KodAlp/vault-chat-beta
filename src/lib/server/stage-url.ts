@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import matter from 'gray-matter';
-import { enqueueConversion } from './convertQueue';
+import { enqueueConversion, type ConvertEvent } from './convertQueue';
 import { enqueueWebExtract } from './webExtractQueue';
 import { enqueueYoutubeTranscript } from './youtubeQueue';
 import {
@@ -38,7 +38,8 @@ import type { VaultContext } from './vaults';
 export async function stageUrl(
 	v: VaultContext,
 	url: URL,
-	importId: string
+	importId: string,
+	onEvent?: (event: ConvertEvent) => void
 ): Promise<{ title: string; warnings: string[] }> {
 	// #17: a YouTube link must go through the transcript sidecar, not be
 	// fetched as an ordinary web page (trafilatura would extract youtube.com's
@@ -80,7 +81,7 @@ export async function stageUrl(
 		fs.writeFileSync(tempIn, bytes);
 
 		const result = isPdf
-			? await enqueueConversion(tempIn, workDir, 'auto', undefined, sourceNameFromUrl(url))
+			? await enqueueConversion(tempIn, workDir, 'auto', onEvent, sourceNameFromUrl(url))
 			: await enqueueWebExtract(tempIn, url.href, workDir);
 		if (!result.outPath) throw new AppError('CONVERSION_EMPTY');
 
