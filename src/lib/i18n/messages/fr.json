@@ -413,6 +413,9 @@
     "domainLabel": "Domaine",
     "domainPlaceholder": "ex. maths",
     "levelLabel": "Niveau",
+    "levelUndergraduate": "Licence",
+    "levelGraduate": "Master",
+    "levelPhd": "Doctorat",
     "saveFailed": "Échec de l'enregistrement",
     "uploadFailed": "Échec du téléversement",
     "tooLarge": "Fichier trop volumineux : le serveur a refusé un envoi de cette taille."

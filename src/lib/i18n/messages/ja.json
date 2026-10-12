@@ -403,6 +403,9 @@
     "domainLabel": "分野",
     "domainPlaceholder": "例：数学",
     "levelLabel": "レベル",
+    "levelUndergraduate": "学部",
+    "levelGraduate": "大学院",
+    "levelPhd": "博士",
     "saveFailed": "保存できませんでした",
     "uploadFailed": "アップロードに失敗しました",
     "tooLarge": "ファイルが大きすぎます — サーバーがこのサイズのアップロードを拒否しました。"

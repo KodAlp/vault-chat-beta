@@ -416,6 +416,9 @@
 		"domainLabel": "Emne",
 		"domainPlaceholder": "fx matematik",
 		"levelLabel": "Niveau",
+		"levelUndergraduate": "Bachelor",
+		"levelGraduate": "Kandidat",
+		"levelPhd": "Ph.d.",
 		"saveFailed": "Kunne ikke gemme",
 		"uploadFailed": "Upload mislykkedes",
 		"tooLarge": "Filen er for stor – serveren afviste en upload i denne størrelse."

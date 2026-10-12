@@ -428,6 +428,9 @@
 		"domainLabel": "Domain",
 		"domainPlaceholder": "e.g. math",
 		"levelLabel": "Level",
+		"levelUndergraduate": "Undergraduate",
+		"levelGraduate": "Graduate",
+		"levelPhd": "PhD",
 		"saveFailed": "Couldn't save",
 		"uploadFailed": "Upload failed",
 		"tooLarge": "File too large — the server refused an upload of this size."

@@ -403,6 +403,9 @@
     "domainLabel": "विषय-क्षेत्र",
     "domainPlaceholder": "जैसे: गणित",
     "levelLabel": "स्तर",
+    "levelUndergraduate": "स्नातक",
+    "levelGraduate": "स्नातकोत्तर",
+    "levelPhd": "पीएचडी",
     "saveFailed": "सहेजा नहीं जा सका",
     "uploadFailed": "अपलोड विफल रहा",
     "tooLarge": "फ़ाइल बहुत बड़ी है — सर्वर ने इस आकार का अपलोड अस्वीकार कर दिया।"

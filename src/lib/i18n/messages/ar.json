@@ -460,6 +460,9 @@
     "domainLabel": "المجال",
     "domainPlaceholder": "مثال: رياضيات",
     "levelLabel": "المستوى",
+    "levelUndergraduate": "المرحلة الجامعية الأولى",
+    "levelGraduate": "الدراسات العليا",
+    "levelPhd": "الدكتوراه",
     "saveFailed": "تعذّر الحفظ",
     "uploadFailed": "فشل الرفع",
     "tooLarge": "الملف كبير جدًا — رفض الخادم رفع ملف بهذا الحجم."

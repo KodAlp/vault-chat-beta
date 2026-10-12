@@ -428,6 +428,9 @@
 		"domainLabel": "Domain",
 		"domainPlaceholder": "örn. math",
 		"levelLabel": "Seviye",
+		"levelUndergraduate": "Lisans",
+		"levelGraduate": "Yüksek lisans",
+		"levelPhd": "Doktora",
 		"saveFailed": "Kaydedilemedi",
 		"uploadFailed": "Yükleme başarısız",
 		"tooLarge": "Dosya çok büyük — sunucu bu boyuttaki bir yüklemeyi kabul etmedi."

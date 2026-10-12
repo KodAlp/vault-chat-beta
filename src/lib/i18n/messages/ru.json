@@ -445,6 +445,9 @@
     "domainLabel": "Тема",
     "domainPlaceholder": "например, математика",
     "levelLabel": "Уровень",
+    "levelUndergraduate": "Бакалавриат",
+    "levelGraduate": "Магистратура",
+    "levelPhd": "Докторантура",
     "saveFailed": "Не удалось сохранить",
     "uploadFailed": "Не удалось загрузить",
     "tooLarge": "Файл слишком большой: сервер отклонил загрузку такого размера."

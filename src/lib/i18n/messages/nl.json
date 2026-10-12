@@ -409,6 +409,9 @@
 		"domainLabel": "Vakgebied",
 		"domainPlaceholder": "bijv. wiskunde",
 		"levelLabel": "Niveau",
+		"levelUndergraduate": "Bachelor",
+		"levelGraduate": "Master",
+		"levelPhd": "Promotie",
 		"saveFailed": "Opslaan mislukt",
 		"uploadFailed": "Uploaden mislukt",
 		"tooLarge": "Bestand te groot — de server heeft een upload van deze grootte geweigerd."

@@ -403,6 +403,9 @@
     "domainLabel": "شعبہ",
     "domainPlaceholder": "مثلاً ریاضی",
     "levelLabel": "سطح",
+    "levelUndergraduate": "انڈرگریجویٹ",
+    "levelGraduate": "گریجویٹ",
+    "levelPhd": "پی ایچ ڈی",
     "saveFailed": "محفوظ نہیں ہو سکا",
     "uploadFailed": "اپ لوڈ ناکام ہو گیا",
     "tooLarge": "فائل بہت بڑی ہے — سرور نے اس سائز کا اپ لوڈ قبول نہیں کیا۔"

@@ -403,6 +403,9 @@
     "domainLabel": "বিষয়ক্ষেত্র",
     "domainPlaceholder": "যেমন: গণিত",
     "levelLabel": "স্তর",
+    "levelUndergraduate": "স্নাতক",
+    "levelGraduate": "স্নাতকোত্তর",
+    "levelPhd": "পিএইচডি",
     "saveFailed": "সংরক্ষণ করা যায়নি",
     "uploadFailed": "আপলোড ব্যর্থ হয়েছে",
     "tooLarge": "ফাইল অনেক বড় — সার্ভার এই আকারের আপলোড প্রত্যাখ্যান করেছে।"
