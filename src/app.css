@@ -272,7 +272,24 @@ body {
 :root[data-theme='forest'] .shiki,
 :root[data-theme='forest'] .shiki span {
 	color: var(--shiki-dark) !important;
+}
+
+/* Background only on the <pre> itself. --shiki-dark-bg is an inherited custom
+   property, so applying it to every span painted each token (and each line
+   span) in the block colour: visible grey stripes wherever it differed from
+   the pre's own fill. */
+:root[data-theme='dark'] .shiki,
+:root[data-theme='forest'] .shiki {
 	background-color: var(--shiki-dark-bg) !important;
+}
+
+/* The chat's inline-code chip (.vc-msg-assistant code: fill + padding) must
+   not apply to the <code> inside a fenced block: a multi-line inline box
+   paints a stripe per line plus end-cap padding (the artifact at the end). */
+.vc-msg-assistant pre code {
+	background: none;
+	padding: 0;
+	border-radius: 0;
 }
 
 /* Scrollbars default to the OS/browser theme (usually light), which clashes

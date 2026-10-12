@@ -17,6 +17,7 @@
 	import { markdown } from '@codemirror/lang-markdown';
 	import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
 	import { tags as t } from '@lezer/highlight';
+	import { detectLineSeparator } from '$lib/line-separator';
 
 	let { value, onchange }: { value: string; onchange: (next: string) => void } = $props();
 
@@ -87,23 +88,31 @@
 		{ tag: [t.processingInstruction, t.meta, t.contentSeparator], color: 'var(--label-tertiary)' }
 	]);
 
-	onMount(() => {
-		view = new EditorView({
-			parent: host,
-			state: EditorState.create({
-				doc: value,
-				extensions: [
-					basicSetup,
-					markdown(),
-					EditorView.lineWrapping,
-					theme,
-					syntaxHighlighting(highlight),
-					EditorView.updateListener.of((u) => {
-						if (u.docChanged) onchange(u.state.doc.toString());
-					})
-				]
-			})
+	// The line separator is fixed per EditorState (a facet), so it is detected
+	// from the loaded text and the state is rebuilt when a reload brings in a
+	// file with a different one. Reading back via sliceDoc (joins with the
+	// state's own separator) instead of doc.toString() (always LF) is what
+	// keeps CRLF files CRLF on save.
+	function makeState(doc: string): EditorState {
+		const sep = detectLineSeparator(doc);
+		return EditorState.create({
+			doc,
+			extensions: [
+				...(sep ? [EditorState.lineSeparator.of(sep)] : []),
+				basicSetup,
+				markdown(),
+				EditorView.lineWrapping,
+				theme,
+				syntaxHighlighting(highlight),
+				EditorView.updateListener.of((u) => {
+					if (u.docChanged) onchange(u.state.sliceDoc(0));
+				})
+			]
 		});
+	}
+
+	onMount(() => {
+		view = new EditorView({ parent: host, state: makeState(value) });
 		return () => view?.destroy();
 	});
 
@@ -112,7 +121,10 @@
 	// keystroke echo.
 	$effect(() => {
 		const next = value;
-		if (view && next !== view.state.doc.toString()) {
+		if (!view || next === view.state.sliceDoc(0)) return;
+		if (detectLineSeparator(next) !== detectLineSeparator(view.state.sliceDoc(0))) {
+			view.setState(makeState(next));
+		} else {
 			view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: next } });
 		}
 	});
