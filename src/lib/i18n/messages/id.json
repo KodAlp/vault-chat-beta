@@ -696,6 +696,7 @@
     "add": "Tambah",
     "local": "lokal",
     "cloud": "cloud",
+    "ollamaLocal": "Ollama (lokal)",
     "keyConnected": "terhubung · {mask}",
     "keyMissing": "tanpa kunci",
     "apiKeyPlaceholder": "Kunci API",

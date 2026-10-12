@@ -754,6 +754,7 @@
 		"add": "Přidat",
 		"local": "lokální",
 		"cloud": "cloud",
+		"ollamaLocal": "Ollama (místní)",
 		"keyConnected": "připojeno · {mask}",
 		"keyMissing": "bez klíče",
 		"apiKeyPlaceholder": "Klíč API",

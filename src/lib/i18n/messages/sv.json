@@ -797,6 +797,7 @@
 		"add": "Lägg till",
 		"local": "lokal",
 		"cloud": "moln",
+		"ollamaLocal": "Ollama (lokal)",
 		"keyConnected": "ansluten · {mask}",
 		"keyMissing": "ingen nyckel",
 		"apiKeyPlaceholder": "API-nyckel",

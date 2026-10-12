@@ -696,6 +696,7 @@
     "add": "जोड़ें",
     "local": "लोकल",
     "cloud": "क्लाउड",
+    "ollamaLocal": "Ollama (स्थानीय)",
     "keyConnected": "जुड़ा हुआ · {mask}",
     "keyMissing": "कुंजी नहीं",
     "apiKeyPlaceholder": "API कुंजी",

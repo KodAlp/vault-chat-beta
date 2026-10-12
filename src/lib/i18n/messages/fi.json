@@ -757,6 +757,7 @@
 		"add": "Lisää",
 		"local": "paikallinen",
 		"cloud": "pilvi",
+		"ollamaLocal": "Ollama (paikallinen)",
 		"keyConnected": "yhdistetty · {mask}",
 		"keyMissing": "ei avainta",
 		"apiKeyPlaceholder": "API-avain",

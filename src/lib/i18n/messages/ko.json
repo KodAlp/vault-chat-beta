@@ -745,6 +745,7 @@
 		"add": "추가",
 		"local": "로컬",
 		"cloud": "클라우드",
+		"ollamaLocal": "Ollama (로컬)",
 		"keyConnected": "연결됨 · {mask}",
 		"keyMissing": "키 없음",
 		"apiKeyPlaceholder": "API 키",

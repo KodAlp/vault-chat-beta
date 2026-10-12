@@ -2,6 +2,8 @@
 	import type { ProviderModelOption } from '$lib/types';
 	import { selectionKey } from '$lib/model-selection';
 	import { t } from '$lib/i18n/index.svelte';
+	import { providerDisplayLabel } from '$lib/provider-label';
+	const pLabel = (id: string, label: string) => providerDisplayLabel(id, label, t);
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
 	import BotIcon from '@lucide/svelte/icons/bot';
 	import BrainIcon from '@lucide/svelte/icons/brain';
@@ -112,7 +114,7 @@
 				<option value={selectionKey(activeProvider, activeModel)}>{activeModel || t('ModelPickerRow.autoModel')}</option>
 			{/if}
 			{#each modelOptions as m (m.providerId + '/' + m.id)}
-				<option value={selectionKey(m.providerId, m.id)}>{m.providerLabel} · {m.id}</option>
+				<option value={selectionKey(m.providerId, m.id)}>{pLabel(m.providerId, m.providerLabel)} · {m.id}</option>
 			{/each}
 		</select>
 	</label>
@@ -160,7 +162,7 @@
 			<AlertDialog.Header>
 				<AlertDialog.Title>{t('ModelPickerRow.consentTitle')}</AlertDialog.Title>
 				<AlertDialog.Description>
-					{t('ModelPickerRow.consentDescription', { provider: pendingModel.providerLabel })}
+					{t('ModelPickerRow.consentDescription', { provider: pLabel(pendingModel.providerId, pendingModel.providerLabel) })}
 				</AlertDialog.Description>
 			</AlertDialog.Header>
 			<AlertDialog.Footer>

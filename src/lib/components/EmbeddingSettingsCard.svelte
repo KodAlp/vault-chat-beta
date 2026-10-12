@@ -10,6 +10,8 @@
 	import TriangleAlertIcon from '@lucide/svelte/icons/triangle-alert';
 	import ReindexDialog from './ReindexDialog.svelte';
 	import { t } from '$lib/i18n/index.svelte';
+	import { providerDisplayLabel } from '$lib/provider-label';
+	const pLabel = (id: string, label: string) => providerDisplayLabel(id, label, t);
 	import { localizeError } from '$lib/server-error';
 
 	/**
@@ -250,11 +252,11 @@
 					}}
 				>
 					<Select.Trigger id="{uid}-embed-provider" class="w-64">
-						{providers.find((p) => p.id === draftProviderId)?.label ?? t('EmbeddingSettingsCard.selectProvider')}
+						{(() => { const p = providers.find((x) => x.id === draftProviderId); return p ? pLabel(p.id, p.label) : undefined; })() ?? t('EmbeddingSettingsCard.selectProvider')}
 					</Select.Trigger>
 					<Select.Content>
 						{#each embeddingCapable as p (p.id)}
-							<Select.Item value={p.id} label={p.label}>{p.label}{p.local ? '' : ` (${t('ProvidersSettingsPage.cloud')})`}</Select.Item>
+							<Select.Item value={p.id} label={pLabel(p.id, p.label)}>{pLabel(p.id, p.label)}{p.local ? '' : ` (${t('ProvidersSettingsPage.cloud')})`}</Select.Item>
 						{/each}
 					</Select.Content>
 				</Select.Root>
@@ -337,7 +339,7 @@
 					role="alert"
 				>
 					<TriangleAlertIcon size={16} aria-hidden="true" class="mt-0.5 shrink-0" />
-					<span>{t('EmbeddingSettingsCard.cloudWarning', { provider: selectedProvider?.label ?? '' })}</span>
+					<span>{t('EmbeddingSettingsCard.cloudWarning', { provider: selectedProvider ? pLabel(selectedProvider.id, selectedProvider.label) : '' })}</span>
 				</div>
 			{/if}
 
@@ -377,7 +379,7 @@
 				<AlertDialog.Title>{t('EmbeddingSettingsCard.consentTitle')}</AlertDialog.Title>
 				<AlertDialog.Description>
 					{t('EmbeddingSettingsCard.consentDescription', {
-						provider: providers.find((p) => p.id === pendingConsentProviderId)?.label ?? ''
+						provider: (() => { const p = providers.find((x) => x.id === pendingConsentProviderId); return p ? pLabel(p.id, p.label) : ''; })()
 					})}
 				</AlertDialog.Description>
 			</AlertDialog.Header>

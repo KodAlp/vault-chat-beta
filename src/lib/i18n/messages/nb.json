@@ -756,6 +756,7 @@
 		"add": "Legg til",
 		"local": "lokal",
 		"cloud": "sky",
+		"ollamaLocal": "Ollama (lokal)",
 		"keyConnected": "tilkoblet · {mask}",
 		"keyMissing": "ingen nøkkel",
 		"apiKeyPlaceholder": "API-nøkkel",

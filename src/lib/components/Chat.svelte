@@ -7,6 +7,7 @@
 	import { settings } from '$lib/settings.svelte';
 	import { parseSelectionKey } from '$lib/model-selection';
 	import { t } from '$lib/i18n/index.svelte';
+	import { providerDisplayLabel } from '$lib/provider-label';
 	import { localizeError, readResponseError } from '$lib/server-error';
 	import { takePendingMessage } from '$lib/pending-message';
 	import { MAX_PHRASE_CHARS } from '$lib/smalltalk-limits';
@@ -87,7 +88,8 @@
 	);
 
 	$effect(() => {
-		const providerLabel = modelOptions.find((m) => m.providerId === activeProvider)?.providerLabel;
+		const opt = modelOptions.find((m) => m.providerId === activeProvider);
+		const providerLabel = opt ? providerDisplayLabel(opt.providerId, opt.providerLabel, t) : undefined;
 		onModelLabel?.([providerLabel, activeModel].filter(Boolean).join(' · '));
 	});
 

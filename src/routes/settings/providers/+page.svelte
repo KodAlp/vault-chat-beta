@@ -17,6 +17,8 @@
 	import TrashIcon from '@lucide/svelte/icons/trash';
 	import { Label } from '$lib/components/ui/label';
 	import { t, i18n } from '$lib/i18n/index.svelte';
+	import { providerDisplayLabel } from '$lib/provider-label';
+	const pLabel = (id: string, label: string) => providerDisplayLabel(id, label, t);
 	import { relativeTime } from '$lib/relative-time';
 	import { readResponseError } from '$lib/server-error';
 
@@ -308,7 +310,7 @@
 			if (!res.ok) throw new Error();
 			patchProvider(p.id, { defaultModel: modelId || null });
 		} catch {
-			loadError = t('ProvidersSettingsPage.defaultModelUpdateFailed', { label: p.label });
+			loadError = t('ProvidersSettingsPage.defaultModelUpdateFailed', { label: pLabel(p.id, p.label) });
 		}
 	}
 
@@ -392,7 +394,7 @@
 	});
 
 	function labelFor(id: string): string {
-		return providers.find((p) => p.id === id)?.label ?? id;
+		return (() => { const p = providers.find((x) => x.id === id); return p ? pLabel(p.id, p.label) : id; })();
 	}
 
 	/** Coverage is inherently uneven across providers (see registry.ts's
@@ -442,7 +444,7 @@
 			patchProvider(p.id, { enabled: nextEnabled });
 			void refreshProviderModels();
 		} catch {
-			loadError = t('ProvidersSettingsPage.updateFailed', { label: p.label });
+			loadError = t('ProvidersSettingsPage.updateFailed', { label: pLabel(p.id, p.label) });
 		}
 	}
 
@@ -461,7 +463,7 @@
 			patchProvider(p.id, { local: nextLocal });
 			void refreshProviderModels();
 		} catch {
-			loadError = t('ProvidersSettingsPage.updateFailed', { label: p.label });
+			loadError = t('ProvidersSettingsPage.updateFailed', { label: pLabel(p.id, p.label) });
 		}
 	}
 
@@ -485,7 +487,7 @@
 			patchProvider(p.id, { keyStatus: data.keyStatus, mask: data.mask });
 			void refreshProviderModels();
 		} catch {
-			loadError = t('ProvidersSettingsPage.keySaveFailed', { label: p.label });
+			loadError = t('ProvidersSettingsPage.keySaveFailed', { label: pLabel(p.id, p.label) });
 		}
 	}
 
@@ -503,7 +505,7 @@
 			patchProvider(p.id, { keyStatus: 'none', mask: null });
 			void refreshProviderModels();
 		} catch {
-			loadError = t('ProvidersSettingsPage.keyDeleteFailed', { label: p.label });
+			loadError = t('ProvidersSettingsPage.keyDeleteFailed', { label: pLabel(p.id, p.label) });
 		}
 	}
 
@@ -669,7 +671,7 @@
 					<Card.Content class="flex flex-wrap justify-between gap-4">
 						<div class="min-w-[220px] flex-1">
 							<div class="flex flex-wrap items-center gap-1.5">
-								<strong class="text-sm">{p.label}</strong>
+								<strong class="text-sm">{pLabel(p.id, p.label)}</strong>
 								<Badge variant="outline">{p.local ? t('ProvidersSettingsPage.local') : t('ProvidersSettingsPage.cloud')}</Badge>
 								{#if p.needsKey}
 									<Badge variant={p.keyStatus === 'connected' ? 'default' : 'outline'}>
@@ -685,7 +687,7 @@
 							{#if tauri && matchedCatalogId(p) && localServerMetaFor(matchedCatalogId(p) ?? '')}
 								{@const meta = localServerMetaFor(matchedCatalogId(p) ?? '')}
 								{#if meta}
-									<LauncherPanel serverId={meta.id} displayName={p.label} defaultPort={meta.port} launchable={meta.launchable} />
+									<LauncherPanel serverId={meta.id} displayName={pLabel(p.id, p.label)} defaultPort={meta.port} launchable={meta.launchable} />
 								{/if}
 							{/if}
 
@@ -886,10 +888,10 @@
 								variant="ghost"
 								class="text-destructive hover:text-destructive"
 								title={t('ProvidersSettingsPage.removeProviderTitle')}
-								aria-label={t('ProvidersSettingsPage.removeProviderAria', { label: p.label })}
+								aria-label={t('ProvidersSettingsPage.removeProviderAria', { label: pLabel(p.id, p.label) })}
 								onclick={() => {
 									deleteTargetId = p.id;
-									deleteTargetLabel = p.label;
+									deleteTargetLabel = pLabel(p.id, p.label);
 								}}
 							>
 								<TrashIcon size={14} aria-hidden="true" />
@@ -934,7 +936,7 @@
 				<ChainEditor
 					label={TASK_LABELS[taskType]}
 					chain={chains[taskType] ?? []}
-					options={providers.filter((p) => p.enabled).map((p) => ({ id: p.id, label: p.label }))}
+					options={providers.filter((p) => p.enabled).map((p) => ({ id: p.id, label: pLabel(p.id, p.label) }))}
 					{labelFor}
 					onchange={(next) => void saveChain(taskType, next, chains[taskType] ?? [])}
 				/>
@@ -984,7 +986,7 @@
 	<AlertDialog.Content>
 		{#if keyDeleteTarget}
 			<AlertDialog.Header>
-				<AlertDialog.Title>{t('ProvidersSettingsPage.keyDeleteConfirmTitle', { label: keyDeleteTarget.label })}</AlertDialog.Title>
+				<AlertDialog.Title>{t('ProvidersSettingsPage.keyDeleteConfirmTitle', { label: pLabel(keyDeleteTarget.id, keyDeleteTarget.label) })}</AlertDialog.Title>
 				<AlertDialog.Description>
 					{t('ProvidersSettingsPage.keyDeleteConfirmDescription')}
 				</AlertDialog.Description>

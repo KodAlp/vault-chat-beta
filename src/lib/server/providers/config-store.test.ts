@@ -489,3 +489,23 @@ test('getOllamaProviderId: first ENABLED ollama-kind provider, preferring id "ol
 	updateProviderEnabled('ollama', true);
 	assert.equal(getOllamaProviderId(), 'ollama');
 });
+
+test('a missing providers.json falls back to the shipped defaults instead of throwing ENOENT (#64)', () => {
+	const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'config-store-missing-'));
+	process.env.PROVIDERS_PATH = path.join(dir, 'providers.json');
+	assert.equal(fs.existsSync(process.env.PROVIDERS_PATH), false);
+	const data = readProvidersFile();
+	assert.equal(data.providers.some((p) => p.id === 'ollama'), true);
+	assert.equal(getEmbeddingConfig(), null);
+	// a read does not create the file; the first writer does
+	assert.equal(fs.existsSync(process.env.PROVIDERS_PATH), false);
+	updateProviderEnabled('ollama', false);
+	assert.equal(fs.existsSync(process.env.PROVIDERS_PATH), true);
+});
+
+test('a malformed providers.json is still reported, not replaced by the defaults', () => {
+	const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'config-store-bad-'));
+	process.env.PROVIDERS_PATH = path.join(dir, 'providers.json');
+	fs.writeFileSync(process.env.PROVIDERS_PATH, '{ not json', 'utf-8');
+	assert.throws(() => readProvidersFile(), SyntaxError);
+});

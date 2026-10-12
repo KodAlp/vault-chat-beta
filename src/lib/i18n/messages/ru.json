@@ -741,6 +741,7 @@
     "add": "Добавить",
     "local": "локальный",
     "cloud": "облачный",
+    "ollamaLocal": "Ollama (локальный)",
     "keyConnected": "подключён · {mask}",
     "keyMissing": "нет ключа",
     "apiKeyPlaceholder": "API-ключ",

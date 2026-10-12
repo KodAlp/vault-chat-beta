@@ -696,6 +696,7 @@
     "add": "যোগ করুন",
     "local": "লোকাল",
     "cloud": "ক্লাউড",
+    "ollamaLocal": "Ollama (স্থানীয়)",
     "keyConnected": "সংযুক্ত · {mask}",
     "keyMissing": "কী নেই",
     "apiKeyPlaceholder": "API কী",
