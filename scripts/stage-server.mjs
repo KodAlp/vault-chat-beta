@@ -4,7 +4,8 @@
 // build` directly) so the packaged app never ships vite/typescript/
 // svelte-check/tsx/@tauri-apps/cli — `npm ci --omit=dev` inside a *copy* of
 // package.json, not the real node_modules, is what achieves that.
-import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs';
+import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { execFileSync, spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { verifyStagedData } from './stage-verify.mjs';
@@ -38,39 +39,73 @@ function sleepSync(ms) {
  * existsSync() after is the actual ground truth regardless of what the
  * process exit code claims.
  */
-function removeStageDirOrThrow() {
+function removeStageDirOrThrow(target = stageDir) {
 	if (process.platform !== 'win32') {
 		// The PowerShell workaround below is for a Windows non-ASCII path bug; elsewhere plain fs is reliable.
-		rmSync(stageDir, { recursive: true, force: true });
-		if (existsSync(stageDir)) throw new Error(`dist-server/ klasörü temizlenemedi: ${stageDir}`);
+		rmSync(target, { recursive: true, force: true });
+		if (existsSync(target)) throw new Error(`${path.relative(root, target) || target} temizlenemedi: ${target}`);
 		return;
 	}
 	for (let attempt = 1; attempt <= 2; attempt++) {
-		if (!existsSync(stageDir)) return;
+		if (!existsSync(target)) return;
 		try {
 			execFileSync(
 				'powershell',
-				['-NoProfile', '-Command', `Remove-Item -Path "${stageDir}" -Recurse -Force -ErrorAction Stop`],
+				['-NoProfile', '-Command', `Remove-Item -Path "${target}" -Recurse -Force -ErrorAction Stop`],
 				{ stdio: 'inherit' }
 			);
 		} catch {
 			// fall through to the existsSync() check below — a lock that
 			// clears on retry is the common case, not this catch itself
 		}
-		if (!existsSync(stageDir)) return;
+		if (!existsSync(target)) return;
 		if (attempt === 1) {
-			console.log('dist-server/ silinemedi (muhtemelen geçici bir dosya kilidi) — tekrar deneniyor...');
+			console.log(`${path.relative(root, target)} silinemedi (muhtemelen geçici bir dosya kilidi) — tekrar deneniyor...`);
 			sleepSync(2000);
 		}
 	}
 	throw new Error(
-		`dist-server/ klasörü temizlenemedi: ${stageDir}\n` +
+		`dist-server/ klasörü temizlenemedi: ${target}\n` +
 			'Muhtemelen bir antivirüs/indeksleme aracı içindeki bir dosyayı kilitli tutuyor. ' +
 			'Klasörü elle silip tekrar deneyin, ya da o aracı geçici olarak durdurun.'
 	);
 }
 
-removeStageDirOrThrow();
+// --- npm ci atlama (#57) ---
+// `npm ci` her sahnelemede ~dakikalar sürer; package.json + package-lock.json (ve better-sqlite3'ün
+// yerel ikilisinin bağlı olduğu Node sürümü/platform/mimari) değişmediyse önceki sahnelemenin
+// node_modules'ı birebir aynı olur. Güvenlik: damga dosyası YALNIZCA npm ci + rebuild BAŞARIYLA
+// bittikten sonra yazılır (yarım kalmış kurulum asla "geçerli" sayılmaz), ve node_modules dışındaki
+// her şey (build/, ingest/, data/) her seferinde silinip baştan kopyalanır — yalnız node_modules
+// yeniden kullanılır. Zorla temiz kurulum: STAGE_FORCE_INSTALL=1 ya da --force-install.
+const STAMP_NAME = '.npm-ci-stamp';
+const stampPath = path.join(stageDir, STAMP_NAME);
+const nodeModulesDir = path.join(stageDir, 'node_modules');
+const forceInstall = process.env.STAGE_FORCE_INSTALL === '1' || process.argv.includes('--force-install');
+const depsKey = createHash('sha256')
+	.update(readFileSync(path.join(root, 'package-lock.json')))
+	.update('\0')
+	.update(readFileSync(path.join(root, 'package.json')))
+	.update('\0' + [process.version, process.platform, process.arch].join('|'))
+	.digest('hex');
+const nativeBinaryExists = () =>
+	existsSync(path.join(nodeModulesDir, 'better-sqlite3', 'build', 'Release', 'better_sqlite3.node'));
+const canReuseNodeModules =
+	!forceInstall &&
+	existsSync(stampPath) &&
+	existsSync(nodeModulesDir) &&
+	nativeBinaryExists() &&
+	readFileSync(stampPath, 'utf8').trim() === depsKey;
+
+if (canReuseNodeModules) {
+	// node_modules ve damga dışındaki her şeyi temizle (dosya dosya, aynı kilit-dayanıklı silme ile).
+	for (const entry of readdirSync(stageDir)) {
+		if (entry === 'node_modules' || entry === STAMP_NAME) continue;
+		removeStageDirOrThrow(path.join(stageDir, entry));
+	}
+} else {
+	removeStageDirOrThrow();
+}
 mkdirSync(stageDir, { recursive: true });
 
 function copyDir(src, dest, excludeDirs = []) {
@@ -132,8 +167,16 @@ console.log('Installing production-only dependencies in dist-server/...');
  * bearing (compiles/fetches its native .node binary), rebuilt explicitly
  * right after.
  */
-execFileSync('npm', ['ci', '--omit=dev', '--ignore-scripts'], { cwd: stageDir, stdio: 'inherit', shell: true });
-execFileSync('npm', ['rebuild', 'better-sqlite3'], { cwd: stageDir, stdio: 'inherit', shell: true });
+if (canReuseNodeModules) {
+	console.log(
+		'npm ci atlandı: package-lock.json/package.json ve Node sürümü değişmedi, dist-server/node_modules yeniden kullanılıyor ' +
+			'(zorla temiz kurulum için STAGE_FORCE_INSTALL=1 ya da --force-install).'
+	);
+} else {
+	execFileSync('npm', ['ci', '--omit=dev', '--ignore-scripts'], { cwd: stageDir, stdio: 'inherit', shell: true });
+	execFileSync('npm', ['rebuild', 'better-sqlite3'], { cwd: stageDir, stdio: 'inherit', shell: true });
+	writeFileSync(stampPath, depsKey + '\n');
+}
 
 const readIfExists = (p) => (existsSync(p) ? readFileSync(p) : null);
 const stagedProblems = verifyStagedData({
