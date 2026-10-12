@@ -2,7 +2,7 @@
 
 Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncellenir.
 
-**Son güncelleme:** 2026-10-12 · ertelenenler dökümü (88 madde) kullanıcı kararlarıyla dağıtıldı
+**Son güncelleme:** 2026-10-12 · Acil'in 8 küçük maddesi bitti (#1, #36, #44, #46, #54, #57, #64, #73)
 
 ## Kurallar
 
@@ -30,14 +30,11 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 ## Acil
 
 ### 1. Bakım ve temizlik
-- [ ] **Sürüm artırma betiği.** package.json, tauri.conf.json ve Cargo.toml'u tek komutla artır. `K` · #54
-- [ ] **stage-server'da gereksiz `npm ci`.** Her derlemede çalışıyor; gerekmiyorsa atla. `K` · #57
 - [ ] **Test artıklarını sil.** "Formül Testi" kasası ve `Notebook verileri/_formul-testi/` silinecek (kullanıcı kararı); silmeden önce içeriği göster. `K` · #22
 - [ ] **Yanlış adlı arXiv PDF'leri.** SystemsControl, Probabilistic, TeoBanica. `K` · #23 (çekildi)
 - [ ] **Disk ve dal temizliği.** 16 worktree, eski `claude/*` ve `feat/*` dalları, `target` ~17,5 GB. `K` · #58
 
 ### 2. Kurulum ve veri sağlamlığı
-- [ ] **Sihirbaz atlanınca ENOENT.** `providers.json` yoksa indeksleme hata veriyor. `K` · #64
 - [ ] **Ollama ilk sohbete kadar başlamıyor.** Uygulama yeniden açılınca dış betikler `indexPending` alıyor. `K` · #87
 - [ ] **"Veriyi yedekle" ayarı.** Bugün yalnız CLI betiği var. `O` · #61
 
@@ -47,8 +44,6 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 - [ ] **Erişilebilirlik, e2e form testleri, kırık link taraması.** `O` · #62
 
 ### 4. Sohbet ve dil tutarlılığı
-- [ ] **Sohbet başlığı yanlış dilde.** İngilizce soruda Türkçe başlık üretiliyor; `src/lib/server/title.ts` istemi "kısa bir Türkçe başlık" diye sabit. `K` · #36
-- [ ] **Sağlayıcı etiketi sabit Türkçe.** "Ollama (yerel)" `data/providers.default.json`'da; İngilizce arayüzde de Türkçe. `K` · #73
 - [ ] **Seviye seçici ham İngilizce.** `K` · #66 (çekildi)
 - [ ] **Small-talk eşikleri yalnız bge-m3 için.** Diğer embedding modellerinde kapı kapalı. `K` · #31
 - [ ] **Yanlış "Kaynaklar alakasız" rozeti.** Kaynaklar doğruyken çıkıyor (küçük kasada iki kez görüldü). `K–O` · #35
@@ -74,15 +69,12 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 - [ ] **OCR'da geçerli ama yanlış LaTeX.** Σ → `\S`, uyarı yok. `O` · #9
 
 ### 8. MCP araçları ve belgeleri
-- [ ] **`search_library` açıklaması eski.** "v1 vector-only" diyor, oysa FTS yedekli (`mcp/tools/search-library.ts`). `K` · #44
-- [ ] **README "MCP Sunucusu (Faz 10)" bölümü eski.** Salt-okunur v1'i anlatıyor; "Ne yapar?" ve AppData kaydıyla çelişiyor. `K` · #46
 - [ ] **Ayarlar'da "MCP istemcisine bağla".** Claude Desktop, LM Studio, Jan ve genel JSON. `K–O` · #38
 - [ ] **`edit_note` aracı.** Geliştirici anahtarıyla, varsayılan kapalı. `O` · #40
 - [ ] **MCP okuma iyileştirmeleri.** Araştırma C5. `O` · #41
 - [ ] **Yerel modellerle MCP deneyi.** Qwen3 8B/4B, LM Studio. `O` · #39 (çekildi)
 
 ### 9. Formül doğruluğu
-- [ ] **Okunamayan formülün altındaki ham latex bloğunu gizle.** Yerine "⚠ … s. N" bilgi satırı (`ingest/formula_fallback.py`, `block()`). `K` · #1
 - [ ] **MinerU ham kitaplarında KaTeX temizliği.** Çift `\tag`, sözde kod, `\Ss` için mekanik betik. `K–O` · #5 (çekildi)
 - [ ] **Fizik'te kalan 48 geçersiz formül.** Kısmen yapıldı; kalan: onarım betiği, sonra 0.3.0 ile yeniden içe aktarma. `O` · #2
 - [ ] **Model kapasitesi hataları (♯, ∝).** MinerU yedeğiyle düzeldi mi, ölç. `O` · #4
@@ -127,7 +119,8 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 
 ## Öneriler
 
-_(boş)_
+- [ ] **`chat-fallback.ts` yedek mesajı sabit Türkçe.** Ham sağlayıcı etiketini de kullanıyor; #73'ün devamı. `K`
+- [ ] **`npx tsc --noEmit -p mcp` hatası.** `src/lib/server/app-error.ts:47` TS2769; eski bir hata gibi görünüyor, doğrula. `K`
 
 ## Daha sonra
 
@@ -158,6 +151,12 @@ _(boş)_
 
 Yalnız son iki haftanın kaydı tutulur; daha eskisi git geçmişindedir.
 
+- 2026-10-12: sürüm artırma betiği `npm run version:bump -- 0.3.1` (#54). `49f343b`
+- 2026-10-12: stage-server package-lock değişmediyse `npm ci`'yi atlıyor; `STAGE_FORCE_INSTALL=1` ile zorlanır (#57). `628fa74`
+- 2026-10-12: okunamayan formülde ham latex bloğu yerine "⚠ Formül okunamadı — s. N"; latex `vc:formul-latex` yorumunda (#1). `68cbc93`
+- 2026-10-12: README ve KURULUM-REHBERI MCP bölümü, `search_library` açıklaması güncel (#44, #46). `660ba05`
+- 2026-10-12: providers.json yoksa varsayılanlara düşülüyor, doctor da (#64); "Ollama (yerel)" 23 dilde yerelleşti (#73). `6714eaa`
+- 2026-10-12: sohbet başlığı sorunun dilinde (#36). `39f20d1`
 - 2026-10-12: ertelenenler dökümü kullanıcı kararlarıyla Acil / Yapılabilir / Daha sonra'ya dağıtıldı. Listeden düşenler: yapıldı #17, #84; gereksiz #12, #14, #24, #65.
 - 2026-10-10: dil seti 23 dile çıktı (pcm, ar-EG çıktı; ko, it, nl, pl, cs, sv, nb, da, fi girdi). `6af6b6c`
 - 2026-10-10: README için İngilizce demo görselleri ve markaya uygun mimari şema. `b09c434`
