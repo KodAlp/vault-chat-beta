@@ -395,7 +395,7 @@ const NAV_LINE_RATIO = 0.7;
  */
 export function stripImageMarkup(text: string): string {
 	return text
-		.replace(/^[ \t]*<!-- vc:(?:gorsel [0-9a-f]+|formul-gorsel [0-9a-f]+ s\.\d+) -->[ \t]*\r?\n?/gm, '')
+		.replace(/^[ \t]*<!-- vc:(?:gorsel [0-9a-f]+|formul-gorsel [0-9a-f]+ s\.\d+|formul-latex [A-Za-z0-9_-]+) -->[ \t]*\r?\n?/gm, '')
 		.replace(/!\[([^\]\n]*)\]\([^)\s]*(?:\s+"[^"\n]*")?\)/g, '$1');
 }
 

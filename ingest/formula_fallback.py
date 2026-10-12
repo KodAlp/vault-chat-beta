@@ -33,8 +33,9 @@ Akış:
      içeren (find_degenerate_run) formül ölümcüldür; kırpımı varsa item.text, `<!-- vc:fimg N -->` yer
      tutucusuyla değiştirilir (docling onu $$..$$ içinde dışa aktarır, postprocess'e dokunmaz) ve kırpım
      PNG'si FATAL_IMAGES'ta tutulur. Dönüşümün sonunda convert.py `resolve_markers()` ile yer tutucuyu
-     `![Okunamayan formül — s. N](images/<sha16>.png)` + `<!-- vc:formul-gorsel <sha16> s.N -->` + ```latex
-     bloğuyla (en iyi LaTeX denemesi, döngü kuyruğu kesilmiş) değiştirir ve PNG'yi images/ klasörüne yazar;
+     `![Okunamayan formül — s. N](images/<sha16>.png)` + `<!-- vc:formul-gorsel <sha16> s.N -->` +
+     `> ⚠ Formül okunamadı — s. N` bilgi satırı + görünmez `<!-- vc:formul-latex <base64url> -->` (en iyi LaTeX
+     denemesi, döngü kuyruğu kesilmiş; read_latex_comment ile okunur) ile değiştirir ve PNG'yi images/ klasörüne yazar;
      dosya adları done olayının `images` listesine girer (Node tarafı onları _meta/attachments/'a taşır).
 
 Her hata stderr'e bir kez yazılır, CodeFormula metni kalır; dönüşüm asla bozulmaz.
@@ -42,6 +43,7 @@ VC_FORMULA_FALLBACK_MODEL=<HF kimliği> MinerU modelini değiştirir (yalnız ye
 """
 from __future__ import annotations
 
+import base64
 import gc
 import hashlib
 import io
@@ -519,6 +521,24 @@ def fatal_warning(count: int, *, images_on: bool = True) -> str:
     return f"{count} formül okunamadı; sayfa numarası notta belirtildi — kaynakla karşılaştırın."
 
 
+LATEX_COMMENT = re.compile(r"<!-- vc:formul-latex ([A-Za-z0-9_-]+) -->")
+
+
+def latex_comment(latex: str) -> str:
+    """Ham (en iyi deneme) LaTeX'i görünmez HTML yorumu olarak sarar (urlsafe base64, `--` sorunu yok)."""
+    enc = base64.urlsafe_b64encode(latex.encode("utf-8")).decode("ascii").rstrip("=")
+    return f"<!-- vc:formul-latex {enc} -->"
+
+
+def read_latex_comment(line: str) -> str | None:
+    """latex_comment'in tersi; eşleşme yoksa None."""
+    m = LATEX_COMMENT.search(line)
+    if not m:
+        return None
+    enc = m.group(1)
+    return base64.urlsafe_b64decode(enc + "=" * (-len(enc) % 4)).decode("utf-8")
+
+
 def resolve_markers(md: str, images_dir=None) -> tuple[str, list[str]]:
     """Yer tutucuları son bloğa çevirir ve (images_dir verildiyse) PNG'leri yazar. Dönüş: (markdown,
     yazılan dosya adları). images_dir=None (--no-images / --dry-run): görsel yok, yalnız uyarı + LaTeX."""
@@ -539,12 +559,11 @@ def resolve_markers(md: str, images_dir=None) -> tuple[str, list[str]]:
                 names.append(name)
             parts = [f"![Okunamayan formül — s. {page}](images/{name})\n<!-- vc:formul-gorsel {sha} s.{page} -->"]
         else:
-            parts = [f"> ⚠️ Okunamayan formül (s. {page}) — kaynak sayfaya bakın."]
-        latex = info["latex"]
-        if latex:
-            runs = re.findall(r"`+", latex)
-            fence = "`" * max(3, max((len(r) for r in runs), default=0) + 1)
-            parts.append(f"{fence}latex\n{latex}\n{fence}")
+            parts = []
+        # Görünür kısım tek satırlık bilgi; ham LaTeX görünmez yorumda saklanır (yalnız bozuk formülü onarma işi).
+        parts.append(f"> ⚠ Formül okunamadı — s. {page}")
+        if info["latex"]:
+            parts.append(latex_comment(info["latex"]))
         return "\n\n" + "\n\n".join(parts) + "\n\n"
 
     md = _FATAL_WRAPPED.sub(lambda m: block(int(m.group(1))), md)

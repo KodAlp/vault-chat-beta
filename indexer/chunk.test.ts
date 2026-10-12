@@ -329,3 +329,8 @@ test('chunkMarkdown: displayText keeps the image, embedText does not; image-only
 	assert.ok(!chunks[0].embedText.includes('a2694c9b3808ec89'));
 	assert.ok(chunks[0].embedText.includes('Haritada rota gösterilir.'));
 });
+
+test('stripImageMarkup drops the hidden formul-latex comment', () => {
+	const md = '![Okunamayan formül — s. 12](a.png)\n<!-- vc:formul-gorsel a2694c9b3808ec89 s.12 -->\n\n> ⚠ Formül okunamadı — s. 12\n\n<!-- vc:formul-latex eFxe2 -->\n';
+	assert.equal(stripImageMarkup(md), 'Okunamayan formül — s. 12\n\n> ⚠ Formül okunamadı — s. 12\n\n');
+});

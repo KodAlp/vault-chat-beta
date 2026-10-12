@@ -450,19 +450,25 @@ def test_resolve_markers_writes_image_and_block():
         assert (Path(d) / "images" / f"{sha}.png").read_bytes() == ff.FATAL_IMAGES[0]["png"]
     want = (
         f"![Okunamayan formül — s. 1](images/{sha}.png)\n<!-- vc:formul-gorsel {sha} s.1 -->\n\n"
-        "```latex\nE = mc^2 +\n```"
+        f"> ⚠ Formül okunamadı — s. 1\n\n{ff.latex_comment('E = mc^2 +')}"
     )
     assert want in out and "$$$$" not in out and "$$ok$$" in out and "vc:fimg" not in out and "a a a" not in out
+    assert "```latex" not in out and ff.read_latex_comment(out) == "E = mc^2 +"
     assert "\n\n\n" not in out and out.rstrip().endswith("Son paragraf.")
     # görsel kapalıysa (--no-images): dosya yok, uyarı + LaTeX
     out2, names2 = ff.resolve_markers(text, None)
-    assert names2 == [] and "Okunamayan formül (s. 1)" in out2 and "![" not in out2 and "```latex" in out2
+    assert names2 == [] and "> ⚠ Formül okunamadı — s. 1" in out2 and "![" not in out2 and "```latex" not in out2
+    assert ff.read_latex_comment(out2) == "E = mc^2 +"
     # satır içi ($..$) ve çıplak yer tutucu, bilinmeyen kimlik
     out3, _ = ff.resolve_markers("a $<!-- vc:fimg 0 -->$ b <!-- vc:fimg 9 -->", None)
     assert "vc:fimg" not in out3 and "$" not in out3
     # bir kodlama çiti içeren LaTeX daha uzun çit alır
     ff.FATAL_IMAGES[5] = {"png": b"x", "sha": "0" * 16, "page": 3, "latex": "a ``` b"}
-    assert "````latex\na ``` b\n````" in ff.resolve_markers("<!-- vc:fimg 5 -->", None)[0]
+    out5 = ff.resolve_markers("<!-- vc:fimg 5 -->", None)[0]
+    assert ff.read_latex_comment(out5) == "a ``` b" and "```" not in out5
+    ff.FATAL_IMAGES[6] = {"png": b"x", "sha": "0" * 16, "page": 3, "latex": "a --> b -- é"}
+    out6 = ff.resolve_markers("<!-- vc:fimg 6 -->", None)[0]
+    assert ff.read_latex_comment(out6) == "a --> b -- é" and "-->" not in out6.replace("<!-- vc:formul-latex", "").replace(" -->", "")
     fresh("auto")
 
 
