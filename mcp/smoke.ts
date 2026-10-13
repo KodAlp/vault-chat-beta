@@ -65,12 +65,14 @@ try {
 	await client.connect(clientTransport);
 
 	const { tools } = await client.listTools();
-	assert.equal(tools.length, 7, `expected 7 registered tools, got ${tools.length}`);
+	assert.equal(tools.length, 9, `expected 9 registered tools, got ${tools.length}`);
 	const names = tools.map((t) => t.name).sort();
 	assert.deepEqual(names, [
 		'create_vault',
+		'edit_note',
 		'get_note',
 		'import_source',
+		'list_domains',
 		'list_pending_imports',
 		'list_sources',
 		'list_vaults',
@@ -80,6 +82,7 @@ try {
 	// destroy anything; only import_source touches the open world (it fetches URLs). list_pending_imports only reads.
 	const expectedAnnotations: Record<string, { readOnlyHint: boolean; openWorldHint: boolean }> = {
 		create_vault: { readOnlyHint: false, openWorldHint: false },
+		edit_note: { readOnlyHint: false, openWorldHint: false },
 		import_source: { readOnlyHint: false, openWorldHint: true },
 		list_pending_imports: { readOnlyHint: true, openWorldHint: false }
 	};
@@ -87,9 +90,10 @@ try {
 		const want = expectedAnnotations[t.name] ?? { readOnlyHint: true, openWorldHint: false };
 		assert.equal(t.annotations?.readOnlyHint, want.readOnlyHint, `${t.name} readOnlyHint`);
 		assert.equal(t.annotations?.openWorldHint, want.openWorldHint, `${t.name} openWorldHint`);
-		assert.equal(t.annotations?.destructiveHint, false, `${t.name} must be marked destructiveHint:false`);
+		// edit_note overwrites a note (previous version kept as a revision), so it is the one destructive tool.
+		assert.equal(t.annotations?.destructiveHint, t.name === 'edit_note', `${t.name} destructiveHint`);
 	}
-	console.log('ok - tools/list returns all 7 tools with the right annotations (5 read-only, 2 write tools not)');
+	console.log('ok - tools/list returns all 9 tools with the right annotations (6 read-only, 3 write tools not)');
 
 	// list_vaults
 	{

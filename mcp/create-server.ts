@@ -3,6 +3,7 @@ import { registerListVaults } from './tools/list-vaults';
 import { registerSearchLibrary } from './tools/search-library';
 import { registerGetNote } from './tools/get-note';
 import { registerListSources } from './tools/list-sources';
+import { registerListDomains } from './tools/list-domains';
 import { registerCreateVault } from './tools/create-vault';
 import { registerImportSource } from './tools/import-source';
 import { registerListPendingImports } from './tools/list-pending-imports';
@@ -34,6 +35,7 @@ export function createServer(): McpServer {
 	registerSearchLibrary(server);
 	registerGetNote(server);
 	registerListSources(server);
+	registerListDomains(server);
 	registerCreateVault(server);
 	registerImportSource(server);
 	registerListPendingImports(server);

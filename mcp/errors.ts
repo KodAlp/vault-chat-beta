@@ -17,7 +17,8 @@ export type ToolErrorCode =
 	| 'APP_TIMEOUT'
 	| 'APP_UNAUTHORIZED'
 	| 'APP_ERROR'
-	| 'INVALID_ARGUMENTS';
+	| 'INVALID_ARGUMENTS'
+	| 'HEADING_NOT_FOUND';
 
 /** Codes the app itself answers with (src/lib/error-codes/*, e.g. MCP_PATH_NOT_ALLOWED,
  * MCP_IMPORT_ROOTS_EMPTY, UNSUPPORTED_FILE_TYPE) are passed through verbatim so the agent sees the real

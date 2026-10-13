@@ -10,7 +10,9 @@ import { getLibrarySettings } from './library-read';
 import type { RetrieveResult } from '$lib/types';
 import type { VaultContext } from './vaults';
 import { logAppEvent } from './app-log';
-import { buildCoOccurrenceQuery, buildFallbackQuery, extractTerms } from './keyword-query';
+import { buildCoOccurrenceQuery, buildFallbackQuery, buildFtsQuery, extractTerms } from './keyword-query';
+import { reciprocalRankFusion } from './rrf';
+import { domainStats, type DomainStats } from './domain-stats';
 import { hasKeywordIndex, keywordSearch, keywordSearchCoOccurring, type KeywordHit } from './keyword-search';
 import type { GateDecision } from './smalltalk-gate';
 import { normalizeLevel } from '../../../indexer/chunk';
@@ -240,6 +242,11 @@ export async function retrieve(
 		smallTalkGate?: (vector: number[], bestDistance: number | undefined) => GateDecision | null;
 		/** "Yine de kaynak ara": retrieve even when the gate flags the message (still reported in `gate`). */
 		forceSources?: boolean;
+		/** MCP search_library's retrieval mode. 'auto' (default, the chat's behaviour): vector, keyword only as
+		 * fallback. 'vector': vector only, never the keyword fallback. 'keyword': FTS5 only (OR over the
+		 * terms, no embedding call). 'hybrid': vector KNN and FTS5 BM25 fused with reciprocal rank fusion
+		 * (rrf.ts); falls back to keyword-only exactly like 'auto' when vectors cannot run. */
+		mode?: 'auto' | 'vector' | 'keyword' | 'hybrid';
 	} = {}
 ): Promise<RetrieveResult> {
 	const database = getDb(v);
@@ -258,7 +265,10 @@ export async function retrieve(
 	// regardless of opts.keywordFallback (see its own comment there).
 	let vector: number[] | null = null;
 	let embeddingIssue: RetrieveResult['embeddingIssue'];
-	if (config === null) {
+	if (opts.mode === 'keyword') {
+		// Explicit keyword mode: no embedding call at all; same typed state as the configured FTS-only mode.
+		embeddingIssue = 'fts-only';
+	} else if (config === null) {
 		// FTS-only mode: an expected, configured state — typed, but deliberately NOT logged per query.
 		embeddingIssue = 'fts-only';
 	} else if (metaMismatch) {
@@ -340,8 +350,32 @@ export async function retrieve(
 		const c = toCandidate(match.chunk_id, match.distance);
 		if (c) candidates.push(c);
 	}
+	// Hybrid: fuse the vector ranking with a BM25 (OR) ranking by rank only. Keyword-only hits carry
+	// via 'keyword' (distance meaningless, threshold skipped); chunks the vector search also found keep
+	// their real distance and the threshold. Needs both a vector and a keyword index, else plain 'auto'.
+	let hybridCandidates: CandidateChunk[] | null = null;
+	if (opts.mode === 'hybrid' && vector !== null && hasKeywordIndex(database)) {
+		const expr = buildFtsQuery(opts.keywordQuery ?? query, 'or');
+		const kwHits = expr ? keywordSearch(database, expr, k * overfetch) : [];
+		if (kwHits.length > 0) {
+			const distById = new Map(matches.map((m) => [m.chunk_id, m.distance]));
+			const fused = reciprocalRankFusion([
+				matches.map((m) => String(m.chunk_id)),
+				kwHits.map((h) => String(h.chunkId))
+			]);
+			hybridCandidates = [];
+			for (const f of fused) {
+				const id = Number(f.id);
+				const d = distById.get(id);
+				const c = toCandidate(id, d ?? 1, d === undefined ? 'keyword' : undefined);
+				if (c) hybridCandidates.push(c);
+			}
+		}
+	}
 	const vectorResult: RetrieveResult =
-		matches.length === 0
+		hybridCandidates !== null
+			? selectChunks(hybridCandidates, { ...opts, excludedPrefixes, k, distanceThreshold: config?.distanceThreshold })
+			: matches.length === 0
 			? {
 					chunks: [],
 					narrowScope: false,
@@ -365,6 +399,7 @@ export async function retrieve(
 	// responsible for checking embeddingIssue itself before trusting them
 	// (see RetrieveResult.embeddingIssue's doc comment).
 	const wantsFallback =
+		opts.mode !== 'vector' &&
 		(opts.keywordFallback === true || embeddingIssue !== undefined) &&
 		vectorResult.chunks.length === 0 &&
 		(vectorResult.reason === 'filtered' ||
@@ -385,9 +420,14 @@ export async function retrieve(
 	// so the co2 path is not dropped by the threshold any more than AND is.
 	const fallbackQuery = opts.keywordQuery ?? query;
 	const pool = k * (opts.includedPaths?.length ? SCOPED_OVERFETCH_FACTOR : OVERFETCH_FACTOR);
-	const mode: 'and' | 'co2' = embeddingIssue === 'fts-only' ? 'co2' : 'and';
+	const mode: 'and' | 'co2' | 'or' = opts.mode === 'keyword' ? 'or' : embeddingIssue === 'fts-only' ? 'co2' : 'and';
 	let hits: KeywordHit[];
-	if (mode === 'co2') {
+	if (mode === 'or') {
+		// Explicit keyword mode: recall-oriented OR, a single term is enough (the caller asked for keywords).
+		const expr = buildFtsQuery(fallbackQuery, 'or');
+		if (!expr) return vectorResult;
+		hits = keywordSearch(database, expr, pool);
+	} else if (mode === 'co2') {
 		const co = buildCoOccurrenceQuery(fallbackQuery);
 		if (!co) return vectorResult;
 		hits = keywordSearchCoOccurring(database, co.expr, co.terms, pool);
@@ -432,6 +472,13 @@ export function listDomains(v: VaultContext): string[] {
 		.prepare(`SELECT DISTINCT d.value AS domain FROM files, json_each(files.domains_json) AS d ORDER BY d.value`)
 		.all() as { domain: string }[];
 	return rows.map((r) => r.domain);
+}
+
+/** Per-domain note counts and newest mtime (MCP list_domains); reads the index, hidden folders excluded. */
+export function listDomainStats(v: VaultContext): DomainStats {
+	const database = getDb(v);
+	if (!database) return { domains: [], noDomain: 0, totalNotes: 0 };
+	return domainStats(database, getLibrarySettings(v).hiddenFolders);
 }
 
 /** Levels actually present in the index — same reasoning as listDomains():

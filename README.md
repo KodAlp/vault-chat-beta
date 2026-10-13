@@ -435,8 +435,9 @@ sunucu — ayrı bir paket veya kurulum gerektirmez, `mcp/` bu repo'nun içinde
 **Araçlar:**
 
 - `list_vaults` — MCP'ye açık kasaları listeler (kasa başına açma/kapama: **Ayarlar → Kasalar**).
-- `search_library` — kasada arar; vektör araması, embedding yoksa ya da sonuç vermezse anahtar kelime (FTS5) yedeğiyle. `domain`/`level` süzgeci alır.
-- `get_note` — bir notu okur.
+- `search_library` — kasada arar; varsayılan (`mode: "auto"`) vektör araması, embedding yoksa ya da sonuç vermezse anahtar kelime (FTS5) yedeğiyle. `mode`: `vector`, `keyword` (yalnız FTS5, embedding gerekmez) ya da `hybrid` (vektör + FTS5, reciprocal rank fusion). `domain`/`level` süzgeci alır.
+- `get_note` — bir notu okur; `heading` yalnız o başlığın bölümünü, `max_chars`/`offset` sayfalı okumayı verir (`hash` her zaman tüm dosyanınkidir).
+- `list_domains` — kasadaki domain değerlerini not sayısı ve son değişiklik zamanıyla listeler.
 - `list_sources` — kasadaki kaynakları, domain ve seviye değerleriyle listeler.
 - `create_vault` — yeni kasa oluşturur.
 - `import_source` — yerel dosya ya da URL'yi içe aktarmak üzere **bekleyenlere** ekler.
