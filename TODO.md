@@ -2,7 +2,7 @@
 
 Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncellenir.
 
-**Son güncelleme:** 2026-10-13 · #5 mekanik KaTeX temizliği bitti (367 formül)
+**Son güncelleme:** 2026-10-13 · Acil 4. tur: #6, #9, #40, #61, #69, #74 bitti; #2 ölçüldü
 
 ## Kurallar
 
@@ -30,7 +30,6 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 ## Acil
 
 ### 1. Kurulum ve veri sağlamlığı
-- [ ] **"Veriyi yedekle" ayarı.** Bugün yalnız CLI betiği var. `O` · #61
 
 ### 2. Test ve doğrulama
 - [ ] **Paketli sürümde negatif testler.** `invoke('check_and_start')` reddi, `curl` 401. `K` · #59 (çekildi)
@@ -40,25 +39,21 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 ### 3. Sohbet ve dil tutarlılığı
 
 ### 4. Düzenleyici ve sohbet görünümü
-- [ ] **Slaytta quote ve two-column düzenleri.** Uygun içerikle dene. `K` · #74
-- [ ] **`@milkdown/plugin-math` deprecated.** Yerine geçecek paketi seç. `O` · #69
 
 ### 5. Büyük belgelerde bellek ve hız
 - [ ] **1000+ sayfalık kitaplarda bellek ölçümü.** `K` · #83
 - [ ] **Formül yoğun klasörlerin hızı.** Sayfa başına 15–25 sn; 200+ saatlik klasörler. `B` · #82
 
 ### 6. İçe aktarmada sessiz bozulma
-- [ ] **Sessiz glif bozulması.** docling virgülü ↪, `|` işaretini ♣ yapıyor, uyarı yok; pypdf ile karşılaştır. `O` · #6
 - [ ] **OCR dil seçimi.** Türkçe karakterler bozuluyor; Bengalce çöp çıktı. `O` · #8
-- [ ] **OCR'da geçerli ama yanlış LaTeX.** Σ → `\S`, uyarı yok. `O` · #9
 
 ### 7. MCP araçları ve belgeleri
-- [ ] **`edit_note` aracı.** Geliştirici anahtarıyla, varsayılan kapalı. `O` · #40
 - [ ] **MCP okuma iyileştirmeleri.** Araştırma C5. `O` · #41
 - [ ] **Yerel modellerle MCP deneyi.** Qwen3 8B/4B, LM Studio. `O` · #39 (çekildi)
 
 ### 8. Formül doğruluğu
 - [ ] **MinerU KaTeX: elle bakılacak formüller.** Mekanik olanlar bitti (2026-10-13, 367 formül). Kalan: ~73 formül sanılmış kod (kod bloğuna çevir), 14 anlamı belirsiz makro, 7 bozuk MathType kesri, ~15 çift üst/alt simge, dengesiz \left/\right; 19 kesik \quad döngüsü #3 ile. `O` · #5 (çekildi)
+- [ ] **Fizik'te kalan 48 geçersiz formülü yeniden içe aktar.** Mekanik düzeltilemez (dengesiz left/right, formüle karışmış düzyazı, kesik formül; 2026-10-13 ölçümü); 11 notu 0.3.0 ile (MinerU + görsel yedeği) yeniden içe aktar. `O` · #2
 - [ ] **Model kapasitesi hataları (♯, ∝).** MinerU yedeğiyle düzeldi mi, ölç. `O` · #4
 - [ ] **"Yalnız hatalı formülü onar".** Sayfa + kutu; belgenin tamamını yeniden okumadan. `B` · #3
 
@@ -101,6 +96,7 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 
 ## Öneriler
 
+- [ ] **#61 ve #40'ı uygulamada dene.** Yedek kartı (klasör seçici, ilerleme) ve edit_note anahtarı tarayıcıda denenmedi. `K`
 - [ ] **#87'yi paketli sürümde doğrula.** `launchers.json`'dan ollama kaydını sil, uygulamayı aç: `launch.log`'da "starting it for this session" görünmeli; açılış anında MCP `search_library` 30 sn içinde yanıt vermeli. `K`
 - [ ] **#31'i gerçek bir modelle doğrula.** Kalibrasyon yalnız sentetik vektörlerle sınandı; nomic/qwen3 embedding ile 2016 negatiflik setinde yanlış pozitif ölç. `O`
 - [ ] **#7'yi asıl dosyayla dene.** 34 sayfalık taranmış Sinyaller final PDF'i (Kolay Matematik testi). `K`
@@ -137,6 +133,10 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 
 Yalnız son iki haftanın kaydı tutulur; daha eskisi git geçmişindedir.
 
+- 2026-10-13: sessiz glif bozulması (#6) ve OCR formül şüphesi (#9) uyarıları; gerçek veride 15 temiz PDF'te yanlış alarm yok, bozuk slayt dosyasında ↪→, ▷→. ♣→| doğru eşlendi. `e36bade`
+- 2026-10-13: eskimiş @milkdown/plugin-math projeye alındı, bağımlılık kaldırıldı (#69). `d37db0c`
+- 2026-10-13: alıntı ve iki sütun slaytları denendi, taşmalar düzeltildi (#74). `d73e0f2`
+- 2026-10-13: Ayarlar'da "Veriyi yedekle" (#61) ve varsayılan kapalı MCP edit_note (#40). `f4433c0`
 - 2026-10-13: default kasasında 367 formül KaTeX uyumlu hale getirildi: html-entity 212, çift \tag 37, makro tablosu 115 (font-switch, macro-arg, mleftright dahil), MathType kesri 3. Yedekler `Desktop\vault-chat-yedek\katex-2026-10-13*` (#5). `09778ba`
 - 2026-10-12: "Kaynaklar alakasız" düğmesi yalnız güçlü kaynak yoksa çıkıyor (#35; eşik 0,5 ölçülmedi). `b012c15`
 - 2026-10-12: düzenleyicide görsel yükleme (#70) ve Ayarlar → Kasalar'da "MCP istemcisine bağla" kartı (#38). `46c4994`
