@@ -6,6 +6,12 @@ import {
 	fixGlyphJunk,
 	fixHtmlEntities,
 	fixMacroAliases,
+	fixFontSwitch,
+	fixMacroArgs,
+	fixMleftright,
+	countAmbiguous,
+	MACRO_ALIAS_TABLE,
+	FIXES,
 	repairFormula,
 	looksLikeCode,
 	katexError,
@@ -93,4 +99,95 @@ test('processText rewrites only broken formulas and preserves everything else', 
 	assert.equal(r.fixed.length, 1);
 	assert.equal(r.text, '---\nconverter: mineru\n---\ntext\n\n$$\na \\tag{2}\n$$\n\n$$\nb = 2\n$$\n');
 	assert.equal(r.fixed[0].line, 6);
+});
+
+test('macro-alias: every mapping', () => {
+	const cases = [
+		['1,\\hdots,n', '1,\\ldots,n'],
+		['a \\textless b', 'a < b'],
+		['a \\textgreater b', 'a > b'],
+		['\\textmu A', '\\mu A'],
+		['x\\dprime', 'x\\prime\\prime'],
+		['62 \\, \\mum', '62 \\, \\mu\\mathrm{m}'],
+		['-\\sp{u}_w x', '-^{u}_w x'],
+		['z_{\\harpoonright I}', 'z_{\\upharpoonright I}'],
+		['\\itOmega', '\\mathit{\\Omega}'],
+		['30\\textdegree', '30{}^{\\circ}'],
+		['\\overbar{x}', '\\overline{x}'],
+		['\\Breve{x}', '\\breve{x}'],
+		['A \\nsubset B', 'A \\not\\subset B'],
+		['a \\dash b', 'a \\text{—} b']
+	];
+	assert.equal(cases.length, MACRO_ALIAS_TABLE.length);
+	for (const [from, to] of cases) assert.equal(fixMacroAliases(from), to, from);
+});
+
+test('macro-alias: control-word boundaries', () => {
+	for (const t of ['\\hdotsX', '\\space', '\\spX', '\\dashv', '\\dashrightarrow', '\\mumble', '\\overbarX', '\\textmux'])
+		assert.equal(fixMacroAliases(t), null, t);
+});
+
+test('macro-alias: replacement is literal (no $ patterns)', () => {
+	assert.equal(fixMacroAliases('\\textdegree $&$'), '{}^{\\circ} $&$');
+});
+
+test('font-switch: \\em -> \\it, \\sc removed with one space', () => {
+	assert.equal(fixFontSwitch('{\\em x}'), '{\\it x}');
+	assert.equal(fixFontSwitch('{\\sc ~ x}'), '{~ x}');
+	assert.equal(fixFontSwitch('{\\sc  x}'), '{ x}');
+	assert.equal(fixFontSwitch('\\emptyset \\scriptsize \\emph{x}'), null);
+});
+
+test('macro-arg: \\textsuperscript and \\mathbfcal', () => {
+	assert.equal(fixMacroArgs('x\\textsuperscript{th}'), 'x{}^{\\text{th}}');
+	assert.equal(fixMacroArgs('x\\textsuperscript {a{b}c} y'), 'x{}^{\\text{a{b}c}} y');
+	assert.equal(fixMacroArgs('\\mathbfcal{A}'), '\\boldsymbol{\\mathcal{A}}');
+	assert.equal(fixMacroArgs('\\textsuperscript x'), null);
+	assert.equal(fixMacroArgs('\\textsuperscript'), null);
+	assert.equal(fixMacroArgs('\\textsuperscript{unclosed'), null);
+	assert.equal(fixMacroArgs('\\textsuperscriptX{a}'), null);
+});
+
+test('mleftright idiom', () => {
+	assert.equal(
+		fixMleftright('\\delta^{-}\\mathopen{}\\mathclose\\bgroup\\left( S \\aftergroup\\egroup\\right)'),
+		'\\delta^{-}\\left( S \\right)'
+	);
+	assert.equal(
+		fixMleftright('\\mathopen { } \\mathclose \\bgroup \\left[ x \\aftergroup \\egroup \\right]'),
+		'\\left[ x \\right]'
+	);
+	assert.equal(fixMleftright('\\left( x \\right)'), null);
+});
+
+test('new fixes come after the existing ones and pass the gate end to end', () => {
+	const names = FIXES.map(([n]) => n);
+	assert.deepEqual(names.slice(0, 5), ['duplicate-tag', 'stray-delimiter', 'html-entity', 'macro-alias', 'glyph-junk']);
+	assert.deepEqual(names.slice(5), ['font-switch', 'macro-arg', 'mleftright']);
+	let r = repairFormula('\\delta\\mathopen{}\\mathclose\\bgroup\\left( S \\aftergroup\\egroup\\right)');
+	assert.equal(r.status, 'fixed');
+	assert.deepEqual(r.applied, ['mleftright']);
+	r = repairFormula('a \\nsubset b \\textsuperscript{th}');
+	assert.equal(r.status, 'fixed');
+	assert.deepEqual(r.applied, ['macro-alias', 'macro-arg']);
+	r = repairFormula('{\\sc A} + \\hdots');
+	assert.equal(r.status, 'fixed');
+});
+
+test('gate rejects candidates that still fail KaTeX', () => {
+	const r = repairFormula('\\frac{\\hdots \\textsuperscript{2}');
+	assert.equal(r.status, 'unfixable');
+	assert.equal(r.body, undefined);
+	assert.equal(repairFormula('\\hdots \\unknownmacro').status, 'unfixable');
+});
+
+test('countAmbiguous reports but never maps', () => {
+	assert.deepEqual(countAmbiguous('\\llangle x \\rrangle \\Ss0 \\ref{a} \\ref{b} \\neqq \\refx'), {
+		llangle: 1,
+		rrangle: 1,
+		neqq: 1,
+		Ss: 1,
+		ref: 2
+	});
+	assert.equal(repairFormula('\\llangle x \\rrangle').status, 'unfixable');
 });
