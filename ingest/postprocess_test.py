@@ -24,7 +24,10 @@ from postprocess import (  # noqa: E402
     DEGENERATE_NOTE,
     DEGENERATE_RUN,
     derive_title,
+    SYMBOL_PUA,
     fix_latex_artifacts,
+    fix_propto,
+    map_symbol_pua,
     find_degenerate_run,
     truncate_degenerate_math,
     postprocess,
@@ -353,6 +356,81 @@ def test_fatal_formula_token():
     check("okunamayan formül yer tutucusu postprocess'te korunur", "$$<!-- vc:fimg 0 -->$$" in out)
 
 
+# (before, after) pairs; after None = unchanged. scripts/symbol-propto-repair.test.mjs holds the same cases:
+# change both together.
+PROPTO_CASES = [
+    (r"F \infty q_1 q_2 / r^2", r"F \propto q_1 q_2 / r^2"),
+    (r"\rho \, \infty \, a^{-3}", r"\rho \, \propto \, a^{-3}"),
+    (r"u_{\nu} \infty \nu^{3}", r"u_{\nu} \propto \nu^{3}"),
+    (r"f(x) \infty \frac{1}{x}", r"f(x) \propto \frac{1}{x}"),
+    (r"\left| x \right| \; \infty \; \sqrt{y}", r"\left| x \right| \; \propto \; \sqrt{y}"),
+    (r"\{ x \} \quad \infty \quad y", r"\{ x \} \quad \propto \quad y"),
+    (r"A [ b ] \infty 2", r"A [ b ] \propto 2"),
+    (r"\hbar \infty \omega", r"\hbar \propto \omega"),
+    (r"\lim_{x \to \infty} f(x) \infty y", r"\lim_{x \to \infty} f(x) \propto y"),
+    (r"\sum_{n=1}^{\infty} a_n", None),
+    (r"\sum_{n=1}^\infty a_n", None),
+    (r"\int_0^\infty f \, dx", None),
+    (r"\int_{0}^{\infty} f \, dx", None),
+    (r"a = \infty", None),
+    (r"x \to \infty", None),
+    (r"-\infty < x", None),
+    (r"a \pm \infty b", None),
+    (r"(a, \infty)", None),
+    (r"[ a , \infty )", None),
+    (r"\lim_{n \to \infty} a_n", None),
+    (r"\mathcal{C} \infty \text{-category}", None),
+    (r"\mathcal{C} \infty \text {-category}", None),
+    (r"x ^ { a \infty b }", None),  # inside a superscript group
+    (r"\infty x", None),  # nothing before it
+    (r"x \infty", None),  # nothing after it
+    (r"x \infty = y", None),
+    (r"x \infty ^ 2", None),
+    (r"x \, \alpha \, y", r"x \, \propto \, y"),
+    (r"x \alpha \, y", None),  # one-sided: a real alpha
+    (r"x \, \alpha y", None),
+    (r"x \alpha y", None),
+    (r"\alpha_{1} \, \alpha_{2}", None),
+]
+
+
+def test_propto():
+    for before, after in PROPTO_CASES:
+        want = before if after is None else after
+        got = fix_propto(before)
+        check(f"propto: {before}", got == want)
+        if got != want:
+            print("      got ", got)
+    # wired into fix_latex_artifacts, only inside $$ blocks
+    check("propto repaired inside $$", fix_latex_artifacts(r"$$F \, \infty \, q$$") == r"$$F \, \propto \, q$$")
+    check("prose \\infty untouched", fix_latex_artifacts(r"a \infty b") == r"a \infty b")
+    out, _ = postprocess("# T\n\n$$a \\infty b$$\n", title_fallback="t", converted_by="docling", needs_review=False)
+    check("propto repaired through postprocess()", r"a \propto b" in out)
+
+
+def test_symbol_pua():
+    check("U+F0B5 -> propto", map_symbol_pua("a  b") == "a ∝ b")
+    check("U+F0A5 -> infinity", map_symbol_pua("") == "∞")
+    check("U+F066 -> phi", map_symbol_pua("") == "φ")
+    check("U+F06A -> phi1", map_symbol_pua("") == "ϕ")
+    check("Greek letters", map_symbol_pua("") == "αβΓΩ")
+    check(
+        "operators and arrows",
+        map_symbol_pua("")
+        == "±×≤≥→⇔∇∫∑",
+    )
+    check("ASCII range", map_symbol_pua("") == "2+=−")
+    check("unmapped code left alone", map_symbol_pua("") == "" and map_symbol_pua("") == "")
+    printable = list(range(0x20, 0x7F)) + list(range(0xA0, 0xFF))
+    check("table covers every printable Symbol byte except 0xF0", all(chr(0xF000 + b) in SYMBOL_PUA for b in printable if b != 0xF0))
+    check("math content mapped too", map_symbol_pua("$$x  y$$") == "$$x ∝ y$$")
+    code = "```\nx = \n```\n\n`` and "
+    check("code left verbatim", map_symbol_pua(code) == "```\nx = \n```\n\n`` and ∞")
+    out, _ = postprocess("# T\n\ntext  more\n", title_fallback="t", converted_by="docling", needs_review=False)
+    check("mapped through postprocess()", "∝" in out and "" not in out)
+
+
+
 if __name__ == "__main__":
     sys.stdout.reconfigure(encoding="utf-8")
     test_wrapping()
@@ -367,5 +445,7 @@ if __name__ == "__main__":
     test_degenerate_math()
     test_latex_artifacts()
     test_fatal_formula_token()
+    test_propto()
+    test_symbol_pua()
     print(f"\n{len(failures)} başarısız" if failures else "\nhepsi geçti")
     sys.exit(1 if failures else 0)
