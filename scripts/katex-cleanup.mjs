@@ -483,7 +483,10 @@ export function processText(source, fixes = FIXES) {
 function walk(dir, files = []) {
 	for (const name of readdirSync(dir)) {
 		const p = join(dir, name);
-		if (statSync(p).isDirectory()) walk(p, files);
+		// _meta holds revisions, originals and staging copies — not notes; the indexer skips it too.
+		if (statSync(p).isDirectory()) {
+			if (name !== '_meta') walk(p, files);
+		}
 		else if (name.toLowerCase().endsWith('.md')) files.push(p);
 	}
 	return files;
