@@ -17,6 +17,12 @@ import { isInsideDir } from './folder-scan';
  */
 export interface McpSettings {
 	allowedImportRoots: string[];
+	/**
+	 * Developer switch for the `edit_note` MCP tool. OFF by default and only the user can turn it on (this
+	 * file's only writer is the session-gated PUT /api/settings/mcp). While off the app refuses every edit
+	 * request with MCP_EDIT_NOTE_DISABLED, whatever the MCP process does.
+	 */
+	allowEditNote: boolean;
 }
 
 export const MAX_ALLOWED_IMPORT_ROOTS = 20;
@@ -67,22 +73,28 @@ export function sanitizeImportRoots(raw: unknown): string[] {
  * check re-resolves each root and simply skips the ones that no longer exist. */
 export function readMcpSettings(): McpSettings {
 	try {
-		const parsed = JSON.parse(fs.readFileSync(filePath(), 'utf-8')) as { allowedImportRoots?: unknown };
+		const parsed = JSON.parse(fs.readFileSync(filePath(), 'utf-8')) as { allowedImportRoots?: unknown; allowEditNote?: unknown };
 		const roots = Array.isArray(parsed.allowedImportRoots)
 			? parsed.allowedImportRoots.filter((r): r is string => typeof r === 'string' && path.isAbsolute(r))
 			: [];
-		return { allowedImportRoots: roots.slice(0, MAX_ALLOWED_IMPORT_ROOTS) };
+		// Strictly `true`: anything else (missing, "true", 1) is off.
+		return { allowedImportRoots: roots.slice(0, MAX_ALLOWED_IMPORT_ROOTS), allowEditNote: parsed.allowEditNote === true };
 	} catch {
-		return { allowedImportRoots: [] };
+		return { allowedImportRoots: [], allowEditNote: false };
 	}
 }
 
 /** Replaces the whole list (the settings page always sends the full list).
  * Atomic write, same as ui-prefs-store.ts. */
-export function writeMcpSettings(patch: { allowedImportRoots?: unknown }): McpSettings {
+export function writeMcpSettings(patch: { allowedImportRoots?: unknown; allowEditNote?: unknown }): McpSettings {
+	const current = readMcpSettings();
+	if (patch.allowEditNote !== undefined && typeof patch.allowEditNote !== 'boolean') {
+		throw new AppError('VALIDATION_INVALID', { field: 'allowEditNote' });
+	}
 	const next: McpSettings = {
 		allowedImportRoots:
-			patch.allowedImportRoots === undefined ? readMcpSettings().allowedImportRoots : sanitizeImportRoots(patch.allowedImportRoots)
+			patch.allowedImportRoots === undefined ? current.allowedImportRoots : sanitizeImportRoots(patch.allowedImportRoots),
+		allowEditNote: patch.allowEditNote === undefined ? current.allowEditNote : patch.allowEditNote
 	};
 	const p = filePath();
 	const tmp = `${p}.${process.pid}.tmp`;

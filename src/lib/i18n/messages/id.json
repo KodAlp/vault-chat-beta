@@ -896,6 +896,8 @@
   },
   "McpImportSettings": {
     "title": "Folder impor MCP",
+    "editNoteLabel": "Izinkan agen mengedit catatan (edit_note)",
+    "editNoteWarning": "Opsi pengembang, nonaktif secara default. Saat aktif, agen AI yang terhubung lewat MCP dapat mengubah teks catatan Anda yang ada (versi sebelumnya disimpan sebagai revisi yang bisa dipulihkan). Catatan dapat berisi instruksi tersembunyi yang mencoba mengarahkan agen, jadi aktifkan hanya untuk agen dan vault yang Anda percayai.",
     "description": "Agen AI yang terhubung lewat MCP hanya boleh mengimpor berkas lokal dari folder-folder ini. Impor menunggu konfirmasi Anda kecuali Anda mengaktifkan konfirmasi otomatis untuk Vault itu. Biarkan daftar kosong untuk memblokir impor berkas lokal; impor tautan (URL) diizinkan dan melalui konfirmasi yang sama.",
     "empty": "Tidak ada folder yang diizinkan — impor berkas lokal diblokir.",
     "removeAria": "Hapus {path}",
@@ -946,6 +948,22 @@
     "mcpMigrationCloseAll": "Tutup semuanya (disarankan)",
     "mcpMigrationFailed": "Gagal mengubahnya."
   },
+  "BackupCard": {
+    "title": "Cadangkan data",
+    "description": "Menyalin vault (catatan, indeks pencarian, data belajar), obrolan, dan pengaturan Anda ke folder baru bertanggal. Tidak ada yang diubah di folder data Anda.",
+    "destination": "Lokasi cadangan",
+    "choose": "Pilih…",
+    "excludesNote": "Kunci API tidak disertakan. Masukkan ulang setelah memulihkan.",
+    "start": "Cadangkan",
+    "running": "Mencadangkan…",
+    "progress": "{done} dari {total} item",
+    "doneOk": "Pencadangan selesai",
+    "doneWithFailures": "Pencadangan selesai, tetapi {count} file tidak dapat disalin (sedang digunakan?)",
+    "totals": "{files} file, {databases} basis data, {size}",
+    "cancelled": "Pencadangan dibatalkan.",
+    "interrupted": "Pencadangan terhenti."
+  },
+
   "ReindexDialog": {
     "title": "Mengindeks ulang vault",
     "runningDescription": "Setiap berkas di vault ini sedang diproses ulang dengan embedding saat ini. Obrolan tetap berjalan dari indeks lama selama proses ini.",
@@ -1152,6 +1170,9 @@
     "MCP_IMPORT_ROOTS_EMPTY": "No folder is allowed for MCP file imports yet — add one in Settings",
     "MCP_PATH_NOT_ALLOWED": "That file is outside the folders you allowed for MCP imports",
     "MCP_PATH_INVALID": "That path is not usable — it must be an absolute path to an existing regular file (no symlinks, no \"..\" segments)",
+    "MCP_EDIT_NOTE_DISABLED": "Pengeditan catatan lewat MCP dinonaktifkan — pengguna dapat mengaktifkannya di Pengaturan",
+    "MCP_EDIT_NOT_FOUND": "Teks yang akan diganti tidak ditemukan di catatan",
+    "MCP_EDIT_NOT_UNIQUE": "Teks yang akan diganti muncul lebih dari sekali di catatan",
     "IMPORT_INTERRUPTED": "This import was interrupted (the app was closed during conversion) — cancel it and import the source again",
     "IMPORT_AUTO_CONFIRM_FAILED": "Auto-confirm failed (the note could not be indexed) — the import is still pending; you can confirm it yourself",
     "IMPORT_DUPLICATE_URL": "This link appears to have been imported before — you can still continue.",
@@ -1163,6 +1184,10 @@
     "VAULT_NONE": "Belum ada vault — buat satu terlebih dahulu",
     "VAULT_DELETE_CONFIRM_REQUIRED": "Konfirmasi penghapusan diperlukan ('confirm=true')",
     "VAULT_LAST_UNDELETABLE": "Vault terakhir tidak dapat dihapus — aplikasi selalu membutuhkan setidaknya satu vault",
+    "BACKUP_DEST_INVALID": "Masukkan jalur folder lengkap untuk cadangan",
+    "BACKUP_DEST_INSIDE_DATA": "Pilih folder di luar folder data dan vault aplikasi",
+    "BACKUP_ALREADY_RUNNING": "Pencadangan sedang berjalan",
+    "BACKUP_FAILED": "Cadangan tidak dapat dibuat",
     "PROVIDER_OLLAMA_MISCONFIGURED": "Tidak ada penyedia Ollama aktif yang dikonfigurasi",
     "PROVIDER_CONSENT_NOT_NEEDED": "Ollama tidak memerlukan persetujuan",
     "PROVIDER_BASE_URL_INVALID": "{url} bukan alamat http(s) yang valid",

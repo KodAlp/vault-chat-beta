@@ -957,6 +957,8 @@
 	},
 	"McpImportSettings": {
 		"title": "Složky pro import přes MCP",
+		"editNoteLabel": "Povolit agentům upravovat poznámky (edit_note)",
+		"editNoteWarning": "Vývojářská volba, ve výchozím stavu vypnutá. Když je zapnutá, AI agent připojený přes MCP může měnit text tvých existujících poznámek (předchozí verze se uchová jako obnovitelná revize). Poznámky mohou obsahovat skryté pokyny, které se snaží agenta řídit, proto to zapínej jen pro agenty a trezory, kterým věříš.",
 		"description": "AI agent připojený přes MCP smí importovat lokální soubory jen z těchto složek. Importy čekají na vaše potvrzení, pokud pro daný trezor nezapnete automatické potvrzování. Necháte-li seznam prázdný, import lokálních souborů se zablokuje; importy odkazů (URL) jsou povoleny a procházejí stejným potvrzením.",
 		"empty": "Žádné povolené složky – import lokálních souborů je zablokován.",
 		"removeAria": "Odebrat {path}",
@@ -1007,6 +1009,22 @@
 		"mcpMigrationCloseAll": "Zavřít všechny (doporučeno)",
 		"mcpMigrationFailed": "Tuto změnu se nepodařilo provést."
 	},
+	"BackupCard": {
+		"title": "Zálohovat data",
+		"description": "Zkopíruje vaše trezory (poznámky, vyhledávací index, studijní data), chaty a nastavení do nové složky s datem. Ve vaší složce s daty se nic nemění.",
+		"destination": "Umístění zálohy",
+		"choose": "Vybrat…",
+		"excludesNote": "Klíče API nejsou součástí zálohy. Po obnovení je zadejte znovu.",
+		"start": "Zálohovat",
+		"running": "Zálohování…",
+		"progress": "{done} z {total} položek",
+		"doneOk": "Záloha dokončena",
+		"doneWithFailures": "Záloha skončila, ale {count} souborů se nepodařilo zkopírovat (možná se používají)",
+		"totals": "Souborů: {files}, databází: {databases}, {size}",
+		"cancelled": "Zálohování bylo zrušeno.",
+		"interrupted": "Zálohování bylo přerušeno."
+	},
+
 	"ReindexDialog": {
 		"title": "Přeindexování trezoru",
 		"runningDescription": "Každý soubor v tomto trezoru se zpracovává znovu aktuálním embeddingem. Během toho chat dál funguje na starém indexu.",
@@ -1216,6 +1234,9 @@
 		"MCP_IMPORT_ROOTS_EMPTY": "Pro import souborů přes MCP zatím není povolena žádná složka – přidejte ji v Nastavení",
 		"MCP_PATH_NOT_ALLOWED": "Tento soubor je mimo složky, které jste pro importy přes MCP povolili",
 		"MCP_PATH_INVALID": "Tuto cestu nelze použít – musí to být absolutní cesta k existujícímu běžnému souboru (bez symlinků a segmentů „..“)",
+		"MCP_EDIT_NOTE_DISABLED": "Úpravy poznámek přes MCP jsou vypnuty — uživatel je může zapnout v Nastavení",
+		"MCP_EDIT_NOT_FOUND": "Text k nahrazení nebyl v poznámce nalezen",
+		"MCP_EDIT_NOT_UNIQUE": "Text k nahrazení se v poznámce vyskytuje více než jednou",
 		"IMPORT_INTERRUPTED": "Tento import byl přerušen (aplikace byla během převodu zavřena) – zrušte jej a zdroj importujte znovu",
 		"IMPORT_AUTO_CONFIRM_FAILED": "Automatické potvrzení selhalo (poznámku se nepodařilo zaindexovat) – import stále čeká; můžete jej potvrdit sami",
 		"IMPORT_DUPLICATE_URL": "Tento odkaz byl pravděpodobně už importován – můžete přesto pokračovat.",
@@ -1227,6 +1248,10 @@
 		"VAULT_NONE": "Zatím žádné trezory – nejdřív nějaký vytvořte",
 		"VAULT_DELETE_CONFIRM_REQUIRED": "Je vyžadováno potvrzení smazání ('confirm=true')",
 		"VAULT_LAST_UNDELETABLE": "Poslední trezor nelze smazat – aplikace vždy potřebuje alespoň jeden trezor",
+		"BACKUP_DEST_INVALID": "Zadejte úplnou cestu ke složce zálohy",
+		"BACKUP_DEST_INSIDE_DATA": "Vyberte složku mimo složky dat a trezorů aplikace",
+		"BACKUP_ALREADY_RUNNING": "Záloha už probíhá",
+		"BACKUP_FAILED": "Zálohu se nepodařilo vytvořit",
 		"PROVIDER_OLLAMA_MISCONFIGURED": "Není nastaven žádný povolený poskytovatel Ollama",
 		"PROVIDER_CONSENT_NOT_NEEDED": "Ollama souhlas nepotřebuje",
 		"PROVIDER_BASE_URL_INVALID": "{url} není platná adresa http(s)",

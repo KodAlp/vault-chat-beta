@@ -896,6 +896,8 @@
   },
   "McpImportSettings": {
     "title": "MCP ইমপোর্ট ফোল্ডার",
+    "editNoteLabel": "এজেন্টকে নোট সম্পাদনা করতে দিন (edit_note)",
+    "editNoteWarning": "ডেভেলপার বিকল্প, ডিফল্টভাবে বন্ধ। চালু থাকলে MCP-এর মাধ্যমে সংযুক্ত একটি AI এজেন্ট আপনার বিদ্যমান নোটের লেখা বদলাতে পারে (আগের সংস্করণ একটি রিভিশন হিসেবে সংরক্ষিত থাকে, যা আপনি পুনরুদ্ধার করতে পারবেন)। নোটে এজেন্টকে চালিত করার চেষ্টা করা লুকানো নির্দেশ থাকতে পারে, তাই শুধু বিশ্বস্ত এজেন্ট ও ভল্টের জন্য এটি চালু করুন।",
     "description": "MCP-এর মাধ্যমে যুক্ত একটি এআই এজেন্ট শুধু এই ফোল্ডারগুলো থেকে স্থানীয় ফাইল ইমপোর্ট করতে পারে। এই Vault-এর জন্য স্বয়ংক্রিয় নিশ্চিতকরণ চালু না করলে ইমপোর্ট আপনার নিশ্চিতকরণের অপেক্ষা করে। স্থানীয় ফাইল ইমপোর্ট বন্ধ করতে তালিকা খালি রাখুন; লিংক (URL) ইমপোর্ট অনুমোদিত এবং একই নিশ্চিতকরণের মধ্য দিয়ে যায়।",
     "empty": "কোনো ফোল্ডার অনুমোদিত নেই — স্থানীয় ফাইল ইমপোর্ট বন্ধ।",
     "removeAria": "{path} সরান",
@@ -946,6 +948,22 @@
     "mcpMigrationCloseAll": "সব বন্ধ করুন (প্রস্তাবিত)",
     "mcpMigrationFailed": "এটি বদলানো যায়নি।"
   },
+  "BackupCard": {
+    "title": "ডেটা ব্যাকআপ করুন",
+    "description": "আপনার ভল্ট (নোট, সার্চ ইনডেক্স, পড়াশোনার ডেটা), চ্যাট ও সেটিংস তারিখসহ একটি নতুন ফোল্ডারে কপি করে। আপনার ডেটা ফোল্ডারে কিছুই বদলায় না।",
+    "destination": "ব্যাকআপের অবস্থান",
+    "choose": "বেছে নিন…",
+    "excludesNote": "API কী ব্যাকআপে অন্তর্ভুক্ত নয়। রিস্টোরের পর আবার দিন।",
+    "start": "ব্যাকআপ নিন",
+    "running": "ব্যাকআপ হচ্ছে…",
+    "progress": "{total}টির মধ্যে {done}টি আইটেম",
+    "doneOk": "ব্যাকআপ সম্পূর্ণ হয়েছে",
+    "doneWithFailures": "ব্যাকআপ শেষ হয়েছে, কিন্তু {count}টি ফাইল কপি করা যায়নি (ব্যবহারে থাকতে পারে)",
+    "totals": "{files}টি ফাইল, {databases}টি ডেটাবেস, {size}",
+    "cancelled": "ব্যাকআপ বাতিল করা হয়েছে।",
+    "interrupted": "ব্যাকআপ মাঝপথে থেমে গেছে।"
+  },
+
   "ReindexDialog": {
     "title": "Vault আবার ইনডেক্স হচ্ছে",
     "runningDescription": "এই vault-এর প্রতিটি ফাইল বর্তমান embedding দিয়ে আবার প্রক্রিয়া করা হচ্ছে। এই সময়ে চ্যাট পুরনো ইনডেক্স থেকে কাজ চালিয়ে যায়।",
@@ -1152,6 +1170,9 @@
     "MCP_IMPORT_ROOTS_EMPTY": "No folder is allowed for MCP file imports yet — add one in Settings",
     "MCP_PATH_NOT_ALLOWED": "That file is outside the folders you allowed for MCP imports",
     "MCP_PATH_INVALID": "That path is not usable — it must be an absolute path to an existing regular file (no symlinks, no \"..\" segments)",
+    "MCP_EDIT_NOTE_DISABLED": "MCP-এর মাধ্যমে নোট সম্পাদনা বন্ধ আছে — ব্যবহারকারী সেটিংসে এটি চালু করতে পারেন",
+    "MCP_EDIT_NOT_FOUND": "যে লেখা বদলাতে হবে তা নোটে পাওয়া যায়নি",
+    "MCP_EDIT_NOT_UNIQUE": "যে লেখা বদলাতে হবে তা নোটে একাধিকবার আছে",
     "IMPORT_INTERRUPTED": "This import was interrupted (the app was closed during conversion) — cancel it and import the source again",
     "IMPORT_AUTO_CONFIRM_FAILED": "Auto-confirm failed (the note could not be indexed) — the import is still pending; you can confirm it yourself",
     "IMPORT_DUPLICATE_URL": "This link appears to have been imported before — you can still continue.",
@@ -1163,6 +1184,10 @@
     "VAULT_NONE": "এখনও কোনো vault নেই — আগে একটি তৈরি করুন",
     "VAULT_DELETE_CONFIRM_REQUIRED": "মোছার নিশ্চিতকরণ আবশ্যক ('confirm=true')",
     "VAULT_LAST_UNDELETABLE": "শেষ vault মোছা যায় না — অ্যাপের সবসময় অন্তত একটি vault দরকার",
+    "BACKUP_DEST_INVALID": "ব্যাকআপের জন্য ফোল্ডারের সম্পূর্ণ পথ লিখুন",
+    "BACKUP_DEST_INSIDE_DATA": "অ্যাপের ডেটা ও ভল্ট ফোল্ডারের বাইরের একটি ফোল্ডার বেছে নিন",
+    "BACKUP_ALREADY_RUNNING": "একটি ব্যাকআপ আগে থেকেই চলছে",
+    "BACKUP_FAILED": "ব্যাকআপ তৈরি করা যায়নি",
     "PROVIDER_OLLAMA_MISCONFIGURED": "কোনো সক্রিয় Ollama প্রদানকারী কনফিগার করা নেই",
     "PROVIDER_CONSENT_NOT_NEEDED": "Ollama-র সম্মতির দরকার নেই",
     "PROVIDER_BASE_URL_INVALID": "{url} একটি বৈধ http(s) ঠিকানা নয়",

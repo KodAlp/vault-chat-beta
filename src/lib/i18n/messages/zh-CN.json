@@ -896,6 +896,8 @@
   },
   "McpImportSettings": {
     "title": "MCP 导入文件夹",
+    "editNoteLabel": "允许代理编辑笔记 (edit_note)",
+    "editNoteWarning": "开发者选项，默认关闭。开启后，通过 MCP 连接的 AI 代理可以修改你现有笔记的文本（上一版本会作为可恢复的修订保留）。笔记中可能含有试图操控代理的隐藏指令，因此仅对你信任的代理和知识库开启。",
     "description": "通过 MCP 连接的 AI 代理只能从这些文件夹导入本地文件。除非你为该仓库开启自动确认，否则导入会等待你的确认。将列表留空即可禁止导入本地文件；链接（URL）导入是允许的，并经过同样的确认。",
     "empty": "没有允许的文件夹——本地文件导入已被阻止。",
     "removeAria": "移除 {path}",
@@ -946,6 +948,22 @@
     "mcpMigrationCloseAll": "全部关闭（推荐）",
     "mcpMigrationFailed": "无法更改。"
   },
+  "BackupCard": {
+    "title": "备份数据",
+    "description": "将您的知识库（笔记、搜索索引、学习数据）、聊天和设置复制到一个带日期的新文件夹中。数据文件夹中的内容不会被更改。",
+    "destination": "备份位置",
+    "choose": "选择…",
+    "excludesNote": "备份不包含 API 密钥，恢复后请重新输入。",
+    "start": "备份",
+    "running": "正在备份…",
+    "progress": "第 {done} 项，共 {total} 项",
+    "doneOk": "备份完成",
+    "doneWithFailures": "备份已结束，但有 {count} 个文件无法复制（可能正在使用）",
+    "totals": "{files} 个文件，{databases} 个数据库，{size}",
+    "cancelled": "备份已取消。",
+    "interrupted": "备份被中断。"
+  },
+
   "ReindexDialog": {
     "title": "正在重新索引仓库",
     "runningDescription": "此仓库中的每个文件都在使用当前的嵌入模型重新处理。运行期间，聊天仍使用旧索引继续工作。",
@@ -1152,6 +1170,9 @@
     "MCP_IMPORT_ROOTS_EMPTY": "No folder is allowed for MCP file imports yet — add one in Settings",
     "MCP_PATH_NOT_ALLOWED": "That file is outside the folders you allowed for MCP imports",
     "MCP_PATH_INVALID": "That path is not usable — it must be an absolute path to an existing regular file (no symlinks, no \"..\" segments)",
+    "MCP_EDIT_NOTE_DISABLED": "通过 MCP 编辑笔记已关闭 — 用户可在设置中开启",
+    "MCP_EDIT_NOT_FOUND": "在笔记中未找到要替换的文本",
+    "MCP_EDIT_NOT_UNIQUE": "要替换的文本在笔记中出现了多次",
     "IMPORT_INTERRUPTED": "This import was interrupted (the app was closed during conversion) — cancel it and import the source again",
     "IMPORT_AUTO_CONFIRM_FAILED": "Auto-confirm failed (the note could not be indexed) — the import is still pending; you can confirm it yourself",
     "IMPORT_DUPLICATE_URL": "This link appears to have been imported before — you can still continue.",
@@ -1163,6 +1184,10 @@
     "VAULT_NONE": "还没有仓库——请先创建一个",
     "VAULT_DELETE_CONFIRM_REQUIRED": "需要删除确认（“confirm=true”）",
     "VAULT_LAST_UNDELETABLE": "无法删除最后一个仓库——应用始终至少需要一个仓库",
+    "BACKUP_DEST_INVALID": "请输入完整的备份文件夹路径",
+    "BACKUP_DEST_INSIDE_DATA": "请选择应用数据文件夹和知识库文件夹之外的文件夹",
+    "BACKUP_ALREADY_RUNNING": "已有备份正在进行",
+    "BACKUP_FAILED": "无法创建备份",
     "PROVIDER_OLLAMA_MISCONFIGURED": "未配置已启用的 Ollama 提供商",
     "PROVIDER_CONSENT_NOT_NEEDED": "Ollama 不需要同意",
     "PROVIDER_BASE_URL_INVALID": "{url} 不是有效的 http(s) 地址",

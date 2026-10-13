@@ -1008,6 +1008,8 @@
 	},
 	"McpImportSettings": {
 		"title": "MCP-importmappar",
+		"editNoteLabel": "Tillåt agenter att redigera anteckningar (edit_note)",
+		"editNoteWarning": "Utvecklaralternativ, avstängt som standard. När det är på kan en AI-agent ansluten via MCP ändra texten i dina befintliga anteckningar (den tidigare versionen sparas som en återställbar revision). Anteckningar kan innehålla dolda instruktioner som försöker styra agenten, så aktivera detta bara för agenter och valv du litar på.",
 		"description": "En AI-agent ansluten via MCP får bara importera lokala filer från de här mapparna. Importer väntar på din bekräftelse om du inte slår på automatisk bekräftelse för det valvet. Lämna listan tom för att blockera import av lokala filer; import av länkar (URL) är tillåten och går genom samma bekräftelse.",
 		"empty": "Inga mappar tillåtna – import av lokala filer är blockerad.",
 		"removeAria": "Ta bort {path}",
@@ -1058,6 +1060,22 @@
 		"mcpMigrationKeepOpen": "Behåll alla öppna",
 		"mcpMigrationCloseAll": "Stäng alla (rekommenderas)",
 		"mcpMigrationFailed": "Kunde inte ändra det."
+	},
+
+	"BackupCard": {
+		"title": "Säkerhetskopiera data",
+		"description": "Kopierar dina valv (anteckningar, sökindex, studiedata), chattar och inställningar till en ny, daterad mapp. Inget i din datamapp ändras.",
+		"destination": "Plats för säkerhetskopian",
+		"choose": "Välj…",
+		"excludesNote": "API-nycklar ingår inte. Ange dem igen efter återställning.",
+		"start": "Säkerhetskopiera",
+		"running": "Säkerhetskopierar…",
+		"progress": "{done} av {total} objekt",
+		"doneOk": "Säkerhetskopieringen är klar",
+		"doneWithFailures": "Säkerhetskopieringen är klar, men {count} filer kunde inte kopieras (används de?)",
+		"totals": "{files} filer, {databases} databaser, {size}",
+		"cancelled": "Säkerhetskopieringen avbröts.",
+		"interrupted": "Säkerhetskopieringen avbröts oväntat."
 	},
 
 	"ReindexDialog": {
@@ -1279,6 +1297,9 @@
 		"MCP_IMPORT_ROOTS_EMPTY": "Ingen mapp är tillåten för MCP-filimport än – lägg till en under Inställningar",
 		"MCP_PATH_NOT_ALLOWED": "Den filen ligger utanför de mappar du tillåtit för MCP-import",
 		"MCP_PATH_INVALID": "Sökvägen går inte att använda – den måste vara en absolut sökväg till en befintlig vanlig fil (inga symboliska länkar, inga ”..”-segment)",
+		"MCP_EDIT_NOTE_DISABLED": "Redigering av anteckningar via MCP är avstängd — användaren kan aktivera det i Inställningar",
+		"MCP_EDIT_NOT_FOUND": "Texten som ska ersättas hittades inte i anteckningen",
+		"MCP_EDIT_NOT_UNIQUE": "Texten som ska ersättas förekommer mer än en gång i anteckningen",
 		"IMPORT_INTERRUPTED": "Den här importen avbröts (appen stängdes under konverteringen) – avbryt den och importera källan igen",
 		"IMPORT_AUTO_CONFIRM_FAILED": "Automatisk bekräftelse misslyckades (anteckningen kunde inte indexeras) – importen väntar fortfarande; du kan bekräfta den själv",
 		"IMPORT_DUPLICATE_URL": "Den här länken verkar ha importerats tidigare – du kan ändå fortsätta.",
@@ -1290,6 +1311,10 @@
 		"VAULT_NONE": "Inga valv än – skapa ett först",
 		"VAULT_DELETE_CONFIRM_REQUIRED": "Bekräftelse av borttagning krävs (’confirm=true’)",
 		"VAULT_LAST_UNDELETABLE": "Det sista valvet kan inte tas bort – appen behöver alltid minst ett valv",
+		"BACKUP_DEST_INVALID": "Ange den fullständiga sökvägen till mappen för säkerhetskopian",
+		"BACKUP_DEST_INSIDE_DATA": "Välj en mapp utanför appens data- och valvmappar",
+		"BACKUP_ALREADY_RUNNING": "En säkerhetskopiering pågår redan",
+		"BACKUP_FAILED": "Säkerhetskopian kunde inte skapas",
 		"PROVIDER_OLLAMA_MISCONFIGURED": "Ingen aktiverad Ollama-leverantör är konfigurerad",
 		"PROVIDER_CONSENT_NOT_NEEDED": "Ollama behöver inget godkännande",
 		"PROVIDER_BASE_URL_INVALID": "{url} är ingen giltig http(s)-adress",

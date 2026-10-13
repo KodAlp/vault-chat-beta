@@ -18,15 +18,15 @@ function useTmpDataDir(): string {
 
 test('a fresh DATA_DIR has no allowed roots', () => {
 	useTmpDataDir();
-	assert.deepEqual(readMcpSettings(), { allowedImportRoots: [] });
+	assert.deepEqual(readMcpSettings(), { allowedImportRoots: [], allowEditNote: false });
 });
 
 test('write stores the realpath, dedupes, and reads back', () => {
 	useTmpDataDir();
 	const root = tmp();
 	const out = writeMcpSettings({ allowedImportRoots: [root, root, root + path.sep] });
-	assert.deepEqual(out, { allowedImportRoots: [root] });
-	assert.deepEqual(readMcpSettings(), { allowedImportRoots: [root] });
+	assert.deepEqual(out, { allowedImportRoots: [root], allowEditNote: false });
+	assert.deepEqual(readMcpSettings(), { allowedImportRoots: [root], allowEditNote: false });
 });
 
 test('dedupe ignores letter case on Windows', { skip: process.platform !== 'win32' }, () => {
@@ -60,7 +60,7 @@ test('more than the maximum number of roots is rejected', () => {
 test('a corrupt file reads as the default', () => {
 	const dir = useTmpDataDir();
 	fs.writeFileSync(path.join(dir, 'mcp-settings.json'), '{oops');
-	assert.deepEqual(readMcpSettings(), { allowedImportRoots: [] });
+	assert.deepEqual(readMcpSettings(), { allowedImportRoots: [], allowEditNote: false });
 });
 
 test('isInsideAllowedRoots honours path-segment boundaries', () => {

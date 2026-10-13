@@ -13,8 +13,10 @@ import type { VaultContext } from './vaults';
  * library-read.ts: the MCP server (mcp/) imports library-read.ts and must
  * stay read-only — "the AI cannot write" is enforced structurally by
  * mcp/no-write-import.test.ts, which fails if anything under mcp/ can reach
- * this file through its import graph. The only caller is the app's own
- * /api/library/file (+ /revisions) endpoints, i.e. a human clicking Save.
+ * this file through its import graph. Callers are the app's own
+ * /api/library/file (+ /revisions) endpoints (a human clicking Save) and the
+ * app-side /api/mcp/notes/edit route, which only acts when the user switched
+ * "allow edit_note" on in Settings (the MCP process itself never imports this).
  */
 
 const META_DIR = '_meta';
@@ -128,7 +130,7 @@ export async function writeLibraryFile(
 	rel: string,
 	content: string,
 	baseHash: string,
-	opts: { by?: 'user'; indexer?: Indexer } = {}
+	opts: { by?: 'user' | 'mcp'; indexer?: Indexer } = {}
 ): Promise<WriteResult> {
 	const { abs, relPosix } = checkPath(v, rel);
 	assertEditableFile(v, abs);

@@ -993,6 +993,8 @@
 	},
 	"McpImportSettings": {
 		"title": "MCP içe aktarma klasörleri",
+		"editNoteLabel": "Ajanların notları düzenlemesine izin ver (edit_note)",
+		"editNoteWarning": "Geliştirici seçeneği, varsayılan olarak kapalı. Açıkken MCP ile bağlanan bir yapay zekâ ajanı mevcut notlarının metnini değiştirebilir (önceki sürüm geri yükleyebileceğin bir revizyon olarak saklanır). Notlar ajanı yönlendirmeye çalışan gizli talimatlar içerebilir; bunu yalnızca güvendiğin ajanlar ve kasalar için aç.",
 		"description": "MCP ile bağlanan bir yapay zekâ ajanı yalnızca bu klasörlerdeki yerel dosyaları içe aktarabilir. Vault için otomatik onayı açmadıkça içe aktarmalar onayını bekler. Yerel dosya içe aktarmayı engellemek için listeyi boş bırak; bağlantı (URL) içe aktarmaları serbesttir ve aynı onaydan geçer.",
 		"empty": "İzinli klasör yok — yerel dosya içe aktarma engelli.",
 		"removeAria": "{path} klasörünü kaldır",
@@ -1042,6 +1044,22 @@
 		"mcpMigrationKeepOpen": "Hepsini açık tut",
 		"mcpMigrationCloseAll": "Hepsini kapat (önerilen)",
 		"mcpMigrationFailed": "Değiştirilemedi."
+	},
+
+	"BackupCard": {
+		"title": "Verileri yedekle",
+		"description": "Kasalarınızı (notlar, arama dizini, çalışma verileri), sohbetleri ve ayarları tarihli yeni bir klasöre kopyalar. Veri klasörünüzde hiçbir şey değişmez.",
+		"destination": "Yedek konumu",
+		"choose": "Seç…",
+		"excludesNote": "API anahtarları yedeğe dahil değildir. Geri yükledikten sonra yeniden girin.",
+		"start": "Yedekle",
+		"running": "Yedekleniyor…",
+		"progress": "{total} öğenin {done} tanesi",
+		"doneOk": "Yedekleme tamamlandı",
+		"doneWithFailures": "Yedekleme bitti, ancak {count} dosya kopyalanamadı (kullanımda olabilir)",
+		"totals": "{files} dosya, {databases} veritabanı, {size}",
+		"cancelled": "Yedekleme iptal edildi.",
+		"interrupted": "Yedekleme yarıda kesildi."
 	},
 
 	"ReindexDialog": {
@@ -1259,6 +1277,9 @@
 		"MCP_IMPORT_ROOTS_EMPTY": "MCP dosya içe aktarması için henüz izinli klasör yok — Ayarlar'dan ekleyebilirsin",
 		"MCP_PATH_NOT_ALLOWED": "Bu dosya, MCP içe aktarması için izin verdiğin klasörlerin dışında",
 		"MCP_PATH_INVALID": "Bu yol kullanılamaz — var olan, sıradan bir dosyanın mutlak yolu olmalı (sembolik bağ ve \"..\" parçası olmadan)",
+		"MCP_EDIT_NOTE_DISABLED": "MCP ile not düzenleme kapalı — kullanıcı bunu Ayarlar'dan açabilir",
+		"MCP_EDIT_NOT_FOUND": "Değiştirilecek metin notta bulunamadı",
+		"MCP_EDIT_NOT_UNIQUE": "Değiştirilecek metin notta birden fazla yerde geçiyor",
 		"IMPORT_INTERRUPTED": "Bu içe aktarma yarıda kaldı (dönüştürme sırasında uygulama kapandı) — iptal edip kaynağı yeniden içe aktar",
 		"IMPORT_AUTO_CONFIRM_FAILED": "Otomatik onay başarısız oldu (not dizinlenemedi) — içe aktarma hâlâ bekliyor, elle onaylayabilirsin",
 		"IMPORT_DUPLICATE_URL": "Bu bağlantı daha önce içe aktarılmış görünüyor — yine de devam edebilirsin.",
@@ -1270,6 +1291,10 @@
 		"VAULT_NONE": "Hiç vault yok — önce bir vault oluştur",
 		"VAULT_DELETE_CONFIRM_REQUIRED": "Silme onayı gerekli ('confirm=true')",
 		"VAULT_LAST_UNDELETABLE": "Son vault silinemez — uygulama her zaman en az bir vault gerektirir",
+		"BACKUP_DEST_INVALID": "Yedek için tam bir klasör yolu girin",
+		"BACKUP_DEST_INSIDE_DATA": "Uygulamanın veri ve kasa klasörlerinin dışında bir klasör seçin",
+		"BACKUP_ALREADY_RUNNING": "Bir yedekleme zaten çalışıyor",
+		"BACKUP_FAILED": "Yedek oluşturulamadı",
 		"PROVIDER_OLLAMA_MISCONFIGURED": "Etkin bir Ollama sağlayıcısı ayarlı değil",
 		"PROVIDER_CONSENT_NOT_NEEDED": "Ollama için onay gerekmez",
 		"PROVIDER_BASE_URL_INVALID": "{url} geçerli bir http(s) adresi değil",

@@ -911,6 +911,8 @@
   },
   "McpImportSettings": {
     "title": "Pastas de importação MCP",
+    "editNoteLabel": "Permitir que agentes editem notas (edit_note)",
+    "editNoteWarning": "Opção de desenvolvedor, desativada por padrão. Quando ativada, um agente de IA conectado via MCP pode alterar o texto das suas notas existentes (a versão anterior é mantida como revisão restaurável). As notas podem conter instruções ocultas que tentam conduzir o agente, então ative isto apenas para agentes e cofres em que você confia.",
     "description": "Um agente de IA conectado via MCP só pode importar arquivos locais destas pastas. As importações aguardam a sua confirmação, a menos que você ative a confirmação automática do cofre. Deixe a lista vazia para bloquear a importação de arquivos locais; importações por link (URL) são permitidas e passam pela mesma confirmação.",
     "empty": "Nenhuma pasta permitida — a importação de arquivos locais está bloqueada.",
     "removeAria": "Remover {path}",
@@ -961,6 +963,22 @@
     "mcpMigrationCloseAll": "Fechar todos (recomendado)",
     "mcpMigrationFailed": "Não foi possível alterar."
   },
+  "BackupCard": {
+    "title": "Fazer backup dos dados",
+    "description": "Copia seus cofres (notas, índice de busca, dados de estudo), conversas e configurações para uma nova pasta com data. Nada na sua pasta de dados é alterado.",
+    "destination": "Local do backup",
+    "choose": "Escolher…",
+    "excludesNote": "As chaves de API não são incluídas. Digite-as novamente após restaurar.",
+    "start": "Fazer backup",
+    "running": "Fazendo backup…",
+    "progress": "{done} de {total} itens",
+    "doneOk": "Backup concluído",
+    "doneWithFailures": "Backup finalizado, mas {count} arquivos não puderam ser copiados (em uso?)",
+    "totals": "{files} arquivos, {databases} bancos de dados, {size}",
+    "cancelled": "Backup cancelado.",
+    "interrupted": "O backup foi interrompido."
+  },
+
   "ReindexDialog": {
     "title": "Reindexando o cofre",
     "runningDescription": "Todos os arquivos deste cofre estão sendo reprocessados com o embedding atual. O chat continua funcionando com o índice antigo enquanto isso.",
@@ -1168,6 +1186,9 @@
     "MCP_IMPORT_ROOTS_EMPTY": "No folder is allowed for MCP file imports yet — add one in Settings",
     "MCP_PATH_NOT_ALLOWED": "That file is outside the folders you allowed for MCP imports",
     "MCP_PATH_INVALID": "That path is not usable — it must be an absolute path to an existing regular file (no symlinks, no \"..\" segments)",
+    "MCP_EDIT_NOTE_DISABLED": "A edição de notas via MCP está desativada — o usuário pode ativá-la em Configurações",
+    "MCP_EDIT_NOT_FOUND": "O texto a substituir não foi encontrado na nota",
+    "MCP_EDIT_NOT_UNIQUE": "O texto a substituir aparece mais de uma vez na nota",
     "IMPORT_INTERRUPTED": "This import was interrupted (the app was closed during conversion) — cancel it and import the source again",
     "IMPORT_AUTO_CONFIRM_FAILED": "Auto-confirm failed (the note could not be indexed) — the import is still pending; you can confirm it yourself",
     "IMPORT_DUPLICATE_URL": "This link appears to have been imported before — you can still continue.",
@@ -1179,6 +1200,10 @@
     "VAULT_NONE": "Ainda não há cofres: crie um primeiro",
     "VAULT_DELETE_CONFIRM_REQUIRED": "É necessária a confirmação da exclusão ('confirm=true')",
     "VAULT_LAST_UNDELETABLE": "O último cofre não pode ser excluído: o aplicativo sempre precisa de pelo menos um",
+    "BACKUP_DEST_INVALID": "Informe o caminho completo da pasta do backup",
+    "BACKUP_DEST_INSIDE_DATA": "Escolha uma pasta fora das pastas de dados e de cofres do app",
+    "BACKUP_ALREADY_RUNNING": "Já há um backup em andamento",
+    "BACKUP_FAILED": "Não foi possível criar o backup",
     "PROVIDER_OLLAMA_MISCONFIGURED": "Nenhum provedor Ollama ativado está configurado",
     "PROVIDER_CONSENT_NOT_NEEDED": "O Ollama não precisa de consentimento",
     "PROVIDER_BASE_URL_INVALID": "{url} não é um endereço http(s) válido",

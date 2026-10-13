@@ -963,6 +963,8 @@
 	},
 	"McpImportSettings": {
 		"title": "MCP-tuontikansiot",
+		"editNoteLabel": "Salli agenttien muokata muistiinpanoja (edit_note)",
+		"editNoteWarning": "Kehittäjäasetus, oletuksena pois päältä. Kun päällä, MCP:n kautta yhdistetty tekoälyagentti voi muuttaa olemassa olevien muistiinpanojesi tekstiä (edellinen versio säilyy palautettavana revisiona). Muistiinpanot voivat sisältää piilotettuja ohjeita, jotka yrittävät ohjata agenttia, joten ota tämä käyttöön vain luotetuille agenteille ja holveille.",
 		"description": "MCP:n kautta yhdistetty tekoälyagentti saa tuoda paikallisia tiedostoja vain näistä kansioista. Tuonnit odottavat vahvistustasi, ellet ota kyseiselle holville käyttöön automaattista vahvistusta. Jätä lista tyhjäksi estääksesi paikallisten tiedostojen tuonnin; linkkien (URL) tuonti on sallittu ja kulkee saman vahvistuksen kautta.",
 		"empty": "Ei sallittuja kansioita – paikallisten tiedostojen tuonti on estetty.",
 		"removeAria": "Poista {path}",
@@ -1014,6 +1016,22 @@
 		"mcpMigrationCloseAll": "Sulje kaikki (suositeltu)",
 		"mcpMigrationFailed": "Muutos epäonnistui."
 	},
+	"BackupCard": {
+		"title": "Varmuuskopioi tiedot",
+		"description": "Kopioi holvisi (muistiinpanot, hakuindeksi, opiskelutiedot), keskustelut ja asetukset uuteen päivättyyn kansioon. Tietokansiosi sisältöä ei muuteta.",
+		"destination": "Varmuuskopion sijainti",
+		"choose": "Valitse…",
+		"excludesNote": "API-avaimia ei sisällytetä. Syötä ne uudelleen palautuksen jälkeen.",
+		"start": "Varmuuskopioi",
+		"running": "Varmuuskopioidaan…",
+		"progress": "{done} / {total} kohdetta",
+		"doneOk": "Varmuuskopiointi valmis",
+		"doneWithFailures": "Varmuuskopiointi päättyi, mutta {count} tiedostoa ei voitu kopioida (käytössä?)",
+		"totals": "{files} tiedostoa, {databases} tietokantaa, {size}",
+		"cancelled": "Varmuuskopiointi peruttiin.",
+		"interrupted": "Varmuuskopiointi keskeytyi."
+	},
+
 	"ReindexDialog": {
 		"title": "Indeksoidaan holvia uudelleen",
 		"runningDescription": "Jokainen tämän holvin tiedosto käsitellään uudelleen nykyisellä upotuksella. Keskustelu toimii vanhalla indeksillä, kunnes tämä päättyy.",
@@ -1227,6 +1245,9 @@
 		"MCP_IMPORT_ROOTS_EMPTY": "MCP-tiedostotuonneille ei ole vielä sallittu yhtään kansiota – lisää yksi asetuksissa",
 		"MCP_PATH_NOT_ALLOWED": "Tiedosto on MCP-tuonneille sallimiesi kansioiden ulkopuolella",
 		"MCP_PATH_INVALID": "Polku ei kelpaa – sen on oltava absoluuttinen polku olemassa olevaan tavalliseen tiedostoon (ei symbolisia linkkejä, ei ”..”-osia)",
+		"MCP_EDIT_NOTE_DISABLED": "Muistiinpanojen muokkaus MCP:n kautta on pois päältä — käyttäjä voi ottaa sen käyttöön Asetuksissa",
+		"MCP_EDIT_NOT_FOUND": "Korvattavaa tekstiä ei löytynyt muistiinpanosta",
+		"MCP_EDIT_NOT_UNIQUE": "Korvattava teksti esiintyy muistiinpanossa useammin kuin kerran",
 		"IMPORT_INTERRUPTED": "Tämä tuonti keskeytyi (sovellus suljettiin muunnoksen aikana) – peruuta se ja tuo lähde uudelleen",
 		"IMPORT_AUTO_CONFIRM_FAILED": "Automaattinen vahvistus epäonnistui (muistiinpanoa ei voitu indeksoida) – tuonti on yhä odottamassa; voit vahvistaa sen itse",
 		"IMPORT_DUPLICATE_URL": "Tämä linkki näyttää olevan tuotu aiemmin – voit silti jatkaa.",
@@ -1238,6 +1259,10 @@
 		"VAULT_NONE": "Ei vielä holveja – luo ensin yksi",
 		"VAULT_DELETE_CONFIRM_REQUIRED": "Poiston vahvistus vaaditaan (’confirm=true’)",
 		"VAULT_LAST_UNDELETABLE": "Viimeistä holvia ei voi poistaa – sovellus tarvitsee aina vähintään yhden holvin",
+		"BACKUP_DEST_INVALID": "Anna varmuuskopion kansion koko polku",
+		"BACKUP_DEST_INSIDE_DATA": "Valitse kansio sovelluksen tieto- ja holvikansioiden ulkopuolelta",
+		"BACKUP_ALREADY_RUNNING": "Varmuuskopiointi on jo käynnissä",
+		"BACKUP_FAILED": "Varmuuskopiota ei voitu luoda",
 		"PROVIDER_OLLAMA_MISCONFIGURED": "Käytössä olevaa Ollama-palveluntarjoajaa ei ole määritetty",
 		"PROVIDER_CONSENT_NOT_NEEDED": "Ollama ei tarvitse suostumusta",
 		"PROVIDER_BASE_URL_INVALID": "{url} ei ole kelvollinen http(s)-osoite",

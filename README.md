@@ -441,6 +441,7 @@ sunucu — ayrı bir paket veya kurulum gerektirmez, `mcp/` bu repo'nun içinde
 - `create_vault` — yeni kasa oluşturur.
 - `import_source` — yerel dosya ya da URL'yi içe aktarmak üzere **bekleyenlere** ekler.
 - `list_pending_imports` — bekleyen içe aktarmaların durumunu gösterir.
+- `edit_note` — var olan bir notu düzenler (`get_note`'un `hash` değeri `expected_hash` olarak gerekir; frontmatter değişmez, önceki sürüm revizyon olarak saklanır). **Varsayılan olarak kapalıdır**: yalnızca **Ayarlar**'daki geliştirici anahtarıyla açılır, ajan açamaz; kapalıyken çağrı `MCP_EDIT_NOTE_DISABLED` hatası verir.
 
 Yazma araçları uygulamanın API'si üzerinden çalışır, bu yüzden **uygulamanın
 açık olması** gerekir (uygulama, `DATA_DIR` içine `mcp-endpoint.json` yazar).

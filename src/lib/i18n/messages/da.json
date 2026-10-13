@@ -966,6 +966,8 @@
 	},
 	"McpImportSettings": {
 		"title": "MCP-importmapper",
+		"editNoteLabel": "Tillad agenter at redigere noter (edit_note)",
+		"editNoteWarning": "Udviklerindstilling, slået fra som standard. Når den er slået til, kan en AI-agent forbundet via MCP ændre teksten i dine eksisterende noter (den tidligere version gemmes som en gendannelig revision). Noter kan indeholde skjulte instruktioner, der forsøger at styre agenten, så slå det kun til for agenter og vaults, du stoler på.",
 		"description": "En AI-agent, der er forbundet via MCP, må kun importere lokale filer fra disse mapper. Importer afventer din bekræftelse, medmindre du slår automatisk bekræftelse til for det vault. Lad listen stå tom for at blokere import af lokale filer. Import af links (URL) er tilladt og går gennem samme bekræftelse.",
 		"empty": "Ingen mapper tilladt – import af lokale filer er blokeret.",
 		"removeAria": "Fjern {path}",
@@ -1016,6 +1018,22 @@
 		"mcpMigrationCloseAll": "Luk dem alle (anbefalet)",
 		"mcpMigrationFailed": "Kunne ikke ændre det."
 	},
+	"BackupCard": {
+		"title": "Sikkerhedskopiér data",
+		"description": "Kopierer dine pengeskabe (noter, søgeindeks, studiedata), chats og indstillinger til en ny mappe med dato. Intet i din datamappe ændres.",
+		"destination": "Placering af sikkerhedskopien",
+		"choose": "Vælg…",
+		"excludesNote": "API-nøgler er ikke med. Indtast dem igen efter gendannelse.",
+		"start": "Sikkerhedskopiér",
+		"running": "Sikkerhedskopierer…",
+		"progress": "{done} af {total} elementer",
+		"doneOk": "Sikkerhedskopiering fuldført",
+		"doneWithFailures": "Sikkerhedskopieringen er færdig, men {count} filer kunne ikke kopieres (i brug?)",
+		"totals": "{files} filer, {databases} databaser, {size}",
+		"cancelled": "Sikkerhedskopieringen blev annulleret.",
+		"interrupted": "Sikkerhedskopieringen blev afbrudt."
+	},
+
 	"ReindexDialog": {
 		"title": "Genindekserer vault",
 		"runningDescription": "Hver fil i dette vault behandles igen med den nuværende embedding. Chatten fortsætter med at bruge det gamle indeks, mens det kører.",
@@ -1228,6 +1246,9 @@
 		"MCP_IMPORT_ROOTS_EMPTY": "Ingen mappe er endnu tilladt til MCP-filimport – tilføj en under Indstillinger",
 		"MCP_PATH_NOT_ALLOWED": "Den fil ligger uden for de mapper, du har tilladt til MCP-importer",
 		"MCP_PATH_INVALID": "Den sti kan ikke bruges – det skal være en absolut sti til en eksisterende almindelig fil (ingen symlinks, ingen \"..\"-segmenter)",
+		"MCP_EDIT_NOTE_DISABLED": "Redigering af noter via MCP er slået fra — brugeren kan slå det til i Indstillinger",
+		"MCP_EDIT_NOT_FOUND": "Teksten, der skal erstattes, blev ikke fundet i noten",
+		"MCP_EDIT_NOT_UNIQUE": "Teksten, der skal erstattes, forekommer mere end én gang i noten",
 		"IMPORT_INTERRUPTED": "Denne import blev afbrudt (appen blev lukket under konverteringen) – annullér den, og importér kilden igen",
 		"IMPORT_AUTO_CONFIRM_FAILED": "Automatisk bekræftelse mislykkedes (noten kunne ikke indekseres) – importen afventer stadig, og du kan selv bekræfte den",
 		"IMPORT_DUPLICATE_URL": "Dette link ser ud til at være importeret før – du kan stadig fortsætte.",
@@ -1239,6 +1260,10 @@
 		"VAULT_NONE": "Ingen vaults endnu – opret et først",
 		"VAULT_DELETE_CONFIRM_REQUIRED": "Bekræftelse af sletning kræves ('confirm=true')",
 		"VAULT_LAST_UNDELETABLE": "Det sidste vault kan ikke slettes – appen har altid brug for mindst ét vault",
+		"BACKUP_DEST_INVALID": "Angiv den fulde mappesti til sikkerhedskopien",
+		"BACKUP_DEST_INSIDE_DATA": "Vælg en mappe uden for appens data- og pengeskabsmapper",
+		"BACKUP_ALREADY_RUNNING": "En sikkerhedskopiering kører allerede",
+		"BACKUP_FAILED": "Sikkerhedskopien kunne ikke oprettes",
 		"PROVIDER_OLLAMA_MISCONFIGURED": "Ingen aktiveret Ollama-udbyder er konfigureret",
 		"PROVIDER_CONSENT_NOT_NEEDED": "Ollama behøver ikke samtykke",
 		"PROVIDER_BASE_URL_INVALID": "{url} er ikke en gyldig http(s)-adresse",

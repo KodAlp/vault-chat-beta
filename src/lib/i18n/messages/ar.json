@@ -968,6 +968,8 @@
   },
   "McpImportSettings": {
     "title": "مجلدات استيراد MCP",
+    "editNoteLabel": "السماح للوكلاء بتعديل الملاحظات (edit_note)",
+    "editNoteWarning": "خيار للمطورين، متوقف افتراضيًا. عند تفعيله يمكن لوكيل ذكاء اصطناعي متصل عبر MCP تغيير نص ملاحظاتك الحالية (يُحفظ الإصدار السابق كمراجعة يمكنك استعادتها). قد تحتوي الملاحظات على تعليمات مخفية تحاول توجيه الوكيل، لذا فعّل هذا الخيار فقط للوكلاء والخزائن التي تثق بها.",
     "description": "يمكن لوكيل ذكاء اصطناعي متصل عبر MCP استيراد الملفات المحلية من هذه المجلدات فقط. تنتظر عمليات الاستيراد تأكيدك ما لم تُفعّل التأكيد التلقائي لهذا المخزن. اترك القائمة فارغة لمنع استيراد الملفات المحلية؛ أما استيراد الروابط (URL) فمسموح ويمر بالتأكيد نفسه.",
     "empty": "لا توجد مجلدات مسموح بها — استيراد الملفات المحلية محظور.",
     "removeAria": "إزالة {path}",
@@ -1023,6 +1025,22 @@
     "mcpMigrationCloseAll": "أغلقها كلها (موصى به)",
     "mcpMigrationFailed": "تعذّر تغيير ذلك."
   },
+  "BackupCard": {
+    "title": "نسخ احتياطي للبيانات",
+    "description": "ينسخ خزائنك (الملاحظات وفهرس البحث وبيانات الدراسة) والمحادثات والإعدادات إلى مجلد جديد يحمل التاريخ. لا يتغير أي شيء في مجلد بياناتك.",
+    "destination": "موقع النسخة الاحتياطية",
+    "choose": "اختيار…",
+    "excludesNote": "مفاتيح API غير مضمّنة. أعد إدخالها بعد الاستعادة.",
+    "start": "نسخ احتياطي",
+    "running": "جارٍ النسخ الاحتياطي…",
+    "progress": "{done} من {total} عنصرًا",
+    "doneOk": "اكتمل النسخ الاحتياطي",
+    "doneWithFailures": "انتهى النسخ الاحتياطي، لكن تعذّر نسخ {count} ملفات (ربما قيد الاستخدام)",
+    "totals": "{files} ملفات، {databases} قواعد بيانات، {size}",
+    "cancelled": "أُلغي النسخ الاحتياطي.",
+    "interrupted": "انقطع النسخ الاحتياطي."
+  },
+
   "ReindexDialog": {
     "title": "إعادة فهرسة المخزن",
     "runningDescription": "تُعاد معالجة كل ملف في هذا المخزن بنموذج embedding الحالي. تواصل الدردشة العمل بالفهرس القديم أثناء ذلك.",
@@ -1249,6 +1267,9 @@
     "MCP_IMPORT_ROOTS_EMPTY": "No folder is allowed for MCP file imports yet — add one in Settings",
     "MCP_PATH_NOT_ALLOWED": "That file is outside the folders you allowed for MCP imports",
     "MCP_PATH_INVALID": "That path is not usable — it must be an absolute path to an existing regular file (no symlinks, no \"..\" segments)",
+    "MCP_EDIT_NOTE_DISABLED": "تعديل الملاحظات عبر MCP متوقف — يمكن للمستخدم تفعيله من الإعدادات",
+    "MCP_EDIT_NOT_FOUND": "لم يُعثر على النص المراد استبداله في الملاحظة",
+    "MCP_EDIT_NOT_UNIQUE": "النص المراد استبداله يظهر أكثر من مرة في الملاحظة",
     "IMPORT_INTERRUPTED": "This import was interrupted (the app was closed during conversion) — cancel it and import the source again",
     "IMPORT_AUTO_CONFIRM_FAILED": "Auto-confirm failed (the note could not be indexed) — the import is still pending; you can confirm it yourself",
     "IMPORT_DUPLICATE_URL": "This link appears to have been imported before — you can still continue.",
@@ -1260,6 +1281,10 @@
     "VAULT_NONE": "لا توجد مخازن بعد — أنشئ واحدًا أولًا",
     "VAULT_DELETE_CONFIRM_REQUIRED": "مطلوب تأكيد الحذف ('confirm=true')",
     "VAULT_LAST_UNDELETABLE": "لا يمكن حذف آخر مخزن — يحتاج التطبيق دائمًا إلى مخزن واحد على الأقل",
+    "BACKUP_DEST_INVALID": "أدخل مسار مجلد كاملًا للنسخة الاحتياطية",
+    "BACKUP_DEST_INSIDE_DATA": "اختر مجلدًا خارج مجلدات بيانات التطبيق والخزائن",
+    "BACKUP_ALREADY_RUNNING": "هناك نسخ احتياطي قيد التنفيذ بالفعل",
+    "BACKUP_FAILED": "تعذّر إنشاء النسخة الاحتياطية",
     "PROVIDER_OLLAMA_MISCONFIGURED": "لا يوجد مزوّد Ollama مفعّل مضبوط",
     "PROVIDER_CONSENT_NOT_NEEDED": "لا يحتاج Ollama إلى موافقة",
     "PROVIDER_BASE_URL_INVALID": "{url} ليس عنوان http(s) صالحًا",

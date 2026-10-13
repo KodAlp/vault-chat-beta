@@ -962,6 +962,8 @@
 	},
 	"McpImportSettings": {
 		"title": "MCP-importmapper",
+		"editNoteLabel": "Tillat agenter å redigere notater (edit_note)",
+		"editNoteWarning": "Utviklervalg, av som standard. Når det er på, kan en AI-agent koblet til via MCP endre teksten i de eksisterende notatene dine (forrige versjon beholdes som en gjenopprettbar revisjon). Notater kan inneholde skjulte instruksjoner som prøver å styre agenten, så slå dette bare på for agenter og hvelv du stoler på.",
 		"description": "En KI-agent som er koblet til via MCP, kan bare importere lokale filer fra disse mappene. Importer venter på bekreftelsen din med mindre du slår på automatisk bekreftelse for det hvelvet. La listen stå tom for å blokkere import av lokale filer; import av lenker (URL) er tillatt og går gjennom samme bekreftelse.",
 		"empty": "Ingen mapper er tillatt – import av lokale filer er blokkert.",
 		"removeAria": "Fjern {path}",
@@ -1013,6 +1015,22 @@
 		"mcpMigrationCloseAll": "Steng alle (anbefalt)",
 		"mcpMigrationFailed": "Kunne ikke endre det."
 	},
+	"BackupCard": {
+		"title": "Sikkerhetskopier data",
+		"description": "Kopierer hvelvene dine (notater, søkeindeks, studiedata), chatter og innstillinger til en ny mappe med dato. Ingenting i datamappen din endres.",
+		"destination": "Plassering for sikkerhetskopien",
+		"choose": "Velg…",
+		"excludesNote": "API-nøkler er ikke med. Skriv dem inn på nytt etter gjenoppretting.",
+		"start": "Sikkerhetskopier",
+		"running": "Sikkerhetskopierer…",
+		"progress": "{done} av {total} elementer",
+		"doneOk": "Sikkerhetskopieringen er fullført",
+		"doneWithFailures": "Sikkerhetskopieringen er ferdig, men {count} filer kunne ikke kopieres (i bruk?)",
+		"totals": "{files} filer, {databases} databaser, {size}",
+		"cancelled": "Sikkerhetskopieringen ble avbrutt.",
+		"interrupted": "Sikkerhetskopieringen ble avbrutt uventet."
+	},
+
 	"ReindexDialog": {
 		"title": "Indekserer hvelvet på nytt",
 		"runningDescription": "Hver fil i dette hvelvet behandles på nytt med gjeldende embedding. Chatten fortsetter å fungere med den gamle indeksen mens dette pågår.",
@@ -1225,6 +1243,9 @@
 		"MCP_IMPORT_ROOTS_EMPTY": "Ingen mappe er tillatt for MCP-filimport ennå – legg til en under Innstillinger",
 		"MCP_PATH_NOT_ALLOWED": "Den filen ligger utenfor mappene du har tillatt for MCP-import",
 		"MCP_PATH_INVALID": "Den stien er ikke brukbar – den må være en absolutt sti til en eksisterende vanlig fil (ingen symbolske lenker, ingen «..»-segmenter)",
+		"MCP_EDIT_NOTE_DISABLED": "Redigering av notater via MCP er slått av — brukeren kan slå det på i Innstillinger",
+		"MCP_EDIT_NOT_FOUND": "Teksten som skal erstattes ble ikke funnet i notatet",
+		"MCP_EDIT_NOT_UNIQUE": "Teksten som skal erstattes forekommer mer enn én gang i notatet",
 		"IMPORT_INTERRUPTED": "Denne importen ble avbrutt (appen ble lukket under konverteringen) – avbryt den og importer kilden på nytt",
 		"IMPORT_AUTO_CONFIRM_FAILED": "Automatisk bekreftelse mislyktes (notatet kunne ikke indekseres) – importen venter fortsatt; du kan bekrefte den selv",
 		"IMPORT_DUPLICATE_URL": "Denne lenken ser ut til å ha blitt importert før – du kan likevel fortsette.",
@@ -1236,6 +1257,10 @@
 		"VAULT_NONE": "Ingen hvelv ennå – opprett ett først",
 		"VAULT_DELETE_CONFIRM_REQUIRED": "Bekreftelse av sletting kreves ('confirm=true')",
 		"VAULT_LAST_UNDELETABLE": "Det siste hvelvet kan ikke slettes – appen trenger alltid minst ett hvelv",
+		"BACKUP_DEST_INVALID": "Skriv inn full mappesti for sikkerhetskopien",
+		"BACKUP_DEST_INSIDE_DATA": "Velg en mappe utenfor appens data- og hvelvmapper",
+		"BACKUP_ALREADY_RUNNING": "En sikkerhetskopiering pågår allerede",
+		"BACKUP_FAILED": "Kunne ikke opprette sikkerhetskopien",
 		"PROVIDER_OLLAMA_MISCONFIGURED": "Ingen aktivert Ollama-leverandør er konfigurert",
 		"PROVIDER_CONSENT_NOT_NEEDED": "Ollama trenger ikke samtykke",
 		"PROVIDER_BASE_URL_INVALID": "{url} er ikke en gyldig http(s)-adresse",

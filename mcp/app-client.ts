@@ -48,6 +48,13 @@ const HINTS: Record<string, string> = {
 	MCP_VAULT_NOT_EXPOSED: 'That vault is not open to MCP clients. The user can open it in Settings → Vaults.',
 	MCP_TOKEN_REQUIRED: 'The app rejected the MCP token (it may have just restarted). Retry the call.',
 	MCP_API_DISABLED: 'The app was started without MCP write support. Restart Vault Chat and retry.',
+	MCP_EDIT_NOTE_DISABLED:
+		'edit_note is switched off. Only the user can turn it on (Vault Chat Settings, MCP section, "Allow agents to edit notes"). Do not retry; tell the user.',
+	MCP_EDIT_NOT_FOUND: 'old_string does not occur in the note body (frontmatter is never editable). Re-read the note with get_note and copy the text exactly, including whitespace and line endings.',
+	MCP_EDIT_NOT_UNIQUE: 'old_string occurs more than once in the note body. Include more surrounding text so it matches exactly one place.',
+	LIBRARY_EDIT_CONFLICT: 'The note changed since you read it (the hash no longer matches). Call get_note again, redo the edit on the fresh text and pass the new hash.',
+	LIBRARY_EDIT_FORBIDDEN: 'Only existing .md notes inside the library can be edited (not _meta, not symlinks).',
+	PATH_OUTSIDE_LIBRARY: 'That path resolves outside the vault library.',
 	UNSUPPORTED_FILE_TYPE: 'That file type cannot be converted.',
 	FILE_TOO_LARGE: 'That file is over the upload size limit.',
 	LINK_INVALID: 'That is not a valid URL.',

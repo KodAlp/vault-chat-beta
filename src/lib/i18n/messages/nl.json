@@ -958,6 +958,8 @@
 	},
 	"McpImportSettings": {
 		"title": "MCP-importmappen",
+		"editNoteLabel": "Agenten toestaan notities te bewerken (edit_note)",
+		"editNoteWarning": "Ontwikkeloptie, standaard uit. Wanneer ingeschakeld kan een AI-agent die via MCP is verbonden de tekst van je bestaande notities wijzigen (de vorige versie blijft bewaard als herstelbare revisie). Notities kunnen verborgen instructies bevatten die de agent proberen te sturen, schakel dit dus alleen in voor agenten en kluizen die je vertrouwt.",
 		"description": "Een AI-agent die via MCP is verbonden, mag alleen lokale bestanden uit deze mappen importeren. Imports wachten op je bevestiging, tenzij je automatisch bevestigen voor die kluis aanzet. Laat de lijst leeg om het importeren van lokale bestanden te blokkeren; import via links (URL's) is toegestaan en loopt via dezelfde bevestiging.",
 		"empty": "Geen mappen toegestaan — import van lokale bestanden is geblokkeerd.",
 		"removeAria": "{path} verwijderen",
@@ -1008,6 +1010,22 @@
 		"mcpMigrationCloseAll": "Allemaal sluiten (aanbevolen)",
 		"mcpMigrationFailed": "Dat kon niet worden gewijzigd."
 	},
+	"BackupCard": {
+		"title": "Gegevens back-uppen",
+		"description": "Kopieert je kluizen (notities, zoekindex, studiegegevens), chats en instellingen naar een nieuwe map met datum. Er wordt niets gewijzigd in je gegevensmap.",
+		"destination": "Back-uplocatie",
+		"choose": "Kiezen…",
+		"excludesNote": "API-sleutels zijn niet inbegrepen. Voer ze opnieuw in na het herstellen.",
+		"start": "Back-up maken",
+		"running": "Back-up wordt gemaakt…",
+		"progress": "{done} van {total} items",
+		"doneOk": "Back-up voltooid",
+		"doneWithFailures": "Back-up klaar, maar {count} bestanden konden niet worden gekopieerd (in gebruik?)",
+		"totals": "{files} bestanden, {databases} databases, {size}",
+		"cancelled": "Back-up geannuleerd.",
+		"interrupted": "De back-up is onderbroken."
+	},
+
 	"ReindexDialog": {
 		"title": "Kluis opnieuw indexeren",
 		"runningDescription": "Elk bestand in deze kluis wordt opnieuw verwerkt met de huidige embedding. De chat blijft intussen werken met de oude index.",
@@ -1219,6 +1237,9 @@
 		"MCP_IMPORT_ROOTS_EMPTY": "Er is nog geen map toegestaan voor MCP-bestandsimports — voeg er een toe in Instellingen",
 		"MCP_PATH_NOT_ALLOWED": "Dat bestand staat buiten de mappen die je voor MCP-imports hebt toegestaan",
 		"MCP_PATH_INVALID": "Dat pad is niet bruikbaar — het moet een absoluut pad naar een bestaand regulier bestand zijn (geen symlinks, geen \"..\"-segmenten)",
+		"MCP_EDIT_NOTE_DISABLED": "Notities bewerken via MCP staat uit — de gebruiker kan dit inschakelen in Instellingen",
+		"MCP_EDIT_NOT_FOUND": "De te vervangen tekst is niet gevonden in de notitie",
+		"MCP_EDIT_NOT_UNIQUE": "De te vervangen tekst komt meer dan eens voor in de notitie",
 		"IMPORT_INTERRUPTED": "Deze import is onderbroken (de app werd tijdens de conversie gesloten) — annuleer hem en importeer de bron opnieuw",
 		"IMPORT_AUTO_CONFIRM_FAILED": "Automatisch bevestigen mislukt (de notitie kon niet worden geïndexeerd) — de import staat nog open; je kunt hem zelf bevestigen",
 		"IMPORT_DUPLICATE_URL": "Deze link lijkt al eerder te zijn geïmporteerd — je kunt toch doorgaan.",
@@ -1230,6 +1251,10 @@
 		"VAULT_NONE": "Nog geen kluizen — maak er eerst een",
 		"VAULT_DELETE_CONFIRM_REQUIRED": "Bevestiging van verwijdering vereist ('confirm=true')",
 		"VAULT_LAST_UNDELETABLE": "De laatste kluis kan niet worden verwijderd — de app heeft altijd minstens één kluis nodig",
+		"BACKUP_DEST_INVALID": "Geef het volledige mappad voor de back-up op",
+		"BACKUP_DEST_INSIDE_DATA": "Kies een map buiten de gegevens- en kluismappen van de app",
+		"BACKUP_ALREADY_RUNNING": "Er loopt al een back-up",
+		"BACKUP_FAILED": "De back-up kon niet worden gemaakt",
 		"PROVIDER_OLLAMA_MISCONFIGURED": "Er is geen ingeschakelde Ollama-aanbieder geconfigureerd",
 		"PROVIDER_CONSENT_NOT_NEEDED": "Ollama heeft geen toestemming nodig",
 		"PROVIDER_BASE_URL_INVALID": "{url} is geen geldig http(s)-adres",
