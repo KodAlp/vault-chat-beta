@@ -58,6 +58,21 @@ export interface DeckSlide {
  * line reconstructed from the now-separate `heading` field (the model no
  * longer writes the heading INTO content_markdown — see
  * generate-slides.ts's buildSystemPrompt invariant on that). */
+/**
+ * #74 — a fixed 1280x720 slide cannot grow, and CSS alone cannot know how
+ * much text a quote/two-column slide holds, so long bodies get an extra
+ * density class (`dense` / `xdense`, see slides-theme.ts) that steps the
+ * font size down. Content is never dropped. Short bodies get no suffix, so
+ * their `class` attribute stays exactly the layout name.
+ */
+export function densityClass(layout: string, content: string): string {
+	if (layout !== 'quote' && layout !== 'two-column') return '';
+	// Rough visible length: drop fenced-code fences and markdown markers.
+	const len = content.replace(/```[a-z]*/g, '').replace(/[>*_`#]/g, '').length;
+	const [dense, xdense] = layout === 'quote' ? [260, 520] : [650, 1000];
+	return len > xdense ? ' xdense' : len > dense ? ' dense' : '';
+}
+
 export function buildMarpDeck(slides: DeckSlide[]): string {
 	const header = `---\nmarp: true\ntheme: ${SLIDES_THEME_NAME}\n---\n\n`;
 	const body = slides
@@ -66,7 +81,7 @@ export function buildMarpDeck(slides: DeckSlide[]): string {
 			const content = useDiagram
 				? renderDiagramSvg(s.diagram!)
 				: trimMathDelimiterWhitespace(s.content_markdown.trim());
-			return `<!-- _class: ${s.layout} -->\n\n# ${s.heading}\n\n${content}`;
+			return `<!-- _class: ${s.layout}${densityClass(s.layout, content)} -->\n\n# ${s.heading}\n\n${content}`;
 		})
 		.join('\n\n---\n\n');
 	return header + body;
