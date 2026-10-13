@@ -94,7 +94,6 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 ## Öneriler
 
 - [ ] **Taranmış kod sayfalarında takas kararı.** #8 ile Türkçe taramada kod tanıma kapalı: Türkçe karakter doğru ama kodun satır sonu/girintisi kayboluyor. Bu mu, eski hal mi? `K`
-- [ ] **edit_note kapalıyken gizlensin mi?** Araştırma belgesi "listede hiç görünmesin" diyordu; uygulanan: görünür ama uygulama reddeder (MCP yeniden başlatma gerekmez, denetim uygulamada). `K`
 - [ ] **MinerU "all" modu neden tüm formüllere uygulanmıyor?** #4 ölçümünde kozmolojide formüllerin ~%11'i MinerU izi taşıyor; seçim kuralını incele. `O`
 - [ ] **#61 ve #40'ı uygulamada dene.** Yedek kartı (klasör seçici, ilerleme) ve edit_note anahtarı tarayıcıda denenmedi. `K`
 - [ ] **#87'yi paketli sürümde doğrula.** `launchers.json`'dan ollama kaydını sil, uygulamayı aç: `launch.log`'da "starting it for this session" görünmeli; açılış anında MCP `search_library` 30 sn içinde yanıt vermeli. `K`
@@ -133,6 +132,7 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 
 Yalnız son iki haftanın kaydı tutulur; daha eskisi git geçmişindedir.
 
+- 2026-10-13: karar: edit_note kapalıyken listede görünür, uygulama reddeder (olduğu gibi kalsın).
 - 2026-10-13: OCR dili kasa dilinden; desteklenmeyen dilde uyarı; Türkçe taramada CodeFormula kapalı (bozulmanın asıl nedeni oydu) (#8). `ebe763e`
 - 2026-10-13: MCP search_library mode (hibrit RRF), list_domains, get_note bölüm/sayfa (#41). `8e56d34`
 - 2026-10-13: Playwright e2e (36 test, `npm run test:e2e`), axe denetimi ve düzeltmeleri, kırık link yok (#62). `5e12e74`
