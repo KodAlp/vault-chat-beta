@@ -499,6 +499,205 @@ def _move_prose_out(body: str, nearby: str = "") -> str | None:
     return "\n\n".join(parts)
 
 
+# ---------------------------------------------------------------------------
+# Symbol-font private-use codes (Likharev PDFs, measured 2026-10-13)
+# ---------------------------------------------------------------------------
+# Some PDFs (Likharev's physics lecture notes) set maths in the Adobe Symbol
+# font and their text layer exposes the glyphs as U+F000 + <Symbol byte>
+# (U+F0B5 = proportional-to, U+F0A5 = infinity, U+F066 = phi ...); ~5000 such
+# characters per note. They render as tofu and match no search. The standard
+# Adobe Symbol encoding (bytes 0x20-0xFE) maps them to real Unicode.
+# scripts/symbol-propto-repair.mjs carries the same table for notes that are
+# already in a library -- change both together (both tests pin the same codes).
+_SYMBOL_ASCII = " !\u2200#\u2203%&\u220b()\u2217+,\u2212./0123456789:;<=>?\u2245"  # bytes 0x20-0x40
+_SYMBOL_GREEK_UP = "\u0391\u0392\u03a7\u0394\u0395\u03a6\u0393\u0397\u0399\u03d1\u039a\u039b\u039c\u039d\u039f\u03a0\u0398\u03a1\u03a3\u03a4\u03a5\u03c2\u03a9\u039e\u03a8\u0396"  # 0x41-0x5A
+_SYMBOL_GREEK_LOW = "\u03b1\u03b2\u03c7\u03b4\u03b5\u03c6\u03b3\u03b7\u03b9\u03d5\u03ba\u03bb\u03bc\u03bd\u03bf\u03c0\u03b8\u03c1\u03c3\u03c4\u03c5\u03d6\u03c9\u03be\u03c8\u03b6"  # 0x61-0x7A
+_SYMBOL_OTHER = {
+    0x5B: "[", 0x5C: "\u2234", 0x5D: "]", 0x5E: "\u22a5", 0x5F: "_", 0x60: "\u203e",
+    0x7B: "{", 0x7C: "|", 0x7D: "}", 0x7E: "\u223c",
+    0xA0: "\u20ac", 0xA1: "\u03d2", 0xA2: "\u2032", 0xA3: "\u2264", 0xA4: "\u2044", 0xA5: "\u221e",
+    0xA6: "\u0192", 0xA7: "\u2663", 0xA8: "\u2666", 0xA9: "\u2665", 0xAA: "\u2660", 0xAB: "\u2194",
+    0xAC: "\u2190", 0xAD: "\u2191", 0xAE: "\u2192", 0xAF: "\u2193", 0xB0: "\u00b0", 0xB1: "\u00b1",
+    0xB2: "\u2033", 0xB3: "\u2265", 0xB4: "\u00d7", 0xB5: "\u221d", 0xB6: "\u2202", 0xB7: "\u2022",
+    0xB8: "\u00f7", 0xB9: "\u2260", 0xBA: "\u2261", 0xBB: "\u2248", 0xBC: "\u2026", 0xBD: "\u23d0",
+    0xBE: "\u23af", 0xBF: "\u21b5", 0xC0: "\u2135", 0xC1: "\u2111", 0xC2: "\u211c", 0xC3: "\u2118",
+    0xC4: "\u2297", 0xC5: "\u2295", 0xC6: "\u2205", 0xC7: "\u2229", 0xC8: "\u222a", 0xC9: "\u2283",
+    0xCA: "\u2287", 0xCB: "\u2284", 0xCC: "\u2282", 0xCD: "\u2286", 0xCE: "\u2208", 0xCF: "\u2209",
+    0xD0: "\u2220", 0xD1: "\u2207", 0xD2: "\u00ae", 0xD3: "\u00a9", 0xD4: "\u2122", 0xD5: "\u220f",
+    0xD6: "\u221a", 0xD7: "\u22c5", 0xD8: "\u00ac", 0xD9: "\u2227", 0xDA: "\u2228", 0xDB: "\u21d4",
+    0xDC: "\u21d0", 0xDD: "\u21d1", 0xDE: "\u21d2", 0xDF: "\u21d3", 0xE0: "\u25ca", 0xE1: "\u27e8",
+    0xE2: "\u00ae", 0xE3: "\u00a9", 0xE4: "\u2122", 0xE5: "\u2211", 0xE6: "\u239b", 0xE7: "\u239c",
+    0xE8: "\u239d", 0xE9: "\u23a1", 0xEA: "\u23a2", 0xEB: "\u23a3", 0xEC: "\u23a7", 0xED: "\u23a8",
+    0xEE: "\u23a9", 0xEF: "\u23aa", 0xF1: "\u27e9", 0xF2: "\u222b", 0xF3: "\u2320", 0xF4: "\u23ae",
+    0xF5: "\u2321", 0xF6: "\u239e", 0xF7: "\u239f", 0xF8: "\u23a0", 0xF9: "\u23a4", 0xFA: "\u23a5",
+    0xFB: "\u23a6", 0xFC: "\u23ab", 0xFD: "\u23ac", 0xFE: "\u23ad",
+}
+# Byte 0x66 is Adobe's "phi" -> U+03C6 (phi), byte 0x6A "phi1" -> U+03D5; both are in the letter runs above.
+SYMBOL_PUA: dict[str, str] = {chr(0xF020 + i): c for i, c in enumerate(_SYMBOL_ASCII)}
+SYMBOL_PUA.update({chr(0xF041 + i): c for i, c in enumerate(_SYMBOL_GREEK_UP)})
+SYMBOL_PUA.update({chr(0xF061 + i): c for i, c in enumerate(_SYMBOL_GREEK_LOW)})
+SYMBOL_PUA.update({chr(0xF000 + b): c for b, c in _SYMBOL_OTHER.items()})
+_SYMBOL_PUA_RE = re.compile("[\uf020-\uf0fe]")
+
+
+def map_symbol_pua(text: str) -> str:
+    """Maps Adobe-Symbol private-use codes (U+F0xx) to Unicode.
+
+    Runs on the whole document EXCEPT fenced and inline code, and it includes
+    math: a raw U+F0B5 inside `$$ ... $$` is as unreadable as in prose, and the
+    replacements (propto, infinity, Greek, arrows ...) are all characters KaTeX
+    accepts. Code is skipped because a private-use character there is data we
+    must not rewrite. A code with no entry (U+F0F0 = Apple logo) stays as it is.
+    """
+    if not _SYMBOL_PUA_RE.search(text):
+        return text
+
+    def sub(chunk: str) -> str:
+        return _SYMBOL_PUA_RE.sub(lambda m: SYMBOL_PUA.get(m.group(0), m.group(0)), chunk)
+
+    def sub_outside_inline(chunk: str) -> str:
+        parts: list[str] = []
+        p = 0
+        for m in _INLINE_CODE.finditer(chunk):
+            parts.append(sub(chunk[p : m.start()]))
+            parts.append(m.group(0))
+            p = m.end()
+        parts.append(sub(chunk[p:]))
+        return "".join(parts)
+
+    out: list[str] = []
+    pos = 0
+    for m in _FENCE.finditer(text):
+        out.append(sub_outside_inline(text[pos : m.start()]))
+        out.append(m.group(0))
+        pos = m.end()
+    out.append(sub_outside_inline(text[pos:]))
+    return "".join(out)
+
+
+# ---------------------------------------------------------------------------
+# \infty read where the PDF has "proportional to" (TODO #4, measured 2026-10-13)
+# ---------------------------------------------------------------------------
+# CodeFormula writes `\, \infty \,` for the symbol propto (and sometimes `\, \alpha \,`).
+# It is valid LaTeX, so no KaTeX/structure check ever flagged it. Measured on 18
+# Fizik notes: 71 candidates between two terms, 70 verified as propto in the PDF text
+# layer (the one miss: `\infty \text {-category}`); 1,792 other \infty untouched.
+# scripts/symbol-propto-repair.mjs implements the same rule -- change both together.
+_TERM_END_CMDS = frozenset(
+    "alpha beta gamma delta epsilon varepsilon zeta eta theta vartheta iota kappa lambda mu nu xi pi "
+    "varpi rho varrho sigma varsigma tau upsilon phi varphi chi psi omega Gamma Delta Theta Lambda Xi "
+    "Pi Sigma Upsilon Phi Psi Omega hbar ell partial aleph imath jmath Re Im".split()
+)
+_TERM_START_CMDS = _TERM_END_CMDS | frozenset(
+    "frac dfrac tfrac sqrt left mathrm mathbf mathit mathcal mathbb boldsymbol text textrm operatorname "
+    "vec hat bar dot ddot tilde overline nabla sin cos tan exp ln log int sum prod".split()
+)
+_SPACING_BACK = (r"\,", r"\;", r"\ ", r"\quad")
+_SPACING_FWD = re.compile(r"\\(?:,|;| |quad(?![a-zA-Z]))|\s")
+_INFTY = re.compile(r"\\infty(?![a-zA-Z])")
+_NO_DASH_TEXT = re.compile(r"\\(?:text|textrm|mathrm)\s*\{\s*-")
+_SPACED_ALPHA = re.compile(r"(\\,\s*)\\alpha(?![a-zA-Z])(\s*\\,)")
+
+
+def _skip_spacing_back(s: str, i: int) -> int:
+    """Index just past the last non-spacing character of s[:i]."""
+    while i > 0:
+        for cand in _SPACING_BACK:
+            if s.endswith(cand, 0, i):
+                i -= len(cand)
+                break
+        else:
+            if not s[i - 1].isspace():
+                return i
+            i -= 1
+    return i
+
+
+def _skip_spacing_fwd(s: str, i: int) -> int:
+    while i < len(s):
+        m = _SPACING_FWD.match(s, i)
+        if not m:
+            return i
+        i = m.end()
+    return i
+
+
+def _in_script_group(s: str, pos: int) -> bool:
+    """True when s[pos] sits inside a `{...}` group that is a sub/superscript argument."""
+    depth = 0
+    for i in range(pos - 1, -1, -1):
+        if i > 0 and s[i - 1] == "\\":
+            continue
+        if s[i] == "}":
+            depth += 1
+        elif s[i] == "{":
+            if depth == 0:
+                j = i
+                while j > 0 and s[j - 1].isspace():
+                    j -= 1
+                if j > 0 and s[j - 1] in "_^":
+                    return True
+            else:
+                depth -= 1
+    return False
+
+
+def _prev_is_term_end(s: str, end: int) -> bool:
+    """Is the last meaningful token of s[:end] the end of a term?"""
+    if end <= 0:
+        return False
+    if s.endswith(r"\}", 0, end) or s.endswith(r"\right|", 0, end):
+        return True
+    ch = s[end - 1]
+    if ch in ")]":
+        return True
+    if ch == "}":
+        return True
+    if ch.isascii() and ch.isdigit():
+        return True
+    if ch.isascii() and ch.isalpha():
+        j = end
+        while j > 0 and s[j - 1].isascii() and s[j - 1].isalpha():
+            j -= 1
+        if j > 0 and s[j - 1] == "\\":
+            return s[j:end] in _TERM_END_CMDS
+        return True
+    return False
+
+
+def _next_is_term_start(s: str, i: int) -> bool:
+    if i >= len(s) or _NO_DASH_TEXT.match(s, i):
+        return False
+    ch = s[i]
+    if ch == "\\":
+        m = re.match(r"\\([A-Za-z]+)", s[i:])
+        return bool(m) and m.group(1) in _TERM_START_CMDS
+    return ch in "([{" or (ch.isascii() and (ch.isdigit() or ch.isalpha()))
+
+
+def fix_propto(body: str) -> str:
+    r"""`\infty` between two terms (and a two-side-spaced `\, \alpha \,`) -> `\propto`.
+
+    `\infty` stays when it is a script argument or follows `_` `^` (limits, sums), follows an operator
+    or relation (`=`, `\to`, `\pm`, `-`, `(`, `[`, `,`), or is followed by `\text{-...}` ("\infty-category").
+    Neighbours are looked at past `\,` `\;` `\ ` `\quad`.
+    """
+    if "\\infty" not in body and "\\alpha" not in body:
+        return body
+    out: list[str] = []
+    pos = 0
+    for m in _INFTY.finditer(body):
+        a = _skip_spacing_back(body, m.start())
+        b = _skip_spacing_fwd(body, m.end())
+        if _prev_is_term_end(body, a) and _next_is_term_start(body, b) and not _in_script_group(body, m.start()):
+            out.append(body[pos : m.start()])
+            out.append("\\propto")
+            pos = m.end()
+    out.append(body[pos:])
+    body = "".join(out)
+    return _SPACED_ALPHA.sub(lambda m: m.group(1) + "\\propto" + m.group(2), body)
+
+
 def fix_latex_artifacts(text: str) -> str:
     r"""Deterministic repairs of recurring formula-model artifacts inside $$ blocks (each is a KaTeX error).
 
@@ -512,7 +711,7 @@ def fix_latex_artifacts(text: str) -> str:
     """
 
     def fix(match: re.Match) -> str:
-        body = _HBAR_SCRIPT.sub(r"\\hbar \1", match.group(1))
+        body = fix_propto(_HBAR_SCRIPT.sub(r"\\hbar \1", match.group(1)))
         out = []
         pos = 0
         for m in _ACCENT_AFTER_FONT.finditer(body):
@@ -700,6 +899,7 @@ def build_frontmatter(title: str, converted_by: str, needs_review: bool) -> dict
 
 
 def postprocess(text: str, *, title_fallback: str, converted_by: str, needs_review: bool) -> tuple[str, dict]:
+    text = map_symbol_pua(text)
     text = normalize_math_delimiters(text)
     text = truncate_degenerate_math(text)
     text = fix_latex_artifacts(text)
