@@ -2,7 +2,7 @@
 
 Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncellenir.
 
-**Son güncelleme:** 2026-10-12 · Acil 3. tur: #35, #38, #70 bitti, #5 betiği hazır
+**Son güncelleme:** 2026-10-13 · #5: 249 formül yazıldı, makro tablosu hazır
 
 ## Kurallar
 
@@ -58,7 +58,7 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 - [ ] **Yerel modellerle MCP deneyi.** Qwen3 8B/4B, LM Studio. `O` · #39 (çekildi)
 
 ### 8. Formül doğruluğu
-- [ ] **MinerU KaTeX temizliğini uygula.** Betik hazır (`scripts/katex-cleanup.mjs`, deneme: 296 düzeltilebilir / 236 düzeltilemez / 42 kod sanılmış); kalan: kullanıcı kararı (son `	ag` korunsun mu, entity/makro düzeltmeleri) ve kasa dışı yedekle `--write`. `K` · #5 (çekildi)
+- [ ] **MinerU KaTeX temizliği: makro eşlemelerini uygula.** 2026-10-13'te 249 formül yazıldı (html-entity + çift `	ag`; yedek `Desktopault-chat-yedek\katex-2026-10-13`). Kalan: makro tablosuyla 115 formül (kullanıcı onayı bekliyor); sonra `maxExpand` (13) ve MathType eğik kesri (10). `K` · #5 (çekildi)
 - [ ] **Fizik'te kalan 48 geçersiz formül.** Kısmen yapıldı; kalan: onarım betiği, sonra 0.3.0 ile yeniden içe aktarma. `O` · #2
 - [ ] **Model kapasitesi hataları (♯, ∝).** MinerU yedeğiyle düzeldi mi, ölç. `O` · #4
 - [ ] **"Yalnız hatalı formülü onar".** Sayfa + kutu; belgenin tamamını yeniden okumadan. `B` · #3
