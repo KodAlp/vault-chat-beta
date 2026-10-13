@@ -24,7 +24,7 @@ import { Editor, rootCtx, editorViewCtx, parserCtx, serializerCtx, schemaCtx, re
 import { commonmark, remarkPreserveEmptyLinePlugin, imageSchema, toggleStrongCommand, toggleEmphasisCommand, toggleInlineCodeCommand, wrapInHeadingCommand, turnIntoTextCommand, wrapInBulletListCommand, wrapInOrderedListCommand, wrapInBlockquoteCommand, toggleLinkCommand, createCodeBlockCommand, insertImageCommand } from '@milkdown/kit/preset/commonmark';
 import { gfm, toggleStrikethroughCommand, insertTableCommand, addRowAfterCommand, addColAfterCommand } from '@milkdown/kit/preset/gfm';
 import { history, undoCommand, redoCommand } from '@milkdown/kit/plugin/history';
-import { math, katexOptionsCtx, mathBlockSchema } from '@milkdown/plugin-math';
+import { math, katexOptionsCtx, mathBlockSchema } from './milkdown-math';
 import katex from 'katex';
 import { $remark, $prose, $nodeSchema, $view, callCommand } from '@milkdown/kit/utils';
 import { Plugin } from '@milkdown/kit/prose/state';
