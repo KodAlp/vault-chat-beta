@@ -2,7 +2,7 @@
 
 Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncellenir.
 
-**Son güncelleme:** 2026-10-13 · Acil 4. tur: #6, #9, #40, #61, #69, #74 bitti; #2 ölçüldü
+**Son güncelleme:** 2026-10-13 · Acil 5. tur: #8, #41, #62 bitti; #4 ölçüldü
 
 ## Kurallar
 
@@ -34,7 +34,6 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 ### 2. Test ve doğrulama
 - [ ] **Paketli sürümde negatif testler.** `invoke('check_and_start')` reddi, `curl` 401. `K` · #59 (çekildi)
 - [ ] **Faz 11 canlı doğrulamaları.** Paketli sürümde sağlayıcı aç/kapa, `chats.db` bozma testi. `K` · #56 (çekildi)
-- [ ] **Erişilebilirlik, e2e form testleri, kırık link taraması.** `O` · #62
 
 ### 3. Sohbet ve dil tutarlılığı
 
@@ -45,16 +44,14 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 - [ ] **Formül yoğun klasörlerin hızı.** Sayfa başına 15–25 sn; 200+ saatlik klasörler. `B` · #82
 
 ### 6. İçe aktarmada sessiz bozulma
-- [ ] **OCR dil seçimi.** Türkçe karakterler bozuluyor; Bengalce çöp çıktı. `O` · #8
 
 ### 7. MCP araçları ve belgeleri
-- [ ] **MCP okuma iyileştirmeleri.** Araştırma C5. `O` · #41
 - [ ] **Yerel modellerle MCP deneyi.** Qwen3 8B/4B, LM Studio. `O` · #39 (çekildi)
 
 ### 8. Formül doğruluğu
 - [ ] **MinerU KaTeX: elle bakılacak formüller.** Mekanik olanlar bitti (2026-10-13, 367 formül). Kalan: ~73 formül sanılmış kod (kod bloğuna çevir), 14 anlamı belirsiz makro, 7 bozuk MathType kesri, ~15 çift üst/alt simge, dengesiz \left/\right; 19 kesik \quad döngüsü #3 ile. `O` · #5 (çekildi)
 - [ ] **Fizik'te kalan 48 geçersiz formülü yeniden içe aktar.** Mekanik düzeltilemez (dengesiz left/right, formüle karışmış düzyazı, kesik formül; 2026-10-13 ölçümü); 11 notu 0.3.0 ile (MinerU + görsel yedeği) yeniden içe aktar. `O` · #2
-- [ ] **Model kapasitesi hataları (♯, ∝).** MinerU yedeğiyle düzeldi mi, ölç. `O` · #4
+- [ ] **∝ hâlâ yanlış okunuyor (54 formül).** ♯ düzeldi (~21'de 20); ∝ yerine 54 formülde `\, \infty \,` (en çok kozmoloji 24). Neden: MinerU yedeği "all" modunda bile formüllerin bir kısmına uygulanmış. Seçenek: (a) `\, \infty \,` → `\propto` dönüşümü + yanlış pozitif denetimi, (b) #3 ile yalnız bu formülleri yeniden oku. Ölçüm: scratchpad olcum4. `O` · #4
 - [ ] **"Yalnız hatalı formülü onar".** Sayfa + kutu; belgenin tamamını yeniden okumadan. `B` · #3
 
 ### 9. MCP paketleme ve kurulum
@@ -96,6 +93,9 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 
 ## Öneriler
 
+- [ ] **Taranmış kod sayfalarında takas kararı.** #8 ile Türkçe taramada kod tanıma kapalı: Türkçe karakter doğru ama kodun satır sonu/girintisi kayboluyor. Bu mu, eski hal mi? `K`
+- [ ] **edit_note kapalıyken gizlensin mi?** Araştırma belgesi "listede hiç görünmesin" diyordu; uygulanan: görünür ama uygulama reddeder (MCP yeniden başlatma gerekmez, denetim uygulamada). `K`
+- [ ] **MinerU "all" modu neden tüm formüllere uygulanmıyor?** #4 ölçümünde kozmolojide formüllerin ~%11'i MinerU izi taşıyor; seçim kuralını incele. `O`
 - [ ] **#61 ve #40'ı uygulamada dene.** Yedek kartı (klasör seçici, ilerleme) ve edit_note anahtarı tarayıcıda denenmedi. `K`
 - [ ] **#87'yi paketli sürümde doğrula.** `launchers.json`'dan ollama kaydını sil, uygulamayı aç: `launch.log`'da "starting it for this session" görünmeli; açılış anında MCP `search_library` 30 sn içinde yanıt vermeli. `K`
 - [ ] **#31'i gerçek bir modelle doğrula.** Kalibrasyon yalnız sentetik vektörlerle sınandı; nomic/qwen3 embedding ile 2016 negatiflik setinde yanlış pozitif ölç. `O`
@@ -133,6 +133,9 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 
 Yalnız son iki haftanın kaydı tutulur; daha eskisi git geçmişindedir.
 
+- 2026-10-13: OCR dili kasa dilinden; desteklenmeyen dilde uyarı; Türkçe taramada CodeFormula kapalı (bozulmanın asıl nedeni oydu) (#8). `ebe763e`
+- 2026-10-13: MCP search_library mode (hibrit RRF), list_domains, get_note bölüm/sayfa (#41). `8e56d34`
+- 2026-10-13: Playwright e2e (36 test, `npm run test:e2e`), axe denetimi ve düzeltmeleri, kırık link yok (#62). `5e12e74`
 - 2026-10-13: sessiz glif bozulması (#6) ve OCR formül şüphesi (#9) uyarıları; gerçek veride 15 temiz PDF'te yanlış alarm yok, bozuk slayt dosyasında ↪→, ▷→. ♣→| doğru eşlendi. `e36bade`
 - 2026-10-13: eskimiş @milkdown/plugin-math projeye alındı, bağımlılık kaldırıldı (#69). `d37db0c`
 - 2026-10-13: alıntı ve iki sütun slaytları denendi, taşmalar düzeltildi (#74). `d73e0f2`
