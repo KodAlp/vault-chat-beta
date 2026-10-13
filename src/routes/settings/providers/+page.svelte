@@ -580,7 +580,7 @@
 			{#if resetSecretsError}<p class="text-xs">{resetSecretsError}</p>{/if}
 		</div>
 	{:else if secretsInfo?.mode === 'plaintext'}
-		<p class="mb-4 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-400" role="status">
+		<p class="mb-4 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-800 dark:text-amber-400" role="status">
 			{secretsInfo.platform === 'linux'
 				? t('ProvidersSettingsPage.secretsPlaintextWarningLinux')
 				: t('ProvidersSettingsPage.secretsPlaintextWarning')}

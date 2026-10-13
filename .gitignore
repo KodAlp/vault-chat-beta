@@ -40,3 +40,7 @@ docker-out/
 # MCP: per-launch endpoint + token written by the app (never commit), and the user's allowed import folders.
 data/mcp-endpoint.json
 data/mcp-settings.json
+
+# Playwright
+test-results/
+playwright-report/

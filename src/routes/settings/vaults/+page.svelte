@@ -447,6 +447,7 @@
 						<Switch
 							checked={vault.mcpExposed === true}
 							disabled={mcpToggleBusy === vault.id}
+							aria-label={t('VaultsSettingsPage.mcpExposedLabel')}
 							onCheckedChange={() => toggleMcpExposed(vault)}
 						/>
 					</div>
@@ -489,6 +490,7 @@
 				<Input
 					type="text"
 					placeholder={t('VaultsSettingsPage.vaultNamePlaceholder')}
+					aria-label={t('VaultsSettingsPage.vaultNamePlaceholder')}
 					bind:value={newVaultName}
 					class="max-w-xs"
 					disabled={creatingVault}

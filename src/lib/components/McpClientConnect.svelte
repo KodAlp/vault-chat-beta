@@ -55,7 +55,7 @@
 
 {#snippet snippetBlock(key: string, text: string)}
 	<div class="relative">
-		<pre class="overflow-x-auto rounded-lg border bg-muted/40 p-3 pe-20 font-mono text-xs"><code>{text}</code></pre>
+		<pre tabindex="0" class="overflow-x-auto rounded-lg border bg-muted/40 p-3 pe-20 font-mono text-xs"><code>{text}</code></pre>
 		<Button type="button" size="sm" variant="outline" class="absolute end-2 top-2" onclick={() => copy(key, text)}>
 			{copiedKey === key ? t('McpConnect.copied') : t('McpConnect.copy')}
 		</Button>

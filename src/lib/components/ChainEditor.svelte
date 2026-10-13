@@ -380,7 +380,7 @@
 	}
 	.chain-empty {
 		font: 400 13px/18px var(--font-sans);
-		color: var(--label-tertiary);
+		color: var(--label-secondary);
 	}
 	.chain-menu {
 		flex: none;
