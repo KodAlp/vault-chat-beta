@@ -9,6 +9,7 @@ import {
 	fixFontSwitch,
 	fixMacroArgs,
 	fixMleftright,
+	fixMathtypeSlash,
 	countAmbiguous,
 	MACRO_ALIAS_TABLE,
 	FIXES,
@@ -163,7 +164,7 @@ test('mleftright idiom', () => {
 test('new fixes come after the existing ones and pass the gate end to end', () => {
 	const names = FIXES.map(([n]) => n);
 	assert.deepEqual(names.slice(0, 5), ['duplicate-tag', 'stray-delimiter', 'html-entity', 'macro-alias', 'glyph-junk']);
-	assert.deepEqual(names.slice(5), ['font-switch', 'macro-arg', 'mleftright']);
+	assert.deepEqual(names.slice(5), ['font-switch', 'macro-arg', 'mleftright', 'mathtype-slash']);
 	let r = repairFormula('\\delta\\mathopen{}\\mathclose\\bgroup\\left( S \\aftergroup\\egroup\\right)');
 	assert.equal(r.status, 'fixed');
 	assert.deepEqual(r.applied, ['mleftright']);
@@ -190,4 +191,35 @@ test('countAmbiguous reports but never maps', () => {
 		ref: 2
 	});
 	assert.equal(repairFormula('\\llangle x \\rrangle').status, 'unfixable');
+});
+
+test('mathtype-slash: both real samples are repaired through the gate', () => {
+	const a = String.raw`{ \frac { 1 5 \mathord { \left/ { \vphantom { \frac { 1 5 } { 4 5 } } } \right. \kern - delimiterspace } 4 5 ^ { \circ } } { 3 - j 4 } } + j 2`;
+	const b = String.raw`3 { \mathord { \left/ { \vphantom { 3 2 } } \right. \kern - delimiterspace } - 4 9 . 4 ^ { \circ } } \mathrm { A }`;
+	assert.ok(katexError(a, true));
+	assert.ok(katexError(b, true));
+	assert.ok(!fixMathtypeSlash(a).includes('mathord'));
+	assert.equal(fixMathtypeSlash(b), String.raw`3 { / - 4 9 . 4 ^ { \circ } } \mathrm { A }`);
+	for (const s of [a, b]) {
+		const r = repairFormula(s);
+		assert.equal(r.status, 'fixed');
+		assert.ok(r.applied.includes('mathtype-slash'));
+	}
+	assert.equal(FIXES.at(-1)[0], 'mathtype-slash');
+});
+
+test('mathtype-slash: \\nulldelimiterspace spelling, no spaces, several occurrences', () => {
+	const s = String.raw`a\mathord{\left/{\vphantom{x}}\right.\kern-\nulldelimiterspace}b + c\mathord { \left/ { \vphantom { y } } \right. \kern - \nulldelimiterspace } d`;
+	assert.equal(fixMathtypeSlash(s), 'a/b + c/ d');
+});
+
+test('mathtype-slash: other \\mathord groups are untouched', () => {
+	assert.equal(fixMathtypeSlash(String.raw`\mathord { x } + \mathord { \left/ y \right. }`), null);
+	assert.equal(fixMathtypeSlash(String.raw`\mathord { \left/ { \vphantom { 1 } } \right. \kern 2pt }`), null);
+	assert.equal(fixMathtypeSlash(String.raw`\mathord { \left( { \vphantom { 1 } } \right. \kern - delimiterspace }`), null);
+});
+
+test('mathtype-slash: nested braces inside \\vphantom', () => {
+	const s = String.raw`x \mathord { \left/ { \vphantom { \frac { \sqrt { a } } { { b } } } } \right. \kern - delimiterspace } y`;
+	assert.equal(fixMathtypeSlash(s), 'x / y');
 });

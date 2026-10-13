@@ -350,6 +350,58 @@ export function countAmbiguous(body) {
 	return counts;
 }
 
+/**
+ * MathType "slashed fraction" idiom as mangled by MinerU:
+ *   \mathord { \left/ { \vphantom { N } } \right. \kern - delimiterspace }
+ * (originally `\kern-\nulldelimiterspace`; KaTeX fails with "Invalid size: '- '").
+ * The whole group typesets one "/" between the preceding numerator and the
+ * following denominator (\vphantom only reserves height, \right. / the null
+ * kern draw nothing), so the group is replaced by `/`. Only the exact shape
+ * \left/ [{] \vphantom{...} [}] \right. \kern - [\null]delimiterspace is
+ * replaced; any other \mathord group is left untouched.
+ */
+function isSlashGroup(inner) {
+	let m = /^\s*\\left\s*\/\s*/.exec(inner);
+	if (!m) return false;
+	let i = m[0].length;
+	let wrapped = false;
+	if (inner[i] === '{') {
+		wrapped = true;
+		i++;
+		i += /^\s*/.exec(inner.slice(i))[0].length;
+	}
+	m = /^\\vphantom\s*(?=\{)/.exec(inner.slice(i));
+	if (!m) return false;
+	i += m[0].length;
+	const close = matchBrace(inner, i);
+	if (close === -1) return false;
+	i = close + 1;
+	if (wrapped) {
+		m = /^\s*\}/.exec(inner.slice(i));
+		if (!m) return false;
+		i += m[0].length;
+	}
+	return /^\s*\\right\s*\.\s*\\kern\s*-\s*(?:\\null)?delimiterspace\s*$/.test(inner.slice(i));
+}
+
+export function fixMathtypeSlash(body) {
+	const re = /\\mathord\s*(?=\{)/g;
+	let res = '';
+	let pos = 0;
+	let m;
+	while ((m = re.exec(body))) {
+		const open = m.index + m[0].length;
+		const close = matchBrace(body, open);
+		if (close === -1) continue;
+		if (!isSlashGroup(body.slice(open + 1, close))) continue;
+		res += body.slice(pos, m.index) + '/';
+		pos = close + 1;
+		re.lastIndex = pos;
+	}
+	if (pos === 0) return null;
+	return res + body.slice(pos);
+}
+
 export const FIXES = [
 	['duplicate-tag', fixDuplicateTag],
 	['stray-delimiter', fixStrayDelimiters],
@@ -358,7 +410,8 @@ export const FIXES = [
 	['glyph-junk', fixGlyphJunk],
 	['font-switch', fixFontSwitch],
 	['macro-arg', fixMacroArgs],
-	['mleftright', fixMleftright]
+	['mleftright', fixMleftright],
+	['mathtype-slash', fixMathtypeSlash]
 ];
 
 /** Code / assembly / pseudo-code mistaken for a formula (report only). */
