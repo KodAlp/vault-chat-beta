@@ -25,6 +25,8 @@ import { indexLibraryFile } from '$lib/server/incrementalIndex';
 import { inflightImportHashes } from '$lib/server/inflight-hashes';
 import { keepOriginalCopy } from '$lib/server/originals';
 import { vaultFromId } from '$lib/server/requestVault';
+import { ocrLangArg } from '$lib/server/ocr-lang';
+import { getLibrarySettings } from '$lib/server/library-read';
 import { sseStream } from '$lib/server/sse';
 import { logAppEvent } from '$lib/server/app-log';
 import { AppError, toCodedError, errorPayload } from '$lib/server/app-error';
@@ -68,6 +70,7 @@ export const POST: RequestHandler = async ({ request }) => {
 	const concurrency = Number.isFinite(concurrencyParsed) ? Math.min(4, Math.max(1, concurrencyParsed)) : 1;
 	const files = formData.getAll('files').filter((f): f is File => f instanceof File);
 	const v = vaultFromId(formData.get('vault') as string | null);
+	const ocrLang = ocrLangArg(formData.get('ocrLang'), getLibrarySettings(v).allowedLanguages);
 	const scanId = formData.get('scanId');
 	const scanRelPath = formData.get('relPath');
 
@@ -187,7 +190,8 @@ export const POST: RequestHandler = async ({ request }) => {
 
 				const result = await enqueueConversion(tempIn, workDir, 'auto', undefined, safeName, undefined, {
 					exclusiveGpu: true,
-					concurrency
+					concurrency,
+					ocrLang
 				});
 				if (!result.outPath) throw new AppError('CONVERSION_EMPTY');
 

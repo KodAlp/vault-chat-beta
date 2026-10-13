@@ -91,6 +91,18 @@
 	// A folder pick names the domain; loose files leave it for the user to type.
 	let domain = $state(initial.folderName);
 	let level = $state('undergraduate');
+	// Per-import OCR language for scanned pages; '' = the vault's own language(s) (server default).
+	// Only languages the bundled OCR model reads (ingest/ocr_lang.py); names come from the browser's locale data.
+	const OCR_LANGS = ['tr', 'en', 'de', 'fr', 'es', 'it', 'pt', 'nl', 'pl', 'zh', 'ja'];
+	let ocrLang = $state('');
+	const ocrLangLabel = (code: string) => {
+		if (!code) return t('ImportFlow.ocrLangVault');
+		try {
+			return new Intl.DisplayNames(undefined, { type: 'language' }).of(code) ?? code;
+		} catch {
+			return code;
+		}
+	};
 	// Level values are stored as English enums; the shown label is translated (ImportFlow.level*).
 	const levelLabel = (v: string) =>
 		v === 'graduate' ? t('ImportFlow.levelGraduate') : v === 'phd' ? t('ImportFlow.levelPhd') : t('ImportFlow.levelUndergraduate');
@@ -174,6 +186,7 @@
 		}
 		fd.append('domain', domain.trim());
 		fd.append('level', level);
+		if (ocrLang) fd.append('ocrLang', ocrLang);
 		fd.append('concurrency', String(concurrency));
 
 		try {
@@ -286,6 +299,18 @@
 				<Select.Item value="undergraduate" label={t('ImportFlow.levelUndergraduate')}>{t('ImportFlow.levelUndergraduate')}</Select.Item>
 				<Select.Item value="graduate" label={t('ImportFlow.levelGraduate')}>{t('ImportFlow.levelGraduate')}</Select.Item>
 				<Select.Item value="phd" label={t('ImportFlow.levelPhd')}>{t('ImportFlow.levelPhd')}</Select.Item>
+			</Select.Content>
+		</Select.Root>
+	</label>
+	<label class="flex flex-col gap-1.5 text-[13px] leading-[18px] font-medium">
+		{t('ImportFlow.ocrLangLabel')}
+		<Select.Root type="single" bind:value={ocrLang}>
+			<Select.Trigger class="w-full">{ocrLangLabel(ocrLang)}</Select.Trigger>
+			<Select.Content>
+				<Select.Item value="" label={t('ImportFlow.ocrLangVault')}>{t('ImportFlow.ocrLangVault')}</Select.Item>
+				{#each OCR_LANGS as code (code)}
+					<Select.Item value={code} label={ocrLangLabel(code)}>{ocrLangLabel(code)}</Select.Item>
+				{/each}
 			</Select.Content>
 		</Select.Root>
 	</label>

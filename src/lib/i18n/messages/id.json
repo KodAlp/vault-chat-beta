@@ -403,6 +403,8 @@
     "domainLabel": "Bidang",
     "domainPlaceholder": "mis. matematika",
     "levelLabel": "Tingkat",
+    "ocrLangLabel": "Bahasa pindaian (OCR)",
+    "ocrLangVault": "Bahasa vault",
     "levelUndergraduate": "Sarjana",
     "levelGraduate": "Pascasarjana",
     "levelPhd": "Doktor",

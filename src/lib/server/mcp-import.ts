@@ -3,6 +3,8 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { enqueueConversion } from './convertQueue';
 import { stagingDir, importLogPath, loadImportedSourceHashes } from './library';
+import { ocrLangArg } from './ocr-lang';
+import { getLibrarySettings } from './library-read';
 import { keepOriginalCopy } from './originals';
 import { discardStagedNote } from './converted-image-cleanup';
 import { AppError, errorPayload, fail } from './app-error';
@@ -73,7 +75,9 @@ export async function stageLocalFile(
 		// E5: content-addressed duplicate check — a warning, not a block (the user decides at confirm time).
 		const alreadyImportedHash = loadImportedSourceHashes(importLogPath(v)).has(await sha256OfFile(tempIn));
 
-		const result = await enqueueConversion(tempIn, workDir, 'auto', onEvent, file.name);
+		const result = await enqueueConversion(tempIn, workDir, 'auto', onEvent, file.name, undefined, {
+			ocrLang: ocrLangArg(undefined, getLibrarySettings(v).allowedLanguages)
+		});
 		if (!result.outPath) throw new AppError('CONVERSION_EMPTY');
 
 		const stagedMdPath = path.join(stagingDir(v), `${importId}.md`);

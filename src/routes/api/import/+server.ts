@@ -14,6 +14,8 @@ import {
 } from '$lib/server/library';
 import { keepOriginalCopy } from '$lib/server/originals';
 import { vaultFromId } from '$lib/server/requestVault';
+import { ocrLangArg } from '$lib/server/ocr-lang';
+import { getLibrarySettings } from '$lib/server/library-read';
 import { importConvertedImages, libraryRelPath } from '$lib/server/converted-images';
 import { sseStream } from '$lib/server/sse';
 import { logAppEvent } from '$lib/server/app-log';
@@ -97,7 +99,9 @@ export const POST: RequestHandler = async ({ request }) => {
 						});
 					}
 				},
-				safeName
+				safeName,
+				undefined,
+				{ ocrLang: ocrLangArg(formData.get('ocrLang'), getLibrarySettings(v).allowedLanguages) }
 			);
 
 			if (!result.outPath) throw new AppError('CONVERSION_EMPTY');

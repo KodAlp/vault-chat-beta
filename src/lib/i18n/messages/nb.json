@@ -412,6 +412,8 @@
 		"domainLabel": "Fagområde",
 		"domainPlaceholder": "f.eks. matte",
 		"levelLabel": "Nivå",
+		"ocrLangLabel": "Skannespråk (OCR)",
+		"ocrLangVault": "Hvelvets språk",
 		"levelUndergraduate": "Bachelor",
 		"levelGraduate": "Master",
 		"levelPhd": "Doktorgrad",

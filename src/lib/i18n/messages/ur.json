@@ -403,6 +403,8 @@
     "domainLabel": "شعبہ",
     "domainPlaceholder": "مثلاً ریاضی",
     "levelLabel": "سطح",
+    "ocrLangLabel": "اسکین کی زبان (OCR)",
+    "ocrLangVault": "والٹ کی زبان",
     "levelUndergraduate": "انڈرگریجویٹ",
     "levelGraduate": "گریجویٹ",
     "levelPhd": "پی ایچ ڈی",

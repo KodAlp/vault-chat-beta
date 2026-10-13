@@ -460,6 +460,8 @@
     "domainLabel": "المجال",
     "domainPlaceholder": "مثال: رياضيات",
     "levelLabel": "المستوى",
+    "ocrLangLabel": "لغة المسح الضوئي (OCR)",
+    "ocrLangVault": "لغة المستودع",
     "levelUndergraduate": "المرحلة الجامعية الأولى",
     "levelGraduate": "الدراسات العليا",
     "levelPhd": "الدكتوراه",

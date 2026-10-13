@@ -403,6 +403,8 @@
     "domainLabel": "领域",
     "domainPlaceholder": "例如：数学",
     "levelLabel": "级别",
+    "ocrLangLabel": "扫描语言 (OCR)",
+    "ocrLangVault": "库语言",
     "levelUndergraduate": "本科",
     "levelGraduate": "研究生",
     "levelPhd": "博士",

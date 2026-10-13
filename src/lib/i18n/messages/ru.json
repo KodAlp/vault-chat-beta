@@ -445,6 +445,8 @@
     "domainLabel": "Тема",
     "domainPlaceholder": "например, математика",
     "levelLabel": "Уровень",
+    "ocrLangLabel": "Язык скана (OCR)",
+    "ocrLangVault": "Язык хранилища",
     "levelUndergraduate": "Бакалавриат",
     "levelGraduate": "Магистратура",
     "levelPhd": "Докторантура",

@@ -5,6 +5,8 @@ import matter from 'gray-matter';
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { enqueueConversion } from '$lib/server/convertQueue';
+import { ocrLangArg } from '$lib/server/ocr-lang';
+import { getLibrarySettings } from '$lib/server/library-read';
 import { stagingDir, readLibraryFile, safeBasename, ALLOWED_EXTENSIONS, CODE_EXTENSIONS } from '$lib/server/library';
 import { originalPathForSourceSha } from '$lib/server/originals';
 import { importConvertedImages } from '$lib/server/converted-images';
@@ -91,7 +93,9 @@ export const POST: RequestHandler = async ({ request }) => {
 						send({ type: 'progress', stage: event.stage, pageCount: event.pageCount, estimatedSeconds: event.estimatedSeconds });
 					}
 				},
-				name
+				name,
+				undefined,
+				{ ocrLang: ocrLangArg(undefined, getLibrarySettings(v).allowedLanguages) }
 			);
 			if (!result.outPath) throw new AppError('CONVERSION_EMPTY');
 

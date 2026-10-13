@@ -403,6 +403,8 @@
     "domainLabel": "বিষয়ক্ষেত্র",
     "domainPlaceholder": "যেমন: গণিত",
     "levelLabel": "স্তর",
+    "ocrLangLabel": "স্ক্যানের ভাষা (OCR)",
+    "ocrLangVault": "ভল্টের ভাষা",
     "levelUndergraduate": "স্নাতক",
     "levelGraduate": "স্নাতকোত্তর",
     "levelPhd": "পিএইচডি",

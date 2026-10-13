@@ -428,6 +428,8 @@
 		"domainLabel": "Domain",
 		"domainPlaceholder": "e.g. math",
 		"levelLabel": "Level",
+		"ocrLangLabel": "Scan language (OCR)",
+		"ocrLangVault": "Vault language",
 		"levelUndergraduate": "Undergraduate",
 		"levelGraduate": "Graduate",
 		"levelPhd": "PhD",

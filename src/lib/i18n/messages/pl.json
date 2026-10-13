@@ -409,6 +409,8 @@
 		"domainLabel": "Dziedzina",
 		"domainPlaceholder": "np. matematyka",
 		"levelLabel": "Poziom",
+		"ocrLangLabel": "Język skanu (OCR)",
+		"ocrLangVault": "Język skarbca",
 		"levelUndergraduate": "Studia licencjackie",
 		"levelGraduate": "Studia magisterskie",
 		"levelPhd": "Doktorat",

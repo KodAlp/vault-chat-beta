@@ -413,6 +413,8 @@
 		"domainLabel": "Ambito",
 		"domainPlaceholder": "es. matematica",
 		"levelLabel": "Livello",
+		"ocrLangLabel": "Lingua della scansione (OCR)",
+		"ocrLangVault": "Lingua del vault",
 		"levelUndergraduate": "Laurea triennale",
 		"levelGraduate": "Laurea magistrale",
 		"levelPhd": "Dottorato",
