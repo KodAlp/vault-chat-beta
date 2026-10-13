@@ -2,7 +2,7 @@
 
 Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncellenir.
 
-**Son güncelleme:** 2026-10-13 · Acil 5. tur: #8, #41, #62 bitti; #4 ölçüldü
+**Son güncelleme:** 2026-10-13 · #4 (∝) ve #8 devamı araştırıldı; ∝ onarımı onaylandı, #8 devamı kullanıcıyla netleşecek
 
 ## Kurallar
 
@@ -44,6 +44,7 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 - [ ] **Formül yoğun klasörlerin hızı.** Sayfa başına 15–25 sn; 200+ saatlik klasörler. `B` · #82
 
 ### 6. İçe aktarmada sessiz bozulma
+- [ ] **Taranmış Türkçe + kod sayfaları (#8 devamı).** Kullanıcı (2026-10-13): "hem Türkçe hem kod içeren kaynaklar çöp olur, bu doğru değil" — şimdiki çözüm (Türkçe taramada CodeFormula kapalı, kod tek satır) kabul edilmedi; oturum başında kullanıcıyla netleştir. Araştırma önerisi (B): taranmış sayfalarda CodeFormula'yı atla, kod bloğunu docling OCR hücrelerinden kur (satır = y sırası, girinti = x / karakter genişliği), el yazısı notlar ayrı paragraf; ölçüm fonk1 s.1 %74→%95 doğruluk, 49/51 girinti; ~5x hızlı. Ek: RapidOCR `use_cls=False` (uzun satırları ters çeviriyordu). Sınır: OCR `ı`→`i`. Plan: yeni ingest/code_layout.py (~150 satır), convert.py'de generate_parsed_pages + rebuild_code_items, testler. Ayrıntı: docs/dev/arastirma-2026-10-13-propto-ve-taranmis-kod.md. `O` · #8
 
 ### 7. MCP araçları ve belgeleri
 - [ ] **Yerel modellerle MCP deneyi.** Qwen3 8B/4B, LM Studio. `O` · #39 (çekildi)
@@ -51,7 +52,7 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 ### 8. Formül doğruluğu
 - [ ] **MinerU KaTeX: elle bakılacak formüller.** Mekanik olanlar bitti (2026-10-13, 367 formül). Kalan: ~73 formül sanılmış kod (kod bloğuna çevir), 14 anlamı belirsiz makro, 7 bozuk MathType kesri, ~15 çift üst/alt simge, dengesiz \left/\right; 19 kesik \quad döngüsü #3 ile. `O` · #5 (çekildi)
 - [ ] **Fizik'te kalan 48 geçersiz formülü yeniden içe aktar.** Mekanik düzeltilemez (dengesiz left/right, formüle karışmış düzyazı, kesik formül; 2026-10-13 ölçümü); 11 notu 0.3.0 ile (MinerU + görsel yedeği) yeniden içe aktar. `O` · #2
-- [ ] **∝ hâlâ yanlış okunuyor (54 formül).** ♯ düzeldi (~21'de 20); ∝ yerine 54 formülde `\, \infty \,` (en çok kozmoloji 24). Neden: MinerU yedeği "all" modunda bile formüllerin bir kısmına uygulanmış. Seçenek: (a) `\, \infty \,` → `\propto` dönüşümü + yanlış pozitif denetimi, (b) #3 ile yalnız bu formülleri yeniden oku. Ölçüm: scratchpad olcum4. `O` · #4
+- [ ] **∝ onarımı: kural + mevcut notlar + Likharev sembolleri (ONAYLANDI 2026-10-13).** Araştırma: Fizik o gece "auto" ile dönüştürülmüş ("all" değil); yanlış ∝'ler geçerli LaTeX olduğu için MinerU'ya gitmemiş. Yapılacak: (1) `ingest/postprocess.py` fix_latex_artifacts'e kural: iki terim arasındaki `\infty` → `\propto` (beyaz liste komşular; alt/üst simge, `\to`, `=`, `\pm`, `-`, `(`, `[`, `,` sonrası ve `\infty \text{-` hariç) + iki yanı boşluklu `\, \alpha \,`; ölçüm: 71 aday, 70 doğru, 1.792 diğer `\infty`'ye dokunmuyor. (2) İsteğe bağlı: formula_fallback.flag_reason'a `propto_suspect` (MinerU 14/14 doğru okudu). (3) Mevcut 18 Fizik notuna bir kerelik onarım: kural.mjs deseni (writeLibraryFile, revizyon, yedek), önce `--dry` ve kullanıcıya fark. (4) Likharev Symbol yazı tipi özel kodları (U+F0B5→∝, U+F0A5→∞, U+F066→φ …; not başına ~5000 karakter) için eşleme tablosu — aynı işte düzelt. Elle: 7 `\circ c`, 1 `\underset`. Ayrıntı: docs/dev/arastirma-2026-10-13-propto-ve-taranmis-kod.md. `O` · #4
 - [ ] **"Yalnız hatalı formülü onar".** Sayfa + kutu; belgenin tamamını yeniden okumadan. `B` · #3
 
 ### 9. MCP paketleme ve kurulum
@@ -93,8 +94,6 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 
 ## Öneriler
 
-- [ ] **Taranmış kod sayfalarında takas kararı.** #8 ile Türkçe taramada kod tanıma kapalı: Türkçe karakter doğru ama kodun satır sonu/girintisi kayboluyor. Bu mu, eski hal mi? `K`
-- [ ] **MinerU "all" modu neden tüm formüllere uygulanmıyor?** #4 ölçümünde kozmolojide formüllerin ~%11'i MinerU izi taşıyor; seçim kuralını incele. `O`
 - [ ] **#61 ve #40'ı uygulamada dene.** Yedek kartı (klasör seçici, ilerleme) ve edit_note anahtarı tarayıcıda denenmedi. `K`
 - [ ] **#87'yi paketli sürümde doğrula.** `launchers.json`'dan ollama kaydını sil, uygulamayı aç: `launch.log`'da "starting it for this session" görünmeli; açılış anında MCP `search_library` 30 sn içinde yanıt vermeli. `K`
 - [ ] **#31'i gerçek bir modelle doğrula.** Kalibrasyon yalnız sentetik vektörlerle sınandı; nomic/qwen3 embedding ile 2016 negatiflik setinde yanlış pozitif ölç. `O`
