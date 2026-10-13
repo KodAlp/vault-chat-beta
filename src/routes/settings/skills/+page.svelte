@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import type { UserSkillStatus, UserSkillScope } from '$lib/types';
 	import { MAX_SKILL_FILE_CHARS } from '$lib/skill-limits';
-	import { Button } from '$lib/components/ui/button';
+	import { Button, buttonVariants } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Textarea } from '$lib/components/ui/textarea';
 	import { Badge } from '$lib/components/ui/badge';
@@ -254,7 +254,11 @@ ${t('SkillsSettingsPage.templateBody')}
 	<div class="mb-5 flex flex-wrap items-center justify-between gap-3">
 		<div class="flex flex-wrap items-center gap-1.5">
 			<Button onclick={openNewEditor}>{t('SkillsSettingsPage.newSkill')}</Button>
-			<Button variant="outline" disabled={zipUploading} class="relative overflow-hidden">
+			<!-- A <label> styled as a button, not <Button><input/></Button>: a file input inside a button is
+			     nested-interactive for assistive tech. The label gives the input its accessible name. -->
+			<label
+				class={buttonVariants({ variant: 'outline' }) + ' relative cursor-pointer overflow-hidden focus-within:ring-[3px] focus-within:ring-ring/50' + (zipUploading ? ' pointer-events-none opacity-50' : '')}
+			>
 				{zipUploading ? t('Common.yukleniyor') : t('SkillsSettingsPage.uploadZip')}
 				<input
 					type="file"
@@ -263,7 +267,7 @@ ${t('SkillsSettingsPage.templateBody')}
 					onchange={handleZipUpload}
 					class="absolute inset-0 cursor-pointer opacity-0 disabled:cursor-not-allowed"
 				/>
-			</Button>
+			</label>
 		</div>
 		<div class="flex gap-1.5">
 			<Select.Root type="single" bind:value={previewScope}>
@@ -297,7 +301,7 @@ ${t('SkillsSettingsPage.templateBody')}
 								<Badge variant="destructive" title={localizeError({ code: skill.parseError, message: skill.parseError })}>{t('SkillsSettingsPage.errorBadge')}</Badge>
 							{/if}
 							{#if skill.truncated}
-								<Badge class="bg-amber-500/20 text-amber-700 dark:text-amber-400">{t('SkillsSettingsPage.truncatedBadge')}</Badge>
+								<Badge class="bg-amber-500/20 text-amber-800 dark:text-amber-400">{t('SkillsSettingsPage.truncatedBadge')}</Badge>
 							{/if}
 						</div>
 						<p class="mt-1 mb-2 text-sm text-muted-foreground">{skill.description ?? skill.relPath}</p>

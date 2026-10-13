@@ -84,6 +84,7 @@
 		{#if renaming}
 			<input
 				class="rename-input"
+				aria-label={t('LibraryTreeNode.rename')}
 				bind:value={newName}
 				onclick={(e) => e.stopPropagation()}
 				onkeydown={(e) => {

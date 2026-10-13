@@ -199,6 +199,10 @@
 	{/if}
 {/snippet}
 
+<svelte:head>
+	<title>{t('ProgressPage.title')} — Vault Chat</title>
+</svelte:head>
+
 <div class="progress-screen">
 	<a class="home-link" href={backHref}><ArrowLeftIcon class="rtl-flip" size={16} strokeWidth={1.75} aria-hidden="true" /> {t('ProgressPage.back')}</a>
 	<h1>{t('ProgressPage.title')}</h1>
