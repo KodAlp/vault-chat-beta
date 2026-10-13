@@ -438,6 +438,8 @@
 		"domainLabel": "Område",
 		"domainPlaceholder": "t.ex. matematik",
 		"levelLabel": "Nivå",
+		"ocrLangLabel": "Skanningsspråk (OCR)",
+		"ocrLangVault": "Valvets språk",
 		"levelUndergraduate": "Kandidat",
 		"levelGraduate": "Master",
 		"levelPhd": "Doktor",

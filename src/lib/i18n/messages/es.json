@@ -415,6 +415,8 @@
     "domainLabel": "Dominio",
     "domainPlaceholder": "p. ej., matemáticas",
     "levelLabel": "Nivel",
+    "ocrLangLabel": "Idioma del escaneo (OCR)",
+    "ocrLangVault": "Idioma de la bóveda",
     "levelUndergraduate": "Grado",
     "levelGraduate": "Posgrado",
     "levelPhd": "Doctorado",

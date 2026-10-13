@@ -411,6 +411,8 @@
     "domainLabel": "Fachgebiet",
     "domainPlaceholder": "z. B. Mathe",
     "levelLabel": "Niveau",
+    "ocrLangLabel": "Scansprache (OCR)",
+    "ocrLangVault": "Tresorsprache",
     "levelUndergraduate": "Bachelor",
     "levelGraduate": "Master",
     "levelPhd": "Promotion",

@@ -88,6 +88,7 @@ import formula_early_stop
 import formula_fallback
 import images
 import glyph_check
+import ocr_lang
 import ocr_math_check
 import pdf_tounicode
 from column_order import repair_document_order
@@ -772,6 +773,9 @@ _HYBRID_BACKEND_USED: list[bool] = [False]
 # True when the most recent convert_with_docling call ran with OCR enabled;
 # decides which textless-page warning main() shows. Same pattern as above.
 _OCR_RAN: list[bool] = [False]
+# OCR language plan (ocr_lang.OcrPlan) of the current run, resolved in main()
+# from --ocr-lang / VC_OCR_LANG; None = engine default. Same pattern as above.
+_OCR_PLAN: list["ocr_lang.OcrPlan | None"] = [None]
 # formula_early_stop sayaçları (son docling dönüşümü); done olayına "formulaEarlyStop" olarak girer.
 _FORMULA_STATS: list[dict | None] = [None]
 # formula_crop sayaçları (son docling dönüşümü); done olayına "formulaCrop" olarak girer.
@@ -796,6 +800,7 @@ def reset_run_state() -> None:
     _DOCLING_ERRORS.clear()
     _HYBRID_BACKEND_USED[0] = False
     _OCR_RAN[0] = False
+    _OCR_PLAN[0] = None
     _FORMULA_STATS[0] = None
     _FORMULA_FALLBACK_STATS[0] = None
     formula_fallback.reset_images()
@@ -810,10 +815,11 @@ def reset_run_state() -> None:
 _REUSE_CONVERTER: list[bool] = [False]
 # At most ONE entry: a second converter (e.g. hybrid backend after a default
 # one) would hold a second copy of the models in a 6 GB card, so a different
-# key evicts the old converter first. Key = (hybrid backend, images enabled):
+# key evicts the old converter first. Key = (hybrid backend, images enabled, OCR lang):
 # those are the only inputs that change the pipeline options (see
-# convert_with_docling); OCR is toggled on the model, not part of the key.
-_CONVERTER_CACHE: dict[tuple[bool, bool], object] = {}
+# convert_with_docling) plus the OCR recognizer code (see ocr_lang); OCR
+# on/off is toggled on the model, not part of the key.
+_CONVERTER_CACHE: dict[tuple[bool, bool, str | None], object] = {}
 
 
 def _release_cached_converters() -> None:
@@ -830,7 +836,7 @@ def _release_cached_converters() -> None:
         pass
 
 
-def _shared_converter(key: tuple[bool, bool], build: Callable[[], object]):
+def _shared_converter(key: tuple[bool, bool, str | None], build: Callable[[], object]):
     """Return (converter, ocr_model) for `key`, building and caching it on a
     miss. ocr_model is the pipeline's OCR model whose `.enabled` flag is the
     per-document/segment toggle (see _convert_ocr_segments). Returns None when
@@ -855,6 +861,12 @@ def _shared_converter(key: tuple[bool, bool], build: Callable[[], object]):
     _CONVERTER_CACHE[key] = (conv, ocr_model)
     return conv, ocr_model
 
+
+# Appended when OCR ran for a non-ASCII language and the note has a code fence.
+OCR_CODE_NOTE = (
+    "Taranmış sayfalardaki kod blokları kod tanıma olmadan okundu (kod tanıma Türkçe vb. karakterleri bozuyor); "
+    "satır başları ve girinti kaybolmuş olabilir."
+)
 
 PDF_BACKENDS = ("default", "hybrid")
 HYBRID_BACKEND_WARNING = (
@@ -899,6 +911,36 @@ def ocr_segments(page_range: tuple[int, int], textless: set[int] | list[int]) ->
     return out
 
 
+def _code_formula_model(conv):
+    """The pipeline's CodeFormula enrichment model (None when docling's
+    internals differ). Its `options.extract_code` can be flipped per run."""
+    try:
+        from docling.datamodel.base_models import InputFormat
+
+        for model in conv._get_pipeline(InputFormat.PDF).enrichment_pipe:
+            opts = getattr(model, "options", None)
+            if opts is not None and isinstance(getattr(opts, "extract_code", None), bool):
+                return model
+    except Exception:  # noqa: BLE001 — quality tweak only
+        pass
+    return None
+
+
+def _set_code_extraction(conv, on: bool) -> None:
+    """Turn CodeFormula's CODE recognition on/off for the next conversion
+    (formula recognition is untouched).
+
+    Why off for OCR'd pages (#8, measured 2026-10-13 on fonk1-NOTLU.pdf, a
+    scanned Turkish Python lesson): RapidOCR PP-OCRv6 reads "Geri döndürülen
+    parçaları" correctly, then CodeFormulaV2 re-reads the code-labelled region
+    from pixels and overwrites it with "d&ndurilen pargalari" — it was never
+    trained on Turkish diacritics. Born-digital code keeps CodeFormula (its
+    text comes from the PDF layer, and the model fixes indentation)."""
+    model = _code_formula_model(conv)
+    if model is not None:
+        model.options.extract_code = on
+
+
 def _convert_ocr_segments(conv, path: Path, segments: list[tuple[int, int, bool]]):
     """Convert each (start, end, ocr) segment on the SAME DocumentConverter,
     toggling the pipeline's OCR model between them, and concatenate the
@@ -919,12 +961,16 @@ def _convert_ocr_segments(conv, path: Path, segments: list[tuple[int, int, bool]
         print(f"ocr: sayfa bazlı OCR kullanılamadı, tüm belge OCR'lanıyor: {err}", file=sys.stderr)
         return None
     results = []
+    plan = _OCR_PLAN[0]
+    keep_chars = plan is not None and plan.has_diacritics
     try:
         for start, end, ocr in segments:
             ocr_model.enabled = ocr
+            _set_code_extraction(conv, not (ocr and keep_chars))
             results.append(conv.convert(str(path), page_range=(start, end)))
     finally:
         ocr_model.enabled = True
+        _set_code_extraction(conv, True)
     try:
         document = concatenate([r.document for r in results])
     except Exception as err:  # noqa: BLE001 — optimization only
@@ -1032,6 +1078,15 @@ def convert_with_docling(
     # pipeline. The CLI keeps building exactly the pipeline it needs.
     options.do_ocr = True if _REUSE_CONVERTER[0] else want_ocr
     _OCR_RAN[0] = want_ocr
+    plan = _OCR_PLAN[0]
+    ocr_code = plan.lang if plan is not None else None
+    keep_chars = plan is not None and plan.has_diacritics
+    if ocr_code:
+        # Explicit recognizer (ocr_lang.resolve only returns codes the INSTALLED
+        # models serve, so this never triggers a model download).
+        from docling.datamodel.pipeline_options import RapidOcrOptions
+
+        options.ocr_options = RapidOcrOptions(lang=[ocr_code])
     options.do_formula_enrichment = True
     options.do_code_enrichment = True
     options.accelerator_options = AcceleratorOptions(device=AcceleratorDevice.AUTO)
@@ -1058,7 +1113,7 @@ def convert_with_docling(
         ocr_model = None
         conv = None
         if _REUSE_CONVERTER[0]:
-            shared = _shared_converter((use_hybrid, images.COLLECTOR.enabled), build)
+            shared = _shared_converter((use_hybrid, images.COLLECTOR.enabled, ocr_code), build)
             if shared is not None:
                 conv, ocr_model = shared
             else:
@@ -1076,10 +1131,12 @@ def convert_with_docling(
         try:
             if ocr_model is not None:
                 ocr_model.enabled = want_ocr
+            _set_code_extraction(conv, not (want_ocr and keep_chars))
             result = conv.convert(str(path), **convert_kwargs)
         finally:
             if ocr_model is not None:
                 ocr_model.enabled = True
+            _set_code_extraction(conv, True)
         return [result], result.document, want_ocr
 
     def run(use_hybrid: bool):
@@ -1508,12 +1565,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--pdf-backend", dest="pdf_backend", default="default", choices=list(PDF_BACKENDS))
     # See the module docstring's Images section.
     parser.add_argument("--no-images", dest="images", action="store_false")
+    # OCR language(s) for scanned pages, e.g. "tr,en" or "Türkçe, English" (names
+    # or codes; see ocr_lang.py). Default: $VC_OCR_LANG, else the engine default.
+    parser.add_argument("--ocr-lang", dest="ocr_lang", default=os.environ.get("VC_OCR_LANG") or None)
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     reset_run_state()
+    _OCR_PLAN[0] = ocr_lang.resolve(args.ocr_lang)
     images.COLLECTOR.reset(enabled=args.images and not args.dry_run)
 
     in_path = Path(args.in_path)
@@ -1641,6 +1702,10 @@ def main(argv: list[str] | None = None) -> int:
     textless_note = textless_warning(converted_by, textless, _OCR_RAN[0])
     if textless_note:
         warnings.append(textless_note)
+    if converted_by == "docling" and _OCR_RAN[0] and _OCR_PLAN[0] is not None:
+        warnings.extend(_OCR_PLAN[0].warnings)
+        if _OCR_PLAN[0].has_diacritics and "```" in final_text:
+            warnings.append(OCR_CODE_NOTE)
     if is_pdf and converted_by == "docling":
         glyph_note = glyph_check.check(text, work_path)
         if glyph_note:

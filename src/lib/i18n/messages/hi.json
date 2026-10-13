@@ -403,6 +403,8 @@
     "domainLabel": "विषय-क्षेत्र",
     "domainPlaceholder": "जैसे: गणित",
     "levelLabel": "स्तर",
+    "ocrLangLabel": "स्कैन की भाषा (OCR)",
+    "ocrLangVault": "वॉल्ट की भाषा",
     "levelUndergraduate": "स्नातक",
     "levelGraduate": "स्नातकोत्तर",
     "levelPhd": "पीएचडी",

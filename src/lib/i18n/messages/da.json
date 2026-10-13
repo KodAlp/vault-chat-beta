@@ -416,6 +416,8 @@
 		"domainLabel": "Emne",
 		"domainPlaceholder": "fx matematik",
 		"levelLabel": "Niveau",
+		"ocrLangLabel": "Scanningssprog (OCR)",
+		"ocrLangVault": "Boksens sprog",
 		"levelUndergraduate": "Bachelor",
 		"levelGraduate": "Kandidat",
 		"levelPhd": "Ph.d.",

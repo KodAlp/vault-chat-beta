@@ -403,6 +403,8 @@
     "domainLabel": "分野",
     "domainPlaceholder": "例：数学",
     "levelLabel": "レベル",
+    "ocrLangLabel": "スキャンの言語 (OCR)",
+    "ocrLangVault": "保管庫の言語",
     "levelUndergraduate": "学部",
     "levelGraduate": "大学院",
     "levelPhd": "博士",

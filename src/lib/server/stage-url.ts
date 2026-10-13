@@ -20,6 +20,8 @@ import { importConvertedImages, libraryRelPath } from './converted-images';
 import { keepOriginalCopy } from './originals';
 import { AppError } from './app-error';
 import type { VaultContext } from './vaults';
+import { ocrLangArg } from './ocr-lang';
+import { getLibrarySettings } from './library-read';
 
 /**
  * The one copy of the "URL -> staged Markdown" pipeline, shared by the
@@ -81,7 +83,9 @@ export async function stageUrl(
 		fs.writeFileSync(tempIn, bytes);
 
 		const result = isPdf
-			? await enqueueConversion(tempIn, workDir, 'auto', onEvent, sourceNameFromUrl(url))
+			? await enqueueConversion(tempIn, workDir, 'auto', onEvent, sourceNameFromUrl(url), undefined, {
+					ocrLang: ocrLangArg(undefined, getLibrarySettings(v).allowedLanguages)
+				})
 			: await enqueueWebExtract(tempIn, url.href, workDir);
 		if (!result.outPath) throw new AppError('CONVERSION_EMPTY');
 

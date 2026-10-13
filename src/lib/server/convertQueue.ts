@@ -112,7 +112,8 @@ function runConvert(
 	tool: string,
 	onEvent?: (event: ConvertEvent) => void,
 	sourceName?: string,
-	pages?: string
+	pages?: string,
+	ocrLang?: string
 ): Promise<ConvertEvent & { type: 'done' }> {
 	return runWithCrashRetry(
 		(attemptNumber) =>
@@ -123,7 +124,8 @@ function runConvert(
 				onEvent,
 				sourceName,
 				pages,
-				attemptNumber === 1 ? 'hybrid' : undefined
+				attemptNumber === 1 ? 'hybrid' : undefined,
+				ocrLang
 			),
 		(crashDetail) => {
 			// Keep the diagnosis: the user only ever sees the retry notice.
@@ -134,13 +136,14 @@ function runConvert(
 }
 
 /** CLI arguments of one convert.py run (without the script path). */
-function buildConvertArgs(
+export function buildConvertArgs(
 	inPath: string,
 	outDir: string,
 	tool: string,
 	sourceName?: string,
 	pages?: string,
-	pdfBackend?: 'hybrid'
+	pdfBackend?: 'hybrid',
+	ocrLang?: string
 ): string[] {
 	const args = ['--in', inPath, '--out-dir', outDir, '--tool', tool];
 	// The real filename (E5/K2-5) — every caller stages the input under a
@@ -154,6 +157,9 @@ function buildConvertArgs(
 	// Fallback PDF reader, only for the retry after a native crash — see
 	// convert.py's module docstring (--pdf-backend).
 	if (pdfBackend) args.push('--pdf-backend', pdfBackend);
+	// OCR language(s) for scanned pages: the vault's language or a per-import
+	// choice (ocr-lang.ts); convert.py maps names/codes and warns when unsupported.
+	if (ocrLang) args.push('--ocr-lang', ocrLang);
 	return args;
 }
 
@@ -172,12 +178,16 @@ function runConvertAttempt(
 	onEvent?: (event: ConvertEvent) => void,
 	sourceName?: string,
 	pages?: string,
-	pdfBackend?: 'hybrid'
+	pdfBackend?: 'hybrid',
+	ocrLang?: string
 ): Promise<AttemptOutcome<ConvertEvent & { type: 'done' }>> {
 	if (!convertWorkerEnabled()) {
-		return runConvertAttemptSpawn(inPath, outDir, tool, onEvent, sourceName, pages, pdfBackend);
+		return runConvertAttemptSpawn(inPath, outDir, tool, onEvent, sourceName, pages, pdfBackend, ocrLang);
 	}
-	return getConvertWorker().run(buildConvertArgs(inPath, outDir, tool, sourceName, pages, pdfBackend), onEvent);
+	return getConvertWorker().run(
+		buildConvertArgs(inPath, outDir, tool, sourceName, pages, pdfBackend, ocrLang),
+		onEvent
+	);
 }
 
 /** One spawn of convert.py per file (VC_CONVERT_WORKER=0), classified into done / error / native crash. */
@@ -188,11 +198,12 @@ function runConvertAttemptSpawn(
 	onEvent?: (event: ConvertEvent) => void,
 	sourceName?: string,
 	pages?: string,
-	pdfBackend?: 'hybrid'
+	pdfBackend?: 'hybrid',
+	ocrLang?: string
 ): Promise<AttemptOutcome<ConvertEvent & { type: 'done' }>> {
 	return new Promise((resolve, reject) => {
 		const bin = pythonBin();
-		const args = [CONVERT_PY, ...buildConvertArgs(inPath, outDir, tool, sourceName, pages, pdfBackend)];
+		const args = [CONVERT_PY, ...buildConvertArgs(inPath, outDir, tool, sourceName, pages, pdfBackend, ocrLang)];
 		// convert.py's convert_with_pandoc/pandoc_not_installed_message check
 		// PANDOC_BIN before falling back to a bare 'pandoc' PATH lookup — same
 		// stale-server-PATH bug as pythonBin() above, see pandoc-bin.ts's doc
@@ -323,10 +334,10 @@ export function enqueueConversion(
 	onEvent?: (event: ConvertEvent) => void,
 	sourceName?: string,
 	pages?: string,
-	opts: { exclusiveGpu?: boolean; concurrency?: number } = {}
+	opts: { exclusiveGpu?: boolean; concurrency?: number; ocrLang?: string } = {}
 ): Promise<ConvertEvent & { type: 'done' }> {
 	return sharedJobMutex.runShared(async () => {
 		if (opts.exclusiveGpu) await evictForExclusiveJob();
-		return runConvert(inPath, outDir, tool, onEvent, sourceName, pages);
+		return runConvert(inPath, outDir, tool, onEvent, sourceName, pages, opts.ocrLang);
 	}, opts.concurrency ?? 1);
 }

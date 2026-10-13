@@ -409,6 +409,8 @@
 		"domainLabel": "Vakgebied",
 		"domainPlaceholder": "bijv. wiskunde",
 		"levelLabel": "Niveau",
+		"ocrLangLabel": "Scantaal (OCR)",
+		"ocrLangVault": "Taal van de kluis",
 		"levelUndergraduate": "Bachelor",
 		"levelGraduate": "Master",
 		"levelPhd": "Promotie",

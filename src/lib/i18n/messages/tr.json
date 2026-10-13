@@ -428,6 +428,8 @@
 		"domainLabel": "Domain",
 		"domainPlaceholder": "örn. math",
 		"levelLabel": "Seviye",
+		"ocrLangLabel": "Tarama dili (OCR)",
+		"ocrLangVault": "Kasa dili",
 		"levelUndergraduate": "Lisans",
 		"levelGraduate": "Yüksek lisans",
 		"levelPhd": "Doktora",

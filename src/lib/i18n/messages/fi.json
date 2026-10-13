@@ -413,6 +413,8 @@
 		"domainLabel": "Aihepiiri",
 		"domainPlaceholder": "esim. matematiikka",
 		"levelLabel": "Taso",
+		"ocrLangLabel": "Skannauksen kieli (OCR)",
+		"ocrLangVault": "Holvin kieli",
 		"levelUndergraduate": "Kandidaatti",
 		"levelGraduate": "Maisteri",
 		"levelPhd": "Tohtori",

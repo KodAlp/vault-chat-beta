@@ -413,6 +413,8 @@
     "domainLabel": "Domaine",
     "domainPlaceholder": "ex. maths",
     "levelLabel": "Niveau",
+    "ocrLangLabel": "Langue du scan (OCR)",
+    "ocrLangVault": "Langue du coffre",
     "levelUndergraduate": "Licence",
     "levelGraduate": "Master",
     "levelPhd": "Doctorat",

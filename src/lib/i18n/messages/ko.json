@@ -403,6 +403,8 @@
 		"domainLabel": "분야",
 		"domainPlaceholder": "예: 수학",
 		"levelLabel": "수준",
+		"ocrLangLabel": "스캔 언어 (OCR)",
+		"ocrLangVault": "보관함 언어",
 		"levelUndergraduate": "학부",
 		"levelGraduate": "대학원",
 		"levelPhd": "박사",

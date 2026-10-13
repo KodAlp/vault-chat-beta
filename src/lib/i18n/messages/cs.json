@@ -412,6 +412,8 @@
 		"domainLabel": "Oblast",
 		"domainPlaceholder": "např. matematika",
 		"levelLabel": "Úroveň",
+		"ocrLangLabel": "Jazyk skenu (OCR)",
+		"ocrLangVault": "Jazyk trezoru",
 		"levelUndergraduate": "Bakalářské",
 		"levelGraduate": "Magisterské",
 		"levelPhd": "Doktorské",
