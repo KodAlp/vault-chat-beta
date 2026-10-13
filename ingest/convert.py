@@ -87,6 +87,8 @@ import formula_crop
 import formula_early_stop
 import formula_fallback
 import images
+import glyph_check
+import ocr_math_check
 import pdf_tounicode
 from column_order import repair_document_order
 from reading_order import repair_reading_order
@@ -1639,6 +1641,12 @@ def main(argv: list[str] | None = None) -> int:
     textless_note = textless_warning(converted_by, textless, _OCR_RAN[0])
     if textless_note:
         warnings.append(textless_note)
+    if is_pdf and converted_by == "docling":
+        glyph_note = glyph_check.check(text, work_path)
+        if glyph_note:
+            warnings.append(glyph_note)
+    if is_pdf:
+        warnings.extend(ocr_math_check.check(final_text, work_path))
     if converted_by == "docling" and _COLUMN_REPAIRED_PAGES:
         warnings.append(
             "Sütun sırası düzeltildi (docling okuma sırası): sayfa "
