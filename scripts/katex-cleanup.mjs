@@ -28,6 +28,7 @@
  *      an array it may be an alignment tab).
  *   4. fixMacroAliases - macros KaTeX lacks that have an exact equivalent:
  *      \hdots -> \ldots, \textless -> <, \textgreater -> >, \textmu -> \mu.
+ *   6. fixFontSwitch / fixMacroArgs / fixMleftright - see MACRO_ALIAS_TABLE etc.
  *   5. fixGlyphJunk - OCR junk with one unambiguous reading: `\/` -> `/`.
  *      (`\Ss` etc. have no unambiguous mapping and are left alone.)
  */
@@ -228,12 +229,43 @@ export function fixHtmlEntities(body) {
 	return out === body ? null : out;
 }
 
-const MACRO_ALIASES = [
-	[/\\hdots(?![a-zA-Z])/g, '\\ldots'],
-	[/\\textless(?![a-zA-Z])/g, '<'],
-	[/\\textgreater(?![a-zA-Z])/g, '>'],
-	[/\\textmu(?![a-zA-Z])/g, '\\mu']
+/**
+ * Exact token aliases: [control word, replacement, meaning / origin].
+ * Every entry is a macro KaTeX does not define, with a faithful equivalent.
+ * Matching respects TeX control-word boundaries (`\hdotsX` is another macro).
+ */
+export const MACRO_ALIAS_TABLE = [
+	// horizontal dots (mathdots / amsmath-style alias)
+	['hdots', '\\ldots'],
+	// textcomp text-mode symbols: less-than / greater-than sign
+	['textless', '<'],
+	['textgreater', '>'],
+	// textcomp micro sign
+	['textmu', '\\mu'],
+	// double prime (unicode-math / mathabx)
+	['dprime', '\\prime\\prime'],
+	// micrometre used as a unit ("62 \, \mum"): mu + upright m
+	['mum', '\\mu\\mathrm{m}'],
+	// plain TeX: \sp is the superscript-primitive alias (CSAPP "-\sp{u}_w x" = -^u_w x)
+	['sp', '^'],
+	// restriction arrow (harpoon up-right), e.g. z_{\harpoonright I}
+	['harpoonright', '\\upharpoonright'],
+	// unicode-math italic capital Omega
+	['itOmega', '\\mathit{\\Omega}'],
+	// textcomp degree sign
+	['textdegree', '{}^{\\circ}'],
+	// overbar (mathabx / unicode-math) = overline
+	['overbar', '\\overline'],
+	// mathabx wide breve
+	['Breve', '\\breve'],
+	// not a subset of (U+2284)
+	['nsubset', '\\not\\subset'],
+	// em dash in text mode (unicode-math \dash)
+	['dash', '\\text{—}']
 ];
+
+const tokenRe = (name) => new RegExp('\\\\' + name + '(?![a-zA-Z])', 'g');
+const MACRO_ALIASES = MACRO_ALIAS_TABLE.map(([name, to]) => [tokenRe(name), to]);
 
 /** Undefined-in-KaTeX macros with an exact equivalent. */
 export function fixMacroAliases(body) {
@@ -242,12 +274,91 @@ export function fixMacroAliases(body) {
 	return out === body ? null : out;
 }
 
+/**
+ * Font switch macros that carry no content and that KaTeX lacks:
+ * `\em` (emphasis switch) -> `\it` (italic switch, supported by KaTeX);
+ * `\sc` (small-caps switch) -> removed (content kept, only the styling is
+ * lost) together with ONE following space.
+ */
+export function fixFontSwitch(body) {
+	const out = body.replace(/\\em(?![a-zA-Z])/g, () => '\\it').replace(/\\sc(?![a-zA-Z]) ?/g, () => '');
+	return out === body ? null : out;
+}
+
+/**
+ * One-argument macros: `\name <ws> {X}` -> template(X). No brace group after
+ * the macro: left untouched. [control word, template, meaning / origin].
+ */
+export const MACRO_ARG_TABLE = [
+	// textcomp / LaTeX text superscript
+	['textsuperscript', (x) => `{}^{\\text{${x}}}`],
+	// unicode-math bold calligraphic
+	['mathbfcal', (x) => `\\boldsymbol{\\mathcal{${x}}}`]
+];
+
+export function fixMacroArgs(body) {
+	let out = body;
+	for (const [name, tpl] of MACRO_ARG_TABLE) {
+		const re = new RegExp('\\\\' + name + '(?![a-zA-Z])\\s*(?=\\{)', 'g');
+		let res = '';
+		let pos = 0;
+		let m;
+		while ((m = re.exec(out))) {
+			const open = m.index + m[0].length;
+			const close = matchBrace(out, open);
+			if (close === -1) continue;
+			res += out.slice(pos, m.index) + tpl(out.slice(open + 1, close));
+			pos = close + 1;
+			re.lastIndex = pos;
+		}
+		out = res + out.slice(pos);
+	}
+	return out === body ? null : out;
+}
+
+/**
+ * mleftright package idiom: `\mathopen{}\mathclose\bgroup\left` -> `\left` and
+ * `\aftergroup\egroup\right` -> `\right` (the package only removes the spacing
+ * after \left...\right, the delimiters themselves are unchanged).
+ */
+export function fixMleftright(body) {
+	const out = body
+		.replace(/\\mathopen\s*\{\s*\}\s*\\mathclose\s*\\bgroup\s*\\left(?![a-zA-Z])/g, () => '\\left')
+		.replace(/\\aftergroup\s*\\egroup\s*\\right(?![a-zA-Z])/g, () => '\\right');
+	return out === body ? null : out;
+}
+
+/**
+ * Macros seen in the data whose meaning is NOT certain: never mapped, only
+ * counted in the dry-run report.
+ */
+export const AMBIGUOUS_MACROS = [
+	['llangle', 'OCR junk for the phase angle or a stray bracket'],
+	['rrangle', 'OCR junk for the phase angle or a stray bracket'],
+	['neqq', 'probably \\not\\equiv (modular arithmetic) but uncertain'],
+	['Ss', 'OCR of the MIPS register $s'],
+	['ref', 'unresolvable cross-reference']
+];
+
+/** {name: occurrences} of the ambiguous macros in a formula body. */
+export function countAmbiguous(body) {
+	const counts = {};
+	for (const [name] of AMBIGUOUS_MACROS) {
+		const n = (body.match(tokenRe(name)) || []).length;
+		if (n) counts[name] = n;
+	}
+	return counts;
+}
+
 export const FIXES = [
 	['duplicate-tag', fixDuplicateTag],
 	['stray-delimiter', fixStrayDelimiters],
 	['html-entity', fixHtmlEntities],
 	['macro-alias', fixMacroAliases],
-	['glyph-junk', fixGlyphJunk]
+	['glyph-junk', fixGlyphJunk],
+	['font-switch', fixFontSwitch],
+	['macro-arg', fixMacroArgs],
+	['mleftright', fixMleftright]
 ];
 
 /** Code / assembly / pseudo-code mistaken for a formula (report only). */
@@ -264,14 +375,14 @@ export function looksLikeCode(body) {
  * is accepted only if KaTeX renders it. Returns
  * {status:'ok'} | {status:'fixed', body, applied} | {status:'code-like', error} | {status:'unfixable', error}.
  */
-export function repairFormula(body, display = true) {
+export function repairFormula(body, display = true, fixes = FIXES) {
 	const err0 = katexError(body, display);
 	if (!err0) return { status: 'ok' };
 	if (looksLikeCode(body)) return { status: 'code-like', error: err0 };
 
 	let cur = body;
 	const applied = [];
-	for (const [name, fn] of FIXES) {
+	for (const [name, fn] of fixes) {
 		const cand = fn(cur);
 		if (cand === null || cand === cur) continue;
 		cur = cand;
@@ -293,7 +404,7 @@ export function isMineru(frontmatter) {
 }
 
 /** Pure: {text, formulas, fixed:[{line,body,after,applied}], unfixable:[...], codeLike:[...]}. */
-export function processText(source) {
+export function processText(source, fixes = FIXES) {
 	const [fm, body] = splitFrontmatter(source);
 	const math = findMath(body);
 	const result = { formulas: math.length, fixed: [], unfixable: [], codeLike: [] };
@@ -301,7 +412,7 @@ export function processText(source) {
 	let out = '';
 	let pos = 0;
 	for (const f of math) {
-		const r = repairFormula(f.body, f.kind === 'display');
+		const r = repairFormula(f.body, f.kind === 'display', fixes);
 		if (r.status === 'ok') continue;
 		const entry = { line: body.slice(0, f.start).split('\n').length + fmLines, body: f.body };
 		if (r.status === 'fixed') {
@@ -339,7 +450,7 @@ function clip(s, n = 220) {
 /* ------------------------------------------------------------------ CLI */
 
 function parseArgs(argv) {
-	const a = { dir: null, all: false, write: false, backupDir: null, report: null, samples: 5 };
+	const a = { dir: null, all: false, write: false, backupDir: null, report: null, samples: 5, only: null };
 	for (let i = 0; i < argv.length; i++) {
 		const x = argv[i];
 		if (x === '--all') a.all = true;
@@ -347,6 +458,7 @@ function parseArgs(argv) {
 		else if (x === '--backup-dir') a.backupDir = argv[++i];
 		else if (x === '--report') a.report = argv[++i];
 		else if (x === '--samples') a.samples = Number(argv[++i]);
+		else if (x === '--only') a.only = argv[++i].split(',').map((n) => n.trim()).filter(Boolean);
 		else if (!x.startsWith('--') && !a.dir) a.dir = x;
 		else throw new Error(`bilinmeyen argüman: ${x}`);
 	}
@@ -367,8 +479,18 @@ function main() {
 		process.exit(2);
 	}
 	if (!args.dir) {
-		console.error('kullanım: node scripts/katex-cleanup.mjs <libraryDir> [--all] [--report f.json] [--samples N] [--write --backup-dir <dir>]');
+		console.error('kullanım: node scripts/katex-cleanup.mjs <libraryDir> [--all] [--report f.json] [--samples N] [--only a,b] [--write --backup-dir <dir>]');
 		process.exit(2);
+	}
+	let fixes = FIXES;
+	if (args.only) {
+		const known = new Set(FIXES.map(([n]) => n));
+		const bad = args.only.filter((n) => !known.has(n));
+		if (bad.length) {
+			console.error(`bilinmeyen düzeltme: ${bad.join(', ')} (geçerli: ${[...known].join(', ')})`);
+			process.exit(2);
+		}
+		fixes = FIXES.filter(([n]) => args.only.includes(n));
 	}
 	if (args.write && !args.backupDir) {
 		console.error('--write için --backup-dir zorunlu (yedek kasanın içine yazılamaz).');
@@ -388,6 +510,7 @@ function main() {
 	const byFix = {};
 	const perFile = [];
 	const samples = [];
+	const ambiguous = {};
 
 	for (const file of files) {
 		totals.files++;
@@ -395,11 +518,18 @@ function main() {
 		const [fm] = splitFrontmatter(source);
 		if (!args.all && !isMineru(fm)) continue;
 		totals.scanned++;
-		const r = processText(source);
+		const r = processText(source, fixes);
 		totals.formulas += r.formulas;
 		totals.fixed += r.fixed.length;
 		totals.unfixable += r.unfixable.length;
 		totals.codeLike += r.codeLike.length;
+		for (const u of r.unfixable) {
+			for (const [n, c] of Object.entries(countAmbiguous(u.body))) {
+				ambiguous[n] = ambiguous[n] || { occurrences: 0, formulas: 0 };
+				ambiguous[n].occurrences += c;
+				ambiguous[n].formulas++;
+			}
+		}
 		for (const f of r.fixed) {
 			const k = f.applied.join('+');
 			byFix[k] = (byFix[k] || 0) + 1;
@@ -437,6 +567,11 @@ function main() {
 	console.log(`düzeltilemeyen: ${totals.unfixable}`);
 	console.log(`kod sanılmış (elle bakılacak): ${totals.codeLike}`);
 	if (args.write) console.log(`değiştirilen dosya: ${totals.modified}`);
+	console.log('\nanlamı belirsiz makrolar (düzeltilemeyen formüllerde, eşlenmedi):');
+	for (const [n, why] of AMBIGUOUS_MACROS) {
+		const a = ambiguous[n];
+		console.log(`  \\${n}:${a ? `${a.occurrences} kez, ${a.formulas} formül` : '0'}  (${why})`);
+	}
 	if (samples.length) {
 		console.log('\nörnekler:');
 		for (const s of samples) {
@@ -445,7 +580,7 @@ function main() {
 	}
 	if (args.report) {
 		mkdirSync(dirname(resolve(args.report)), { recursive: true });
-		writeFileSync(args.report, JSON.stringify({ totals, byFix, files: perFile, samples }, null, 2), 'utf-8');
+		writeFileSync(args.report, JSON.stringify({ totals, byFix, ambiguous, files: perFile, samples }, null, 2), 'utf-8');
 		console.log(`\nrapor: ${args.report}`);
 	}
 }
