@@ -2,7 +2,7 @@
 
 Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncellenir.
 
-**Son güncelleme:** 2026-10-13 · #5: 249 formül yazıldı, makro tablosu hazır
+**Son güncelleme:** 2026-10-13 · #5 mekanik KaTeX temizliği bitti (367 formül)
 
 ## Kurallar
 
@@ -58,8 +58,7 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 - [ ] **Yerel modellerle MCP deneyi.** Qwen3 8B/4B, LM Studio. `O` · #39 (çekildi)
 
 ### 8. Formül doğruluğu
-- [ ] **MinerU KaTeX temizliği: makro eşlemelerini uygula.** 2026-10-13'te 249 formül yazıldı (html-entity + çift `\tag`; yedek `Desktop\vault-chat-yedek\katex-2026-10-13`). Kalan: makro tablosuyla 115 formül (kullanıcı onayı bekliyor); sonra `maxExpand` (13) ve MathType eğik kesri (10). `K` · #5 (çekildi)
-- [ ] **Fizik'te kalan 48 geçersiz formül.** Kısmen yapıldı; kalan: onarım betiği, sonra 0.3.0 ile yeniden içe aktarma. `O` · #2
+- [ ] **MinerU KaTeX: elle bakılacak formüller.** Mekanik olanlar bitti (2026-10-13, 367 formül). Kalan: ~73 formül sanılmış kod (kod bloğuna çevir), 14 anlamı belirsiz makro, 7 bozuk MathType kesri, ~15 çift üst/alt simge, dengesiz \left/\right; 19 kesik \quad döngüsü #3 ile. `O` · #5 (çekildi)
 - [ ] **Model kapasitesi hataları (♯, ∝).** MinerU yedeğiyle düzeldi mi, ölç. `O` · #4
 - [ ] **"Yalnız hatalı formülü onar".** Sayfa + kutu; belgenin tamamını yeniden okumadan. `B` · #3
 
@@ -138,6 +137,7 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 
 Yalnız son iki haftanın kaydı tutulur; daha eskisi git geçmişindedir.
 
+- 2026-10-13: default kasasında 367 formül KaTeX uyumlu hale getirildi: html-entity 212, çift \tag 37, makro tablosu 115 (font-switch, macro-arg, mleftright dahil), MathType kesri 3. Yedekler `Desktop\vault-chat-yedek\katex-2026-10-13*` (#5). `09778ba`
 - 2026-10-12: "Kaynaklar alakasız" düğmesi yalnız güçlü kaynak yoksa çıkıyor (#35; eşik 0,5 ölçülmedi). `b012c15`
 - 2026-10-12: düzenleyicide görsel yükleme (#70) ve Ayarlar → Kasalar'da "MCP istemcisine bağla" kartı (#38). `46c4994`
 - 2026-10-12: KaTeX temizlik betiği, yalnız deneme modunda çalıştırıldı (#5'in ilk yarısı). `30e0e86`
