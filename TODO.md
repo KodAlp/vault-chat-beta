@@ -2,7 +2,7 @@
 
 Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncellenir.
 
-**Son güncelleme:** 2026-10-13 · #4 (∝) ve #8 devamı araştırıldı; ∝ onarımı onaylandı, #8 devamı kullanıcıyla netleşecek
+**Son güncelleme:** 2026-10-13 · #4 (∝ + Symbol kodları, Fizik notlarına uygulandı) ve #8 devamı (taranmış kod OCR kutularından) bitti
 
 ## Kurallar
 
@@ -44,7 +44,6 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 - [ ] **Formül yoğun klasörlerin hızı.** Sayfa başına 15–25 sn; 200+ saatlik klasörler. `B` · #82
 
 ### 6. İçe aktarmada sessiz bozulma
-- [ ] **Taranmış Türkçe + kod sayfaları (#8 devamı).** Kullanıcı (2026-10-13): "hem Türkçe hem kod içeren kaynaklar çöp olur, bu doğru değil" — şimdiki çözüm (Türkçe taramada CodeFormula kapalı, kod tek satır) kabul edilmedi; oturum başında kullanıcıyla netleştir. Araştırma önerisi (B): taranmış sayfalarda CodeFormula'yı atla, kod bloğunu docling OCR hücrelerinden kur (satır = y sırası, girinti = x / karakter genişliği), el yazısı notlar ayrı paragraf; ölçüm fonk1 s.1 %74→%95 doğruluk, 49/51 girinti; ~5x hızlı. Ek: RapidOCR `use_cls=False` (uzun satırları ters çeviriyordu). Sınır: OCR `ı`→`i`. Plan: yeni ingest/code_layout.py (~150 satır), convert.py'de generate_parsed_pages + rebuild_code_items, testler. Ayrıntı: docs/dev/arastirma-2026-10-13-propto-ve-taranmis-kod.md. `O` · #8
 
 ### 7. MCP araçları ve belgeleri
 - [ ] **Yerel modellerle MCP deneyi.** Qwen3 8B/4B, LM Studio. `O` · #39 (çekildi)
@@ -52,7 +51,6 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 ### 8. Formül doğruluğu
 - [ ] **MinerU KaTeX: elle bakılacak formüller.** Mekanik olanlar bitti (2026-10-13, 367 formül). Kalan: ~73 formül sanılmış kod (kod bloğuna çevir), 14 anlamı belirsiz makro, 7 bozuk MathType kesri, ~15 çift üst/alt simge, dengesiz \left/\right; 19 kesik \quad döngüsü #3 ile. `O` · #5 (çekildi)
 - [ ] **Fizik'te kalan 48 geçersiz formülü yeniden içe aktar.** Mekanik düzeltilemez (dengesiz left/right, formüle karışmış düzyazı, kesik formül; 2026-10-13 ölçümü); 11 notu 0.3.0 ile (MinerU + görsel yedeği) yeniden içe aktar. `O` · #2
-- [ ] **∝ onarımı: kural + mevcut notlar + Likharev sembolleri (ONAYLANDI 2026-10-13).** Araştırma: Fizik o gece "auto" ile dönüştürülmüş ("all" değil); yanlış ∝'ler geçerli LaTeX olduğu için MinerU'ya gitmemiş. Yapılacak: (1) `ingest/postprocess.py` fix_latex_artifacts'e kural: iki terim arasındaki `\infty` → `\propto` (beyaz liste komşular; alt/üst simge, `\to`, `=`, `\pm`, `-`, `(`, `[`, `,` sonrası ve `\infty \text{-` hariç) + iki yanı boşluklu `\, \alpha \,`; ölçüm: 71 aday, 70 doğru, 1.792 diğer `\infty`'ye dokunmuyor. (2) İsteğe bağlı: formula_fallback.flag_reason'a `propto_suspect` (MinerU 14/14 doğru okudu). (3) Mevcut 18 Fizik notuna bir kerelik onarım: kural.mjs deseni (writeLibraryFile, revizyon, yedek), önce `--dry` ve kullanıcıya fark. (4) Likharev Symbol yazı tipi özel kodları (U+F0B5→∝, U+F0A5→∞, U+F066→φ …; not başına ~5000 karakter) için eşleme tablosu — aynı işte düzelt. Elle: 7 `\circ c`, 1 `\underset`. Ayrıntı: docs/dev/arastirma-2026-10-13-propto-ve-taranmis-kod.md. `O` · #4
 - [ ] **"Yalnız hatalı formülü onar".** Sayfa + kutu; belgenin tamamını yeniden okumadan. `B` · #3
 
 ### 9. MCP paketleme ve kurulum
@@ -100,6 +98,10 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 - [ ] **#7'yi asıl dosyayla dene.** 34 sayfalık taranmış Sinyaller final PDF'i (Kolay Matematik testi). `K`
 - [ ] **Çok kısa gerçek başlıklar dosya adına düşüyor.** #10'un yan etkisi: "Go", "R" gibi başlıklar artık reddediliyor. `K`
 - [ ] **`chat-fallback.ts` yedek mesajı sabit Türkçe.** Ham sağlayıcı etiketini de kullanıyor; #73'ün devamı. `K`
+- [ ] **Fizik'te onarılan 7 notu yeniden indeksle.** ∝/Symbol onarımı yazıldı ama indeks güncellenemedi (embedding sunucusu kapalıydı); uygulamada kasayı yeniden indeksle. `K`
+- [ ] **Elle: 7 `\circ c` ve 1 `\underset{X}{\, \infty}` (Likharev).** ∝ kuralı bunlara bilerek dokunmuyor. `K`
+- [ ] **`ingest/` testleri tek pytest komutuyla koşmuyor.** `column_order_test.py` vb. yüklenirken `sys.exit` çağırıyor; düz fonksiyon testlerine çevir. `K`
+- [ ] **#8: `use_cls=False` tüm OCR sayfalarında.** Yan/ters taramada döndürme düzeltmesi kayboldu; yalnız kodlu sayfalarda kapatmak ikinci geçiş ister. Ayrıca eşit genişlikli yazı tipi varsayımı, `code_language` etiketi kaybı, kod alanındaki el yazısı OCR çöpü. `O`
 - [ ] **`npx tsc --noEmit -p mcp` hatası.** `src/lib/server/app-error.ts:47` TS2769; eski bir hata gibi görünüyor, doğrula. `K`
 
 ## Daha sonra
@@ -131,6 +133,8 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 
 Yalnız son iki haftanın kaydı tutulur; daha eskisi git geçmişindedir.
 
+- 2026-10-13: taranmış kod blokları OCR kutularından satır ve girintiyle kuruluyor; CodeFormula OCR'da her dilde kapalı, RapidOCR `use_cls=False`; fonk1 0,93/49 ve 0,95/47, dic1 0,96/52 (#8 devamı). `c242bc8`
+- 2026-10-13: ∝ kuralı ve Adobe Symbol özel kod eşlemesi içe aktarmada; Fizik'te 7 not onarıldı (35 ∝, 12.937 Symbol karakteri; revizyon yedekli). Araştırmadaki 71 aday yerine 35: notlar sonradan yeniden içe aktarılmış (#4). `48aa5d9`
 - 2026-10-13: karar: edit_note kapalıyken listede görünür, uygulama reddeder (olduğu gibi kalsın).
 - 2026-10-13: OCR dili kasa dilinden; desteklenmeyen dilde uyarı; Türkçe taramada CodeFormula kapalı (bozulmanın asıl nedeni oydu) (#8). `ebe763e`
 - 2026-10-13: MCP search_library mode (hibrit RRF), list_domains, get_note bölüm/sayfa (#41). `8e56d34`
