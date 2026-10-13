@@ -87,6 +87,7 @@ import formula_crop
 import formula_early_stop
 import formula_fallback
 import images
+import code_layout
 import glyph_check
 import ocr_lang
 import ocr_math_check
@@ -864,8 +865,8 @@ def _shared_converter(key: tuple[bool, bool, str | None], build: Callable[[], ob
 
 # Appended when OCR ran for a non-ASCII language and the note has a code fence.
 OCR_CODE_NOTE = (
-    "Taranmış sayfalardaki kod blokları kod tanıma olmadan okundu (kod tanıma Türkçe vb. karakterleri bozuyor); "
-    "satır başları ve girinti kaybolmuş olabilir."
+    "Taranmış sayfalardaki kod blokları OCR satır kutularından yeniden kuruldu (kod tanıma Türkçe vb. "
+    "karakterleri bozuyor); girinti ve satır sonları yaklaşık olabilir, kodu gözden geçirin."
 )
 
 PDF_BACKENDS = ("default", "hybrid")
@@ -934,11 +935,40 @@ def _set_code_extraction(conv, on: bool) -> None:
     scanned Turkish Python lesson): RapidOCR PP-OCRv6 reads "Geri döndürülen
     parçaları" correctly, then CodeFormulaV2 re-reads the code-labelled region
     from pixels and overwrites it with "d&ndurilen pargalari" — it was never
-    trained on Turkish diacritics. Born-digital code keeps CodeFormula (its
+    trained on Turkish diacritics. It is off for OCR'd pages in EVERY language
+    (it also corrupts plain ASCII on scans); code_layout then rebuilds the
+    layout from the OCR boxes. Born-digital code keeps CodeFormula (its
     text comes from the PDF layer, and the model fixes indentation)."""
     model = _code_formula_model(conv)
     if model is not None:
         model.options.extract_code = on
+
+
+def _disable_ocr_cls(conv) -> None:
+    """RapidOCR's text-angle classifier flips long, wide code lines upside down
+    (measured on fonk1, #8): switch it off on the OCR engine behind the auto
+    model (the explicit-language branch sets use_cls=False in its options)."""
+    try:
+        from docling.datamodel.base_models import InputFormat
+
+        ocr_model = conv._get_pipeline(InputFormat.PDF).ocr_model
+        engine = getattr(ocr_model, "_engine", None) or ocr_model
+        opts = getattr(engine, "options", None)
+        if opts is not None and isinstance(getattr(opts, "use_cls", None), bool):
+            opts.use_cls = False
+    except Exception:  # noqa: BLE001 — quality tweak only
+        pass
+
+
+def _rebuild_scanned_code(result) -> None:
+    """Rebuild code-block layout of an OCR'd conversion result from its OCR
+    line boxes (code_layout). Any failure keeps today's (collapsed) text."""
+    try:
+        n = code_layout.rebuild_code_items(result.document, result.pages)
+        if n:
+            print(f"code_layout: {n} kod bloğu OCR kutularından yeniden kuruldu", file=sys.stderr)
+    except Exception as err:  # noqa: BLE001
+        print(f"code_layout: atlandı: {err}", file=sys.stderr)
 
 
 def _convert_ocr_segments(conv, path: Path, segments: list[tuple[int, int, bool]]):
@@ -961,13 +991,14 @@ def _convert_ocr_segments(conv, path: Path, segments: list[tuple[int, int, bool]
         print(f"ocr: sayfa bazlı OCR kullanılamadı, tüm belge OCR'lanıyor: {err}", file=sys.stderr)
         return None
     results = []
-    plan = _OCR_PLAN[0]
-    keep_chars = plan is not None and plan.has_diacritics
     try:
         for start, end, ocr in segments:
             ocr_model.enabled = ocr
-            _set_code_extraction(conv, not (ocr and keep_chars))
-            results.append(conv.convert(str(path), page_range=(start, end)))
+            _set_code_extraction(conv, not ocr)
+            result = conv.convert(str(path), page_range=(start, end))
+            if ocr:
+                _rebuild_scanned_code(result)
+            results.append(result)
     finally:
         ocr_model.enabled = True
         _set_code_extraction(conv, True)
@@ -1080,13 +1111,13 @@ def convert_with_docling(
     _OCR_RAN[0] = want_ocr
     plan = _OCR_PLAN[0]
     ocr_code = plan.lang if plan is not None else None
-    keep_chars = plan is not None and plan.has_diacritics
+    options.generate_parsed_pages = True  # page cells (boxes) for code_layout
     if ocr_code:
         # Explicit recognizer (ocr_lang.resolve only returns codes the INSTALLED
         # models serve, so this never triggers a model download).
         from docling.datamodel.pipeline_options import RapidOcrOptions
 
-        options.ocr_options = RapidOcrOptions(lang=[ocr_code])
+        options.ocr_options = RapidOcrOptions(lang=[ocr_code], use_cls=False)
     options.do_formula_enrichment = True
     options.do_code_enrichment = True
     options.accelerator_options = AcceleratorOptions(device=AcceleratorDevice.AUTO)
@@ -1122,6 +1153,8 @@ def convert_with_docling(
                 options.do_ocr = want_ocr
         if conv is None:
             conv = build()
+        if want_ocr:
+            _disable_ocr_cls(conv)
         if per_page:
             # (results, document, ocr_ran), or None when the per-page route is
             # unavailable and the whole document must be OCR'd.
@@ -1131,8 +1164,10 @@ def convert_with_docling(
         try:
             if ocr_model is not None:
                 ocr_model.enabled = want_ocr
-            _set_code_extraction(conv, not (want_ocr and keep_chars))
+            _set_code_extraction(conv, not want_ocr)
             result = conv.convert(str(path), **convert_kwargs)
+            if want_ocr:
+                _rebuild_scanned_code(result)
         finally:
             if ocr_model is not None:
                 ocr_model.enabled = True
@@ -1702,9 +1737,10 @@ def main(argv: list[str] | None = None) -> int:
     textless_note = textless_warning(converted_by, textless, _OCR_RAN[0])
     if textless_note:
         warnings.append(textless_note)
-    if converted_by == "docling" and _OCR_RAN[0] and _OCR_PLAN[0] is not None:
-        warnings.extend(_OCR_PLAN[0].warnings)
-        if _OCR_PLAN[0].has_diacritics and "```" in final_text:
+    if converted_by == "docling" and _OCR_RAN[0]:
+        if _OCR_PLAN[0] is not None:
+            warnings.extend(_OCR_PLAN[0].warnings)
+        if "```" in final_text:
             warnings.append(OCR_CODE_NOTE)
     if is_pdf and converted_by == "docling":
         glyph_note = glyph_check.check(text, work_path)
