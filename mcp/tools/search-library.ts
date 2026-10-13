@@ -38,11 +38,15 @@ export function registerSearchLibrary(server: McpServer): void {
 						'Filter to one level (case-insensitive). The value set is whatever this vault\'s frontmatter ' +
 							'actually uses (often undergrad/grad/phd, but not guaranteed) — see list_vaults/list_sources.'
 					),
+				mode: z
+					.enum(['auto', 'vector', 'keyword', 'hybrid'])
+					.optional()
+					.describe('Retrieval mode, default "auto" (see the tool description).'),
 				k: z.number().int().min(1).max(25).optional().describe('Max results to return, default 8.')
 			},
 			annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false }
 		},
-		async ({ vault, query, domain, level, k }) => {
+		async ({ vault, query, domain, level, mode, k }) => {
 			const start = Date.now();
 			try {
 				const { vaultId, result } = await withVault(vault, async (v) => {
@@ -58,7 +62,8 @@ export function registerSearchLibrary(server: McpServer): void {
 						r = await retrieve(v, query, {
 							domains: domain ? [domain] : undefined,
 							levels: level ? [level] : undefined,
-							k
+							k,
+							mode
 						});
 					} catch (err) {
 						// Provider-neutral: the embedding provider may be any server (or none — keyword-only mode
@@ -78,7 +83,8 @@ export function registerSearchLibrary(server: McpServer): void {
 						heading_path: c.heading_path,
 						level: c.depth,
 						domains: c.domains,
-						score: Number((1 - c.distance).toFixed(4)),
+						score: c.via === 'keyword' ? null : Number((1 - c.distance).toFixed(4)),
+						matched_by: c.via === 'keyword' ? 'keyword' : 'vector',
 						snippet: text,
 						snippetTruncated: truncated
 					};
@@ -91,14 +97,26 @@ export function registerSearchLibrary(server: McpServer): void {
 					ok: true,
 					ms: Date.now() - start,
 					resultCount: results.length,
-					params: { queryChars: query.length, domain, level, k }
+					params: { queryChars: query.length, domain, level, mode, k }
 				});
 
 				return {
 					content: [
 						{
 							type: 'text' as const,
-							text: JSON.stringify({ vault: vaultId, query, narrowScope: result.narrowScope, results }, null, 1)
+							text: JSON.stringify(
+								{
+									vault: vaultId,
+									query,
+									mode: mode ?? 'auto',
+									narrowScope: result.narrowScope,
+									...(results.length === 0 && result.reason ? { reason: result.reason } : {}),
+									...(result.embeddingIssue && mode !== 'keyword' ? { embeddingIssue: result.embeddingIssue } : {}),
+									results
+								},
+								null,
+								1
+							)
 						}
 					]
 				};
@@ -111,7 +129,7 @@ export function registerSearchLibrary(server: McpServer): void {
 					ok: false,
 					ms: Date.now() - start,
 					errorCode: result.content[0].text.split(':')[0],
-					params: { queryChars: query.length, domain, level, k }
+					params: { queryChars: query.length, domain, level, mode, k }
 				});
 				return result;
 			}
