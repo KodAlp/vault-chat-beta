@@ -963,6 +963,8 @@
 	},
 	"McpImportSettings": {
 		"title": "Cartelle di importazione MCP",
+		"editNoteLabel": "Consenti agli agenti di modificare le note (edit_note)",
+		"editNoteWarning": "Opzione per sviluppatori, disattivata per impostazione predefinita. Se attiva, un agente IA collegato via MCP può cambiare il testo delle tue note esistenti (la versione precedente resta come revisione ripristinabile). Le note possono contenere istruzioni nascoste che cercano di guidare l'agente: attivala solo per agenti e vault di cui ti fidi.",
 		"description": "Un agente IA collegato tramite MCP può importare file locali solo da queste cartelle. Le importazioni aspettano la tua conferma, a meno che tu non attivi la conferma automatica per quell'archivio. Lascia l'elenco vuoto per bloccare l'importazione di file locali; le importazioni da link (URL) sono consentite e seguono la stessa conferma.",
 		"empty": "Nessuna cartella consentita: le importazioni di file locali sono bloccate.",
 		"removeAria": "Rimuovi {path}",
@@ -1014,6 +1016,22 @@
 		"mcpMigrationCloseAll": "Chiudili tutti (consigliato)",
 		"mcpMigrationFailed": "Impossibile applicare la modifica."
 	},
+	"BackupCard": {
+		"title": "Esegui il backup dei dati",
+		"description": "Copia i tuoi vault (note, indice di ricerca, dati di studio), le chat e le impostazioni in una nuova cartella con la data. Nella tua cartella dati non viene modificato nulla.",
+		"destination": "Posizione del backup",
+		"choose": "Scegli…",
+		"excludesNote": "Le chiavi API non sono incluse. Reinseriscile dopo il ripristino.",
+		"start": "Esegui backup",
+		"running": "Backup in corso…",
+		"progress": "{done} di {total} elementi",
+		"doneOk": "Backup completato",
+		"doneWithFailures": "Backup terminato, ma non è stato possibile copiare {count} file (in uso?)",
+		"totals": "{files} file, {databases} database, {size}",
+		"cancelled": "Backup annullato.",
+		"interrupted": "Il backup è stato interrotto."
+	},
+
 	"ReindexDialog": {
 		"title": "Reindicizzazione dell'archivio",
 		"runningDescription": "Ogni file di questo archivio viene rielaborato con l'embedding attuale. La chat continua a funzionare con il vecchio indice mentre l'operazione è in corso.",
@@ -1227,6 +1245,9 @@
 		"MCP_IMPORT_ROOTS_EMPTY": "Per le importazioni di file MCP non è ancora consentita nessuna cartella: aggiungine una nelle Impostazioni",
 		"MCP_PATH_NOT_ALLOWED": "Quel file è fuori dalle cartelle che hai consentito per le importazioni MCP",
 		"MCP_PATH_INVALID": "Quel percorso non è utilizzabile: deve essere un percorso assoluto di un file normale esistente (niente link simbolici, niente segmenti “..”)",
+		"MCP_EDIT_NOTE_DISABLED": "La modifica delle note tramite MCP è disattivata — l'utente può attivarla nelle Impostazioni",
+		"MCP_EDIT_NOT_FOUND": "Il testo da sostituire non è stato trovato nella nota",
+		"MCP_EDIT_NOT_UNIQUE": "Il testo da sostituire compare più di una volta nella nota",
 		"IMPORT_INTERRUPTED": "Questa importazione è stata interrotta (l'app è stata chiusa durante la conversione): annullala e importa di nuovo la fonte",
 		"IMPORT_AUTO_CONFIRM_FAILED": "Conferma automatica non riuscita (la nota non ha potuto essere indicizzata): l'importazione è ancora in sospeso; puoi confermarla tu",
 		"IMPORT_DUPLICATE_URL": "Questo link sembra essere già stato importato: puoi comunque continuare.",
@@ -1238,6 +1259,10 @@
 		"VAULT_NONE": "Ancora nessun archivio: creane prima uno",
 		"VAULT_DELETE_CONFIRM_REQUIRED": "Serve la conferma di eliminazione ('confirm=true')",
 		"VAULT_LAST_UNDELETABLE": "L'ultimo archivio non può essere eliminato: l'app ha sempre bisogno di almeno un archivio",
+		"BACKUP_DEST_INVALID": "Inserisci il percorso completo della cartella del backup",
+		"BACKUP_DEST_INSIDE_DATA": "Scegli una cartella fuori dalle cartelle dati e vault dell’app",
+		"BACKUP_ALREADY_RUNNING": "Un backup è già in corso",
+		"BACKUP_FAILED": "Impossibile creare il backup",
 		"PROVIDER_OLLAMA_MISCONFIGURED": "Non è configurato nessun provider Ollama abilitato",
 		"PROVIDER_CONSENT_NOT_NEEDED": "Ollama non richiede il consenso",
 		"PROVIDER_BASE_URL_INVALID": "{url} non è un indirizzo http(s) valido",

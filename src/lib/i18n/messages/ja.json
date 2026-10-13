@@ -896,6 +896,8 @@
   },
   "McpImportSettings": {
     "title": "MCP インポート用フォルダ",
+    "editNoteLabel": "エージェントによるノート編集を許可する (edit_note)",
+    "editNoteWarning": "開発者向けオプションで、既定ではオフです。オンにすると、MCP経由で接続したAIエージェントが既存ノートの本文を変更できます(変更前の版は復元できるリビジョンとして保存されます)。ノートにはエージェントを誘導しようとする隠れた指示が含まれている可能性があるため、信頼できるエージェントとボールトにのみ有効にしてください。",
     "description": "MCP で接続した AI エージェントは、これらのフォルダにあるローカルファイルだけをインポートできます。保管庫の自動承認をオンにしない限り、インポートはあなたの確認を待ちます。ローカルファイルのインポートを禁止するにはリストを空にしてください。リンク（URL）のインポートは許可され、同じ確認を経ます。",
     "empty": "許可されたフォルダはありません。ローカルファイルのインポートはブロックされています。",
     "removeAria": "{path} を削除",
@@ -946,6 +948,22 @@
     "mcpMigrationCloseAll": "すべて非公開にする（推奨）",
     "mcpMigrationFailed": "変更できませんでした。"
   },
+  "BackupCard": {
+    "title": "データをバックアップ",
+    "description": "保管庫（ノート、検索インデックス、学習データ）、チャット、設定を日付付きの新しいフォルダにコピーします。データフォルダ内は一切変更されません。",
+    "destination": "バックアップ先",
+    "choose": "選択…",
+    "excludesNote": "API キーはバックアップに含まれません。復元後に再入力してください。",
+    "start": "バックアップ",
+    "running": "バックアップ中…",
+    "progress": "{total} 件中 {done} 件",
+    "doneOk": "バックアップが完了しました",
+    "doneWithFailures": "バックアップは終了しましたが、{count} 個のファイルをコピーできませんでした（使用中の可能性があります）",
+    "totals": "ファイル {files} 個、データベース {databases} 個、{size}",
+    "cancelled": "バックアップをキャンセルしました。",
+    "interrupted": "バックアップが中断されました。"
+  },
+
   "ReindexDialog": {
     "title": "保管庫を再インデックス中",
     "runningDescription": "この保管庫のすべてのファイルを現在の埋め込みモデルで再処理しています。実行中も、チャットは古いインデックスで動作し続けます。",
@@ -1152,6 +1170,9 @@
     "MCP_IMPORT_ROOTS_EMPTY": "No folder is allowed for MCP file imports yet — add one in Settings",
     "MCP_PATH_NOT_ALLOWED": "That file is outside the folders you allowed for MCP imports",
     "MCP_PATH_INVALID": "That path is not usable — it must be an absolute path to an existing regular file (no symlinks, no \"..\" segments)",
+    "MCP_EDIT_NOTE_DISABLED": "MCP経由のノート編集はオフです — ユーザーは設定でオンにできます",
+    "MCP_EDIT_NOT_FOUND": "置換するテキストがノート内に見つかりませんでした",
+    "MCP_EDIT_NOT_UNIQUE": "置換するテキストがノート内に複数あります",
     "IMPORT_INTERRUPTED": "This import was interrupted (the app was closed during conversion) — cancel it and import the source again",
     "IMPORT_AUTO_CONFIRM_FAILED": "Auto-confirm failed (the note could not be indexed) — the import is still pending; you can confirm it yourself",
     "IMPORT_DUPLICATE_URL": "This link appears to have been imported before — you can still continue.",
@@ -1163,6 +1184,10 @@
     "VAULT_NONE": "保管庫がまだありません。まず作成してください",
     "VAULT_DELETE_CONFIRM_REQUIRED": "削除の確認が必要です（'confirm=true'）",
     "VAULT_LAST_UNDELETABLE": "最後の保管庫は削除できません。アプリには常に 1 つ以上の保管庫が必要です",
+    "BACKUP_DEST_INVALID": "バックアップ先のフォルダのフルパスを入力してください",
+    "BACKUP_DEST_INSIDE_DATA": "アプリのデータフォルダおよび保管庫フォルダの外にあるフォルダを選んでください",
+    "BACKUP_ALREADY_RUNNING": "すでにバックアップを実行中です",
+    "BACKUP_FAILED": "バックアップを作成できませんでした",
     "PROVIDER_OLLAMA_MISCONFIGURED": "有効な Ollama プロバイダーが設定されていません",
     "PROVIDER_CONSENT_NOT_NEEDED": "Ollama には同意は不要です",
     "PROVIDER_BASE_URL_INVALID": "{url} は有効な http(s) アドレスではありません",

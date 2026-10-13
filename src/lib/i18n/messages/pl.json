@@ -954,6 +954,8 @@
 	},
 	"McpImportSettings": {
 		"title": "Foldery importu MCP",
+		"editNoteLabel": "Zezwalaj agentom na edycję notatek (edit_note)",
+		"editNoteWarning": "Opcja dla programistów, domyślnie wyłączona. Gdy jest włączona, agent AI połączony przez MCP może zmieniać tekst istniejących notatek (poprzednia wersja jest zachowywana jako rewizja, którą można przywrócić). Notatki mogą zawierać ukryte instrukcje próbujące sterować agentem, więc włączaj to tylko dla agentów i skarbców, którym ufasz.",
 		"description": "Agent AI połączony przez MCP może importować pliki lokalne tylko z tych folderów. Importy czekają na Twoje potwierdzenie, chyba że włączysz automatyczne potwierdzanie dla danego sejfu. Pozostaw listę pustą, aby zablokować import plików lokalnych; import linków (URL) jest dozwolony i przechodzi przez to samo potwierdzenie.",
 		"empty": "Brak dozwolonych folderów — import plików lokalnych jest zablokowany.",
 		"removeAria": "Usuń {path}",
@@ -1004,6 +1006,22 @@
 		"mcpMigrationCloseAll": "Zamknij wszystkie (zalecane)",
 		"mcpMigrationFailed": "Nie udało się tego zmienić."
 	},
+	"BackupCard": {
+		"title": "Utwórz kopię zapasową danych",
+		"description": "Kopiuje Twoje skarbce (notatki, indeks wyszukiwania, dane do nauki), czaty i ustawienia do nowego folderu z datą. Nic w folderze danych nie jest zmieniane.",
+		"destination": "Lokalizacja kopii",
+		"choose": "Wybierz…",
+		"excludesNote": "Klucze API nie są uwzględniane. Wpisz je ponownie po przywróceniu.",
+		"start": "Utwórz kopię",
+		"running": "Tworzenie kopii…",
+		"progress": "{done} z {total} elementów",
+		"doneOk": "Kopia zapasowa gotowa",
+		"doneWithFailures": "Kopia zakończona, ale nie udało się skopiować {count} plików (może są w użyciu?)",
+		"totals": "Pliki: {files}, bazy danych: {databases}, {size}",
+		"cancelled": "Anulowano tworzenie kopii.",
+		"interrupted": "Tworzenie kopii zostało przerwane."
+	},
+
 	"ReindexDialog": {
 		"title": "Ponowne indeksowanie sejfu",
 		"runningDescription": "Każdy plik w tym sejfie jest przetwarzany ponownie z użyciem bieżącego modelu embeddingów. W tym czasie czat nadal działa na starym indeksie.",
@@ -1213,6 +1231,9 @@
 		"MCP_IMPORT_ROOTS_EMPTY": "Nie dozwolono jeszcze żadnego folderu dla importu plików przez MCP — dodaj go w Ustawieniach",
 		"MCP_PATH_NOT_ALLOWED": "Ten plik znajduje się poza folderami dozwolonymi dla importów MCP",
 		"MCP_PATH_INVALID": "Ta ścieżka jest nieużyteczna — musi być bezwzględną ścieżką do istniejącego zwykłego pliku (bez dowiązań symbolicznych i segmentów „..”)",
+		"MCP_EDIT_NOTE_DISABLED": "Edycja notatek przez MCP jest wyłączona — użytkownik może ją włączyć w Ustawieniach",
+		"MCP_EDIT_NOT_FOUND": "Nie znaleziono w notatce tekstu do zastąpienia",
+		"MCP_EDIT_NOT_UNIQUE": "Tekst do zastąpienia występuje w notatce więcej niż raz",
 		"IMPORT_INTERRUPTED": "Ten import został przerwany (aplikację zamknięto w trakcie konwersji) — anuluj go i zaimportuj źródło ponownie",
 		"IMPORT_AUTO_CONFIRM_FAILED": "Automatyczne potwierdzenie nie powiodło się (nie udało się zindeksować notatki) — import nadal oczekuje; możesz potwierdzić go samodzielnie",
 		"IMPORT_DUPLICATE_URL": "Ten link wygląda na już zaimportowany — nadal możesz kontynuować.",
@@ -1224,6 +1245,10 @@
 		"VAULT_NONE": "Nie ma jeszcze sejfów — najpierw utwórz jeden",
 		"VAULT_DELETE_CONFIRM_REQUIRED": "Wymagane potwierdzenie usunięcia („confirm=true”)",
 		"VAULT_LAST_UNDELETABLE": "Nie można usunąć ostatniego sejfu — aplikacja zawsze potrzebuje co najmniej jednego sejfu",
+		"BACKUP_DEST_INVALID": "Podaj pełną ścieżkę folderu kopii zapasowej",
+		"BACKUP_DEST_INSIDE_DATA": "Wybierz folder poza folderami danych i skarbców aplikacji",
+		"BACKUP_ALREADY_RUNNING": "Kopia zapasowa jest już tworzona",
+		"BACKUP_FAILED": "Nie udało się utworzyć kopii zapasowej",
 		"PROVIDER_OLLAMA_MISCONFIGURED": "Nie skonfigurowano żadnego włączonego dostawcy Ollama",
 		"PROVIDER_CONSENT_NOT_NEEDED": "Ollama nie wymaga zgody",
 		"PROVIDER_BASE_URL_INVALID": "{url} nie jest prawidłowym adresem http(s)",

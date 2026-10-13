@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import { z } from 'zod';
 import matter from 'gray-matter';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -15,7 +16,7 @@ export function registerGetNote(server: McpServer): void {
 			title: 'Get note',
 			description:
 				'Read one note by its library-relative path (as returned by search_library or list_sources), ' +
-				'with frontmatter parsed out separately from the body. Rejects any path that resolves outside ' +
+				'with frontmatter parsed out separately from the body, plus the content `hash` of the file (pass it as `expected_hash` to edit_note). Rejects any path that resolves outside ' +
 				'the vault\'s library root.',
 			inputSchema: {
 				vault: z.string().optional().describe('Vault id — omit to use the active vault (see list_vaults).'),
@@ -26,7 +27,7 @@ export function registerGetNote(server: McpServer): void {
 		async ({ vault, path: relPath }) => {
 			const start = Date.now();
 			try {
-				const { vaultId, frontmatter, content } = await withVault(vault, (v) => {
+				const { vaultId, frontmatter, content, hash } = await withVault(vault, (v) => {
 					let raw: string;
 					try {
 						raw = readLibraryFile(v, relPath);
@@ -44,7 +45,8 @@ export function registerGetNote(server: McpServer): void {
 						throw err;
 					}
 					const parsed = matter(raw);
-					return { vaultId: v.id, frontmatter: parsed.data, content: parsed.content };
+					// sha256 of the whole file text (frontmatter included): the `expected_hash` edit_note wants.
+					return { vaultId: v.id, frontmatter: parsed.data, content: parsed.content, hash: crypto.createHash('sha256').update(raw, 'utf8').digest('hex') };
 				});
 
 				const truncated = content.length > CONTENT_MAX_CHARS;
@@ -64,7 +66,7 @@ export function registerGetNote(server: McpServer): void {
 						{
 							type: 'text' as const,
 							text: JSON.stringify(
-								{ vault: vaultId, path: relPath, frontmatter, content: body, chars: content.length, truncated },
+								{ vault: vaultId, path: relPath, hash, frontmatter, content: body, chars: content.length, truncated },
 								null,
 								1
 							)

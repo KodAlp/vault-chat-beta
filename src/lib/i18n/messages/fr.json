@@ -909,6 +909,8 @@
   },
   "McpImportSettings": {
     "title": "Dossiers d'importation MCP",
+    "editNoteLabel": "Autoriser les agents à modifier les notes (edit_note)",
+    "editNoteWarning": "Option développeur, désactivée par défaut. Activée, un agent IA connecté via MCP peut modifier le texte de tes notes existantes (la version précédente est conservée comme révision restaurable). Les notes peuvent contenir des instructions cachées visant à piloter l'agent : n'active ceci que pour des agents et des coffres de confiance.",
     "description": "Un agent IA connecté via MCP ne peut importer des fichiers locaux que depuis ces dossiers. Les importations attendent votre confirmation, sauf si vous activez la confirmation automatique du coffre. Laissez la liste vide pour bloquer l'importation de fichiers locaux ; les importations par lien (URL) sont autorisées et passent par la même confirmation.",
     "empty": "Aucun dossier autorisé — l'importation de fichiers locaux est bloquée.",
     "removeAria": "Retirer {path}",
@@ -959,6 +961,22 @@
     "mcpMigrationCloseAll": "Tous les fermer (recommandé)",
     "mcpMigrationFailed": "Impossible de modifier cela."
   },
+  "BackupCard": {
+    "title": "Sauvegarder les données",
+    "description": "Copie vos coffres (notes, index de recherche, données d’étude), vos discussions et vos réglages dans un nouveau dossier daté. Rien n’est modifié dans votre dossier de données.",
+    "destination": "Emplacement de la sauvegarde",
+    "choose": "Choisir…",
+    "excludesNote": "Les clés API ne sont pas incluses. Saisissez-les de nouveau après la restauration.",
+    "start": "Sauvegarder",
+    "running": "Sauvegarde en cours…",
+    "progress": "{done} sur {total} éléments",
+    "doneOk": "Sauvegarde terminée",
+    "doneWithFailures": "Sauvegarde terminée, mais {count} fichiers n’ont pas pu être copiés (en cours d’utilisation ?)",
+    "totals": "{files} fichiers, {databases} bases de données, {size}",
+    "cancelled": "Sauvegarde annulée.",
+    "interrupted": "La sauvegarde a été interrompue."
+  },
+
   "ReindexDialog": {
     "title": "Réindexation du coffre",
     "runningDescription": "Chaque fichier de ce coffre est retraité avec l'embedding actuel. Le chat continue de fonctionner avec l'ancien index pendant ce temps.",
@@ -1168,6 +1186,9 @@
     "MCP_IMPORT_ROOTS_EMPTY": "No folder is allowed for MCP file imports yet — add one in Settings",
     "MCP_PATH_NOT_ALLOWED": "That file is outside the folders you allowed for MCP imports",
     "MCP_PATH_INVALID": "That path is not usable — it must be an absolute path to an existing regular file (no symlinks, no \"..\" segments)",
+    "MCP_EDIT_NOTE_DISABLED": "La modification de notes via MCP est désactivée — l'utilisateur peut l'activer dans les Paramètres",
+    "MCP_EDIT_NOT_FOUND": "Le texte à remplacer est introuvable dans la note",
+    "MCP_EDIT_NOT_UNIQUE": "Le texte à remplacer apparaît plusieurs fois dans la note",
     "IMPORT_INTERRUPTED": "This import was interrupted (the app was closed during conversion) — cancel it and import the source again",
     "IMPORT_AUTO_CONFIRM_FAILED": "Auto-confirm failed (the note could not be indexed) — the import is still pending; you can confirm it yourself",
     "IMPORT_DUPLICATE_URL": "This link appears to have been imported before — you can still continue.",
@@ -1179,6 +1200,10 @@
     "VAULT_NONE": "Aucun coffre pour l'instant : créez-en un d'abord",
     "VAULT_DELETE_CONFIRM_REQUIRED": "Confirmation de suppression requise ('confirm=true')",
     "VAULT_LAST_UNDELETABLE": "Le dernier coffre ne peut pas être supprimé : l'application a toujours besoin d'au moins un coffre",
+    "BACKUP_DEST_INVALID": "Saisissez le chemin complet du dossier de sauvegarde",
+    "BACKUP_DEST_INSIDE_DATA": "Choisissez un dossier en dehors des dossiers de données et de coffres de l’application",
+    "BACKUP_ALREADY_RUNNING": "Une sauvegarde est déjà en cours",
+    "BACKUP_FAILED": "Impossible de créer la sauvegarde",
     "PROVIDER_OLLAMA_MISCONFIGURED": "Aucun fournisseur Ollama activé n'est configuré",
     "PROVIDER_CONSENT_NOT_NEEDED": "Ollama n'a pas besoin de consentement",
     "PROVIDER_BASE_URL_INVALID": "{url} n'est pas une adresse http(s) valide",

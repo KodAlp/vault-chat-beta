@@ -950,6 +950,8 @@
   },
   "McpImportSettings": {
     "title": "Папки для импорта через MCP",
+    "editNoteLabel": "Разрешить агентам редактировать заметки (edit_note)",
+    "editNoteWarning": "Параметр для разработчиков, по умолчанию выключен. Когда он включён, ИИ-агент, подключённый через MCP, может менять текст твоих существующих заметок (предыдущая версия сохраняется как ревизия, которую можно восстановить). Заметки могут содержать скрытые инструкции, пытающиеся управлять агентом, поэтому включай это только для агентов и хранилищ, которым доверяешь.",
     "description": "ИИ-агент, подключённый через MCP, может импортировать локальные файлы только из этих папок. Импорт ждёт вашего подтверждения, пока вы не включите автоподтверждение для хранилища. Оставьте список пустым, чтобы запретить импорт локальных файлов; импорт по ссылке (URL) разрешён и проходит то же подтверждение.",
     "empty": "Нет разрешённых папок — импорт локальных файлов заблокирован.",
     "removeAria": "Убрать {path}",
@@ -1003,6 +1005,22 @@
     "mcpMigrationCloseAll": "Закрыть все (рекомендуется)",
     "mcpMigrationFailed": "Не удалось изменить."
   },
+  "BackupCard": {
+    "title": "Резервная копия данных",
+    "description": "Копирует ваши хранилища (заметки, поисковый индекс, учебные данные), чаты и настройки в новую папку с датой. В папке с данными ничего не изменяется.",
+    "destination": "Место для копии",
+    "choose": "Выбрать…",
+    "excludesNote": "Ключи API в копию не входят. Введите их заново после восстановления.",
+    "start": "Создать копию",
+    "running": "Копирование…",
+    "progress": "{done} из {total} элементов",
+    "doneOk": "Резервная копия готова",
+    "doneWithFailures": "Копирование завершено, но {count} файлов скопировать не удалось (возможно, они используются)",
+    "totals": "Файлов: {files}, баз данных: {databases}, {size}",
+    "cancelled": "Резервное копирование отменено.",
+    "interrupted": "Резервное копирование прервано."
+  },
+
   "ReindexDialog": {
     "title": "Переиндексация хранилища",
     "runningDescription": "Каждый файл этого хранилища обрабатывается заново с текущей embedding-моделью. Пока это выполняется, чат продолжает работать по старому индексу.",
@@ -1221,6 +1239,9 @@
     "MCP_IMPORT_ROOTS_EMPTY": "No folder is allowed for MCP file imports yet — add one in Settings",
     "MCP_PATH_NOT_ALLOWED": "That file is outside the folders you allowed for MCP imports",
     "MCP_PATH_INVALID": "That path is not usable — it must be an absolute path to an existing regular file (no symlinks, no \"..\" segments)",
+    "MCP_EDIT_NOTE_DISABLED": "Редактирование заметок через MCP выключено — пользователь может включить его в Настройках",
+    "MCP_EDIT_NOT_FOUND": "Заменяемый текст не найден в заметке",
+    "MCP_EDIT_NOT_UNIQUE": "Заменяемый текст встречается в заметке более одного раза",
     "IMPORT_INTERRUPTED": "This import was interrupted (the app was closed during conversion) — cancel it and import the source again",
     "IMPORT_AUTO_CONFIRM_FAILED": "Auto-confirm failed (the note could not be indexed) — the import is still pending; you can confirm it yourself",
     "IMPORT_DUPLICATE_URL": "This link appears to have been imported before — you can still continue.",
@@ -1232,6 +1253,10 @@
     "VAULT_NONE": "Хранилищ пока нет — сначала создайте одно",
     "VAULT_DELETE_CONFIRM_REQUIRED": "Требуется подтверждение удаления ('confirm=true')",
     "VAULT_LAST_UNDELETABLE": "Последнее хранилище удалить нельзя — приложению всегда нужно хотя бы одно хранилище",
+    "BACKUP_DEST_INVALID": "Укажите полный путь к папке для копии",
+    "BACKUP_DEST_INSIDE_DATA": "Выберите папку вне папок данных и хранилищ приложения",
+    "BACKUP_ALREADY_RUNNING": "Резервное копирование уже выполняется",
+    "BACKUP_FAILED": "Не удалось создать резервную копию",
     "PROVIDER_OLLAMA_MISCONFIGURED": "Не настроен ни один включённый провайдер Ollama",
     "PROVIDER_CONSENT_NOT_NEEDED": "Для Ollama согласие не требуется",
     "PROVIDER_BASE_URL_INVALID": "{url} не является корректным адресом http(s)",

@@ -993,6 +993,8 @@
 	},
 	"McpImportSettings": {
 		"title": "MCP import folders",
+		"editNoteLabel": "Allow agents to edit notes (edit_note)",
+		"editNoteWarning": "Developer option, off by default. When on, an AI agent connected via MCP can change the text of your existing notes (the previous version is kept as a revision you can restore). Notes can contain hidden instructions that try to steer the agent, so only enable this for agents and vaults you trust.",
 		"description": "An AI agent connected via MCP may only import local files from these folders. Imports wait for your confirmation unless you turn on auto-confirm for that vault. Leave the list empty to block local file imports; link (URL) imports are allowed and go through the same confirmation.",
 		"empty": "No folders allowed — local file imports are blocked.",
 		"removeAria": "Remove {path}",
@@ -1042,6 +1044,22 @@
 		"mcpMigrationKeepOpen": "Keep them all open",
 		"mcpMigrationCloseAll": "Close them all (recommended)",
 		"mcpMigrationFailed": "Couldn't change that."
+	},
+
+	"BackupCard": {
+		"title": "Back up data",
+		"description": "Copies your vaults (notes, search index, study data), chats and settings into a new dated folder. Nothing in your data folder is changed.",
+		"destination": "Backup location",
+		"choose": "Choose…",
+		"excludesNote": "API keys are not included. Re-enter them after restoring.",
+		"start": "Back up",
+		"running": "Backing up…",
+		"progress": "{done} of {total} items",
+		"doneOk": "Backup complete",
+		"doneWithFailures": "Backup finished, but {count} files could not be copied (in use?)",
+		"totals": "{files} files, {databases} databases, {size}",
+		"cancelled": "Backup cancelled.",
+		"interrupted": "The backup was interrupted."
 	},
 
 	"ReindexDialog": {
@@ -1259,6 +1277,9 @@
 		"MCP_IMPORT_ROOTS_EMPTY": "No folder is allowed for MCP file imports yet — add one in Settings",
 		"MCP_PATH_NOT_ALLOWED": "That file is outside the folders you allowed for MCP imports",
 		"MCP_PATH_INVALID": "That path is not usable — it must be an absolute path to an existing regular file (no symlinks, no \"..\" segments)",
+		"MCP_EDIT_NOTE_DISABLED": "Editing notes over MCP is switched off — the user can enable it in Settings",
+		"MCP_EDIT_NOT_FOUND": "The text to replace was not found in the note",
+		"MCP_EDIT_NOT_UNIQUE": "The text to replace appears more than once in the note",
 		"IMPORT_INTERRUPTED": "This import was interrupted (the app was closed during conversion) — cancel it and import the source again",
 		"IMPORT_AUTO_CONFIRM_FAILED": "Auto-confirm failed (the note could not be indexed) — the import is still pending; you can confirm it yourself",
 		"IMPORT_DUPLICATE_URL": "This link appears to have been imported before — you can still continue.",
@@ -1270,6 +1291,10 @@
 		"VAULT_NONE": "No vaults yet — create one first",
 		"VAULT_DELETE_CONFIRM_REQUIRED": "Delete confirmation required ('confirm=true')",
 		"VAULT_LAST_UNDELETABLE": "The last vault can't be deleted — the app always needs at least one vault",
+		"BACKUP_DEST_INVALID": "Enter a full folder path for the backup",
+		"BACKUP_DEST_INSIDE_DATA": "Choose a folder outside the app's data and vault folders",
+		"BACKUP_ALREADY_RUNNING": "A backup is already running",
+		"BACKUP_FAILED": "The backup couldn't be created",
 		"PROVIDER_OLLAMA_MISCONFIGURED": "No enabled Ollama provider is configured",
 		"PROVIDER_CONSENT_NOT_NEEDED": "Ollama doesn't need consent",
 		"PROVIDER_BASE_URL_INVALID": "{url} isn't a valid http(s) address",

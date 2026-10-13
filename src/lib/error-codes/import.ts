@@ -69,6 +69,10 @@ export const IMPORT_CODES = [
 	'MCP_IMPORT_ROOTS_EMPTY',
 	'MCP_PATH_NOT_ALLOWED',
 	'MCP_PATH_INVALID',
+	// edit_note (api/mcp/notes): the developer switch is off; old_string matched nowhere / more than once.
+	'MCP_EDIT_NOTE_DISABLED',
+	'MCP_EDIT_NOT_FOUND',
+	'MCP_EDIT_NOT_UNIQUE',
 	'SCAN_ROOT_INVALID',
 	'SCAN_PATH_INVALID',
 	'SCAN_TOO_LARGE',

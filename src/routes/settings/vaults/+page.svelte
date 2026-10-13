@@ -11,6 +11,7 @@
 	import * as Card from '$lib/components/ui/card';
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
 	import ReindexDialog from '$lib/components/ReindexDialog.svelte';
+	import BackupCard from '$lib/components/BackupCard.svelte';
 	import McpClientConnect from '$lib/components/McpClientConnect.svelte';
 	import { t } from '$lib/i18n/index.svelte';
 	import { readResponseError } from '$lib/server-error';
@@ -76,12 +77,16 @@
 	let mcpRootInput = $state('');
 	let mcpRootsBusy = $state(false);
 	let mcpRootsError = $state('');
+	// Developer switch for the edit_note MCP tool (off by default; only this page can change it).
+	let allowEditNote = $state(false);
 
 	onMount(async () => {
 		try {
 			const res = await fetch('/api/settings/mcp');
 			if (!res.ok) throw new Error();
-			mcpRoots = ((await res.json()) as { allowedImportRoots: string[] }).allowedImportRoots;
+			const loaded = (await res.json()) as { allowedImportRoots: string[]; allowEditNote?: boolean };
+			mcpRoots = loaded.allowedImportRoots;
+			allowEditNote = loaded.allowEditNote === true;
 		} catch {
 			mcpRootsError = t('McpImportSettings.loadFailed');
 		}
@@ -121,6 +126,27 @@
 		const { open } = await import('@tauri-apps/plugin-dialog');
 		const picked = await open({ directory: true, multiple: false });
 		if (typeof picked === 'string') await addMcpRoot(picked);
+	}
+
+	async function saveAllowEditNote(next: boolean) {
+		mcpRootsBusy = true;
+		mcpRootsError = '';
+		try {
+			const res = await fetch('/api/settings/mcp', {
+				method: 'PUT',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ allowEditNote: next })
+			});
+			if (!res.ok) {
+				mcpRootsError = await readResponseError(res);
+				return;
+			}
+			allowEditNote = ((await res.json()) as { allowEditNote?: boolean }).allowEditNote === true;
+		} catch {
+			mcpRootsError = t('McpImportSettings.saveFailed');
+		} finally {
+			mcpRootsBusy = false;
+		}
 	}
 
 	function removeMcpRoot(root: string) {
@@ -520,6 +546,18 @@
 					<Button onclick={() => addMcpRoot(mcpRootInput)} disabled={!mcpRootInput.trim() || mcpRootsBusy}>{t('McpImportSettings.add')}</Button>
 				</div>
 			{/if}
+			<div class="flex items-start justify-between gap-3 border-t pt-3">
+				<div class="flex min-w-0 flex-col gap-1">
+					<span class="text-sm font-medium">{t('McpImportSettings.editNoteLabel')}</span>
+					<p class="text-xs text-muted-foreground">{t('McpImportSettings.editNoteWarning')}</p>
+				</div>
+				<Switch
+					checked={allowEditNote}
+					disabled={mcpRootsBusy}
+					aria-label={t('McpImportSettings.editNoteLabel')}
+					onCheckedChange={(on) => saveAllowEditNote(on)}
+				/>
+			</div>
 			{#if mcpRootsError}
 				<p class="text-sm text-destructive" role="alert">{mcpRootsError}</p>
 			{/if}
@@ -561,6 +599,8 @@
 			</Card.Content>
 		</Card.Root>
 	{/if}
+
+	<BackupCard />
 </div>
 
 <AlertDialog.Root open={!!deleteTarget} onOpenChange={(open) => !open && (deleteTarget = null)}>

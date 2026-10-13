@@ -70,5 +70,11 @@ export const SETTINGS_CODES = [
 	'SKILL_FILE_UNREADABLE',
 	'SKILL_ZIP_TOO_MANY_ENTRIES',
 	'SKILL_ZIP_ENTRY_PATH_INVALID',
-	'SKILL_ZIP_TOTAL_TOO_LARGE'
+	'SKILL_ZIP_TOTAL_TOO_LARGE',
+
+	// #61 data backup (api/settings/backup, server/backup.ts). A `detail` param is appended by the client.
+	'BACKUP_DEST_INVALID',
+	'BACKUP_DEST_INSIDE_DATA',
+	'BACKUP_ALREADY_RUNNING',
+	'BACKUP_FAILED'
 ] as const;

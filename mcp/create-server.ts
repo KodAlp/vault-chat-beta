@@ -6,6 +6,7 @@ import { registerListSources } from './tools/list-sources';
 import { registerCreateVault } from './tools/create-vault';
 import { registerImportSource } from './tools/import-source';
 import { registerListPendingImports } from './tools/list-pending-imports';
+import { registerEditNote } from './tools/edit-note';
 
 /**
  * Builds and registers tools onto a McpServer without connecting a
@@ -36,6 +37,7 @@ export function createServer(): McpServer {
 	registerCreateVault(server);
 	registerImportSource(server);
 	registerListPendingImports(server);
+	registerEditNote(server);
 
 	return server;
 }

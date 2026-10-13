@@ -18,7 +18,7 @@ export const PUT: RequestHandler = async ({ request }) => {
 		fail('VALIDATION_INVALID', { field: 'body' });
 	}
 	try {
-		return json(writeMcpSettings(body as { allowedImportRoots?: unknown }));
+		return json(writeMcpSettings(body as { allowedImportRoots?: unknown; allowEditNote?: unknown }));
 	} catch (err) {
 		if (err instanceof AppError) fail(err.code, err.params, err.status);
 		throw err;

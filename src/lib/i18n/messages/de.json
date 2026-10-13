@@ -906,6 +906,8 @@
   },
   "McpImportSettings": {
     "title": "MCP-Importordner",
+    "editNoteLabel": "Agenten das Bearbeiten von Notizen erlauben (edit_note)",
+    "editNoteWarning": "Entwickleroption, standardmäßig aus. Wenn aktiviert, kann ein per MCP verbundener KI-Agent den Text deiner vorhandenen Notizen ändern (die vorherige Version bleibt als wiederherstellbare Revision erhalten). Notizen können versteckte Anweisungen enthalten, die den Agenten lenken wollen – aktiviere dies nur für Agenten und Tresore, denen du vertraust.",
     "description": "Ein über MCP verbundener KI-Agent darf lokale Dateien nur aus diesen Ordnern importieren. Importe warten auf deine Bestätigung, solange du die automatische Bestätigung für den Tresor nicht einschaltest. Lass die Liste leer, um lokale Dateiimporte zu sperren; Link-Importe (URL) sind erlaubt und laufen über dieselbe Bestätigung.",
     "empty": "Keine Ordner erlaubt — lokale Dateiimporte sind gesperrt.",
     "removeAria": "{path} entfernen",
@@ -956,6 +958,22 @@
     "mcpMigrationCloseAll": "Alle schließen (empfohlen)",
     "mcpMigrationFailed": "Das ließ sich nicht ändern."
   },
+  "BackupCard": {
+    "title": "Daten sichern",
+    "description": "Kopiert Ihre Tresore (Notizen, Suchindex, Lerndaten), Chats und Einstellungen in einen neuen Ordner mit Datum. In Ihrem Datenordner wird nichts verändert.",
+    "destination": "Sicherungsort",
+    "choose": "Auswählen…",
+    "excludesNote": "API-Schlüssel sind nicht enthalten. Geben Sie sie nach dem Wiederherstellen erneut ein.",
+    "start": "Sichern",
+    "running": "Sicherung läuft…",
+    "progress": "{done} von {total} Elementen",
+    "doneOk": "Sicherung abgeschlossen",
+    "doneWithFailures": "Sicherung beendet, aber {count} Dateien konnten nicht kopiert werden (in Benutzung?)",
+    "totals": "{files} Dateien, {databases} Datenbanken, {size}",
+    "cancelled": "Sicherung abgebrochen.",
+    "interrupted": "Die Sicherung wurde unterbrochen."
+  },
+
   "ReindexDialog": {
     "title": "Tresor wird neu indiziert",
     "runningDescription": "Jede Datei in diesem Tresor wird mit dem aktuellen Embedding neu verarbeitet. Der Chat arbeitet währenddessen weiter mit dem alten Index.",
@@ -1165,6 +1183,9 @@
     "MCP_IMPORT_ROOTS_EMPTY": "No folder is allowed for MCP file imports yet — add one in Settings",
     "MCP_PATH_NOT_ALLOWED": "That file is outside the folders you allowed for MCP imports",
     "MCP_PATH_INVALID": "That path is not usable — it must be an absolute path to an existing regular file (no symlinks, no \"..\" segments)",
+    "MCP_EDIT_NOTE_DISABLED": "Das Bearbeiten von Notizen über MCP ist ausgeschaltet — der Nutzer kann es in den Einstellungen aktivieren",
+    "MCP_EDIT_NOT_FOUND": "Der zu ersetzende Text wurde in der Notiz nicht gefunden",
+    "MCP_EDIT_NOT_UNIQUE": "Der zu ersetzende Text kommt in der Notiz mehrfach vor",
     "IMPORT_INTERRUPTED": "This import was interrupted (the app was closed during conversion) — cancel it and import the source again",
     "IMPORT_AUTO_CONFIRM_FAILED": "Auto-confirm failed (the note could not be indexed) — the import is still pending; you can confirm it yourself",
     "IMPORT_DUPLICATE_URL": "This link appears to have been imported before — you can still continue.",
@@ -1176,6 +1197,10 @@
     "VAULT_NONE": "Noch keine Tresore – erstelle zuerst einen",
     "VAULT_DELETE_CONFIRM_REQUIRED": "Löschbestätigung erforderlich ('confirm=true')",
     "VAULT_LAST_UNDELETABLE": "Der letzte Tresor kann nicht gelöscht werden – die App benötigt immer mindestens einen Tresor",
+    "BACKUP_DEST_INVALID": "Geben Sie den vollständigen Ordnerpfad für die Sicherung ein",
+    "BACKUP_DEST_INSIDE_DATA": "Wählen Sie einen Ordner außerhalb der Daten- und Tresorordner der App",
+    "BACKUP_ALREADY_RUNNING": "Es läuft bereits eine Sicherung",
+    "BACKUP_FAILED": "Die Sicherung konnte nicht erstellt werden",
     "PROVIDER_OLLAMA_MISCONFIGURED": "Es ist kein aktivierter Ollama-Anbieter konfiguriert",
     "PROVIDER_CONSENT_NOT_NEEDED": "Ollama benötigt keine Zustimmung",
     "PROVIDER_BASE_URL_INVALID": "{url} ist keine gültige http(s)-Adresse",

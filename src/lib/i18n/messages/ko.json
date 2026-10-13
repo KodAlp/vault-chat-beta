@@ -948,6 +948,8 @@
 	},
 	"McpImportSettings": {
 		"title": "MCP 가져오기 폴더",
+		"editNoteLabel": "에이전트의 노트 편집 허용 (edit_note)",
+		"editNoteWarning": "개발자 옵션이며 기본값은 꺼짐입니다. 켜면 MCP로 연결된 AI 에이전트가 기존 노트의 텍스트를 바꿀 수 있습니다(이전 버전은 복원할 수 있는 리비전으로 보관됩니다). 노트에는 에이전트를 조종하려는 숨겨진 지시가 들어 있을 수 있으므로, 신뢰하는 에이전트와 보관함에만 켜세요.",
 		"description": "MCP로 연결된 AI 에이전트는 이 폴더에서만 로컬 파일을 가져올 수 있어요. 해당 보관함에서 자동 확인을 켜지 않는 한 가져오기는 사용자의 확인을 기다려요. 목록을 비워 두면 로컬 파일 가져오기가 차단돼요. 링크(URL) 가져오기는 허용되며 같은 확인 절차를 거쳐요.",
 		"empty": "허용된 폴더가 없어요. 로컬 파일 가져오기가 차단돼요.",
 		"removeAria": "{path} 제거",
@@ -998,6 +1000,22 @@
 		"mcpMigrationCloseAll": "모두 닫기 (권장)",
 		"mcpMigrationFailed": "변경하지 못했어요."
 	},
+	"BackupCard": {
+		"title": "데이터 백업",
+		"description": "보관함(노트, 검색 색인, 학습 데이터), 채팅, 설정을 날짜가 붙은 새 폴더로 복사합니다. 데이터 폴더의 내용은 전혀 바뀌지 않습니다.",
+		"destination": "백업 위치",
+		"choose": "선택…",
+		"excludesNote": "API 키는 백업에 포함되지 않습니다. 복원한 뒤 다시 입력하세요.",
+		"start": "백업",
+		"running": "백업 중…",
+		"progress": "{total}개 중 {done}개 항목",
+		"doneOk": "백업 완료",
+		"doneWithFailures": "백업이 끝났지만 파일 {count}개를 복사하지 못했습니다(사용 중일 수 있음)",
+		"totals": "파일 {files}개, 데이터베이스 {databases}개, {size}",
+		"cancelled": "백업이 취소되었습니다.",
+		"interrupted": "백업이 중단되었습니다."
+	},
+
 	"ReindexDialog": {
 		"title": "보관함 다시 인덱싱 중",
 		"runningDescription": "이 보관함의 모든 파일을 현재 임베딩으로 다시 처리하고 있어요. 이 작업이 실행되는 동안 채팅은 이전 인덱스로 계속 동작해요.",
@@ -1207,6 +1225,9 @@
 		"MCP_IMPORT_ROOTS_EMPTY": "MCP 파일 가져오기에 허용된 폴더가 아직 없어요. 설정에서 추가하세요",
 		"MCP_PATH_NOT_ALLOWED": "해당 파일은 MCP 가져오기용으로 허용한 폴더 밖에 있어요",
 		"MCP_PATH_INVALID": "사용할 수 없는 경로예요. 존재하는 일반 파일의 절대 경로여야 해요 (심볼릭 링크 불가, \"..\" 구간 불가)",
+		"MCP_EDIT_NOTE_DISABLED": "MCP를 통한 노트 편집이 꺼져 있습니다 — 사용자가 설정에서 켤 수 있습니다",
+		"MCP_EDIT_NOT_FOUND": "바꿀 텍스트를 노트에서 찾을 수 없습니다",
+		"MCP_EDIT_NOT_UNIQUE": "바꿀 텍스트가 노트에 두 번 이상 나타납니다",
 		"IMPORT_INTERRUPTED": "이 가져오기가 중단됐어요 (변환 중에 앱이 닫혔어요). 취소하고 출처를 다시 가져오세요",
 		"IMPORT_AUTO_CONFIRM_FAILED": "자동 확인에 실패했어요 (노트를 인덱싱하지 못했어요). 가져오기는 여전히 대기 중이며 직접 확인할 수 있어요",
 		"IMPORT_DUPLICATE_URL": "이 링크는 전에 가져온 것 같아요. 계속 진행할 수도 있어요.",
@@ -1218,6 +1239,10 @@
 		"VAULT_NONE": "아직 보관함이 없어요. 먼저 하나를 만드세요",
 		"VAULT_DELETE_CONFIRM_REQUIRED": "삭제 확인이 필요해요 ('confirm=true')",
 		"VAULT_LAST_UNDELETABLE": "마지막 보관함은 삭제할 수 없어요. 앱에는 항상 보관함이 하나 이상 있어야 해요",
+		"BACKUP_DEST_INVALID": "백업할 폴더의 전체 경로를 입력하세요",
+		"BACKUP_DEST_INSIDE_DATA": "앱의 데이터 폴더와 보관함 폴더 밖의 폴더를 선택하세요",
+		"BACKUP_ALREADY_RUNNING": "이미 백업이 진행 중입니다",
+		"BACKUP_FAILED": "백업을 만들 수 없습니다",
 		"PROVIDER_OLLAMA_MISCONFIGURED": "사용 중인 Ollama 제공자가 설정되어 있지 않아요",
 		"PROVIDER_CONSENT_NOT_NEEDED": "Ollama는 동의가 필요 없어요",
 		"PROVIDER_BASE_URL_INVALID": "{url}은(는) 올바른 http(s) 주소가 아니에요",
