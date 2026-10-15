@@ -2,7 +2,7 @@
 
 Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncellenir.
 
-**Son güncelleme:** 2026-10-15 · paketli testler (#59, #45, #87) geçti; `_meta` indeks hatası düzeltildi
+**Son güncelleme:** 2026-10-15 · f2d78d9 kuruldu; Fizik ve Rusça `_meta`'sız yeniden indekslendi
 
 ## Kurallar
 
@@ -95,7 +95,6 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 - [ ] **#7'yi asıl dosyayla dene.** 34 sayfalık taranmış Sinyaller final PDF'i (Kolay Matematik testi). `K`
 - [ ] **Elle: 7 `\circ c` ve 1 `\underset{X}{\, \infty}` (Likharev).** ∝ kuralı bunlara bilerek dokunmuyor. `K`
 - [ ] **#8: `use_cls=False` tüm OCR sayfalarında.** Yan/ters taramada döndürme düzeltmesi kayboldu; yalnız kodlu sayfalarda kapatmak ikinci geçiş ister. Ayrıca eşit genişlikli yazı tipi varsayımı, `code_language` etiketi kaybı, kod alanındaki el yazısı OCR çöpü. `O`
-- [ ] **Tüm kasaları yeniden indeksle (`_meta` düzeltmesinden sonra).** Revizyonlar indekste (Fizik'te 68 dosyanın 50'si); `_meta` dışlaması yeni derlemede olacak, kurulduktan sonra her kasayı yeniden indeksle — yetim temizliği eski satırları siler. `K`
 - [ ] **Sessiz kurulum eski exe'yi bırakabiliyor.** 2026-10-15'te ilk `/S` kurulum çıkış 0 verdi ama `vault-chat.exe`'yi değiştirmedi (yalnız dist-server güncellendi); süreçler tam kapanınca ikinci kurulum düzeldi. Kurulumdan sonra exe'yi doğrula; uygulama `taskkill` (zorlamasız) ile de kapanmıyor. `K`
 
 ## Daha sonra
@@ -127,6 +126,7 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 
 Yalnız son iki haftanın kaydı tutulur; daha eskisi git geçmişindedir.
 
+- 2026-10-15: f2d78d9 kuruldu; Fizik (34.595 → 7.854 parça, 18 not) ve Rusça (16 → 2 dosya) revizyonsuz yeniden indekslendi; diğer kasalarda `_meta` satırı yoktu ya da indeks hiç yoktu.
 - 2026-10-15: `_meta` (revizyonlar) artık indekslenmiyor; Fizik'te indeksin 50/68'i revizyondu. `c2f2b49`
 - 2026-10-15: #87 paketli sürümde doğrulandı: launcher kaydı yokken Ollama açılışta başlıyor ("starting it for this session"), launchers.json'a yazılmıyor; açılıştan hemen sonra MCP search_library yanıt veriyor.
 - 2026-10-15: #45 paketli sürümde: `mcp-endpoint.json` her açılışta yeni pid/port ile yazılıyor, pid canlı sidecar; MCP jetonu yalnız /api/mcp/*'yi açıyor.
