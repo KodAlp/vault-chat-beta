@@ -2,7 +2,7 @@
 
 Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncellenir.
 
-**Son güncelleme:** 2026-10-15 · #83 ölçüldü (parçalı dönüştürme Acil'e eklendi); 942721e kuruldu
+**Son güncelleme:** 2026-10-15 · paketli testler (#59, #45, #87) geçti; `_meta` indeks hatası düzeltildi
 
 ## Kurallar
 
@@ -32,7 +32,6 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 ### 1. Kurulum ve veri sağlamlığı
 
 ### 2. Test ve doğrulama
-- [ ] **Paketli sürümde negatif testler.** `invoke('check_and_start')` reddi, `curl` 401. `K` · #59 (çekildi)
 - [ ] **Faz 11 canlı doğrulamaları.** Paketli sürümde sağlayıcı aç/kapa, `chats.db` bozma testi. `K` · #56 (çekildi)
 
 ### 3. Sohbet ve dil tutarlılığı
@@ -54,7 +53,6 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 - [ ] **"Yalnız hatalı formülü onar".** Sayfa + kutu; belgenin tamamını yeniden okumadan. `B` · #3
 
 ### 9. MCP paketleme ve kurulum
-- [ ] **Paketli Tauri'de `mcp-endpoint.json` kapı deneyi.** `K` · #45
 - [ ] **`npx` ile tek komut MCP kurulumu + örnek kasa.** `O` · #43
 - [ ] **MCP sunucusunu Tauri paketine dahil et.** Tek dosya ya da gömülü Node. `O–B` · #37
 - [ ] **Node'u (ve Python'u) pakete gömme; WebView2 çevrimdışı yükleyici.** Node kısmı #37 ile ortak. `B` · #53 (çekildi) ← MCP sunucusunu Tauri paketine dahil et
@@ -93,11 +91,12 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 ## Öneriler
 
 - [ ] **#61 ve #40'ı uygulamada dene.** Yedek kartı (klasör seçici, ilerleme) ve edit_note anahtarı tarayıcıda denenmedi. `K`
-- [ ] **#87'yi paketli sürümde doğrula.** `launchers.json`'dan ollama kaydını sil, uygulamayı aç: `launch.log`'da "starting it for this session" görünmeli; açılış anında MCP `search_library` 30 sn içinde yanıt vermeli. `K`
 - [ ] **#31'i gerçek bir modelle doğrula.** Kalibrasyon yalnız sentetik vektörlerle sınandı; nomic/qwen3 embedding ile 2016 negatiflik setinde yanlış pozitif ölç. `O`
 - [ ] **#7'yi asıl dosyayla dene.** 34 sayfalık taranmış Sinyaller final PDF'i (Kolay Matematik testi). `K`
 - [ ] **Elle: 7 `\circ c` ve 1 `\underset{X}{\, \infty}` (Likharev).** ∝ kuralı bunlara bilerek dokunmuyor. `K`
 - [ ] **#8: `use_cls=False` tüm OCR sayfalarında.** Yan/ters taramada döndürme düzeltmesi kayboldu; yalnız kodlu sayfalarda kapatmak ikinci geçiş ister. Ayrıca eşit genişlikli yazı tipi varsayımı, `code_language` etiketi kaybı, kod alanındaki el yazısı OCR çöpü. `O`
+- [ ] **Tüm kasaları yeniden indeksle (`_meta` düzeltmesinden sonra).** Revizyonlar indekste (Fizik'te 68 dosyanın 50'si); `_meta` dışlaması yeni derlemede olacak, kurulduktan sonra her kasayı yeniden indeksle — yetim temizliği eski satırları siler. `K`
+- [ ] **Sessiz kurulum eski exe'yi bırakabiliyor.** 2026-10-15'te ilk `/S` kurulum çıkış 0 verdi ama `vault-chat.exe`'yi değiştirmedi (yalnız dist-server güncellendi); süreçler tam kapanınca ikinci kurulum düzeldi. Kurulumdan sonra exe'yi doğrula; uygulama `taskkill` (zorlamasız) ile de kapanmıyor. `K`
 
 ## Daha sonra
 
@@ -128,6 +127,10 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 
 Yalnız son iki haftanın kaydı tutulur; daha eskisi git geçmişindedir.
 
+- 2026-10-15: `_meta` (revizyonlar) artık indekslenmiyor; Fizik'te indeksin 50/68'i revizyondu. `c2f2b49`
+- 2026-10-15: #87 paketli sürümde doğrulandı: launcher kaydı yokken Ollama açılışta başlıyor ("starting it for this session"), launchers.json'a yazılmıyor; açılıştan hemen sonra MCP search_library yanıt veriyor.
+- 2026-10-15: #45 paketli sürümde: `mcp-endpoint.json` her açılışta yeni pid/port ile yazılıyor, pid canlı sidecar; MCP jetonu yalnız /api/mcp/*'yi açıyor.
+- 2026-10-15: #59 paketli sürümde: sidecar kökenli sayfadan `check_and_start` / `save_vault_config_and_start` / `recheck_node` ACL ile reddediliyor (CDP ile denendi); jetonsuz, yanlış jetonlu, MCP jetonuyla MCP dışı istek 401, yabancı Origin 403.
 - 2026-10-15: büyük PDF bellek ölçümü: 150/300/600 sayfa → 5,5/8,7/14,6 GB RAM, GPU ~4,3 GB sabit (#83). `docs/dev/bellek-olcum-2026-10-15.md`
 - 2026-10-15: yedek bildirimleri sağlayıcıyı etiketiyle anıyor, yerleşik "Ollama (yerel)" her dilde yerelleşiyor (#73 devamı). `39a9367`
 - 2026-10-15: kısa gerçek başlıklar ("Go", "R", "C", "Qt") artık reddedilmiyor; yalnız bölüm numarası ("I", "XIV", "12") eleniyor (#10 yan etkisi). `d9bb0da`
