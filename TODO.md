@@ -2,7 +2,7 @@
 
 Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncellenir.
 
-**Son güncelleme:** 2026-10-15 · Öneriler'den 4 kısa iş bitti; 942721e derlemesi masaüstünde
+**Son güncelleme:** 2026-10-15 · #83 ölçüldü (parçalı dönüştürme Acil'e eklendi); 942721e kuruldu
 
 ## Kurallar
 
@@ -40,7 +40,7 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 ### 4. Düzenleyici ve sohbet görünümü
 
 ### 5. Büyük belgelerde bellek ve hız
-- [ ] **1000+ sayfalık kitaplarda bellek ölçümü.** `K` · #83
+- [ ] **Uzun PDF'leri parçalı dönüştür.** docling her sayfanın görüntüsünü/arka ucunu/hücrelerini sonuna kadar tutuyor: 2,4 GB + 20 MB/sayfa, 32 GB'ta ~1300 sayfa üstü sığmaz. 150 sayfalık aralıklarla çevir, Markdown'u birleştir. `docs/dev/bellek-olcum-2026-10-15.md` `O` · #83 devamı
 - [ ] **Formül yoğun klasörlerin hızı.** Sayfa başına 15–25 sn; 200+ saatlik klasörler. `B` · #82
 
 ### 6. İçe aktarmada sessiz bozulma
@@ -128,6 +128,7 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 
 Yalnız son iki haftanın kaydı tutulur; daha eskisi git geçmişindedir.
 
+- 2026-10-15: büyük PDF bellek ölçümü: 150/300/600 sayfa → 5,5/8,7/14,6 GB RAM, GPU ~4,3 GB sabit (#83). `docs/dev/bellek-olcum-2026-10-15.md`
 - 2026-10-15: yedek bildirimleri sağlayıcıyı etiketiyle anıyor, yerleşik "Ollama (yerel)" her dilde yerelleşiyor (#73 devamı). `39a9367`
 - 2026-10-15: kısa gerçek başlıklar ("Go", "R", "C", "Qt") artık reddedilmiyor; yalnız bölüm numarası ("I", "XIV", "12") eleniyor (#10 yan etkisi). `d9bb0da`
 - 2026-10-15: `python -m pytest ingest` tek komutla 16 dosyayı koşuyor (conftest, her dosya kendi sürecinde). `a91000b`
