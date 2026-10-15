@@ -850,19 +850,22 @@ _EDITION_ONLY = re.compile(
     re.IGNORECASE,
 )
 _FILE_NAME_TITLE = re.compile(r"\.(?:pdf|docx?|pptx?|xlsx?|tex|md|txt)$", re.IGNORECASE)
-_TITLE_MIN_ALNUM = 3
+# A part/chapter number standing alone ("I", "XIV", "12"). Upper-case I/V/X only:
+# a lone "C" or "D" is likelier a language or a grade, and "Vi" an editor.
+_PART_NUMBER_ONLY = re.compile(r"^(?:[IVX]+|\d+)\.?$")
 
 
 def is_junk_title(title: str | None) -> bool:
     """True when `title` cannot serve as a note title: empty, no real
-    characters (``******``), fewer than 3 letters/digits (``I``), a generator
+    characters (``******``), a bare part number (``I``, ``XIV``, ``12``), a generator
     default (PowerPoint Presentation / Sunusu, Untitled, Slide 1, "Microsoft
     Word - ..."), an edition label alone (Expanded Edition), or a file name.
+    Short real titles ("Go", "R", "C", "Qt") are kept.
     The caller then tries its next candidate (next heading, metadata, file name)."""
     if not title:
         return True
     t = " ".join(title.split())
-    if sum(1 for ch in t if ch.isalnum()) < _TITLE_MIN_ALNUM:
+    if not any(ch.isalnum() for ch in t) or _PART_NUMBER_ONLY.match(t):
         return True
     return bool(
         _GENERIC_TITLE.match(t)

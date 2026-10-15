@@ -206,14 +206,15 @@ def test_html_stripping() -> None:
 
 
 def test_junk_titles() -> None:
-    junk = ["******", "I", "", "  ", "—", "II", "PowerPoint Sunusu", "PowerPoint Presentation",
+    junk = ["******", "I", "", "  ", "—", "II", "XIV", "IV.", "12", "PowerPoint Sunusu", "PowerPoint Presentation",
             "Microsoft PowerPoint", "Microsoft Word - rapor.doc", "Untitled", "untitled document 2",
             "Slide 1", "Başlıksız", "Expanded Edition", "Second Edition", "Revised and Expanded Edition",
             "3rd Edition", "Genişletilmiş Baskı", "ders.pdf", "sunu.pptx"]
     for j in junk:
         check(f"is_junk_title rejects {j!r}", is_junk_title(j))
     good = ["Linear Algebra Done Right", "Kontrol Teorisi", "Attention Is All You Need",
-            "Introduction to Algorithms, Third Edition", "Fizik 101", "PowerPoint ile Sunum Hazırlama"]
+            "Introduction to Algorithms, Third Edition", "Fizik 101", "PowerPoint ile Sunum Hazırlama",
+            "Go", "R", "C", "Qt", "C++", "Vi", "Ω"]
     for g in good:
         check(f"is_junk_title keeps {g!r}", not is_junk_title(g))
     check("is_junk_title(None)", is_junk_title(None))
