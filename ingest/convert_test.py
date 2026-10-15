@@ -828,6 +828,66 @@ def test_ocr_segments() -> None:
     ))
 
 
+def test_chunk_segments() -> None:
+    """#83: long PDFs are converted in chunks of at most N pages."""
+    ch = convert.chunk_segments
+    check("chunk_segments: short segment untouched", ch([(1, 150, False)], 150) == [(1, 150, False)])
+    check("chunk_segments: 151 pages -> 150 + 1", ch([(1, 151, False)], 150) == [(1, 150, False), (151, 151, False)])
+    check(
+        "chunk_segments: OCR flag kept, each segment split on its own",
+        ch([(1, 2, True), (3, 9, False)], 3) == [(1, 2, True), (3, 5, False), (6, 8, False), (9, 9, False)],
+    )
+    tiles = ch([(5, 1000, True)], 150)
+    check("chunk_segments: pieces tile the range", tiles[0][0] == 5 and tiles[-1][1] == 1000
+          and all(a[1] + 1 == b[0] for a, b in zip(tiles, tiles[1:])) and all(e - s < 150 for s, e, _o in tiles))
+    check("chunk_segments: empty", ch([], 150) == [])
+    saved = os.environ.get("VC_PDF_CHUNK_PAGES")
+    try:
+        os.environ["VC_PDF_CHUNK_PAGES"] = "40"
+        check("pdf_chunk_pages: env override", convert.pdf_chunk_pages() == 40)
+        os.environ["VC_PDF_CHUNK_PAGES"] = "x"
+        check("pdf_chunk_pages: junk -> default", convert.pdf_chunk_pages() == convert.PDF_CHUNK_PAGES)
+        os.environ["VC_PDF_CHUNK_PAGES"] = "0"
+        check("pdf_chunk_pages: never below 1", convert.pdf_chunk_pages() == 1)
+    finally:
+        if saved is None:
+            os.environ.pop("VC_PDF_CHUNK_PAGES", None)
+        else:
+            os.environ["VC_PDF_CHUNK_PAGES"] = saved
+
+
+def test_concatenate_keep_pages() -> None:
+    """Merging chunk documents keeps the real page numbers, also when docling
+    dropped the last page of a chunk (concatenate alone would shift them)."""
+    try:
+        from docling_core.types.doc import BoundingBox, DoclingDocument, ProvenanceItem, Size
+    except ImportError:
+        print("SKIP  _concatenate_keep_pages: docling_core kurulu değil")
+        return
+
+    def doc(pages: list[int]) -> DoclingDocument:
+        d = DoclingDocument(name="t")
+        for p in pages:
+            d.add_page(page_no=p, size=Size(width=100, height=100))
+            d.add_text(label="text", text=f"sayfa {p}",
+                       prov=ProvenanceItem(page_no=p, bbox=BoundingBox(l=0, t=0, r=1, b=1), charspan=(0, 1)))
+        return d
+
+    def prov_pages(d) -> list[int]:
+        return [t.prov[0].page_no for t in d.texts]
+
+    merged = convert._concatenate_keep_pages([doc([1, 2, 3]), doc([4, 5])])
+    check("_concatenate_keep_pages: contiguous chunks", sorted(merged.pages) == [1, 2, 3, 4, 5]
+          and prov_pages(merged) == [1, 2, 3, 4, 5])
+    # Page 3 missing from the first chunk: plain concatenate would renumber 4,5 -> 3,4.
+    merged = convert._concatenate_keep_pages([doc([1, 2]), doc([4, 5])])
+    check("_concatenate_keep_pages: dropped last page does not shift later pages",
+          sorted(merged.pages) == [1, 2, 4, 5] and prov_pages(merged) == [1, 2, 4, 5]
+          and all(merged.pages[n].page_no == n for n in merged.pages))
+    merged = convert._concatenate_keep_pages([doc([151, 152]), doc([153])])
+    check("_concatenate_keep_pages: range not starting at 1", prov_pages(merged) == [151, 152, 153])
+
+
 def test_textless_warning() -> None:
     w = convert.textless_warning
     check("textless_warning: docling + OCR ran -> OCR ile okundu", "OCR ile okundu" in (w("docling", [2], True) or ""))
@@ -910,6 +970,8 @@ if __name__ == "__main__":
     test_textless_pages()
     test_textless_warning()
     test_ocr_segments()
+    test_chunk_segments()
+    test_concatenate_keep_pages()
     test_reset_run_state()
     test_serve_mode()
     print(f"\n{len(failures)} başarısız" if failures else "\nhepsi geçti")
