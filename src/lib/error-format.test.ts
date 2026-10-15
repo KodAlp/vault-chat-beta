@@ -103,3 +103,20 @@ test('undefined input returns the fallback', () => {
 test('an empty-string message does not count as usable and falls through to fallback', () => {
 	assert.equal(formatCodedError({ message: '' }, fakeTranslate, 'fallback'), 'fallback');
 });
+
+test('the stock built-in Ollama name in a provider param is localized; a user label is not', () => {
+	const dict: Record<string, string> = {
+		'ServerErrors.CHAT_FALLBACK_RATE_LIMITED': '{from} hit its rate limit → switching to {to}',
+		'ProvidersSettingsPage.ollamaLocal': 'Ollama (local)'
+	};
+	const translate = (key: string, params?: ErrorParams) =>
+		(dict[key] ?? key).replace(/\{(\w+)\}/g, (_, k) => String(params?.[k] ?? `{${k}}`));
+	assert.equal(
+		formatCodedError({ code: 'CHAT_FALLBACK_RATE_LIMITED', params: { from: 'Ollama (yerel)', to: 'My Groq' } }, translate, 'fb'),
+		'Ollama (local) hit its rate limit → switching to My Groq'
+	);
+	assert.equal(
+		formatCodedError({ code: 'CHAT_FALLBACK_RATE_LIMITED', params: { from: 'My Groq', to: 'ollama' } }, translate, 'fb'),
+		'My Groq hit its rate limit → switching to Ollama (local)'
+	);
+});
