@@ -179,6 +179,9 @@ export const POST: RequestHandler = async ({ request }) => {
 			// event already sent — the loop-terminating `done` below is skipped
 			// so the client isn't told this generation succeeded.
 			let exhaustedEmpty = false;
+			// Set once an `error` event reached the client: the finalizer's own save failure (the
+			// same broken chats.db, again) is then only logged, not sent as a second error.
+			let errorSent = false;
 			// Only non-null once startFlight() has actually run — endFlight()
 			// in the finally block must not fire for a flight that was never
 			// registered (e.g. the DB calls above it threw first).
@@ -666,11 +669,18 @@ export const POST: RequestHandler = async ({ request }) => {
 					} catch {
 						// An unreadable providers.json falls through to the generic error below.
 					}
+					// A chats.db failure (better-sqlite3's SqliteError: SQLITE_NOTADB, SQLITE_CORRUPT, ...)
+					// gets its own code instead of UNKNOWN — the user can act on "couldn't save the chat".
+					const sqliteCode = (err as { code?: unknown } | null)?.code;
+					const dbFailure = typeof sqliteCode === 'string' && sqliteCode.startsWith('SQLITE_');
 					const payload =
 						unreachableLabel !== null
 							? errorEvent('LOCAL_SERVER_UNREACHABLE', { provider: unreachableLabel })
-							: { type: 'error' as const, ...errorPayload(err) };
+							: dbFailure
+								? errorEvent('CHAT_SAVE_FAILED', { detail: err instanceof Error ? err.message : String(err) })
+								: { type: 'error' as const, ...errorPayload(err) };
 					send(payload);
+					errorSent = true;
 					logAppEvent({ kind: 'chat_error', chatId, message: err instanceof Error ? err.message : String(err) });
 				}
 			} finally {
@@ -728,7 +738,7 @@ export const POST: RequestHandler = async ({ request }) => {
 				} catch (err) {
 					const detail = err instanceof Error ? err.message : String(err);
 					logAppEvent({ kind: 'db_error', chatId, message: detail });
-					send(errorEvent('CHAT_SAVE_FAILED', { detail }));
+					if (!errorSent) send(errorEvent('CHAT_SAVE_FAILED', { detail }));
 				}
 
 				closed = true;
