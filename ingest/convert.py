@@ -912,6 +912,76 @@ def ocr_segments(page_range: tuple[int, int], textless: set[int] | list[int]) ->
     return out
 
 
+# Long PDFs are converted in page chunks of at most this size (#83, measured
+# 2026-10-15 on a 1151-page book, docs/dev/bellek-olcum-2026-10-15.md): with
+# formula/code enrichment and picture crops on, docling keeps every page's
+# image, PDF backend and parsed cells until the whole conversion ends — RAM
+# grew as ~2.4 GB + 20 MB/page (150 pages 5.5 GB, 600 pages 14.6 GB), so a
+# 32 GB machine ran out above ~1300 pages. Chunks bound the peak to one
+# chunk's pages. VC_PDF_CHUNK_PAGES overrides it (tests, small machines).
+PDF_CHUNK_PAGES = 150
+
+
+def pdf_chunk_pages() -> int:
+    raw = os.environ.get("VC_PDF_CHUNK_PAGES", "").strip()
+    try:
+        n = int(raw) if raw else PDF_CHUNK_PAGES
+    except ValueError:
+        n = PDF_CHUNK_PAGES
+    return max(1, n)
+
+
+def chunk_segments(segments: list[tuple[int, int, bool]], size: int) -> list[tuple[int, int, bool]]:
+    """Split every (start, end, ocr) segment longer than `size` pages into
+    consecutive pieces of at most `size` pages, keeping its OCR flag."""
+    out: list[tuple[int, int, bool]] = []
+    for start, end, ocr in segments:
+        while end - start + 1 > size:
+            out.append((start, start + size - 1, ocr))
+            start += size
+        out.append((start, end, ocr))
+    return out
+
+
+def _release_pages(result) -> None:
+    """Drop what docling keeps per page for enrichment (page image, PDF
+    backend, parsed cells) once a chunk is fully processed; the Page objects
+    and their page_no stay for the page-count checks. Best-effort."""
+    for page in getattr(result, "pages", None) or []:
+        try:
+            backend = getattr(page, "_backend", None)
+            if backend is not None:
+                backend.unload()
+                page._backend = None
+            page._image_cache = {}
+            page.parsed_page = None
+        except Exception:  # noqa: BLE001 — memory only, never the conversion
+            pass
+
+
+def _concatenate_keep_pages(documents):
+    """DoclingDocument.concatenate shifts each document's pages to follow the
+    previous document's LAST page; when docling dropped the last page(s) of a
+    chunk, every later page number would move down. Map the merged pages back
+    to the page numbers the chunks actually had (order is preserved)."""
+    from docling_core.types.doc import ContentLayer, DocItem, DoclingDocument
+
+    merged = DoclingDocument.concatenate(documents)
+    original = sorted(p for d in documents for p in d.pages)
+    current = sorted(merged.pages)
+    if original == current or len(original) != len(current):
+        return merged
+    mapping = dict(zip(current, original))
+    merged.pages = {mapping[n]: page for n, page in merged.pages.items()}
+    for n, page in merged.pages.items():
+        page.page_no = n
+    for item, _level in merged.iterate_items(traverse_pictures=True, included_content_layers=set(ContentLayer)):
+        if isinstance(item, DocItem):
+            for prov in item.prov:
+                prov.page_no = mapping.get(prov.page_no, prov.page_no)
+    return merged
+
+
 def _code_formula_model(conv):
     """The pipeline's CodeFormula enrichment model (None when docling's
     internals differ). Its `options.extract_code` can be flipped per run."""
@@ -974,22 +1044,26 @@ def _rebuild_scanned_code(result) -> None:
 def _convert_ocr_segments(conv, path: Path, segments: list[tuple[int, int, bool]]):
     """Convert each (start, end, ocr) segment on the SAME DocumentConverter,
     toggling the pipeline's OCR model between them, and concatenate the
-    segment documents. Returns (results, merged_document, ocr_ran), or None
-    when docling's internals do not allow it (the caller then converts the
-    whole document with OCR, as before). A conversion error from docling
-    itself is NOT swallowed — only the optimization is best-effort."""
+    segment documents. Segments are OCR runs (ocr_segments) and/or page
+    chunks of a long PDF (chunk_segments); each segment's page resources are
+    released as soon as it is done. Returns (results, merged_document,
+    ocr_ran), or None when docling's internals do not allow it (the caller
+    then converts the whole document in one call, as before). A conversion
+    error from docling itself is NOT swallowed — only the optimization is
+    best-effort."""
     from docling.datamodel.base_models import InputFormat
 
     try:
         ocr_model = conv._get_pipeline(InputFormat.PDF).ocr_model
         if not isinstance(ocr_model.enabled, bool):
             raise AttributeError("ocr_model.enabled")
-        from docling_core.types.doc import DoclingDocument
-
-        concatenate = DoclingDocument.concatenate
+        from docling_core.types.doc import DoclingDocument  # noqa: F401 — availability check
     except Exception as err:  # noqa: BLE001 — optimization only
-        print(f"ocr: sayfa bazlı OCR kullanılamadı, tüm belge OCR'lanıyor: {err}", file=sys.stderr)
+        print(f"docling: parçalı dönüştürme kullanılamadı, belge tek seferde çevriliyor: {err}", file=sys.stderr)
         return None
+    was_enabled = ocr_model.enabled
+    total = sum(e - s + 1 for s, e, _o in segments)
+    done = 0
     results = []
     try:
         for start, end, ocr in segments:
@@ -998,14 +1072,19 @@ def _convert_ocr_segments(conv, path: Path, segments: list[tuple[int, int, bool]
             result = conv.convert(str(path), page_range=(start, end))
             if ocr:
                 _rebuild_scanned_code(result)
+            _release_pages(result)
             results.append(result)
+            done += end - start + 1
+            emit({"type": "progress", "stage": "converting", "pagesDone": done, "pagesTotal": total})
     finally:
-        ocr_model.enabled = True
+        # Back to the converter's own setting: a CLI converter built with
+        # do_ocr=False has no OCR engine to switch on.
+        ocr_model.enabled = was_enabled
         _set_code_extraction(conv, True)
     try:
-        document = concatenate([r.document for r in results])
+        document = _concatenate_keep_pages([r.document for r in results])
     except Exception as err:  # noqa: BLE001 — optimization only
-        print(f"ocr: sayfa bazlı OCR kullanılamadı, tüm belge OCR'lanıyor: {err}", file=sys.stderr)
+        print(f"docling: parçalı dönüştürme kullanılamadı, belge tek seferde çevriliyor: {err}", file=sys.stderr)
         return None
     return results, document, any(ocr for _s, _e, ocr in segments)
 
@@ -1066,7 +1145,9 @@ def convert_with_docling(
     gracefully to CPU on a GPU-less one instead of hard-failing.
 
     page_range (#37, Aşama 7): 1-indexed inclusive, docling's own convention
-    — for a document too large to convert whole in one sitting.
+    — for a document too large to convert whole in one sitting. Independent
+    of it, a scope longer than pdf_chunk_pages() is converted in chunks on
+    the same converter and merged (#83, see PDF_CHUNK_PAGES).
 
     backend: "default" or "hybrid" (see hybrid_backend.py and the module
     docstring's --pdf-backend). On "default", an open failure (#354) is
@@ -1098,9 +1179,16 @@ def convert_with_docling(
     textless = [] if need_all else textless_pages_in_scope(path, page_range)
     total_pages = pdf_page_count(path)
     scope = page_range or ((1, total_pages) if total_pages > 0 else None)
-    # More than one segment = a mix of scanned and born-digital pages; an
-    # unknown page count (scope None) keeps the old whole-document OCR.
-    segments = ocr_segments(scope, textless) if (textless and scope) else []
+    # More than one segment = a mix of scanned and born-digital pages and/or
+    # a PDF longer than one chunk (pdf_chunk_pages); an unknown page count
+    # (scope None) keeps the old single whole-document call.
+    if scope is None:
+        segments = []
+    elif need_all:
+        segments = [(scope[0], scope[1], True)]
+    else:
+        segments = ocr_segments(scope, textless)
+    segments = chunk_segments(segments, pdf_chunk_pages())
     per_page = len(segments) > 1
     want_ocr = need_all or bool(textless)
     # Serve mode: the cached converter is always built with OCR on and the
