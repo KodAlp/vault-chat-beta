@@ -2,7 +2,7 @@
 
 Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncellenir.
 
-**Son güncelleme:** 2026-10-15 · #2 Fizik bitti (11 not yeniden içe aktarıldı, PDF ile elle denetlendi, 48 → 0)
+**Son güncelleme:** 2026-10-16 · #83 uzun PDF'ler parçalı dönüştürülüyor (1151 sayfa 6,7 GB)
 
 ## Kurallar
 
@@ -38,7 +38,6 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 ### 4. Düzenleyici ve sohbet görünümü
 
 ### 5. Büyük belgelerde bellek ve hız
-- [ ] **Uzun PDF'leri parçalı dönüştür.** docling her sayfanın görüntüsünü/arka ucunu/hücrelerini sonuna kadar tutuyor: 2,4 GB + 20 MB/sayfa, 32 GB'ta ~1300 sayfa üstü sığmaz. 150 sayfalık aralıklarla çevir, Markdown'u birleştir. `docs/dev/bellek-olcum-2026-10-15.md` `O` · #83 devamı
 - [ ] **Formül yoğun klasörlerin hızı.** Sayfa başına 15–25 sn; 200+ saatlik klasörler. `B` · #82
 
 ### 6. İçe aktarmada sessiz bozulma
@@ -96,6 +95,8 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 - [ ] **Yeniden içe aktarma kapısı formül düzeyinde olmalı.** KaTeX "hata azaldı" ölçütü yanlış-ama-geçerli formülü yakalamıyor: 2026-10-15'te 10 notta eski 42 hatanın 32'si görsel (doğru), 10'u LaTeX (2 doğru, 4 yarım, 4 yanlış); ayrıca 3 regresyon (eskisi neredeyse doğruydu). Notun tamamı yerine yalnız değişen formülleri göster/onaylat ya da eskisi yalnız sözdiziminden düşüyorsa onu onar. #3 ile birlikte. `O`
 - [ ] **MinerU çıktısında formüle karışmış düzyazı.** `	ext{where the constant in…}`, `	ext{ a n d   m a n g n e t i c …}` gibi satırlar KaTeX'ten geçiyor ama yanlış; postprocess'te ayıklanabilir (uzun `	ext{}` + düzyazıda aynı cümle). `O`
 - [ ] **Sessiz kurulum eski exe'yi bırakabiliyor.** 2026-10-15'te ilk `/S` kurulum çıkış 0 verdi ama `vault-chat.exe`'yi değiştirmedi (yalnız dist-server güncellendi); süreçler tam kapanınca ikinci kurulum düzeldi. Kurulumdan sonra exe'yi doğrula; uygulama `taskkill` (zorlamasız) ile de kapanmıyor. `K`
+- [ ] **İçe aktarmada sayfa ilerlemesi göster.** convert.py artık her parça sonunda `pagesDone`/`pagesTotal` yayıyor; SingleFileImport ve BatchImport yalnız aşama etiketi gösteriyor. Uzun kitapta "450/1151 sayfa" ve kalan süre. `K–O`
+- [ ] **Parçalı dönüştürmede kalan bellek artışı.** 1151 sayfada parça başına ~0,15 GB birikiyor (birleşik belgedeki görseller, formül kırpımları); 5000 sayfalık Intel SDM ile ölç, gerekirse görselleri parça sonunda diske yaz. `O`
 
 ## Daha sonra
 
@@ -126,6 +127,7 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 
 Yalnız son iki haftanın kaydı tutulur; daha eskisi git geçmişindedir.
 
+- 2026-10-16: uzun PDF'ler 150 sayfalık parçalarla dönüştürülüyor (#83): AIMA 1–300 tepe RAM 8,7 → 5,4 GB, 1151 sayfanın tamamı 6,7 GB / 35 dk (parçasız ~25 GB olurdu); Markdown'da tek fark parça sınırındaki kenar notu. Parça birleştirmede kayan sayfa numaraları da düzeldi. `217e901`
 - 2026-10-15: #2 Fizik yeniden içe aktarma bitti: 11 not, KaTeX hataları 48 → 0 (kasanın 18 notunda 0); kozmoloji/QM'de ~22 `∞`→`∝` düzeldi. Elle PDF karşılaştırması: 45 eski hata noktası → çoğu sayfa numaralı görsel; yanlış/yarım/regresyon olan 11 formül PDF'ten elle yazıldı (adaptive (2.16)/(3.41)/s.26/s.32, motivic (5.1.8.a) ve 64 `𝕀`→`𝟙`, Carroll Maxwell, string (3.36)/(6.17) yeri, optik (11.21), SM (2.69), QM (4.122–123) ve 2 kenar etiketi, loop-QG yinelenen düzyazı, EM kenar etiketi). Hepsi revizyonlu; indeks güncel. Aynı kalan formüllerin eski hataları (ör. `\dot ν`) taranmadı.
 - 2026-10-15: bozuk `chats.db` artık tek hata olayı veriyor (`CHAT_SAVE_FAILED`), önce `UNKNOWN` yok. `2d27a10`
 - 2026-10-15: #56 paketli sürümde: sağlayıcı aç/kapa `AppData\providers.json`'a yazılıyor (kurulumdaki varsayılan dokunulmuyor), API ile disk tutarlı; bozuk `chats.db` (kopyada, paketli sunucu) istemciye `error` olayı + `app-log.jsonl`'e `db_error`, sunucu ayakta kalıyor.
