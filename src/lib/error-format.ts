@@ -1,4 +1,5 @@
 import type { ErrorParams } from './errors';
+import { isStockOllamaName } from './provider-label';
 
 /**
  * Pure formatting core for a coded server error — no i18n import, no DOM,
@@ -44,6 +45,16 @@ export function formatCodedError(
 			const resolvedReason = translate(reasonKey, params);
 			if (resolvedReason !== reasonKey) {
 				params.reason = resolvedReason;
+			}
+		}
+
+		// A provider name in a fallback notice: the built-in Ollama entry's stock label is Turkish
+		// ("Ollama (yerel)") in every install, so it is localized here like entity/reason above.
+		for (const name of ['provider', 'from', 'to'] as const) {
+			const value = params[name];
+			if (typeof value === 'string' && isStockOllamaName(value)) {
+				const localized = translate('ProvidersSettingsPage.ollamaLocal');
+				if (localized !== 'ProvidersSettingsPage.ollamaLocal') params[name] = localized;
 			}
 		}
 

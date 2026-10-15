@@ -89,6 +89,9 @@ export async function* chatWithFallbackCore(
 	signal: AbortSignal,
 	pinnedProviderId?: string
 ): AsyncGenerator<FallbackEvent> {
+	// Notices name a provider by its label (what the user sees in Settings), never its bare id; the
+	// client's formatCodedError localizes the stock built-in Ollama label.
+	const labelOf = (providerId: string): string => deps.getProviderEntry(providerId)?.label ?? providerId;
 	const baseChain = deps.getChain(taskType).filter(deps.isProviderEnabled).filter(deps.isProviderConsented);
 	const pinEnabled = pinnedProviderId ? deps.isProviderEnabled(pinnedProviderId) : false;
 	const pinConsented = pinnedProviderId ? deps.isProviderConsented(pinnedProviderId) : false;
@@ -99,13 +102,13 @@ export async function* chatWithFallbackCore(
 		// the whole notice to formatCodedError, same as NOT_FOUND's `entity`.
 		const reason: 'disabled' | 'not_consented' = !pinEnabled ? 'disabled' : 'not_consented';
 		const logReason = reason === 'disabled' ? 'devre dışı' : 'henüz onaylanmadı';
-		const message = `${pinnedProviderId} ${logReason} → görev zinciri kullanılıyor`;
+		const message = `${labelOf(pinnedProviderId)} ${logReason} → görev zinciri kullanılıyor`;
 		deps.logFallback(message, pinnedProviderId);
 		yield {
 			type: 'notice',
 			message,
 			code: 'CHAT_FALLBACK_PINNED_UNAVAILABLE',
-			params: { provider: pinnedProviderId, reason }
+			params: { provider: labelOf(pinnedProviderId), reason }
 		};
 	}
 	// A dropped pin leaves hop 0 on the chain head with a req.model that belonged to the pinned provider —
@@ -133,13 +136,13 @@ export async function* chatWithFallbackCore(
 			// A continuation request is only valid against the provider that wrote the
 			// partial answer; skipping to another one is not an option.
 			if (req.continuation) throw firstError ?? new AppError('CHAT_CONTINUATION_UNAVAILABLE', { taskType });
-			const message = `${providerId} için varsayılan model tanımlı değil → atlanıyor`;
+			const message = `${labelOf(providerId)} için varsayılan model tanımlı değil → atlanıyor`;
 			deps.logFallback(message, providerId);
 			yield {
 				type: 'notice',
 				message,
 				code: 'CHAT_FALLBACK_NO_DEFAULT_MODEL',
-				params: { provider: providerId }
+				params: { provider: labelOf(providerId) }
 			};
 			if (isLast) throw firstError ?? new AppError('CHAT_NO_MODEL_RESOLVED', { taskType });
 			continue;
@@ -173,8 +176,8 @@ export async function* chatWithFallbackCore(
 			if (isLast) throw err;
 
 			const errorKind = err instanceof ProviderError ? err.kind : undefined;
-			const providerLabel = deps.getProviderEntry(providerId)?.label ?? providerId;
-			const nextLabel = deps.getProviderEntry(chain[i + 1])?.label ?? chain[i + 1];
+			const providerLabel = labelOf(providerId);
+			const nextLabel = labelOf(chain[i + 1]);
 			if (errorKind === 'http_429') {
 				const message = `${providerLabel} hız sınırına takıldı → ${nextLabel}'a geçiliyor`;
 				deps.logFallback(message, providerId, errorKind);
@@ -185,13 +188,13 @@ export async function* chatWithFallbackCore(
 					params: { from: providerLabel, to: nextLabel }
 				};
 			} else {
-				const message = `${providerId} kullanılamıyor (${errorKind ?? 'error'}) → sıradaki modele geçiliyor`;
+				const message = `${providerLabel} kullanılamıyor (${errorKind ?? 'error'}) → sıradaki modele geçiliyor`;
 				deps.logFallback(message, providerId, errorKind);
 				yield {
 					type: 'notice',
 					message,
 					code: 'CHAT_FALLBACK_UNAVAILABLE',
-					params: { provider: providerId, kind: errorKind ?? 'error' }
+					params: { provider: providerLabel, kind: errorKind ?? 'error' }
 				};
 			}
 		}

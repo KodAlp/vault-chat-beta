@@ -517,3 +517,17 @@ test('an empty chain throws CHAT_NO_CHAIN (the "setup not finished" state of a f
 		(err: unknown) => err instanceof AppError && err.code === 'CHAT_NO_CHAIN'
 	);
 });
+
+test('every notice names a provider by its label, not its bare id', async () => {
+	const deps = makeDeps({
+		getChain: () => ['ollama', 'b'],
+		getProviderEntry: (id) => ({ ...stubEntry(id), label: id === 'ollama' ? 'Ollama (yerel)' : 'Groq' }),
+		getAdapter: async (id) => {
+			if (id === 'ollama') return failingAdapter('ollama', new ProviderError('timeout_connect', 'ollama', 'timed out'));
+			return okAdapter('b', ['ok']);
+		}
+	});
+	const events = await collect(chatWithFallbackCore(deps, 'chat', req(), new AbortController().signal));
+	const notice = events.find((e) => e.type === 'notice');
+	assert.deepEqual(notice && 'params' in notice ? notice.params : undefined, { provider: 'Ollama (yerel)', kind: 'timeout_connect' });
+});
