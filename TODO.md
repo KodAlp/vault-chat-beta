@@ -2,7 +2,7 @@
 
 Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncellenir.
 
-**Son güncelleme:** 2026-10-15 · f2d78d9 kuruldu; Fizik ve Rusça `_meta`'sız yeniden indekslendi
+**Son güncelleme:** 2026-10-15 · #2 Fizik 10/11 yeniden içe aktarıldı ve elle denetlendi; Likharev QM sürüyor
 
 ## Kurallar
 
@@ -48,7 +48,7 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 
 ### 8. Formül doğruluğu
 - [ ] **MinerU KaTeX: elle bakılacak formüller.** Mekanik olanlar bitti (2026-10-13, 367 formül). Kalan: ~73 formül sanılmış kod (kod bloğuna çevir), 14 anlamı belirsiz makro, 7 bozuk MathType kesri, ~15 çift üst/alt simge, dengesiz \left/\right; 19 kesik \quad döngüsü #3 ile. `O` · #5 (çekildi)
-- [ ] **Fizik'te kalan 48 geçersiz formülü yeniden içe aktar.** Mekanik düzeltilemez (dengesiz left/right, formüle karışmış düzyazı, kesik formül; 2026-10-13 ölçümü); 11 notu 0.3.0 ile (MinerU + görsel yedeği) yeniden içe aktar. `O` · #2
+- [ ] **Fizik #2: Likharev QM'yi incele.** 11 notun 10'u yeniden içe aktarıldı (KaTeX 45 → 0) ve elle PDF ile karşılaştırıldı; QM (465 s., 3 hata) dönüşümde. Bittiğinde aynı yöntem: değişen formül bloklarını eskiyle eşle, LaTeX'e dönenleri PDF sayfasıyla karşılaştır, yanlışı elle düzelt. `K` · #2
 - [ ] **"Yalnız hatalı formülü onar".** Sayfa + kutu; belgenin tamamını yeniden okumadan. `B` · #3
 
 ### 9. MCP paketleme ve kurulum
@@ -94,6 +94,8 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 - [ ] **#7'yi asıl dosyayla dene.** 34 sayfalık taranmış Sinyaller final PDF'i (Kolay Matematik testi). `K`
 - [ ] **Elle: 7 `\circ c` ve 1 `\underset{X}{\, \infty}` (Likharev).** ∝ kuralı bunlara bilerek dokunmuyor. `K`
 - [ ] **#8: `use_cls=False` tüm OCR sayfalarında.** Yan/ters taramada döndürme düzeltmesi kayboldu; yalnız kodlu sayfalarda kapatmak ikinci geçiş ister. Ayrıca eşit genişlikli yazı tipi varsayımı, `code_language` etiketi kaybı, kod alanındaki el yazısı OCR çöpü. `O`
+- [ ] **Yeniden içe aktarma kapısı formül düzeyinde olmalı.** KaTeX "hata azaldı" ölçütü yanlış-ama-geçerli formülü yakalamıyor: 2026-10-15'te 10 notta eski 42 hatanın 32'si görsel (doğru), 10'u LaTeX (2 doğru, 4 yarım, 4 yanlış); ayrıca 3 regresyon (eskisi neredeyse doğruydu). Notun tamamı yerine yalnız değişen formülleri göster/onaylat ya da eskisi yalnız sözdiziminden düşüyorsa onu onar. #3 ile birlikte. `O`
+- [ ] **MinerU çıktısında formüle karışmış düzyazı.** `	ext{where the constant in…}`, `	ext{ a n d   m a n g n e t i c …}` gibi satırlar KaTeX'ten geçiyor ama yanlış; postprocess'te ayıklanabilir (uzun `	ext{}` + düzyazıda aynı cümle). `O`
 - [ ] **Sessiz kurulum eski exe'yi bırakabiliyor.** 2026-10-15'te ilk `/S` kurulum çıkış 0 verdi ama `vault-chat.exe`'yi değiştirmedi (yalnız dist-server güncellendi); süreçler tam kapanınca ikinci kurulum düzeldi. Kurulumdan sonra exe'yi doğrula; uygulama `taskkill` (zorlamasız) ile de kapanmıyor. `K`
 
 ## Daha sonra
@@ -125,6 +127,7 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 
 Yalnız son iki haftanın kaydı tutulur; daha eskisi git geçmişindedir.
 
+- 2026-10-15: #2 Fizik yeniden içe aktarma (10/11 not, Likharev QM sürüyor): KaTeX hataları 45 → 0; kozmolojide ~20 `∞`→`∝` düzeldi. Elle PDF karşılaştırması: 42 eski hata noktasının 32'si sayfa numaralı görsel, 10'u LaTeX; yanlış/yarım 8 formül + 3 regresyon PDF'ten elle yazıldı (adaptive (2.16)/(3.41)/s.26/s.32, motivic (5.1.8.a) ve 64 `𝕀`→`𝟙`, Carroll Maxwell, string (3.36)/(6.17) yeri, optik (11.21), SM (2.69), loop-QG yinelenen düzyazı, EM kenar etiketi). Hepsi revizyonlu.
 - 2026-10-15: bozuk `chats.db` artık tek hata olayı veriyor (`CHAT_SAVE_FAILED`), önce `UNKNOWN` yok. `2d27a10`
 - 2026-10-15: #56 paketli sürümde: sağlayıcı aç/kapa `AppData\providers.json`'a yazılıyor (kurulumdaki varsayılan dokunulmuyor), API ile disk tutarlı; bozuk `chats.db` (kopyada, paketli sunucu) istemciye `error` olayı + `app-log.jsonl`'e `db_error`, sunucu ayakta kalıyor.
 - 2026-10-15: f2d78d9 kuruldu; Fizik (34.595 → 7.854 parça, 18 not) ve Rusça (16 → 2 dosya) revizyonsuz yeniden indekslendi; diğer kasalarda `_meta` satırı yoktu ya da indeks hiç yoktu.
