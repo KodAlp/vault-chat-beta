@@ -2,7 +2,7 @@
 
 Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncellenir.
 
-**Son güncelleme:** 2026-10-13 · #4 (∝ + Symbol kodları, Fizik notlarına uygulandı) ve #8 devamı (taranmış kod OCR kutularından) bitti
+**Son güncelleme:** 2026-10-15 · Fizik yeniden indekslendi; dal main'e alınmaya hazır (testler yeşil)
 
 ## Kurallar
 
@@ -98,7 +98,6 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 - [ ] **#7'yi asıl dosyayla dene.** 34 sayfalık taranmış Sinyaller final PDF'i (Kolay Matematik testi). `K`
 - [ ] **Çok kısa gerçek başlıklar dosya adına düşüyor.** #10'un yan etkisi: "Go", "R" gibi başlıklar artık reddediliyor. `K`
 - [ ] **`chat-fallback.ts` yedek mesajı sabit Türkçe.** Ham sağlayıcı etiketini de kullanıyor; #73'ün devamı. `K`
-- [ ] **Fizik'te onarılan 7 notu yeniden indeksle.** ∝/Symbol onarımı yazıldı ama indeks güncellenemedi (embedding sunucusu kapalıydı); uygulamada kasayı yeniden indeksle. `K`
 - [ ] **Elle: 7 `\circ c` ve 1 `\underset{X}{\, \infty}` (Likharev).** ∝ kuralı bunlara bilerek dokunmuyor. `K`
 - [ ] **`ingest/` testleri tek pytest komutuyla koşmuyor.** `column_order_test.py` vb. yüklenirken `sys.exit` çağırıyor; düz fonksiyon testlerine çevir. `K`
 - [ ] **#8: `use_cls=False` tüm OCR sayfalarında.** Yan/ters taramada döndürme düzeltmesi kayboldu; yalnız kodlu sayfalarda kapatmak ikinci geçiş ister. Ayrıca eşit genişlikli yazı tipi varsayımı, `code_language` etiketi kaybı, kod alanındaki el yazısı OCR çöpü. `O`
@@ -133,6 +132,7 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 
 Yalnız son iki haftanın kaydı tutulur; daha eskisi git geçmişindedir.
 
+- 2026-10-15: Fizik kasası ∝/Symbol onarımından sonra uygulamada yeniden indekslendi (kullanıcı).
 - 2026-10-13: taranmış kod blokları OCR kutularından satır ve girintiyle kuruluyor; CodeFormula OCR'da her dilde kapalı, RapidOCR `use_cls=False`; fonk1 0,93/49 ve 0,95/47, dic1 0,96/52 (#8 devamı). `c242bc8`
 - 2026-10-13: ∝ kuralı ve Adobe Symbol özel kod eşlemesi içe aktarmada; Fizik'te 7 not onarıldı (35 ∝, 12.937 Symbol karakteri; revizyon yedekli). Araştırmadaki 71 aday yerine 35: notlar sonradan yeniden içe aktarılmış (#4). `48aa5d9`
 - 2026-10-13: karar: edit_note kapalıyken listede görünür, uygulama reddeder (olduğu gibi kalsın).
