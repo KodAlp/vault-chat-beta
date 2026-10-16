@@ -33,6 +33,13 @@ her adımda kopyalanıyor ve dikkat tüm önbellek uzunluğu üzerinden; tek bir
 2653 konumluk önbellekte bu ikisi adım başına ~12 ms tutuyordu (formüllerin
 çoğu 300 token'ın altında biter).
 
+GQA dikkati (2026-10-17): yakalama süresince SDPA, `repeat_kv` yerine aynı KV
+başını paylaşan 3 sorgu başını sorgu ekseninde yan yana koyan
+`_gqa_decode_attention` ile değiştirilir (K/V kopyası yok). Rastgele girdide
+SDPA ile bit düzeyinde aynı (fp32 ve bf16); gerçek modelde Carroll 81 + Tong 71
+formül birebir aynı, adım 10,3 -> 8,3 ms (Carroll), 16,4 -> 14,0 (Tong).
+VC_FORMULA_GQA=0 kapatır.
+
 Stokla eşdeğerlik:
 - İlk token ön doldurma (normal forward, görüntü dahil) ile, konumlar stok
   generate gibi `cumsum(attention_mask) - 1`.
@@ -148,6 +155,61 @@ def _vram_ok(dec) -> bool:
     if dec is not None:
         free += dec.held_bytes()
     return free >= MIN_FREE_BYTES
+
+
+def gqa_enabled() -> bool:
+    return os.environ.get("VC_FORMULA_GQA", "1").strip() != "0"
+
+
+def _gqa_decode_attention(orig):
+    """Tek sorgulu decode adımı için `repeat_kv`'siz dikkat: aynı KV başını paylaşan
+    sorgu başları (repeat_kv sırasıyla h = kv * n + r) sorgu uzunluğu ekseninde
+    yan yana konur, SDPA K/V'yi kopyalamadan çalışır. Matematik olarak aynı; çekirdek
+    ve toplama sırası değişebilir. Diğer çağrılar (ön doldurma, maskesiz) `orig`'e."""
+    import torch
+
+    def attn(module, query, key, value, attention_mask, dropout=0.0, scaling=None, is_causal=None, **kw):
+        n = getattr(module, "num_key_value_groups", 1)
+        if (n <= 1 or query.shape[2] != 1 or attention_mask is None or dropout
+                or kw.get("position_bias") is not None or key.shape[1] * n != query.shape[1]):
+            return orig(module, query, key, value, attention_mask, dropout=dropout, scaling=scaling,
+                        is_causal=is_causal, **kw)
+        B, H, _, d = query.shape
+        q = query.reshape(B, key.shape[1], n, d)
+        out = torch.nn.functional.scaled_dot_product_attention(q, key, value, attn_mask=attention_mask,
+                                                               scale=scaling)
+        return out.reshape(B, 1, H, d), None
+
+    return attn
+
+
+class _DecodeAttention:
+    """Yakalama süresince modelin dikkat işlevini `_gqa_decode_attention` ile değiştirir;
+    grafik çekirdekleri yakalandığı anda sabitlenir, sonrası etkilenmez."""
+
+    def __init__(self, config):
+        self.key = getattr(config, "_attn_implementation", None)
+        self.prev = None
+
+    def __enter__(self):
+        if self.key != "sdpa" or not gqa_enabled():
+            return self
+        from transformers.modeling_utils import ALL_ATTENTION_FUNCTIONS as fns
+
+        self.prev = fns._local_mapping.get(self.key)
+        fns[self.key] = _gqa_decode_attention(fns[self.key])
+        return self
+
+    def __exit__(self, *exc):
+        if self.key != "sdpa" or not gqa_enabled():
+            return False
+        from transformers.modeling_utils import ALL_ATTENTION_FUNCTIONS as fns
+
+        if self.prev is None:
+            fns._local_mapping.pop(self.key, None)
+        else:
+            fns[self.key] = self.prev
+        return False
 
 
 def _first_id(v) -> int:
@@ -292,15 +354,16 @@ class GraphDecoder:
                     lay.cumulative_length.copy_(v)
 
             s = self.stream
-            s.wait_stream(torch.cuda.current_stream())
-            with torch.cuda.stream(s):
-                self._step(st, b)  # ısınma
-            torch.cuda.current_stream().wait_stream(s)
-            restore()
-            g = torch.cuda.CUDAGraph()
-            with torch.cuda.graph(g, pool=st["pool"]):
-                self._step(st, b)
-            restore()
+            with _DecodeAttention(self.text.config):
+                s.wait_stream(torch.cuda.current_stream())
+                with torch.cuda.stream(s):
+                    self._step(st, b)  # ısınma
+                torch.cuda.current_stream().wait_stream(s)
+                restore()
+                g = torch.cuda.CUDAGraph()
+                with torch.cuda.graph(g, pool=st["pool"]):
+                    self._step(st, b)
+                restore()
             # Isınma/yakalama cidx konumuna yazdı: gerçek adım aynı konuma önce yazar, sonra okur.
             b["graph"] = g
         return b

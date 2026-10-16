@@ -215,6 +215,33 @@ def test_low_vram_goes_stock_and_release_clears():
         fgd.MIN_FREE_BYTES = saved
 
 
+def test_gqa_decode_attention_matches_sdpa_and_is_restored():
+    from transformers.integrations.sdpa_attention import sdpa_attention_forward
+    from transformers.modeling_utils import ALL_ATTENTION_FUNCTIONS
+
+    class Mod:
+        num_key_value_groups = 3
+
+    g = torch.Generator(device="cuda").manual_seed(0)
+    attn = fgd._gqa_decode_attention(sdpa_attention_forward)
+    for dt in (torch.float32, torch.bfloat16):
+        q = torch.randn(4, 1, 9, 64, device="cuda", dtype=dt, generator=g).transpose(1, 2)
+        k = torch.randn(4, 3, 300, 64, device="cuda", dtype=dt, generator=g)
+        v = torch.randn(4, 3, 300, 64, device="cuda", dtype=dt, generator=g)
+        mask = torch.rand(4, 1, 1, 300, device="cuda", generator=g) > 0.3
+        ref, _ = sdpa_attention_forward(Mod(), q, k, v, mask, scaling=0.125)
+        got, _ = attn(Mod(), q, k, v, mask, scaling=0.125)
+        assert got.shape == ref.shape and torch.equal(got, ref)
+    m = _model()
+    inputs = _inputs([9, 6])
+    fgd._DISABLED[0] = False
+    with torch.inference_mode():
+        stock = m.generate(**inputs, generation_config=_gc(20, eos=VOCAB - 6))
+    out = fgd.wrap(m.generate, m)(**inputs, generation_config=_gc(20, eos=VOCAB - 6))
+    assert torch.equal(out, stock)
+    assert "sdpa" not in ALL_ATTENTION_FUNCTIONS._local_mapping
+
+
 def main():
     if torch is None or not torch.cuda.is_available():
         print("SKIP formula_graph_decode_test: CUDA yok")
