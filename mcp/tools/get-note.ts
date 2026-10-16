@@ -43,7 +43,7 @@ export function registerGetNote(server: McpServer): void {
 						if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
 							throw new ToolError(
 								'NOTE_NOT_FOUND',
-								`"${relPath}" indekste görünüyor olabilir ama diskte yok — indeks bayat olabilir ("npm run index" ile yeniden indeksle).`
+								`"${relPath}" indekste görünüyor olabilir ama diskte yok — indeks bayat olabilir (uygulamada Ayarlar → Kasalar → Yeniden indeksle).`
 							);
 						}
 						throw err;

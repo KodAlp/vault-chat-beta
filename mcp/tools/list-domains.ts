@@ -25,7 +25,7 @@ export function registerListDomains(server: McpServer): void {
 			try {
 				const { vaultId, stats } = await withVault(vault, (v) => {
 					if (!vaultIsIndexed(v)) {
-						throw new ToolError('NOT_INDEXED', `Vault '${v.id}' henüz indekslenmemiş (npm run index -- --vault ${v.id}).`);
+						throw new ToolError('NOT_INDEXED', `Vault '${v.id}' henüz indekslenmemiş: uygulamada Ayarlar → Kasalar → Yeniden indeksle.`);
 					}
 					return { vaultId: v.id, stats: listDomainStats(v) };
 				});
