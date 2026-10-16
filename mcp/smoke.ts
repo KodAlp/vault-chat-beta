@@ -169,6 +169,22 @@ try {
 	}
 	console.log('ok - every vault-scoped tool reports VAULT_NOT_FOUND for an unknown vault id (never throws)');
 
+	// #39: local models pass the vault's NAME ("Fizik") or a differently-cased id.
+	// Only opened vaults take part in that match, and the not-found hint lists only them.
+	for (const vault of ['Smoke Test', 'smoke test', 'DEFAULT']) {
+		const result = await client.callTool({ name: 'get_note', arguments: { vault, path: 'note.md' } });
+		assert.notEqual(result.isError, true, `get_note with vault "${vault}" must resolve to default`);
+	}
+	{
+		const result = await client.callTool({ name: 'get_note', arguments: { vault: 'Closed Vault', path: 'x.md' } });
+		assert.equal(result.isError, true, 'a closed vault must not be reachable by its name');
+		const text = (result.content as { type: string; text: string }[])[0].text;
+		assert.ok(text.includes('default — Smoke Test'), `hint must list the opened vault: ${text}`);
+		assert.ok(!text.includes('Closed Vault') || text.startsWith('VAULT_NOT_FOUND:'), text);
+		assert.ok(!/closed —/.test(text), `hint must not list a closed vault: ${text}`);
+	}
+	console.log('ok - vault name / case-insensitive id resolves among opened vaults only; error lists opened vaults');
+
 	// İ6 (Aşama 8): a vault that exists but was never opened to external
 	// clients must be both invisible to discovery (list_vaults, already
 	// asserted length 1 above — 'closed' is the second, unlisted vault) and

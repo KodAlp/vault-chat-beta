@@ -33,7 +33,7 @@ export function registerListSources(server: McpServer): void {
 					// vault returned `{"total":0,"sources":[]}, isError:false`,
 					// indistinguishable from "indexed, filter matched nothing".
 					if (!vaultIsIndexed(v)) {
-						throw new ToolError('NOT_INDEXED', `Vault '${v.id}' henüz indekslenmemiş (npm run index -- --vault ${v.id}).`);
+						throw new ToolError('NOT_INDEXED', `Vault '${v.id}' henüz indekslenmemiş: uygulamada Ayarlar → Kasalar → Yeniden indeksle.`);
 					}
 					const r = listSources(v, {
 						domains: domain ? [domain] : undefined,

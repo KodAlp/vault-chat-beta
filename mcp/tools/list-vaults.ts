@@ -15,8 +15,9 @@ export function registerListVaults(server: McpServer): void {
 				'external MCP clients (Ayarlar → Kasalar) — a vault the user has not opened this way ' +
 				'never appears here and cannot be reached by any other tool either, even by its id. ' +
 				'With indexing status, note count, and the domains/levels actually present. ' +
-				'unindexedCount > 0 means files exist on disk that `npm run index` has not been run ' +
-				'against since — search_library/list_sources will not see them yet. Call this first — ' +
+				'unindexedCount > 0 means files exist on disk that have not been indexed yet (the user ' +
+				're-indexes in the app: Ayarlar → Kasalar) ' +
+				'— search_library/list_sources will not see them yet. Call this first — ' +
 				'every other tool takes an optional vault id, and this is how you find one (or confirm ' +
 				'the active vault is the right one to search).',
 			inputSchema: {},

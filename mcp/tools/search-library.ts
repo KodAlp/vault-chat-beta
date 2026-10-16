@@ -55,7 +55,7 @@ export function registerSearchLibrary(server: McpServer): void {
 					// `{"results":[]}, isError:false`. NOT_INDEXED was defined in
 					// errors.ts from the start; nothing produced it.
 					if (!vaultIsIndexed(v)) {
-						throw new ToolError('NOT_INDEXED', `Vault '${v.id}' henüz indekslenmemiş (npm run index -- --vault ${v.id}).`);
+						throw new ToolError('NOT_INDEXED', `Vault '${v.id}' henüz indekslenmemiş: uygulamada Ayarlar → Kasalar → Yeniden indeksle.`);
 					}
 					let r;
 					try {
