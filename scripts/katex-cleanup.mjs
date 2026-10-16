@@ -14,7 +14,9 @@
  * it never truncates or guesses content. Every candidate is re-rendered with
  * KaTeX and accepted only if KaTeX now accepts it; otherwise the original is
  * left untouched. Code / pseudo-code mistaken for a formula is only REPORTED
- * ("kod sanılmış"), never touched.
+ * ("kod sanılmış"), never touched. Exception: a display formula that is purely
+ * rows of \text{...} has its code recovered exactly and becomes a ```text fence
+ * (codeToFence).
  *
  * Fix order (pure functions, exported for tests):
  *   1. fixDuplicateTag   - several \tag in one formula: keep the LAST one.
@@ -423,15 +425,152 @@ export function looksLikeCode(body) {
 	return false;
 }
 
+/** Unescape the inside of a \text{...} group; null when it is not plain code text. */
+function unescapeCodeText(inner) {
+	// `$\$` / `\$$`: a stray MinerU dollar next to an escaped one (Okasaki's `$Cons`
+	// came out as `\$CONS (1, $\$CONS ...`); which one is real is a guess -> null.
+	if (/(?<!\\)\$\\\$|\\\$\$/.test(inner)) return null;
+	let out = '';
+	for (let i = 0; i < inner.length; i++) {
+		const ch = inner[i];
+		if (ch === '\n' || ch === '\r' || ch === '{' || ch === '}') return null;
+		if (ch !== '\\') {
+			out += ch;
+			continue;
+		}
+		const nx = inner[i + 1];
+		if (nx !== undefined && '_#$%&{}'.includes(nx)) {
+			out += nx;
+			i++;
+			continue;
+		}
+		const m = /^\\(?:text)?backslash(?![a-zA-Z])/.exec(inner.slice(i));
+		if (!m) return null;
+		out += '\\';
+		i += m[0].length - 1;
+	}
+	return out;
+}
+
+/** Splits at top-level `\\` (rows) and unescaped `&` (cells); null if braces are unbalanced. */
+function splitRowsAndCells(s) {
+	const rows = [[]];
+	let cell = '';
+	let depth = 0;
+	for (let i = 0; i < s.length; i++) {
+		const ch = s[i];
+		if (ch === '\\') {
+			if (s[i + 1] === '\\' && depth === 0) {
+				rows.at(-1).push(cell);
+				rows.push([]);
+				cell = '';
+			} else cell += ch + (s[i + 1] ?? '');
+			i++;
+			continue;
+		}
+		if (ch === '{') depth++;
+		else if (ch === '}' && --depth < 0) return null;
+		if (ch === '&' && depth === 0) {
+			rows.at(-1).push(cell);
+			cell = '';
+		} else cell += ch;
+	}
+	if (depth !== 0) return null;
+	rows.at(-1).push(cell);
+	return rows;
+}
+
+/** One cell -> {text, quads} (quads = leading indentation units), or null. */
+function parseCodeCell(cell) {
+	let text = '';
+	let quads = 0;
+	let leading = true;
+	let gap = false; // an explicit spacing token / comment marker wants a space before the next piece
+	let i = 0;
+	const push = (t) => {
+		text += (gap && text ? ' ' : '') + t;
+		gap = false;
+		leading = false;
+	};
+	while (i < cell.length) {
+		const ch = cell[i];
+		if (/\s/.test(ch)) {
+			i++;
+			continue;
+		}
+		if (ch !== '\\') return null;
+		const rest = cell.slice(i);
+		let m;
+		if ((m = /^\\(q?)quad(?![a-zA-Z])/.exec(rest))) {
+			if (leading) quads += m[1] ? 2 : 1;
+			else gap = true;
+			i += m[0].length;
+		} else if ((m = /^\\[, ]/.exec(rest))) {
+			if (!leading) gap = true;
+			i += 2;
+		} else if (rest[1] === '#') {
+			push('#');
+			gap = true;
+			i += 2;
+		} else if ((m = /^\\text(?![a-zA-Z])\s*\{/.exec(rest))) {
+			const open = i + m[0].length - 1;
+			const close = matchBrace(cell, open);
+			if (close === -1) return null;
+			const t = unescapeCodeText(cell.slice(open + 1, close));
+			if (t === null) return null;
+			push(t);
+			i = close + 1;
+		} else return null;
+	}
+	return { text, quads };
+}
+
+/**
+ * Display formula that is purely rows of \text{...} (code mistaken for math) ->
+ * the exact code text (lines joined by "\n"), else null. See the rules in the
+ * repo notes: only \text groups, spacing tokens and `\#` outside \text; any other
+ * token, nested braces inside \text or unknown escapes in the text -> null.
+ */
+export function codeToFence(body) {
+	if (body.length > 2000) return null;
+	let inner = body.trim();
+	const arr = /^\\begin\s*\{array\}\s*\{[lrc ]+\}([\s\S]*)\\end\s*\{array\}$/.exec(inner);
+	if (arr) inner = arr[1];
+	else if (/\\(?:begin|end)(?![a-zA-Z])/.test(inner)) return null;
+	const rows = splitRowsAndCells(inner);
+	if (!rows) return null;
+	if (rows.length && rows.at(-1).every((c) => !c.trim())) rows.pop();
+	const lines = [];
+	for (const cells of rows) {
+		const parts = [];
+		let indent = 0;
+		for (let k = 0; k < cells.length; k++) {
+			const c = parseCodeCell(cells[k]);
+			if (!c) return null;
+			if (k === 0) indent = c.quads; // quads in later cells are plain spacing
+			if (c.text) parts.push(c.text);
+		}
+		if (indent > 8) return null;
+		lines.push((' '.repeat(indent * 4) + parts.join(' ')).replace(/ +$/, ''));
+	}
+	const code = lines.join('\n');
+	if (!code.trim() || code.includes('```')) return null;
+	return code;
+}
+
 /**
  * Tries each fix cumulatively, re-running KaTeX after each step; a candidate
  * is accepted only if KaTeX renders it. Returns
- * {status:'ok'} | {status:'fixed', body, applied} | {status:'code-like', error} | {status:'unfixable', error}.
+ * {status:'ok'} | {status:'fixed', body, applied} | {status:'fenced', code, error} | {status:'code-like', error} | {status:'unfixable', error}.
  */
 export function repairFormula(body, display = true, fixes = FIXES) {
 	const err0 = katexError(body, display);
 	if (!err0) return { status: 'ok' };
-	if (looksLikeCode(body)) return { status: 'code-like', error: err0 };
+	if (looksLikeCode(body)) {
+		const code = display ? codeToFence(body) : null;
+		if (code !== null) return { status: 'fenced', code, error: err0 };
+		return { status: 'code-like', error: err0 };
+	}
 
 	let cur = body;
 	const applied = [];
@@ -456,11 +595,11 @@ export function isMineru(frontmatter) {
 	return /^converter:\s*["']?mineru["']?\s*$/m.test(frontmatter);
 }
 
-/** Pure: {text, formulas, fixed:[{line,body,after,applied}], unfixable:[...], codeLike:[...]}. */
+/** Pure: {text, formulas, fixed:[{line,body,after,applied}], fenced:[{line,body,code}], unfixable:[...], codeLike:[...]}. */
 export function processText(source, fixes = FIXES) {
 	const [fm, body] = splitFrontmatter(source);
 	const math = findMath(body);
-	const result = { formulas: math.length, fixed: [], unfixable: [], codeLike: [] };
+	const result = { formulas: math.length, fixed: [], fenced: [], unfixable: [], codeLike: [] };
 	const fmLines = fm.split('\n').length - 1;
 	let out = '';
 	let pos = 0;
@@ -472,6 +611,16 @@ export function processText(source, fixes = FIXES) {
 			out += body.slice(pos, f.start) + f.open + r.body + f.close;
 			pos = f.end;
 			result.fixed.push({ ...entry, after: r.body, applied: r.applied });
+		} else if (r.status === 'fenced') {
+			// Replace from the line start so the (<= 3 spaces) indent of `$$` does not shift the fence.
+			let start = f.start;
+			const ls = body.lastIndexOf('\n', start - 1) + 1;
+			if (/^[ \t]*$/.test(body.slice(ls, start))) start = ls;
+			const nl = body.slice(f.start, f.end).includes('\r\n') ? '\r\n' : '\n';
+			const code = nl === '\n' ? r.code : r.code.replace(/\n/g, nl);
+			out += body.slice(pos, start) + '```text' + nl + code + nl + '```';
+			pos = f.end;
+			result.fenced.push({ ...entry, code: r.code });
 		} else if (r.status === 'code-like') result.codeLike.push({ ...entry, error: r.error });
 		else result.unfixable.push({ ...entry, error: r.error });
 	}
@@ -562,7 +711,7 @@ function main() {
 	}
 
 	const files = walk(args.dir);
-	const totals = { files: 0, scanned: 0, formulas: 0, fixed: 0, unfixable: 0, codeLike: 0, modified: 0 };
+	const totals = { files: 0, scanned: 0, formulas: 0, fixed: 0, fenced: 0, unfixable: 0, codeLike: 0, modified: 0 };
 	const byFix = {};
 	const perFile = [];
 	const samples = [];
@@ -577,6 +726,7 @@ function main() {
 		const r = processText(source, fixes);
 		totals.formulas += r.formulas;
 		totals.fixed += r.fixed.length;
+		totals.fenced += r.fenced.length;
 		totals.unfixable += r.unfixable.length;
 		totals.codeLike += r.codeLike.length;
 		for (const u of r.unfixable) {
@@ -593,17 +743,19 @@ function main() {
 				samples.push({ file: relative(args.dir, file), line: f.line, applied: k, before: clip(f.body), after: clip(f.after) });
 			}
 		}
-		if (r.fixed.length || r.unfixable.length || r.codeLike.length) {
+		if (r.fixed.length || r.fenced.length || r.unfixable.length || r.codeLike.length) {
 			perFile.push({
 				file: relative(args.dir, file),
 				fixed: r.fixed.length,
+				fenced: r.fenced.length,
 				unfixable: r.unfixable.length,
 				codeLike: r.codeLike.length,
+				codeFenceSamples: r.fenced.map((u) => ({ line: u.line, code: u.code })),
 				unfixableSamples: r.unfixable.slice(0, 3).map((u) => ({ line: u.line, error: u.error, body: clip(u.body, 160) })),
 				codeLikeSamples: r.codeLike.slice(0, 2).map((u) => ({ line: u.line, body: clip(u.body, 160) }))
 			});
 		}
-		if (args.write && r.fixed.length && r.text !== source) {
+		if (args.write && (r.fixed.length || r.fenced.length) && r.text !== source) {
 			const bpath = join(args.backupDir, relative(args.dir, file));
 			mkdirSync(dirname(bpath), { recursive: true });
 			if (existsSync(bpath)) throw new Error(`yedek zaten var, üzerine yazılmaz: ${bpath}`);
@@ -615,11 +767,12 @@ function main() {
 
 	console.log(`${args.write ? 'YAZMA' : 'KURU ÇALIŞMA (dosya değişmedi)'} — ${args.dir}`);
 	for (const f of perFile) {
-		console.log(`  ${f.file}: düzeltilen ${f.fixed}, düzeltilemeyen ${f.unfixable}, kod sanılmış ${f.codeLike}`);
+		console.log(`  ${f.file}: düzeltilen ${f.fixed}, koda çevrilen ${f.fenced}, düzeltilemeyen ${f.unfixable}, kod sanılmış ${f.codeLike}`);
 	}
 	console.log('');
 	console.log(`taranan dosya: ${totals.scanned}/${totals.files}, formül: ${totals.formulas}`);
 	console.log(`düzeltilen: ${totals.fixed}  (${Object.entries(byFix).map(([k, v]) => `${k}=${v}`).join(', ') || '-'})`);
+	console.log(`koda çevrilen: ${totals.fenced}`);
 	console.log(`düzeltilemeyen: ${totals.unfixable}`);
 	console.log(`kod sanılmış (elle bakılacak): ${totals.codeLike}`);
 	if (args.write) console.log(`değiştirilen dosya: ${totals.modified}`);
