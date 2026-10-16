@@ -103,6 +103,8 @@ Aynı grup boyutunda belirlenimli. `VC_FORMULA_FALLBACK_BATCH` ile ayarlanır; v
 
 ## Kalan fırsatlar (ölçülmedi)
 
+- Grafikli decode adımı artık GPU sınırlı: 7,1 ms/adım (kova 128, girdi 605, grup 5); dikkat 1,5 ms, `repeat_kv` kopyası 1,5 ms, ağırlık çarpımları 2,4 ms (bellek bant genişliği tabanı ~1,4 ms), diğer ~1,5 ms. `repeat_kv`'siz GQA'lı SDPA (özel dikkat işlevi) adımı ~%20–40 kısaltabilir; çekirdek seçimi değişeceği için çıktı yeniden karşılaştırılmalı.
+
 - İşlemci (görüntüyü 2048 kenara büyütüp 512'lik parçalara bölme) grup başına ~0,37 sn CPU; GPU decode ile örtüştürülebilir (~%15 formül süresi).
 - 40'lık grubu genişliğe göre sıralayıp 5'li çözmek ~%8.
 - Görüntü kodlayıcı (ön doldurma) grup başına ~0,5 sn GPU; modelin girdisini değiştirmeden küçülmez.
