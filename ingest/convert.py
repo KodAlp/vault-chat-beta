@@ -1161,6 +1161,9 @@ def convert_with_docling(
     try:
         formula_early_stop.install()
         formula_early_stop.reset_stats()
+        import formula_graph_decode
+
+        formula_graph_decode.reset_stats()
     except Exception as err:  # noqa: BLE001 — hızlandırma; dönüşümü asla bozmaz
         print(f"formula_early_stop: kurulamadı: {err}", file=sys.stderr)
     try:
@@ -1287,12 +1290,25 @@ def convert_with_docling(
     except Exception:  # noqa: BLE001
         _FORMULA_STATS[0] = None
     try:
+        import formula_graph_decode
+
+        formula_graph_decode.report()
+    except Exception:  # noqa: BLE001
+        pass
+    try:
         _FORMULA_CROP_STATS[0] = formula_crop.report()
     except Exception:  # noqa: BLE001
         _FORMULA_CROP_STATS[0] = None
     # CodeFormula'nın boş/döngülü/geçersiz LaTeX'ini MinerU ile yeniden oku (CUDA yoksa atlanır; modeli
     # işi bitince boşaltır). Sütun/okuma sırası onarımından ve markdown dışa aktarımından ÖNCE: sonraki
     # adımlar düzeltilmiş metni görür. Hata dönüşümü bozmaz (CodeFormula metni kalır).
+    try:
+        # CUDA grafikli formül decode'unun K/V deposu ve grafikleri MinerU yüklenmeden bırakılır.
+        import formula_graph_decode
+
+        formula_graph_decode.release()
+    except Exception:  # noqa: BLE001
+        pass
     try:
         formula_fallback.apply(document)
         _FORMULA_FALLBACK_STATS[0] = formula_fallback.report()

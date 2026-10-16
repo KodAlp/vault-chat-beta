@@ -242,9 +242,13 @@ def test_env_off():
     try:
         m, out = run([[loop_row(2, n=60), clean_row(5)]], 2)
         assert "stopping_criteria" not in m.calls[0] and fes.snapshot()["rows_stopped"] == 0
-        assert fes.install() is False and fes.report() is None
+        assert fes.report() is None
+        # Kanca CUDA grafikli decode için de kurulur; ikisi de kapalıysa kurulmaz.
+        os.environ["VC_FORMULA_CUDA_GRAPH"] = "0"
+        assert fes.install() is False
     finally:
         del os.environ["VC_FORMULA_EARLY_STOP"]
+        os.environ.pop("VC_FORMULA_CUDA_GRAPH", None)
 
 
 def _fake_docling(kind):

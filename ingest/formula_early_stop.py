@@ -27,7 +27,10 @@ tuttuğu HF modelinin `generate`'i örnek düzeyinde sarılır (yalnız formül
 motoru; başka VLM aşamaları etkilenmez). predict_batch çıktıyı
 `generated_ids[:, input_ids.shape[1]:]` ile dilimler; biz de aynı genişlikte
 (sol dolgulu girdinin tamamı = plen) ve sağdan pad'li bir tensör döndürürüz.
-Eski CodeFormulaModel (docling < 2.130) için de aynı sarma denenir.
+Eski CodeFormulaModel (docling < 2.130) için de aynı sarma denenir. Sarılan
+`generate`in altına önce formula_graph_decode girer (stokla aynı sonucu veren,
+CUDA grafikli açgözlü decode; VC_FORMULA_CUDA_GRAPH=0 kapatır), yeniden
+deneme ise repetition_penalty yüzünden stok yoldan gider.
 
 VC_FORMULA_EARLY_STOP=0 kapatır (A/B ölçümü). docling'in iç yapısı farklıysa
 bir kez stderr'e yazıp stok davranışa dönülür; dönüşüm asla bozulmaz.
@@ -65,6 +68,15 @@ _WARNED = [False]
 
 def enabled() -> bool:
     return os.environ.get("VC_FORMULA_EARLY_STOP", "1").strip() != "0"
+
+
+def _graph_enabled() -> bool:
+    try:
+        import formula_graph_decode
+
+        return formula_graph_decode.enabled()
+    except Exception:  # noqa: BLE001
+        return False
 
 
 def reset_stats() -> None:
@@ -261,7 +273,16 @@ def wrap_generate(orig, model):
 def _wrap_model(model) -> bool:
     if model is None or getattr(model, "_vc_early_stop", False) or not callable(getattr(model, "generate", None)):
         return False
-    model.generate = wrap_generate(model.generate, model)
+    base = model.generate
+    try:
+        # Stok generate'in yerine CUDA grafikli decode (uygun çağrılarda); döngü kesici onun üstünde.
+        import formula_graph_decode
+
+        if formula_graph_decode.enabled():
+            base = formula_graph_decode.wrap(base, model)
+    except Exception as err:  # noqa: BLE001 — hız iyileştirmesi; dönüşümü asla bozmaz
+        print(f"formula_graph_decode: kurulamadı: {err}", file=sys.stderr)
+    model.generate = wrap_generate(base, model)
     model._vc_early_stop = True
     return True
 
@@ -317,7 +338,7 @@ def install() -> bool:
     """Formül motorunun HF modelinin generate'ini sarar: gerçek hat
     CodeFormulaVlmModel(.engine.vlm_model), eski hat CodeFormulaModel(._model).
     Bir kez kurulur; hiçbiri uymazsa False döner (stok davranış)."""
-    if not enabled():
+    if not enabled() and not _graph_enabled():
         return False
     if _INSTALLED[0]:
         return True
