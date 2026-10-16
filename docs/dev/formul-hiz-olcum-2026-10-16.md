@@ -97,14 +97,27 @@ Grafik decoder'dan sonra Carroll 30 sayfanın aşamaları (docling profil zamanl
 
 Aynı grup boyutunda belirlenimli. `VC_FORMULA_FALLBACK_BATCH` ile ayarlanır. 2026-10-16 kullanıcı kararı: varsayılan 12 (farklı 3 formülden biri 12'de daha doğru, ikisi tek-token farkı; ayrıca −15 sn).
 
+### Kırpım + işlemci ön-getirmesi (`d1b81c6`)
+
+`ingest/formula_prefetch.py`: `_enrich_document` sarılır; bir üretici iş parçacığı bir sonraki grubun `prepare_element` (kırpım) ve işlemci girdisini, ana iş parçacığı GPU'da decode ederken hazırlar. `predict_batch`'in `processor(...)` çağrısı aynı görüntü nesneleri ve istemlerle önbellekten döner; asıl işlemciye giden çağrılar tek kilitle seri. `VC_FORMULA_PREFETCH=0` kapatır.
+
+| Belge | Zenginleştirme (`doc_enrich`) | Toplam | Markdown | Önbellek |
+|---|---|---|---|---|
+| Carroll GR 40–69 | 54,7 → 45,4 sn | 107,4 → 89,7 | birebir aynı | 17/17 grup |
+| Likharev QM 1–30 (3 döngü kesildi) | 52,3 → 40,5 | 92,5 → 79,6 | birebir aynı | 22/22 |
+
+Üretici süresi (kırpım + işlemci) Carroll'da 12,3 sn, Likharev'de 18,2; ana iş parçacığının bekleme süresi 0,7–0,8 sn.
+
+### Genişliğe göre sıralama: bırakıldı
+
+40 öğelik pencereyi görüntü genişliğine göre sıralayıp 5'li gruplamak (ön-getirmenin üstüne): Carroll 45,4 → 44,9 sn (gürültü içinde), Likharev 40,5 → 42,9 (yavaş). Grafikli decode'da grup süresi artık en uzun satıra o kadar bağlı değil. Carroll'da bir formülde dizi hizası değişti (`{l c l}` → `{r c l}`). Kazanç yok, çıktı değişiyor; uygulanmadı.
+
 ### Birikimli (Carroll GR s. 40–69)
 
-221 sn (stok) → 144 (CUDA grafiği) → 111 (kırpım ızgarası); MinerU 12'li grupla ~96 sn.
+221 sn (stok) → 144 (CUDA grafiği) → 111 (kırpım ızgarası) → ~107 (MinerU 12'li grup; bu ölçümde yedek 26 sn, model yükleme dahil) → ~90 (ön-getirme).
 
 ## Kalan fırsatlar (ölçülmedi)
 
 - Grafikli decode adımı artık GPU sınırlı: 7,1 ms/adım (kova 128, girdi 605, grup 5); dikkat 1,5 ms, `repeat_kv` kopyası 1,5 ms, ağırlık çarpımları 2,4 ms (bellek bant genişliği tabanı ~1,4 ms), diğer ~1,5 ms. `repeat_kv`'siz GQA'lı SDPA (özel dikkat işlevi) adımı ~%20–40 kısaltabilir; çekirdek seçimi değişeceği için çıktı yeniden karşılaştırılmalı.
-
-- İşlemci (görüntüyü 2048 kenara büyütüp 512'lik parçalara bölme) grup başına ~0,37 sn CPU; GPU decode ile örtüştürülebilir (~%15 formül süresi).
-- 40'lık grubu genişliğe göre sıralayıp 5'li çözmek ~%8.
 - Görüntü kodlayıcı (ön doldurma) grup başına ~0,5 sn GPU; modelin girdisini değiştirmeden küçülmez.
+- MinerU yedeği (~22 sn) zenginleştirmeden sonra sırayla koşuyor; model yükleme ~2–4 sn.
