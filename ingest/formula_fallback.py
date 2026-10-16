@@ -59,6 +59,18 @@ from typing import Any, Callable
 MODEL_ID = "opendatalab/MinerU2.5-Pro-2605-1.2B"
 MAX_STORE_BYTES = 256 * 1024 * 1024
 BATCH_SIZE = 4
+# MinerU grup boyutu (#82, 2026-10-16, Carroll GR s. 40-69, 25 formül): 4 / 8 / 12 ->
+# 36,4 / 28,5 / 21,4 sn, tepe VRAM 3,18 / 3,41 / 3,68 GB. Grup boyutu 25 formülün 3'ünde
+# tek-token farkı veriyor (padding'de neredeyse eşit adaylar; aynı boyutta belirlenimli).
+# Varsayılan 4 değişmedi; VC_FORMULA_FALLBACK_BATCH ile denenebilir (1-32).
+
+
+def batch_size() -> int:
+    try:
+        n = int(os.environ.get("VC_FORMULA_FALLBACK_BATCH", "").strip() or BATCH_SIZE)
+    except ValueError:
+        n = BATCH_SIZE
+    return max(1, min(32, n))
 KATEX_TIMEOUT_S = 60
 FATAL_LATEX_MAX_CHARS = 2000
 
@@ -369,7 +381,7 @@ class MineruSession:
             self.model.config.max_position_embeddings = self.model.config.text_config.max_position_embeddings
         self.proc = AutoProcessor.from_pretrained(vid, use_fast=True, local_files_only=True)
         self.client = MinerUClient(
-            backend="transformers", model=self.model, processor=self.proc, use_tqdm=False, batch_size=BATCH_SIZE
+            backend="transformers", model=self.model, processor=self.proc, use_tqdm=False, batch_size=batch_size()
         )
 
     def recognize(self, images: list) -> list:
@@ -637,8 +649,8 @@ def apply(
 
         t0 = time.time()
         candidates = []  # (item, MinerU metni) — kabulü KaTeX'le topluca verilir
-        for start in range(0, len(todo), BATCH_SIZE * 4):
-            chunk = todo[start : start + BATCH_SIZE * 4]
+        for start in range(0, len(todo), batch_size() * 4):
+            chunk = todo[start : start + batch_size() * 4]
             try:
                 images = [Image.open(io.BytesIO(png)).convert("RGB") for _i, _r, png in chunk]
                 outs = recognizer(images)
