@@ -2,7 +2,7 @@
 
 Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncellenir.
 
-**Son güncelleme:** 2026-10-16 · #82: MinerU grup boyutu 12, kırpım/işlemci ön-getirmesi; sıralama bırakıldı
+**Son güncelleme:** 2026-10-17 · #82 bitti: `repeat_kv`'siz GQA dikkati
 
 ## Kurallar
 
@@ -38,7 +38,6 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 ### 4. Düzenleyici ve sohbet görünümü
 
 ### 5. Büyük belgelerde bellek ve hız
-- [ ] **Formül yoğun klasörlerin hızı: kalanlar.** Carroll 30 s. 221 → ~90 sn oldu. Kalan: decode adımında `repeat_kv`'siz GQA dikkati (~%20–40 adım; çıktı yeniden karşılaştırılmalı). Genişliğe göre sıralama denendi, kazanç yok. `docs/dev/formul-hiz-olcum-2026-10-16.md` `O` · #82
 
 ### 6. İçe aktarmada sessiz bozulma
 
@@ -130,6 +129,7 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 
 Yalnız son iki haftanın kaydı tutulur; daha eskisi git geçmişindedir.
 
+- 2026-10-17: formül modelinin grafikli decode'unda `repeat_kv`'siz GQA dikkati (#82 son madde): adım 10,3 → 8,3 ms (Carroll), uçtan uca Likharev 30 s. 87 → 73 sn, bgnet 47 → 36, Carroll 86 → 78, JeffE 52 → 48; 4 belgede Markdown ve 152 formül birebir aynı. `VC_FORMULA_GQA=0` kapatır. `docs/dev/formul-hiz-olcum-2026-10-16.md`
 - 2026-10-16: formül grubunun kırpımı ve işlemcisi GPU decode'la örtüşüyor (#82): zenginleştirme Carroll 30 s. 54,7 → 45,4 sn, Likharev 52,3 → 40,5; iki belgede Markdown birebir aynı. `VC_FORMULA_PREFETCH=0` kapatır. Genişliğe göre sıralama denendi: kazanç yok, bir formülde çıktı değişti; bırakıldı. `d1b81c6`
 - 2026-10-16: MinerU yedeğinin grup boyutu varsayılanı 4 → 12 (kullanıcı kararı, #82): Carroll 30 s. yedek 36 → 21 sn, +0,5 GB VRAM; 25 formülün 3'ünde tek-token farkı, biri 12'de daha doğru. `VC_FORMULA_FALLBACK_BATCH=4` eskiye döndürür. Uçtan uca yeniden ölçülmedi.
 - 2026-10-16: yerel modellerle MCP deneyi (#39): `bench/mcp-yerel-model.mjs`, 10 görev × qwen3 8b/4b × düşünme açık/kapalı (Ollama). En iyisi qwen3:4b düşünme açık (8/10); 8b kasa kimliğini tahmin ediyor ve uyduruyor (3–4/10); 4b düşünme kapalıyken akıl yürütmeyi cevaba sızdırıyor. MCP sunucusu kasa adını da kabul ediyor, hatada erişilebilir kasaları listeliyor, `npm run index` yerine uygulamadaki yolu söylüyor: araç hataları 6 → 2, başarı oranı değişmedi. `docs/dev/mcp-yerel-model-2026-10-16.md` `daac314` `553cbe6`

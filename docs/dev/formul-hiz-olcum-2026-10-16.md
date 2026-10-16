@@ -118,6 +118,21 @@ Aynı grup boyutunda belirlenimli. `VC_FORMULA_FALLBACK_BATCH` ile ayarlanır. 2
 
 ## Kalan fırsatlar (ölçülmedi)
 
-- Grafikli decode adımı artık GPU sınırlı: 7,1 ms/adım (kova 128, girdi 605, grup 5); dikkat 1,5 ms, `repeat_kv` kopyası 1,5 ms, ağırlık çarpımları 2,4 ms (bellek bant genişliği tabanı ~1,4 ms), diğer ~1,5 ms. `repeat_kv`'siz GQA'lı SDPA (özel dikkat işlevi) adımı ~%20–40 kısaltabilir; çekirdek seçimi değişeceği için çıktı yeniden karşılaştırılmalı.
+- Grafikli decode adımı artık GPU sınırlı: 7,1 ms/adım (kova 128, girdi 605, grup 5); dikkat 1,5 ms, `repeat_kv` kopyası 1,5 ms, ağırlık çarpımları 2,4 ms (bellek bant genişliği tabanı ~1,4 ms), diğer ~1,5 ms. `repeat_kv`'siz GQA dikkati 2026-10-17'de uygulandı (aşağıda).
 - Görüntü kodlayıcı (ön doldurma) grup başına ~0,5 sn GPU; modelin girdisini değiştirmeden küçülmez.
 - MinerU yedeği (~22 sn) zenginleştirmeden sonra sırayla koşuyor; model yükleme ~2–4 sn.
+
+## GQA dikkati, `repeat_kv`'siz (2026-10-17)
+
+Grafik yakalanırken SDPA, aynı KV başını paylaşan 3 sorgu başını sorgu ekseninde yan yana koyan özel işlevle değiştirilir; K/V kopyası yok. `VC_FORMULA_GQA=0` kapatır.
+
+- Rastgele girdide stok SDPA ile bit düzeyinde aynı (fp32, bf16).
+- Saklanan formül grupları, gerçek model: Carroll 81, Tong 71 formül birebir aynı. Adım 10,3 → 8,3 ms (Carroll), 16,4 → 14,0 ms (Tong); iki koşu tutarlı.
+- Uçtan uca (tam dönüşüm, Markdown 4 belgede birebir aynı):
+
+| Belge | Sayfa | GQA kapalı | GQA açık | Formül modeli |
+|---|---|---|---|---|
+| Likharev QM | 1–30 | 87,2 sn | 72,8 sn | 40,3 → 35,0 |
+| Carroll GR | 40–69 | 86,3 sn | 77,8 sn | 44,5 → 36,1 |
+| bgnet (C kodu) | 30–49 | 47,2 sn | 35,6 sn | 36,8 → 25,6 |
+| JeffE | 40–59 | 52,4 sn | 48,2 sn | 16,8 → 13,1 |
