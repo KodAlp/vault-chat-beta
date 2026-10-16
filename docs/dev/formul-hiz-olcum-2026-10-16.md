@@ -71,6 +71,36 @@ Formül/kod modeli 2,2–2,6 kat, toplam dönüşüm 1,3–1,8 kat hızlı. Dön
 
 qwen3:8b GPU'da yüklüyken: Carroll 10 sayfa 46 sn, tepe 5,84/6,14 GB, hata yok. Windows (WDDM) VRAM'i sanallaştırıyor: boştaki Ollama modeli sistem belleğine iniyor ve `mem_get_info` onu boş sayıyor, yani düşük VRAM koruması yalnız gerçek dolulukta devreye girer; taşma OOM değil sayfalama olur.
 
+## Sonraki adımlar (aynı gece)
+
+Grafik decoder'dan sonra Carroll 30 sayfanın aşamaları (docling profil zamanları + sarmalayıcılar):
+
+| Aşama | Süre |
+|---|---|
+| Formül modeli (`predict_batch`, grafikli) | 48–50 sn |
+| MinerU yedeği (25 formül, `toplevel_align`) | 36,5 sn |
+| Formül kırpımı (`prepare_element`, 81 formül) | 25,5 sn |
+| İşlemci (görüntü → 512'lik parçalar, CPU) | 5,1 sn |
+| Metin katmanı okuma (başlık onarımı için) | 4,5 sn |
+
+### Formül kırpımı: ızgara (`e172d97`)
+
+`formula_crop._v2_segments` sayfadaki karakterleri x'e göre sıralı tarayıp aynı x aralığındaki tüm satırları ikili karşılaştırıyordu (8 formülde 15 milyon `max()` çağrısı). Bağ koşulu simetrik ve yatay boşluk < maxgap ile dikey örtüşme gerektirdiği için sonuç "koşulu sağlayan tüm çiftlerin birleşimi"; aday çiftler artık bir ızgaradan geliyor, koşul aynı ifadelerle sınanıyor. 300 rastgele düzende ve 108 gerçek sayfa çağrısında bileşenler ve sıraları birebir aynı; gerçek sayfalarda 14,6 → 0,9 sn. Carroll: `prepare_element` 25,5 → 5,3 sn, toplam 131 → 111 sn, Markdown birebir aynı.
+
+### MinerU grup boyutu (`9a3ac39`, varsayılan değişmedi)
+
+| Grup | Yedek süresi | Tepe VRAM | Çıktı |
+|---|---|---|---|
+| 4 (varsayılan) | 36,4 sn | 3,18 GB | — |
+| 8 | 28,5 sn | 3,41 GB | 25 formülün 3'ünde tek-token farkı |
+| 12 | 21,4 sn | 3,68 GB | aynı 3 formül (biri 12'de daha doğru: `	ext{(2.43)}`) |
+
+Aynı grup boyutunda belirlenimli. `VC_FORMULA_FALLBACK_BATCH` ile ayarlanır; varsayılanı değiştirmek kullanıcı kararı (hız ↔ VRAM ↔ küçük çıktı farkı).
+
+### Birikimli (Carroll GR s. 40–69)
+
+221 sn (stok) → 144 (CUDA grafiği) → 111 (kırpım ızgarası); MinerU 12'li grupla ~96 sn.
+
 ## Kalan fırsatlar (ölçülmedi)
 
 - İşlemci (görüntüyü 2048 kenara büyütüp 512'lik parçalara bölme) grup başına ~0,37 sn CPU; GPU decode ile örtüştürülebilir (~%15 formül süresi).

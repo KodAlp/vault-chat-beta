@@ -38,7 +38,7 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 ### 4. Düzenleyici ve sohbet görünümü
 
 ### 5. Büyük belgelerde bellek ve hız
-- [ ] **Formül yoğun klasörlerin hızı: kalanlar.** CUDA grafiği yapıldı (1,3–1,8 kat). Kalan: görüntü işlemcisini (grup başına ~0,37 sn CPU) GPU decode ile örtüştür (~%15 formül süresi), grubu genişliğe göre sırala (~%8). `docs/dev/formul-hiz-olcum-2026-10-16.md` `O` · #82
+- [ ] **Formül yoğun klasörlerin hızı: kalanlar.** Carroll 30 s. 221 → 111 sn oldu (CUDA grafiği + kırpım ızgarası). Kalan: MinerU grup boyutu kararı (4 → 12: −15 sn, +0,5 GB VRAM, 3/25 formülde tek-token farkı; `VC_FORMULA_FALLBACK_BATCH`), işlemciyi GPU decode ile örtüştür (~5 sn), grubu genişliğe göre sırala (~%8). `docs/dev/formul-hiz-olcum-2026-10-16.md` `O` · #82
 
 ### 6. İçe aktarmada sessiz bozulma
 
@@ -132,6 +132,7 @@ Yalnız son iki haftanın kaydı tutulur; daha eskisi git geçmişindedir.
 
 - 2026-10-16: yerel modellerle MCP deneyi (#39): `bench/mcp-yerel-model.mjs`, 10 görev × qwen3 8b/4b × düşünme açık/kapalı (Ollama). En iyisi qwen3:4b düşünme açık (8/10); 8b kasa kimliğini tahmin ediyor ve uyduruyor (3–4/10); 4b düşünme kapalıyken akıl yürütmeyi cevaba sızdırıyor. MCP sunucusu kasa adını da kabul ediyor, hatada erişilebilir kasaları listeliyor, `npm run index` yerine uygulamadaki yolu söylüyor: araç hataları 6 → 2, başarı oranı değişmedi. `docs/dev/mcp-yerel-model-2026-10-16.md` `daac314` `553cbe6`
 - 2026-10-16: formül/kod modelinin decode'u CUDA grafiğiyle (#82): token başına 33 → 7–10 ms, toplam dönüşüm 1,3–1,8 kat (Carroll 30 s. 221 → 144 sn, Likharev 198 → 135, bgnet 88 → 49). Stokla 320 blokta 6 tek-token farkı, PDF'le elle bakıldı, hiçbiri içerik hatası değil; KaTeX iki modda 0 hata. `VC_FORMULA_CUDA_GRAPH=0` kapatır. `6f5297d`
+- 2026-10-16: formül kırpımında parça bulma ızgarayla (#82): `prepare_element` 25,5 → 5,3 sn (Carroll 30 s.), çıktı birebir aynı (300 rastgele + 108 gerçek sayfa çağrısı, Markdown). MinerU yedeğinin grup boyutu `VC_FORMULA_FALLBACK_BATCH` ile ayarlanabilir, varsayılan 4. `e172d97` `9a3ac39`
 - 2026-10-16: uzun PDF'ler 150 sayfalık parçalarla dönüştürülüyor (#83): AIMA 1–300 tepe RAM 8,7 → 5,4 GB, 1151 sayfanın tamamı 6,7 GB / 35 dk (parçasız ~25 GB olurdu); Markdown'da tek fark parça sınırındaki kenar notu. Parça birleştirmede kayan sayfa numaraları da düzeldi. `217e901`
 - 2026-10-15: #2 Fizik yeniden içe aktarma bitti: 11 not, KaTeX hataları 48 → 0 (kasanın 18 notunda 0); kozmoloji/QM'de ~22 `∞`→`∝` düzeldi. Elle PDF karşılaştırması: 45 eski hata noktası → çoğu sayfa numaralı görsel; yanlış/yarım/regresyon olan 11 formül PDF'ten elle yazıldı (adaptive (2.16)/(3.41)/s.26/s.32, motivic (5.1.8.a) ve 64 `𝕀`→`𝟙`, Carroll Maxwell, string (3.36)/(6.17) yeri, optik (11.21), SM (2.69), QM (4.122–123) ve 2 kenar etiketi, loop-QG yinelenen düzyazı, EM kenar etiketi). Hepsi revizyonlu; indeks güncel. Aynı kalan formüllerin eski hataları (ör. `\dot ν`) taranmadı.
 - 2026-10-15: bozuk `chats.db` artık tek hata olayı veriyor (`CHAT_SAVE_FAILED`), önce `UNKNOWN` yok. `2d27a10`
