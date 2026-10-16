@@ -15,6 +15,7 @@ import {
 	FIXES,
 	repairFormula,
 	looksLikeCode,
+	codeToFence,
 	katexError,
 	findMath,
 	processText
@@ -222,4 +223,77 @@ test('mathtype-slash: other \\mathord groups are untouched', () => {
 test('mathtype-slash: nested braces inside \\vphantom', () => {
 	const s = String.raw`x \mathord { \left/ { \vphantom { \frac { \sqrt { a } } { { b } } } } \right. \kern - delimiterspace } y`;
 	assert.equal(fixMathtypeSlash(s), 'x / y');
+});
+
+const MIPS = String.raw`\begin{array}{l l} \text {lw $t0, AddrConstant4($s1) # $t0 = constant 4} \\ \text {add $s3,$s3,$t0 # $s3 = $s3 + $t0 ($t0 == 4)} \end{array}`;
+
+test('codeToFence: MIPS rows recovered exactly', () => {
+	assert.equal(codeToFence(MIPS), 'lw $t0, AddrConstant4($s1) # $t0 = constant 4\nadd $s3,$s3,$t0 # $s3 = $s3 + $t0 ($t0 == 4)');
+});
+
+test('codeToFence: three columns with \\# comment marker', () => {
+	const b = String.raw`\begin{array}{l l l} \text {lw} & \text {a0, 0($sp)} & \# \text {restore} \\ \text {addi} & \text {sp, $sp, 8} & \# \text {pop} \end{array}`;
+	assert.equal(codeToFence(b), 'lw a0, 0($sp) # restore\naddi sp, $sp, 8 # pop');
+});
+
+test('codeToFence: leading \\quad indents by 4 spaces', () => {
+	const b = String.raw`\begin{array}{l} \text {fun f x =} \\ \quad \text {x + 1} \end{array}`;
+	assert.equal(codeToFence(b), 'fun f x =\n    x + 1');
+	assert.equal(codeToFence(String.raw`\qquad \text {a}`), '        a');
+	assert.equal(codeToFence(String.raw`\qquad\qquad\qquad\qquad\qquad \text {a}`), null); // > 8 quads
+});
+
+test('codeToFence: escapes in text are unescaped', () => {
+	assert.equal(codeToFence(String.raw`\text {a\_b \$x \{ \} \& \% \# \backslash \textbackslash}`), 'a_b $x { } & % # ' + '\\' + ' ' + '\\');
+});
+
+test('codeToFence: not-code content is rejected', () => {
+	assert.equal(codeToFence(String.raw`\text{fun deleteMin ts = let val (Node (\_, x, ts_{1}), ts_{2}) = removeMinTree ts}`), null);
+	assert.equal(
+		codeToFence(String.raw`\begin{array}{l} \text {Else:sub $s0,$s1,$s2} \quad \# f = g - h (\text {skipped if i = j}) \\ \text {Exit:} \end{array}`),
+		null
+	);
+	assert.equal(codeToFence(String.raw`\text{a \geq b}`), null);
+	assert.equal(codeToFence(String.raw`\text{a \n b}`), null);
+	assert.equal(codeToFence(String.raw`\mathrm{jr} \quad \mathrm {\Sra}`), null);
+	assert.equal(codeToFence('\\text{' + 'x'.repeat(2000) + '}'), null);
+	assert.equal(codeToFence(String.raw`x \begin{array}{l} \text{a} \end{array}`), null);
+	assert.equal(codeToFence(String.raw`\begin{array}{l} \text{a} \end{array} y`), null);
+	assert.equal(codeToFence('\\text{a ' + '`'.repeat(3) + ' b}'), null);
+	assert.equal(codeToFence(String.raw`\text{}`), null);
+});
+
+test('repairFormula: display code-like -> fenced, inline stays code-like', () => {
+	assert.equal(katexError(MIPS) === null, false);
+	const r = repairFormula(MIPS, true);
+	assert.equal(r.status, 'fenced');
+	assert.equal(r.code.split('\n').length, 2);
+	assert.equal(repairFormula(MIPS, false).status, 'code-like');
+});
+
+test('processText: $$ block and single-line $$ become ```text fences, neighbours kept', () => {
+	const fm = '---\nconverter: mineru\n---\n';
+	const expected = 'lw $t0, AddrConstant4($s1) # $t0 = constant 4\nadd $s3,$s3,$t0 # $s3 = $s3 + $t0 ($t0 == 4)';
+	let r = processText(`${fm}before\n\n$$\n${MIPS}\n$$\n\nafter\n`);
+	assert.equal(r.text, `${fm}before\n\n\`\`\`text\n${expected}\n\`\`\`\n\nafter\n`);
+	assert.equal(r.fenced.length, 1);
+	assert.equal(r.fenced[0].line, 6);
+	assert.equal(r.fenced[0].code, expected);
+	assert.equal(r.codeLike.length, 0);
+	r = processText(`${fm}before\n$$ ${MIPS} $$\nafter`);
+	assert.equal(r.text, `${fm}before\n\`\`\`text\n${expected}\n\`\`\`\nafter`);
+	r = processText(`before\n\n  $$ ${MIPS} $$  \nafter`);
+	assert.equal(r.text, `before\n\n\`\`\`text\n${expected}\n\`\`\`  \nafter`);
+	// non-convertible code-like stays untouched
+	const keep = '$$\n\\text {addi $t0, $s0, 1} \\geq 2 \\tag{1}\\tag{2}\n$$\n';
+	r = processText(keep);
+	assert.equal(r.text, keep);
+	assert.equal(r.codeLike.length, 1);
+	assert.equal(r.fenced.length, 0);
+});
+
+test('codeToFence: stray dollar next to an escaped one is left alone', () => {
+	assert.equal(codeToFence('\\text{\\$CONS (1, $\\$CONS (2, $\\$NIL))}'), null);
+	assert.equal(codeToFence('\\text{a \\$$ b}'), null);
+	assert.equal(codeToFence('\\text{QB.d = QB.q $ QA.q}'), 'QB.d = QB.q $ QA.q');
 });

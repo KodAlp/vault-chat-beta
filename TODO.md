@@ -2,7 +2,7 @@
 
 Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncellenir.
 
-**Son güncelleme:** 2026-10-17 · #82 bitti: `repeat_kv`'siz GQA dikkati
+**Son güncelleme:** 2026-10-17 · #82 bitti: `repeat_kv`'siz GQA dikkati; #5 kodu bloğa çeviren düzeltme (yazma bekliyor)
 
 ## Kurallar
 
@@ -44,7 +44,7 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 ### 7. MCP araçları ve belgeleri
 
 ### 8. Formül doğruluğu
-- [ ] **MinerU KaTeX: elle bakılacak formüller.** Mekanik olanlar bitti (2026-10-13, 367 formül). Kalan: ~73 formül sanılmış kod (kod bloğuna çevir), 14 anlamı belirsiz makro, 7 bozuk MathType kesri, ~15 çift üst/alt simge, dengesiz \left/\right; 19 kesik \quad döngüsü #3 ile. `O` · #5 (çekildi)
+- [ ] **MinerU KaTeX: elle bakılacak formüller.** Mekanik olanlar bitti (2026-10-13, 367 formül). 2026-10-17 ölçümü (geliştirme `default` kasası): 165 düzeltilemeyen + 42 kod sanılmış. Betik artık yalnız `\text{}` satırlarından oluşan kodu ```text bloğuna çeviriyor: 6 formül (MIPS 5, Horowitz 1), yazma bekliyor (`node scripts/katex-cleanup.mjs <kasa> --write --backup-dir <yedek>`; otomatik izin reddetti). Kalan 36 kod sanılmış: kesik `\quad` döngülü (#3 ile), içinde matematik olanlar ve yanlış pozitifler (Cormen `\text{(because A_{k}(j) …)}`). Ayrıca 14 anlamı belirsiz makro, 7 bozuk MathType kesri, ~15 çift üst/alt simge, dengesiz \left/\right; 19 kesik \quad döngüsü #3 ile. `O` · #5 (çekildi)
 - [ ] **"Yalnız hatalı formülü onar".** Sayfa + kutu; belgenin tamamını yeniden okumadan. `B` · #3
 
 ### 9. MCP paketleme ve kurulum
