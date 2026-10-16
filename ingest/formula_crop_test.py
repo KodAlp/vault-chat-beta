@@ -229,6 +229,46 @@ def test_install_patches_pipeline_class_and_falls_back():
         fc.reset_stats()
 
 
+def _same_segments(chars):
+    new, ref = fc._v2_segments(chars), fc._v2_segments_ref(chars)
+    assert len(new) == len(ref), (len(new), len(ref))
+    for (cs_n, mh_n), (cs_r, mh_r) in zip(new, ref):
+        assert [id(c) for c in cs_n] == [id(c) for c in cs_r] and mh_n == mh_r
+
+
+def test_segments_grid_equals_reference_random():
+    """Izgaralı _v2_segments eski sıralı taramayla birebir aynı bileşenleri aynı sırada verir (#82)."""
+    import random
+
+    rng = random.Random(7)
+    for trial in range(300):
+        chars = []
+        lines = rng.randint(1, 25)
+        for li in range(lines):
+            y = rng.uniform(0, 700)
+            h = rng.choice([0.0, rng.uniform(2, 14)])
+            x = rng.uniform(0, 100)
+            for _ in range(rng.randint(1, 40)):
+                w = rng.choice([0.0, rng.uniform(1, 8)])
+                dy = rng.uniform(-h, h) if rng.random() < 0.2 else 0.0  # üst/alt simge
+                hh = h * rng.choice([1.0, 0.6, 1.4])
+                chars.append([rng.choice("abcxyz=+()1(7.4)"), x, y + dy, x + w, y + dy + hh])
+                x += w + rng.choice([0.0, 0.5, 2.0, rng.uniform(0, 3 * max(h, 1))])
+        if trial % 10 == 0 and chars:
+            chars.append(list(chars[0]))  # aynı kutu iki kez
+        rng.shuffle(chars)
+        _same_segments(chars)
+    _same_segments([])
+
+
+def test_segments_bad_boxes_fall_back_to_reference():
+    chars = word("abc", 10, 10) + [["x", 30, 20, 25, 18]]  # ters kutu
+    _same_segments(chars)
+    chars = word("abc", 10, 10) + [["x", float("nan"), 20, 25, 30]]
+    new, ref = fc._v2_segments(chars), fc._v2_segments_ref(chars)
+    assert len(new) == len(ref)
+
+
 def main():
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
     for t in tests:

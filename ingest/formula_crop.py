@@ -25,6 +25,7 @@ gönderdiği kırpımları (+ stok karşılığını ve kutuları) oraya yazar (
 from __future__ import annotations
 
 import json
+import math
 import os
 import re
 import statistics
@@ -45,8 +46,82 @@ V2_PIX_GAP_X = 0.6  # ... YATAY boşluk (sonda kalan nokta/virgül, ince parante
 V2_PIX_REACH = 1.2  # piksel büyütmenin kutudan en çok uzaklaşabileceği (* medyan yükseklik)
 
 
+def _v2_pairs_ok(ca, cb_) -> bool:
+    """İki karakter aynı parçaya bağlanır mı (simetrik): yatay boşluk < V2_PROSE_GAP * büyük yükseklik
+    ve dikey örtüşme >= küçük yüksekliğin yarısı. _v2_segments_ref'teki ifadelerin aynısı."""
+    ha, hb = ca[4] - ca[2], cb_[4] - cb_[2]
+    gap = max(cb_[1] - ca[3], ca[1] - cb_[3], 0.0)
+    if gap >= V2_PROSE_GAP * max(ha, hb):
+        return False
+    ov = min(ca[4], cb_[4]) - max(ca[2], cb_[2])
+    return ov >= 0.5 * min(ha, hb)
+
+
 def _v2_segments(chars):
     """Karakterleri yazı dizilerine (parçalara) böler: iki karakter, dikey aralıkları küçüğünün >= %50'si
+    kadar örtüşüyor ve yatay boşluk < V2_PROSE_GAP * (büyük yükseklik) ise bağlıdır (birleşik bileşenler).
+    Sözcük boşluğu (~0.4-0.75 h) bağlar; matris sütunu / ayrık yazı (> 1.3 h) bağlamaz.
+    Dönüş: [(parça karakterleri, medyan yükseklik)].
+
+    Hız (#82, 2026-10-16): eski gerçekleme (_v2_segments_ref) x'e göre sıralı tarayıp aynı x aralığındaki
+    TÜM satırların karakterlerini ikili karşılaştırıyordu: tam sayfada formül başına ~0,3 sn, Carroll
+    30 sayfada 81 formülde 25 sn. Bağ koşulu simetrik ve yatay boşluk < maxgap ile dikey örtüşme
+    gerektirdiği için sonuç "koşulu sağlayan tüm çiftlerin birleşimi"dir; aday çiftler burada bir
+    ızgaradan (hücre: maxgap genişlik, medyan yükseklik boy) gelir, koşul aynı ifadelerle sınanır.
+    Bileşenler ve sıraları eskisiyle birebir aynı (formula_crop_test)."""
+    n = len(chars)
+    # Izgara, genişlik/yükseklik >= 0 ve sonlu kutu varsayar (o zaman bağ dikey örtüşme ister);
+    # bozuk kutuda eski taramaya düş.
+    if any(not (c[3] >= c[1] and c[4] >= c[2]) or not all(math.isfinite(v) for v in c[1:5]) for c in chars):
+        return _v2_segments_ref(chars)
+    par = list(range(n))
+
+    def find(x):
+        while par[x] != x:
+            par[x] = par[par[x]]
+            x = par[x]
+        return x
+
+    maxgap = 0.0
+    for c in chars:
+        maxgap = max(maxgap, V2_PROSE_GAP * (c[4] - c[2]))
+    if n:
+        hs = sorted(c[4] - c[2] for c in chars)
+        cw = maxgap if maxgap > 0 else 1.0
+        ch = hs[len(hs) // 2] if hs[len(hs) // 2] > 0 else 1.0
+        grid: dict[tuple[int, int], list[int]] = {}
+        spans = []
+        for i, c in enumerate(chars):
+            gx0, gx1 = math.floor(c[1] / cw), math.floor(c[3] / cw)
+            gy0, gy1 = math.floor(c[2] / ch), math.floor(c[4] / ch)
+            spans.append((gx0, gx1, gy0, gy1))
+            for gx in range(gx0, gx1 + 1):
+                for gy in range(gy0, gy1 + 1):
+                    grid.setdefault((gx, gy), []).append(i)
+        for i, c in enumerate(chars):
+            gx0, gx1, gy0, gy1 = spans[i]
+            seen = set()
+            # yatay boşluk < maxgap: komşu bir hücre yeter; dikey örtüşme: aynı satır hücreleri
+            for gx in range(gx0 - 1, gx1 + 2):
+                for gy in range(gy0, gy1 + 1):
+                    for j in grid.get((gx, gy), ()):
+                        if j <= i or j in seen:
+                            continue
+                        seen.add(j)
+                        if _v2_pairs_ok(c, chars[j]):
+                            ri, rj = find(i), find(j)
+                            if ri != rj:
+                                par[ri] = rj
+    comps: dict[int, list] = {}
+    for i in range(n):
+        comps.setdefault(find(i), []).append(chars[i])
+    return [(cs, statistics.median([c[4] - c[2] for c in cs])) for cs in comps.values()]
+
+
+def _v2_segments_ref(chars):
+    """Eski (sıralı tarama) gerçekleme; _v2_segments ile birebir aynı sonucu verdiği testte sınanır.
+
+    Karakterleri yazı dizilerine (parçalara) böler: iki karakter, dikey aralıkları küçüğünün >= %50'si
     kadar örtüşüyor ve yatay boşluk < V2_PROSE_GAP * (büyük yükseklik) ise bağlıdır (birleşik bileşenler).
     Sözcük boşluğu (~0.4-0.75 h) bağlar; matris sütunu / ayrık yazı (> 1.3 h) bağlamaz.
     Dönüş: [(parça karakterleri, medyan yükseklik)]."""
