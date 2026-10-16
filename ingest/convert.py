@@ -86,6 +86,7 @@ from typing import Callable
 import formula_crop
 import formula_early_stop
 import formula_fallback
+import formula_prefetch
 import images
 import code_layout
 import glyph_check
@@ -781,6 +782,8 @@ _OCR_PLAN: list["ocr_lang.OcrPlan | None"] = [None]
 _FORMULA_STATS: list[dict | None] = [None]
 # formula_crop sayaçları (son docling dönüşümü); done olayına "formulaCrop" olarak girer.
 _FORMULA_CROP_STATS: list[dict | None] = [None]
+# formula_prefetch sayaçları (son docling dönüşümü); done olayına "formulaPrefetch" olarak girer.
+_FORMULA_PREFETCH_STATS: list[dict | None] = [None]
 # formula_fallback sayaçları (son docling dönüşümü); done olayına "formulaFallback" olarak girer.
 _FORMULA_FALLBACK_STATS: list[dict | None] = [None]
 # Why docling (the primary converter on a GPU machine) was skipped and
@@ -804,6 +807,7 @@ def reset_run_state() -> None:
     _OCR_PLAN[0] = None
     _FORMULA_STATS[0] = None
     _FORMULA_FALLBACK_STATS[0] = None
+    _FORMULA_PREFETCH_STATS[0] = None
     formula_fallback.reset_images()
     _PRIMARY_FALLBACK.clear()
     _TEXTLESS_CACHE.clear()
@@ -1177,6 +1181,12 @@ def convert_with_docling(
         formula_fallback.reset_stats()
     except Exception as err:  # noqa: BLE001 — kalite iyileştirmesi; dönüşümü asla bozmaz
         print(f"formula_fallback: kurulamadı: {err}", file=sys.stderr)
+    try:
+        # prepare_element kancalarından (crop, fallback) SONRA: ön-getirme onları üretici iş parçacığında çağırır
+        formula_prefetch.install()
+        formula_prefetch.reset_stats()
+    except Exception as err:  # noqa: BLE001 — hızlandırma; dönüşümü asla bozmaz
+        print(f"formula_prefetch: kurulamadı: {err}", file=sys.stderr)
     options = PdfPipelineOptions()
     need_all = not pdf_has_text_layer(path)
     textless = [] if need_all else textless_pages_in_scope(path, page_range)
@@ -1299,6 +1309,10 @@ def convert_with_docling(
         _FORMULA_CROP_STATS[0] = formula_crop.report()
     except Exception:  # noqa: BLE001
         _FORMULA_CROP_STATS[0] = None
+    try:
+        _FORMULA_PREFETCH_STATS[0] = formula_prefetch.report()
+    except Exception:  # noqa: BLE001
+        _FORMULA_PREFETCH_STATS[0] = None
     # CodeFormula'nın boş/döngülü/geçersiz LaTeX'ini MinerU ile yeniden oku (CUDA yoksa atlanır; modeli
     # işi bitince boşaltır). Sütun/okuma sırası onarımından ve markdown dışa aktarımından ÖNCE: sonraki
     # adımlar düzeltilmiş metni görür. Hata dönüşümü bozmaz (CodeFormula metni kalır).
@@ -1929,6 +1943,7 @@ def main(argv: list[str] | None = None) -> int:
             "imageStats": image_stats,
             "formulaEarlyStop": _FORMULA_STATS[0],
             "formulaCrop": _FORMULA_CROP_STATS[0],
+            "formulaPrefetch": _FORMULA_PREFETCH_STATS[0],
             "formulaFallback": _FORMULA_FALLBACK_STATS[0],
         }
     )
