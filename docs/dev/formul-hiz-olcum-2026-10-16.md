@@ -87,15 +87,15 @@ Grafik decoder'dan sonra Carroll 30 sayfanın aşamaları (docling profil zamanl
 
 `formula_crop._v2_segments` sayfadaki karakterleri x'e göre sıralı tarayıp aynı x aralığındaki tüm satırları ikili karşılaştırıyordu (8 formülde 15 milyon `max()` çağrısı). Bağ koşulu simetrik ve yatay boşluk < maxgap ile dikey örtüşme gerektirdiği için sonuç "koşulu sağlayan tüm çiftlerin birleşimi"; aday çiftler artık bir ızgaradan geliyor, koşul aynı ifadelerle sınanıyor. 300 rastgele düzende ve 108 gerçek sayfa çağrısında bileşenler ve sıraları birebir aynı; gerçek sayfalarda 14,6 → 0,9 sn. Carroll: `prepare_element` 25,5 → 5,3 sn, toplam 131 → 111 sn, Markdown birebir aynı.
 
-### MinerU grup boyutu (`9a3ac39`, varsayılan değişmedi)
+### MinerU grup boyutu (`9a3ac39`; varsayılan 12)
 
 | Grup | Yedek süresi | Tepe VRAM | Çıktı |
 |---|---|---|---|
-| 4 (varsayılan) | 36,4 sn | 3,18 GB | — |
+| 4 | 36,4 sn | 3,18 GB | — |
 | 8 | 28,5 sn | 3,41 GB | 25 formülün 3'ünde tek-token farkı |
-| 12 | 21,4 sn | 3,68 GB | aynı 3 formül (biri 12'de daha doğru: `	ext{(2.43)}`) |
+| 12 (varsayılan) | 21,4 sn | 3,68 GB | aynı 3 formül (biri 12'de daha doğru: `	ext{(2.43)}`) |
 
-Aynı grup boyutunda belirlenimli. `VC_FORMULA_FALLBACK_BATCH` ile ayarlanır; varsayılanı değiştirmek kullanıcı kararı (hız ↔ VRAM ↔ küçük çıktı farkı).
+Aynı grup boyutunda belirlenimli. `VC_FORMULA_FALLBACK_BATCH` ile ayarlanır. 2026-10-16 kullanıcı kararı: varsayılan 12 (farklı 3 formülden biri 12'de daha doğru, ikisi tek-token farkı; ayrıca −15 sn).
 
 ### Birikimli (Carroll GR s. 40–69)
 
