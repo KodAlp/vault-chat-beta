@@ -58,11 +58,12 @@ from typing import Any, Callable
 
 MODEL_ID = "opendatalab/MinerU2.5-Pro-2605-1.2B"
 MAX_STORE_BYTES = 256 * 1024 * 1024
-BATCH_SIZE = 4
+BATCH_SIZE = 12
 # MinerU grup boyutu (#82, 2026-10-16, Carroll GR s. 40-69, 25 formül): 4 / 8 / 12 ->
 # 36,4 / 28,5 / 21,4 sn, tepe VRAM 3,18 / 3,41 / 3,68 GB. Grup boyutu 25 formülün 3'ünde
-# tek-token farkı veriyor (padding'de neredeyse eşit adaylar; aynı boyutta belirlenimli).
-# Varsayılan 4 değişmedi; VC_FORMULA_FALLBACK_BATCH ile denenebilir (1-32).
+# tek-token farkı veriyor (padding'de neredeyse eşit adaylar; aynı boyutta belirlenimli);
+# biri 12'de daha doğru. Varsayılan 12 (kullanıcı kararı); VC_FORMULA_FALLBACK_BATCH ile
+# değiştirilir (1-32), VRAM darsa 4.
 
 
 def batch_size() -> int:
