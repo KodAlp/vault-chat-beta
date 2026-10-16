@@ -2,7 +2,7 @@
 
 Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncellenir.
 
-**Son güncelleme:** 2026-10-16 · #83 uzun PDF'ler parçalı dönüştürülüyor (1151 sayfa 6,7 GB)
+**Son güncelleme:** 2026-10-16 · gece: #82 CUDA grafiği (formül modeli 2,2–2,6 kat), #39 yerel model MCP deneyi
 
 ## Kurallar
 
@@ -43,7 +43,6 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 ### 6. İçe aktarmada sessiz bozulma
 
 ### 7. MCP araçları ve belgeleri
-- [ ] **Yerel modellerle MCP deneyi.** Qwen3 8B/4B, LM Studio. `O` · #39 (çekildi)
 
 ### 8. Formül doğruluğu
 - [ ] **MinerU KaTeX: elle bakılacak formüller.** Mekanik olanlar bitti (2026-10-13, 367 formül). Kalan: ~73 formül sanılmış kod (kod bloğuna çevir), 14 anlamı belirsiz makro, 7 bozuk MathType kesri, ~15 çift üst/alt simge, dengesiz \left/\right; 19 kesik \quad döngüsü #3 ile. `O` · #5 (çekildi)
@@ -97,6 +96,10 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 - [ ] **Sessiz kurulum eski exe'yi bırakabiliyor.** 2026-10-15'te ilk `/S` kurulum çıkış 0 verdi ama `vault-chat.exe`'yi değiştirmedi (yalnız dist-server güncellendi); süreçler tam kapanınca ikinci kurulum düzeldi. Kurulumdan sonra exe'yi doğrula; uygulama `taskkill` (zorlamasız) ile de kapanmıyor. `K`
 - [ ] **İçe aktarmada sayfa ilerlemesi göster.** convert.py artık her parça sonunda `pagesDone`/`pagesTotal` yayıyor; SingleFileImport ve BatchImport yalnız aşama etiketi gösteriyor. Uzun kitapta "450/1151 sayfa" ve kalan süre. `K–O`
 - [ ] **Parçalı dönüştürmede kalan bellek artışı.** 1151 sayfada parça başına ~0,15 GB birikiyor (birleşik belgedeki görseller, formül kırpımları); 5000 sayfalık Intel SDM ile ölç, gerekirse görselleri parça sonunda diske yaz. `O`
+- [ ] **MCP: `search_library` için `k` alt sınırı.** Yerel modeller `k=1` istiyor ve yanlış notu alıyor (Einstein sorusunda kozmoloji notu). Alt sınır 3 ölç. `K`
+- [ ] **MCP: `get_note` varsayılanı.** Notun tamamı dönüyor (yüz binlerce karakter), 8K bağlamlı yerel model aradığını bulamıyor; bölüm/sayfa parametresini hiçbir model kullanmadı. Varsayılan olarak başlık listesi + ilk bölüm ya da büyük notta ipucu. `O`
+- [ ] **"MCP istemcisine bağla" kartına yerel model notu.** qwen3:4b, düşünme açık, bağlam ≥ 8K; 8b bu araç setinde uyduruyor. `K`
+- [ ] **CUDA grafikli decode'u paketli sürümde dene.** Kurulu uygulamanın Python'unda (aynı torch/transformers mi?) ve sohbet modeliyle eşzamanlı içe aktarmada. `K`
 
 ## Daha sonra
 
@@ -127,6 +130,7 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 
 Yalnız son iki haftanın kaydı tutulur; daha eskisi git geçmişindedir.
 
+- 2026-10-16: yerel modellerle MCP deneyi (#39): `bench/mcp-yerel-model.mjs`, 10 görev × qwen3 8b/4b × düşünme açık/kapalı (Ollama). En iyisi qwen3:4b düşünme açık (8/10); 8b kasa kimliğini tahmin ediyor ve uyduruyor (3–4/10); 4b düşünme kapalıyken akıl yürütmeyi cevaba sızdırıyor. MCP sunucusu kasa adını da kabul ediyor, hatada erişilebilir kasaları listeliyor, `npm run index` yerine uygulamadaki yolu söylüyor: araç hataları 6 → 2, başarı oranı değişmedi. `docs/dev/mcp-yerel-model-2026-10-16.md` `daac314` `553cbe6`
 - 2026-10-16: formül/kod modelinin decode'u CUDA grafiğiyle (#82): token başına 33 → 7–10 ms, toplam dönüşüm 1,3–1,8 kat (Carroll 30 s. 221 → 144 sn, Likharev 198 → 135, bgnet 88 → 49). Stokla 320 blokta 6 tek-token farkı, PDF'le elle bakıldı, hiçbiri içerik hatası değil; KaTeX iki modda 0 hata. `VC_FORMULA_CUDA_GRAPH=0` kapatır. `6f5297d`
 - 2026-10-16: uzun PDF'ler 150 sayfalık parçalarla dönüştürülüyor (#83): AIMA 1–300 tepe RAM 8,7 → 5,4 GB, 1151 sayfanın tamamı 6,7 GB / 35 dk (parçasız ~25 GB olurdu); Markdown'da tek fark parça sınırındaki kenar notu. Parça birleştirmede kayan sayfa numaraları da düzeldi. `217e901`
 - 2026-10-15: #2 Fizik yeniden içe aktarma bitti: 11 not, KaTeX hataları 48 → 0 (kasanın 18 notunda 0); kozmoloji/QM'de ~22 `∞`→`∝` düzeldi. Elle PDF karşılaştırması: 45 eski hata noktası → çoğu sayfa numaralı görsel; yanlış/yarım/regresyon olan 11 formül PDF'ten elle yazıldı (adaptive (2.16)/(3.41)/s.26/s.32, motivic (5.1.8.a) ve 64 `𝕀`→`𝟙`, Carroll Maxwell, string (3.36)/(6.17) yeri, optik (11.21), SM (2.69), QM (4.122–123) ve 2 kenar etiketi, loop-QG yinelenen düzyazı, EM kenar etiketi). Hepsi revizyonlu; indeks güncel. Aynı kalan formüllerin eski hataları (ör. `\dot ν`) taranmadı.
