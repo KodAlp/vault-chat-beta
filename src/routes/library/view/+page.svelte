@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { beforeNavigate, goto } from '$app/navigation';
-	import { onDestroy, untrack, type Component } from 'svelte';
+	import { onDestroy, tick, untrack, type Component } from 'svelte';
 	import { renderMarkdown } from '$lib/markdown';
 	import { planBySize } from '$lib/wysiwyg/block-safety';
 	import { detectEol } from '$lib/wysiwyg/note-blocks';
@@ -19,6 +19,7 @@
 	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
 	import type { ReimportEvent } from '$lib/types';
 	import { findUnreadableFormulas, replaceUnreadableFormula } from '$lib/formula-repair';
+	import { findHeadingElement } from '$lib/heading-target';
 	import FormulaRepairDialog, { type RepairCandidateView } from '$lib/components/FormulaRepairDialog.svelte';
 
 	type Revision = { id: string; at: string; bytes: number };
@@ -95,6 +96,7 @@
 	let unreadable = $derived(findUnreadableFormulas(editing ? draft : raw));
 	// The re-read needs the original PDF (the same lookup as re-import).
 	let repairAvailable = $derived(reimportAvailable && /\.pdf$/i.test(reimportOriginal));
+	let citedHeading = $derived(page.url.searchParams.get('heading') ?? '');
 	let backHref = $derived(resolveBackHref(page.url.searchParams.get('from'), vaultId ? `/vault/${vaultId}` : '/'));
 
 	// Reload whenever the target file changes (also covers first mount).
@@ -414,6 +416,28 @@
 				node.querySelectorAll('.formula-repair-btn').forEach((el) => el.remove());
 			}
 		};
+	}
+
+	// Citation links carry the cited chunk's breadcrumb (`heading`, #33): once the note is rendered,
+	// scroll to that heading and mark it briefly. Once per file + heading, so a save that re-renders
+	// the note does not yank the reader back.
+	let scrolledTo = '';
+	function headingTarget(node: HTMLElement, params: { html: string; heading: string; key: string }) {
+		function apply(p: typeof params) {
+			if (!p.html || !p.heading || scrolledTo === p.key) return;
+			// After tick(): the action's update can run before {@html} has swapped in the new markup.
+			void tick().then(() => {
+				if (scrolledTo === p.key) return;
+				const el = findHeadingElement(node, p.heading);
+				if (!el) return;
+				scrolledTo = p.key;
+				el.scrollIntoView({ block: 'start' });
+				el.classList.add('cited-heading');
+				setTimeout(() => el.classList.remove('cited-heading'), 2400);
+			});
+		}
+		apply(params);
+		return { update: apply };
 	}
 
 	// Live preview, debounced so typing doesn't re-run the markdown pipeline
@@ -806,7 +830,13 @@
 		</div>
 		<div class="content markdown-body">{@html revPreview.html}</div>
 	{:else}
-		<div class="content markdown-body" use:repairButtons={{ html: html, items: unreadable, enabled: repairAvailable, busy: repairingSha, label: t('LibraryViewPage.formulaRepair'), run: runFormulaRepair }}>{@html html}</div>
+		<div
+			class="content markdown-body"
+			use:repairButtons={{ html: html, items: unreadable, enabled: repairAvailable, busy: repairingSha, label: t('LibraryViewPage.formulaRepair'), run: runFormulaRepair }}
+			use:headingTarget={{ html, heading: citedHeading, key: `${vaultId}|${filePath}|${citedHeading}` }}
+		>
+			{@html html}
+		</div>
 	{/if}
 </div>
 
@@ -1103,5 +1133,15 @@
 
 	.content {
 		line-height: 1.7;
+	}
+
+	/* The heading a citation pointed at (headingTarget). Reduced motion is covered by app.css's data-motion net. */
+	.content :global(:is(h2, h3, h4, h5, h6)) {
+		scroll-margin-top: 1rem;
+		border-radius: var(--radius-sm);
+		transition: background-color 600ms ease;
+	}
+	.content :global(.cited-heading) {
+		background-color: color-mix(in srgb, var(--color-primary) 16%, transparent);
 	}
 </style>
