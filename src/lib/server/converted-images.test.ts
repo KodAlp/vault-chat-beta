@@ -97,3 +97,10 @@ test('importConvertedImages with no images leaves the text alone', () => {
 	const v = tmpVault();
 	assert.equal(importConvertedImages(v, { outPath: null }, 'n.md', 'merhaba'), 'merhaba');
 });
+
+test('formul-gorsel marker with the k= box suffix is left untouched', () => {
+	const marker = '<!-- vc:formul-gorsel 0123456789abcdef s.12 k=72,100.5,300,-4 -->';
+	const out = rewriteConvertedImageLinks('![x](images/0123456789abcdef.png)\n' + marker, 'n.md', () => true).split('\n');
+	assert.equal(out[0], '![x](_meta/attachments/0123456789abcdef.png)');
+	assert.equal(out[1], marker);
+});

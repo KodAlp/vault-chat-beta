@@ -18,6 +18,8 @@
 	import CheckIcon from '@lucide/svelte/icons/check';
 	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
 	import type { ReimportEvent } from '$lib/types';
+	import { findUnreadableFormulas, replaceUnreadableFormula } from '$lib/formula-repair';
+	import FormulaRepairDialog, { type RepairCandidateView } from '$lib/components/FormulaRepairDialog.svelte';
 
 	type Revision = { id: string; at: string; bytes: number };
 	type EditorProps = { value: string; onchange: (next: string) => void };
@@ -60,6 +62,12 @@
 	let reimportStage = $state('');
 	let reimportNote = $state(false);
 
+	// "Yeniden oku": one unreadable formula re-read from the kept PDF; the chosen LaTeX lands in the draft.
+	let repairingSha = $state('');
+	let repairDialogOpen = $state(false);
+	let repairResult = $state<{ sha: string; page: number; cropUrl?: string; candidates: RepairCandidateView[] } | null>(null);
+	let formulaRepairNote = $state(false);
+
 	let showVersions = $state(false);
 	let versionsLoading = $state(false);
 	let revisions = $state<Revision[]>([]);
@@ -83,6 +91,10 @@
 		postprocessing: t('ImportFlow.stagePostprocessing'),
 		retrying: t('ImportFlow.stageRetrying')
 	});
+	// Unreadable-formula blocks of whatever text is on screen (the draft while editing, else the saved note).
+	let unreadable = $derived(findUnreadableFormulas(editing ? draft : raw));
+	// The re-read needs the original PDF (the same lookup as re-import).
+	let repairAvailable = $derived(reimportAvailable && /\.pdf$/i.test(reimportOriginal));
 	let backHref = $derived(resolveBackHref(page.url.searchParams.get('from'), vaultId ? `/vault/${vaultId}` : '/'));
 
 	// Reload whenever the target file changes (also covers first mount).
@@ -124,6 +136,9 @@
 		reimportAvailable = false;
 		reimportOriginal = '';
 		reimportNote = false;
+		repairResult = null;
+		repairDialogOpen = false;
+		formulaRepairNote = false;
 		if (!filePath) {
 			error = t('LibraryViewPage.missingPath');
 			return;
@@ -228,6 +243,7 @@
 	function leaveEdit() {
 		editing = false;
 		reimportNote = false;
+		formulaRepairNote = false;
 		conflict = false;
 		saveError = '';
 	}
@@ -310,6 +326,94 @@
 		if (reimporting || !reimportAvailable) return;
 		if (dirty) askConfirm(t('LibraryViewPage.discardConfirm'), t('LibraryViewPage.discard'), runReimport);
 		else void runReimport();
+	}
+
+	// ---- "Yeniden oku": re-read ONE broken formula (never saves; the result is an unsaved draft edit) ----
+	async function runFormulaRepair(sha: string) {
+		if (repairingSha || !repairAvailable) return;
+		repairingSha = sha;
+		saveError = '';
+		try {
+			const res = await fetch('/api/library/formula-repair', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ path: filePath, sha, vault: vaultId || undefined })
+			});
+			if (!res.ok) {
+				saveError = await readResponseError(res);
+				return;
+			}
+			const data = (await res.json()) as { page: number; cropUrl?: string; candidates: RepairCandidateView[] };
+			repairResult = { sha, page: data.page, cropUrl: data.cropUrl, candidates: data.candidates };
+			repairDialogOpen = true;
+		} catch (e) {
+			saveError = localizeError(e as Error);
+		} finally {
+			repairingSha = '';
+		}
+	}
+
+	// Puts the chosen LaTeX into the draft in place of the broken block. Like re-import, the raw Markdown
+	// editor takes over (the visual editor does not follow an external change of its value).
+	async function useRepairCandidate(latex: string) {
+		const target = repairResult;
+		if (!target) return;
+		if (editing && editMode === 'visual') visualRef?.flush();
+		const next = replaceUnreadableFormula(editing ? draft : raw, target.sha, latex);
+		repairDialogOpen = false;
+		if (next === null) {
+			saveError = t('LibraryViewPage.formulaRepairGone');
+			return;
+		}
+		draft = next;
+		previewHtml = await render(next);
+		saveError = '';
+		conflict = false;
+		savedFlash = '';
+		indexNote = null;
+		revPreview = null;
+		showVersions = false;
+		modeNote = '';
+		editMode = 'source';
+		editing = true;
+		reimportNote = false;
+		formulaRepairNote = true;
+		await ensureEditor();
+	}
+
+	// Adds a "Yeniden oku" button to every rendered "⚠ Formül okunamadı — s. N" line. The rendered HTML is
+	// plain markdown output (no ids), so each line is matched to its block by page number, in order.
+	function repairButtons(
+		node: HTMLElement,
+		params: { html: string; items: { sha: string; page: number }[]; enabled: boolean; busy: string; label: string; run: (sha: string) => void }
+	) {
+		function apply(p: typeof params) {
+			node.querySelectorAll('.formula-repair-btn').forEach((el) => el.remove());
+			if (!p.enabled) return;
+			const pending = [...p.items];
+			for (const quote of node.querySelectorAll('blockquote')) {
+				const text = quote.textContent?.trim() ?? '';
+				if (!text.startsWith('⚠')) continue;
+				const page = Number(/s\.\s*(\d+)/.exec(text)?.[1]);
+				const at = pending.findIndex((i) => i.page === page);
+				if (at < 0) continue;
+				const [item] = pending.splice(at, 1);
+				const btn = document.createElement('button');
+				btn.type = 'button';
+				btn.className = 'vc-btn ghost formula-repair-btn';
+				btn.textContent = p.busy === item.sha ? p.label + '…' : p.label;
+				btn.disabled = p.busy !== '';
+				btn.addEventListener('click', () => p.run(item.sha));
+				(quote.querySelector('p') ?? quote).append(' ', btn);
+			}
+		}
+		apply(params);
+		return {
+			update: apply,
+			destroy() {
+				node.querySelectorAll('.formula-repair-btn').forEach((el) => el.remove());
+			}
+		};
 	}
 
 	// Live preview, debounced so typing doesn't re-run the markdown pipeline
@@ -600,6 +704,15 @@
 			<div class="d">{t('LibraryViewPage.reimportReady')}</div>
 		</div>
 	{/if}
+	{#if repairingSha}
+		<p class="mode-note reimport-status" role="status">{t('LibraryViewPage.formulaRepairing')}</p>
+	{/if}
+	{#if formulaRepairNote && editing}
+		<div class="vc-banner info note" role="status">
+			<span class="dot"></span>
+			<div class="d">{t('LibraryViewPage.formulaRepairApplied')}</div>
+		</div>
+	{/if}
 	{#if savedFlash}
 		<p class="saved-flash" role="status"><CheckIcon size={14} aria-hidden="true" /> {savedFlash}</p>
 	{/if}
@@ -640,6 +753,18 @@
 		</div>
 	{:else if editing && editMode === 'visual'}
 		{#if modeNote}<p class="mode-note" role="status">{modeNote}</p>{/if}
+		{#if repairAvailable && unreadable.length > 0}
+			<ul class="repair-list" aria-label={t('LibraryViewPage.formulaRepairList')}>
+				{#each unreadable as item (item.sha)}
+					<li>
+						<span>{t('LibraryViewPage.formulaRepairItem', { page: item.page })}</span>
+						<button type="button" class="vc-btn ghost" onclick={() => runFormulaRepair(item.sha)} disabled={repairingSha !== ''}>
+							{repairingSha === item.sha ? t('LibraryViewPage.formulaRepairing') : t('LibraryViewPage.formulaRepair')}
+						</button>
+					</li>
+				{/each}
+			</ul>
+		{/if}
 		<div class="visual">
 			{#if VisualComp}
 				<VisualComp
@@ -665,7 +790,7 @@
 				{/if}
 			</section>
 			<section class="pane preview-pane" aria-label={t('LibraryViewPage.previewLabel')}>
-				<div class="content markdown-body">{@html previewHtml}</div>
+				<div class="content markdown-body" use:repairButtons={{ html: previewHtml, items: unreadable, enabled: repairAvailable, busy: repairingSha, label: t('LibraryViewPage.formulaRepair'), run: runFormulaRepair }}>{@html previewHtml}</div>
 			</section>
 		</div>
 	{:else if revPreview}
@@ -681,9 +806,19 @@
 		</div>
 		<div class="content markdown-body">{@html revPreview.html}</div>
 	{:else}
-		<div class="content markdown-body">{@html html}</div>
+		<div class="content markdown-body" use:repairButtons={{ html: html, items: unreadable, enabled: repairAvailable, busy: repairingSha, label: t('LibraryViewPage.formulaRepair'), run: runFormulaRepair }}>{@html html}</div>
 	{/if}
 </div>
+
+{#if repairResult}
+	<FormulaRepairDialog
+		bind:open={repairDialogOpen}
+		page={repairResult.page}
+		cropUrl={repairResult.cropUrl}
+		candidates={repairResult.candidates}
+		onuse={useRepairCandidate}
+	/>
+{/if}
 
 <AlertDialog.Root bind:open={confirmOpen}>
 	<AlertDialog.Content>
@@ -707,6 +842,30 @@
 </AlertDialog.Root>
 
 <style>
+	/* The "Yeniden oku" button is injected into the rendered ⚠ line by repairButtons(), outside Svelte's scoping. */
+	:global(.formula-repair-btn) {
+		margin-inline-start: 0.5rem;
+		vertical-align: middle;
+	}
+
+	.repair-list {
+		list-style: none;
+		margin: 0 0 1rem;
+		padding: 0.35rem 0.75rem;
+		border-radius: var(--radius-lg);
+		background: var(--bg-elevated);
+		box-shadow: inset 0 0 0 1px var(--separator);
+		font: var(--text-footnote);
+	}
+
+	.repair-list li {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
+		padding: 0.25rem 0;
+	}
+
 	.viewer {
 		max-width: 760px;
 		margin: 0 auto;

@@ -72,6 +72,11 @@ export function pythonBin(): string {
 
 const CONVERT_PY = path.resolve(process.cwd(), 'ingest', 'convert.py');
 
+/** Absolute path of another script in the same ingest/ folder (same resolution as convert.py). */
+export function ingestScriptPath(name: string): string {
+	return path.resolve(path.dirname(CONVERT_PY), name);
+}
+
 /**
  * Conversions run on ONE persistent `convert.py --serve` worker
  * (convert-worker.ts) so docling's models are loaded once, not per file.
