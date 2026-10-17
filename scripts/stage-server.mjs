@@ -8,7 +8,8 @@ import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, readdirSync,
 import { createHash } from 'node:crypto';
 import { execFileSync, spawnSync } from 'node:child_process';
 import path from 'node:path';
-import { verifyStagedData } from './stage-verify.mjs';
+import { requiredNodeMajor, verifyStagedData } from './stage-verify.mjs';
+import { fetchPythonRuntime } from './fetch-python-runtime.mjs';
 import { buildMcpBundle, MCP_BUNDLE_RELATIVE } from './build-mcp.mjs';
 
 const root = process.cwd();
@@ -185,6 +186,28 @@ if (canReuseNodeModules) {
 const mcpBundle = await buildMcpBundle({ root, outDir: stageDir });
 console.log(`MCP bundle: ${path.relative(root, mcpBundle.outfile)} (${(mcpBundle.size / 1024).toFixed(0)} KiB)`);
 
+// Windows only (#53): the installer carries its own Node and Python so the user installs neither. macOS/Linux
+// keep resolving a system Node/Python.
+if (process.platform === 'win32') {
+	// Node: this very process's node.exe. better-sqlite3 in dist-server/node_modules was (re)built by this same
+	// Node a few lines above (or by the identical Node recorded in the npm-ci stamp's depsKey), so the native
+	// addon's ABI matches the bundled runtime by construction; src-tauri/src/lib.rs always runs this copy.
+	const requiredMajor = requiredNodeMajor(JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8')).engines?.node);
+	const buildMajor = Number(process.versions.node.split('.')[0]);
+	if (requiredMajor === null || buildMajor !== requiredMajor) {
+		console.error(`Gömülecek Node ana sürümü ${requiredMajor ?? '?'} olmalı (package.json engines.node); bu makinedeki Node ${process.version}.`);
+		process.exit(1);
+	}
+	mkdirSync(path.join(stageDir, 'node'), { recursive: true });
+	copyFileSync(process.execPath, path.join(stageDir, 'node', 'node.exe'));
+	// A standard Node install keeps LICENSE beside node.exe; a bare/portable copy may not (see THIRD_PARTY_NOTICES.md).
+	const nodeLicense = path.join(path.dirname(process.execPath), 'LICENSE');
+	if (existsSync(nodeLicense)) copyFileSync(nodeLicense, path.join(stageDir, 'node', 'LICENSE'));
+	else console.warn('Uyarı: Node LICENSE dosyası node.exe yanında yok; THIRD_PARTY_NOTICES.md bildirimine güveniliyor.');
+	console.log(`Node ${process.version} -> dist-server/node/node.exe`);
+	await fetchPythonRuntime({ root, stageDir });
+}
+
 const readIfExists = (p) => (existsSync(p) ? readFileSync(p) : null);
 const stagedProblems = verifyStagedData({
 	stagedProviders: readIfExists(path.join(stageDir, 'data', 'providers.json')),
@@ -192,7 +215,9 @@ const stagedProblems = verifyStagedData({
 	stagedDataEntries: readdirSync(path.join(stageDir, 'data')),
 	stagedBuildIndexExists: existsSync(path.join(stageDir, 'build', 'index.js')),
 	stagedConvertPyExists: existsSync(path.join(stageDir, 'ingest', 'convert.py')),
-	stagedMcpBundleExists: existsSync(path.join(stageDir, MCP_BUNDLE_RELATIVE))
+	stagedMcpBundleExists: existsSync(path.join(stageDir, MCP_BUNDLE_RELATIVE)),
+	stagedNodeExists: process.platform === 'win32' ? existsSync(path.join(stageDir, 'node', 'node.exe')) : null,
+	stagedPythonExists: process.platform === 'win32' ? existsSync(path.join(stageDir, 'python', 'python.exe')) : null
 });
 if (stagedProblems.length > 0) {
 	console.error('Sahneleme doğrulaması başarısız:');
