@@ -2,7 +2,7 @@
 
 Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncellenir.
 
-**Son güncelleme:** 2026-10-17 · #3 bitti: not görünümünde okunamayan formüle "Yeniden oku" (asıl PDF'in sayfa + kutusundan aday seçimi); #5 ve #43 bitti
+**Son güncelleme:** 2026-10-17 · #37 bitti: MCP sunucusu paketli uygulamada tek dosya; #3 bitti: not görünümünde okunamayan formüle "Yeniden oku" (asıl PDF'in sayfa + kutusundan aday seçimi); #5 ve #43 bitti
 
 ## Kurallar
 
@@ -46,8 +46,7 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 ### 8. Formül doğruluğu
 
 ### 9. MCP paketleme ve kurulum
-- [ ] **MCP sunucusunu Tauri paketine dahil et.** Tek dosya ya da gömülü Node. `O–B` · #37
-- [ ] **Node'u (ve Python'u) pakete gömme; WebView2 çevrimdışı yükleyici.** Node kısmı #37 ile ortak. `B` · #53 (çekildi) ← MCP sunucusunu Tauri paketine dahil et
+- [ ] **Node'u (ve Python'u) pakete gömme; WebView2 çevrimdışı yükleyici.** Node kısmı #37 ile ortak. `B` · #53 (çekildi)
 
 ## Yapılabilir
 
@@ -99,6 +98,7 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 - [ ] **MinerU HTML tabloları sohbet/not görünümünde.** `markdown.ts` `html: false`; MinerU tabloları `<table><tr><td>` olarak yazıyor (MIPS kitabında 567). Uygulamada ham HTML metni olarak mı göründüğü denenmedi; aynı soru MinerU'nun `<div class="mineru-algorithm">` sözde kod bloklarında da var (Nocedal). Ayrıca tablo hücrelerindeki `$s0 … $sp` yazmaçları satır içi formül gibi eşleniyor (23 KaTeX hatası): tabloyu GFM'e çevirmek ya da `$`'ı kaçırmak ikisini birden çözer. `O`
 
 - [ ] **`npx vault-chat-mcp setup`'ı gerçek istemcilerle dene.** Ana klasörden (worktree'den değil) çalıştır; Claude Code yolu (`claude mcp add`, var olan kayıtta "already exists" → kaldır + ekle) ve Microsoft Store Claude Desktop'ın sanal yapılandırma yolu yalnız birim testte. Yerel kasada gömme sunucusu (Ollama) kapalıyken indeksleme hatası ve ipucu da denenmedi. `K`
+- [ ] **Paketli MCP'yi kurulu uygulamada dene.** Tauri derlemesi yapılmadı; kurulumdan sonra kartın verdiği yol (`%LOCALAPPDATA%ault-chat\_up_\dist-server\mcpault-chat-mcp.mjs`) ile Claude Desktop/Code'a bağlan. Bu makinedeki genel MCP kaydı hâlâ kaynak klasörü (`mcp/launch.mjs`) gösteriyor; pakete çevrilebilir. Vektör/hibrit arama pakette denenmedi (gömme sağlayıcısı yoktu). `K`
 - [ ] **Doğrulanamayan 3 KaTeX formülü.** Ters basılmış ipucu (book (2) s.364), Proakis'te sayfası bulunamayan 600 karakterlik OCR çöpü (satır 6232), Valvano'da PDF'te görsel olan bayrak formülü (satır 13312). Gözle bakılıp yazılabilir. `K`
 - [ ] **"Yeniden oku"yu paketli sürümde dene.** Geliştirme sunucusunda uçtan uca denendi (String Theory s. 87); kurulu uygulamada Python/KaTeX yolu, GPU sırası (sohbet modeli yüklüyken) ve görsel düzenleyici modundaki liste denenmedi. `K`
 - [ ] **İşaretsiz eski KaTeX-geçersiz `$$` formüller için onarım.** Kasada kalan 19 kesik `\quad` döngüsü/dev dizi: sayfa yok; PDF'te çevre metniyle sayfa bulunup aynı `formula_repair.py` akışına verilebilir. `O`
@@ -133,6 +133,7 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 
 Yalnız son iki haftanın kaydı tutulur; daha eskisi git geçmişindedir.
 
+- 2026-10-17: MCP sunucusu Tauri paketinde (#37): `scripts/build-mcp.mjs` `mcp/bundle-entry.mjs`'i esbuild ile tek ESM dosyaya paketliyor (1,4 MB; SDK dahil, better-sqlite3/sqlite-vec dist-server/node_modules'tan), `stage-server` her sahnelemede üretiyor, `stage-verify` denetliyor. DATA_DIR verilmezse kurulu uygulamanın veri klasörü. "MCP istemcisine bağla" kartı paketli dosyayı gösteriyor; eskiyen "paketli değil" metni 23 dilde "bu kurulumda bulunamadı" oldu. Tam sahnelemede (npm ci + build + stage-server) tsx'siz dist-server'da gerçek MCP istemcisiyle tools/list, list_vaults, get_note çalıştı. `5ce6a7c`
 - 2026-10-17: "Yalnız hatalı formülü onar" (#3): not görünümünde her "⚠ Formül okunamadı" satırında "Yeniden oku"; `ingest/formula_repair.py` asıl PDF'in o sayfasını pdfium ile çizip kutuyu (yeni işaretlerde `k=l,b,r,t`, eskilerde saklı kırpımın şablon eşlemesi) dört kırpımla MinerU2.5-Pro'ya okutuyor, KaTeX'le sınıyor; diyalogda kırpım + önizlemeli adaylar, seçilen kaydedilmemiş taslağa yazılıyor (kaydet = revizyon + indeks). GPU işi `sharedJobMutex` özel yuvasında, dönüştürücü işçisi ve boşta Ollama boşaltılarak. String Theory s. 87 ve 89'da ilk aday PDF'le birebir ve KaTeX-geçerli (eski deneme geçersiz), ~25 sn, 2,4 GB VRAM. Görünüm artık `<!-- vc:… -->` satırlarını düz metin göstermiyor. `12123b3` `b86d006`
 - 2026-10-17: KaTeX'te kalan formüllerin elle düzeltmesi (#5): 139 formülün her biri kaynak PDF'in sayfa görüntüsüyle karşılaştırıldı (PyMuPDF ile sayfa bulma); 134'ü için karar `docs/dev/katex-elle-2026-10-17.json`'da (kod/asm/SML/MATLAB blokları kod bloğuna, `\neqq`→`\not\equiv`, `\llangle`→`\angle`, Alexander cevap anahtarındaki fazörler `\angle`'a, `\text{}` içinde kalan matematik dışarıya, tırnakların formül sanılması düzyazıya; kesik `\quad` döngüsüyle kaybolan 9 kod bloğu PDF'ten yeniden yazıldı). Uygulayıcı `scripts/katex-manual-fix.mjs` (kuru çalışma varsayılan, yedekli, KaTeX kapısı, CRLF korunur). 37 dosyanın kopyasında düzeltilemeyen 139 → 41, kod sanılmış 36 → 0. Kullanıcı kasaya yazdı (yedek `vault-chat-yedek\katex-2026-10-17c`): kasada düzeltilemeyen 145 → 47, kod sanılmış 36 → 0. Kalan 47: 23 MIPS HTML tablo hücresi (Öneriler), 19 kesik `\quad` döngüsü/dev dizi (#3), 3 doğrulanamayan (Öneriler). `961b817`
 - 2026-10-17: tek komut MCP kurulumu (#43): `npx vault-chat-mcp setup` (ya da `npm run mcp:setup`) veri klasörünü seçiyor, Claude Desktop / Claude Code / LM Studio'ya yedek alarak kaydediyor (başka anahtarlar ve sunucular korunuyor, geçersiz JSON'a dokunmuyor), 5 notluk "Örnek Kasa"yı oluşturup MCP'ye açıyor ve indeksliyor; `--dry-run`, `--client`, `--data-dir`, `--no-sample`. Geçici klasörde uçtan uca: yapılandırma birleşti, ikinci çalıştırma "zaten güncel", gerçek MCP çağrısıyla `list_vaults` / `search_library` / `get_note` doğru not ve bölümü döndürdü. README'de "Tek komutla kurulum".
