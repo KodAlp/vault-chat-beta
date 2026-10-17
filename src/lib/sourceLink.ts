@@ -9,8 +9,11 @@
  * clicked from, instead of a hardcoded home link. Optional — a caller with
  * no reasonable "current page" to offer (none exist today; kept optional
  * so a future one doesn't need a placeholder) just gets the old behavior. */
-export function libraryViewerUrl(path: string, vaultId: string, from?: string): string {
+/** `heading`: the cited chunk's breadcrumb (`heading_path`, "Topic > H2 > H3");
+ * the viewer scrolls to that section (heading-target.ts, #33). */
+export function libraryViewerUrl(path: string, vaultId: string, from?: string, heading?: string): string {
 	const params = new URLSearchParams({ path, vault: vaultId });
 	if (from) params.set('from', from);
+	if (heading) params.set('heading', heading);
 	return `/library/view?${params.toString()}`;
 }

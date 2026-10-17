@@ -90,11 +90,11 @@
 							onfocusin={() => focusHighlight(g.path)}
 							onfocusout={() => cancelScheduledHighlight(g.path)}
 						>
-							<a class="vc-chip chip" href={libraryViewerUrl(g.path, vaultId, here)}>
+							<a class="vc-chip chip" href={libraryViewerUrl(g.path, vaultId, here, g.chunks[0].heading_path)}>
 								{g.topic}
 								{#if g.chunks.length > 1}<span class="n count">{t('SourceChip.chunkCount', { count: g.chunks.length })}</span>{/if}
 							</a>
-							<a class="vc-icon-btn chip-icon" href={libraryViewerUrl(g.path, vaultId, here)} title={t('Common.kaynagiAc')} aria-label={t('Common.kaynagiAc')}>
+							<a class="vc-icon-btn chip-icon" href={libraryViewerUrl(g.path, vaultId, here, g.chunks[0].heading_path)} title={t('Common.kaynagiAc')} aria-label={t('Common.kaynagiAc')}>
 								<ExternalLinkIcon size={16} strokeWidth={1.75} aria-hidden="true" />
 							</a>
 						</span>
@@ -104,7 +104,7 @@
 					<p class="preview-title">{g.path}</p>
 					<ul class="preview-list">
 						{#each g.chunks as c, i (c.heading_path + '#' + i)}
-							<li>{c.heading_path}</li>
+							<li><a class="preview-link" href={libraryViewerUrl(g.path, vaultId, here, c.heading_path)}>{c.heading_path}</a></li>
 						{/each}
 					</ul>
 				</HoverCard.Content>
@@ -164,5 +164,16 @@
 
 	.preview-list li {
 		margin: 0.1rem 0;
+	}
+
+	.preview-link {
+		color: inherit;
+		text-decoration: none;
+	}
+
+	.preview-link:hover,
+	.preview-link:focus-visible {
+		color: var(--color-foreground);
+		text-decoration: underline;
 	}
 </style>

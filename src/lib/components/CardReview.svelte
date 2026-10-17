@@ -162,10 +162,10 @@
 							<hr />
 							<div class="face back markdown-body">{@html backHtml}</div>
 							<span class="chip-group">
-								<a class="chip" href={libraryViewerUrl(card.source_path, vaultId ?? '', here)} title={card.heading_path}>
+								<a class="chip" href={libraryViewerUrl(card.source_path, vaultId ?? '', here, card.heading_path)} title={card.heading_path}>
 									{card.source_path}
 								</a>
-								<a class="chip-icon" href={libraryViewerUrl(card.source_path, vaultId ?? '', here)} title={t('Common.kaynagiAc')} aria-label={t('Common.kaynagiAc')}>
+								<a class="chip-icon" href={libraryViewerUrl(card.source_path, vaultId ?? '', here, card.heading_path)} title={t('Common.kaynagiAc')} aria-label={t('Common.kaynagiAc')}>
 									<ExternalLinkIcon size={16} strokeWidth={1.75} aria-hidden="true" />
 								</a>
 							</span>

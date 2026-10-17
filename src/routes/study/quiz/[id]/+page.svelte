@@ -374,12 +374,12 @@
 						{/if}
 						<a
 							class="source-link"
-							href={libraryViewerUrl(r.item.sourcePath, data.vaultId ?? '', here)}
+							href={libraryViewerUrl(r.item.sourcePath, data.vaultId ?? '', here, r.item.headingPath)}
 							title={r.item.headingPath}
 						>
 							{r.item.sourcePath}
 						</a>
-						<a class="source-link" href={libraryViewerUrl(r.item.sourcePath, data.vaultId ?? '', here)} title={t('Common.kaynagiAc')} aria-label={t('Common.kaynagiAc')}>
+						<a class="source-link" href={libraryViewerUrl(r.item.sourcePath, data.vaultId ?? '', here, r.item.headingPath)} title={t('Common.kaynagiAc')} aria-label={t('Common.kaynagiAc')}>
 							<ExternalLinkIcon size={16} strokeWidth={1.75} aria-hidden="true" />
 						</a>
 					</div>
