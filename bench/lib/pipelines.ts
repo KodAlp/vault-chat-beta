@@ -10,7 +10,10 @@ import { keywordSearch } from '../../src/lib/server/keyword-search';
 import { getLibrarySettings } from '../../src/lib/server/library-read';
 // Dev-tooling default only — the app itself reads the Ollama provider's baseUrl from providers.json.
 const prodOllamaUrl = (): string => process.env.OLLAMA_URL ?? 'http://127.0.0.1:11434';
-import { EMBED_MODEL, QUERY_PREFIX } from '../../src/lib/server/embed-config';
+import { QUERY_PREFIX } from '../../src/lib/server/embed-config';
+import { embeddingKey } from '../../src/lib/server/embeddings';
+import { getEmbeddingConfig } from '../../src/lib/server/providers/config-store';
+import { readIndexEmbedding, embeddingMismatches, isFtsOnlyIndex } from '../../indexer/db';
 import type { VaultContext } from '../../src/lib/server/vaults';
 import type { ChatMessage } from '../../src/lib/types';
 import { chunkAnchor, type ChunkLike } from './anchor';
@@ -30,7 +33,8 @@ import { RerankerClient } from './reranker';
  *
  * Free of `$env`/`$lib` *runtime* behavior — the few src/lib/server imports
  * used here (retrieve.ts, retrieval-query.ts, keyword-query.ts,
- * keyword-search.ts, library-read.ts, env.ts, embed-config.ts) are the same
+ * keyword-search.ts, library-read.ts, env.ts, embed-config.ts, embeddings.ts,
+ * providers/config-store.ts) are the same
  * ones the vault-rag-index/mcp-server skills already established work fine
  * under plain `tsx` (no Vite, no $env/dynamic/private) — see retrieve.ts's
  * own doc comments.
@@ -152,6 +156,9 @@ export interface PipelineContext {
 	db: InstanceType<typeof Database>;
 	excludedPrefixes: string[];
 	embedCache: EmbedCache;
+	/** embeddingKey() of the configured embedding, checked against the index's
+	 * index_meta at open time — the cache key for every query vector. */
+	embedKey: string;
 	qxCache: QxCache;
 	reranker?: RerankerClient;
 	ollamaUrl: string;
@@ -201,11 +208,24 @@ export function openPipelineContext(
 ): PipelineContext {
 	const db = new Database(v.indexDbPath, { readonly: true, fileMustExist: true });
 	sqliteVec.load(db);
+	// Same refusal retrieve() makes on a mismatch, but loud: a benchmark that
+	// silently compared vectors from two different models would measure nothing.
+	const config = getEmbeddingConfig();
+	const indexMeta = readIndexEmbedding(db);
+	if (!config || isFtsOnlyIndex(indexMeta) || embeddingMismatches(indexMeta, config)) {
+		db.close();
+		const cfg = config ? `${config.providerId}/${config.model}/${config.dims}` : 'yok (yalnız FTS)';
+		throw new Error(
+			`Gömme yapılandırması (${cfg}) indeksle (${indexMeta.provider}/${indexMeta.model}/${indexMeta.dims}) uyuşmuyor; ` +
+				"vektör karşılaştırması anlamsız olur. Kasayı yapılandırılmış modelle yeniden indeksleyin ya da providers.json'u indeksin modeline döndürün."
+		);
+	}
 	return {
 		v,
 		db,
 		excludedPrefixes: getLibrarySettings(v).hiddenFolders,
 		embedCache: opts.embedCache,
+		embedKey: embeddingKey(config),
 		qxCache: opts.qxCache ?? new QxCache(),
 		reranker: opts.reranker,
 		ollamaUrl: opts.ollamaUrl ?? prodOllamaUrl(),
@@ -487,7 +507,7 @@ async function prodKwPipeline(ctx: PipelineContext, item: QueryItem): Promise<Pi
 async function vectorRawPipeline(ctx: PipelineContext, item: QueryItem): Promise<PipelineOutput> {
 	const t0 = Date.now();
 	const query = queryForItem(item);
-	const { vector, ms: embedMs } = await ctx.embedCache.embedCached(`${QUERY_PREFIX}${query}`, EMBED_MODEL);
+	const { vector, ms: embedMs } = await ctx.embedCache.embedCached(`${QUERY_PREFIX}${query}`, ctx.embedKey);
 	const { candidates, ms: knnMs } = vectorSearch(ctx, vector, ctx.poolSize);
 	const ranked: RankedItem[] = candidates.slice(0, 10).map((c) => ({
 		anchor: chunkAnchor(c),
@@ -531,7 +551,7 @@ async function bm25Pipeline(ctx: PipelineContext, item: QueryItem): Promise<Pipe
 async function hybridPipeline(ctx: PipelineContext, item: QueryItem): Promise<PipelineOutput> {
 	const t0 = Date.now();
 	const query = queryForItem(item);
-	const { vector, ms: embedMs } = await ctx.embedCache.embedCached(`${QUERY_PREFIX}${query}`, EMBED_MODEL);
+	const { vector, ms: embedMs } = await ctx.embedCache.embedCached(`${QUERY_PREFIX}${query}`, ctx.embedKey);
 	const { candidates: vecCands, ms: knnMs } = vectorSearch(ctx, vector, ctx.poolSize);
 	const { candidates: bmCands, ms: ftsMs } = bm25Search(ctx, item.question, 'or', ctx.poolSize);
 	const scored = fuseCandidates([vecCands, bmCands], 10);
@@ -551,7 +571,7 @@ async function hybridPipeline(ctx: PipelineContext, item: QueryItem): Promise<Pi
 async function vectorRerankPipeline(ctx: PipelineContext, item: QueryItem): Promise<PipelineOutput> {
 	const t0 = Date.now();
 	const query = queryForItem(item);
-	const { vector, ms: embedMs } = await ctx.embedCache.embedCached(`${QUERY_PREFIX}${query}`, EMBED_MODEL);
+	const { vector, ms: embedMs } = await ctx.embedCache.embedCached(`${QUERY_PREFIX}${query}`, ctx.embedKey);
 	const { candidates, ms: knnMs } = vectorSearch(ctx, vector, ctx.poolSize);
 	const top30 = candidates.slice(0, 30);
 	const { ranked, rerankMs } = await rerankToTop10(ctx, query, top30, 'rerank');
@@ -563,7 +583,7 @@ async function vectorRerankPipeline(ctx: PipelineContext, item: QueryItem): Prom
 async function hybridRerankPipeline(ctx: PipelineContext, item: QueryItem): Promise<PipelineOutput> {
 	const t0 = Date.now();
 	const query = queryForItem(item);
-	const { vector, ms: embedMs } = await ctx.embedCache.embedCached(`${QUERY_PREFIX}${query}`, EMBED_MODEL);
+	const { vector, ms: embedMs } = await ctx.embedCache.embedCached(`${QUERY_PREFIX}${query}`, ctx.embedKey);
 	const { candidates: vecCands, ms: knnMs } = vectorSearch(ctx, vector, ctx.poolSize);
 	const { candidates: bmCands, ms: ftsMs } = bm25Search(ctx, item.question, 'or', ctx.poolSize);
 	const scored30 = fuseCandidates([vecCands, bmCands], 30);
@@ -590,8 +610,8 @@ async function hybridRerankQxPipeline(ctx: PipelineContext, item: QueryItem): Pr
 	const query = queryForItem(item);
 	const { result: qx, ms: qxMs } = await expandQuery(ctx, query);
 
-	const embOrig = await ctx.embedCache.embedCached(`${QUERY_PREFIX}${query}`, EMBED_MODEL);
-	const embEn = await ctx.embedCache.embedCached(`${QUERY_PREFIX}${qx.en_query}`, EMBED_MODEL);
+	const embOrig = await ctx.embedCache.embedCached(`${QUERY_PREFIX}${query}`, ctx.embedKey);
+	const embEn = await ctx.embedCache.embedCached(`${QUERY_PREFIX}${qx.en_query}`, ctx.embedKey);
 	const vecOrig = vectorSearch(ctx, embOrig.vector, ctx.poolSize);
 	const vecEn = vectorSearch(ctx, embEn.vector, ctx.poolSize);
 	const bmOrig = bm25Search(ctx, item.question, 'or', ctx.poolSize);

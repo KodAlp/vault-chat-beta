@@ -1,16 +1,20 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
-import { embed } from '../../src/lib/server/ollama';
+import { embedTexts } from '../../src/lib/server/embeddings';
 
 /**
- * Disk-backed cache in front of the production embed() (src/lib/server/ollama.ts),
- * called the same way retrieve.ts calls it (cpuOnly: true — see ollama.ts's doc
- * comment on why query embedding stays off the GPU). A benchmark run re-embeds
- * the same questions across several pipeline variants (vector-raw, hybrid,
- * hybrid+rerank, ...), so caching avoids paying Ollama's round-trip more than
- * once per (model, text) pair across a whole run — and across runs, since the
- * cache is a plain JSON file under data/vaults/default/bench/cache/.
+ * Disk-backed cache in front of the production embedTexts()
+ * (src/lib/server/embeddings.ts), called the same way retrieve.ts calls it
+ * (purpose 'query' — CPU-only on the Ollama path, see ollama.ts's doc comment
+ * on why query embedding stays off the GPU). Whichever embedding provider/model
+ * is configured in providers.json is the one used, exactly like the app; the
+ * caller passes that config's embeddingKey() so a model switch never reads back
+ * another model's vectors. A benchmark run re-embeds the same questions across
+ * several pipeline variants (vector-raw, hybrid, hybrid+rerank, ...), so caching
+ * avoids paying the provider's round-trip more than once per (key, text) pair
+ * across a whole run — and across runs, since the cache is a plain JSON file
+ * under data/vaults/default/bench/cache/.
  *
  * Free of `$lib`/`$env` imports (only node:fs/path/crypto plus the one
  * production import) so `bench/` runs under plain `tsx`.
@@ -24,8 +28,10 @@ export interface EmbedCacheResult {
 
 const DEFAULT_CACHE_PATH = path.join('data', 'vaults', 'default', 'bench', 'cache', 'embeddings.json');
 
-function cacheKey(model: string, text: string): string {
-	return createHash('sha1').update(model + '\u0000' + text).digest('hex');
+/** `key` is embeddingKey(): the literal 'bge-m3' for the legacy default config,
+ * so caches written before the bench followed the configured provider stay valid. */
+function cacheKey(key: string, text: string): string {
+	return createHash('sha1').update(key + '\u0000' + text).digest('hex');
 }
 
 export class EmbedCache {
@@ -56,13 +62,13 @@ export class EmbedCache {
 		this.dirty = false;
 	}
 
-	async embedCached(text: string, model: string): Promise<EmbedCacheResult> {
-		const key = cacheKey(model, text);
+	async embedCached(text: string, embedKey: string): Promise<EmbedCacheResult> {
+		const key = cacheKey(embedKey, text);
 		const hit = this.cache[key];
 		if (hit) return { vector: hit, ms: 0, cached: true };
 
 		const t0 = Date.now();
-		const [vector] = await embed([text], model, { cpuOnly: true });
+		const [vector] = await embedTexts([text], { purpose: 'query' });
 		const ms = Date.now() - t0;
 		this.cache[key] = vector;
 		this.dirty = true;
