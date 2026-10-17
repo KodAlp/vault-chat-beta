@@ -33,6 +33,8 @@
  *   6. fixFontSwitch / fixMacroArgs / fixMleftright - see MACRO_ALIAS_TABLE etc.
  *   5. fixGlyphJunk - OCR junk with one unambiguous reading: `\/` -> `/`.
  *      (`\Ss` etc. have no unambiguous mapping and are left alone.)
+ *   7. fixBoldWrap / fixGluedGreek / fixTrailingBrace - `\pmb \mathbb Z`,
+ *      `\muA`, one orphan `}` at the very end.
  */
 import { readFileSync, writeFileSync, renameSync, readdirSync, statSync, mkdirSync, existsSync } from 'node:fs';
 import { join, relative, dirname, resolve, sep } from 'node:path';
@@ -250,6 +252,10 @@ export const MACRO_ALIAS_TABLE = [
 	['mum', '\\mu\\mathrm{m}'],
 	// plain TeX: \sp is the superscript-primitive alias (CSAPP "-\sp{u}_w x" = -^u_w x)
 	['sp', '^'],
+	// plain TeX: \sb is the subscript-primitive alias (HDP "d \sb{1} \times d \sb{2}")
+	['sb', '_'],
+	// \framebox{x} without the optional width is exactly \fbox{x}
+	['framebox', '\\fbox'],
 	// restriction arrow (harpoon up-right), e.g. z_{\harpoonright I}
 	['harpoonright', '\\upharpoonright'],
 	// unicode-math italic capital Omega
@@ -404,6 +410,82 @@ export function fixMathtypeSlash(body) {
 	return res + body.slice(pos);
 }
 
+/**
+ * `\pmb` / `\boldsymbol` followed by an UNBRACED one-argument style macro:
+ * `\pmb \mathbb Z` -> `\pmb{\mathbb Z}`. Both take one argument, so without
+ * braces they swallow `\mathbb` alone and leave it argument-less (KaTeX:
+ * "Unexpected end of input in a macro argument"). The intended reading (bold
+ * of the styled symbol) is the only one; the wrapped argument is the style
+ * macro plus its own argument (a brace group, a control word or one char).
+ */
+const BOLD_WRAP_INNER = ['mathbb', 'mathcal', 'mathrm', 'mathsf', 'mathfrak', 'mathscr', 'mathit', 'mathbf', 'bar', 'hat', 'tilde', 'vec', 'dot'];
+
+export function fixBoldWrap(body) {
+	const re = new RegExp(
+		'\\\\(pmb|boldsymbol)\\s*(\\\\(?:' + BOLD_WRAP_INNER.join('|') + ')(?![a-zA-Z]))\\s*',
+		'g'
+	);
+	let res = '';
+	let pos = 0;
+	let m;
+	while ((m = re.exec(body))) {
+		const argStart = m.index + m[0].length;
+		let argEnd;
+		if (body[argStart] === '{') {
+			const close = matchBrace(body, argStart);
+			if (close === -1) continue;
+			argEnd = close + 1;
+		} else if (body[argStart] === '\\') {
+			const w = /^\\(?:[a-zA-Z]+|.)/.exec(body.slice(argStart));
+			argEnd = argStart + w[0].length;
+		} else if (argStart < body.length && body[argStart] !== '}') {
+			argEnd = argStart + 1;
+		} else continue;
+		res += body.slice(pos, m.index) + `\\${m[1]}{${m[2]} ${body.slice(argStart, argEnd)}}`;
+		pos = argEnd;
+		re.lastIndex = pos;
+	}
+	if (pos === 0) return null;
+	return res + body.slice(pos);
+}
+
+/**
+ * A Greek-letter macro glued to following CAPITAL letters: `\muA` -> `\mu A`,
+ * `\betaEX` -> `\beta EX`. No such macro exists, and a capital suffix cannot
+ * continue a lowercase Greek name, so the split is unambiguous. (Lowercase
+ * suffixes like `\mum` are ambiguous in general and live in MACRO_ALIAS_TABLE
+ * one by one.)
+ */
+const GREEK = 'alpha|beta|gamma|delta|epsilon|varepsilon|zeta|eta|theta|vartheta|iota|kappa|lambda|mu|nu|xi|pi|varpi|rho|varrho|sigma|varsigma|tau|upsilon|phi|varphi|chi|psi|omega|Gamma|Delta|Theta|Lambda|Xi|Pi|Sigma|Upsilon|Phi|Psi|Omega';
+const GLUED_GREEK = new RegExp('\\\\(' + GREEK + ')([A-Z]+)(?![a-zA-Z])', 'g');
+
+export function fixGluedGreek(body) {
+	const out = body.replace(GLUED_GREEK, (_, g, rest) => `\\${g} ${rest}`);
+	return out === body ? null : out;
+}
+
+/**
+ * One orphan `}` as the last token (`x[((n))_N]}`): the formula has exactly
+ * one more `}` than `{` and the first unmatched `}` is the final non-space
+ * character. Only that brace is removed; any other imbalance is left alone.
+ */
+export function fixTrailingBrace(body) {
+	let depth = 0;
+	for (let i = 0; i < body.length; i++) {
+		const ch = body[i];
+		if (ch === '\\') {
+			i++;
+			continue;
+		}
+		if (ch === '{') depth++;
+		else if (ch === '}' && --depth < 0) {
+			if (body.slice(i + 1).trim() !== '') return null;
+			return body.slice(0, i) + body.slice(i + 1);
+		}
+	}
+	return null;
+}
+
 export const FIXES = [
 	['duplicate-tag', fixDuplicateTag],
 	['stray-delimiter', fixStrayDelimiters],
@@ -413,7 +495,10 @@ export const FIXES = [
 	['font-switch', fixFontSwitch],
 	['macro-arg', fixMacroArgs],
 	['mleftright', fixMleftright],
-	['mathtype-slash', fixMathtypeSlash]
+	['mathtype-slash', fixMathtypeSlash],
+	['bold-wrap', fixBoldWrap],
+	['glued-greek', fixGluedGreek],
+	['trailing-brace', fixTrailingBrace]
 ];
 
 /** Code / assembly / pseudo-code mistaken for a formula (report only). */
