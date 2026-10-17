@@ -2,7 +2,7 @@
 
 Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncellenir.
 
-**Son güncelleme:** 2026-10-17 · #43 bitti: `npx vault-chat-mcp setup` + Örnek Kasa; #5: 26 formül yazıldı
+**Son güncelleme:** 2026-10-17 · #5: 134 formül PDF'le elle düzeltildi (yazma bekliyor); #43 bitti: `npx vault-chat-mcp setup` + Örnek Kasa
 
 ## Kurallar
 
@@ -44,7 +44,7 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 ### 7. MCP araçları ve belgeleri
 
 ### 8. Formül doğruluğu
-- [ ] **MinerU KaTeX: elle bakılacak formüller.** Mekanik kurallar bitti ve kasaya yazıldı. 2026-10-17 ölçümü (geliştirme `default` kasası): 145 düzeltilemeyen + 36 kod sanılmış. Kalan 145: 23'ü MIPS HTML tablolarında `$s0 … $sp` yazmaç çiftleri (Öneriler'deki tablo maddesiyle), 13'ü kesik `\quad` döngüsü + 6 dev bozuk dizi (#3 ile), ~100'ü tek tek PDF'le bakılacak (9× Horowitz `D^{2}^{x}`, `\llangle`/`\rrangle`, `\neqq`, `\Ss`, dengesiz \left/\right, 7 bozuk MathType kesri, çift üst/alt simge). Kalan 36 kod sanılmış: kesik `\quad` döngülü, içinde matematik olanlar, yanlış pozitifler. `O` · #5 (çekildi)
+- [ ] **MinerU KaTeX: elle düzeltmeleri kasaya yaz.** 134 formül PDF'le karşılaştırılıp karara bağlandı (`docs/dev/katex-elle-2026-10-17.json`); kopyada düzeltilemeyen 139 → 41, kod sanılmış 36 → 0. Yazma kullanıcıda: `node scripts/katex-manual-fix.mjs <kasa> docs/dev/katex-elle-2026-10-17.json --write --backup-dir <yeni yedek>`, sonra 37 dosyayı yeniden indeksle. Bundan sonra kalan 47: 23 MIPS HTML tablo hücresi (Öneriler'deki tablo maddesi), 13 kesik `\quad` döngüsü + 6 dev bozuk dizi (#3), 5 bilinçli atlanan (ters basılmış ipucu, Proakis sayfası bulunamadı, Valvano bayrak formülü PDF'te görsel, 2 MIPS tablo hücresi). `K` · #5 (çekildi)
 - [ ] **"Yalnız hatalı formülü onar".** Sayfa + kutu; belgenin tamamını yeniden okumadan. `B` · #3
 
 ### 9. MCP paketleme ve kurulum
@@ -98,7 +98,7 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 - [ ] **MCP: `get_note` varsayılanı.** Notun tamamı dönüyor (yüz binlerce karakter), 8K bağlamlı yerel model aradığını bulamıyor; bölüm/sayfa parametresini hiçbir model kullanmadı. Varsayılan olarak başlık listesi + ilk bölüm ya da büyük notta ipucu. `O`
 - [ ] **"MCP istemcisine bağla" kartına yerel model notu.** qwen3:4b, düşünme açık, bağlam ≥ 8K; 8b bu araç setinde uyduruyor. `K`
 - [ ] **CUDA grafikli decode'u paketli sürümde dene.** Kurulu uygulamanın Python'unda (aynı torch/transformers mi?) ve sohbet modeliyle eşzamanlı içe aktarmada. `K`
-- [ ] **MinerU HTML tabloları sohbet/not görünümünde.** `markdown.ts` `html: false`; MinerU tabloları `<table><tr><td>` olarak yazıyor (MIPS kitabında 567). Uygulamada ham HTML metni olarak mı göründüğü denenmedi. Ayrıca tablo hücrelerindeki `$s0 … $sp` yazmaçları satır içi formül gibi eşleniyor (23 KaTeX hatası): tabloyu GFM'e çevirmek ya da `$`'ı kaçırmak ikisini birden çözer. `O`
+- [ ] **MinerU HTML tabloları sohbet/not görünümünde.** `markdown.ts` `html: false`; MinerU tabloları `<table><tr><td>` olarak yazıyor (MIPS kitabında 567). Uygulamada ham HTML metni olarak mı göründüğü denenmedi; aynı soru MinerU'nun `<div class="mineru-algorithm">` sözde kod bloklarında da var (Nocedal). Ayrıca tablo hücrelerindeki `$s0 … $sp` yazmaçları satır içi formül gibi eşleniyor (23 KaTeX hatası): tabloyu GFM'e çevirmek ya da `$`'ı kaçırmak ikisini birden çözer. `O`
 
 - [ ] **`npx vault-chat-mcp setup`'ı gerçek istemcilerle dene.** Ana klasörden (worktree'den değil) çalıştır; Claude Code yolu (`claude mcp add`, var olan kayıtta "already exists" → kaldır + ekle) ve Microsoft Store Claude Desktop'ın sanal yapılandırma yolu yalnız birim testte. Yerel kasada gömme sunucusu (Ollama) kapalıyken indeksleme hatası ve ipucu da denenmedi. `K`
 
@@ -131,6 +131,7 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 
 Yalnız son iki haftanın kaydı tutulur; daha eskisi git geçmişindedir.
 
+- 2026-10-17: KaTeX'te kalan formüllerin elle düzeltmesi (#5): 139 formülün her biri kaynak PDF'in sayfa görüntüsüyle karşılaştırıldı (PyMuPDF ile sayfa bulma); 134'ü için karar `docs/dev/katex-elle-2026-10-17.json`'da (kod/asm/SML/MATLAB blokları kod bloğuna, `\neqq`→`\not\equiv`, `\llangle`→`\angle`, Alexander cevap anahtarındaki fazörler `\angle`'a, `\text{}` içinde kalan matematik dışarıya, tırnakların formül sanılması düzyazıya; kesik `\quad` döngüsüyle kaybolan 9 kod bloğu PDF'ten yeniden yazıldı). Uygulayıcı `scripts/katex-manual-fix.mjs` (kuru çalışma varsayılan, yedekli, KaTeX kapısı, CRLF korunur). 37 dosyanın kopyasında düzeltilemeyen 139 → 41, kod sanılmış 36 → 0, hiçbir düzeltme atlanmadı. Kasaya yazılmadı.
 - 2026-10-17: tek komut MCP kurulumu (#43): `npx vault-chat-mcp setup` (ya da `npm run mcp:setup`) veri klasörünü seçiyor, Claude Desktop / Claude Code / LM Studio'ya yedek alarak kaydediyor (başka anahtarlar ve sunucular korunuyor, geçersiz JSON'a dokunmuyor), 5 notluk "Örnek Kasa"yı oluşturup MCP'ye açıyor ve indeksliyor; `--dry-run`, `--client`, `--data-dir`, `--no-sample`. Geçici klasörde uçtan uca: yapılandırma birleşti, ikinci çalıştırma "zaten güncel", gerçek MCP çağrısıyla `list_vaults` / `search_library` / `get_note` doğru not ve bölümü döndürdü. README'de "Tek komutla kurulum".
 - 2026-10-17: KaTeX temizliğine kesin karşılıklı kurallar (#5): parantezsiz `\pmb \mathbb Z` → `\pmb{\mathbb Z}`, `\muA` → `\mu A`, sondaki tek fazla `}`, `\sb` → `_`, `\framebox` → `\fbox`. Geliştirme kasasında 20 formül (20'si elle gözden geçirildi), düzeltilemeyen 165 → 145; kullanıcı yazdı (yedek `vault-chat-yedek\katex-2026-10-17b`). `2687a96`
 - 2026-10-17: yalnız `\text{}` satırlarından oluşan 6 formül ```text bloğuna çevrildi (MIPS 5, Horowitz 1; kullanıcı yazdı, yedek `vault-chat-yedek\katex-2026-10-17`) (#5). `893e2f8`
