@@ -461,6 +461,8 @@ görmeden aramaya katar — prompt injection riskini göz önünde bulundur.
 npx vault-chat-mcp setup      # ya da: npm run mcp:setup
 ```
 
+Windows PowerShell'de betik çalıştırma kapalıysa (`npx.ps1 cannot be loaded`) `npx.cmd vault-chat-mcp setup` ya da `npm.cmd run mcp:setup` yaz.
+
 1. **Veri klasörünü seçer:** `--data-dir` > `DATA_DIR` ortam değişkeni (`.env` dahil) > kurulu masaüstü uygulamasının klasörü (varsa) > repo'nun `data/` klasörü.
 2. **Bulduğu MCP istemcilerine kaydeder:** Claude Desktop (Microsoft Store sürümünün sanal yapılandırma dosyası dahil), Claude Code (`claude` PATH'teyse) ve LM Studio (`~/.lmstudio` varsa). Dosyaların yedeğini `<dosya>.bak-YYYYMMDD-HHMMSS` olarak alır, başka anahtarlara ve başka sunuculara dokunmaz; geçersiz JSON'u asla ezmez. Claude Desktop'ı tamamen kapatıp yeniden başlatman gerekir. Jan ve diğer istemciler için sonda yapılandırma bloğu yazdırılır.
 3. **"Örnek Kasa" oluşturur:** 5 kısa ders notunu (Türkçe ve İngilizce) kopyalar, MCP'ye açar ve indeksler; hemen `search_library` / `get_note` deneyebilirsin. `vaults.json` uygulamaya ait olduğundan, uygulama açıkken bu adım atlanır: uygulamayı kapatıp komutu yeniden çalıştır. Gömme sunucusu (Ollama) yoksa indeks yalnız anahtar kelime (FTS5) aramasıyla kurulur; yapılandırdığın sağlayıcıya erişilemezse indeksleme hata verir ve ekrandaki ipucuyla `npm run index -- --vault ornek-kasa` çalıştırılır.
