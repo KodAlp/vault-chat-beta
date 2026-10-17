@@ -1001,7 +1001,7 @@
 	"McpConnect": {
 		"title": "Connect an MCP client",
 		"description": "Let an AI app like Claude, LM Studio or Jan search your vaults. Copy the snippet for your client — it already has the right paths for this computer.",
-		"notBundled": "The MCP server isn't bundled with the desktop app yet — for now it runs from the source checkout with Node.js (see \"MCP Server\" in the README). Run vault-chat from the source repository to get a ready-to-paste snippet here.",
+		"notBundled": "The MCP server wasn't found in this installation. Reinstall the app, or run it from a source checkout with Node.js (see \"MCP Server\" in the README).",
 		"loadFailed": "Couldn't load the connection snippet.",
 		"copy": "Copy",
 		"copied": "Copied",

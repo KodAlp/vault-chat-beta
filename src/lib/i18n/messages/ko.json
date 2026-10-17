@@ -956,7 +956,7 @@
 	"McpConnect": {
 		"title": "MCP 클라이언트 연결",
 		"description": "Claude, LM Studio, Jan 같은 AI 앱이 보관함을 검색하도록 허용하세요. 사용하는 클라이언트용 스니펫을 복사하세요. 이 컴퓨터에 맞는 경로가 이미 들어 있습니다.",
-		"notBundled": "MCP 서버는 아직 데스크톱 앱에 포함되어 있지 않습니다. 지금은 소스 체크아웃에서 Node.js로 실행합니다(README의 \"MCP 서버\" 참고). 여기에 바로 붙여넣을 스니펫을 보려면 소스 저장소에서 vault-chat을 실행하세요.",
+		"notBundled": "이 설치에서 MCP 서버를 찾을 수 없습니다. 앱을 다시 설치하거나 소스 체크아웃에서 Node.js로 실행하세요(README의 \"MCP 서버\" 참조).",
 		"loadFailed": "연결 스니펫을 불러오지 못했습니다.",
 		"copy": "복사",
 		"copied": "복사됨",

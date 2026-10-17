@@ -30,6 +30,7 @@
     "test:e2e": "playwright test",
     "stage:server": "node scripts/stage-server.mjs",
     "mcp": "tsx mcp/server.ts",
+    "build:mcp": "node scripts/build-mcp.mjs",
     "mcp:setup": "node mcp/setup.mjs setup",
     "mcp:smoke": "tsx mcp/smoke.ts",
     "mcp:e2e": "tsx mcp/e2e-pipeline.ts",

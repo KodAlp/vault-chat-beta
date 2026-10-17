@@ -971,7 +971,7 @@
 	"McpConnect": {
 		"title": "Yhdistä MCP-asiakas",
 		"description": "Anna tekoälysovelluksen, kuten Clauden, LM Studion tai Janin, hakea holveistasi. Kopioi asiakkaasi pätkä — siinä on jo tämän tietokoneen oikeat polut.",
-		"notBundled": "MCP-palvelinta ei ole vielä sisällytetty työpöytäsovellukseen — toistaiseksi se ajetaan lähdekoodin kopiosta Node.js:llä (katso README:n kohta \"MCP-palvelin\"). Käynnistä vault-chat lähdekoodivarastosta saadaksesi tähän valmiin pätkän.",
+		"notBundled": "MCP-palvelinta ei löytynyt tästä asennuksesta. Asenna sovellus uudelleen tai aja se lähdekoodin kopiosta Node.js:llä (katso README:n kohta \"MCP-palvelin\").",
 		"loadFailed": "Yhteyspätkää ei voitu ladata.",
 		"copy": "Kopioi",
 		"copied": "Kopioitu",

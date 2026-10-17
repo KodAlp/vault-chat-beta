@@ -965,7 +965,7 @@
 	"McpConnect": {
 		"title": "Připojit klienta MCP",
 		"description": "Nechte AI aplikaci jako Claude, LM Studio nebo Jan prohledávat vaše trezory. Zkopírujte úryvek pro svého klienta — už obsahuje správné cesty pro tento počítač.",
-		"notBundled": "Server MCP zatím není součástí desktopové aplikace — prozatím běží ze zdrojového checkoutu s Node.js (viz „Server MCP“ v README). Spusťte vault-chat ze zdrojového repozitáře a získáte zde hotový úryvek.",
+		"notBundled": "Server MCP nebyl v této instalaci nalezen. Přeinstalujte aplikaci, nebo ho spusťte ze zdrojového checkoutu s Node.js (viz „Server MCP“ v README).",
 		"loadFailed": "Úryvek připojení se nepodařilo načíst.",
 		"copy": "Kopírovat",
 		"copied": "Zkopírováno",

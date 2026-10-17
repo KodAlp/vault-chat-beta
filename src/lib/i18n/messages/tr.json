@@ -1001,7 +1001,7 @@
 	"McpConnect": {
 		"title": "Bir MCP istemcisine bağlan",
 		"description": "Claude, LM Studio veya Jan gibi bir yapay zekâ uygulamasının kasalarında arama yapmasına izin ver. İstemcin için olan parçayı kopyala — bu bilgisayara uygun yollar zaten içinde.",
-		"notBundled": "MCP sunucusu henüz masaüstü uygulamasına dahil değil — şimdilik kaynak kod klasöründen Node.js ile çalışıyor (README'deki \"MCP Sunucusu\" bölümüne bak). Burada yapıştırmaya hazır parça görmek için vault-chat'i kaynak depodan çalıştır.",
+		"notBundled": "MCP sunucusu bu kurulumda bulunamadı. Uygulamayı yeniden kurun ya da kaynak kod klasöründen Node.js ile çalıştırın (README'deki \"MCP Sunucusu\" bölümü).",
 		"loadFailed": "Bağlantı parçası yüklenemedi.",
 		"copy": "Kopyala",
 		"copied": "Kopyalandı",

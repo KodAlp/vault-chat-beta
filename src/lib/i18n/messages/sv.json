@@ -1016,7 +1016,7 @@
 	"McpConnect": {
 		"title": "Anslut en MCP-klient",
 		"description": "Låt en AI-app som Claude, LM Studio eller Jan söka i dina valv. Kopiera kodavsnittet för din klient — det har redan rätt sökvägar för den här datorn.",
-		"notBundled": "MCP-servern ingår inte i skrivbordsappen ännu — just nu körs den från en utcheckad källkod med Node.js (se \"MCP-server\" i README). Kör vault-chat från källkodsarkivet för att få ett färdigt kodavsnitt här.",
+		"notBundled": "MCP-servern hittades inte i den här installationen. Installera om appen eller kör den från en utcheckad källkod med Node.js (se \"MCP-server\" i README).",
 		"loadFailed": "Det gick inte att läsa in anslutningsavsnittet.",
 		"copy": "Kopiera",
 		"copied": "Kopierad",

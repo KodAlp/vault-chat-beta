@@ -432,6 +432,16 @@ Kasandaki notları Claude Code/Desktop gibi MCP istemcilerine açan yerel bir
 sunucu — ayrı bir paket veya kurulum gerektirmez, `mcp/` bu repo'nun içinde
 `indexer/` ile aynı desende yaşar.
 
+**Paketli masaüstü uygulamasında** sunucu tek dosyalık bir paket olarak gelir
+(`dist-server/mcp/vault-chat-mcp.mjs`, `scripts/build-mcp.mjs` üretir; `npm run stage:server`
+içinde otomatik): repo, `tsx` ya da başka bir kurulum gerekmez,
+sistemdeki Node 22 yeter. **Ayarlar → MCP istemcisine bağla** kartı bu dosyayı
+gösteren hazır yapılandırmayı verir. `node <kurulum>/_up_/dist-server/mcp/vault-chat-mcp.mjs --print-config` (Windows'ta kurulum klasörü `%LOCALAPPDATA%ault-chat`)
+de aynı bloğu yazdırır. `DATA_DIR` verilmezse kurulu uygulamanın veri klasörü
+(`%APPDATA%\app.vaultchat.desktop`, macOS'ta `~/Library/Application Support/app.vaultchat.desktop`,
+Linux'ta `$XDG_DATA_HOME` ya da `~/.local/share` altında aynı ad) kullanılır. Kaynak koddan
+çalışırken `mcp/launch.mjs` yolu aynen geçerlidir. Paketi tek başına üretmek için: `npm run build:mcp`.
+
 **Araçlar:**
 
 - `list_vaults` — MCP'ye açık kasaları listeler (kasa başına açma/kapama: **Ayarlar → Kasalar**).

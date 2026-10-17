@@ -966,7 +966,7 @@
 	"McpConnect": {
 		"title": "Een MCP-client verbinden",
 		"description": "Laat een AI-app zoals Claude, LM Studio of Jan in je kluizen zoeken. Kopieer het fragment voor jouw client — het bevat al de juiste paden voor deze computer.",
-		"notBundled": "De MCP-server zit nog niet in de desktop-app — voorlopig draait hij vanuit een checkout van de broncode met Node.js (zie \"MCP-server\" in de README). Start vault-chat vanuit de bronrepository om hier een kant-en-klaar fragment te krijgen.",
+		"notBundled": "De MCP-server is niet gevonden in deze installatie. Installeer de app opnieuw of start hem vanuit een checkout van de broncode met Node.js (zie \"MCP-server\" in de README).",
 		"loadFailed": "Het verbindingsfragment kon niet worden geladen.",
 		"copy": "Kopiëren",
 		"copied": "Gekopieerd",

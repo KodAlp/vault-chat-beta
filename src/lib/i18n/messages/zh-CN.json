@@ -904,7 +904,7 @@
   "McpConnect": {
     "title": "连接 MCP 客户端",
     "description": "让 Claude、LM Studio 或 Jan 等 AI 应用搜索你的知识库。复制适合你客户端的片段——其中已包含这台电脑上的正确路径。",
-    "notBundled": "MCP 服务器尚未随桌面应用打包——目前需要在源码检出目录中使用 Node.js 运行（参见 README 中的“MCP 服务器”）。请从源码仓库运行 vault-chat，即可在此获得可直接粘贴的片段。",
+    "notBundled": "在此安装中未找到 MCP 服务器。请重新安装应用，或在源码检出目录中使用 Node.js 运行（参见 README 中的“MCP 服务器”）。",
     "loadFailed": "无法加载连接片段。",
     "copy": "复制",
     "copied": "已复制",

@@ -904,7 +904,7 @@
   "McpConnect": {
     "title": "Hubungkan klien MCP",
     "description": "Izinkan aplikasi AI seperti Claude, LM Studio, atau Jan mencari di brankas Anda. Salin cuplikan untuk klien Anda — sudah berisi jalur yang benar untuk komputer ini.",
-    "notBundled": "Server MCP belum disertakan dalam aplikasi desktop — untuk saat ini berjalan dari checkout kode sumber dengan Node.js (lihat \"Server MCP\" di README). Jalankan vault-chat dari repositori kode sumber untuk mendapatkan cuplikan siap tempel di sini.",
+    "notBundled": "Server MCP tidak ditemukan di instalasi ini. Instal ulang aplikasi, atau jalankan dari checkout kode sumber dengan Node.js (lihat \"Server MCP\" di README).",
     "loadFailed": "Gagal memuat cuplikan koneksi.",
     "copy": "Salin",
     "copied": "Tersalin",

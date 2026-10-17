@@ -974,7 +974,7 @@
 	"McpConnect": {
 		"title": "Tilslut en MCP-klient",
 		"description": "Lad en AI-app som Claude, LM Studio eller Jan søge i dine bokse. Kopiér uddraget til din klient — det har allerede de rigtige stier til denne computer.",
-		"notBundled": "MCP-serveren er endnu ikke inkluderet i desktop-appen — indtil videre kører den fra et udtjekket kildekodearkiv med Node.js (se \"MCP-server\" i README). Kør vault-chat fra kildekodearkivet for at få et færdigt uddrag her.",
+		"notBundled": "MCP-serveren blev ikke fundet i denne installation. Geninstallér appen, eller kør den fra et udtjekket kildekodearkiv med Node.js (se \"MCP-server\" i README).",
 		"loadFailed": "Forbindelsesuddraget kunne ikke indlæses.",
 		"copy": "Kopiér",
 		"copied": "Kopieret",
