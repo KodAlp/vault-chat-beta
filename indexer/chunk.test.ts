@@ -334,3 +334,8 @@ test('stripImageMarkup drops the hidden formul-latex comment', () => {
 	const md = '![Okunamayan formül — s. 12](a.png)\n<!-- vc:formul-gorsel a2694c9b3808ec89 s.12 -->\n\n> ⚠ Formül okunamadı — s. 12\n\n<!-- vc:formul-latex eFxe2 -->\n';
 	assert.equal(stripImageMarkup(md), 'Okunamayan formül — s. 12\n\n> ⚠ Formül okunamadı — s. 12\n\n');
 });
+
+test('stripImageMarkup also drops a formul-gorsel marker that carries a k= box', () => {
+	const md = '![x](a.png)\n<!-- vc:formul-gorsel a2694c9b3808ec89 s.12 k=72,100.5,300,-4 -->\ntext\n';
+	assert.equal(stripImageMarkup(md), 'x\ntext\n');
+});

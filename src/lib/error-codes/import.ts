@@ -53,6 +53,17 @@ export const IMPORT_CODES = [
 	// Re-import of a note (api/library/reimport): its original was not kept, or a conversion of the note is already running.
 	'REIMPORT_NO_ORIGINAL',
 	'REIMPORT_BUSY',
+	// "Re-read one formula" (api/library/formula-repair): the block is gone from the note, the original PDF was not kept (or the
+	// original is not a PDF), another repair is running, or the ingest/formula_repair.py CLI failed (codes mirror its fail codes).
+	'FORMULA_REPAIR_BLOCK_NOT_FOUND',
+	'FORMULA_REPAIR_NO_ORIGINAL',
+	'FORMULA_REPAIR_NOT_PDF',
+	'FORMULA_REPAIR_BUSY',
+	'FORMULA_REPAIR_NO_CUDA',
+	'FORMULA_REPAIR_BAD_PAGE',
+	'FORMULA_REPAIR_NO_BOX',
+	'FORMULA_REPAIR_MODEL_MISSING',
+	'FORMULA_REPAIR_FAILED',
 	'IMPORT_INDEX_FAILED',
 	'IMPORT_SOURCE_INVALID',
 	'IMPORT_NOTHING_TO_IMPORT',

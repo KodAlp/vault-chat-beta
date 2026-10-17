@@ -3,7 +3,7 @@ import katexPlugin from '@vscode/markdown-it-katex';
 import DOMPurify from 'dompurify';
 import { createHighlighter, type Highlighter } from 'shiki';
 import { ABSOLUTE_SRC_RE, resolveRelativeLibraryPath } from './attachment-link';
-import { prepareMarkdown, normalizeMathDelimiters } from './markdown-prepare';
+import { prepareMarkdown, normalizeMathDelimiters, hideMarkerComments } from './markdown-prepare';
 
 const THEMES = { light: 'github-light', dark: 'github-dark' };
 const LANGS = [
@@ -187,7 +187,7 @@ export function stabilizeForStreaming(raw: string): string {
  */
 export async function renderMarkdown(raw: string, ctx?: MarkdownRenderContext): Promise<string> {
 	await ensureHighlighter();
-	const restored = prepareMarkdown(raw);
+	const restored = prepareMarkdown(hideMarkerComments(raw));
 	const html = md.render(restored, ctx ? { imgCtx: ctx } : undefined);
 	return DOMPurify.sanitize(html, SANITIZE_OPTS);
 }
