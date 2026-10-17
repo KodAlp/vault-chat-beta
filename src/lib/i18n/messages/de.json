@@ -914,7 +914,7 @@
   "McpConnect": {
     "title": "MCP-Client verbinden",
     "description": "Lass eine KI-App wie Claude, LM Studio oder Jan in deinen Tresoren suchen. Kopiere den Ausschnitt für deinen Client — er enthält bereits die richtigen Pfade für diesen Computer.",
-    "notBundled": "Der MCP-Server ist noch nicht in der Desktop-App enthalten — derzeit läuft er aus dem Quellcode-Checkout mit Node.js (siehe „MCP-Server“ in der README). Starte vault-chat aus dem Quell-Repository, um hier einen fertigen Ausschnitt zu erhalten.",
+    "notBundled": "Der MCP-Server wurde in dieser Installation nicht gefunden. Installieren Sie die App neu oder starten Sie ihn aus dem Quellcode-Checkout mit Node.js (siehe „MCP-Server“ in der README).",
     "loadFailed": "Der Verbindungsausschnitt konnte nicht geladen werden.",
     "copy": "Kopieren",
     "copied": "Kopiert",

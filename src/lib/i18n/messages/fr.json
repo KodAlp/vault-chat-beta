@@ -917,7 +917,7 @@
   "McpConnect": {
     "title": "Connecter un client MCP",
     "description": "Laissez une application d'IA comme Claude, LM Studio ou Jan chercher dans vos coffres. Copiez l'extrait de votre client — il contient déjà les bons chemins pour cet ordinateur.",
-    "notBundled": "Le serveur MCP n'est pas encore inclus dans l'application de bureau — pour l'instant il s'exécute depuis une copie du code source avec Node.js (voir « Serveur MCP » dans le README). Lancez vault-chat depuis le dépôt source pour obtenir ici un extrait prêt à coller.",
+    "notBundled": "Le serveur MCP est introuvable dans cette installation. Réinstallez l'application ou lancez-le depuis une copie du code source avec Node.js (voir « Serveur MCP » dans le README).",
     "loadFailed": "Impossible de charger l'extrait de connexion.",
     "copy": "Copier",
     "copied": "Copié",

@@ -971,7 +971,7 @@
 	"McpConnect": {
 		"title": "Collega un client MCP",
 		"description": "Lascia che un'app di IA come Claude, LM Studio o Jan cerchi nei tuoi vault. Copia lo snippet per il tuo client — contiene già i percorsi giusti per questo computer.",
-		"notBundled": "Il server MCP non è ancora incluso nell'app desktop — per ora viene eseguito da una copia del codice sorgente con Node.js (vedi «Server MCP» nel README). Avvia vault-chat dal repository sorgente per ottenere qui uno snippet pronto da incollare.",
+		"notBundled": "Il server MCP non è stato trovato in questa installazione. Reinstalla l'app oppure eseguilo da una copia del codice sorgente con Node.js (vedi «Server MCP» nel README).",
 		"loadFailed": "Impossibile caricare lo snippet di connessione.",
 		"copy": "Copia",
 		"copied": "Copiato",

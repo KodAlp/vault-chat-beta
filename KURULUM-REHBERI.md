@@ -180,22 +180,28 @@ sayfasındaki "Kurulum sihirbazını yeniden çalıştır" bağlantısını kull
    otomatikleştirilmedi. Kaynak koda erişimin yoksa, bu konuda bize
    ulaş — bu rehberin bir sonraki sürümünde bu adım da kapatılacak.
 
-## 7. Claude'a bağlamak (isteğe bağlı, yalnızca kaynak koddan)
+## 7. Claude'a bağlamak (isteğe bağlı)
 
 Claude Code veya Claude Desktop'ı kasana bağlayabilirsin. Claude notlarını
 arayabilir, okuyabilir, kasa oluşturabilir ve kaynak içe aktarmak üzere
 bekleyenlere ekleyebilir. İçe aktarılan kaynak, sen uygulamada onaylayana kadar
 kütüphaneye girmez; Claude bunu kendisi onaylayamaz. Yazma araçları uygulama
-açıkken çalışır. **Bugün MCP sunucusu paketli masaüstü uygulamasının içinde
-değil**; kaynak kod deposundan `node` ile çalışır:
+açıkken çalışır. MCP sunucusu paketli uygulamanın içinde gelir ve sistemdeki
+Node.js ile çalışır; ek kurulum gerekmez.
+
+En kolayı: uygulamada **Ayarlar → MCP istemcisine bağla** kartını aç, istemcini
+seç ve gösterilen bloğu ya da komutu olduğu gibi kopyala (içinde sunucu dosyasının
+yolu ve veri klasörün hazır yazılıdır). Claude Desktop için blok
+`%APPDATA%\Claude\claude_desktop_config.json` dosyasına eklenir.
+
+Kaynak kod deposundan çalışıyorsan sunucu `mcp/launch.mjs` ile açılır:
 
 ```bash
 claude mcp add --scope user vault-chat -- node "<repo yolun>\mcp\launch.mjs"
 ```
 
-Claude Desktop için `npm run mcp:config` çıktısını
-`%APPDATA%\Claude\claude_desktop_config.json`'a ekle. Kurulu uygulamanın
-verisini kullanmak için `DATA_DIR` o klasörü göstermelidir.
+Claude Desktop için `npm run mcp:config` çıktısını aynı dosyaya ekle. Kurulu
+uygulamanın verisini kullanmak için `DATA_DIR` o klasörü göstermelidir.
 
 Araçların listesi, otomatik onay ayarı (`off` / `clean` / `all`) ve güvenlik
 notları için `README.md`'nin "MCP Sunucusu" bölümüne bak.

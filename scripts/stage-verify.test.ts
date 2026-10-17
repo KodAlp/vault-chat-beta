@@ -45,7 +45,7 @@ test('validateDefaultProviders flags each way a default file can go wrong', () =
 });
 
 const SAME = Buffer.from('{"a":1}');
-const PRESENT = { stagedBuildIndexExists: true, stagedConvertPyExists: true };
+const PRESENT = { stagedBuildIndexExists: true, stagedConvertPyExists: true, stagedMcpBundleExists: true };
 
 test('verifyStagedData accepts a byte-identical providers.json and nothing else under data/', () => {
 	assert.deepEqual(verifyStagedData({ stagedProviders: SAME, defaultProviders: Buffer.from('{"a":1}'), ...PRESENT, stagedDataEntries: ['providers.json'] }), []);
@@ -70,14 +70,17 @@ test('verifyStagedData reports a missing staged or default file', () => {
 	assert.ok(verifyStagedData({ stagedProviders: SAME, defaultProviders: null, ...PRESENT, stagedDataEntries: ['providers.json'] }).length > 0);
 });
 
-test('verifyStagedData requires dist-server/build/index.js and dist-server/ingest/convert.py', () => {
+test('verifyStagedData requires dist-server/build/index.js, ingest/convert.py and mcp/vault-chat-mcp.mjs', () => {
 	const base = { stagedProviders: SAME, defaultProviders: SAME, stagedDataEntries: ['providers.json'] };
 	assert.deepEqual(verifyStagedData({ ...base, ...PRESENT }), []);
-	const noBuild = verifyStagedData({ ...base, stagedBuildIndexExists: false, stagedConvertPyExists: true });
+	const noBuild = verifyStagedData({ ...base, stagedBuildIndexExists: false, stagedConvertPyExists: true, stagedMcpBundleExists: true });
 	assert.equal(noBuild.length, 1);
 	assert.match(noBuild[0], /build\/index\.js/);
-	const noConvert = verifyStagedData({ ...base, stagedBuildIndexExists: true, stagedConvertPyExists: false });
+	const noConvert = verifyStagedData({ ...base, stagedBuildIndexExists: true, stagedConvertPyExists: false, stagedMcpBundleExists: true });
 	assert.equal(noConvert.length, 1);
 	assert.match(noConvert[0], /convert\.py/);
-	assert.equal(verifyStagedData({ ...base }).length, 2, 'flags omitted by the caller count as missing');
+	const noMcp = verifyStagedData({ ...base, stagedBuildIndexExists: true, stagedConvertPyExists: true, stagedMcpBundleExists: false });
+	assert.equal(noMcp.length, 1);
+	assert.match(noMcp[0], /vault-chat-mcp\.mjs/);
+	assert.equal(verifyStagedData({ ...base }).length, 3, 'flags omitted by the caller count as missing');
 });

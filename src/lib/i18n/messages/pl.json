@@ -962,7 +962,7 @@
 	"McpConnect": {
 		"title": "Połącz klienta MCP",
 		"description": "Pozwól aplikacji AI, takiej jak Claude, LM Studio lub Jan, przeszukiwać Twoje sejfy. Skopiuj fragment dla swojego klienta — ma już poprawne ścieżki dla tego komputera.",
-		"notBundled": "Serwer MCP nie jest jeszcze dołączony do aplikacji desktopowej — na razie działa z kopii kodu źródłowego przy użyciu Node.js (zobacz „Serwer MCP” w README). Uruchom vault-chat z repozytorium źródłowego, aby otrzymać tutaj gotowy fragment.",
+		"notBundled": "Nie znaleziono serwera MCP w tej instalacji. Zainstaluj aplikację ponownie lub uruchom go z kopii kodu źródłowego przy użyciu Node.js (zobacz „Serwer MCP” w README).",
 		"loadFailed": "Nie udało się wczytać fragmentu połączenia.",
 		"copy": "Kopiuj",
 		"copied": "Skopiowano",

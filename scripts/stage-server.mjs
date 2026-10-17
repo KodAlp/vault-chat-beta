@@ -9,6 +9,7 @@ import { createHash } from 'node:crypto';
 import { execFileSync, spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { verifyStagedData } from './stage-verify.mjs';
+import { buildMcpBundle, MCP_BUNDLE_RELATIVE } from './build-mcp.mjs';
 
 const root = process.cwd();
 const stageDir = path.join(root, 'dist-server');
@@ -178,13 +179,20 @@ if (canReuseNodeModules) {
 	writeFileSync(stampPath, depsKey + '\n');
 }
 
+// Self-contained MCP server (plain `node`, no tsx/devDependencies) for the Settings "connect an MCP client"
+// card. Built after the production install because its externals (better-sqlite3, sqlite-vec) resolve from
+// dist-server/node_modules; everything else, @modelcontextprotocol/sdk included, is bundled in.
+const mcpBundle = await buildMcpBundle({ root, outDir: stageDir });
+console.log(`MCP bundle: ${path.relative(root, mcpBundle.outfile)} (${(mcpBundle.size / 1024).toFixed(0)} KiB)`);
+
 const readIfExists = (p) => (existsSync(p) ? readFileSync(p) : null);
 const stagedProblems = verifyStagedData({
 	stagedProviders: readIfExists(path.join(stageDir, 'data', 'providers.json')),
 	defaultProviders: readIfExists(path.join(root, 'data', 'providers.default.json')),
 	stagedDataEntries: readdirSync(path.join(stageDir, 'data')),
 	stagedBuildIndexExists: existsSync(path.join(stageDir, 'build', 'index.js')),
-	stagedConvertPyExists: existsSync(path.join(stageDir, 'ingest', 'convert.py'))
+	stagedConvertPyExists: existsSync(path.join(stageDir, 'ingest', 'convert.py')),
+	stagedMcpBundleExists: existsSync(path.join(stageDir, MCP_BUNDLE_RELATIVE))
 });
 if (stagedProblems.length > 0) {
 	console.error('Sahneleme doğrulaması başarısız:');

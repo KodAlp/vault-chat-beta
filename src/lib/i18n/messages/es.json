@@ -919,7 +919,7 @@
   "McpConnect": {
     "title": "Conectar un cliente MCP",
     "description": "Deja que una app de IA como Claude, LM Studio o Jan busque en tus bóvedas. Copia el fragmento de tu cliente — ya incluye las rutas correctas de este equipo.",
-    "notBundled": "El servidor MCP aún no viene incluido en la aplicación de escritorio — por ahora se ejecuta desde una copia del código fuente con Node.js (consulta «Servidor MCP» en el README). Ejecuta vault-chat desde el repositorio de código fuente para obtener aquí un fragmento listo para pegar.",
+    "notBundled": "No se encontró el servidor MCP en esta instalación. Reinstala la aplicación o ejecútalo desde una copia del código fuente con Node.js (consulta \"Servidor MCP\" en el README).",
     "loadFailed": "No se pudo cargar el fragmento de conexión.",
     "copy": "Copiar",
     "copied": "Copiado",
