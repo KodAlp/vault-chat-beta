@@ -2,7 +2,7 @@
 
 Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncellenir.
 
-**Son güncelleme:** 2026-10-17 · #37 bitti: MCP sunucusu paketli uygulamada tek dosya; #3 bitti: not görünümünde okunamayan formüle "Yeniden oku" (asıl PDF'in sayfa + kutusundan aday seçimi); #5 ve #43 bitti
+**Son güncelleme:** 2026-10-17 · #30 bitti: bench sorgu gömmesi yapılandırılmış sağlayıcıdan; #33 bitti: alıntı bağlantısı kaynaktaki başlığa kayıyor; #37 bitti: MCP sunucusu paketli uygulamada tek dosya; #3 bitti: not görünümünde okunamayan formüle "Yeniden oku" (asıl PDF'in sayfa + kutusundan aday seçimi); #5 ve #43 bitti
 
 ## Kurallar
 
@@ -60,7 +60,6 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 
 ### 3. Arayüz
 - [ ] **LauncherPanel görsel denetimi.** `K` · #68
-- [ ] **Alıntı bağlantısına başlık çapası.** `sourceLink.ts` hâlâ yalnız `path` ve `vault` veriyor; başlık çapası yok. `K–O` · #33
 - [ ] **Kalan lucide ikonları ve özel pencere çubuğu.** Yeni ikonlar geldi; önce onlara bak. `O` · #67
 
 ### 4. Güvenlik ve CI
@@ -70,7 +69,6 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 - [ ] **ollama-gate'te olası kilitlenme.** Akış içinde farklı model + evict beklemesi. `O` · #63
 
 ### 5. RAG ve benchmark
-- [ ] **`bench/` bge-m3'e sabit.** `K` · #30
 - [ ] **Tam altın set (330 soru) koşusu.** `O` · #27
 - [ ] **Reranker'ı üretime al.** Pilotta R@5 0,74 → 0,80; ONNX int8 ölçülmedi. `O` · #29
 - [ ] **İstem/skill dili A/B.** qwen3:8b için İngilizce çekirdek istem; educational-agent açık/kapalı. Kullanıcı notu: "olabilir". `O` · #28
@@ -104,6 +102,9 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 - [ ] **İşaretsiz eski KaTeX-geçersiz `$$` formüller için onarım.** Kasada kalan 19 kesik `\quad` döngüsü/dev dizi: sayfa yok; PDF'te çevre metniyle sayfa bulunup aynı `formula_repair.py` akışına verilebilir. `O`
 - [ ] **Fizik'teki 19 işaretli formülü "Yeniden oku" ile onar.** Eski işaretlerde kutu yok; kutu şablon eşlemeyle bulunuyor (iki örnekte skor 0,88–0,89). Kullanıcının uygulamada yapması gerekir. `K`
 
+- [ ] **#33 çipini gerçek sohbette dene.** Görüntüleyicinin başlığa kayması geçici kasada denendi (aynı adlı iki "Örnek", `**…**` `` `…` `` başlık); sohbetteki kaynak çipi, önizlemedeki bölüm bağlantıları, bilgi kartı ve test sonucu bağlantısı model olmadan tıklanmadı. `K`
+- [ ] **bench `prod` varyantı gömmesiz 30 sn bekliyor.** Ollama kapalıyken `prod` her soruda `embedding-unavailable` ile 0 veriyor, diğer varyantlar önbellekten geliyor; koşu başında gömme sağlayıcısına bir kez ulaşıp erken durmalı. #30'un önbelleği boş canlı yolu (Ollama açık) da denenmedi. `K`
+
 ## Daha sonra
 
 - [ ] **PPTX kapı deneyi.** #15
@@ -133,6 +134,8 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 
 Yalnız son iki haftanın kaydı tutulur; daha eskisi git geçmişindedir.
 
+- 2026-10-17: alıntı bağlantısı kaynaktaki başlığa kayıyor (#33): `libraryViewerUrl`'e `heading` (parçanın `heading_path`'i); not görünümü başlığı metniyle bulup (`heading-target.ts`: Markdown işaretleri ayıklanır, aynı adlı başlıkta üst başlıklar eşleşen seçilir) kayıyor ve kısa vurguluyor. Sohbet çipi (önizlemedeki her bölüm ayrı bağlantı), bilgi kartı ve test sonucu geçiriyor. Geçici kasada geliştirme sunucusunda denendi. `8bdaabc`
+- 2026-10-17: `bench/` sorgu gömmesi uygulamanın `embedTexts()`'i ve providers.json'daki sağlayıcıyla; indeksin `index_meta`'sıyla uyuşmazlıkta açık hata (#30). Önbellek anahtarı `embeddingKey()`, varsayılanda yine `bge-m3`: eski önbellek geçerli, 3 soruluk koşu eski kodla birebir aynı. `f56863b`
 - 2026-10-17: MCP sunucusu Tauri paketinde (#37): `scripts/build-mcp.mjs` `mcp/bundle-entry.mjs`'i esbuild ile tek ESM dosyaya paketliyor (1,4 MB; SDK dahil, better-sqlite3/sqlite-vec dist-server/node_modules'tan), `stage-server` her sahnelemede üretiyor, `stage-verify` denetliyor. DATA_DIR verilmezse kurulu uygulamanın veri klasörü. "MCP istemcisine bağla" kartı paketli dosyayı gösteriyor; eskiyen "paketli değil" metni 23 dilde "bu kurulumda bulunamadı" oldu. Tam sahnelemede (npm ci + build + stage-server) tsx'siz dist-server'da gerçek MCP istemcisiyle tools/list, list_vaults, get_note çalıştı. `5ce6a7c`
 - 2026-10-17: "Yalnız hatalı formülü onar" (#3): not görünümünde her "⚠ Formül okunamadı" satırında "Yeniden oku"; `ingest/formula_repair.py` asıl PDF'in o sayfasını pdfium ile çizip kutuyu (yeni işaretlerde `k=l,b,r,t`, eskilerde saklı kırpımın şablon eşlemesi) dört kırpımla MinerU2.5-Pro'ya okutuyor, KaTeX'le sınıyor; diyalogda kırpım + önizlemeli adaylar, seçilen kaydedilmemiş taslağa yazılıyor (kaydet = revizyon + indeks). GPU işi `sharedJobMutex` özel yuvasında, dönüştürücü işçisi ve boşta Ollama boşaltılarak. String Theory s. 87 ve 89'da ilk aday PDF'le birebir ve KaTeX-geçerli (eski deneme geçersiz), ~25 sn, 2,4 GB VRAM. Görünüm artık `<!-- vc:… -->` satırlarını düz metin göstermiyor. `12123b3` `b86d006`
 - 2026-10-17: KaTeX'te kalan formüllerin elle düzeltmesi (#5): 139 formülün her biri kaynak PDF'in sayfa görüntüsüyle karşılaştırıldı (PyMuPDF ile sayfa bulma); 134'ü için karar `docs/dev/katex-elle-2026-10-17.json`'da (kod/asm/SML/MATLAB blokları kod bloğuna, `\neqq`→`\not\equiv`, `\llangle`→`\angle`, Alexander cevap anahtarındaki fazörler `\angle`'a, `\text{}` içinde kalan matematik dışarıya, tırnakların formül sanılması düzyazıya; kesik `\quad` döngüsüyle kaybolan 9 kod bloğu PDF'ten yeniden yazıldı). Uygulayıcı `scripts/katex-manual-fix.mjs` (kuru çalışma varsayılan, yedekli, KaTeX kapısı, CRLF korunur). 37 dosyanın kopyasında düzeltilemeyen 139 → 41, kod sanılmış 36 → 0. Kullanıcı kasaya yazdı (yedek `vault-chat-yedek\katex-2026-10-17c`): kasada düzeltilemeyen 145 → 47, kod sanılmış 36 → 0. Kalan 47: 23 MIPS HTML tablo hücresi (Öneriler), 19 kesik `\quad` döngüsü/dev dizi (#3), 3 doğrulanamayan (Öneriler). `961b817`
