@@ -46,7 +46,7 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 ### 8. Formül doğruluğu
 
 ### 9. MCP paketleme ve kurulum
-- [ ] **Node'u (ve Python'u) pakete gömme; WebView2 çevrimdışı yükleyici.** Node kısmı #37 ile ortak. `B` · #53 (çekildi)
+- [ ] **Node'u ve Python'u pakete gömme; WebView2 önyükleyicisi.** Kararlar (2026-10-17): yalnız Windows; Node 22 gömülü ve hep o kullanılır (MCP kartı da); Python embeddable gömülü, hafif paketler ilk açılışta "Şimdi kur" ile indirilir, docling'li sistem/venv Python'u ya da PYTHON_BIN varsa o tercih edilir; WebView2 için embedBootstrapper. `B` · #53 (çekildi)
 
 ## Yapılabilir
 
