@@ -2,7 +2,7 @@
 
 Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncellenir.
 
-**Son güncelleme:** 2026-10-17 · #5: kod→blok yazıldı (6 formül); 20 formül için yeni kurallar (yazma bekliyor)
+**Son güncelleme:** 2026-10-17 · #5: kod→blok yazıldı (6 formül); yeni kurallarla 20 formül daha yazıldı
 
 ## Kurallar
 
@@ -44,7 +44,7 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 ### 7. MCP araçları ve belgeleri
 
 ### 8. Formül doğruluğu
-- [ ] **MinerU KaTeX: elle bakılacak formüller.** Mekanik kurallar bitti. 2026-10-17 ölçümü (geliştirme `default` kasası): 145 düzeltilemeyen + 36 kod sanılmış. Yeni kurallar 20 formülü düzeltiyor, yazma bekliyor (`node scripts/katex-cleanup.mjs <kasa> --write --backup-dir <yedek>`; yedek klasörü yeni olmalı). Kalan 145: 23'ü MIPS HTML tablolarında `$s0 … $sp` yazmaç çiftleri (Öneriler'deki tablo maddesiyle), 13'ü kesik `\quad` döngüsü + 6 dev bozuk dizi (#3 ile), ~100'ü tek tek PDF'le bakılacak (9× Horowitz `D^{2}^{x}`, `\llangle`/`\rrangle`, `\neqq`, `\Ss`, dengesiz \left/\right, 7 bozuk MathType kesri, çift üst/alt simge). Kalan 36 kod sanılmış: kesik `\quad` döngülü, içinde matematik olanlar, yanlış pozitifler. `O` · #5 (çekildi)
+- [ ] **MinerU KaTeX: elle bakılacak formüller.** Mekanik kurallar bitti ve kasaya yazıldı. 2026-10-17 ölçümü (geliştirme `default` kasası): 145 düzeltilemeyen + 36 kod sanılmış. Kalan 145: 23'ü MIPS HTML tablolarında `$s0 … $sp` yazmaç çiftleri (Öneriler'deki tablo maddesiyle), 13'ü kesik `\quad` döngüsü + 6 dev bozuk dizi (#3 ile), ~100'ü tek tek PDF'le bakılacak (9× Horowitz `D^{2}^{x}`, `\llangle`/`\rrangle`, `\neqq`, `\Ss`, dengesiz \left/\right, 7 bozuk MathType kesri, çift üst/alt simge). Kalan 36 kod sanılmış: kesik `\quad` döngülü, içinde matematik olanlar, yanlış pozitifler. `O` · #5 (çekildi)
 - [ ] **"Yalnız hatalı formülü onar".** Sayfa + kutu; belgenin tamamını yeniden okumadan. `B` · #3
 
 ### 9. MCP paketleme ve kurulum
@@ -130,7 +130,7 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 
 Yalnız son iki haftanın kaydı tutulur; daha eskisi git geçmişindedir.
 
-- 2026-10-17: KaTeX temizliğine kesin karşılıklı kurallar (#5): parantezsiz `\pmb \mathbb Z` → `\pmb{\mathbb Z}`, `\muA` → `\mu A`, sondaki tek fazla `}`, `\sb` → `_`, `\framebox` → `\fbox`. Geliştirme kasasında 20 formül (20'si elle gözden geçirildi), düzeltilemeyen 165 → 145; kasaya yazılmadı. `2687a96`
+- 2026-10-17: KaTeX temizliğine kesin karşılıklı kurallar (#5): parantezsiz `\pmb \mathbb Z` → `\pmb{\mathbb Z}`, `\muA` → `\mu A`, sondaki tek fazla `}`, `\sb` → `_`, `\framebox` → `\fbox`. Geliştirme kasasında 20 formül (20'si elle gözden geçirildi), düzeltilemeyen 165 → 145; kullanıcı yazdı (yedek `vault-chat-yedek\katex-2026-10-17b`). `2687a96`
 - 2026-10-17: yalnız `\text{}` satırlarından oluşan 6 formül ```text bloğuna çevrildi (MIPS 5, Horowitz 1; kullanıcı yazdı, yedek `vault-chat-yedek\katex-2026-10-17`) (#5). `893e2f8`
 - 2026-10-17: formül modelinin grafikli decode'unda `repeat_kv`'siz GQA dikkati (#82 son madde): adım 10,3 → 8,3 ms (Carroll), uçtan uca Likharev 30 s. 87 → 73 sn, bgnet 47 → 36, Carroll 86 → 78, JeffE 52 → 48; 4 belgede Markdown ve 152 formül birebir aynı. `VC_FORMULA_GQA=0` kapatır. `docs/dev/formul-hiz-olcum-2026-10-16.md`
 - 2026-10-16: formül grubunun kırpımı ve işlemcisi GPU decode'la örtüşüyor (#82): zenginleştirme Carroll 30 s. 54,7 → 45,4 sn, Likharev 52,3 → 40,5; iki belgede Markdown birebir aynı. `VC_FORMULA_PREFETCH=0` kapatır. Genişliğe göre sıralama denendi: kazanç yok, bir formülde çıktı değişti; bırakıldı. `d1b81c6`
