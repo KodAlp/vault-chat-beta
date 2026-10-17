@@ -436,7 +436,7 @@ sunucu — ayrı bir paket veya kurulum gerektirmez, `mcp/` bu repo'nun içinde
 (`dist-server/mcp/vault-chat-mcp.mjs`, `scripts/build-mcp.mjs` üretir; `npm run stage:server`
 içinde otomatik): repo, `tsx` ya da başka bir kurulum gerekmez,
 sistemdeki Node 22 yeter. **Ayarlar → MCP istemcisine bağla** kartı bu dosyayı
-gösteren hazır yapılandırmayı verir. `node <kurulum>/_up_/dist-server/mcp/vault-chat-mcp.mjs --print-config` (Windows'ta kurulum klasörü `%LOCALAPPDATA%ault-chat`)
+gösteren hazır yapılandırmayı verir. `node <kurulum>/_up_/dist-server/mcp/vault-chat-mcp.mjs --print-config` (Windows'ta kurulum klasörü `%LOCALAPPDATA%\vault-chat`)
 de aynı bloğu yazdırır. `DATA_DIR` verilmezse kurulu uygulamanın veri klasörü
 (`%APPDATA%\app.vaultchat.desktop`, macOS'ta `~/Library/Application Support/app.vaultchat.desktop`,
 Linux'ta `$XDG_DATA_HOME` ya da `~/.local/share` altında aynı ad) kullanılır. Kaynak koddan
