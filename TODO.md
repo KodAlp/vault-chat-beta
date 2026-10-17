@@ -2,7 +2,7 @@
 
 Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncellenir.
 
-**Son güncelleme:** 2026-10-17 · #5: kod→blok yazıldı (6 formül); yeni kurallarla 20 formül daha yazıldı
+**Son güncelleme:** 2026-10-17 · #43 bitti: `npx vault-chat-mcp setup` + Örnek Kasa; #5: 26 formül yazıldı
 
 ## Kurallar
 
@@ -48,7 +48,6 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 - [ ] **"Yalnız hatalı formülü onar".** Sayfa + kutu; belgenin tamamını yeniden okumadan. `B` · #3
 
 ### 9. MCP paketleme ve kurulum
-- [ ] **`npx` ile tek komut MCP kurulumu + örnek kasa.** `O` · #43
 - [ ] **MCP sunucusunu Tauri paketine dahil et.** Tek dosya ya da gömülü Node. `O–B` · #37
 - [ ] **Node'u (ve Python'u) pakete gömme; WebView2 çevrimdışı yükleyici.** Node kısmı #37 ile ortak. `B` · #53 (çekildi) ← MCP sunucusunu Tauri paketine dahil et
 
@@ -101,6 +100,8 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 - [ ] **CUDA grafikli decode'u paketli sürümde dene.** Kurulu uygulamanın Python'unda (aynı torch/transformers mi?) ve sohbet modeliyle eşzamanlı içe aktarmada. `K`
 - [ ] **MinerU HTML tabloları sohbet/not görünümünde.** `markdown.ts` `html: false`; MinerU tabloları `<table><tr><td>` olarak yazıyor (MIPS kitabında 567). Uygulamada ham HTML metni olarak mı göründüğü denenmedi. Ayrıca tablo hücrelerindeki `$s0 … $sp` yazmaçları satır içi formül gibi eşleniyor (23 KaTeX hatası): tabloyu GFM'e çevirmek ya da `$`'ı kaçırmak ikisini birden çözer. `O`
 
+- [ ] **`npx vault-chat-mcp setup`'ı gerçek istemcilerle dene.** Ana klasörden (worktree'den değil) çalıştır; Claude Code yolu (`claude mcp add`, var olan kayıtta "already exists" → kaldır + ekle) ve Microsoft Store Claude Desktop'ın sanal yapılandırma yolu yalnız birim testte. Yerel kasada gömme sunucusu (Ollama) kapalıyken indeksleme hatası ve ipucu da denenmedi. `K`
+
 ## Daha sonra
 
 - [ ] **PPTX kapı deneyi.** #15
@@ -130,6 +131,7 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 
 Yalnız son iki haftanın kaydı tutulur; daha eskisi git geçmişindedir.
 
+- 2026-10-17: tek komut MCP kurulumu (#43): `npx vault-chat-mcp setup` (ya da `npm run mcp:setup`) veri klasörünü seçiyor, Claude Desktop / Claude Code / LM Studio'ya yedek alarak kaydediyor (başka anahtarlar ve sunucular korunuyor, geçersiz JSON'a dokunmuyor), 5 notluk "Örnek Kasa"yı oluşturup MCP'ye açıyor ve indeksliyor; `--dry-run`, `--client`, `--data-dir`, `--no-sample`. Geçici klasörde uçtan uca: yapılandırma birleşti, ikinci çalıştırma "zaten güncel", gerçek MCP çağrısıyla `list_vaults` / `search_library` / `get_note` doğru not ve bölümü döndürdü. README'de "Tek komutla kurulum".
 - 2026-10-17: KaTeX temizliğine kesin karşılıklı kurallar (#5): parantezsiz `\pmb \mathbb Z` → `\pmb{\mathbb Z}`, `\muA` → `\mu A`, sondaki tek fazla `}`, `\sb` → `_`, `\framebox` → `\fbox`. Geliştirme kasasında 20 formül (20'si elle gözden geçirildi), düzeltilemeyen 165 → 145; kullanıcı yazdı (yedek `vault-chat-yedek\katex-2026-10-17b`). `2687a96`
 - 2026-10-17: yalnız `\text{}` satırlarından oluşan 6 formül ```text bloğuna çevrildi (MIPS 5, Horowitz 1; kullanıcı yazdı, yedek `vault-chat-yedek\katex-2026-10-17`) (#5). `893e2f8`
 - 2026-10-17: formül modelinin grafikli decode'unda `repeat_kv`'siz GQA dikkati (#82 son madde): adım 10,3 → 8,3 ms (Carroll), uçtan uca Likharev 30 s. 87 → 73 sn, bgnet 47 → 36, Carroll 86 → 78, JeffE 52 → 48; 4 belgede Markdown ve 152 formül birebir aynı. `VC_FORMULA_GQA=0` kapatır. `docs/dev/formul-hiz-olcum-2026-10-16.md`

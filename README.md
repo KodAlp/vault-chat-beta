@@ -455,6 +455,20 @@ onaylarsın), `clean` (yalnızca uyarısız, inceleme işaretsiz, kopya olmayanl
 ya da `all` (başarılı her içe aktarma). `all` ajanın getirdiği içeriği sen
 görmeden aramaya katar — prompt injection riskini göz önünde bulundur.
 
+**Tek komutla kurulum.** Kaynak koddan (`npm install` sonrası) şu komut her şeyi yapar:
+
+```bash
+npx vault-chat-mcp setup      # ya da: npm run mcp:setup
+```
+
+1. **Veri klasörünü seçer:** `--data-dir` > `DATA_DIR` ortam değişkeni (`.env` dahil) > kurulu masaüstü uygulamasının klasörü (varsa) > repo'nun `data/` klasörü.
+2. **Bulduğu MCP istemcilerine kaydeder:** Claude Desktop (Microsoft Store sürümünün sanal yapılandırma dosyası dahil), Claude Code (`claude` PATH'teyse) ve LM Studio (`~/.lmstudio` varsa). Dosyaların yedeğini `<dosya>.bak-YYYYMMDD-HHMMSS` olarak alır, başka anahtarlara ve başka sunuculara dokunmaz; geçersiz JSON'u asla ezmez. Claude Desktop'ı tamamen kapatıp yeniden başlatman gerekir. Jan ve diğer istemciler için sonda yapılandırma bloğu yazdırılır.
+3. **"Örnek Kasa" oluşturur:** 5 kısa ders notunu (Türkçe ve İngilizce) kopyalar, MCP'ye açar ve indeksler; hemen `search_library` / `get_note` deneyebilirsin. `vaults.json` uygulamaya ait olduğundan, uygulama açıkken bu adım atlanır: uygulamayı kapatıp komutu yeniden çalıştır. Gömme sunucusu (Ollama) yoksa indeks yalnız anahtar kelime (FTS5) aramasıyla kurulur; yapılandırdığın sağlayıcıya erişilemezse indeksleme hata verir ve ekrandaki ipucuyla `npm run index -- --vault ornek-kasa` çalıştırılır.
+
+Seçenekler: `--client claude-desktop,claude-code,lm-studio` (yalnız bunları kaydeder; klasörü yoksa oluşturur), `--data-dir <klasör>`, `--no-sample` (örnek kasa yok), `--dry-run` (hiçbir şey yazmadan ne yapacağını gösterir). `npx vault-chat-mcp config` yalnız yapılandırma bloğunu yazdırır. Komut tekrar çalıştırılabilir: güncel kayıt ve var olan örnek kasa olduğu gibi bırakılır.
+
+Elle kurmak istersen:
+
 **Bağlanmak.** Kurulu masaüstü uygulamasının verisi `%APPDATA%\Roaming\app.vaultchat.desktop\`
 altındadır (bkz. "Masaüstü (Tauri)"); `DATA_DIR` bu klasörü göstermelidir.
 Kaynak koddan çalıştırıyorsan varsayılan repo'nun `data/` klasörüdür. Claude
