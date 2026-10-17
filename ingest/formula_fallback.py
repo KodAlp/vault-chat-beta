@@ -33,7 +33,8 @@ Akış:
      içeren (find_degenerate_run) formül ölümcüldür; kırpımı varsa item.text, `<!-- vc:fimg N -->` yer
      tutucusuyla değiştirilir (docling onu $$..$$ içinde dışa aktarır, postprocess'e dokunmaz) ve kırpım
      PNG'si FATAL_IMAGES'ta tutulur. Dönüşümün sonunda convert.py `resolve_markers()` ile yer tutucuyu
-     `![Okunamayan formül — s. N](images/<sha16>.png)` + `<!-- vc:formul-gorsel <sha16> s.N -->` +
+     `![Okunamayan formül — s. N](images/<sha16>.png)` + `<!-- vc:formul-gorsel <sha16> s.N k=l,b,r,t -->` (k= docling kutusu, PDF noktası sol-alt orijin; kutu
+     bilinmiyorsa k= yok, eski biçim) +
      `> ⚠ Formül okunamadı — s. N` bilgi satırı + görünmez `<!-- vc:formul-latex <base64url> -->` (en iyi LaTeX
      denemesi, döngü kuyruğu kesilmiş; read_latex_comment ile okunur) ile değiştirir ve PNG'yi images/ klasörüne yazar;
      dosya adları done olayının `images` listesine girer (Node tarafı onları _meta/attachments/'a taşır).
@@ -501,6 +502,25 @@ def find_fatal(texts: list[str], katex: Callable | None = None) -> tuple[list[st
     return reasons, source
 
 
+def _bbox_pt(document, item) -> tuple[float, float, float, float] | None:
+    """Formülün docling kutusu: PDF noktası, sol-alt orijin (l, b, r, t) — crop_formula'nın aldığı biçim.
+    Üst-sol orijinli kutu için sayfa yüksekliği gerekir; bilinmiyorsa None (işaretçi eski biçimde kalır)."""
+    try:
+        from docling_core.types.doc.base import CoordOrigin
+
+        prov = item.prov[0]
+        bb = prov.bbox
+        if bb.coord_origin != CoordOrigin.BOTTOMLEFT:
+            pg = (getattr(document, "pages", None) or {}).get(prov.page_no)
+            if pg is None or pg.size is None:
+                return None
+            bb = bb.to_bottom_left_origin(page_height=pg.size.height)
+        vals = (float(bb.l), float(bb.b), float(bb.r), float(bb.t))
+        return vals if all(v == v and abs(v) < 1e7 for v in vals) else None
+    except Exception:  # noqa: BLE001
+        return None
+
+
 def mark_fatal(document, katex: Callable | None = None) -> None:
     """Son metni KaTeX'e uymayan ya da döngülü formülleri (kırpımı varsa) yer tutucuyla değiştirir."""
     items = list(_formula_items(document))
@@ -522,6 +542,7 @@ def mark_fatal(document, katex: Callable | None = None) -> None:
             "sha": hashlib.sha256(png).hexdigest()[:16],
             "page": int(item.prov[0].page_no),
             "latex": _best_attempt(item.text or ""),
+            "bbox": _bbox_pt(document, item),
         }
         item.text = f"<!-- vc:fimg {fid} -->"
         STATS["fatal_images"] += 1
@@ -570,7 +591,9 @@ def resolve_markers(md: str, images_dir=None) -> tuple[str, list[str]]:
                 images_dir.mkdir(parents=True, exist_ok=True)
                 (images_dir / name).write_bytes(info["png"])
                 names.append(name)
-            parts = [f"![Okunamayan formül — s. {page}](images/{name})\n<!-- vc:formul-gorsel {sha} s.{page} -->"]
+            bb = info.get("bbox")
+            k = f" k={bb[0]:.2f},{bb[1]:.2f},{bb[2]:.2f},{bb[3]:.2f}" if bb else ""
+            parts = [f"![Okunamayan formül — s. {page}](images/{name})\n<!-- vc:formul-gorsel {sha} s.{page}{k} -->"]
         else:
             parts = []
         # Görünür kısım tek satırlık bilgi; ham LaTeX görünmez yorumda saklanır (yalnız bozuk formülü onarma işi).

@@ -449,7 +449,7 @@ def test_resolve_markers_writes_image_and_block():
         assert names == [f"{sha}.png"]
         assert (Path(d) / "images" / f"{sha}.png").read_bytes() == ff.FATAL_IMAGES[0]["png"]
     want = (
-        f"![Okunamayan formül — s. 1](images/{sha}.png)\n<!-- vc:formul-gorsel {sha} s.1 -->\n\n"
+        f"![Okunamayan formül — s. 1](images/{sha}.png)\n<!-- vc:formul-gorsel {sha} s.1 k=10.00,110.00,50.00,120.00 -->\n\n"
         f"> ⚠ Formül okunamadı — s. 1\n\n{ff.latex_comment('E = mc^2 +')}"
     )
     assert want in out and "$$$$" not in out and "$$ok$$" in out and "vc:fimg" not in out and "a a a" not in out
@@ -469,6 +469,29 @@ def test_resolve_markers_writes_image_and_block():
     ff.FATAL_IMAGES[6] = {"png": b"x", "sha": "0" * 16, "page": 3, "latex": "a --> b -- é"}
     out6 = ff.resolve_markers("<!-- vc:fimg 6 -->", None)[0]
     assert ff.read_latex_comment(out6) == "a --> b -- é" and "-->" not in out6.replace("<!-- vc:formul-latex", "").replace(" -->", "")
+    fresh("auto")
+
+
+def test_resolve_markers_box_and_old_form():
+    import tempfile
+
+    # kutu biliniyorsa k=l,b,r,t (2 ondalık); bilinmiyorsa eski biçim
+    fresh("auto", "1")
+    ff.FATAL_IMAGES[7] = {"png": b"x", "sha": "a" * 16, "page": 87, "latex": "", "bbox": (72.5, 300.126, 400.0, 340.999)}
+    ff.FATAL_IMAGES[8] = {"png": b"y", "sha": "b" * 16, "page": 3, "latex": ""}
+    with tempfile.TemporaryDirectory() as d:
+        out, _ = ff.resolve_markers("<!-- vc:fimg 7 -->\n\n<!-- vc:fimg 8 -->", Path(d))
+    assert "<!-- vc:formul-gorsel " + "a" * 16 + " s.87 k=72.50,300.13,400.00,341.00 -->" in out
+    assert "<!-- vc:formul-gorsel " + "b" * 16 + " s.3 -->" in out
+    fresh("auto")
+
+
+def test_mark_fatal_records_bbox():
+    fresh("auto", "1")
+    doc, items = make_doc(["BAD one"])
+    store(items)
+    ff.apply(doc, recognizer=lambda imgs: ["BAD two"] * len(imgs), katex=fake_katex())
+    assert ff.FATAL_IMAGES[0]["bbox"] == (10.0, 90.0, 50.0, 100.0)
     fresh("auto")
 
 
