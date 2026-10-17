@@ -16,6 +16,19 @@ import { execFile } from 'node:child_process';
  *   2. the app-owned venv (<dataDir>/python-venv)
  *   3. python3 found by scanning PATH ourselves
  *   4. well-known install locations
+ * Windows adds the Python bundled with the installer (dist-server/python,
+ * TODO #53) and one invariant: a Python that has docling (several GB with
+ * torch/CUDA) is never shadowed by one that doesn't, or the user would
+ * re-download it. Windows order:
+ *   1. PYTHON_BIN
+ *   2. the app venv, if it has docling
+ *   3. a system interpreter that has docling
+ *   4. the app venv (no docling)
+ *   5. the bundled Python
+ *   6. any other system interpreter, then bare `python`
+ * "Has docling" is a filesystem probe (see pythonHasDocling), not a process
+ * spawn: this runs on the hot path of every conversion and every status call,
+ * and `python -c "import docling"` costs seconds (torch import).
  * On macOS, /usr/bin/python3 is a shim that pops an "install developer
  * tools" dialog when the Command Line Tools are missing, so it is skipped
  * (also when found through PATH) unless CLT or Xcode is present.
@@ -32,6 +45,9 @@ export interface PythonResolveDeps {
 	dataDir: string | null;
 	exists: (p: string) => boolean;
 	readdir: (p: string) => string[];
+	/** Windows: absolute path of the bundled interpreter (may not exist: dev
+	 * runs, older layouts). Unset/null elsewhere. */
+	bundledPython?: string | null;
 }
 
 export function defaultPythonDeps(dataDirPath: string | null): PythonResolveDeps {
@@ -41,8 +57,47 @@ export function defaultPythonDeps(dataDirPath: string | null): PythonResolveDeps
 		home: os.homedir(),
 		dataDir: dataDirPath,
 		exists: fs.existsSync,
-		readdir: (p) => fs.readdirSync(p)
+		readdir: (p) => fs.readdirSync(p),
+		bundledPython: process.platform === 'win32' ? bundledPythonPath(process.cwd()) : null
 	};
+}
+
+/** Bundled interpreter inside a server root. The packaged sidecar's cwd IS the
+ * server root (src-tauri/src/lib.rs: current_dir(server_dir), the same
+ * assumption convertQueue.ts makes for ingest/*.py), so no env var is needed;
+ * scripts/fetch-python-runtime.mjs puts python.exe at <root>/python/python.exe. */
+export function bundledPythonPath(serverRoot: string): string {
+	return path.win32.join(serverRoot, 'python', 'python.exe');
+}
+
+/** The bundled interpreter when it is actually on disk, else null. */
+export function existingBundledPython(d: PythonResolveDeps): string | null {
+	return d.bundledPython && d.exists(d.bundledPython) ? d.bundledPython : null;
+}
+
+/**
+ * Windows: does this interpreter's own prefix carry the docling package?
+ * Probes <prefix>\Lib\site-packages\docling (prefix = the exe's folder, or the
+ * folder above a `Scripts` dir for venvs), plus the per-user site
+ * (%APPDATA%\Python\Python3XY\site-packages\docling, where `pip install --user`
+ * lands). The per-user probe cannot know the interpreter's X.Y without
+ * spawning it, so any Python3* folder counts; that only widens a system
+ * interpreter's match and never applies to venvs (they ignore user site).
+ * Always false off Windows: POSIX keeps its plain order.
+ */
+export function pythonHasDocling(d: PythonResolveDeps, exe: string): boolean {
+	if (d.platform !== 'win32') return false;
+	const p = path.win32;
+	let dir = p.dirname(exe);
+	const isVenv = p.basename(dir).toLowerCase() === 'scripts';
+	if (isVenv) dir = p.dirname(dir);
+	if (d.exists(p.join(dir, 'Lib', 'site-packages', 'docling'))) return true;
+	if (isVenv || !d.env.APPDATA) return false;
+	const userBase = p.join(d.env.APPDATA, 'Python');
+	if (!d.exists(userBase)) return false;
+	return d
+		.readdir(userBase)
+		.some((n) => /^Python3\d+$/.test(n) && d.exists(p.join(userBase, n, 'site-packages', 'docling')));
 }
 
 const MAC_CLT_PYTHON = '/Library/Developer/CommandLineTools/usr/bin/python3';
@@ -121,11 +176,16 @@ export function systemPythonCandidates(d: PythonResolveDeps): string[] {
 
 export function resolvePythonBin(d: PythonResolveDeps = defaultPythonDeps(null)): string {
 	if (d.env.PYTHON_BIN) return d.env.PYTHON_BIN;
-	if (d.dataDir) {
-		const venvPy = venvPythonPath(d.dataDir, d.platform);
-		if (d.exists(venvPy)) return venvPy;
-	}
-	const first = systemPythonCandidates(d)[0];
+	const venvPy = d.dataDir && d.exists(venvPythonPath(d.dataDir, d.platform)) ? venvPythonPath(d.dataDir, d.platform) : null;
+	const system = systemPythonCandidates(d);
+	// Docling-first (Windows only, pythonHasDocling is false elsewhere): see the header comment.
+	if (venvPy && pythonHasDocling(d, venvPy)) return venvPy;
+	const withDocling = system.find((exe) => pythonHasDocling(d, exe));
+	if (withDocling) return withDocling;
+	if (venvPy) return venvPy;
+	const bundled = existingBundledPython(d);
+	if (bundled) return bundled;
+	const first = system[0];
 	if (first) return first;
 	return d.platform === 'win32' ? 'python' : 'python3'; // last resort
 }

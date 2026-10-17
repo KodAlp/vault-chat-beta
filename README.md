@@ -97,7 +97,7 @@ ya da isteğe bağlı bir bulut sağlayıcıyla konuşur. Tek Node süreci,
 
 ## Ön koşullar
 
-1. **Node.js 22** (`>=22 <23`; 20 ve 24 çalışmaz — kurulu sürümü `node --version` ile gör).
+1. **Node.js 22** (`>=22 <23`; 20 ve 24 çalışmaz — kurulu sürümü `node --version` ile gör). Windows masaüstü paketi Node'u kendi içinde taşıdığı için orada ayrıca kurulmaz.
 2. **Bir sohbet modeli kaynağı** — **Ollama önerilir** (https://ollama.com), ama
    zorunlu değil. Şunlardan biri yeter:
    - Ollama,
@@ -256,9 +256,10 @@ geçmen gerekir.
 ## Masaüstü (Tauri)
 
 Aynı sunucuyu tarayıcı yerine yerel bir pencerede çalıştıran, Electron
-kullanmayan bir paket. Ön koşullar tarayıcı akışıyla birebir aynı — **Node.js
-22 kurulu olmalı; sohbet için bir model kaynağı (önerilen: Ollama, ya da başka
-bir yerel sunucu / bulut sağlayıcı) gerekir**, hiçbiri pakete gömülmez.
+kullanmayan bir paket. **Windows paketi Node.js 22'yi ve Python 3.12'yi (python-build-standalone) kendi
+içinde taşır**: ikisi de ayrıca kurulmaz, uygulama her zaman gömülü Node'u kullanır (WebView2 yükleyicisi de
+pakette). Sohbet için bir model kaynağı (önerilen: Ollama, ya da başka bir yerel sunucu / bulut sağlayıcı)
+gerekir, pakete gömülmez. macOS/Linux paketlerinde Node (ve Python) hâlâ elle kurulur, aşağıya bak.
 
 ```bash
 npm run desktop:dev      # canlı Vite dev sunucusuna karşı native pencere, HMR çalışır
@@ -303,21 +304,21 @@ geçerli — bkz. yukarıdaki not.
 
 ## Başka bir Windows makinesinde çalıştırma
 
-Ne installer ne de geliştirici kurulumu Node'u veya yerel model sunucusunu
-(Ollama gibi) pakete gömüyor — Node hedef makinede **elle** kurulu olmalı, model
-kaynağı da (önerilen Ollama, başka bir yerel sunucu ya da bir bulut sağlayıcı)
-ayrıca ayarlanmalı. Hedef makinede kurulduktan sonra `npm run doctor`
+Windows installer'ı Node.js 22'yi ve Python 3.12'yi kendi içinde taşır, ama yerel model sunucusunu
+(Ollama gibi) taşımaz — model kaynağı (önerilen Ollama, başka bir yerel sunucu ya da bir bulut sağlayıcı)
+hedef makinede ayrıca ayarlanmalı. Geliştirici akışında (`npm run dev` / `node build`) Node hâlâ elle kurulur. Hedef makinede kurulduktan sonra `npm run doctor`
 (geliştirici akışı) ya da uygulamanın kendi "Yerel sunucu … çalışmıyor" /
 "Kurulum tamamlanmadı" banner'ı (masaüstü paketi) eksik olanı söyler.
 
 | Bileşen | Zorunlu mu | Kim kuruyor |
 |---|---|---|
-| Node.js 22.x (`>=22 <23`) | Evet, masaüstü paketinde de | Elle — https://nodejs.org |
+| Node.js 22.x (`>=22 <23`) | Evet | Windows masaüstü paketinde gömülü (uygulama hep onu kullanır); geliştirici akışı: elle — https://nodejs.org |
 | Ollama + `qwen3:8b` + `bge-m3` | **Önerilen** (başka yerel sunucu ya da bulut sağlayıcı da olur; embedding yoksa yalnızca anahtar kelime araması) | Elle — https://ollama.com, ya da kurulum sihirbazı |
-| WebView2 Runtime | Evet (yalnızca masaüstü paketi) | Otomatik — NSIS installer yoksa internetten indirip kurar |
+| WebView2 Runtime | Evet (yalnızca masaüstü paketi) | Otomatik — NSIS installer yoksa içindeki küçük yükleyiciyle (`embedBootstrapper`) kurar; kurulum sırasında internet gerekir |
 | Visual C++ Redistributable | Teknik olarak evet | Genelde Windows 10/11'de zaten var; eksikse elle |
-| Python 3.12+ (kararlı sürüm) | Hayır — yalnızca PDF/doküman/YouTube içe aktarma için | Elle — https://python.org |
-| `markitdown` paketi (`pip install -r ingest/requirements.txt`) | Hayır — yalnızca PDF/doküman/YouTube içe aktarma için | Elle, veya masaüstü paketinde uygulamanın kendi "Şimdi kur" banner'ı |
+| Python 3.12+ (kararlı sürüm) | Hayır — yalnızca PDF/doküman/YouTube içe aktarma için | Windows masaüstü paketinde gömülü (3.12); docling'li bir sistem Python'u ya da `PYTHON_BIN` varsa o tercih edilir. Diğer akışlar: elle — https://python.org |
+| `markitdown` ve diğer hafif paketler (`pip install -r ingest/requirements.txt`) | Hayır — yalnızca PDF/doküman/YouTube içe aktarma için | Masaüstü paketinde uygulamanın kendi "Şimdi kur" banner'ı (gömülü Python'dan `python-venv` oluşturur, internet gerekir); diğer akışlar: elle |
+| docling (ağır PDF/OCR) | Hayır — isteğe bağlı | Elle (`pip install docling`) |
 | pandoc | Hayır — yalnızca `.tex` dönüştürme için | Elle |
 
 Dikkat edilecek noktalar:
@@ -340,13 +341,13 @@ Dikkat edilecek noktalar:
   (`data/vaults/<id>/library/`, `index.db`, `study.db`) ayrıca kopyalanmalı —
   ya da hedef makinede içe aktarma + `npm run index` ile
   yeniden oluşturulmalı.
-- **Masaüstü paketinde PDF/doküman/YouTube içe aktarma, Python + markitdown
-  hedef makinede kuruluysa çalışır.** `ingest/` klasörü kurulum paketine
-  dahil (bkz. `scripts/stage-server.mjs`), ama Python'un kendisi ve
-  `markitdown` paketi hâlâ elle kurulmalı (installer bunları gömmez — bkz.
-  yukarıdaki tablo). Eksikse uygulama artık `/api/system/python` üzerinden
-  bunu algılayıp turuncu bir banner'da "Şimdi kur" butonuyla
-  `pip install -r ingest/requirements.txt`'i senin yerine çalıştırır.
+- **Windows masaüstü paketinde PDF/doküman/YouTube içe aktarma için yalnızca hafif
+  paketler eksiktir.** `ingest/` klasörü ve Python 3.12 kurulum paketine dahil
+  (bkz. `scripts/stage-server.mjs`, `scripts/fetch-python-runtime.mjs`); `markitdown`
+  ve diğer paketler pakette yok, ilk kullanımda uygulama `/api/system/python`
+  üzerinden bunu algılayıp turuncu bir banner'da "Şimdi kur" butonuyla
+  `pip install -r ingest/requirements.txt`'i veri klasöründeki `python-venv`'e
+  senin yerine kurar. Docling'li bir Python zaten varsa o tercih edilir.
 
 ## Linux ve macOS (yeni, beta)
 
