@@ -10,6 +10,9 @@ import {
 	fixMacroArgs,
 	fixMleftright,
 	fixMathtypeSlash,
+	fixBoldWrap,
+	fixGluedGreek,
+	fixTrailingBrace,
 	countAmbiguous,
 	MACRO_ALIAS_TABLE,
 	FIXES,
@@ -118,7 +121,9 @@ test('macro-alias: every mapping', () => {
 		['\\overbar{x}', '\\overline{x}'],
 		['\\Breve{x}', '\\breve{x}'],
 		['A \\nsubset B', 'A \\not\\subset B'],
-		['a \\dash b', 'a \\text{—} b']
+		['a \\dash b', 'a \\text{—} b'],
+		['d \\sb{1}', 'd _{1}'],
+		['\\framebox{1}', '\\fbox{1}']
 	];
 	assert.equal(cases.length, MACRO_ALIAS_TABLE.length);
 	for (const [from, to] of cases) assert.equal(fixMacroAliases(from), to, from);
@@ -165,7 +170,7 @@ test('mleftright idiom', () => {
 test('new fixes come after the existing ones and pass the gate end to end', () => {
 	const names = FIXES.map(([n]) => n);
 	assert.deepEqual(names.slice(0, 5), ['duplicate-tag', 'stray-delimiter', 'html-entity', 'macro-alias', 'glyph-junk']);
-	assert.deepEqual(names.slice(5), ['font-switch', 'macro-arg', 'mleftright', 'mathtype-slash']);
+	assert.deepEqual(names.slice(5), ['font-switch', 'macro-arg', 'mleftright', 'mathtype-slash', 'bold-wrap', 'glued-greek', 'trailing-brace']);
 	let r = repairFormula('\\delta\\mathopen{}\\mathclose\\bgroup\\left( S \\aftergroup\\egroup\\right)');
 	assert.equal(r.status, 'fixed');
 	assert.deepEqual(r.applied, ['mleftright']);
@@ -206,7 +211,7 @@ test('mathtype-slash: both real samples are repaired through the gate', () => {
 		assert.equal(r.status, 'fixed');
 		assert.ok(r.applied.includes('mathtype-slash'));
 	}
-	assert.equal(FIXES.at(-1)[0], 'mathtype-slash');
+	assert.equal(FIXES[8][0], 'mathtype-slash');
 });
 
 test('mathtype-slash: \\nulldelimiterspace spelling, no spaces, several occurrences', () => {
@@ -296,4 +301,35 @@ test('codeToFence: stray dollar next to an escaped one is left alone', () => {
 	assert.equal(codeToFence('\\text{\\$CONS (1, $\\$CONS (2, $\\$NIL))}'), null);
 	assert.equal(codeToFence('\\text{a \\$$ b}'), null);
 	assert.equal(codeToFence('\\text{QB.d = QB.q $ QA.q}'), 'QB.d = QB.q $ QA.q');
+});
+
+test('fixBoldWrap: unbraced style macro after \\pmb / \\boldsymbol', () => {
+	assert.equal(fixBoldWrap('{ \\pmb x } \\in { \\pmb \\mathbb Z } _ { n }'), '{ \\pmb x } \\in { \\pmb{\\mathbb Z} } _ { n }');
+	assert.equal(fixBoldWrap('{ \\pmb \\mathbb { Z } } _ { n }'), '{ \\pmb{\\mathbb { Z }} } _ { n }');
+	assert.equal(fixBoldWrap('\\boldsymbol \\mathsf { r } _ { j }'), '\\boldsymbol{\\mathsf { r }} _ { j }');
+	assert.equal(fixBoldWrap('{ \\pmb \\bar { U } }'), '{ \\pmb{\\bar { U }} }');
+	assert.equal(fixBoldWrap('\\pmb{\\mathbb Z}'), null);
+	assert.equal(fixBoldWrap('\\pmb \\mathbb }'), null);
+	for (const s of ['{ \\pmb x } \\in { \\pmb \\mathbb Z } _ { n } ^ { * }', '\\boldsymbol \\mathsf { r } _ { \\mathrm { j } }']) {
+		assert.equal(repairFormula(s, false).status, 'fixed');
+	}
+});
+
+test('fixGluedGreek: capital suffix only', () => {
+	assert.equal(fixGluedGreek("k' = 180 \\, \\muA/V^{2}"), "k' = 180 \\, \\mu A/V^{2}");
+	assert.equal(fixGluedGreek('\\alpha + \\betaEX_{i}'), '\\alpha + \\beta EX_{i}');
+	assert.equal(fixGluedGreek('\\mum \\Delta \\betaXy'), null);
+});
+
+test('fixTrailingBrace: one orphan } at the end only', () => {
+	assert.equal(fixTrailingBrace('y_p[n] = x[((-n))_4]}'), 'y_p[n] = x[((-n))_4]');
+	assert.equal(fixTrailingBrace('a} + b'), null);
+	assert.equal(fixTrailingBrace('\\{ a \\}'), null);
+	assert.equal(fixTrailingBrace('{a}'), null);
+});
+
+test('macro aliases: \\sb and \\framebox', () => {
+	assert.equal(fixMacroAliases('d \\sb { 1 } \\times d \\sb { 2 }'), 'd _ { 1 } \\times d _ { 2 }');
+	assert.equal(fixMacroAliases('\\framebox {1} & 2'), '\\fbox {1} & 2');
+	assert.equal(fixMacroAliases('\\sbox'), null);
 });
