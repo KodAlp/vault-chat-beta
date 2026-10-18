@@ -2,7 +2,7 @@
 
 Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncellenir.
 
-**Son güncelleme:** 2026-10-18 · Acil boşaldı. main origin'e push edildi (`e4b2729`): #30, #33, #37, #3, #5, #43. #53 (gömülü Node 22 + Python, WebView2 önyükleyicisi) yerel main'e alındı (`e18335d`); kurulum dosyası kuruldu: Ollama ile sohbet, docling'li Python seçimi ve gömülü Python'dan "Şimdi kur" çalışıyor; WebView2 önyükleyicisi canlı denenmedi; push yok.
+**Son güncelleme:** 2026-10-18 · Acil boşaldı. main origin'e push edildi (`796adf1`): #53 (gömülü Node 22 + Python, WebView2 önyükleyicisi) ve kurulu uygulamada denemesi; önceki push (`e4b2729`) #30, #33, #37, #3, #5, #43'ü içeriyordu. Kurulumda Ollama ile sohbet, docling'li Python seçimi ve gömülü Python'dan "Şimdi kur" çalışıyor; WebView2 önyükleyicisi canlı denenmedi.
 
 ## Kurallar
 
@@ -136,6 +136,7 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 
 Yalnız son iki haftanın kaydı tutulur; daha eskisi git geçmişindedir.
 
+- 2026-10-18: main origin'e push edildi (`a1027f6` → `796adf1`, 8 commit): #53 ve kurulu uygulamadaki denemeleri artık uzak depoda.
 - 2026-10-18: #53 Python yolları kurulu sunucuyla (gömülü `node.exe` + `build`, geçici DATA_DIR, ayrı port) denendi: gerçek PATH'te docling'li sistem Python'u (3.12.0rc2) seçiliyor; Python'suz ortamda (dar PATH, Python'suz profil) gömülü 3.12.15 seçiliyor, "Şimdi kur" venv'i gömülü Python'dan açıp (`pyvenv.cfg` home = `dist-server\python`) altı modülü 157 sn'de kurdu, yeniden denetimde hepsi kurulu. `e18335d`
 - 2026-10-18: #53 kurulumu denendi (`6417b05_gomulu` kurulum dosyası, sessiz kurulum): sunucu `_up_\dist-server\node\node.exe` ile açılıyor; Ollama'yı uygulama başlatıyor (`ollama serve`, üst süreç vault-chat.exe). Fizik kasasında sohbet uçtan uca çalıştı: small-talk kapısı ilk mesajı kaynaksız geçirdi (ilk model yüklemesi 6,8 sn), "optikten bahset" 5 kaynakla 325 token / 8,6 sn; qwen3:8b-bart-iq4xs tamamen GPU'da, sohbet `chats.db`'ye yazıldı. `e18335d`
 - 2026-10-18: main origin'e push edildi (`893e2f8` → `e4b2729`, 17 commit): #3, #37, #43, #5 elle düzeltmeler, #30 ve #33 artık uzak depoda.
