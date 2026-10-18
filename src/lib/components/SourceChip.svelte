@@ -1,9 +1,9 @@
 <script lang="ts">
+	import Icon from '$lib/components/Icon.svelte';
 	import { page } from '$app/state';
 	import { libraryViewerUrl } from '$lib/sourceLink';
 	import type { RetrievedChunk } from '$lib/types';
 	import * as HoverCard from '$lib/components/ui/hover-card';
-	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
 	import { t } from '$lib/i18n/index.svelte';
 	import { setHighlight, clearHighlight } from '$lib/source-highlight.svelte';
 
@@ -95,7 +95,7 @@
 								{#if g.chunks.length > 1}<span class="n count">{t('SourceChip.chunkCount', { count: g.chunks.length })}</span>{/if}
 							</a>
 							<a class="vc-icon-btn chip-icon" href={libraryViewerUrl(g.path, vaultId, here, g.chunks[0].heading_path)} title={t('Common.kaynagiAc')} aria-label={t('Common.kaynagiAc')}>
-								<ExternalLinkIcon size={16} strokeWidth={1.75} aria-hidden="true" />
+								<Icon name="external-link" size="sm" />
 							</a>
 						</span>
 					{/snippet}

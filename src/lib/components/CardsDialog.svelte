@@ -7,7 +7,6 @@
 	import GenerationDialog from './GenerationDialog.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
-	import LayersIcon from '@lucide/svelte/icons/layers';
 	import { t } from '$lib/i18n/index.svelte';
 
 	let {
@@ -78,7 +77,7 @@
 	{vaultId}
 	{includedPaths}
 	bind:open
-	icon={LayersIcon}
+	icon="layers"
 	label={t('CardsDialog.label')}
 	dialogTitle={t('CardsDialog.dialogTitle')}
 	promptLabel={t('CardsDialog.promptLabel')}

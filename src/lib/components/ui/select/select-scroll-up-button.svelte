@@ -1,6 +1,6 @@
 <script lang="ts">
+	import Icon from '$lib/components/Icon.svelte';
 	import { Select as SelectPrimitive } from "bits-ui";
-	import ChevronUpIcon from '@lucide/svelte/icons/chevron-up';
 	import { cn, type WithoutChildrenOrChild } from "$lib/utils.js";
 
 	let {
@@ -16,5 +16,5 @@
 	class={cn("z-10 flex cursor-default items-center justify-center bg-popover py-1 [&_svg:not([class*='size-'])]:size-4 top-0 w-full", className)}
 	{...restProps}
 >
-	<ChevronUpIcon  />
+	<Icon name="chevron-down" size="sm" class="rotate-180" />
 </SelectPrimitive.ScrollUpButton>

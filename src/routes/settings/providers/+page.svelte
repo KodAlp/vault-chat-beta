@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '$lib/components/Icon.svelte';
 	import { onMount } from 'svelte';
 	import { isTauri, invoke } from '@tauri-apps/api/core';
 	import type { ProviderStatus, ProviderModelOption, ModelListItem, DetectedServer } from '$lib/types';
@@ -13,8 +14,6 @@
 	import * as Select from '$lib/components/ui/select';
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
 	import ChainEditor from '$lib/components/ChainEditor.svelte';
-	import PlusIcon from '@lucide/svelte/icons/plus';
-	import TrashIcon from '@lucide/svelte/icons/trash';
 	import { Label } from '$lib/components/ui/label';
 	import { t, i18n } from '$lib/i18n/index.svelte';
 	import { providerDisplayLabel } from '$lib/provider-label';
@@ -591,7 +590,7 @@
 		<div class="mb-3 flex items-baseline justify-between">
 			<h2 class="text-base font-semibold">{t('ProvidersSettingsPage.providersSectionTitle')}</h2>
 			<Button variant="outline" size="sm" onclick={() => (addFormOpen = !addFormOpen)}>
-				<PlusIcon size={14} aria-hidden="true" /> {t('ProvidersSettingsPage.addProvider')}
+				<Icon name="plus" size="sm" /> {t('ProvidersSettingsPage.addProvider')}
 			</Button>
 		</div>
 
@@ -894,7 +893,7 @@
 									deleteTargetLabel = pLabel(p.id, p.label);
 								}}
 							>
-								<TrashIcon size={14} aria-hidden="true" />
+								<Icon name="trash" size="sm" />
 							</Button>
 						</div>
 					</Card.Content>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '$lib/components/Icon.svelte';
 	import { page } from '$app/state';
 	import { beforeNavigate, goto } from '$app/navigation';
 	import { onDestroy, tick, untrack, type Component } from 'svelte';
@@ -11,12 +12,6 @@
 	import { relativeTime } from '$lib/relative-time';
 	import { localizeError, readResponseError } from '$lib/server-error';
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
-	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
-	import TriangleAlertIcon from '@lucide/svelte/icons/triangle-alert';
-	import PencilIcon from '@lucide/svelte/icons/pencil';
-	import ClockIcon from '@lucide/svelte/icons/clock';
-	import CheckIcon from '@lucide/svelte/icons/check';
-	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
 	import type { ReimportEvent } from '$lib/types';
 	import { findUnreadableFormulas, replaceUnreadableFormula } from '$lib/formula-repair';
 	import { findHeadingElement } from '$lib/heading-target';
@@ -653,7 +648,7 @@
 <svelte:window onkeydown={onWindowKeydown} onbeforeunload={onBeforeUnload} />
 
 <div class="viewer" class:wide={editing}>
-	<a class="home-link" href={backHref}><ArrowLeftIcon class="rtl-flip" size={14} aria-hidden="true" /> {t('Common.geriDon')}</a>
+	<a class="home-link" href={backHref}><Icon name="arrow-left" size="sm" class="rtl-flip" /> {t('Common.geriDon')}</a>
 	<div class="toolbar">
 		<p class="path">{filePath}</p>
 		{#if !error}
@@ -671,7 +666,7 @@
 						disabled={!reimportAvailable || reimporting || saving}
 						title={reimportAvailable ? t('LibraryViewPage.reimportFrom', { name: reimportOriginal }) : t('LibraryViewPage.reimportUnavailable')}
 					>
-						<RefreshCwIcon size={14} aria-hidden="true" /> {reimporting ? t('LibraryViewPage.reimporting') : t('LibraryViewPage.reimport')}
+						<Icon name="refresh" size="sm" /> {reimporting ? t('LibraryViewPage.reimporting') : t('LibraryViewPage.reimport')}
 					</button>
 					<button type="button" class="vc-btn ghost" onclick={cancelEdit} disabled={saving}>{t('LibraryViewPage.cancel')}</button>
 					<button type="button" class="vc-btn primary" onclick={save} disabled={!dirty || saving}>
@@ -679,7 +674,7 @@
 					</button>
 				{:else}
 					<button type="button" class="vc-btn ghost" onclick={toggleVersions} aria-expanded={showVersions}>
-						<ClockIcon size={14} aria-hidden="true" /> {t('LibraryViewPage.versions')}
+						<Icon name="clock" size="sm" /> {t('LibraryViewPage.versions')}
 					</button>
 					<button
 						type="button"
@@ -688,10 +683,10 @@
 						disabled={!reimportAvailable || reimporting || saving}
 						title={reimportAvailable ? t('LibraryViewPage.reimportFrom', { name: reimportOriginal }) : t('LibraryViewPage.reimportUnavailable')}
 					>
-						<RefreshCwIcon size={14} aria-hidden="true" /> {reimporting ? t('LibraryViewPage.reimporting') : t('LibraryViewPage.reimport')}
+						<Icon name="refresh" size="sm" /> {reimporting ? t('LibraryViewPage.reimporting') : t('LibraryViewPage.reimport')}
 					</button>
 					<button type="button" class="vc-btn secondary" onclick={startEdit}>
-						<PencilIcon size={14} aria-hidden="true" /> {t('LibraryViewPage.edit')}
+						<Icon name="pencil" size="sm" /> {t('LibraryViewPage.edit')}
 					</button>
 				{/if}
 			</div>
@@ -738,7 +733,7 @@
 		</div>
 	{/if}
 	{#if savedFlash}
-		<p class="saved-flash" role="status"><CheckIcon size={14} aria-hidden="true" /> {savedFlash}</p>
+		<p class="saved-flash" role="status"><Icon name="check" size="sm" /> {savedFlash}</p>
 	{/if}
 	{#if indexNote}
 		<div class="vc-banner info note" role="status">
@@ -772,7 +767,7 @@
 
 	{#if error}
 		<div class="error">
-			<TriangleAlertIcon size={16} aria-hidden="true" />
+			<Icon name="warning" size="sm" />
 			<p>{error}</p>
 		</div>
 	{:else if editing && editMode === 'visual'}

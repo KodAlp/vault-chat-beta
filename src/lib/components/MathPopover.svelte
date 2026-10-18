@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '$lib/components/Icon.svelte';
 	/**
 	 * Formula editor popover (MathLive). Imported only when the user opens a
 	 * formula in the WYSIWYG editor, so MathLive (~220 KB gzip) never loads
@@ -11,7 +12,6 @@
 	import { onMount, tick } from 'svelte';
 	import { t, i18n } from '$lib/i18n/index.svelte';
 	import { loadMathlive } from '$lib/wysiwyg/mathlive-locale';
-	import KeyboardIcon from '@lucide/svelte/icons/keyboard';
 
 	let {
 		latex,
@@ -108,7 +108,7 @@
 	</div>
 	<div class="row">
 		<button type="button" class="vc-btn ghost" onclick={toggleKeyboard} disabled={status !== 'ready'}>
-			<KeyboardIcon size={14} aria-hidden="true" /> {t('WysiwygEditor.mathKeyboard')}
+			<Icon name="keyboard" size="sm" /> {t('WysiwygEditor.mathKeyboard')}
 		</button>
 		<span class="spacer"></span>
 		<button type="button" class="vc-btn ghost" onclick={oncancel}>{t('WysiwygEditor.cancel')}</button>

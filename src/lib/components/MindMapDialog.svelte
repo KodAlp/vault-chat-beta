@@ -3,7 +3,6 @@
 	import { mindmapGeneration, startMindMapGeneration } from '$lib/mindmap-generation.svelte';
 	import type { MindMapGenerationRequest } from '$lib/types';
 	import GenerationDialog from './GenerationDialog.svelte';
-	import BrainIcon from '@lucide/svelte/icons/brain';
 	import { t } from '$lib/i18n/index.svelte';
 
 	let {
@@ -37,7 +36,7 @@
 	{vaultId}
 	{includedPaths}
 	bind:open
-	icon={BrainIcon}
+	icon="neurology"
 	label={t('MindMapDialog.label')}
 	dialogTitle={t('MindMapDialog.dialogTitle')}
 	promptLabel={t('MindMapDialog.promptLabel')}

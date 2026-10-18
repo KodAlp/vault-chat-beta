@@ -1,4 +1,5 @@
 <script lang="ts" module>
+	import Icon from '$lib/components/Icon.svelte';
 	export type SourceCounts = {
 		selected: number;
 		total: number;
@@ -22,7 +23,6 @@
 	import * as Sheet from '$lib/components/ui/sheet';
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
 	import SourceTree from './SourceTree.svelte';
-	import XIcon from '@lucide/svelte/icons/x';
 	import { t } from '$lib/i18n/index.svelte';
 
 	/**
@@ -177,7 +177,7 @@
 				</div>
 				<span style="flex:1"></span>
 				<DialogPrimitive.Close class="vc-icon-btn" aria-label={t('SourcesSheet.close')}>
-					<XIcon size={20} strokeWidth={1.75} aria-hidden="true" />
+					<Icon name="close" />
 				</DialogPrimitive.Close>
 			</div>
 
@@ -258,7 +258,7 @@
 											aria-label={t('SourcesSheet.remove', { name: a.node.name })}
 											onclick={() => removeArea(a.node)}
 										>
-											<XIcon size={12} strokeWidth={2} aria-hidden="true" />
+											<Icon name="close" size="sm" />
 										</button>
 									</span>
 								{/each}

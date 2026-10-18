@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '$lib/components/Icon.svelte';
 	/**
 	 * Visual (WYSIWYG) Markdown editor on Milkdown 7. Imported ONLY via dynamic
 	 * import() from the library viewer when the user enters edit mode, like
@@ -15,29 +16,8 @@
 	import { t } from '$lib/i18n/index.svelte';
 	import { createVisualEditor, type VisualEditor, type FormatState, type MathTarget, type ToolbarCommand } from '$lib/wysiwyg/visual-editor';
 	import MathPopover from '$lib/components/MathPopover.svelte';
-	import BoldIcon from '@lucide/svelte/icons/bold';
-	import ItalicIcon from '@lucide/svelte/icons/italic';
-	import StrikethroughIcon from '@lucide/svelte/icons/strikethrough';
-	import CodeIcon from '@lucide/svelte/icons/code';
-	import Heading1Icon from '@lucide/svelte/icons/heading-1';
-	import Heading2Icon from '@lucide/svelte/icons/heading-2';
-	import Heading3Icon from '@lucide/svelte/icons/heading-3';
-	import PilcrowIcon from '@lucide/svelte/icons/pilcrow';
-	import ListIcon from '@lucide/svelte/icons/list';
-	import ListOrderedIcon from '@lucide/svelte/icons/list-ordered';
-	import QuoteIcon from '@lucide/svelte/icons/quote';
-	import LinkIcon from '@lucide/svelte/icons/link';
 	import { readResponseError } from '$lib/server-error';
 	import { relativeLibraryLink } from '$lib/attachment-link';
-	import ImageIcon from '@lucide/svelte/icons/image';
-	import TableIcon from '@lucide/svelte/icons/table';
-	import SquareCodeIcon from '@lucide/svelte/icons/square-code';
-	import Undo2Icon from '@lucide/svelte/icons/undo-2';
-	import Redo2Icon from '@lucide/svelte/icons/redo-2';
-	import SigmaIcon from '@lucide/svelte/icons/sigma';
-	import SquareSigmaIcon from '@lucide/svelte/icons/square-sigma';
-	import TableRowsSplitIcon from '@lucide/svelte/icons/table-rows-split';
-	import TableColumnsSplitIcon from '@lucide/svelte/icons/table-columns-split';
 
 	let {
 		value,
@@ -226,37 +206,37 @@
 <div class="vc-visual" class:busy={!ready && !failed} role="group" aria-label={t('WysiwygEditor.editorLabel')}>
 	<div class="tb" role="toolbar" aria-label={t('WysiwygEditor.toolbar')}>
 		<div class="grp">
-			<button type="button" title={t('WysiwygEditor.undo')} aria-label={t('WysiwygEditor.undo')} onclick={() => run('undo')}><Undo2Icon size={16} aria-hidden="true" /></button>
-			<button type="button" title={t('WysiwygEditor.redo')} aria-label={t('WysiwygEditor.redo')} onclick={() => run('redo')}><Redo2Icon size={16} aria-hidden="true" /></button>
+			<button type="button" title={t('WysiwygEditor.undo')} aria-label={t('WysiwygEditor.undo')} onclick={() => run('undo')}><Icon name="undo" size="sm" /></button>
+			<button type="button" title={t('WysiwygEditor.redo')} aria-label={t('WysiwygEditor.redo')} onclick={() => run('redo')}><Icon name="redo" size="sm" /></button>
 		</div>
 		<div class="grp">
-			<button type="button" class:on={fmt.bold} aria-pressed={fmt.bold} title={t('WysiwygEditor.bold')} aria-label={t('WysiwygEditor.bold')} onclick={() => run('bold')}><BoldIcon size={16} aria-hidden="true" /></button>
-			<button type="button" class:on={fmt.italic} aria-pressed={fmt.italic} title={t('WysiwygEditor.italic')} aria-label={t('WysiwygEditor.italic')} onclick={() => run('italic')}><ItalicIcon size={16} aria-hidden="true" /></button>
-			<button type="button" class:on={fmt.strike} aria-pressed={fmt.strike} title={t('WysiwygEditor.strike')} aria-label={t('WysiwygEditor.strike')} onclick={() => run('strike')}><StrikethroughIcon size={16} aria-hidden="true" /></button>
-			<button type="button" class:on={fmt.code} aria-pressed={fmt.code} title={t('WysiwygEditor.code')} aria-label={t('WysiwygEditor.code')} onclick={() => run('code')}><CodeIcon size={16} aria-hidden="true" /></button>
+			<button type="button" class:on={fmt.bold} aria-pressed={fmt.bold} title={t('WysiwygEditor.bold')} aria-label={t('WysiwygEditor.bold')} onclick={() => run('bold')}><Icon name="bold" size="sm" /></button>
+			<button type="button" class:on={fmt.italic} aria-pressed={fmt.italic} title={t('WysiwygEditor.italic')} aria-label={t('WysiwygEditor.italic')} onclick={() => run('italic')}><Icon name="italic" size="sm" /></button>
+			<button type="button" class:on={fmt.strike} aria-pressed={fmt.strike} title={t('WysiwygEditor.strike')} aria-label={t('WysiwygEditor.strike')} onclick={() => run('strike')}><Icon name="strikethrough" size="sm" /></button>
+			<button type="button" class:on={fmt.code} aria-pressed={fmt.code} title={t('WysiwygEditor.code')} aria-label={t('WysiwygEditor.code')} onclick={() => run('code')}><Icon name="code" size="sm" /></button>
 		</div>
 		<div class="grp">
-			<button type="button" class:on={fmt.heading === 1} aria-pressed={fmt.heading === 1} title={t('WysiwygEditor.h1')} aria-label={t('WysiwygEditor.h1')} onclick={() => run('h1')}><Heading1Icon size={16} aria-hidden="true" /></button>
-			<button type="button" class:on={fmt.heading === 2} aria-pressed={fmt.heading === 2} title={t('WysiwygEditor.h2')} aria-label={t('WysiwygEditor.h2')} onclick={() => run('h2')}><Heading2Icon size={16} aria-hidden="true" /></button>
-			<button type="button" class:on={fmt.heading === 3} aria-pressed={fmt.heading === 3} title={t('WysiwygEditor.h3')} aria-label={t('WysiwygEditor.h3')} onclick={() => run('h3')}><Heading3Icon size={16} aria-hidden="true" /></button>
-			<button type="button" title={t('WysiwygEditor.paragraph')} aria-label={t('WysiwygEditor.paragraph')} onclick={() => run('paragraph')}><PilcrowIcon size={16} aria-hidden="true" /></button>
+			<button type="button" class:on={fmt.heading === 1} aria-pressed={fmt.heading === 1} title={t('WysiwygEditor.h1')} aria-label={t('WysiwygEditor.h1')} onclick={() => run('h1')}><Icon name="heading-1" size="sm" /></button>
+			<button type="button" class:on={fmt.heading === 2} aria-pressed={fmt.heading === 2} title={t('WysiwygEditor.h2')} aria-label={t('WysiwygEditor.h2')} onclick={() => run('h2')}><Icon name="heading-2" size="sm" /></button>
+			<button type="button" class:on={fmt.heading === 3} aria-pressed={fmt.heading === 3} title={t('WysiwygEditor.h3')} aria-label={t('WysiwygEditor.h3')} onclick={() => run('h3')}><Icon name="heading-3" size="sm" /></button>
+			<button type="button" title={t('WysiwygEditor.paragraph')} aria-label={t('WysiwygEditor.paragraph')} onclick={() => run('paragraph')}><Icon name="pilcrow" size="sm" /></button>
 		</div>
 		<div class="grp">
-			<button type="button" class:on={fmt.bullet} aria-pressed={fmt.bullet} title={t('WysiwygEditor.bullet')} aria-label={t('WysiwygEditor.bullet')} onclick={() => run('bullet')}><ListIcon size={16} aria-hidden="true" /></button>
-			<button type="button" class:on={fmt.ordered} aria-pressed={fmt.ordered} title={t('WysiwygEditor.ordered')} aria-label={t('WysiwygEditor.ordered')} onclick={() => run('ordered')}><ListOrderedIcon size={16} aria-hidden="true" /></button>
-			<button type="button" class:on={fmt.quote} aria-pressed={fmt.quote} title={t('WysiwygEditor.quote')} aria-label={t('WysiwygEditor.quote')} onclick={() => run('quote')}><QuoteIcon size={16} aria-hidden="true" /></button>
-			<button type="button" class:on={fmt.codeblock} aria-pressed={fmt.codeblock} title={t('WysiwygEditor.codeBlock')} aria-label={t('WysiwygEditor.codeBlock')} onclick={() => run('codeblock')}><SquareCodeIcon size={16} aria-hidden="true" /></button>
+			<button type="button" class:on={fmt.bullet} aria-pressed={fmt.bullet} title={t('WysiwygEditor.bullet')} aria-label={t('WysiwygEditor.bullet')} onclick={() => run('bullet')}><Icon name="list" size="sm" /></button>
+			<button type="button" class:on={fmt.ordered} aria-pressed={fmt.ordered} title={t('WysiwygEditor.ordered')} aria-label={t('WysiwygEditor.ordered')} onclick={() => run('ordered')}><Icon name="list-ordered" size="sm" /></button>
+			<button type="button" class:on={fmt.quote} aria-pressed={fmt.quote} title={t('WysiwygEditor.quote')} aria-label={t('WysiwygEditor.quote')} onclick={() => run('quote')}><Icon name="quote" size="sm" /></button>
+			<button type="button" class:on={fmt.codeblock} aria-pressed={fmt.codeblock} title={t('WysiwygEditor.codeBlock')} aria-label={t('WysiwygEditor.codeBlock')} onclick={() => run('codeblock')}><Icon name="code-block" size="sm" /></button>
 		</div>
 		<div class="grp">
-			<button type="button" class:on={fmt.link} aria-pressed={fmt.link} title={t('WysiwygEditor.link')} aria-label={t('WysiwygEditor.link')} onclick={openLink}><LinkIcon size={16} aria-hidden="true" /></button>
-			<button type="button" title={t('WysiwygEditor.image')} aria-label={t('WysiwygEditor.image')} onclick={openImage}><ImageIcon size={16} aria-hidden="true" /></button>
-			<button type="button" title={t('WysiwygEditor.table')} aria-label={t('WysiwygEditor.table')} onclick={() => run('table')}><TableIcon size={16} aria-hidden="true" /></button>
-			<button type="button" disabled={!fmt.table} title={t('WysiwygEditor.rowAfter')} aria-label={t('WysiwygEditor.rowAfter')} onclick={() => run('rowAfter')}><TableRowsSplitIcon size={16} aria-hidden="true" /></button>
-			<button type="button" disabled={!fmt.table} title={t('WysiwygEditor.colAfter')} aria-label={t('WysiwygEditor.colAfter')} onclick={() => run('colAfter')}><TableColumnsSplitIcon size={16} aria-hidden="true" /></button>
+			<button type="button" class:on={fmt.link} aria-pressed={fmt.link} title={t('WysiwygEditor.link')} aria-label={t('WysiwygEditor.link')} onclick={openLink}><Icon name="link" size="sm" /></button>
+			<button type="button" title={t('WysiwygEditor.image')} aria-label={t('WysiwygEditor.image')} onclick={openImage}><Icon name="image" size="sm" /></button>
+			<button type="button" title={t('WysiwygEditor.table')} aria-label={t('WysiwygEditor.table')} onclick={() => run('table')}><Icon name="table" size="sm" /></button>
+			<button type="button" disabled={!fmt.table} title={t('WysiwygEditor.rowAfter')} aria-label={t('WysiwygEditor.rowAfter')} onclick={() => run('rowAfter')}><Icon name="table-rows" size="sm" /></button>
+			<button type="button" disabled={!fmt.table} title={t('WysiwygEditor.colAfter')} aria-label={t('WysiwygEditor.colAfter')} onclick={() => run('colAfter')}><Icon name="table-columns" size="sm" /></button>
 		</div>
 		<div class="grp">
-			<button type="button" title={t('WysiwygEditor.formulaInline')} aria-label={t('WysiwygEditor.formulaInline')} onclick={() => insertFormula('inline')}><SigmaIcon size={16} aria-hidden="true" /></button>
-			<button type="button" title={t('WysiwygEditor.formulaBlock')} aria-label={t('WysiwygEditor.formulaBlock')} onclick={() => insertFormula('block')}><SquareSigmaIcon size={16} aria-hidden="true" /></button>
+			<button type="button" title={t('WysiwygEditor.formulaInline')} aria-label={t('WysiwygEditor.formulaInline')} onclick={() => insertFormula('inline')}><Icon name="sigma" size="sm" /></button>
+			<button type="button" title={t('WysiwygEditor.formulaBlock')} aria-label={t('WysiwygEditor.formulaBlock')} onclick={() => insertFormula('block')}><Icon name="math-block" size="sm" /></button>
 		</div>
 	</div>
 

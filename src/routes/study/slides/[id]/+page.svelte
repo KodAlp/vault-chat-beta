@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '$lib/components/Icon.svelte';
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
 	import { libraryViewerUrl } from '$lib/sourceLink';
@@ -7,8 +8,6 @@
 	import { readResponseError, localizeError } from '$lib/server-error';
 	import type { PageProps } from './$types';
 	import type { SlideDeckView, SlideView } from '$lib/types';
-	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
-	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 
 	let { data }: PageProps = $props();
 
@@ -97,7 +96,7 @@
 </svelte:head>
 
 <div class="slides-screen">
-	<a class="home-link" href={backHref}><ArrowLeftIcon class="rtl-flip" size={14} aria-hidden="true" /> {t('Common.geriDon')}</a>
+	<a class="home-link" href={backHref}><Icon name="arrow-left" size="sm" class="rtl-flip" /> {t('Common.geriDon')}</a>
 
 	<!-- See study/report/[id]/+page.svelte for why every one of these view
 	     routes gets a boundary: phase='ready' is assigned before its subtree
@@ -143,7 +142,7 @@
 					title={t('Common.kaynagiAc')}
 					aria-label={t('Common.kaynagiAc')}
 				>
-					<ExternalLinkIcon size={13} aria-hidden="true" />
+					<Icon name="external-link" size="sm" />
 				</a>
 			</div>
 		{/if}

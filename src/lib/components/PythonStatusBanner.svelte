@@ -1,7 +1,6 @@
 <script lang="ts">
+	import Icon from '$lib/components/Icon.svelte';
 	import { motionFly } from '$lib/motion';
-	import TriangleAlertIcon from '@lucide/svelte/icons/triangle-alert';
-	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
 	import { t } from '$lib/i18n/index.svelte';
 	import { localizeError, readResponseError } from '$lib/server-error';
 	import type { PythonSetupEvent, PythonSystemStatus } from '$lib/types';
@@ -115,7 +114,7 @@
 	<div class="banner-slot" transition:motionFly={{ y: -16 }}>
 		<div class="vc-banner warning" role="status">
 			<span class="dot" aria-hidden="true"></span>
-			<TriangleAlertIcon size={20} strokeWidth={1.75} class="banner-icon" aria-hidden="true" />
+			<Icon name="warning" class="banner-icon" />
 			<div class="banner-text">
 				<div class="t">
 					{#if status === 'no_python'}
@@ -139,7 +138,7 @@
 			{#if status === 'missing'}
 				<div class="banner-actions">
 					<button type="button" class="vc-btn secondary" onclick={install} disabled={installing}>
-						<RefreshCwIcon size={16} strokeWidth={1.75} aria-hidden="true" class={installing ? 'animate-spin' : ''} />
+						<Icon name="refresh" size="sm" class={installing ? 'animate-spin' : ''} />
 						{installing ? t('PythonStatusBanner.installing') : t('PythonStatusBanner.installNow')}
 					</button>
 				</div>

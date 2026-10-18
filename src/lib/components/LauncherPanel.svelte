@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '$lib/components/Icon.svelte';
 	/**
 	 * Aşama 2b — settings/providers' local-launcher control panel for ONE
 	 * catalog id (Ollama or any local openai-compat server the user's added
@@ -26,7 +27,6 @@
 	import { Label } from '$lib/components/ui/label';
 	import { Switch } from '$lib/components/ui/switch';
 	import { Badge } from '$lib/components/ui/badge';
-	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
 	import { t } from '$lib/i18n/index.svelte';
 	import type { LauncherConfig, LauncherStatusValue } from '$lib/types';
 
@@ -290,7 +290,7 @@
 		<p class="text-muted-foreground">{t('LauncherPanel.noProgram')}</p>
 		<div class="flex flex-wrap gap-2">
 			<Button size="sm" variant="outline" onclick={redetectProgram} disabled={busy}>
-				<RefreshCwIcon size={12} aria-hidden="true" class={busy ? 'animate-spin' : ''} />
+				<Icon name="refresh" size="sm" class={busy ? 'animate-spin' : ''} />
 				{t('LauncherPanel.redetect')}
 			</Button>
 			<Button size="sm" variant="outline" onclick={pickProgram} disabled={busy}>{t('LauncherPanel.pickProgram')}</Button>

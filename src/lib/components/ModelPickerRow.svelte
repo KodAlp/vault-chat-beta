@@ -1,13 +1,11 @@
 <script lang="ts">
+	import Icon from '$lib/components/Icon.svelte';
 	import type { ProviderModelOption } from '$lib/types';
 	import { selectionKey } from '$lib/model-selection';
 	import { t } from '$lib/i18n/index.svelte';
 	import { providerDisplayLabel } from '$lib/provider-label';
 	const pLabel = (id: string, label: string) => providerDisplayLabel(id, label, t);
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
-	import BotIcon from '@lucide/svelte/icons/bot';
-	import BrainIcon from '@lucide/svelte/icons/brain';
-	import RotateCcwIcon from '@lucide/svelte/icons/rotate-ccw';
 
 	/**
 	 * The model/provider pill + "Derin düşün" pill row — extracted from
@@ -103,7 +101,7 @@
 <div class="compose-controls {className}">
 	<label class="model-pill" for="{idPrefix}-model-select">
 		<span class="sr-only">{t('ModelPickerRow.modelSrLabel')}</span>
-		<BotIcon size={13} aria-hidden="true" />
+		<Icon name="bot" size="sm" />
 		<select
 			id="{idPrefix}-model-select"
 			title={t('ModelPickerRow.modelSelectTitle')}
@@ -131,7 +129,7 @@
 			bind:checked={thinkMode}
 			class="sr-only"
 		/>
-		<BrainIcon size={13} aria-hidden="true" />
+		<Icon name="neurology" size="sm" />
 		{t('ModelPickerRow.thinkModeLabel')}
 	</label>
 	<label
@@ -151,7 +149,7 @@
 			}}
 			class="sr-only"
 		/>
-		<RotateCcwIcon size={13} aria-hidden="true" />
+		<Icon name="reset" size="sm" />
 		{t('ModelPickerRow.reviewModeLabel')}
 	</label>
 </div>
@@ -235,7 +233,7 @@
 		outline-offset: 1px;
 	}
 
-	.model-pill :global(svg) {
+	.model-pill :global(.vc-icon) {
 		flex-shrink: 0;
 		color: var(--color-muted-foreground);
 	}

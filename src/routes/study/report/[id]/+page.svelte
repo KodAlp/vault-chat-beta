@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '$lib/components/Icon.svelte';
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
 	import { renderMarkdown } from '$lib/markdown';
@@ -8,8 +9,6 @@
 	import { readResponseError, localizeError } from '$lib/server-error';
 	import type { PageProps } from './$types';
 	import type { ReportSectionView, ReportView } from '$lib/types';
-	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
-	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 
 	let { data }: PageProps = $props();
 
@@ -80,7 +79,7 @@
 </svelte:head>
 
 <div class="report-screen">
-	<a class="home-link" href={backHref}><ArrowLeftIcon class="rtl-flip" size={16} strokeWidth={1.75} aria-hidden="true" /> {t('Common.geriDon')}</a>
+	<a class="home-link" href={backHref}><Icon name="arrow-left" size="sm" class="rtl-flip" /> {t('Common.geriDon')}</a>
 
 	{#if phase === 'loading'}
 		<p class="status">{t('Common.yukleniyor')}</p>
@@ -117,7 +116,7 @@
 							{#each r.section.source_paths as path, i (path + '#' + i)}
 								<a class="source-link" href={libraryViewerUrl(path, data.vaultId ?? '', here)}>{path}</a>
 								<a class="source-link" href={libraryViewerUrl(path, data.vaultId ?? '', here)} title={t('Common.kaynagiAc')} aria-label={t('Common.kaynagiAc')}>
-									<ExternalLinkIcon size={16} strokeWidth={1.75} aria-hidden="true" />
+									<Icon name="external-link" size="sm" />
 								</a>
 							{/each}
 						</div>

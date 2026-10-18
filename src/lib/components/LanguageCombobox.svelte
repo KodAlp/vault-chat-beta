@@ -1,9 +1,6 @@
 <script lang="ts">
+	import Icon from '$lib/components/Icon.svelte';
 	import { tick } from 'svelte';
-	import CheckIcon from '@lucide/svelte/icons/check';
-	import ChevronsUpDownIcon from '@lucide/svelte/icons/chevrons-up-down';
-	import LoaderCircleIcon from '@lucide/svelte/icons/loader-circle';
-	import SearchIcon from '@lucide/svelte/icons/search';
 	import { i18n, setLocale, t } from '$lib/i18n/index.svelte';
 	import { LOCALES, localeInfo, type Locale } from '$lib/i18n/locales';
 
@@ -190,9 +187,9 @@
 	>
 		<span class="lang-trigger-label" lang={current.code} dir={current.dir}>{current.nativeName}</span>
 		{#if loading}
-			<LoaderCircleIcon class="animate-spin" size={14} strokeWidth={1.75} aria-hidden="true" />
+			<Icon name="loader" size="sm" class="animate-spin" />
 		{:else}
-			<ChevronsUpDownIcon size={14} strokeWidth={1.75} aria-hidden="true" />
+			<Icon name="chevrons-up-down" size="sm" />
 		{/if}
 	</button>
 
@@ -207,7 +204,7 @@
 			style:max-height="{pos.maxHeight}px"
 		>
 			<div class="lang-search">
-				<SearchIcon size={14} strokeWidth={1.75} aria-hidden="true" />
+				<Icon name="search" size="sm" />
 				<input
 					bind:this={searchEl}
 					bind:value={query}
@@ -240,7 +237,7 @@
 						<span class="lang-native" lang={loc.code} dir={loc.dir}>{loc.nativeName}</span>
 						<span class="lang-english" lang="en" dir="ltr">— {loc.englishName}</span>
 						{#if loc.code === i18n.locale}
-							<CheckIcon class="lang-check" size={16} strokeWidth={2} aria-hidden="true" />
+							<Icon name="check" size="sm" class="lang-check" />
 						{/if}
 					</li>
 				{:else}

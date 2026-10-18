@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '$lib/components/Icon.svelte';
 	import Chat from '$lib/components/Chat.svelte';
 	import ExportMenu from '$lib/components/ExportMenu.svelte';
 	import QuizDialog from '$lib/components/QuizDialog.svelte';
@@ -13,8 +14,6 @@
 	import StudyPanel from '$lib/components/StudyPanel.svelte';
 	import { scopeExpandSignal } from '$lib/scope-expand.svelte';
 	import { t } from '$lib/i18n/index.svelte';
-	import HomeIcon from '@lucide/svelte/icons/house';
-	import SettingsIcon from '@lucide/svelte/icons/settings';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -140,14 +139,14 @@
 				href="/?picker=1"
 				title={t('VaultChatPage.vaultPicker')}
 				aria-label={t('VaultChatPage.vaultPicker')}
-			><HomeIcon size={20} strokeWidth={1.75} aria-hidden="true" /></a>
+			><Icon name="house" /></a>
 			<ExportMenu chatId={data.chatId} />
 			<a
 				class="vc-icon-btn"
 				href="/settings"
 				title={t('Common.ayarlar')}
 				aria-label={t('Common.ayarlar')}
-			><SettingsIcon size={20} strokeWidth={1.75} aria-hidden="true" /></a>
+			><Icon name="settings" /></a>
 			<button
 				type="button"
 				class="vc-icon-btn study-panel-trigger"

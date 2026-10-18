@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '$lib/components/Icon.svelte';
 	import { onMount } from 'svelte';
 	import type { ProviderStatus, EmbeddingConfig } from '$lib/types';
 	import * as Card from '$lib/components/ui/card';
@@ -7,7 +8,6 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
-	import TriangleAlertIcon from '@lucide/svelte/icons/triangle-alert';
 	import ReindexDialog from './ReindexDialog.svelte';
 	import { t } from '$lib/i18n/index.svelte';
 	import { providerDisplayLabel } from '$lib/provider-label';
@@ -338,7 +338,7 @@
 					style="border-color: var(--warning); background: color-mix(in srgb, var(--warning) 10%, transparent); color: var(--warning);"
 					role="alert"
 				>
-					<TriangleAlertIcon size={16} aria-hidden="true" class="mt-0.5 shrink-0" />
+					<Icon name="warning" size="sm" class="mt-0.5 shrink-0" />
 					<span>{t('EmbeddingSettingsCard.cloudWarning', { provider: selectedProvider ? pLabel(selectedProvider.id, selectedProvider.label) : '' })}</span>
 				</div>
 			{/if}

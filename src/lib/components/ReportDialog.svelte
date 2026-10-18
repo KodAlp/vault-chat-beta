@@ -3,7 +3,6 @@
 	import { reportGeneration, startReportGeneration } from '$lib/report-generation.svelte';
 	import type { ReportGenerationRequest } from '$lib/types';
 	import GenerationDialog from './GenerationDialog.svelte';
-	import FileTextIcon from '@lucide/svelte/icons/file-text';
 	import { t } from '$lib/i18n/index.svelte';
 
 	let {
@@ -37,7 +36,7 @@
 	{vaultId}
 	{includedPaths}
 	bind:open
-	icon={FileTextIcon}
+	icon="file-text"
 	label={t('ReportDialog.label')}
 	dialogTitle={t('ReportDialog.dialogTitle')}
 	promptLabel={t('ReportDialog.promptLabel')}

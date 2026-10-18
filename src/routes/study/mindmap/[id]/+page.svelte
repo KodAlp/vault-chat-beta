@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '$lib/components/Icon.svelte';
 	import { onDestroy, onMount } from 'svelte';
 	import { page } from '$app/state';
 	import { buildTree, treeToMarkdownOutline } from '$lib/mindmap-tree';
@@ -8,11 +9,6 @@
 	import { readResponseError, localizeError } from '$lib/server-error';
 	import type { PageProps } from './$types';
 	import type { MindMapNodeView, MindMapView } from '$lib/types';
-	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
-	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
-	import ZoomInIcon from '@lucide/svelte/icons/zoom-in';
-	import ZoomOutIcon from '@lucide/svelte/icons/zoom-out';
-	import MaximizeIcon from '@lucide/svelte/icons/maximize';
 
 	let { data }: PageProps = $props();
 
@@ -147,7 +143,7 @@
 </svelte:head>
 
 <div class="mindmap-screen">
-	<a class="home-link" href={backHref}><ArrowLeftIcon class="rtl-flip" size={16} strokeWidth={1.75} aria-hidden="true" /> {t('Common.geriDon')}</a>
+	<a class="home-link" href={backHref}><Icon name="arrow-left" size="sm" class="rtl-flip" /> {t('Common.geriDon')}</a>
 
 	<!-- See study/report/[id]/+page.svelte for why every one of these view
 	     routes gets a boundary: phase='ready' is assigned before its subtree
@@ -179,7 +175,7 @@
 					disabled={!markmapInstance}
 					onclick={() => markmapInstance?.rescale(ZOOM_STEP_IN)}
 				>
-					<ZoomInIcon size={16} strokeWidth={1.75} aria-hidden="true" />
+					<Icon name="zoom-in" size="sm" />
 				</button>
 				<button
 					type="button"
@@ -188,7 +184,7 @@
 					disabled={!markmapInstance}
 					onclick={() => markmapInstance?.rescale(ZOOM_STEP_OUT)}
 				>
-					<ZoomOutIcon size={16} strokeWidth={1.75} aria-hidden="true" />
+					<Icon name="zoom-out" size="sm" />
 				</button>
 				<button
 					type="button"
@@ -197,7 +193,7 @@
 					disabled={!markmapInstance}
 					onclick={() => markmapInstance?.fit()}
 				>
-					<MaximizeIcon size={16} strokeWidth={1.75} aria-hidden="true" />
+					<Icon name="maximize" size="sm" />
 				</button>
 			</div>
 		</div>
@@ -212,7 +208,7 @@
 						{node.source_path}
 					</a>
 					<a class="source-link" href={libraryViewerUrl(node.source_path, data.vaultId ?? '', here)} title={t('Common.kaynagiAc')} aria-label={t('Common.kaynagiAc')}>
-						<ExternalLinkIcon size={16} strokeWidth={1.75} aria-hidden="true" />
+						<Icon name="external-link" size="sm" />
 					</a>
 				</div>
 			{/each}

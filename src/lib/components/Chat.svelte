@@ -11,9 +11,7 @@
 	import { localizeError, readResponseError } from '$lib/server-error';
 	import { takePendingMessage } from '$lib/pending-message';
 	import { shouldOfferNotRelevant } from '$lib/smalltalk-limits';
-	import ArrowDownIcon from '@lucide/svelte/icons/arrow-down';
 	import Icon from '$lib/components/Icon.svelte';
-	import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';
 
 	let {
 		chatId,
@@ -482,7 +480,7 @@
 					{#if onFocusTree}
 						<button type="button" class="vc-btn secondary" onclick={() => onFocusTree?.()}>
 							{t('Chat.emptyStateBrowseSources')}
-							<ArrowRightIcon class="rtl-flip" size={20} strokeWidth={1.75} aria-hidden="true" />
+							<Icon name="arrow-forward" />
 						</button>
 					{/if}
 				</div>
@@ -509,7 +507,7 @@
 				aria-label={t('Chat.scrollToBottom')}
 				title={t('Chat.scrollToBottom')}
 			>
-				<ArrowDownIcon size={20} strokeWidth={1.75} aria-hidden="true" />
+				<Icon name="arrow-down" />
 			</button>
 		{/if}
 	</div>
