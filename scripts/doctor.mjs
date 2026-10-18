@@ -241,6 +241,8 @@ console.log('\nOpsiyonel (belge/YouTube içe aktarma için)');
 	// src/lib/server/python-bin.ts ile aynı mantık (bağımsız .mjs olduğu için
 	// kopya — ikisini birlikte güncelleyin). Sıra: PYTHON_BIN, uygulamanın kendi
 	// venv'i, PATH taraması, bilinen konumlar. Windows'ta WindowsApps alias'ı atlanır.
+	// Windows'ta ek olarak paketle gelen Python (<sunucu kökü>/python/python.exe) ve değişmez kural:
+	// docling'i olan bir Python, olmayanın gölgesinde kalmaz (ayrıntı: python-bin.ts başlığı).
 	const isWin = process.platform === 'win32';
 	const isMac = process.platform === 'darwin';
 	const dataRoot = path.resolve(root, nonEmpty(process.env.DATA_DIR) ?? 'data');
@@ -284,13 +286,33 @@ console.log('\nOpsiyonel (belge/YouTube içe aktarma için)');
 		return out;
 	}
 
+	// python-bin.ts pythonHasDocling()'in aynası: dosya sistemi yoklaması, süreç başlatmaz.
+	function hasDocling(exe) {
+		if (!isWin) return false;
+		let dir = path.dirname(exe);
+		const isVenv = path.basename(dir).toLowerCase() === 'scripts';
+		if (isVenv) dir = path.dirname(dir);
+		if (existsSync(path.join(dir, 'Lib', 'site-packages', 'docling'))) return true;
+		if (isVenv || !process.env.APPDATA) return false;
+		const userBase = path.join(process.env.APPDATA, 'Python');
+		if (!existsSync(userBase)) return false;
+		return readdirSync(userBase).some((n) => /^Python3\d+$/.test(n) && existsSync(path.join(userBase, n, 'site-packages', 'docling')));
+	}
+
 	function resolvePython() {
 		if (nonEmpty(process.env.PYTHON_BIN)) return process.env.PYTHON_BIN;
-		const venvPy = isWin
+		const venvCandidate = isWin
 			? path.join(dataRoot, 'python-venv', 'Scripts', 'python.exe')
 			: path.join(dataRoot, 'python-venv', 'bin', 'python3');
-		if (existsSync(venvPy)) return venvPy;
-		return pythonCandidates()[0] ?? null;
+		const venvPy = existsSync(venvCandidate) ? venvCandidate : null;
+		const system = pythonCandidates();
+		if (venvPy && hasDocling(venvPy)) return venvPy;
+		const withDocling = system.find(hasDocling);
+		if (withDocling) return withDocling;
+		if (venvPy) return venvPy;
+		const bundled = isWin ? path.join(process.cwd(), 'python', 'python.exe') : null;
+		if (bundled && existsSync(bundled)) return bundled;
+		return system[0] ?? null;
 	}
 
 	function resolvePandoc() {

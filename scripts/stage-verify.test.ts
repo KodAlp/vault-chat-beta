@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { validateDefaultProviders, verifyStagedData } from './stage-verify.mjs';
+import { requiredNodeMajor, validateDefaultProviders, verifyStagedData } from './stage-verify.mjs';
 
 const DEFAULT_PATH = path.join(process.cwd(), 'data', 'providers.default.json');
 
@@ -83,4 +83,25 @@ test('verifyStagedData requires dist-server/build/index.js, ingest/convert.py an
 	assert.equal(noMcp.length, 1);
 	assert.match(noMcp[0], /vault-chat-mcp\.mjs/);
 	assert.equal(verifyStagedData({ ...base }).length, 3, 'flags omitted by the caller count as missing');
+});
+
+test('verifyStagedData requires the bundled node.exe / python.exe only where the caller asks (win32)', () => {
+	const base = { stagedProviders: SAME, defaultProviders: SAME, stagedDataEntries: ['providers.json'], ...PRESENT };
+	assert.deepEqual(verifyStagedData({ ...base }), [], 'omitted (non-Windows) = not required');
+	assert.deepEqual(verifyStagedData({ ...base, stagedNodeExists: true, stagedPythonExists: true }), []);
+	const noNode = verifyStagedData({ ...base, stagedNodeExists: false, stagedPythonExists: true });
+	assert.equal(noNode.length, 1);
+	assert.match(noNode[0], /node\/node\.exe/);
+	const noPython = verifyStagedData({ ...base, stagedNodeExists: true, stagedPythonExists: false });
+	assert.equal(noPython.length, 1);
+	assert.match(noPython[0], /python\/python\.exe/);
+});
+
+test('requiredNodeMajor reads the engines.node lower bound, and the repo pins 22', () => {
+	assert.equal(requiredNodeMajor('>=22 <23'), 22);
+	assert.equal(requiredNodeMajor('>= 20'), 20);
+	assert.equal(requiredNodeMajor('^22'), null);
+	assert.equal(requiredNodeMajor(undefined), null);
+	const pkg = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'package.json'), 'utf-8'));
+	assert.equal(requiredNodeMajor(pkg.engines.node), 22);
 });

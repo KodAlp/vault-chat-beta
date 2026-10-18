@@ -11,21 +11,24 @@ her adımı sırayla uygulaman yeterli.
 
 ## 0. Kapalı beta — bağımlılık listesi (önce bunu oku)
 
-Bu sürüm (**0.2.0, kapalı beta**) kurulum dosyası **yalnızca Vault Chat'in
-kendisini** kurar. Aşağıdaki programlar bilgisayarında **ayrıca** bulunmalı;
-kurulum dosyası bunları ne kurar ne de kontrol eder. Her birinin yanında
-tek satırlık `winget` komutu var (Başlat → "cmd" → yapıştır → Enter).
+Bu sürümün **Windows** kurulum dosyası **Node.js 22'yi, Python'u ve WebView2
+yükleyicisini kendi içinde taşır**: bunları ayrıca kurman gerekmez. Aşağıdaki
+diğer programlar (model kaynağı, Pandoc ve ağır PDF/OCR için isteğe bağlı
+docling) bilgisayarında **ayrıca** bulunmalı; kurulum dosyası bunları ne kurar
+ne de kontrol eder. Her birinin yanında tek satırlık `winget` komutu var
+(Başlat → "cmd" → yapıştır → Enter).
 
 | Bağımlılık | Durum | Sürüm | Kurulum komutu | Yoksa ne olur? |
 |---|---|---|---|---|
 | Windows 10/11 **x64** | Zorunlu | — | — | ARM (Snapdragon vb.) bilgisayarlarda çalışmaz |
-| Microsoft Edge WebView2 | Zorunlu | güncel | Windows 11'de hazır gelir; yoksa kurulum dosyası indirir (**internet gerekir**) | Pencere açılmaz |
-| **Node.js** | Zorunlu | **tam olarak 22.x** (20 ve 24 çalışmaz) | `winget install -e --id OpenJS.NodeJS.22` | Açılışta "Node.js bulunamadı"; yanlış sürümde uygulama açılışta veritabanını açamaz |
+| Microsoft Edge WebView2 | Zorunlu | güncel | Windows 11'de hazır gelir; yoksa kurulum dosyası içindeki küçük yükleyiciyle kurar (**internet gerekir**) | Pencere açılmaz |
+| **Node.js** | Pakette gömülü (Windows) | 22.x, uygulama her zaman kendi kopyasını kullanır | Gerekmez; sistemdeki Node'a dokunulmaz. (macOS/Linux: elle, `node --version` `v22.` ile başlamalı) | — |
 | **Ollama** (ya da başka bir yerel model sunucusu) | **Önerilen** | güncel | `winget install -e --id Ollama.Ollama` | Sohbet ve test/kart/rapor üretimi için **bir** model kaynağı gerekir: başka bir yerel sunucu (LM Studio, llama.cpp, vLLM, Jan...) ya da bir bulut sağlayıcı da olur. Hiçbiri yoksa sohbet çalışmaz ("Kurulum tamamlanmadı" uyarısı) |
 | ↳ `qwen3:8b` modeli | **Önerilen** | — | `ollama pull qwen3:8b` (~5 GB) | Başka bir sohbet modeli seçebilirsin; hiç model yoksa sohbet ve üretim çalışmaz |
 | ↳ `bge-m3` modeli | **Önerilen** | — | `ollama pull bge-m3` (~1,2 GB) | Anlamsal arama kapanır; notlar yine indekslenir ve **yalnızca anahtar kelimeyle** aranır (sonuçlar daha zayıf, özellikle Türkçe sorgularda). Başka bir embedding modeli de seçilebilir |
-| Python 3 | İsteğe bağlı | 3.12 önerilir | `winget install -e --id Python.Python.3.12` | **Hiçbir dosya içe aktarılamaz** (PDF, Word, bağlantı, YouTube, hatta .md yükleme) — sohbet çalışır |
-| ↳ Python paketleri | İsteğe bağlı | `ingest\requirements.txt`: markitdown 0.1.6, pypdf 6.14.2, yt-dlp 2026.7.4, trafilatura 2.2.0, py-asciimath 0.3.0 | Uygulamadaki "Şimdi kur" düğmesi ya da Adım 3b | Uygulama yalnız markitdown'u denetler; diğerleri eksikse web sayfası/YouTube içe aktarma hata verir |
+| Python 3 | Pakette gömülü (Windows) | 3.12 | Gerekmez. Bilgisayarında docling kurulu bir Python varsa (ya da `PYTHON_BIN` ayarlıysa) uygulama önce onu kullanır, böylece GB'larca paket yeniden inmez | — |
+| ↳ Python paketleri | İlk kullanımda kurulur | `ingest\requirements.txt`: markitdown 0.1.6, pypdf 6.14.2, yt-dlp 2026.7.4, trafilatura 2.2.0, py-asciimath 0.3.0 | Uygulamadaki "Şimdi kur" düğmesi (internet gerekir; paketler veri klasöründeki `python-venv`'e kurulur) | Kurulana kadar **hiçbir dosya içe aktarılamaz** (PDF, Word, bağlantı, YouTube, hatta .md yükleme) — sohbet çalışır |
+| ↳ docling | İsteğe bağlı | — | Elle (`pip install docling`) | Yalnız ağır PDF/OCR dönüştürme hızlı ve doğru yoldan yapılmaz; hafif yol yine çalışır |
 | Pandoc | İsteğe bağlı | güncel | `winget install -e --id JohnMacFarlane.Pandoc` | Yalnız `.tex` (LaTeX) içe aktarma çalışmaz |
 
 **Donanım:** `qwen3:8b` için en az **6 GB ekran kartı belleği** (NVIDIA
@@ -47,11 +50,10 @@ gerekir; sonrasında yerel sohbet internetsiz çalışır.
 
 Vault Chat, kasandaki notlar üzerinde çalışan yerel bir yapay zekâ sohbet
 uygulaması. İnternete ihtiyaç duymadan, bilgisayarının kendi işlem gücüyle
-çalışır. Bunun için bilgisayarında iki şeyin **ayrıca kurulu** olması
-gerekiyor — Vault Chat'in kurulum dosyası bunları kendisi kurmaz:
+çalışır. Windows kurulum dosyası uygulamanın motorunu (Node.js 22) ve
+Python'u kendi içinde taşır; bilgisayarında **ayrıca** şu gerekir:
 
-1. **Node.js 22** (uygulamanın arka planda çalıştırdığı motor)
-2. **Bir yapay zekâ model kaynağı** — **önerilen:** Ollama + iki model (sohbet
+1. **Bir yapay zekâ model kaynağı** — **önerilen:** Ollama + iki model (sohbet
    ve arama için). Ollama zorunlu değil: LM Studio, llama.cpp, vLLM, Jan gibi
    başka bir yerel sunucu ya da bir bulut sağlayıcı (DeepSeek, Gemini...) da
    olur; embedding (arama) modeli ise isteğe bağlıdır — yoksa notlar yalnızca
@@ -60,7 +62,11 @@ gerekiyor — Vault Chat'in kurulum dosyası bunları kendisi kurmaz:
 Aşağıdaki adımları sırayla takip et. Ollama'yı kurmak istemiyorsan Adım 3'ü
 atlayıp doğrudan Adım 5'teki kurulum sihirbazına geçebilirsin.
 
-## 2. Node.js'i kur
+## 2. Node.js (yalnızca macOS/Linux için; Windows'ta atla)
+
+Windows kurulum dosyası Node.js 22'yi içinde taşır ve her zaman kendi
+kopyasını kullanır — bu adım Windows'ta **gerekmez**. Aşağıdaki adımlar
+yalnızca macOS/Linux ya da kaynak koddan çalıştıranlar içindir.
 
 1. https://nodejs.org adresine git.
 2. **22.x** sürümünü indir (sayfada "LTS" yazan sürüm 22'den farklıysa, sitede
@@ -102,21 +108,22 @@ bulut sağlayıcı kullanacaksan atlayabilirsin. Ollama'yı kurmak ve modellerin
 **Bu adımı nasıl anlarım doğru gitti mi?** Aynı pencerede `ollama list`
 yazıp Enter'a bas — listede hem `qwen3:8b` hem `bge-m3` görünmeli.
 
-## 3b. PDF/doküman içe aktarma için Python (isteğe bağlı)
+## 3b. PDF/doküman içe aktarma için Python paketleri (Windows'ta Python hazır)
 
-Bu adım **yalnızca** notlarına PDF, Word veya YouTube transkripti içe
-aktarmak istiyorsan gerekli — sohbet ve normal not aramanın çalışması için
-gerekli değil, atlayıp devam edebilirsin.
+Windows kurulum dosyası Python 3.12'yi içinde taşır; Python'u ayrıca kurman
+gerekmez. Yalnızca notlarına PDF, Word veya YouTube transkripti içe aktarmak
+istiyorsan hafif paketler gerekli — sohbet ve normal not aramanın çalışması için
+gerekli değil.
 
-1. https://python.org adresine git, **Download Python** butonuna bas
-   (herhangi bir güncel Python 3 sürümü olur).
-2. İndirilen kurulum dosyasını çalıştır. Sihirbazın ilk ekranında **"Add
-   python.exe to PATH"** kutucuğunu işaretlemeyi unutma — işaretlemezsen
-   Vault Chat Python'u bulamaz.
-3. Vault Chat'i kurduktan sonra (bkz. Adım 4), ilk PDF/doküman içe aktarma
+1. Vault Chat'i kurduktan sonra (bkz. Adım 4), ilk PDF/doküman içe aktarma
    denemende uygulama ekranın üstünde turuncu bir uyarı gösterir ve
-   **"Şimdi kur"** butonuyla gereken Python paketini senin yerine kurar —
-   elle bir komut çalıştırman gerekmez.
+   **"Şimdi kur"** butonuyla gereken Python paketlerini senin yerine kurar
+   (internet gerekir) — elle bir komut çalıştırman gerekmez. Paketler veri
+   klasöründeki `python-venv` ortamına kurulur.
+2. **Ağır PDF/OCR (docling) isteğe bağlıdır.** Bilgisayarında docling kurulu bir
+   Python varsa uygulama onu otomatik bulur ve tercih eder (GB'larca paketi
+   yeniden indirmez); yoksa hafif yol kullanılır. Kendi Python'unu seçmek için
+   `PYTHON_BIN` ortam değişkenini ayarlayabilirsin.
 
 **Elle kurmak istersen** (uygulama içindeki "Şimdi kur" butonu yerine):
 Vault Chat'in kurulu olduğu klasörde `ingest\requirements.txt` dosyasını
@@ -291,9 +298,11 @@ temizler); Etkinlik Monitörü'nden `node`'u sonlandırabilirsin.
 
 ## Sorun giderme
 
-- **Uygulama açılırken "Node.js bulunamadı" diyor** → Adım 2'yi tekrar
-  kontrol et, `node --version` komutu `v22.` ile başlamıyorsa Node.js ya
-  kurulmamış ya da yanlış sürüm kurulmuş.
+- **Uygulama açılırken "Node.js bulunamadı" diyor** → Windows kurulum dosyasında
+  Node.js gömülüdür; bu hata yalnızca eksik/bozuk bir kurulumda çıkar (Vault
+  Chat'i yeniden kur). macOS/Linux'ta Adım 2'yi tekrar kontrol et,
+  `node --version` komutu `v22.` ile başlamıyorsa Node.js ya kurulmamış ya da
+  yanlış sürüm kurulmuş.
 - **Kırmızı "Yerel sunucu … çalışmıyor" uyarısı çıkıyor** → Sohbetin
   kullandığı yerel sunucu (Ollama, LM Studio, llama.cpp... — uyarıda adı
   yazar) kapalı demektir. Sunucuyu aç (Ollama için görev çubuğunda
@@ -313,8 +322,8 @@ temizler); Etkinlik Monitörü'nden `node`'u sonlandırabilirsin.
   "Küçük GPU'lar için performans ayarları" bölümüne bak; birkaç ortam değişkeniyle
   belirgin hızlanma sağlanabilir.
 - **PDF/doküman içe aktarma çalışmıyor, turuncu uyarı çıkıyor** → bkz. "3b.
-  PDF/doküman içe aktarma için Python" — Python kurulu değil ya da gereken
-  paket henüz kurulmamış; uyarıdaki "Şimdi kur" butonu bunu senin yerine
+  PDF/doküman içe aktarma için Python paketleri" — gereken paketler henüz
+  kurulmamış; uyarıdaki "Şimdi kur" butonu bunu senin yerine
   halleder.
 - **Ayarlar → Sağlayıcılar'da bulut sağlayıcıların (DeepSeek, OpenRouter,
   Groq, Google AI Studio...) model listesi gelmiyor veya bağlantı testi
