@@ -24,7 +24,43 @@
 	// Bumped when a pending import is confirmed so the library tree below reloads.
 	let treeVersion = $state(0);
 
+	// Antivirus scan of imported files (GET/PUT /api/settings/av-scan, on by default).
+	let avScan = $state(true);
+	let avLoaded = $state(false);
+	let avError = $state('');
+
+	async function loadAvScan() {
+		try {
+			const res = await fetch('/api/settings/av-scan');
+			if (!res.ok) throw new Error();
+			avScan = ((await res.json()) as { avScan: boolean }).avScan;
+			avLoaded = true;
+		} catch {
+			avError = t('AvScanSettings.loadFailed');
+		}
+	}
+
+	/** Optimistic: the switch flips at once and is put back if the save fails. */
+	async function persistAvScan(checked: boolean) {
+		const previous = avScan;
+		avScan = checked;
+		avError = '';
+		try {
+			const res = await fetch('/api/settings/av-scan', {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ avScan: checked })
+			});
+			if (!res.ok) throw new Error();
+			avScan = ((await res.json()) as { avScan: boolean }).avScan;
+		} catch {
+			avScan = previous;
+			avError = t('AvScanSettings.saveFailed');
+		}
+	}
+
 	onMount(async () => {
+		loadAvScan();
 		try {
 			const res = await fetch('/api/library/settings');
 			if (!res.ok) throw new Error();
@@ -173,6 +209,16 @@
 					{t('LibrarySettingsPage.keepOriginals', { path: 'data/library/_meta/originals/' })}
 				</label>
 				<p class="text-muted-foreground text-xs">{t('LibrarySettingsPage.keepOriginalsHint')}</p>
+			</div>
+			<div class="flex flex-col gap-1">
+				<label class="flex cursor-pointer items-center gap-2 text-sm">
+					<Switch checked={avScan} disabled={!avLoaded} onCheckedChange={persistAvScan} />
+					{t('AvScanSettings.label')}
+				</label>
+				<p class="text-muted-foreground text-xs">{t('AvScanSettings.description')}</p>
+				{#if avError}
+					<p class="text-xs text-destructive" role="alert">{avError}</p>
+				{/if}
 			</div>
 			<div class="flex flex-col gap-1 text-sm">
 				{t('LibrarySettingsPage.responseLanguage')}
