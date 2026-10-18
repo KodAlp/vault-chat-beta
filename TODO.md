@@ -2,7 +2,7 @@
 
 Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncellenir.
 
-**Son güncelleme:** 2026-10-18 · Acil boş. Yapılabilir 1–3 (öğrenme ajanı, arayüz, güvenlik ve CI) bu dalda bitti; #51'in public anına bağlı kısmı kaldı. Dal `claude/remaining-steps-list-a9fde0` main'e alınmadı, push yok.
+**Son güncelleme:** 2026-10-18 · Acil boş. #51'in yerel kısmı (gitleaks) bitti; #27 tam set yazıldı ve retrieval koşuldu, üretim/yargıç koşusu kaldı. Dal `claude/kalan-adimlardan-devam-6e2e77`, push yok.
 
 ## Kurallar
 
@@ -50,11 +50,11 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 ## Yapılabilir
 
 ### 1. Güvenlik ve CI
-- [ ] **Public öncesi kalan.** gitleaks'i tam kural setiyle bir kez çalıştır; public olunca iş akışı tetikleyicilerini aç (adımlar `docs/dev/public-oncesi.md`). Yerel Windows ARM64 derlemesi sqlite-vec'in ARM64 paketi olmadığı için engelli. `K` · #51
+- [ ] **Public öncesi kalan.** Public olunca iş akışı tetikleyicilerini aç (adımlar `docs/dev/public-oncesi.md`). Yerel Windows ARM64 derlemesi sqlite-vec'in ARM64 paketi olmadığı için engelli. `K` · #51
 
 ### 2. RAG ve benchmark
-- [ ] **Tam altın set (330 soru) koşusu.** `O` · #27
-- [ ] **Reranker'ı üretime al.** Pilotta R@5 0,74 → 0,80; ONNX int8 ölçülmedi. `O` · #29
+- [ ] **Tam altın set: üretim ve yargıç koşusu.** 330 soru ve retrieval hazır (`docs/rag-benchmark-tam-set-2026-10-18.md`); kalan qwen3:8b cevapları + deepseek yargıcı (~6 $). `O` · #27
+- [ ] **Reranker'ı üretime al.** Tam sette R@5 0,688 → 0,748, nDCG@10 0,706 → 0,788 (p<0,001); en iyi aday skoru < 0,02 ise boş sonuç: cevapsızların 15/15'i süzülüyor, 305 cevaplıdan 7'si düşüyor (4'ü belirsiz). ONNX int8 ölçülmedi. `O` · #29
 - [ ] **İstem/skill dili A/B.** qwen3:8b için İngilizce çekirdek istem; educational-agent açık/kapalı. Kullanıcı notu: "olabilir". `O` · #28
 
 ### 3. Notebook verileri
@@ -102,6 +102,9 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 - [ ] **npm audit'te kalan orta düzey açıklar.** katex (marp-core, markmap, remark-math üzerinden) ve sprintf-js (gray-matter) yalnız kırıcı sürümle düzeliyor; `security-audit.mjs` high/critical'da düşüyor, bunlar geçiyor. `O`
 - [ ] **sqlite-vec yüklenemezse kasa yalnız-FTS'e düşsün.** Şu an `indexer/db.ts` ve `retrieve.ts` koşulsuz yüklüyor; yüklenemezse FTS de açılmıyor. Windows ARM64 için ön koşul (#51). `O`
 
+- [ ] **`default` indeksinde 6 `_meta` parçası.** `c2f2b49`'dan sonra bu kasa yeniden indekslenmedi; benchmark etiketleri çapayla bağlı olduğundan yeniden indeksleme sonrası `validate-golden --targets full` yeniden çalıştırılmalı. `K`
+- [ ] **Reranker multi_hop ve ambiguous'ta kazanç vermiyor.** Tam sette multi_hop R@5 0,62 → 0,60, ambiguous 0,40 → 0,37 (tek yorumu öne çekiyor); üretime alırken dosya başına çeşitlilik ya da iki aşamalı sorgu düşünülebilir. `O`
+
 ## Daha sonra
 
 - [ ] **PPTX kapı deneyi.** #15
@@ -131,6 +134,9 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 ## Son tamamlananlar
 
 Yalnız son iki haftanın kaydı tutulur; daha eskisi git geçmişindedir.
+
+- 2026-10-18: #27 tam altın set: 330 soru (pilot 70 + 5 Sonnet alt ajanının 260'ı; `FULL_TARGET`'la birebir, 934 etiketin hepsi çözülüyor) ve 7 varyantlı retrieval koşusu. `hybrid+rerank` R@5 0,748, `prod` 0,688 (p<0,001); mesafe eşiği 0,6 cevapsızların hiçbirini süzmüyor, reranker skoru 0,02 neredeyse bedelsiz süzüyor. `docs/rag-benchmark-tam-set-2026-10-18.md`
+- 2026-10-18: #51 gitleaks 8.30.1 tam kural setiyle (484 commit + çalışma ağacı): tek bulgu yanlış pozitif (YouTube altyazı dil anahtarı), `.gitleaksignore` ve `gitleaks:allow` ile işaretlendi. `24509c6`
 
 - 2026-10-18: #79 canlı denendi (ikinci Ollama 11435, geçici DATA_DIR, başsız Playwright): iki quiz ve quiz+kart aynı anda üç ayrı bildirimle çalıştı, iki quiz ayrı kimlikle bitti; "kapsam daraltma" bildirimi ve "Kapsamı genişlet?" sohbette ve üretimde çalışıyor (eşik 0,42 ile). Bulunan zaman aşımı ve eşik sorunları Öneriler'de.
 - 2026-10-18: #77 yeni sohbette "Tekrar modunda başla" önerisi (karar yalnız öğrenme durumundan: vadesi gelmiş kart, zayıf/eski konu; `GET /api/study/review-suggestion`). `93add17`
