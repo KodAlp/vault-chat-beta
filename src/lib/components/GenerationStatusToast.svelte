@@ -1,8 +1,6 @@
 <script lang="ts">
+	import Icon from '$lib/components/Icon.svelte';
 	import { motionFly } from '$lib/motion';
-	import CheckIcon from '@lucide/svelte/icons/check';
-	import XIcon from '@lucide/svelte/icons/x';
-	import AlertIcon from '@lucide/svelte/icons/triangle-alert';
 	import { t } from '$lib/i18n/index.svelte';
 
 	/**
@@ -90,7 +88,7 @@
 						title={t('GenerationStatusToast.cancel')}
 						aria-label={t('GenerationStatusToast.cancel')}
 					>
-						<XIcon size={16} strokeWidth={1.75} aria-hidden="true" />
+						<Icon name="close" size="sm" />
 					</button>
 				{/if}
 			</div>
@@ -101,12 +99,12 @@
 				onclick={onView}
 				transition:motionFly={{ y: 12 }}
 			>
-				<CheckIcon size={20} strokeWidth={1.75} aria-hidden="true" />
+				<Icon name="check" />
 				<span class="toast-title">{doneMessage}</span>
 			</button>
 		{:else if status.phase === 'error'}
 			<div class="vc-toast error" role="alert" transition:motionFly={{ y: 12 }}>
-				<AlertIcon size={20} strokeWidth={1.75} aria-hidden="true" />
+				<Icon name="warning" />
 				<div class="toast-body">
 					<span class="toast-title">{errorPrefix}{status.message}</span>
 					{#if (status.narrowScope && onExpandScope) || (status.embeddingMismatch && onReindex)}
@@ -138,7 +136,7 @@
 					title={t('GenerationStatusToast.dismiss')}
 					aria-label={t('GenerationStatusToast.dismiss')}
 				>
-					<XIcon size={16} strokeWidth={1.75} aria-hidden="true" />
+					<Icon name="close" size="sm" />
 				</button>
 			</div>
 		{/if}

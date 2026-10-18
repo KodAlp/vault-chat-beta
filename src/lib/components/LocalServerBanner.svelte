@@ -1,8 +1,7 @@
 <script lang="ts">
+	import Icon from '$lib/components/Icon.svelte';
 	import { untrack } from 'svelte';
 	import { motionFly } from '$lib/motion';
-	import TriangleAlertIcon from '@lucide/svelte/icons/triangle-alert';
-	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
 	import { isTauri, invoke } from '@tauri-apps/api/core';
 	import { afterNavigate } from '$app/navigation';
 	import { t } from '$lib/i18n/index.svelte';
@@ -179,7 +178,7 @@
 	<div class="banner-slot" transition:motionFly={{ y: -16 }}>
 		<div class="vc-banner warning" role="status">
 			<span class="dot" aria-hidden="true"></span>
-			<TriangleAlertIcon size={20} strokeWidth={1.75} class="banner-icon" aria-hidden="true" />
+			<Icon name="warning" class="banner-icon" />
 			<div class="banner-text">
 				<div class="t">{t('LocalServerBanner.setupNotFinished')}</div>
 				<div class="d">
@@ -194,7 +193,7 @@
 	<div class="banner-slot" transition:motionFly={{ y: -16 }}>
 		<div class="vc-banner danger" role="alert">
 			<span class="dot" aria-hidden="true"></span>
-			<TriangleAlertIcon size={20} strokeWidth={1.75} class="banner-icon" aria-hidden="true" />
+			<Icon name="warning" class="banner-icon" />
 			<div class="banner-text">
 				<div class="t">
 					{status === 'auth_error'
@@ -216,7 +215,7 @@
 					</button>
 				{/if}
 				<button type="button" class="vc-btn secondary" onclick={check} disabled={probing}>
-					<RefreshCwIcon size={16} strokeWidth={1.75} aria-hidden="true" class={probing ? 'animate-spin' : ''} />
+					<Icon name="refresh" size="sm" class={probing ? 'animate-spin' : ''} />
 					{probing ? t('LocalServerBanner.checking') : t('LocalServerBanner.retry')}
 				</button>
 			</div>
@@ -226,7 +225,7 @@
 	<div class="banner-slot" transition:motionFly={{ y: -16 }}>
 		<div class="vc-banner warning" role="status">
 			<span class="dot" aria-hidden="true"></span>
-			<TriangleAlertIcon size={20} strokeWidth={1.75} class="banner-icon" aria-hidden="true" />
+			<Icon name="warning" class="banner-icon" />
 			<div class="banner-text">
 				<div class="t">{t('LocalServerBanner.missingModels', { models: missingModels.join(', ') })}</div>
 				<div class="d">

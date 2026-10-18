@@ -1,12 +1,11 @@
 <script lang="ts">
+	import Icon from '$lib/components/Icon.svelte';
 	import { onMount, untrack } from 'svelte';
 	import { renderMarkdown } from '$lib/markdown';
 	import { libraryViewerUrl } from '$lib/sourceLink';
 	import { t } from '$lib/i18n/index.svelte';
 	import { readResponseError, localizeError } from '$lib/server-error';
 	import type { CardView, Grade } from '$lib/types';
-	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
-	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 
 	/**
 	 * The flashcard review session — front/reveal/grade, spaced-repetition
@@ -125,7 +124,7 @@
 </svelte:head>
 
 <div class="cards-screen">
-	<a class="home-link" href={backHref}><ArrowLeftIcon class="rtl-flip" size={16} strokeWidth={1.75} aria-hidden="true" /> {t('Common.geriDon')}</a>
+	<a class="home-link" href={backHref}><Icon name="arrow-left" size="sm" class="rtl-flip" /> {t('Common.geriDon')}</a>
 
 	{#if phase === 'loading'}
 		<p class="status">{t('Common.yukleniyor')}</p>
@@ -166,7 +165,7 @@
 									{card.source_path}
 								</a>
 								<a class="chip-icon" href={libraryViewerUrl(card.source_path, vaultId ?? '', here, card.heading_path)} title={t('Common.kaynagiAc')} aria-label={t('Common.kaynagiAc')}>
-									<ExternalLinkIcon size={16} strokeWidth={1.75} aria-hidden="true" />
+									<Icon name="external-link" size="sm" />
 								</a>
 							</span>
 						</div>

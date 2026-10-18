@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '$lib/components/Icon.svelte';
 	import { onMount } from 'svelte';
 	import { settings, persistSettings } from '$lib/settings.svelte';
 	import type { OllamaModel, ProviderModelOption } from '$lib/types';
@@ -13,8 +14,6 @@
 	import { providerDisplayLabel } from '$lib/provider-label';
 	const pLabel = (id: string, label: string) => providerDisplayLabel(id, label, t);
 	import { localizeError, readResponseError } from '$lib/server-error';
-	import DownloadIcon from '@lucide/svelte/icons/download';
-	import TrashIcon from '@lucide/svelte/icons/trash';
 
 	// Stable per-instance id prefix for label/control association.
 	const uid = $props.id();
@@ -311,7 +310,7 @@
 								aria-label={t('SettingsPage.deleteModelAria', { name: m.name })}
 								onclick={() => (deleteTarget = m)}
 							>
-								<TrashIcon size={14} aria-hidden="true" />
+								<Icon name="trash" size="sm" />
 							</Button>
 						</div>
 					{/each}
@@ -330,7 +329,7 @@
 							onkeydown={(e) => e.key === 'Enter' && pullModel()}
 						/>
 						<Button type="button" onclick={pullModel} disabled={!pullName.trim()} loading={pulling}>
-							{#if !pulling}<DownloadIcon size={14} aria-hidden="true" />{/if} {pulling ? t('SettingsPage.downloading') : t('SettingsPage.downloadModel')}
+							{#if !pulling}<Icon name="download" size="sm" />{/if} {pulling ? t('SettingsPage.downloading') : t('SettingsPage.downloadModel')}
 						</Button>
 					</div>
 					{#if pullStatus}

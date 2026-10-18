@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount, untrack } from 'svelte';
 	import type { Snippet } from 'svelte';
-	import type { LucideIcon } from '@lucide/svelte';
+	import Icon from '$lib/components/Icon.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Textarea } from '$lib/components/ui/textarea';
 	import { Checkbox } from '$lib/components/ui/checkbox';
@@ -60,7 +60,8 @@
 	}: {
 		chatId: string;
 		vaultId: string;
-		icon: LucideIcon;
+		/** Name of a static/icons/<name>.svg glyph. */
+		icon: string;
 		label: string;
 		dialogTitle: string;
 		promptLabel: string;
@@ -93,11 +94,6 @@
 		extraTop?: Snippet;
 		extraFields?: Snippet;
 	} = $props();
-
-	// Capitalized local binding — Svelte only treats a tag as a dynamic
-	// component when its name starts uppercase, so the lowercase `icon`
-	// prop can't be used as `<icon />` directly.
-	let Icon = $derived(icon);
 
 	let domains = $state<string[]>([]);
 	let selectedDomain = $state('');
@@ -206,7 +202,7 @@
 	title={dialogTitle}
 >
 	<span class="relative inline-flex">
-		<Icon size={19} aria-hidden="true" />
+		<Icon name={icon} />
 		{#if badge}
 			<span
 				class="absolute -top-1.5 -end-2.5 rounded-full bg-primary px-1 text-[0.6875rem] leading-none font-bold text-primary-foreground"

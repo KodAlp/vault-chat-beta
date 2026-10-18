@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '$lib/components/Icon.svelte';
 	import { onMount } from 'svelte';
 	import { isTauri, invoke } from '@tauri-apps/api/core';
 	import type { VaultRecord, VaultWithStatus } from '$lib/types';
@@ -15,7 +16,6 @@
 	import McpClientConnect from '$lib/components/McpClientConnect.svelte';
 	import { t } from '$lib/i18n/index.svelte';
 	import { readResponseError } from '$lib/server-error';
-	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
 
 	// Stable per-instance id prefix for label/control association.
 	const uid = $props.id();
@@ -429,7 +429,7 @@
 										reindexOpen = true;
 									}}
 								>
-									<RefreshCwIcon size={13} aria-hidden="true" />
+									<Icon name="refresh" size="sm" />
 									{t('VaultsSettingsPage.reindex')}
 								</Button>
 							{/if}

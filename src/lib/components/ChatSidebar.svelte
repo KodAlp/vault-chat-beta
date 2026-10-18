@@ -6,8 +6,6 @@
 	import { t } from '$lib/i18n/index.svelte';
 	import Icon from './Icon.svelte';
 	import { scopeSummary, type ScopeCounts } from '$lib/source-summary';
-	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
-	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 	import AnimatedIcon from './AnimatedIcon.svelte';
 
 	/**
@@ -125,7 +123,7 @@
 	<div class="top">
 		{#if !collapsed}
 			<a class="vault-name" href={'/vault/' + vaultId} title={t('VaultChatPage.backToChatList')}>
-				<ArrowLeftIcon class="rtl-flip" size={20} strokeWidth={1.75} aria-hidden="true" />
+				<Icon name="arrow-left" class="rtl-flip" />
 				<span>{vaultName}</span>
 			</a>
 		{/if}
@@ -199,7 +197,7 @@
 						<b>{t('SourcesSheet.title')}</b>
 						<small title={sourcesSubtitle}>{sourcesSubtitle}</small>
 					</span>
-					<ChevronRightIcon class="chev" size={16} strokeWidth={1.75} aria-hidden="true" />
+					<Icon name="chevron-right" size="sm" class="chev" />
 				</button>
 			{/if}
 		</div>

@@ -1,16 +1,11 @@
 <script lang="ts">
+	import Icon from '$lib/components/Icon.svelte';
 	import { renderMarkdown, stabilizeForStreaming } from '$lib/markdown';
 	import type { ChatMessage } from '$lib/types';
 	import SourceChip from './SourceChip.svelte';
 	import ChatBubble from './ChatBubble.svelte';
 	import FallbackNotice from './FallbackNotice.svelte';
 	import ThinkingPanel from './ThinkingPanel.svelte';
-	import FileTextIcon from '@lucide/svelte/icons/file-text';
-	import CheckIcon from '@lucide/svelte/icons/check';
-	import XIcon from '@lucide/svelte/icons/x';
-	import LoaderIcon from '@lucide/svelte/icons/loader';
-	import TriangleAlertIcon from '@lucide/svelte/icons/triangle-alert';
-	import InfoIcon from '@lucide/svelte/icons/info';
 	import { t } from '$lib/i18n/index.svelte';
 	import { localizeError } from '$lib/server-error';
 
@@ -84,16 +79,16 @@
 		<div class="tool-calls">
 			{#each message.toolCalls as tc, i (tc.skill + '#' + tc.path + '#' + i)}
 				<span class="vc-chip tool-call-chip" class:error={tc.status === 'error'} title={tc.error}>
-					<FileTextIcon size={16} strokeWidth={1.75} aria-hidden="true" />
+					<Icon name="file-text" size="sm" />
 					<span class="tool-call-path">{tc.path}</span>
 					{#if tc.status === 'reading'}
-						<LoaderIcon size={16} strokeWidth={1.75} aria-hidden="true" />
+						<Icon name="loader" size="sm" />
 						<span class="tool-call-status">{t('Message.toolReading')}</span>
 					{:else if tc.status === 'error'}
-						<XIcon size={16} strokeWidth={1.75} aria-hidden="true" />
+						<Icon name="close" size="sm" />
 						<span class="tool-call-status">{t('Message.toolError')}</span>
 					{:else}
-						<CheckIcon size={16} strokeWidth={1.75} aria-hidden="true" />
+						<Icon name="check" size="sm" />
 						<span class="tool-call-status">{t('Message.toolDone')}</span>
 					{/if}
 				</span>
@@ -113,7 +108,7 @@
 	</div>
 	{#if message.role === 'assistant' && !streaming && message.hedges?.length}
 		<span class="vc-badge hedge-badge" title={t('Message.hedgeBadgeTitle', { hedges: message.hedges.join(', ') })}>
-			<TriangleAlertIcon size={14} strokeWidth={1.75} aria-hidden="true" />
+			<Icon name="warning" size="sm" />
 			{t('Message.hedgeBadge', { count: message.hedges.length })}
 		</span>
 	{/if}
@@ -123,7 +118,7 @@
 		</div>
 		{#if onNotRelevant && !streaming}
 			<div class="vc-banner info extra">
-				<InfoIcon size={20} strokeWidth={1.75} aria-hidden="true" />
+				<Icon name="info" />
 				<div class="d">
 					{#if message.taughtSmallTalk}
 						{t('Message.taught')}
@@ -136,7 +131,7 @@
 	{/if}
 	{#if message.role === 'assistant' && message.smallTalk && !streaming}
 		<div class="vc-banner info extra">
-			<InfoIcon size={20} strokeWidth={1.75} aria-hidden="true" />
+			<Icon name="info" />
 			<div class="d">
 				{t('Message.smallTalk')}
 				{#if onForceSources}
@@ -147,7 +142,7 @@
 	{/if}
 	{#if message.role === 'assistant' && message.narrowScope && !streaming}
 		<div class="vc-banner warning extra">
-			<TriangleAlertIcon size={20} strokeWidth={1.75} aria-hidden="true" />
+			<Icon name="warning" />
 			<div class="d">
 				{t('Message.narrowScope')}
 				{#if onExpandScope}
@@ -158,13 +153,13 @@
 	{/if}
 	{#if message.role === 'assistant' && message.nearCtxLimit && !streaming}
 		<div class="vc-banner warning extra">
-			<TriangleAlertIcon size={20} strokeWidth={1.75} aria-hidden="true" />
+			<Icon name="warning" />
 			<div class="d">{t('Message.nearCtxLimit')}</div>
 		</div>
 	{/if}
 	{#if message.role === 'assistant' && message.embeddingIssue && !streaming}
 		<div class="vc-banner warning extra">
-			<TriangleAlertIcon size={20} strokeWidth={1.75} aria-hidden="true" />
+			<Icon name="warning" />
 			<div class="d">
 				{message.embeddingIssue === 'mismatch' ? t('Message.embeddingMismatch') : t('Message.embeddingUnavailable')}
 				{#if message.embeddingIssue === 'mismatch' && onReindex}
@@ -222,15 +217,15 @@
 		padding: var(--space-2) var(--space-3);
 	}
 
-	.extra :global(svg) {
+	.extra :global(.vc-icon) {
 		flex: none;
 	}
 
-	.extra.warning :global(svg) {
+	.extra.warning :global(.vc-icon) {
 		color: var(--warning);
 	}
 
-	.extra.info :global(svg) {
+	.extra.info :global(.vc-icon) {
 		color: var(--info);
 	}
 
@@ -283,7 +278,7 @@
 		overflow-wrap: anywhere;
 	}
 
-	.tool-call-chip :global(svg) {
+	.tool-call-chip :global(.vc-icon) {
 		flex: none;
 	}
 

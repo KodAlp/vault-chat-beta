@@ -1,23 +1,11 @@
 <script lang="ts">
+	import Icon from '$lib/components/Icon.svelte';
 	import { page } from '$app/state';
 	import { afterNavigate } from '$app/navigation';
 	import { t } from '$lib/i18n/index.svelte';
 	import { onMount } from 'svelte';
 	import { pendingImports, refreshPendingImports } from '$lib/pending-imports.svelte';
 	import { attentionCount } from '$lib/pending-imports-view';
-	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
-	import ArrowUpRightIcon from '@lucide/svelte/icons/arrow-up-right';
-	import PaletteIcon from '@lucide/svelte/icons/palette';
-	import ArchiveIcon from '@lucide/svelte/icons/archive';
-	import UploadIcon from '@lucide/svelte/icons/upload';
-	import SparklesIcon from '@lucide/svelte/icons/sparkles';
-	import BrainIcon from '@lucide/svelte/icons/brain';
-	import ChartColumnIcon from '@lucide/svelte/icons/chart-column';
-	import CpuIcon from '@lucide/svelte/icons/cpu';
-	import PlugIcon from '@lucide/svelte/icons/plug';
-	import Layers2Icon from '@lucide/svelte/icons/layers-2';
-	import MessageCircleIcon from '@lucide/svelte/icons/message-circle';
-	import type { Component } from 'svelte';
 
 	let { children } = $props();
 
@@ -38,7 +26,7 @@
 	interface NavItem {
 		href: string;
 		label: string;
-		icon: Component<any>;
+		icon: string;
 		/** Leaves the settings area (a study page, not a settings page). */
 		external?: boolean;
 		/** Count shown as a small pill after the label (hidden at 0). */
@@ -49,21 +37,21 @@
 		{
 			title: t('SettingsNav.groupGeneral'),
 			items: [
-				{ href: '/settings', label: t('SettingsNav.appearance'), icon: PaletteIcon },
-				{ href: '/settings/vaults', label: t('SettingsNav.vaults'), icon: ArchiveIcon },
-				{ href: '/settings/library', label: t('SettingsNav.upload'), icon: UploadIcon, badge: pendingCount },
-				{ href: '/settings/skills', label: t('SettingsNav.skills'), icon: SparklesIcon },
-				{ href: '/settings/memory', label: t('SettingsNav.memory'), icon: BrainIcon },
-				{ href: '/study/progress', label: t('SettingsNav.progress'), icon: ChartColumnIcon, external: true }
+				{ href: '/settings', label: t('SettingsNav.appearance'), icon: 'palette' },
+				{ href: '/settings/vaults', label: t('SettingsNav.vaults'), icon: 'archive' },
+				{ href: '/settings/library', label: t('SettingsNav.upload'), icon: 'upload', badge: pendingCount },
+				{ href: '/settings/skills', label: t('SettingsNav.skills'), icon: 'sparkles' },
+				{ href: '/settings/memory', label: t('SettingsNav.memory'), icon: 'neurology' },
+				{ href: '/study/progress', label: t('SettingsNav.progress'), icon: 'chart-column', external: true }
 			]
 		},
 		{
 			title: t('SettingsNav.groupAdvanced'),
 			items: [
-				{ href: '/settings/models', label: t('SettingsNav.models'), icon: CpuIcon },
-				{ href: '/settings/providers', label: t('SettingsNav.providers'), icon: PlugIcon },
-				{ href: '/settings/embedding', label: t('SettingsNav.embedding'), icon: Layers2Icon },
-				{ href: '/settings/smalltalk', label: t('SettingsNav.smalltalk'), icon: MessageCircleIcon }
+				{ href: '/settings/models', label: t('SettingsNav.models'), icon: 'cpu' },
+				{ href: '/settings/providers', label: t('SettingsNav.providers'), icon: 'plug' },
+				{ href: '/settings/embedding', label: t('SettingsNav.embedding'), icon: 'layers-2' },
+				{ href: '/settings/smalltalk', label: t('SettingsNav.smalltalk'), icon: 'message-circle' }
 			]
 		}
 	]);
@@ -82,7 +70,7 @@
 <div class="settings-shell">
 	<nav class="vc-sidebar settings-nav" aria-label={t('Common.ayarlar')}>
 		<a href="/" class="vc-side-row settings-back">
-			<ArrowLeftIcon class="rtl-flip" size={20} strokeWidth={1.75} aria-hidden="true" />
+			<Icon name="arrow-left" class="rtl-flip" />
 			{t('SettingsNav.backToApp')}
 		</a>
 		<div class="settings-nav-title">{t('Common.ayarlar')}</div>
@@ -90,19 +78,18 @@
 			<div class="settings-group">
 				<div class="vc-side-head">{group.title}</div>
 				{#each group.items as item (item.href)}
-					{@const Icon = item.icon}
 					<a
 						href={item.href}
 						class="vc-side-row"
 						aria-current={isActive(item, page.url.pathname) ? 'page' : undefined}
 					>
-						<Icon size={20} strokeWidth={1.75} aria-hidden="true" />
+						<Icon name={item.icon} />
 						{item.label}
 						{#if item.badge}
 							<span class="nav-badge" aria-label={t('PendingImports.navBadgeLabel', { count: item.badge })}>{item.badge}</span>
 						{/if}
 						{#if item.external}
-							<ArrowUpRightIcon class="meta" size={16} strokeWidth={1.75} aria-label={t('SettingsNav.leavesSettings')} />
+							<Icon name="arrow-up-right" size="sm" label={t('SettingsNav.leavesSettings')} class="meta" />
 						{/if}
 					</a>
 				{/each}

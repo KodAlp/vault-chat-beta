@@ -1,12 +1,9 @@
 <script lang="ts">
+	import Icon from '$lib/components/Icon.svelte';
 	import { goto } from '$app/navigation';
 	import type { LibraryNode } from '$lib/types';
 	import LibraryTreeNode from './LibraryTreeNode.svelte';
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
-	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
-	import FileTextIcon from '@lucide/svelte/icons/file-text';
-	import PencilIcon from '@lucide/svelte/icons/pencil';
-	import Trash2Icon from '@lucide/svelte/icons/trash-2';
 	import { t } from '$lib/i18n/index.svelte';
 
 	let { node, onchange }: { node: LibraryNode; onchange: () => void } = $props();
@@ -77,9 +74,9 @@
 <div class="node">
 	<div class="row" onclick={openFile} role="button" tabindex="0" onkeydown={onRowKeydown}>
 		{#if node.type === 'folder'}
-			<ChevronRightIcon class="caret {expanded ? 'open' : ''}" size={14} aria-hidden="true" />
+			<Icon name="chevron-right" size="sm" class="caret {expanded ? 'open' : ''}" />
 		{:else}
-			<FileTextIcon class="file-icon" size={13} aria-hidden="true" />
+			<Icon name="file-text" size="sm" class="file-icon" />
 		{/if}
 		{#if renaming}
 			<input
@@ -106,11 +103,11 @@
 		<span class="row-actions">
 			{#if node.type === 'file'}
 				<button onclick={startRename} title={t('LibraryTreeNode.rename')} aria-label={t('LibraryTreeNode.rename')}>
-					<PencilIcon size={13} aria-hidden="true" />
+					<Icon name="pencil" size="sm" />
 				</button>
 			{/if}
 			<button onclick={askRemove} title={t('Common.sil')} aria-label={t('Common.sil')}>
-				<Trash2Icon size={13} aria-hidden="true" />
+				<Icon name="trash" size="sm" />
 			</button>
 		</span>
 	</div>

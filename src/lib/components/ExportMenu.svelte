@@ -3,8 +3,6 @@
 	import { motionFly } from '$lib/motion';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import Icon from '$lib/components/Icon.svelte';
-	import CheckIcon from '@lucide/svelte/icons/check';
-	import XIcon from '@lucide/svelte/icons/x';
 	import { isTauri, invoke } from '@tauri-apps/api/core';
 	import { t } from '$lib/i18n/index.svelte';
 
@@ -165,7 +163,7 @@
 				title={t('Common.kapat')}
 				aria-label={t('Common.kapat')}
 			>
-				<XIcon size={14} aria-hidden="true" />
+				<Icon name="close" size="sm" />
 			</button>
 		</div>
 	{/if}
@@ -185,7 +183,7 @@
 			style="box-shadow: 0 2px 8px var(--accent-glow)"
 			transition:motionFly={{ y: 12 }}
 		>
-			<CheckIcon size={14} class="shrink-0 text-emerald-600" aria-hidden="true" />
+			<Icon name="check" size="sm" class="shrink-0 text-emerald-600" />
 			{successMessage}
 		</div>
 	{/if}

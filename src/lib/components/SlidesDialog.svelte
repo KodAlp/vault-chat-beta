@@ -3,7 +3,6 @@
 	import { slidesGeneration, startSlidesGeneration } from '$lib/slides-generation.svelte';
 	import type { SlidesGenerationRequest } from '$lib/types';
 	import GenerationDialog from './GenerationDialog.svelte';
-	import PresentationIcon from '@lucide/svelte/icons/presentation';
 	import { t } from '$lib/i18n/index.svelte';
 
 	let {
@@ -37,7 +36,7 @@
 	{vaultId}
 	{includedPaths}
 	bind:open
-	icon={PresentationIcon}
+	icon="presentation"
 	label={t('SlidesDialog.label')}
 	dialogTitle={t('SlidesDialog.dialogTitle')}
 	promptLabel={t('SlidesDialog.promptLabel')}

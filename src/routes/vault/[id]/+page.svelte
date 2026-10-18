@@ -12,12 +12,6 @@
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
 	import Icon from '$lib/components/Icon.svelte';
 	import ModelPickerRow from '$lib/components/ModelPickerRow.svelte';
-	import SettingsIcon from '@lucide/svelte/icons/settings';
-	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
-	import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';
-	import LibraryIcon from '@lucide/svelte/icons/library-big';
-	import PencilIcon from '@lucide/svelte/icons/pencil';
-	import Trash2Icon from '@lucide/svelte/icons/trash-2';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -247,7 +241,7 @@
 			href="/?picker=1"
 			class="flex items-center gap-1 rounded-[var(--radius-md)] px-1 text-[13px] leading-[18px] text-[var(--label-secondary)] hover:text-[var(--label)] focus-visible:outline-2 focus-visible:outline-[var(--focus-ring)] focus-visible:outline-offset-2"
 		>
-			<ArrowLeftIcon class="rtl-flip" size={16} strokeWidth={1.75} aria-hidden="true" /> {t('VaultChatListPage.backToVaults')}
+			<Icon name="arrow-left" size="sm" class="rtl-flip" /> {t('VaultChatListPage.backToVaults')}
 		</a>
 		<span
 			class="min-w-0 flex-1 truncate px-2 text-center text-[15px] leading-5 font-semibold tracking-[-0.23px]"
@@ -261,7 +255,7 @@
 			aria-label={t('Common.ayarlar')}
 			class="vc-icon-btn focus-visible:outline-2 focus-visible:outline-[var(--focus-ring)] focus-visible:outline-offset-2"
 		>
-			<SettingsIcon size={20} strokeWidth={1.75} aria-hidden="true" />
+			<Icon name="settings" />
 		</a>
 	</div>
 
@@ -277,7 +271,7 @@
 
 	<div class="mx-auto mb-4 flex shrink-0 flex-wrap items-center justify-center gap-2">
 		<a href="/settings/library" class="vc-btn secondary no-underline">
-			<LibraryIcon size={16} strokeWidth={1.75} aria-hidden="true" />
+			<Icon name="library-big" size="sm" />
 			{t('VaultChatListPage.viewSources')}
 		</a>
 		{#if readyImports > 0}
@@ -372,7 +366,7 @@
 							class="vc-icon-btn"
 							style="width: 28px; height: 28px;"
 						>
-							<PencilIcon size={16} strokeWidth={1.75} aria-hidden="true" />
+							<Icon name="pencil" size="sm" />
 						</button>
 						<button
 							type="button"
@@ -382,7 +376,7 @@
 							class="vc-icon-btn hover:!text-[var(--danger)]"
 							style="width: 28px; height: 28px;"
 						>
-							<Trash2Icon size={16} strokeWidth={1.75} aria-hidden="true" />
+							<Icon name="trash" size="sm" />
 						</button>
 					</div>
 				</li>
@@ -393,7 +387,7 @@
 			<p class="text-[17px] leading-[22px] font-semibold text-[var(--label)]">{t('VaultChatListPage.noSourcesTitle')}</p>
 			<p>{t('VaultChatListPage.noSourcesDescription')}</p>
 			<a href="/settings/library" class="vc-btn secondary no-underline">
-				{t('VaultChatListPage.importSources')} <ArrowRightIcon class="rtl-flip" size={16} strokeWidth={1.75} aria-hidden="true" />
+				{t('VaultChatListPage.importSources')} <Icon name="arrow-forward" size="sm" />
 			</a>
 		</div>
 	{:else if loadError}

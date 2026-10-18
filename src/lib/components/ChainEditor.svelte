@@ -1,13 +1,10 @@
 <script lang="ts">
+	import Icon from '$lib/components/Icon.svelte';
 	import { onMount, tick } from 'svelte';
 	import { flip } from 'svelte/animate';
 	import { flipDuration, motionEase } from '$lib/motion';
 	import { t } from '$lib/i18n/index.svelte';
 	import { moveItem } from '$lib/reorder';
-	import XIcon from '@lucide/svelte/icons/x';
-	import EllipsisVerticalIcon from '@lucide/svelte/icons/ellipsis-vertical';
-	import GripVerticalIcon from '@lucide/svelte/icons/grip-vertical';
-	import CheckIcon from '@lucide/svelte/icons/check';
 
 	/** One fallback-chain row of the providers page: a fixed-height strip of
 	 * provider chips (overflow collapses into "+N") and a ⋮ button that opens a
@@ -213,7 +210,7 @@
 					class="chain-x"
 					title={t('ProvidersSettingsPage.removeFromChain')}
 					aria-label="{t('ProvidersSettingsPage.removeFromChain')}: {labelFor(id)}"
-					onclick={() => remove(id)}><XIcon size={14} strokeWidth={1.75} aria-hidden="true" /></button
+					onclick={() => remove(id)}><Icon name="close" size="sm" /></button
 				>
 			</span>
 		{:else}
@@ -235,7 +232,7 @@
 		aria-label="{t('ProvidersSettingsPage.chainEdit')}: {label}"
 		onclick={toggle}
 	>
-		<EllipsisVerticalIcon size={18} strokeWidth={1.75} aria-hidden="true" />
+		<Icon name="ellipsis-vertical" />
 	</button>
 </div>
 
@@ -269,7 +266,7 @@
 								onpointerup={onGripUp}
 								onpointercancel={onGripUp}
 								onkeydown={(e) => onGripKey(e, id)}
-							><GripVerticalIcon size={16} strokeWidth={1.75} aria-hidden="true" /></button>
+							><Icon name="grip-vertical" size="sm" /></button>
 							<span class="chain-n" aria-hidden="true">{i + 1}</span>
 							<button
 								type="button"
@@ -279,7 +276,7 @@
 								onclick={() => remove(id)}
 							>
 								<span class="opt-name">{labelFor(id)}</span>
-								<span class="opt-box checked" aria-hidden="true"><CheckIcon size={12} strokeWidth={2.5} /></span>
+								<span class="opt-box checked" aria-hidden="true"><Icon name="check" size="sm" /></span>
 							</button>
 						</li>
 					{/each}

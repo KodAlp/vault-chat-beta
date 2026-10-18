@@ -1,6 +1,6 @@
 <script lang="ts">
+	import Icon from '$lib/components/Icon.svelte';
 	import { Select as SelectPrimitive } from "bits-ui";
-	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
 	import { cn, type WithoutChild } from "$lib/utils.js";
 
 	let {
@@ -25,5 +25,5 @@
 	{...restProps}
 >
 	<span class="min-w-0 truncate">{@render children?.()}</span>
-	<ChevronDownIcon class="size-4 text-muted-foreground pointer-events-none shrink-0" />
+	<Icon name="chevron-down" size="sm" class="size-4 text-muted-foreground pointer-events-none shrink-0" />
 </SelectPrimitive.Trigger>

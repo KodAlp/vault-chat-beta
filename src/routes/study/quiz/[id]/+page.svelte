@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '$lib/components/Icon.svelte';
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
 	import { renderMarkdown } from '$lib/markdown';
@@ -9,10 +10,6 @@
 	import { readResponseError, localizeError } from '$lib/server-error';
 	import { scoreExcludingFlagged } from '$lib/study-answers';
 	import type { PageProps } from './$types';
-	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
-	import CheckIcon from '@lucide/svelte/icons/check';
-	import XIcon from '@lucide/svelte/icons/x';
-	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 	import type {
 		QuizItemView,
 		QuizView,
@@ -213,7 +210,7 @@
 </svelte:head>
 
 <div class="quiz-screen">
-	<a class="home-link" href={backHref}><ArrowLeftIcon class="rtl-flip" size={16} strokeWidth={1.75} aria-hidden="true" /> {t('Common.geriDon')}</a>
+	<a class="home-link" href={backHref}><Icon name="arrow-left" size="sm" class="rtl-flip" /> {t('Common.geriDon')}</a>
 
 	<!-- See study/report/[id]/+page.svelte for why every one of these view
 	     routes gets a boundary: the phase is switched off 'loading' before its
@@ -308,10 +305,10 @@
 				<div class="result-item" class:correct={r.item.isCorrect} class:incorrect={!r.item.isCorrect}>
 					<div class="result-mark">
 						{#if r.item.isCorrect}
-							<CheckIcon size={20} strokeWidth={1.75} aria-hidden="true" />
+							<Icon name="check" />
 							<span class="sr-only">{t('QuizStudyPage.true')}</span>
 						{:else}
-							<XIcon size={20} strokeWidth={1.75} aria-hidden="true" />
+							<Icon name="close" />
 							<span class="sr-only">{t('QuizStudyPage.false')}</span>
 						{/if}
 					</div>
@@ -380,7 +377,7 @@
 							{r.item.sourcePath}
 						</a>
 						<a class="source-link" href={libraryViewerUrl(r.item.sourcePath, data.vaultId ?? '', here, r.item.headingPath)} title={t('Common.kaynagiAc')} aria-label={t('Common.kaynagiAc')}>
-							<ExternalLinkIcon size={16} strokeWidth={1.75} aria-hidden="true" />
+							<Icon name="external-link" size="sm" />
 						</a>
 					</div>
 				</div>

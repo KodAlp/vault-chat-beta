@@ -4,7 +4,6 @@
 	import type { QuizGenerationRequest } from '$lib/types';
 	import GenerationDialog from './GenerationDialog.svelte';
 	import { Input } from '$lib/components/ui/input';
-	import FileQuestionIcon from '@lucide/svelte/icons/file-question';
 	import { t } from '$lib/i18n/index.svelte';
 
 	let {
@@ -61,7 +60,7 @@
 	{vaultId}
 	{includedPaths}
 	bind:open
-	icon={FileQuestionIcon}
+	icon="file-question"
 	label={t('QuizDialog.label')}
 	dialogTitle={t('QuizDialog.dialogTitle')}
 	promptLabel={t('QuizDialog.promptLabel')}

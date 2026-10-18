@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '$lib/components/Icon.svelte';
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
 	import { resolveBackHref } from '$lib/back-link';
@@ -7,8 +8,6 @@
 	import { UNKNOWN_DOMAIN, type LearnerProfile, type MasteryEstimate, type RetentionEstimate, type SkillNode } from '$lib/learner-model';
 	import type { WeakSpotErrorView, WeakSpotView } from '$lib/types';
 	import type { PageProps } from './$types';
-	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
-	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
 
 	let { data }: PageProps = $props();
 
@@ -183,7 +182,7 @@
 						{#if spot.forgottenCards > 0}{t('ProgressPage.weakSpotForgottenCount', { count: spot.forgottenCards })}{/if}
 					</p>
 					<button type="button" class="toggle" aria-expanded={expandedSpots[spot.id] === true} onclick={() => (expandedSpots[spot.id] = !expandedSpots[spot.id])}>
-						<ChevronDownIcon size={16} class={expandedSpots[spot.id] ? 'open' : ''} aria-hidden="true" />
+						<Icon name="chevron-down" size="sm" class={expandedSpots[spot.id] ? 'open' : ''} />
 						{expandedSpots[spot.id] ? t('ProgressPage.weakSpotHideDetails') : t('ProgressPage.weakSpotShowDetails')}
 					</button>
 					{#if expandedSpots[spot.id]}
@@ -204,7 +203,7 @@
 </svelte:head>
 
 <div class="progress-screen">
-	<a class="home-link" href={backHref}><ArrowLeftIcon class="rtl-flip" size={16} strokeWidth={1.75} aria-hidden="true" /> {t('ProgressPage.back')}</a>
+	<a class="home-link" href={backHref}><Icon name="arrow-left" size="sm" class="rtl-flip" /> {t('ProgressPage.back')}</a>
 	<h1>{t('ProgressPage.title')}</h1>
 
 	{#if phase === 'loading'}
@@ -236,7 +235,7 @@
 					{@render bandRows(domain)}
 					{#if notes.length > 0}
 						<button type="button" class="toggle" aria-expanded={expanded[domain.id] === true} onclick={() => (expanded[domain.id] = !expanded[domain.id])}>
-							<ChevronDownIcon size={16} class={expanded[domain.id] ? 'open' : ''} aria-hidden="true" />
+							<Icon name="chevron-down" size="sm" class={expanded[domain.id] ? 'open' : ''} />
 							{expanded[domain.id] ? t('ProgressPage.hideNotes') : t('ProgressPage.showNotes', { count: notes.length })}
 						</button>
 						{#if expanded[domain.id]}

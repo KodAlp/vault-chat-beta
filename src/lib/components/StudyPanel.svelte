@@ -7,7 +7,6 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import Icon from '$lib/components/Icon.svelte';
 	import AnimatedIcon from '$lib/components/AnimatedIcon.svelte';
-	import Trash2Icon from '@lucide/svelte/icons/trash-2';
 	import type { StudySummary } from '$lib/types';
 	import { t } from '$lib/i18n/index.svelte';
 
@@ -204,7 +203,7 @@
 				<li>
 					<button type="button" class="item-title" onclick={() => openItem(route + '/' + item.id)}>{item.title}</button>
 					<button type="button" class="item-delete" onclick={(e) => askDelete(kind, item.id, item.title, e)} title={t('Common.sil')} aria-label={t('Common.sil')}>
-						<Trash2Icon size={14} strokeWidth={1.75} aria-hidden="true" />
+						<Icon name="trash" size="sm" />
 					</button>
 				</li>
 			{/each}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '$lib/components/Icon.svelte';
 	import { goto } from '$app/navigation';
 	import { motionFly } from '$lib/motion';
 	import type { VaultRecord, VaultWithStatus } from '$lib/types';
@@ -8,8 +9,6 @@
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { t } from '$lib/i18n/index.svelte';
 	import { readResponseError } from '$lib/server-error';
-	import SettingsIcon from '@lucide/svelte/icons/settings';
-	import PlusIcon from '@lucide/svelte/icons/plus';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -60,7 +59,7 @@
 			aria-label={t('Common.ayarlar')}
 			class="vc-icon-btn shrink-0 focus-visible:outline-2 focus-visible:outline-[var(--focus-ring)] focus-visible:outline-offset-2"
 		>
-			<SettingsIcon size={20} strokeWidth={1.75} aria-hidden="true" />
+			<Icon name="settings" />
 		</a>
 	</div>
 
@@ -81,7 +80,7 @@
 
 	<div class="mt-6">
 		<Button size="lg" onclick={() => (createOpen = true)}>
-			<PlusIcon size={20} strokeWidth={1.75} aria-hidden="true" />
+			<Icon name="plus" />
 			{t('HomePage.newVault')}
 		</Button>
 	</div>
