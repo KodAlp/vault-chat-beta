@@ -8,7 +8,7 @@ Durum: 2026-10-18. Repo hâlâ özel; Actions dakikaları bitti, bu yüzden iş 
   - Tek eşleşme `c0ba9a6`'daki birim testinin sahte anahtarı (`sk-abcdefghijklmnopqrstuvwxyz0123456789`, `maskKey` testi).
 - Depoya hiç `.env`, `.pem`, `.key`, `.pfx` ya da `secrets.json` girmedi; geçmişte yalnız `.env.example` var.
 - Takip edilen `data/providers*.json` dosyalarının geçmişinde `apiKey`/`token`/`secret` alanı yok.
-- **Kalan:** gitleaks'in tam kural setiyle bir kez çalıştırmak. Komut `node scripts/security-audit.mjs --only=gitleaks`; gitleaks kurulu olmalı (`winget install Gitleaks.Gitleaks`). `security.yml` bunu CI'da kendisi kuruyor.
+- 2026-10-18: gitleaks 8.30.1 tam kural setiyle çalıştırıldı (`node scripts/security-audit.mjs --only=gitleaks`; 484 commit, ayrıca çalışma ağacı `gitleaks dir .`). Tek bulgu yanlış pozitif: `ingest/youtube_transcript_test.py`'deki YouTube altyazı dil anahtarı `en-qlPKC2UN_YU` (`generic-api-key`). Geçmişteki hali `.gitleaksignore`'da parmak iziyle, güncel satır `# gitleaks:allow` ile işaretli. Şimdi sızıntı yok. `security.yml` gitleaks'i CI'da kendisi kuruyor ve aynı `.gitleaksignore`'u okuyor.
 
 ## 2. Tetikleyiciyi açmak
 

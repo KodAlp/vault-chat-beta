@@ -82,7 +82,7 @@ def test_find_subtitle_file_prefers_manual_over_auto() -> None:
         auto = {"en-orig": [...], "tr": [...]}
         path, is_auto, key = find_subtitle_file(out_dir, "vid123", ["tr", "en"], manual, auto, "en")
         check("manual subtitle chosen over auto even though 'tr' would match auto first", not is_auto)
-        check("the suffixed manual key was the one actually used", key == "en-qlPKC2UN_YU")
+        check("the suffixed manual key was the one actually used", key == "en-qlPKC2UN_YU")  # gitleaks:allow (dil anahtarı, sır değil)
         check("path points at the manual file", path.name == "vid123.en-qlPKC2UN_YU.vtt")
 
 
