@@ -58,6 +58,14 @@ test('buildJudgePrompt embeds delimiters and the injection disclaimer, numbers c
 	assert.match(prompt, /What is a B-tree\?/);
 });
 
+test('buildJudgePrompt keeps $-patterns in data verbatim', () => {
+	const answer = "Display $$x^2$$, prime $f'$ then $'tail, $`head, $& and $1.";
+	const prompt = buildJudgePrompt({ ...ITEM, answer, chunks: [{ ...ITEM.chunks[0], text: 'li $t0, 5 # $` and $\'' }] });
+	assert.ok(prompt.includes(`<answer>\n${answer}\n</answer>`));
+	assert.ok(prompt.includes("li $t0, 5 # $` and $'"));
+	assert.equal(prompt.split('Respond with ONLY').length, 2);
+});
+
 test('judgePromptSha1 is stable and non-empty', () => {
 	const a = judgePromptSha1();
 	const b = judgePromptSha1();

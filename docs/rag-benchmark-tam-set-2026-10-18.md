@@ -1,6 +1,6 @@
-# RAG benchmark: tam altın set, retrieval (2026-10-18)
+# RAG benchmark: tam altın set (2026-10-18)
 
-Pilotun (`docs/rag-benchmark-pilot-2026-09-27.md`) devamı. Veri seti ve ham sonuçlar kişisel not içeriği taşıdığı için repoda değil, `data/vaults/default/bench/` altında (gitignore). Bu belge yalnız toplu sayıları içerir. Üretim/yargıç koşusu bu belgede yok.
+Pilotun (`docs/rag-benchmark-pilot-2026-09-27.md`) devamı. Veri seti ve ham sonuçlar kişisel not içeriği taşıdığı için repoda değil, `data/vaults/default/bench/` altında (gitignore). Bu belge yalnız toplu sayıları içerir.
 
 ## Veri seti
 
@@ -65,6 +65,49 @@ Pilotun (`docs/rag-benchmark-pilot-2026-09-27.md`) devamı. Veri seti ve ham son
 - 0,02 eşiğinde düşen 7 sorunun 4'ü ambiguous; bunlarda da ideal davranış netleştirme istemek. Kalan 3'ü (2 multi_hop, 1 direct) gerçek kayıp.
 - **Sonuç:** mesafe eşiğini düşürmek çekimserlik için kötü bir takas; 0,45 cevaplanabilir soruların %2,3'ünü kaybediyor. Reranker skoru ise 0,02'de neredeyse bedelsiz ayırıyor. Pilottaki "eşik tam sette kalibre edilmeli" maddesinin cevabı bu.
 
+## Üretim, atıf, halüsinasyon (n=330)
+
+- **Test edilen sistem:** pilotla aynı. Model qwen3:8b (Ollama), kullanıcı skill'leri kapalı, `num_ctx` 8192, çıktı tavanı uygulanmadı. 330 cevabın hepsi üretildi, hata yok.
+- **Yargıç:** pilotta deepseek-v4-pro'ydu. Tam sette DeepSeek bakiyesi 76. soruda bitti, bu yüzden 330 cevabı aynı yargıç istemiyle (sha1 `262ac913…`) 15 Claude Sonnet 5.5 alt ajanı puanladı. Çıktılar `parseJudgeResponse` ile doğrulandı (330/330 geçerli) ve `bench/cache/judge.jsonl` üzerinden `run-generation.ts`'in kendi metrik hattına verildi.
+- **Yargıçlar arası uyum:** DeepSeek'in bakiye bitmeden puanladığı 73 ortak cevapta karşılaştırıldı.
+  - Doğruluk puanı: 55'inde birebir aynı, hepsinde fark en fazla 1. Spearman 0,88; "≥4" kararında %90 uyum.
+  - Ortalamalar: Sonnet 3,78, DeepSeek 3,86. Alakada 62/73 birebir aynı.
+  - Sonnet biraz daha katı. Pilotla karşılaştırırken doğrulukta yaklaşık 0,1'lik bir yargıç kayması hesaba katılmalı.
+
+| Metrik | Tam set (Sonnet) | Pilot (DeepSeek, n=70) |
+|---|---|---|
+| Correctness (1–5, cevaplanabilir) | 3.67 [3.56, 3.79] | 3.84 |
+| Correctness ≥4 | %61 [55, 67] | %68 |
+| Relevance (1–5) | 4.37 [4.26, 4.46] | 4.57 |
+| Faithfulness | 0.745 [0.715, 0.773] | 0.77 |
+| Desteklenmeyen iddia oranı | %18,4 [15,5, 21,4] | %16,7 |
+| Halüsinasyon oranı (cevaplanabilir) | %48 | %35 |
+| **Abstention accuracy** | **0/15** | 0/3 |
+| Yanlış çekimserlik (cevaplanabilir) | 0 | 0 |
+| Selamlaşmada uyum | 9/10 | 4/4 |
+| Yanıt dili uyumu | %99,4 (n=320) | %97 |
+| Multi-hop doğruluk ≥4 | %52 (n=50) | %70 (n=10) |
+| Cross-document doğruluk ≥4 | %55 (n=40) | %38 (n=8) |
+| Kaynak listesi kesinliği | %48,5 | %49 |
+| Citation recall | %85 | %88 |
+| Bağlam alakası (parça ≥1) | %63 | %71 |
+
+**Performans** (RTX 4050 6 GB): TTFT P50 1,7 s / P95 2,3 s · üretim P50 29 s / P95 73 s · 15,1 tok/s.
+
+**Bulgular, önem sırasıyla:**
+
+1. **Sistem bilmediğini hiç söylemiyor: 15 cevapsız sorunun 15'inde de uydurdu.** QUIC, OAuth PKCE, Kotlin coroutines, WebRTC, GraphQL, zk-SNARK gibi kasada hiç geçmeyen konuları kendi bilgisiyle uzun uzun anlattı. Cevapsız sorularda halüsinasyon oranı %96. Pilotta 3 soruyla görülen yön tam sette kesinleşti. Retrieval bölümündeki reranker eşiği (0,02) bu 15 sorunun hepsinde boş sonuç veriyor; asıl çare bu.
+2. **Gösterilen kaynakların yarısı hâlâ gereksiz** (kesinlik %48,5, pilotla aynı).
+3. **Cevaplanabilir sorularda da halüsinasyon yüksek:** cevapların %48'inde en az bir desteksiz iddia var. Doğru ama parçada olmayan bilgi de bu sayıma giriyor; yine de 8B model kaynağın dışına sık çıkıyor.
+4. **Belirsiz sorularda netleştirme yok.** 15 ambiguous sorunun 13'ü doğrulukta 3 ya da altı aldı, 9'u 2 aldı. Model çoğunda tek bir yorumu sessizce seçti ("heap", "cache", "priority scheduling").
+5. **Çıktı bozulmaları (%2,7):**
+   - 4 cevap tekrar döngüsüne girdi. En uç örnek f4_029: aynı bölüm 61 kez, 58 bin karakter. Benchmark gerçek rotanın 4096 tokenlık tavanını uygulamıyor, ama döngü tavanla da tavanın sonuna kadar sürer.
+   - 5 cevaba Çince sözcük karıştı.
+   - Birkaç cevap ortada kesildi.
+6. Multi-hop sonucu pilotta (%70) küçük örneklemden iyimser çıkmıştı; tam sette %52. Cross-document ise %38'den %55'e çıktı.
+
+**Yargıç istemindeki hata (bu koşuda bulundu ve düzeltildi):** `buildJudgePrompt`, cevap ve parça metnini `String.replace`'e düz dize olarak veriyordu. Bu durumda metindeki `$'`, `` $` ``, `$&` desen sayılıp istemin parçaları veriye ekleniyordu; `$$` de `$` oluyordu. 330 istemin 13'ü bozuldu, 30'unda yalnız `$$` tek `$`'a indi. Fonksiyon değiştiriciyle düzeltildi ve teste bağlandı. Bozulan 13 istem düzeltilmiş hâlleriyle yeniden yargılandı. Yalnız `$$` farkı olan 30 istemin yargıları korundu, çünkü gösterilen matematik aynı. **Pilotun DeepSeek yargıları da bu hatayla alındı.** Etkisi küçük (~%4 istem), ama pilot sayıları bunu taşıyor.
+
 ## Yeniden üretmek
 
 Tüm komutlar `DATA_DIR=<repo>/data` ile çalıştırılır.
@@ -76,10 +119,18 @@ npm run bench:retrieval -- --vault default --file data/vaults/default/bench/work
 
 Koşu: `results/2026-10-18T12-13-53-527Z-full-330`, git `24509c6`, veri seti sha1 `4012b154`. Koşu öncesi ve sonrasında `chats.db`, `index.db` ve `study.db` aynı kaldı.
 
+Üretim ve rapor koşuları:
+
+```bash
+npm run bench:generation -- --vault default --file data/vaults/default/bench/work/golden-full.jsonl --no-judge --label full-sut
+# yargılar bench/cache/judge.jsonl'de; hepsi önbellekteyse hiçbir bulut çağrısı yapılmaz
+npm run bench:generation -- --vault default --file data/vaults/default/bench/work/golden-full.jsonl --answers <full-sut>/answers.jsonl --allow-cloud deepseek-api --judge-model claude-sonnet-5-5 --label full-judged-sonnet
+```
+
+Sonuçlar `results/2026-10-18T12-31-21-791Z-full-sut` (cevaplar) ve `results/2026-10-18T18-39-00-585Z-full-judged-sonnet` (rapor) altında. Raporun başlığındaki "(deepseek-api)" yalnız sağlayıcı alanı; yargılar Sonnet alt ajanlarından geliyor.
+
 ## Açık
 
-- **Yargıç koşusu.** 330 cevap üretildi (`results/2026-10-18T12-31-21-791Z-full-sut`; qwen3:8b, skill'ler kapalı, hata 0). Performans: TTFT P50 1,7 s / P95 2,3 s; üretim süresi P50 29 s / P95 73 s; 15,1 tok/s. Yanıt dili uyumu %99,4 (n=320).
-  - İlk yargıç koşusu 76. soruda DeepSeek bakiyesi bitince (HTTP 402) bozuldu. Harcama yaklaşık 1,2 $; yargılar diske yazılmadığı için kayboldu.
-  - `run-generation.ts` artık başarılı her yargıyı `bench/cache/judge.jsonl`'e anında yazıyor. Anahtar, model ile yargıç isteminin sha1'i. Yeniden koşu önbellekteki yargıları atlıyor; 401/402'de koşu yeniden denemeden duruyor.
-  - Bakiye yüklenince aynı komutla sürdürülür: `--answers <full-sut>/answers.jsonl --allow-cloud deepseek-api --max-cost-usd 8 --rejudge 10 --sanity`.
-- `default` indeksinde 6 `_meta` parçası duruyor. `c2f2b49`'dan beri `_meta` indekslenmiyor, ama bu kasa o tarihten sonra yeniden indekslenmedi.
+- **İlk DeepSeek koşusu:** 76. soruda bakiye bittiğinde (HTTP 402) yaklaşık 1,2 $ harcanmıştı ve yargılar kayboldu. Kod artık her yargıyı anında `bench/cache/judge.jsonl`'e yazıyor ve 401/402'de duruyor.
+- **Öz-tutarlılık denemeleri yapılmadı:** `--rejudge` ve `--sanity` bu yargıç yolunda çalışmadı. Yani aynı cevapları yeniden puanlatma ve bilerek desteksiz cümle eklenmiş cevapla sağlama yapılmadı.
+- **`_meta` parçaları:** `default` indeksinde 6 tane duruyor. `c2f2b49`'dan beri `_meta` indekslenmiyor, ama bu kasa o tarihten sonra yeniden indekslenmedi.

@@ -2,7 +2,7 @@
 
 Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncellenir.
 
-**Son güncelleme:** 2026-10-18 · Acil boş. #51'in yerel kısmı (gitleaks) bitti; #27 tam set yazıldı ve retrieval koşuldu, üretim/yargıç koşusu kaldı. Dal `claude/kalan-adimlardan-devam-6e2e77`, push yok.
+**Son güncelleme:** 2026-10-18 · Acil boş. #51'in yerel kısmı ve #27 (tam altın set: retrieval + üretim + yargı) bitti. Dal `claude/kalan-adimlardan-devam-6e2e77`, main'e alınmadı, push yok.
 
 ## Kurallar
 
@@ -53,7 +53,6 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 - [ ] **Public öncesi kalan.** Public olunca iş akışı tetikleyicilerini aç (adımlar `docs/dev/public-oncesi.md`). Yerel Windows ARM64 derlemesi sqlite-vec'in ARM64 paketi olmadığı için engelli. `K` · #51
 
 ### 2. RAG ve benchmark
-- [ ] **Tam altın set: yargıç koşusu.** 330 soru, retrieval ve qwen3:8b cevapları hazır (`docs/rag-benchmark-tam-set-2026-10-18.md`); DeepSeek bakiyesi 76. soruda bitti. Bakiye yüklenince aynı komutla sürdür (yargılar artık önbellekte, ~6 $). `K` · #27
 - [ ] **Reranker'ı üretime al.** Tam sette R@5 0,688 → 0,748, nDCG@10 0,706 → 0,788 (p<0,001); en iyi aday skoru < 0,02 ise boş sonuç: cevapsızların 15/15'i süzülüyor, 305 cevaplıdan 7'si düşüyor (4'ü belirsiz). ONNX int8 ölçülmedi. `O` · #29
 - [ ] **İstem/skill dili A/B.** qwen3:8b için İngilizce çekirdek istem; educational-agent açık/kapalı. Kullanıcı notu: "olabilir". `O` · #28
 
@@ -103,6 +102,10 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 - [ ] **sqlite-vec yüklenemezse kasa yalnız-FTS'e düşsün.** Şu an `indexer/db.ts` ve `retrieve.ts` koşulsuz yüklüyor; yüklenemezse FTS de açılmıyor. Windows ARM64 için ön koşul (#51). `O`
 
 - [ ] **`default` indeksinde 6 `_meta` parçası.** `c2f2b49`'dan sonra bu kasa yeniden indekslenmedi; benchmark etiketleri çapayla bağlı olduğundan yeniden indeksleme sonrası `validate-golden --targets full` yeniden çalıştırılmalı. `K`
+- [ ] **Model cevapsız soruda hiç çekimser kalmıyor (0/15).** Tam sette 15 cevapsız sorunun hepsinde kendi bilgisiyle uydurdu; reranker eşiği 0,02 bu 15'in hepsinde boş sonuç veriyor (#29 ile birlikte), ama boş sonuçta da modelin "notlarda yok" demesi ayrıca sınanmalı. `O`
+- [ ] **Belirsiz soruda netleştirme yok.** 15 ambiguous sorunun 9'u doğrulukta 2 aldı; model tek yorumu sessizce seçiyor. İstemde "birden çok anlam varsa sor" kuralı ya da retrieval'da farklı dosyalardan gelen eşit skorlu parçalarla tetikleme. `O`
+- [ ] **qwen3:8b çıktı bozulmaları.** 330 cevapta 4 tekrar döngüsü (biri 58 bin karakter), 5 cevaba Çince sözcük karışması, birkaç kesik cevap. Uygulamada tekrar algılayıp akışı kesme ve CJK sızıntısını işaretleme düşünülebilir. `K–O`
+- [ ] **Benchmark öz-tutarlılığı Sonnet yargıcıyla sınanmadı.** `--rejudge` ve `--sanity` alt ajan yolunda çalışmadı; 10 cevabı ayrı ajana yeniden puanlatıp uyumu ölç. `K`
 - [ ] **Reranker multi_hop ve ambiguous'ta kazanç vermiyor.** Tam sette multi_hop R@5 0,62 → 0,60, ambiguous 0,40 → 0,37 (tek yorumu öne çekiyor); üretime alırken dosya başına çeşitlilik ya da iki aşamalı sorgu düşünülebilir. `O`
 
 ## Daha sonra
@@ -135,6 +138,7 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 
 Yalnız son iki haftanın kaydı tutulur; daha eskisi git geçmişindedir.
 
+- 2026-10-18: #27 üretim ve yargı: qwen3:8b 330 cevap; DeepSeek bakiyesi 76. soruda bittiği için yargıyı aynı istemle 15 Sonnet alt ajanı verdi (DeepSeek ile 73 ortak cevapta Spearman 0,88). Correctness 3,67, faithfulness 0,745, abstention 0/15, kaynak kesinliği %48,5. Yargıç isteminde `String.replace` `$`-desen hatası bulundu ve düzeltildi (13 istem bozuluyordu, pilot da etkilenmiş); yargılar artık anında önbelleğe yazılıyor, 401/402'de koşu duruyor. `b2a86c2`
 - 2026-10-18: #27 tam altın set: 330 soru (pilot 70 + 5 Sonnet alt ajanının 260'ı; `FULL_TARGET`'la birebir, 934 etiketin hepsi çözülüyor) ve 7 varyantlı retrieval koşusu. `hybrid+rerank` R@5 0,748, `prod` 0,688 (p<0,001); mesafe eşiği 0,6 cevapsızların hiçbirini süzmüyor, reranker skoru 0,02 neredeyse bedelsiz süzüyor. `docs/rag-benchmark-tam-set-2026-10-18.md`
 - 2026-10-18: #51 gitleaks 8.30.1 tam kural setiyle (484 commit + çalışma ağacı): tek bulgu yanlış pozitif (YouTube altyazı dil anahtarı), `.gitleaksignore` ve `gitleaks:allow` ile işaretlendi. `24509c6`
 

@@ -105,13 +105,16 @@ function formatChunks(chunks: JudgeChunkInput[]): string {
 }
 
 export function buildJudgePrompt(item: JudgeItemInput): string {
-	return JUDGE_PROMPT_TEMPLATE.replace('{{type}}', item.type)
-		.replace('{{answerable}}', String(item.answerable))
-		.replace('{{question}}', formatQuestion(item))
-		.replace('{{reference_answer}}', item.reference_answer || '(none — this question is not expected to be answerable from the vault)')
-		.replace('{{chunks}}', formatChunks(item.chunks))
-		.replace('{{answer}}', item.answer || '(empty answer)')
-		.replace(/\{\{numChunks\}\}/g, String(item.chunks.length));
+	// Function replacers: a string replacement would expand `$'`, `` $` ``, `$&` and `$$` found in
+	// answers and chunks (LaTeX, shell, asm), splicing parts of the template into the data.
+	const fill = (s: string) => () => s;
+	return JUDGE_PROMPT_TEMPLATE.replace('{{type}}', fill(item.type))
+		.replace('{{answerable}}', fill(String(item.answerable)))
+		.replace('{{question}}', fill(formatQuestion(item)))
+		.replace('{{reference_answer}}', fill(item.reference_answer || '(none — this question is not expected to be answerable from the vault)'))
+		.replace('{{chunks}}', fill(formatChunks(item.chunks)))
+		.replace('{{answer}}', fill(item.answer || '(empty answer)'))
+		.replace(/\{\{numChunks\}\}/g, fill(String(item.chunks.length)));
 }
 
 // ---------------------------------------------------------------------------
