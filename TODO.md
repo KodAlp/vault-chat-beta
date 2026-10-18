@@ -2,7 +2,7 @@
 
 Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncellenir.
 
-**Son güncelleme:** 2026-10-18 · Acil boşaldı. main origin'e push edildi (`796adf1`): #53 (gömülü Node 22 + Python, WebView2 önyükleyicisi) ve kurulu uygulamada denemesi; önceki push (`e4b2729`) #30, #33, #37, #3, #5, #43'ü içeriyordu. Kurulumda Ollama ile sohbet, docling'li Python seçimi ve gömülü Python'dan "Şimdi kur" çalışıyor. WebView2 önyükleyicisinin canlı denemesi atlandı (kullanıcı kararı).
+**Son güncelleme:** 2026-10-18 · Acil boş. F15 tam kapsamı (#18) dalda bitti (`ffd69f8`): paralel link indirme ve link manifesti; JS sayfa yedeği ölçümde 7 sayfanın yalnız birinde fark yarattığı için Daha sonra'ya alındı. main origin'de `796adf1` (#53 dahil); bu dal henüz main'e alınmadı.
 
 ## Kurallar
 
@@ -49,30 +49,27 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 
 ## Yapılabilir
 
-### 1. İçe aktarma
-- [ ] **F15 tam kapsamı.** Playwright ile JS sayfa yedeği, `manifest.jsonl`, paralel link indirme. `O` · #18
-
-### 2. Öğrenme ajanı
+### 1. Öğrenme ajanı
 - [ ] **Kapsam daraltma ve eşzamanlı üretim bildirimleri.** Canlı Ollama ile dene. `K` · #79
 - [ ] **F8: 12.000 karakter bütçesi ve `nearCtxLimit` eşiği.** Yeniden ölç. `K` · #78
 - [ ] **F6: otomatik mod geçişi.** v1 yalnız elle. `O` · #77
 
-### 3. Arayüz
+### 2. Arayüz
 - [ ] **LauncherPanel görsel denetimi.** `K` · #68
 - [ ] **Kalan lucide ikonları ve özel pencere çubuğu.** Yeni ikonlar geldi; önce onlara bak. `O` · #67
 
-### 4. Güvenlik ve CI
+### 3. Güvenlik ve CI
 - [ ] **CI'da `npm audit` / `cargo audit` / gitleaks.** `K` · #52
 - [ ] **Public öncesi hazırlık.** Geçmişte sır taraması, `desktop.yml` tetikleyicisi, Windows ARM, fork PR güvenliği. `O` · #51
 - [ ] **İçe aktarılan dosyalarda antivirüs taraması.** `O` · #60
 - [ ] **ollama-gate'te olası kilitlenme.** Akış içinde farklı model + evict beklemesi. `O` · #63
 
-### 5. RAG ve benchmark
+### 4. RAG ve benchmark
 - [ ] **Tam altın set (330 soru) koşusu.** `O` · #27
 - [ ] **Reranker'ı üretime al.** Pilotta R@5 0,74 → 0,80; ONNX int8 ölçülmedi. `O` · #29
 - [ ] **İstem/skill dili A/B.** qwen3:8b için İngilizce çekirdek istem; educational-agent açık/kapalı. Kullanıcı notu: "olabilir". `O` · #28
 
-### 6. Notebook verileri
+### 5. Notebook verileri
 - [ ] **Rusça kasası onarımı.** 14 uyarılı bekleyen; İngilizce/Mandarin/İspanyolca kasa sorusu. `O` · #21
 - [ ] **Notebook verileri dönüşümü.** 12 klasör → ayrı kasalar; Fizik bitti, dil ve bilim klasörleri kaldı. `B` · #20
 
@@ -104,6 +101,7 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 - [ ] **Fizik'teki 19 işaretli formülü "Yeniden oku" ile onar.** Eski işaretlerde kutu yok; kutu şablon eşlemeyle bulunuyor (iki örnekte skor 0,88–0,89). Kullanıcının uygulamada yapması gerekir. `K`
 
 - [ ] **#33 çipini gerçek sohbette dene.** Görüntüleyicinin başlığa kayması geçici kasada denendi (aynı adlı iki "Örnek", `**…**` `` `…` `` başlık); sohbetteki kaynak çipi, önizlemedeki bölüm bağlantıları, bilgi kartı ve test sonucu bağlantısı model olmadan tıklanmadı. `K`
+- [ ] **#18 link diyaloğunu uygulamada dene.** 4 eşzamanlı indirme, "başarısız linkleri yükle" ve "başarısızları yeniden dene" yalnız birim testte; canlı toplu işte aynı siteye 1 sn aralık, sonuçların bitiş sırasıyla gelmesi ve kazanılan süre ölçülmedi. Diğer 21 dilin çevirisi ana dili konuşan biri tarafından okunmadı. `K`
 - [ ] **bench `prod` varyantı gömmesiz 30 sn bekliyor.** Ollama kapalıyken `prod` her soruda `embedding-unavailable` ile 0 veriyor, diğer varyantlar önbellekten geliyor; koşu başında gömme sağlayıcısına bir kez ulaşıp erken durmalı. #30'un önbelleği boş canlı yolu (Ollama açık) da denenmedi. `K`
 
 ## Daha sonra
@@ -127,6 +125,7 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 - [ ] **Görsel açıklamalarını yerel VLM ile üretme.** `vc:gorsel` yuvası hazır; Qwen4'e kadar ertelendi. #85
 - [ ] **Bedrock ve Vertex sağlayıcıları.** Azure yapıldı (e61d6fd). #86
 - [ ] **Çoklu içe aktarma ölçüm belgesi.** `docs/coklu-ice-aktarma-olcum-2026-10-04.md`. #88
+- [ ] **F15: JS ile çizilen sayfalar için başsız tarayıcı yedeği.** 2026-10-18 ölçümü: 7 sayfada (OCW ders notları, angular.dev, vuejs.org, web.dev, docs.python.org, Notion yardım, Observable) trafilatura çıktısı düz indirmeyle çizilmiş DOM arasında yalnız Observable'da değişti (91 → 604 karakter). Sistem Chrome'u başsız modda çöktü, yalnız Playwright headless-shell çalıştı (~100 MB indirme); tüm alt istekler SSRF korumasından geçirilmeli. JS ağırlıklı kaynak gerçekten çoğalırsa. #18
 - [ ] **macOS imza + notarization (yıllık 99 $).** En son. #49
 
 ---
@@ -135,6 +134,7 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 
 Yalnız son iki haftanın kaydı tutulur; daha eskisi git geçmişindedir.
 
+- 2026-10-18: F15 tam kapsamı (#18): link içe aktarma 4 eşzamanlı (`runPool`; dönüştürme `sharedJobMutex`'te sıralı, indirmeler örtüşüyor), `politeDelay` eşzamanlı çağrıda aynı siteye 1 sn aralığı koruyor (yarış düzeldi), `_meta/link-manifest.jsonl` her linkin sonucunu tutuyor; diyalogda önceki başarısız linkleri yükleme ve bu koşunun başarısızlarını yeniden deneme, 23 dilde. JS sayfa yedeği ölçümle Daha sonra'ya alındı (kullanıcı kararı). `ffd69f8`
 - 2026-10-18: karar: WebView2 önyükleyicisinin WebView2'siz makinede canlı denemesi atlandı (#53); kurulum betiğinde `embedBootstrapper` ve Microsoft imzalı önyükleyici var, Windows 11'de WebView2 hazır geliyor.
 - 2026-10-18: main origin'e push edildi (`a1027f6` → `796adf1`, 8 commit): #53 ve kurulu uygulamadaki denemeleri artık uzak depoda.
 - 2026-10-18: #53 Python yolları kurulu sunucuyla (gömülü `node.exe` + `build`, geçici DATA_DIR, ayrı port) denendi: gerçek PATH'te docling'li sistem Python'u (3.12.0rc2) seçiliyor; Python'suz ortamda (dar PATH, Python'suz profil) gömülü 3.12.15 seçiliyor, "Şimdi kur" venv'i gömülü Python'dan açıp (`pyvenv.cfg` home = `dist-server\python`) altı modülü 157 sn'de kurdu, yeniden denetimde hepsi kurulu. `e18335d`
