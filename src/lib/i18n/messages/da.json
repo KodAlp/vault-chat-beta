@@ -492,6 +492,9 @@
 		"creating": "Opretter..."
 	},
 	"VaultChatListPage": {
+		"reviewSuggestion": "Kort til repetition: {cards} · svage emner: {topics} — start i repetitionstilstand",
+		"reviewSuggestionRegion": "Forslag til repetition",
+		"reviewSuggestionDismiss": "Luk forslaget",
 		"backToVaults": "Vaults",
 		"loadError": "Kunne ikke indlæse historikken",
 		"inputPlaceholder": "Skriv et spørgsmål... (Enter: start, Shift+Enter: ny linje)",

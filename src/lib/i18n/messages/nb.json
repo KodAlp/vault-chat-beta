@@ -488,6 +488,9 @@
 		"creating": "Oppretter..."
 	},
 	"VaultChatListPage": {
+		"reviewSuggestion": "Kort til repetisjon: {cards} · svake emner: {topics} — start i repetisjonsmodus",
+		"reviewSuggestionRegion": "Forslag om repetisjon",
+		"reviewSuggestionDismiss": "Lukk forslaget",
 		"backToVaults": "Hvelv",
 		"loadError": "Kunne ikke laste historikken",
 		"inputPlaceholder": "Skriv et spørsmål... (Enter: start, Shift+Enter: ny linje)",

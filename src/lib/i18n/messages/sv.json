@@ -520,6 +520,9 @@
 	},
 
 	"VaultChatListPage": {
+		"reviewSuggestion": "Kort att repetera: {cards} · svaga ämnen: {topics} — börja i repetitionsläge",
+		"reviewSuggestionRegion": "Repetitionsförslag",
+		"reviewSuggestionDismiss": "Stäng förslaget",
 		"backToVaults": "Valv",
 		"loadError": "Kunde inte läsa in historiken",
 		"inputPlaceholder": "Skriv en fråga... (Enter: starta, Shift+Enter: ny rad)",

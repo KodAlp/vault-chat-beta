@@ -489,6 +489,9 @@
     "creating": "Création…"
   },
   "VaultChatListPage": {
+    "reviewSuggestion": "Cartes à réviser : {cards} · sujets faibles : {topics} — commencer en mode Révision",
+    "reviewSuggestionRegion": "Suggestion de révision",
+    "reviewSuggestionDismiss": "Fermer la suggestion",
     "backToVaults": "Coffres",
     "loadError": "Impossible de charger l'historique",
     "inputPlaceholder": "Posez une question… (Entrée : lancer, Maj+Entrée : saut de ligne)",

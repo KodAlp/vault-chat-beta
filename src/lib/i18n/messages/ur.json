@@ -479,6 +479,9 @@
     "creating": "بن رہا ہے..."
   },
   "VaultChatListPage": {
+    "reviewSuggestion": "دہرانے کے کارڈ: {cards} · کمزور موضوعات: {topics} — دہرائی موڈ میں شروع کریں",
+    "reviewSuggestionRegion": "دہرائی کی تجویز",
+    "reviewSuggestionDismiss": "تجویز بند کریں",
     "backToVaults": "والٹس",
     "loadError": "ہسٹری لوڈ نہیں ہو سکی",
     "inputPlaceholder": "سوال لکھیں... (Enter: شروع کریں، Shift+Enter: نئی سطر)",

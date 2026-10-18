@@ -71,9 +71,54 @@
 	// the "view sources" link. 0 until fetched / on any failure.
 	let readyImports = $state(0);
 
+	// F6 suggestion chip (TODO #77): offered, never applied automatically. The decision is made server-side from
+	// learning-state counts only (GET /api/study/review-suggestion); this page just shows it. Dismissal is
+	// remembered per vault per day in localStorage (a per-viewer convenience, so every access is try/catch'd).
+	type ReviewSuggestion = { suggest: boolean; dueCards: number; weakDomains: number; openWeakSpots: number; staleDomains: number };
+	let reviewSuggestion = $state<ReviewSuggestion | null>(null);
+	let suggestionDismissed = $state(false);
+	let suggestionTopics = $derived(
+		reviewSuggestion ? reviewSuggestion.weakDomains + reviewSuggestion.openWeakSpots + reviewSuggestion.staleDomains : 0
+	);
+	const suggestionKey = () => `vc:review-suggestion-dismissed:${data.vaultId}:${new Date().toISOString().slice(0, 10)}`;
+
+	async function loadReviewSuggestion() {
+		try {
+			if (localStorage.getItem(suggestionKey())) {
+				suggestionDismissed = true;
+				return;
+			}
+		} catch {
+			// Storage unavailable: just show the chip.
+		}
+		try {
+			const res = await fetch(`/api/study/review-suggestion?vault=${encodeURIComponent(data.vaultId)}`);
+			if (!res.ok) return;
+			const body = (await res.json()) as ReviewSuggestion;
+			if (body.suggest) reviewSuggestion = body;
+		} catch {
+			// No chip — not worth an error state.
+		}
+	}
+
+	function dismissSuggestion() {
+		suggestionDismissed = true;
+		try {
+			localStorage.setItem(suggestionKey(), '1');
+		} catch {
+			// Dismissal then only lasts until reload.
+		}
+	}
+
+	function acceptSuggestion() {
+		// Same path as ticking the "Tekrar" pill: reviewMode is bound to ModelPickerRow's checkbox.
+		reviewMode = true;
+	}
+
 	onMount(() => {
 		refresh();
 		refreshModelOptions();
+		loadReviewSuggestion();
 	});
 
 	async function refreshModelOptions() {
@@ -281,6 +326,20 @@
 		{/if}
 	</div>
 
+	{#if reviewSuggestion && !suggestionDismissed && !reviewMode}
+		<div class="review-suggestion mx-auto mb-2 shrink-0" role="region" aria-label={t('VaultChatListPage.reviewSuggestionRegion')}>
+			<button type="button" class="vc-chip" onclick={acceptSuggestion}>
+				<Icon name="reset" size="sm" />
+				<span>
+					{t('VaultChatListPage.reviewSuggestion', { cards: reviewSuggestion.dueCards, topics: suggestionTopics })}
+				</span>
+			</button>
+			<button type="button" class="vc-icon-btn" onclick={dismissSuggestion} aria-label={t('VaultChatListPage.reviewSuggestionDismiss')} title={t('VaultChatListPage.reviewSuggestionDismiss')}>
+				<Icon name="close" size="sm" />
+			</button>
+		</div>
+	{/if}
+
 	<div class="vc-composer mx-auto mb-6 shrink-0">
 		<textarea
 			id="new-chat-input"
@@ -421,6 +480,18 @@
 </AlertDialog.Root>
 
 <style>
+	.review-suggestion {
+		display: flex;
+		align-items: center;
+		gap: var(--space-1);
+		max-width: 100%;
+	}
+	.review-suggestion :global(.vc-chip) {
+		height: auto;
+		min-height: 28px;
+		padding-block: 4px;
+		text-align: start;
+	}
 	.vc-composer textarea {
 		field-sizing: content;
 		max-height: 10rem;

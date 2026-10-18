@@ -2,7 +2,14 @@ import { computeLearnerProfile, computeWeakSpots } from './learner-store';
 import { deriveMemorySignals } from './memory-runtime';
 import { getDueCards } from './study-db';
 import { buildReviewBlockText } from '../review-block';
-import { REVIEW_MAX_DUE_CARDS, REVIEW_MAX_STALE_DOMAINS, STALE_DOMAIN_DAYS } from '../review-limits';
+import {
+	REVIEW_MAX_DUE_CARDS,
+	REVIEW_MAX_STALE_DOMAINS,
+	REVIEW_SUGGEST_MAX_DUE_CARDS,
+	REVIEW_SUGGEST_MIN_DUE_CARDS,
+	REVIEW_SUGGEST_MIN_TOPICS,
+	STALE_DOMAIN_DAYS
+} from '../review-limits';
 import type { LearnerProfile } from '../learner-model';
 import { logAppEvent } from './app-log';
 import type { VaultContext } from './vaults';
@@ -51,5 +58,38 @@ export async function computeReviewBlock(v: VaultContext, now: Date = new Date()
 	} catch (err) {
 		logAppEvent({ kind: 'review_error', message: err instanceof Error ? err.message : String(err) });
 		return '';
+	}
+}
+
+export interface ReviewSuggestion {
+	suggest: boolean;
+	dueCards: number;
+	weakDomains: number;
+	openWeakSpots: number;
+	staleDomains: number;
+}
+
+/**
+ * Pure: should the new-chat composer offer review mode? Decided ONLY from learning-state counts (the same inputs
+ * computeReviewBlock feeds the block), never from anything the user typed, so it is language-independent.
+ * Suggest when there is at least one due card, or at least one weak domain / open weak spot / stale domain.
+ */
+export function deriveReviewSuggestion(counts: { dueCards: number; weakDomains: number; openWeakSpots: number; staleDomains: number }): ReviewSuggestion {
+	const topics = counts.weakDomains + counts.openWeakSpots + counts.staleDomains;
+	return { ...counts, suggest: counts.dueCards >= REVIEW_SUGGEST_MIN_DUE_CARDS || topics >= REVIEW_SUGGEST_MIN_TOPICS };
+}
+
+/** Reads the learning state for the suggestion. Fails soft like computeReviewBlock: suggest:false, never throws. */
+export function computeReviewSuggestion(v: VaultContext, now: Date = new Date()): ReviewSuggestion {
+	try {
+		const profile = computeLearnerProfile(v, now);
+		const weakSpots = computeWeakSpots(v);
+		const { weakDomains, openWeakSpots } = deriveMemorySignals(profile, weakSpots);
+		const staleDomains = deriveStaleDomains(profile, STALE_DOMAIN_DAYS, now);
+		const dueCards = getDueCards(v, now.toISOString(), REVIEW_SUGGEST_MAX_DUE_CARDS).length;
+		return deriveReviewSuggestion({ dueCards, weakDomains: weakDomains.length, openWeakSpots: openWeakSpots.length, staleDomains: staleDomains.length });
+	} catch (err) {
+		logAppEvent({ kind: 'review_error', message: err instanceof Error ? err.message : String(err) });
+		return { suggest: false, dueCards: 0, weakDomains: 0, openWeakSpots: 0, staleDomains: 0 };
 	}
 }

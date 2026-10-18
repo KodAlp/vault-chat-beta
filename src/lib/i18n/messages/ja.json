@@ -479,6 +479,9 @@
     "creating": "作成中…"
   },
   "VaultChatListPage": {
+    "reviewSuggestion": "復習するカード: {cards} · 苦手な分野: {topics} — 復習モードで始める",
+    "reviewSuggestionRegion": "復習の提案",
+    "reviewSuggestionDismiss": "提案を閉じる",
     "backToVaults": "保管庫",
     "loadError": "履歴を読み込めませんでした",
     "inputPlaceholder": "質問を入力…（Enter：開始、Shift+Enter：改行）",

@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import Database from 'better-sqlite3';
-import { computeReviewBlock, deriveStaleDomains } from './review-mode';
+import { computeReviewBlock, computeReviewSuggestion, deriveReviewSuggestion, deriveStaleDomains } from './review-mode';
 import { closeVaultStudyDb, createDeck, getDeckCards, updateCardSchedule } from './study-db';
 import type { VaultContext } from './vaults';
 import type { LearnerProfile, MasteryEstimate, SkillNode } from '../learner-model';
@@ -90,4 +90,37 @@ test('end to end: a vault with no evidence at all still resolves to the "nothing
 	const out = await result;
 	assert.notEqual(out, '');
 	assert.match(out, /şu anda belirgin bir öncelik yok/);
+});
+
+test('deriveReviewSuggestion: nothing to review means no suggestion', () => {
+	assert.equal(deriveReviewSuggestion({ dueCards: 0, weakDomains: 0, openWeakSpots: 0, staleDomains: 0 }).suggest, false);
+});
+
+test('deriveReviewSuggestion: any single signal is enough', () => {
+	assert.equal(deriveReviewSuggestion({ dueCards: 1, weakDomains: 0, openWeakSpots: 0, staleDomains: 0 }).suggest, true);
+	assert.equal(deriveReviewSuggestion({ dueCards: 0, weakDomains: 1, openWeakSpots: 0, staleDomains: 0 }).suggest, true);
+	assert.equal(deriveReviewSuggestion({ dueCards: 0, weakDomains: 0, openWeakSpots: 1, staleDomains: 0 }).suggest, true);
+	assert.equal(deriveReviewSuggestion({ dueCards: 0, weakDomains: 0, openWeakSpots: 0, staleDomains: 2 }).suggest, true);
+});
+
+test('computeReviewSuggestion end to end: empty vault -> false; a due card -> true with the count', () => {
+	let empty!: ReturnType<typeof computeReviewSuggestion>;
+	let due!: ReturnType<typeof computeReviewSuggestion>;
+	withVault((v) => {
+		empty = computeReviewSuggestion(v, NOW);
+	});
+	withVault((v) => {
+		const deck = createDeck(v, 'd', {}, 'm', [{ front: 'q', back: 'b', source_path: 'wiki/db/a.md', heading_path: 'A', domain: 'db', level: 'basic' }]);
+		const cards = getDeckCards(v, deck);
+		updateCardSchedule(v, cards[0].id, { ease: 2.5, interval_days: 1, due_at: daysAgo(0), reps: 1, lapses: 0 });
+		due = computeReviewSuggestion(v, NOW);
+	});
+	assert.equal(empty.suggest, false);
+	assert.equal(due.suggest, true);
+	assert.equal(due.dueCards, 1);
+});
+
+test('computeReviewSuggestion fails soft: a broken vault gives suggest:false, not a throw', () => {
+	const v = { id: 'broken-x', name: 't', dir: '/nonexistent', libraryRoot: '/nonexistent', indexDbPath: '/nonexistent/i.db', studyDbPath: '/nonexistent/s.db' } as VaultContext;
+	assert.equal(computeReviewSuggestion(v, NOW).suggest, false);
 });

@@ -510,6 +510,9 @@
 	},
 
 	"VaultChatListPage": {
+		"reviewSuggestion": "Tekrar edilecek kart: {cards} · zayıf konu: {topics} — Tekrar modunda başla",
+		"reviewSuggestionRegion": "Tekrar önerisi",
+		"reviewSuggestionDismiss": "Öneriyi kapat",
 		"backToVaults": "Vault'lar",
 		"loadError": "Geçmiş alınamadı",
 		"inputPlaceholder": "Bir soru yaz... (Enter: başlat, Shift+Enter: yeni satır)",

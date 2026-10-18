@@ -487,6 +487,9 @@
     "creating": "Wird erstellt…"
   },
   "VaultChatListPage": {
+    "reviewSuggestion": "Fällige Karten: {cards} · schwache Themen: {topics} — im Wiederholungsmodus starten",
+    "reviewSuggestionRegion": "Wiederholungsvorschlag",
+    "reviewSuggestionDismiss": "Vorschlag schließen",
     "backToVaults": "Tresore",
     "loadError": "Der Verlauf konnte nicht geladen werden",
     "inputPlaceholder": "Stelle eine Frage… (Enter: starten, Shift+Enter: neue Zeile)",

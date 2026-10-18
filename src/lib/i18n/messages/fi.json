@@ -489,6 +489,9 @@
 		"creating": "Luodaan..."
 	},
 	"VaultChatListPage": {
+		"reviewSuggestion": "Kertattavia kortteja: {cards} · heikkoja aiheita: {topics} — aloita kertaustilassa",
+		"reviewSuggestionRegion": "Kertausehdotus",
+		"reviewSuggestionDismiss": "Sulje ehdotus",
 		"backToVaults": "Holvit",
 		"loadError": "Historiaa ei voitu ladata",
 		"inputPlaceholder": "Kirjoita kysymys... (Enter: aloita, Shift+Enter: uusi rivi)",

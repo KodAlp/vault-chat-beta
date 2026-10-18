@@ -491,6 +491,9 @@
     "creating": "Criando..."
   },
   "VaultChatListPage": {
+    "reviewSuggestion": "Cartões a rever: {cards} · tópicos fracos: {topics} — começar no modo Revisão",
+    "reviewSuggestionRegion": "Sugestão de revisão",
+    "reviewSuggestionDismiss": "Dispensar sugestão",
     "backToVaults": "Cofres",
     "loadError": "Não foi possível carregar o histórico",
     "inputPlaceholder": "Digite uma pergunta... (Enter: iniciar, Shift+Enter: nova linha)",

@@ -479,6 +479,9 @@
     "creating": "Membuat…"
   },
   "VaultChatListPage": {
+    "reviewSuggestion": "Kartu jatuh tempo: {cards} · topik lemah: {topics} — mulai dalam mode Ulasan",
+    "reviewSuggestionRegion": "Saran ulasan",
+    "reviewSuggestionDismiss": "Tutup saran",
     "backToVaults": "Vault",
     "loadError": "Gagal memuat riwayat",
     "inputPlaceholder": "Ketik pertanyaan… (Enter: mulai, Shift+Enter: baris baru)",

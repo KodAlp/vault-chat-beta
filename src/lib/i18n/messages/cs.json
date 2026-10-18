@@ -488,6 +488,9 @@
 		"creating": "Vytváření…"
 	},
 	"VaultChatListPage": {
+		"reviewSuggestion": "Karty k opakování: {cards} · slabá témata: {topics} — začít v režimu opakování",
+		"reviewSuggestionRegion": "Návrh opakování",
+		"reviewSuggestionDismiss": "Zavřít návrh",
 		"backToVaults": "Trezory",
 		"loadError": "Historii se nepodařilo načíst",
 		"inputPlaceholder": "Napište otázku… (Enter: začít, Shift+Enter: nový řádek)",
