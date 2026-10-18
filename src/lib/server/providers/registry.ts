@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import { providersPath } from '../env';
-import { OllamaAdapter } from './ollama';
+import { OllamaAdapter, serveCtxFor } from './ollama';
 import { OpenAICompatAdapter } from './openai-compat';
 import { capsFor } from './model-caps';
 import { AnthropicAdapter } from './anthropic';
@@ -191,6 +191,22 @@ export async function modelCaps(
 		return capsFor(effective, entry.modelCaps?.[effective]);
 	} catch {
 		return { tools: false, reasoning: false };
+	}
+}
+
+/**
+ * The context window (num_ctx) Ollama will serve this chat request with, so prompt building can budget history
+ * against it. Undefined for every other provider kind (their windows are not ours to assume) and on any failure.
+ */
+export function servedContext(pinnedProviderId: string | undefined, model: string): number | undefined {
+	try {
+		const providerId = chatProviderId(pinnedProviderId);
+		if (!providerId) return undefined;
+		const entry = loadConfig().providers.find((p) => p.id === providerId);
+		if (!entry || entry.kind !== 'ollama') return undefined;
+		return serveCtxFor(model || entry.defaultModel || '');
+	} catch {
+		return undefined;
 	}
 }
 

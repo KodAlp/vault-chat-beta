@@ -164,6 +164,29 @@ test('prior turns are carried between the system message and the final question,
 	delete process.env.CHAT_MEMORY_GATE;
 });
 
+test('numCtx shrinks the history budget to what is left in the window; without numCtx the 12K ceiling applies', async () => {
+	process.env.CHAT_MEMORY_GATE = '0';
+	useEmptySkillsDir();
+	const big = 'x'.repeat(2000);
+	const history: ChatMessage[] = [];
+	for (let i = 0; i < 5; i++) {
+		history.push({ id: 'u' + i, role: 'user', content: big });
+		history.push({ id: 'a' + i, role: 'assistant', content: big });
+	}
+	history.push({ id: 'last', role: 'user', content: 'son soru' });
+	await withVaultAsync(async (v) => {
+		const unbounded = await buildPromptMessages(history, [], ['Türkçe'], v, 'free_chat', { responseLanguage: 'fixed' });
+		assert.equal(unbounded.length - 2, 6); // 12000 / 2000 prior turns kept
+		// A window already (nearly) full with system + question + output reserve: only the newest prior turn survives.
+		const tight = await buildPromptMessages(history, [], ['Türkçe'], v, 'free_chat', { responseLanguage: 'fixed', numCtx: 2100 });
+		assert.equal(tight.length - 2, 1);
+		// A roomy window keeps the ceiling.
+		const roomy = await buildPromptMessages(history, [], ['Türkçe'], v, 'free_chat', { responseLanguage: 'fixed', numCtx: 32768 });
+		assert.equal(roomy.length - 2, 6);
+	});
+	delete process.env.CHAT_MEMORY_GATE;
+});
+
 test('review mode with nothing to review: the review block is still in the system prompt, between skills and CORE_INVARIANTS', async () => {
 	process.env.CHAT_MEMORY_GATE = '0';
 	useEmptySkillsDir();
