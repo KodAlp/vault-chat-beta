@@ -1,0 +1,49 @@
+name: security
+
+# CI runs ONLY on the dedicated `ci` branch (and when started by hand from the Actions tab).
+# main, feature branches and pull requests never trigger it — GitHub Actions minutes are limited.
+# To run: git push origin <branch>:ci   (or Actions → security → Run workflow).
+# Same checks locally: node scripts/security-audit.mjs
+on:
+  workflow_dispatch:
+  push:
+    branches: [ci]
+  # Weekly run — enable once the repo is public (Actions minutes are free for public repos).
+  # schedule:
+  #   - cron: "0 6 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: npm audit / cargo audit / gitleaks
+    runs-on: ubuntu-latest
+    env:
+      CI: "1"
+      GITLEAKS_VERSION: "8.28.0"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci --ignore-scripts
+
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-audit
+
+      - name: Install gitleaks (pinned release, plain CLI)
+        run: |
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" -o gitleaks.tgz
+          tar -xzf gitleaks.tgz gitleaks
+          sudo mv gitleaks /usr/local/bin/gitleaks
+          rm gitleaks.tgz
+          gitleaks version
+
+      - run: node scripts/security-audit.mjs
