@@ -510,6 +510,9 @@
 	},
 
 	"VaultChatListPage": {
+		"reviewSuggestion": "Due cards: {cards} · weak topics: {topics} — start in Review mode",
+		"reviewSuggestionRegion": "Review suggestion",
+		"reviewSuggestionDismiss": "Dismiss suggestion",
 		"backToVaults": "Vaults",
 		"loadError": "Couldn't load history",
 		"inputPlaceholder": "Type a question... (Enter: start, Shift+Enter: new line)",

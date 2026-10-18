@@ -536,6 +536,9 @@
     "creating": "جارٍ الإنشاء..."
   },
   "VaultChatListPage": {
+    "reviewSuggestion": "بطاقات مستحقة: {cards} · مواضيع ضعيفة: {topics} — ابدأ في وضع المراجعة",
+    "reviewSuggestionRegion": "اقتراح مراجعة",
+    "reviewSuggestionDismiss": "إغلاق الاقتراح",
     "backToVaults": "المخازن",
     "loadError": "تعذّر تحميل السجل",
     "inputPlaceholder": "اكتب سؤالًا... (Enter: بدء، Shift+Enter: سطر جديد)",

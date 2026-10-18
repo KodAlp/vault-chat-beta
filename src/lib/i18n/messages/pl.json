@@ -485,6 +485,9 @@
 		"creating": "Tworzenie..."
 	},
 	"VaultChatListPage": {
+		"reviewSuggestion": "Fiszki do powtórki: {cards} · słabe tematy: {topics} — zacznij w trybie powtórek",
+		"reviewSuggestionRegion": "Propozycja powtórki",
+		"reviewSuggestionDismiss": "Zamknij propozycję",
 		"backToVaults": "Sejfy",
 		"loadError": "Nie udało się wczytać historii",
 		"inputPlaceholder": "Wpisz pytanie... (Enter: rozpocznij, Shift+Enter: nowa linia)",

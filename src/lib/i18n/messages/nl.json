@@ -485,6 +485,9 @@
 		"creating": "Maken..."
 	},
 	"VaultChatListPage": {
+		"reviewSuggestion": "Kaarten om te herhalen: {cards} · zwakke onderwerpen: {topics} — start in herhalingsmodus",
+		"reviewSuggestionRegion": "Herhalingssuggestie",
+		"reviewSuggestionDismiss": "Suggestie sluiten",
 		"backToVaults": "Kluizen",
 		"loadError": "De geschiedenis kon niet worden geladen",
 		"inputPlaceholder": "Stel een vraag... (Enter: starten, Shift+Enter: nieuwe regel)",

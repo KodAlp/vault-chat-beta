@@ -521,6 +521,9 @@
     "creating": "Создание…"
   },
   "VaultChatListPage": {
+    "reviewSuggestion": "Карточек к повторению: {cards} · слабых тем: {topics} — начать в режиме повторения",
+    "reviewSuggestionRegion": "Предложение повторить",
+    "reviewSuggestionDismiss": "Закрыть предложение",
     "backToVaults": "Хранилища",
     "loadError": "Не удалось загрузить историю",
     "inputPlaceholder": "Введите вопрос… (Enter: начать, Shift+Enter: новая строка)",

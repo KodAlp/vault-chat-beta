@@ -479,6 +479,9 @@
     "creating": "তৈরি হচ্ছে..."
   },
   "VaultChatListPage": {
+    "reviewSuggestion": "পুনরাবৃত্তির কার্ড: {cards} · দুর্বল বিষয়: {topics} — পুনরাবৃত্তি মোডে শুরু করুন",
+    "reviewSuggestionRegion": "পুনরাবৃত্তির পরামর্শ",
+    "reviewSuggestionDismiss": "পরামর্শ বন্ধ করুন",
     "backToVaults": "Vault",
     "loadError": "ইতিহাস লোড করা যায়নি",
     "inputPlaceholder": "প্রশ্ন লিখুন... (Enter: শুরু, Shift+Enter: নতুন লাইন)",

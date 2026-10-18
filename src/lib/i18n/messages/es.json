@@ -491,6 +491,9 @@
     "creating": "Creando..."
   },
   "VaultChatListPage": {
+    "reviewSuggestion": "Tarjetas pendientes: {cards} · temas débiles: {topics} — empezar en modo Repaso",
+    "reviewSuggestionRegion": "Sugerencia de repaso",
+    "reviewSuggestionDismiss": "Descartar sugerencia",
     "backToVaults": "Bóvedas",
     "loadError": "No se pudo cargar el historial",
     "inputPlaceholder": "Escribe una pregunta... (Enter: iniciar, Shift+Enter: nueva línea)",

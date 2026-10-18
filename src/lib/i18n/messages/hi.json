@@ -479,6 +479,9 @@
     "creating": "बन रहा है..."
   },
   "VaultChatListPage": {
+    "reviewSuggestion": "दोहराने के कार्ड: {cards} · कमज़ोर विषय: {topics} — दोहराव मोड में शुरू करें",
+    "reviewSuggestionRegion": "दोहराव का सुझाव",
+    "reviewSuggestionDismiss": "सुझाव बंद करें",
     "backToVaults": "Vault",
     "loadError": "इतिहास लोड नहीं हो सका",
     "inputPlaceholder": "प्रश्न लिखें... (Enter: शुरू करें, Shift+Enter: नई पंक्ति)",

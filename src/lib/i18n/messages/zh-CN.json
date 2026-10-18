@@ -479,6 +479,9 @@
     "creating": "正在创建…"
   },
   "VaultChatListPage": {
+    "reviewSuggestion": "待复习卡片：{cards} · 薄弱主题：{topics} — 以复习模式开始",
+    "reviewSuggestionRegion": "复习建议",
+    "reviewSuggestionDismiss": "关闭建议",
     "backToVaults": "仓库",
     "loadError": "无法加载历史记录",
     "inputPlaceholder": "输入问题…（Enter：开始，Shift+Enter：换行）",

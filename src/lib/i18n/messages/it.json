@@ -489,6 +489,9 @@
 		"creating": "Creazione..."
 	},
 	"VaultChatListPage": {
+		"reviewSuggestion": "Schede da ripassare: {cards} · argomenti deboli: {topics} — inizia in modalità Ripasso",
+		"reviewSuggestionRegion": "Suggerimento di ripasso",
+		"reviewSuggestionDismiss": "Chiudi suggerimento",
 		"backToVaults": "Archivi",
 		"loadError": "Impossibile caricare la cronologia",
 		"inputPlaceholder": "Scrivi una domanda... (Invio: avvia, Maiusc+Invio: a capo)",

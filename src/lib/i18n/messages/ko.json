@@ -479,6 +479,9 @@
 		"creating": "만드는 중..."
 	},
 	"VaultChatListPage": {
+		"reviewSuggestion": "복습할 카드: {cards} · 약한 주제: {topics} — 복습 모드로 시작",
+		"reviewSuggestionRegion": "복습 제안",
+		"reviewSuggestionDismiss": "제안 닫기",
 		"backToVaults": "보관함",
 		"loadError": "기록을 불러오지 못했어요",
 		"inputPlaceholder": "질문을 입력하세요... (Enter: 시작, Shift+Enter: 줄바꿈)",

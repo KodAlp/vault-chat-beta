@@ -19,3 +19,13 @@ export const STALE_DOMAIN_DAYS = 21;
 export const REVIEW_MAX_WEAK_DOMAINS = 3;
 export const REVIEW_MAX_OPEN_WEAK_SPOTS = 3;
 export const REVIEW_MAX_STALE_DOMAINS = 3;
+
+/**
+ * F6 suggestion chip (TODO #77): on a new-chat composer the app OFFERS review mode (never switches it) when the
+ * vault has something to review. Picked, not measured: any single signal is enough, because the chip is dismissible
+ * and costs one line of screen. Due cards are counted up to the cap only so the number on the chip stays small and
+ * the query cheap; the chip says "N cards", so the cap is also the largest number it can show.
+ */
+export const REVIEW_SUGGEST_MAX_DUE_CARDS = 50;
+export const REVIEW_SUGGEST_MIN_DUE_CARDS = 1;
+export const REVIEW_SUGGEST_MIN_TOPICS = 1;
