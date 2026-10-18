@@ -7,6 +7,7 @@ import { resolvePandocBin } from './pandoc-bin';
 import { resolvePythonBin, defaultPythonDeps } from './python-bin';
 import { dataDir } from './env';
 import { evictForExclusiveJob } from './gpu-evict';
+import { assertFileClean } from './av-guard';
 import { forwardedConvertCode } from './convert-error-codes';
 import { isNativeCrash, runWithCrashRetry, type AttemptOutcome } from './convert-crash';
 import { PROCESS_TIMEOUT_MS, pdfEstimatedSeconds, pdfTimeoutMs } from './convert-timeouts';
@@ -331,16 +332,22 @@ function runConvertAttemptSpawn(
  * docling has the 6 GB card to itself — measured (Aşama 7) at roughly 3x
  * slower when qwen3 is resident. Runs while holding a shared slot, which is
  * safe: see ollamaGate.evictAllForExclusiveJob.
+ *
+ * Antivirus (TODO #60): every file is scanned HERE, before it takes a queue slot or reaches convert.py, so one call covers
+ * single, batch, link (stage-url) and MCP imports. A threat rejects with FILE_THREAT_DETECTED; no scanner / a failed scan
+ * lets the import proceed (see av-guard.ts). `skipAvScan` is for re-conversions of an original that was already scanned
+ * when it was first imported (api/library/reimport), so a file is never scanned twice.
  */
-export function enqueueConversion(
+export async function enqueueConversion(
 	inPath: string,
 	outDir: string,
 	tool: string,
 	onEvent?: (event: ConvertEvent) => void,
 	sourceName?: string,
 	pages?: string,
-	opts: { exclusiveGpu?: boolean; concurrency?: number; ocrLang?: string } = {}
+	opts: { exclusiveGpu?: boolean; concurrency?: number; ocrLang?: string; skipAvScan?: boolean } = {}
 ): Promise<ConvertEvent & { type: 'done' }> {
+	if (!opts.skipAvScan) await assertFileClean(inPath);
 	return sharedJobMutex.runShared(async () => {
 		if (opts.exclusiveGpu) await evictForExclusiveJob();
 		return runConvert(inPath, outDir, tool, onEvent, sourceName, pages, opts.ocrLang);

@@ -980,6 +980,12 @@
 		"genericSteps": "Elke MCP-client die stdio-servers kan starten accepteert dit standaard mcpServers-blok. Raadpleeg de documentatie van je client voor de plek.",
 		"secretsNote": "Het fragment bevat geen geheimen. Schrijftools (zoals importeren) vereisen ook dat deze app draait."
 	},
+	"AvScanSettings": {
+		"label": "Geïmporteerde bestanden op virussen scannen",
+		"description": "Elk bestand wordt vóór de conversie gecontroleerd met Windows Defender (of ClamAV op Linux en macOS). Een bestand met een bedreiging wordt geweigerd. Is er geen scanner beschikbaar, dan gaat het importeren door zonder scan.",
+		"loadFailed": "De antivirusinstelling kon niet worden geladen.",
+		"saveFailed": "De antivirusinstelling kon niet worden opgeslagen."
+	},
 	"McpImportSettings": {
 		"title": "MCP-importmappen",
 		"editNoteLabel": "Agenten toestaan notities te bewerken (edit_note)",
@@ -1227,6 +1233,7 @@
 		"CONVERSION_EMPTY": "De conversie leverde geen uitvoer op",
 		"CONVERSION_FAILED": "Conversie mislukt",
 		"PDF_DAMAGED": "Deze PDF lijkt onvolledig of beschadigd — de download is mogelijk afgebroken. Download hem opnieuw en probeer het nog eens.",
+		"FILE_THREAT_DETECTED": "De beveiligingsscan vond een bedreiging ({threat}) in dit bestand, dus het is niet geïmporteerd.",
 		"CONVERTER_CRASHED": "De converter is onverwacht gestopt, en een nieuwe poging stopte ook. Dit bestand veroorzaakt mogelijk een bekende bug in de converter. Probeer het zo meteen opnieuw.",
 		"PROCESS_TIMEOUT": "Time-out van het proces (>{seconds}s)",
 		"PYTHON_NOT_FOUND": "Python niet gevonden. Installeer Python 3 van python.org en probeer het opnieuw.",

@@ -1015,6 +1015,12 @@
 		"genericSteps": "Any MCP client that can start stdio servers accepts this standard mcpServers block. Check your client's docs for where it goes.",
 		"secretsNote": "The snippet contains no secrets. Write tools (such as import) also need this app to be running."
 	},
+	"AvScanSettings": {
+		"label": "Scan imported files for viruses",
+		"description": "Every file is checked with Windows Defender (or ClamAV on Linux and macOS) before it is converted. A file with a threat is rejected. If no scanner is available, imports continue unscanned.",
+		"loadFailed": "Couldn't load the antivirus setting.",
+		"saveFailed": "Couldn't save the antivirus setting."
+	},
 	"McpImportSettings": {
 		"title": "MCP import folders",
 		"editNoteLabel": "Allow agents to edit notes (edit_note)",
@@ -1267,6 +1273,7 @@
 		"CONVERSION_EMPTY": "Conversion produced no output",
 		"CONVERSION_FAILED": "Conversion failed",
 		"PDF_DAMAGED": "This PDF looks incomplete or damaged — the download may have been cut off. Download it again and try again.",
+		"FILE_THREAT_DETECTED": "A security scan found a threat ({threat}) in this file, so it was not imported.",
 		"CONVERTER_CRASHED": "The converter stopped unexpectedly, and a retry stopped too. This file may be triggering a known converter bug. Try again in a moment.",
 		"PROCESS_TIMEOUT": "Process timed out (>{seconds}s)",
 		"PYTHON_NOT_FOUND": "Python not found. Install Python 3 from python.org, then try again.",

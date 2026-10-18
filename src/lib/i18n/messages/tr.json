@@ -1015,6 +1015,12 @@
 		"genericSteps": "stdio sunucusu başlatabilen her MCP istemcisi bu standart mcpServers bloğunu kabul eder. Nereye gideceği için istemcinin belgelerine bak.",
 		"secretsNote": "Parçada gizli bilgi yok. Yazma araçları (içe aktarma gibi) ayrıca bu uygulamanın açık olmasını gerektirir."
 	},
+	"AvScanSettings": {
+		"label": "İçe aktarılan dosyaları virüse karşı tara",
+		"description": "Her dosya dönüştürülmeden önce Windows Defender ile (Linux ve macOS'ta ClamAV ile) taranır. Tehdit içeren dosya reddedilir. Tarayıcı yoksa içe aktarma taranmadan sürer.",
+		"loadFailed": "Antivirüs ayarı yüklenemedi.",
+		"saveFailed": "Antivirüs ayarı kaydedilemedi."
+	},
 	"McpImportSettings": {
 		"title": "MCP içe aktarma klasörleri",
 		"editNoteLabel": "Ajanların notları düzenlemesine izin ver (edit_note)",
@@ -1267,6 +1273,7 @@
 		"CONVERSION_EMPTY": "Dönüştürme çıktı üretmedi",
 		"CONVERSION_FAILED": "Dönüştürme başarısız",
 		"PDF_DAMAGED": "PDF eksik ya da bozuk görünüyor; dosya yarım inmiş olabilir. Yeniden indirip deneyin.",
+		"FILE_THREAT_DETECTED": "Güvenlik taraması bu dosyada bir tehdit buldu ({threat}); dosya içe aktarılmadı.",
 		"CONVERTER_CRASHED": "Dönüştürücü beklenmedik biçimde kapandı; bir kez yeniden denendi ama yine kapandı. Bu dosya bilinen bir dönüştürücü hatasını tetikliyor olabilir. Biraz sonra yeniden deneyin.",
 		"PROCESS_TIMEOUT": "İşlem zaman aşımına uğradı (>{seconds}s)",
 		"PYTHON_NOT_FOUND": "Python bulunamadı. Önce python.org adresinden Python 3 kur, sonra tekrar dene.",

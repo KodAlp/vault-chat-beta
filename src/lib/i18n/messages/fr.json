@@ -931,6 +931,12 @@
     "genericSteps": "Tout client MCP capable de lancer des serveurs stdio accepte ce bloc mcpServers standard. Consultez la documentation de votre client pour savoir où le placer.",
     "secretsNote": "L'extrait ne contient aucun secret. Les outils d'écriture (comme l'import) exigent aussi que cette application soit ouverte."
   },
+  "AvScanSettings": {
+      "label": "Analyser les fichiers importés avec l'antivirus",
+      "description": "Chaque fichier est vérifié avec Windows Defender (ou ClamAV sous Linux et macOS) avant sa conversion. Un fichier contenant une menace est refusé. Si aucun analyseur n'est disponible, l'importation continue sans analyse.",
+      "loadFailed": "Impossible de charger le réglage de l'antivirus.",
+      "saveFailed": "Impossible d'enregistrer le réglage de l'antivirus."
+  },
   "McpImportSettings": {
     "title": "Dossiers d'importation MCP",
     "editNoteLabel": "Autoriser les agents à modifier les notes (edit_note)",
@@ -1179,6 +1185,7 @@
     "CONVERSION_EMPTY": "La conversion n'a produit aucune sortie",
     "CONVERSION_FAILED": "Échec de la conversion",
     "PDF_DAMAGED": "Ce PDF semble incomplet ou endommagé ; le téléchargement a peut-être été interrompu. Téléchargez-le à nouveau et réessayez.",
+    "FILE_THREAT_DETECTED": "L'analyse de sécurité a trouvé une menace ({threat}) dans ce fichier ; il n'a donc pas été importé.",
     "CONVERTER_CRASHED": "Le convertisseur s’est arrêté de façon inattendue, et une nouvelle tentative s’est arrêtée aussi. Ce fichier déclenche peut-être un bogue connu du convertisseur. Réessayez dans un instant.",
     "PROCESS_TIMEOUT": "Délai du processus dépassé (>{seconds} s)",
     "PYTHON_NOT_FOUND": "Python introuvable. Installez Python 3 depuis python.org, puis réessayez.",

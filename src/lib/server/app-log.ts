@@ -80,7 +80,12 @@ export interface AppLogRecord {
 		| 'embedding_issue'
 		/** Converted-image cleanup (converted-image-cleanup.ts) deleted orphaned pictures: `message` carries
 		 * counts only, never a file name or path. */
-		| 'image_cleanup';
+		| 'image_cleanup'
+		/** Antivirus scan of an import (av-guard.ts): a threat was found (rejected), no scanner exists (logged once per process),
+		 * or the scan itself failed / timed out (import proceeds). `message` carries engine, threat name and timing, never a path. */
+		| 'av_threat'
+		| 'av_unavailable'
+		| 'av_error';
 	chatId?: string;
 	provider?: string;
 	model?: string;

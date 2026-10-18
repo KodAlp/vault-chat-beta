@@ -985,6 +985,12 @@
 		"genericSteps": "Mikä tahansa MCP-asiakas, joka osaa käynnistää stdio-palvelimia, hyväksyy tämän vakio-mcpServers-lohkon. Katso asiakkaasi ohjeista, minne se kuuluu.",
 		"secretsNote": "Pätkä ei sisällä salaisuuksia. Kirjoitustyökalut (kuten tuonti) vaativat lisäksi, että tämä sovellus on käynnissä."
 	},
+	"AvScanSettings": {
+		"label": "Tarkista tuodut tiedostot viruksien varalta",
+		"description": "Jokainen tiedosto tarkistetaan Windows Defenderillä (Linuxissa ja macOS:ssä ClamAV:lla) ennen muunnosta. Uhan sisältävä tiedosto hylätään. Jos tarkistinta ei ole, tuonti jatkuu tarkistamatta.",
+		"loadFailed": "Virustorjunta-asetuksen lataus epäonnistui.",
+		"saveFailed": "Virustorjunta-asetuksen tallennus epäonnistui."
+	},
 	"McpImportSettings": {
 		"title": "MCP-tuontikansiot",
 		"editNoteLabel": "Salli agenttien muokata muistiinpanoja (edit_note)",
@@ -1235,6 +1241,7 @@
 		"CONVERSION_EMPTY": "Muunnos ei tuottanut tulosta",
 		"CONVERSION_FAILED": "Muunnos epäonnistui",
 		"PDF_DAMAGED": "Tämä PDF näyttää keskeneräiseltä tai vaurioituneelta – lataus on voinut katketa. Lataa se uudelleen ja yritä uudelleen.",
+		"FILE_THREAT_DETECTED": "Tietoturvatarkistus löysi tiedostosta uhan ({threat}), joten sitä ei tuotu.",
 		"CONVERTER_CRASHED": "Muunnin pysähtyi odottamatta, ja uusi yritys pysähtyi myös. Tämä tiedosto voi laukaista tunnetun muuntimen virheen. Yritä hetken kuluttua uudelleen.",
 		"PROCESS_TIMEOUT": "Prosessi aikakatkaistiin (>{seconds} s)",
 		"PYTHON_NOT_FOUND": "Pythonia ei löytynyt. Asenna Python 3 osoitteesta python.org ja yritä uudelleen.",

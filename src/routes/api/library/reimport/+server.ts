@@ -95,7 +95,7 @@ export const POST: RequestHandler = async ({ request }) => {
 				},
 				name,
 				undefined,
-				{ ocrLang: ocrLangArg(undefined, getLibrarySettings(v).allowedLanguages) }
+				{ ocrLang: ocrLangArg(undefined, getLibrarySettings(v).allowedLanguages), skipAvScan: true }
 			);
 			if (!result.outPath) throw new AppError('CONVERSION_EMPTY');
 

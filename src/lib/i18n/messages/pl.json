@@ -976,6 +976,12 @@
 		"genericSteps": "Każdy klient MCP, który potrafi uruchamiać serwery stdio, akceptuje ten standardowy blok mcpServers. Gdzie go umieścić, sprawdź w dokumentacji klienta.",
 		"secretsNote": "Fragment nie zawiera sekretów. Narzędzia zapisu (np. import) wymagają dodatkowo, aby ta aplikacja była uruchomiona."
 	},
+	"AvScanSettings": {
+		"label": "Skanuj importowane pliki pod kątem wirusów",
+		"description": "Każdy plik jest sprawdzany programem Windows Defender (w systemach Linux i macOS programem ClamAV) przed konwersją. Plik z zagrożeniem jest odrzucany. Jeśli skaner jest niedostępny, import trwa bez skanowania.",
+		"loadFailed": "Nie udało się wczytać ustawienia antywirusa.",
+		"saveFailed": "Nie udało się zapisać ustawienia antywirusa."
+	},
 	"McpImportSettings": {
 		"title": "Foldery importu MCP",
 		"editNoteLabel": "Zezwalaj agentom na edycję notatek (edit_note)",
@@ -1221,6 +1227,7 @@
 		"CONVERSION_EMPTY": "Konwersja nie dała żadnego wyniku",
 		"CONVERSION_FAILED": "Konwersja nie powiodła się",
 		"PDF_DAMAGED": "Ten PDF wygląda na niekompletny lub uszkodzony — pobieranie mogło zostać przerwane. Pobierz go ponownie i spróbuj jeszcze raz.",
+		"FILE_THREAT_DETECTED": "Skanowanie bezpieczeństwa wykryło w tym pliku zagrożenie ({threat}), więc nie został zaimportowany.",
 		"CONVERTER_CRASHED": "Konwerter nieoczekiwanie się zatrzymał, a ponowna próba też się zatrzymała. Ten plik może wywoływać znany błąd konwertera. Spróbuj ponownie za chwilę.",
 		"PROCESS_TIMEOUT": "Przekroczono czas operacji (>{seconds} s)",
 		"PYTHON_NOT_FOUND": "Nie znaleziono Pythona. Zainstaluj Pythona 3 ze strony python.org, a następnie spróbuj ponownie.",

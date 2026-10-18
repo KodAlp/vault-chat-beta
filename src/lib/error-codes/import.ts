@@ -20,6 +20,8 @@ export const IMPORT_CODES = [
 	'CONVERSION_EMPTY',
 	'CONVERSION_FAILED',
 	'PDF_DAMAGED',
+	// Antivirus scan (av-guard.ts) found a threat in the file before conversion; params: {threat}.
+	'FILE_THREAT_DETECTED',
 	'CONVERTER_CRASHED',
 	'PROCESS_TIMEOUT',
 	'PYTHON_NOT_FOUND',
