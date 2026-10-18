@@ -12,7 +12,7 @@ const NEWLINE_RE = /\n/;
 
 const DEFAULT_SERVE_CTX = 8192;
 
-function serveCtxFor(name: string): number {
+export function serveCtxFor(name: string): number {
 	// OLLAMA_SERVE_CTX (env.ts) wins over the table: the table's numbers were
 	// measured for qwen3:8b Q4_K_M, and a smaller quantization frees VRAM the
 	// table knows nothing about. serveCtx is an Ollama num_ctx concern only, which is why it is read here

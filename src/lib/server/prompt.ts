@@ -3,7 +3,7 @@ import type { ChatMessage as ProviderChatMessage } from './providers/types';
 import { renderUserSkillsBlock } from './userSkills';
 import { computeMemoryBlock } from './memory-runtime';
 import { computeReviewBlock } from './review-mode';
-import { trimConversationHistory } from '../history-limits';
+import { historyBudgetChars, trimConversationHistory, MAX_HISTORY_CHARS } from '../history-limits';
 import type { VaultContext } from './vaults';
 import { decideResponseLanguage, responseLanguageDirective } from './response-language';
 
@@ -97,16 +97,10 @@ export async function buildPromptMessages(
 	allowedLanguages: string[],
 	v: VaultContext,
 	mode: string = 'free_chat',
-	opts?: { toolsEnabled?: boolean; responseLanguage?: ResponseLanguageMode }
+	opts?: { toolsEnabled?: boolean; responseLanguage?: ResponseLanguageMode; numCtx?: number }
 ): Promise<ProviderChatMessage[]> {
 	const responseLanguage: ResponseLanguageMode = opts?.responseLanguage ?? 'match';
 	const lastUser = history[history.length - 1];
-	// F8 — bounded, not the whole conversation: a very long chat must not grow the prompt past the context
-	// window and get silently truncated from the front, where CORE_INVARIANTS lives. See history-limits.ts.
-	const priorTurns: ProviderChatMessage[] = trimConversationHistory(
-		history.slice(0, -1).map(({ role, content }) => ({ role, content }))
-	);
-
 	const context =
 		chunks.length > 0
 			? `<context>\n${chunks
@@ -152,6 +146,22 @@ export async function buildPromptMessages(
 		const decision = decideResponseLanguage(lastUser.content, priorUserMessages, primary);
 		finalUserContent = `${finalUserContent}\n\n${responseLanguageDirective(decision)}`;
 	}
+
+	// F8 — bounded, not the whole conversation: a very long chat must not grow the prompt past the context
+	// window and get silently truncated from the front, where CORE_INVARIANTS lives. The budget is what is left
+	// in the served window after the system prompt, the context block and the final question (history-limits.ts);
+	// without a known window (cloud providers) only the fixed ceiling applies.
+	const historyBudget =
+		opts?.numCtx !== undefined
+			? historyBudgetChars({
+					numCtx: opts.numCtx,
+					otherPromptChars: systemPrompt.length + finalUserContent.length
+				})
+			: MAX_HISTORY_CHARS;
+	const priorTurns: ProviderChatMessage[] = trimConversationHistory(
+		history.slice(0, -1).map(({ role, content }) => ({ role, content })),
+		historyBudget
+	);
 
 	return [
 		{ role: 'system', content: systemPrompt },

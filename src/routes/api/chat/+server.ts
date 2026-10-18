@@ -4,7 +4,7 @@ import type { ErrorCode, ErrorParams } from '$lib/errors';
 import { retrieve } from '$lib/server/retrieve';
 import { buildRetrievalQuery } from '$lib/server/retrieval-query';
 import { buildPromptMessages } from '$lib/server/prompt';
-import { chatWithFallback, modelCaps, supportsPrefixResume } from '$lib/server/providers/registry';
+import { chatWithFallback, modelCaps, servedContext, supportsPrefixResume } from '$lib/server/providers/registry';
 import { startFlight, endFlight } from '$lib/server/providers/inflight';
 import type { ChatMessage as ProviderChatMessage } from '$lib/server/providers/types';
 import { readProvidersFile } from '$lib/server/providers/config-store';
@@ -293,7 +293,8 @@ export const POST: RequestHandler = async ({ request }) => {
 				const resumeSupported = await supportsPrefixResume(body.provider, body.model);
 				const basePromptMessages = await buildPromptMessages(body.messages, sources, allowedLanguages, v, body.mode ?? 'free_chat', {
 					toolsEnabled,
-					responseLanguage
+					responseLanguage,
+					numCtx: servedContext(body.provider, body.model)
 				});
 
 				for (let attempt = 0; ; attempt++) {
