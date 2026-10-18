@@ -228,6 +228,17 @@ body {
    classes (components layer, see the import at the top) override them —
    unlayered, `a { color }` turned every link-based sidebar row orange. */
 @layer base {
+	/* Tailwind v4 dropped v3's gray default: a bare `border` class is currentColor, which drew near-black frames
+	   around LauncherPanel, the embedding/MCP/links cards and the args textarea. shadcn-svelte's v4 setup expects
+	   this rule; any explicit border-* colour utility still wins (utilities layer). */
+	*,
+	::after,
+	::before,
+	::backdrop,
+	::file-selector-button {
+		border-color: var(--color-border, currentColor);
+	}
+
 	html {
 		background: var(--bg-canvas);
 	}

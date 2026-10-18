@@ -328,7 +328,7 @@
 				<Label for="{uid}-args" class="text-muted-foreground">{t('LauncherPanel.argsLabel')}</Label>
 				<textarea
 					id="{uid}-args"
-					class="min-h-16 rounded border bg-transparent p-1.5 font-mono text-xs"
+					class="min-h-16 rounded border border-input bg-transparent p-1.5 font-mono text-xs"
 					bind:value={argsDraft}
 					disabled={busy}
 				></textarea>
