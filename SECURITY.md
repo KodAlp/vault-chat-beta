@@ -37,7 +37,17 @@ Bunlar reddedilmiş öneriler değil, ölçülüp bilinçli olarak ertelenmiş k
 
 - **İndirilen dosyaların (PDF vb.) kötü amaçlı yazılım taraması** yok — yalnızca ayrıştırılıyor, çalıştırılmıyor; yine de güvenmediğiniz kaynaklardan indirdiğiniz dosyaları içe aktarmadan önce kendi virüs tarayıcınızla kontrol etmeniz önerilir.
 - **TLS sertifika hatalarında işletim sistemi yedek zinciri** kullanılmıyor (bilinçli — TLS atlatma riskini açmamak için); sertifika hatası veren bir kaynak reddedilir, atlatılmaz.
-- **`gitleaks` gibi bir otomatik sır tarayıcısı repoya entegre değil** — yayın öncesi elle hedefli bir tarama yapıldı (bkz. `docs/yol-2026-09-23.md` Aşama 12); katkıda bulunanlar kendi commit'lerinde `data/secrets.json`, `.env` gibi dosyaları asla commit etmemeli (`.gitignore` bunları zaten kapsıyor).
+- **Sır taraması elle değil, betikle:** `gitleaks` artık `scripts/security-audit.mjs` içinde (aşağıya bakın); katkıda bulunanlar yine de kendi commit'lerinde `data/secrets.json`, `.env` gibi dosyaları asla commit etmemeli (`.gitignore` bunları zaten kapsıyor).
+
+## Güvenlik denetimi
+
+Yerelde tek komutla: `node scripts/security-audit.mjs` (yalnızca biri için: `--only=npm,cargo,gitleaks`). Sırayla şunları çalıştırır ve sonda özet tablo basar:
+
+- `npm audit --omit=dev --audit-level=high` (yüksek/kritik bulgu varsa hata).
+- `cargo audit` (`src-tauri/`, RustSec; `cargo install cargo-audit --locked` gerekir).
+- `gitleaks detect --source . --redact --no-banner` (tüm git geçmişi; `winget install Gitleaks.Gitleaks` / `brew install gitleaks`).
+
+Kurulu olmayan araç yerelde "skipped" olarak atlanır; `CI` ortam değişkeni tanımlıysa hata sayılır. `.github/workflows/security.yml` aynı betiği ubuntu üzerinde çalıştırır; Actions dakikaları sınırlı olduğundan yalnızca `ci` dalına push'ta veya elle (workflow_dispatch) tetiklenir, haftalık zamanlama repo public olana kadar yorumdadır.
 
 ## Desteklenen sürümler
 
