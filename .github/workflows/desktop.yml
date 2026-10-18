@@ -23,6 +23,10 @@ jobs:
           - { os: ubuntu-22.04, label: linux-x64 }
           - { os: macos-15, label: macos-arm64 }
           - { os: macos-15-intel, label: macos-x64 }
+          # Native Windows ARM64 (TODO #51). Expected to FAIL until sqlite-vec ships a windows-arm64 build
+          # (0.1.9 has none and indexer/db.ts + retrieve.ts load it unconditionally); the x64 installer already
+          # runs on Windows 11 ARM under emulation. See docs/dev/public-oncesi.md.
+          - { os: windows-11-arm, label: windows-arm64 }
     defaults:
       run:
         shell: bash
