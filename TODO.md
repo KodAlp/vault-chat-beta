@@ -2,7 +2,7 @@
 
 Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncellenir.
 
-**Son güncelleme:** 2026-10-18 · Acil boş. F15 tam kapsamı (#18) dalda bitti (`ffd69f8`): paralel link indirme ve link manifesti; JS sayfa yedeği ölçümde 7 sayfanın yalnız birinde fark yarattığı için Daha sonra'ya alındı. main origin'de `796adf1` (#53 dahil); bu dal henüz main'e alınmadı.
+**Son güncelleme:** 2026-10-18 · Acil boş. Yapılabilir 1–3 (öğrenme ajanı, arayüz, güvenlik ve CI) bu dalda bitti; #51'in public anına bağlı kısmı kaldı. Dal `claude/remaining-steps-list-a9fde0` main'e alınmadı, push yok.
 
 ## Kurallar
 
@@ -49,27 +49,15 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 
 ## Yapılabilir
 
-### 1. Öğrenme ajanı
-- [ ] **Kapsam daraltma ve eşzamanlı üretim bildirimleri.** Canlı Ollama ile dene. `K` · #79
-- [ ] **F8: 12.000 karakter bütçesi ve `nearCtxLimit` eşiği.** Yeniden ölç. `K` · #78
-- [ ] **F6: otomatik mod geçişi.** v1 yalnız elle. `O` · #77
+### 1. Güvenlik ve CI
+- [ ] **Public öncesi kalan.** gitleaks'i tam kural setiyle bir kez çalıştır; public olunca iş akışı tetikleyicilerini aç (adımlar `docs/dev/public-oncesi.md`). Yerel Windows ARM64 derlemesi sqlite-vec'in ARM64 paketi olmadığı için engelli. `K` · #51
 
-### 2. Arayüz
-- [ ] **LauncherPanel görsel denetimi.** `K` · #68
-- [ ] **Kalan lucide ikonları ve özel pencere çubuğu.** Yeni ikonlar geldi; önce onlara bak. `O` · #67
-
-### 3. Güvenlik ve CI
-- [ ] **CI'da `npm audit` / `cargo audit` / gitleaks.** `K` · #52
-- [ ] **Public öncesi hazırlık.** Geçmişte sır taraması, `desktop.yml` tetikleyicisi, Windows ARM, fork PR güvenliği. `O` · #51
-- [ ] **İçe aktarılan dosyalarda antivirüs taraması.** `O` · #60
-- [ ] **ollama-gate'te olası kilitlenme.** Akış içinde farklı model + evict beklemesi. `O` · #63
-
-### 4. RAG ve benchmark
+### 2. RAG ve benchmark
 - [ ] **Tam altın set (330 soru) koşusu.** `O` · #27
 - [ ] **Reranker'ı üretime al.** Pilotta R@5 0,74 → 0,80; ONNX int8 ölçülmedi. `O` · #29
 - [ ] **İstem/skill dili A/B.** qwen3:8b için İngilizce çekirdek istem; educational-agent açık/kapalı. Kullanıcı notu: "olabilir". `O` · #28
 
-### 5. Notebook verileri
+### 3. Notebook verileri
 - [ ] **Rusça kasası onarımı.** 14 uyarılı bekleyen; İngilizce/Mandarin/İspanyolca kasa sorusu. `O` · #21
 - [ ] **Notebook verileri dönüşümü.** 12 klasör → ayrı kasalar; Fizik bitti, dil ve bilim klasörleri kaldı. `B` · #20
 
@@ -104,6 +92,16 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 - [ ] **#18 link diyaloğunu uygulamada dene.** 4 eşzamanlı indirme, "başarısız linkleri yükle" ve "başarısızları yeniden dene" yalnız birim testte; canlı toplu işte aynı siteye 1 sn aralık, sonuçların bitiş sırasıyla gelmesi ve kazanılan süre ölçülmedi. Diğer 21 dilin çevirisi ana dili konuşan biri tarafından okunmadı. `K`
 - [ ] **bench `prod` varyantı gömmesiz 30 sn bekliyor.** Ollama kapalıyken `prod` her soruda `embedding-unavailable` ile 0 veriyor, diğer varyantlar önbellekten geliyor; koşu başında gömme sağlayıcısına bir kez ulaşıp erken durmalı. #30'un önbelleği boş canlı yolu (Ollama açık) da denenmedi. `K`
 
+- [ ] **Aynı Ollama'ya ikinci istek 30 sn bağlantı zaman aşımına düşüyor.** #79 canlı denemesinde (ikinci Ollama, qwen3:4b) quiz+quiz+kart aynı anda başlatılınca kartlar `PROVIDER_TIMEOUT_CONNECT` ile düştü; sohbet de cevaptan hemen sonra (arka plandaki başlık üretimi sürerken) bir kez `timeout_connect` verdi. Yerel Ollama için `connectMs`'i büyüt ya da yerel istekleri sırala. `K–O`
+- [ ] **narrowScope küçük kasada tetiklenmiyor.** Varsayılan eşik 0,6'da bge-m3 alakasız parçaları da eşiğin altında buluyor; 12 parçalık kasada kapsam dışı soru "alakasız"/uydurma cevap aldı. Bildirim ve "Kapsamı genişlet?" ancak eşik 0,42 yapılınca çıktı (sohbette ve üretimde çalışıyor). Eşiği gerçek kasalarda ölç. `O`
+- [ ] **qwen3:4b cevabında düşünme metni gövdeye sızıyor.** #79 denemesinde cevap gövdesinde akıl yürütme ve sonda düz `</think>` göründü. `K`
+- [ ] **Antivirüs: Defender açık makinede EICAR denemesi.** Bu makinede Defender kapalı (Kaspersky etkin): MpCmdRun "tarayamadım" durumunda da çıkış 2 veriyor, çıktıdaki `Failed with hr` satırıyla ayrılıyor. Tehdit yolu yalnız sahte çalıştırıcıyla sınandı. Tarama hatasında içe aktarma sürüyor (karar gerekirse değiştir); ek görsel yükleme ve klasör/Markdown içe aktarma bilerek taranmıyor. `K`
+- [ ] **#77 öneri çipini gerçek veriyle gör.** Çip yalnız vadesi gelmiş kart ya da zayıf konu olunca çıkıyor; birim testli, tarayıcıda gerçek veriyle görülmedi. Yeni çeviri anahtarlarının (çip, antivirüs düğmesi) 21 dili ana dili konuşan biri tarafından okunmadı. `K`
+- [ ] **Renksiz `border` düzeltmesinin yan etkisine bak.** `app.css`'e eklenen genel `border-color: var(--color-border)` kuralı çıplak `border` kullanan ~11 yeri düzeltti (LauncherPanel, gömme/MCP/link kartları); başka bir yerde bilerek koyu çerçeve kullanılıyorsa açıkça renk sınıfı ister. LauncherPanel kart içinde dar: "Yeniden algıla" alt satıra kayıyor, "Etkin" düğmesi uzun panelin ortasında. `K`
+- [ ] **İkonlarda kalanlar.** `minus` için SVG yok (checkbox ve dropdown onay öğesi hâlâ lucide); model seçicideki `bot` ikonu artık civciv maskotu, genel "model" anlamı için başka glif istenebilir. Başlık çubuğundaki logo gerçek Tauri penceresinde görülmedi. `K`
+- [ ] **npm audit'te kalan orta düzey açıklar.** katex (marp-core, markmap, remark-math üzerinden) ve sprintf-js (gray-matter) yalnız kırıcı sürümle düzeliyor; `security-audit.mjs` high/critical'da düşüyor, bunlar geçiyor. `O`
+- [ ] **sqlite-vec yüklenemezse kasa yalnız-FTS'e düşsün.** Şu an `indexer/db.ts` ve `retrieve.ts` koşulsuz yüklüyor; yüklenemezse FTS de açılmıyor. Windows ARM64 için ön koşul (#51). `O`
+
 ## Daha sonra
 
 - [ ] **PPTX kapı deneyi.** #15
@@ -134,6 +132,15 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 
 Yalnız son iki haftanın kaydı tutulur; daha eskisi git geçmişindedir.
 
+- 2026-10-18: #79 canlı denendi (ikinci Ollama 11435, geçici DATA_DIR, başsız Playwright): iki quiz ve quiz+kart aynı anda üç ayrı bildirimle çalıştı, iki quiz ayrı kimlikle bitti; "kapsam daraltma" bildirimi ve "Kapsamı genişlet?" sohbette ve üretimde çalışıyor (eşik 0,42 ile). Bulunan zaman aşımı ve eşik sorunları Öneriler'de.
+- 2026-10-18: #77 yeni sohbette "Tekrar modunda başla" önerisi (karar yalnız öğrenme durumundan: vadesi gelmiş kart, zayıf/eski konu; `GET /api/study/review-suggestion`). `93add17`
+- 2026-10-18: #60 içe aktarılan dosya dönüştürmeden önce Defender/ClamAV ile taranıyor (tek giriş noktası `enqueueConversion`), tehditte `FILE_THREAT_DETECTED`, tarayıcı yoksa geçip bir kez günlüğe yazıyor; Dosya yükleme sayfasında düğme, varsayılan açık. `8755bcd` `693e7d6`
+- 2026-10-18: #67 kalan lucide ikonları projenin `Icon` bileşenine geçti (kullanıcının 66 ikonu ve AnimatedIcon dahil); özel pencere çubuğu zaten vardı (`6118f77`), logo eklendi. `c3316a3` `37b7fce` `b29b702`
+- 2026-10-18: #68 LauncherPanel sahte Tauri verisiyle açık/koyu/mobil denetlendi: Tailwind v4'te çıplak `border` siyah çiziliyordu, genel kenarlık rengi kuralıyla düzeldi. `008724d`
+- 2026-10-18: #51 public öncesi hazırlık: 503 commit'te sır yok (tek eşleşme testteki sahte anahtar), fork PR kuralları belgelendi, `desktop.yml`'ye Windows ARM64 satırı (tetikleyici yine yalnız `ci`), gömülü Python ARM64 arşivi SHA'sıyla. `246975d`
+- 2026-10-18: #52 `scripts/security-audit.mjs` (npm audit, cargo audit, gitleaks) ve yalnız `ci` dalında `security.yml`; undici/dompurify güncellendi, npm audit high 1 → 0. `b910c95` `996857c`
+- 2026-10-18: #78 yeniden ölçüldü (60 çağrı; uyarı 2 kez, ikisi de geçmiş 12K karakterdeyken %91–93): geçmiş bütçesi artık sunulan pencereden hesaplanıyor (cevaba 2048 token ayrılıyor; 8192/5K tabanda ~3,4K karakter); %90 eşiği doğru durumları yakaladığı için kaldı. `7e7c251`
+- 2026-10-18: #63 ollama-gate: bugün iç içe kira alan çağrı yok; olursa kilitlenme yerine açık hata (AsyncLocalStorage), aynı model yeniden girişi serbest, `:latest` adları eşleniyor. `afb3e66`
 - 2026-10-18: F15 tam kapsamı (#18): link içe aktarma 4 eşzamanlı (`runPool`; dönüştürme `sharedJobMutex`'te sıralı, indirmeler örtüşüyor), `politeDelay` eşzamanlı çağrıda aynı siteye 1 sn aralığı koruyor (yarış düzeldi), `_meta/link-manifest.jsonl` her linkin sonucunu tutuyor; diyalogda önceki başarısız linkleri yükleme ve bu koşunun başarısızlarını yeniden deneme, 23 dilde. JS sayfa yedeği ölçümle Daha sonra'ya alındı (kullanıcı kararı). `ffd69f8`
 - 2026-10-18: karar: WebView2 önyükleyicisinin WebView2'siz makinede canlı denemesi atlandı (#53); kurulum betiğinde `embedBootstrapper` ve Microsoft imzalı önyükleyici var, Windows 11'de WebView2 hazır geliyor.
 - 2026-10-18: main origin'e push edildi (`a1027f6` → `796adf1`, 8 commit): #53 ve kurulu uygulamadaki denemeleri artık uzak depoda.
