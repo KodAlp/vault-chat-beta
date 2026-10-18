@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 /**
- * Node client for bench/reranker/rerank_server.py — spawns the Python
+ * Node client for ingest/rerank_server.py — spawns the Python
  * cross-encoder process once, keeps it warm across many rerank() calls (model
  * load dominates any single request), and talks newline-delimited JSON over
  * stdin/stdout. The Python side processes one line at a time in the order
@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url';
  * Free of `$lib`/`$env` imports so `bench/` runs under plain `tsx`.
  */
 
-const DEFAULT_SCRIPT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'reranker', 'rerank_server.py');
+const DEFAULT_SCRIPT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'ingest', 'rerank_server.py');
 
 export interface RerankerOptions {
 	device?: 'cuda' | 'cpu';
