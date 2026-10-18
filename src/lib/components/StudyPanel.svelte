@@ -6,10 +6,7 @@
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
 	import { Badge } from '$lib/components/ui/badge';
 	import Icon from '$lib/components/Icon.svelte';
-	import FileTextIcon from '@lucide/svelte/icons/file-text';
-	import BrainIcon from '@lucide/svelte/icons/brain';
-	import PresentationIcon from '@lucide/svelte/icons/presentation';
-	import ChartColumnIcon from '@lucide/svelte/icons/chart-column';
+	import AnimatedIcon from '$lib/components/AnimatedIcon.svelte';
 	import Trash2Icon from '@lucide/svelte/icons/trash-2';
 	import type { StudySummary } from '$lib/types';
 	import { t } from '$lib/i18n/index.svelte';
@@ -220,7 +217,7 @@
 		<Sheet.Header class="panel-head">
 			<Sheet.Title>{t('StudyPanel.title')}</Sheet.Title>
 			<Sheet.Close class="vc-icon-btn" aria-label={t('StudyPanel.close')}>
-				<Icon name="panel-right" />
+				<AnimatedIcon name="panel-right" active />
 			</Sheet.Close>
 		</Sheet.Header>
 		<div class="rows">
@@ -234,7 +231,7 @@
 			</div>
 			<div class="type-group">
 				<button type="button" class="vc-action" aria-label={t('StudyPanel.cards') + ': ' + t('StudyPanel.new')} onclick={() => trigger(onOpenCards)}>
-					<span class="glyph"><Icon name="cards-stack" /></span>
+					<span class="glyph"><AnimatedIcon name="cards" /></span>
 					<span class="text">
 						<span class="t">
 							{t('StudyPanel.cards')}
@@ -253,7 +250,7 @@
 			</div>
 			<div class="type-group">
 				<button type="button" class="vc-action" aria-label={t('StudyPanel.report') + ': ' + t('StudyPanel.new')} onclick={() => trigger(onOpenReport)}>
-					<span class="glyph"><FileTextIcon size={20} strokeWidth={1.75} aria-hidden="true" /></span>
+					<span class="glyph"><AnimatedIcon name="report" /></span>
 					<span class="text"><span class="t">{t('StudyPanel.report')}</span><span class="d">{t('StudyPanel.reportDesc')}</span></span>
 					<span class="chev"><Icon name="arrow-forward" size="sm" /></span>
 				</button>
@@ -261,7 +258,7 @@
 			</div>
 			<div class="type-group">
 				<button type="button" class="vc-action" aria-label={t('StudyPanel.mindmap') + ': ' + t('StudyPanel.new')} onclick={() => trigger(onOpenMindMap)}>
-					<span class="glyph"><BrainIcon size={20} strokeWidth={1.75} aria-hidden="true" /></span>
+					<span class="glyph"><AnimatedIcon name="mindmap" /></span>
 					<span class="text"><span class="t">{t('StudyPanel.mindmap')}</span><span class="d">{t('StudyPanel.mindmapDesc')}</span></span>
 					<span class="chev"><Icon name="arrow-forward" size="sm" /></span>
 				</button>
@@ -269,7 +266,7 @@
 			</div>
 			<div class="type-group">
 				<button type="button" class="vc-action" aria-label={t('StudyPanel.slides') + ': ' + t('StudyPanel.new')} onclick={() => trigger(onOpenSlides)}>
-					<span class="glyph"><PresentationIcon size={20} strokeWidth={1.75} aria-hidden="true" /></span>
+					<span class="glyph"><AnimatedIcon name="slides" /></span>
 					<span class="text"><span class="t">{t('StudyPanel.slides')}</span><span class="d">{t('StudyPanel.slidesDesc')}</span></span>
 					<span class="chev"><Icon name="arrow-forward" size="sm" /></span>
 				</button>
@@ -277,7 +274,7 @@
 			</div>
 			<div class="type-group">
 				<button type="button" class="vc-action" aria-label={t('StudyPanel.progress') + ': ' + t('StudyPanel.progressOpen')} onclick={() => openItem('/study/progress')}>
-					<span class="glyph"><ChartColumnIcon size={20} strokeWidth={1.75} aria-hidden="true" /></span>
+					<span class="glyph"><AnimatedIcon name="progress" /></span>
 					<span class="text"><span class="t">{t('StudyPanel.progress')}</span><span class="d">{t('StudyPanel.progressDesc')}</span></span>
 					<span class="chev"><Icon name="arrow-forward" size="sm" /></span>
 				</button>

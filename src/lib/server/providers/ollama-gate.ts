@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { sharedJobMutex, type JobMutex } from '../jobMutex';
 import { releaseConverterWorker } from '../convert-worker';
 import { getEmbeddingConfig, getOllamaBaseUrl } from './config-store';
@@ -66,6 +67,13 @@ async function nativeReconcile(): Promise<Set<string>> {
 	}
 }
 
+/** Ollama's /api/ps reports `bge-m3:latest` for a model configured as
+ * `bge-m3`; every name comparison in the gate goes through this so the two
+ * spellings are one model. */
+function normalizeModelName(model: string): string {
+	return model.endsWith(':latest') ? model.slice(0, -':latest'.length) : model;
+}
+
 interface ModelState {
 	refCount: number;
 	drainWaiters: (() => void)[];
@@ -111,8 +119,19 @@ export function createOllamaGate(
 	const residentSource = opts.residentModels ?? ['nomic-embed-text'];
 	function isResident(model: string): boolean {
 		const iterable = typeof residentSource === 'function' ? residentSource() : residentSource;
-		for (const m of iterable) if (m === model) return true;
+		const wanted = normalizeModelName(model);
+		for (const m of iterable) if (normalizeModelName(m) === wanted) return true;
 		return false;
+	}
+	// Non-resident models whose lease the current async context holds. Lets
+	// acquire() refuse a nested lease on a *different* model: that request
+	// would take the exclusive mutex and wait for the outer model to drain,
+	// which it can never do because the requester itself is the one holding
+	// it (and the stuck mutex would also block every conversion queued
+	// behind it). Fails fast with an error instead of hanging silently.
+	const heldModels = new AsyncLocalStorage<ReadonlySet<string>>();
+	function withHeld<R>(model: string, run: () => R): R {
+		return heldModels.run(new Set([...(heldModels.getStore() ?? []), model]), run);
 	}
 	const mutex = opts.mutex ?? sharedJobMutex;
 	const states = new Map<string, ModelState>();
@@ -170,35 +189,64 @@ export function createOllamaGate(
 			if (currentModel) {
 				await waitForDrain(currentModel);
 				const residentNow = await deps.reconcile();
-				if (residentNow.has(currentModel)) await deps.unload(currentModel);
+				if ([...residentNow].some((m) => normalizeModelName(m) === currentModel)) await deps.unload(currentModel);
 			}
 			currentModel = model;
 			incRef(model);
 		});
 	}
 
-	async function acquire(model: string): Promise<void> {
+	/** `model` must already be normalized. Returns true when the lease is on
+	 * a non-resident model (callers then record it via withHeld). */
+	async function acquire(model: string): Promise<boolean> {
 		if (isResident(model)) {
 			incRef(model);
-			return;
+			return false;
+		}
+		const held = heldModels.getStore();
+		if (held?.has(model)) {
+			// Re-entrant join: this context's own open lease pins the model
+			// (no swap can unload it before the lease drains), so skip the
+			// mutex — it may be held by an evict job waiting on this very lease.
+			incRef(model);
+			return true;
+		}
+		if (held && held.size > 0) {
+			const [other] = held;
+			throw new Error(`ollama-gate: nested lease on "${model}" while holding "${other}" would deadlock`);
 		}
 		await acquireNonResident(model);
+		return true;
 	}
 
 	return {
-		async withModel<T>(model: string, fn: () => Promise<T>): Promise<T> {
-			await acquire(model);
+		async withModel<T>(rawModel: string, fn: () => Promise<T>): Promise<T> {
+			const model = normalizeModelName(rawModel);
+			const tracked = await acquire(model);
 			try {
-				return await fn();
+				return await (tracked ? withHeld(model, fn) : fn());
 			} finally {
 				decRef(model);
 			}
 		},
-		async *withModelStream<T>(model: string, gen: () => AsyncGenerator<T>): AsyncGenerator<T> {
-			await acquire(model);
+		async *withModelStream<T>(rawModel: string, gen: () => AsyncGenerator<T>): AsyncGenerator<T> {
+			const model = normalizeModelName(rawModel);
+			const tracked = await acquire(model);
+			// An async generator body runs in the context of whoever calls
+			// next(), not where it was created, so `yield*` would not carry
+			// the held-model context into gen(). Drive it by hand and enter
+			// the context for every step instead.
+			const inScope = <R>(run: () => R): R => (tracked ? withHeld(model, run) : run());
+			const inner = inScope(gen);
 			try {
-				yield* gen();
+				while (true) {
+					const r = await inScope(() => inner.next());
+					if (r.done) return r.value;
+					yield r.value;
+				}
 			} finally {
+				// Early exit (consumer break/throw): let gen() run its own cleanup.
+				await inScope(() => inner.return(undefined)).catch(() => {});
 				decRef(model);
 			}
 		},
@@ -215,7 +263,7 @@ export function createOllamaGate(
 				// A resident model (the embedder) can still hold a lease here —
 				// it never queues on the mutex. Leave it loaded rather than
 				// pull it out from under an in-flight call.
-				if (state(model).refCount === 0) await deps.unload(model);
+				if (state(normalizeModelName(model)).refCount === 0) await deps.unload(model);
 			}
 		}
 	};

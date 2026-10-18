@@ -9,7 +9,7 @@
 	import SourcesSheet, { type SourceCounts } from '$lib/components/SourcesSheet.svelte';
 	import SourceTrigger from '$lib/components/SourceTrigger.svelte';
 	import ChatSidebar from '$lib/components/ChatSidebar.svelte';
-	import Icon from '$lib/components/Icon.svelte';
+	import AnimatedIcon from '$lib/components/AnimatedIcon.svelte';
 	import StudyPanel from '$lib/components/StudyPanel.svelte';
 	import { scopeExpandSignal } from '$lib/scope-expand.svelte';
 	import { t } from '$lib/i18n/index.svelte';
@@ -156,7 +156,7 @@
 				title={t('VaultChatPage.studyPanelTitle')}
 				aria-label={t('VaultChatPage.studyPanelTitle')}
 			>
-				<Icon name="panel-right" />
+				<AnimatedIcon name="panel-right" active={studyPanelOpen} />
 				{#if hasUnseenStudyItems}
 					<span class="unseen-dot" aria-hidden="true"></span>
 					<span class="sr-only">{t('VaultChatPage.unseenContent')}</span>
