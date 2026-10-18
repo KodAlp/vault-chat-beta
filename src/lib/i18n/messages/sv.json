@@ -1030,6 +1030,12 @@
 		"genericSteps": "Alla MCP-klienter som kan starta stdio-servrar accepterar detta standardblock för mcpServers. Se klientens dokumentation för var det ska placeras.",
 		"secretsNote": "Avsnittet innehåller inga hemligheter. Skrivverktyg (som import) kräver dessutom att den här appen körs."
 	},
+	"AvScanSettings": {
+		"label": "Skanna importerade filer efter virus",
+		"description": "Varje fil kontrolleras med Windows Defender (eller ClamAV på Linux och macOS) innan den konverteras. En fil med hot avvisas. Om ingen skanner finns fortsätter importen utan skanning.",
+		"loadFailed": "Det gick inte att läsa in antivirusinställningen.",
+		"saveFailed": "Det gick inte att spara antivirusinställningen."
+	},
 	"McpImportSettings": {
 		"title": "MCP-importmappar",
 		"editNoteLabel": "Tillåt agenter att redigera anteckningar (edit_note)",
@@ -1287,6 +1293,7 @@
 		"CONVERSION_EMPTY": "Konverteringen gav ingen utdata",
 		"CONVERSION_FAILED": "Konverteringen misslyckades",
 		"PDF_DAMAGED": "Den här PDF-filen verkar vara ofullständig eller skadad – nedladdningen kan ha avbrutits. Ladda ned den igen och försök på nytt.",
+		"FILE_THREAT_DETECTED": "Säkerhetsskanningen hittade ett hot ({threat}) i filen, så den importerades inte.",
 		"CONVERTER_CRASHED": "Konverteraren stannade oväntat, och ett nytt försök stannade också. Den här filen kan utlösa ett känt fel i konverteraren. Försök igen om en stund.",
 		"PROCESS_TIMEOUT": "Processen överskred tidsgränsen (>{seconds} s)",
 		"PYTHON_NOT_FOUND": "Python hittades inte. Installera Python 3 från python.org och försök igen.",

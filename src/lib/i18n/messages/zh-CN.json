@@ -918,6 +918,12 @@
     "genericSteps": "任何能启动 stdio 服务器的 MCP 客户端都接受这个标准的 mcpServers 代码块。放置位置请查阅客户端文档。",
     "secretsNote": "该片段不含任何机密信息。写入类工具（如导入）还要求此应用保持运行。"
   },
+  "AvScanSettings": {
+      "label": "扫描导入的文件是否含病毒",
+      "description": "每个文件在转换前都会用 Windows Defender（Linux 和 macOS 上用 ClamAV）检查。含威胁的文件会被拒绝。没有可用的扫描程序时，导入将不经扫描继续进行。",
+      "loadFailed": "无法加载杀毒设置。",
+      "saveFailed": "无法保存杀毒设置。"
+  },
   "McpImportSettings": {
     "title": "MCP 导入文件夹",
     "editNoteLabel": "允许代理编辑笔记 (edit_note)",
@@ -1163,6 +1169,7 @@
     "CONVERSION_EMPTY": "转换未产生任何输出",
     "CONVERSION_FAILED": "转换失败",
     "PDF_DAMAGED": "此 PDF 似乎不完整或已损坏，可能是下载中途中断。请重新下载后再试。",
+    "FILE_THREAT_DETECTED": "安全扫描在此文件中发现了威胁（{threat}），因此未导入。",
     "CONVERTER_CRASHED": "转换器意外停止，重试时也停止了。此文件可能触发了转换器的已知缺陷。请稍后再试。",
     "PROCESS_TIMEOUT": "进程超时（>{seconds} 秒）",
     "PYTHON_NOT_FOUND": "未找到 Python。请从 python.org 安装 Python 3，然后重试。",

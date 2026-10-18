@@ -979,6 +979,12 @@
 		"genericSteps": "Každý klient MCP, který umí spouštět servery stdio, přijímá tento standardní blok mcpServers. Kam patří, zjistíte v dokumentaci klienta.",
 		"secretsNote": "Úryvek neobsahuje žádná tajemství. Nástroje pro zápis (například import) navíc vyžadují, aby tato aplikace běžela."
 	},
+	"AvScanSettings": {
+		"label": "Kontrolovat importované soubory na viry",
+		"description": "Každý soubor se před převodem zkontroluje programem Windows Defender (v Linuxu a macOS programem ClamAV). Soubor s hrozbou je odmítnut. Pokud není k dispozici žádný skener, import pokračuje bez kontroly.",
+		"loadFailed": "Nastavení antiviru se nepodařilo načíst.",
+		"saveFailed": "Nastavení antiviru se nepodařilo uložit."
+	},
 	"McpImportSettings": {
 		"title": "Složky pro import přes MCP",
 		"editNoteLabel": "Povolit agentům upravovat poznámky (edit_note)",
@@ -1224,6 +1230,7 @@
 		"CONVERSION_EMPTY": "Převod nevytvořil žádný výstup",
 		"CONVERSION_FAILED": "Převod selhal",
 		"PDF_DAMAGED": "Toto PDF vypadá neúplně nebo poškozeně – stahování mohlo být přerušeno. Stáhněte je znovu a zkuste to znovu.",
+		"FILE_THREAT_DETECTED": "Bezpečnostní kontrola v tomto souboru našla hrozbu ({threat}), proto nebyl importován.",
 		"CONVERTER_CRASHED": "Konvertor se neočekávaně zastavil a zastavil se i opakovaný pokus. Tento soubor možná spouští známou chybu konvertoru. Zkuste to za chvíli znovu.",
 		"PROCESS_TIMEOUT": "Proces překročil časový limit (>{seconds} s)",
 		"PYTHON_NOT_FOUND": "Python nebyl nalezen. Nainstalujte Python 3 z python.org a zkuste to znovu.",

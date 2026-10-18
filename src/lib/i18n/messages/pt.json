@@ -933,6 +933,12 @@
     "genericSteps": "Qualquer cliente MCP capaz de iniciar servidores stdio aceita este bloco mcpServers padrão. Consulte a documentação do seu cliente para saber onde colocá-lo.",
     "secretsNote": "O trecho não contém segredos. Ferramentas de escrita (como importar) também exigem que este app esteja aberto."
   },
+  "AvScanSettings": {
+      "label": "Verificar vírus nos arquivos importados",
+      "description": "Cada arquivo é verificado com o Windows Defender (ou ClamAV no Linux e macOS) antes de ser convertido. Um arquivo com ameaça é recusado. Se não houver verificador disponível, a importação continua sem verificação.",
+      "loadFailed": "Não foi possível carregar a configuração do antivírus.",
+      "saveFailed": "Não foi possível salvar a configuração do antivírus."
+  },
   "McpImportSettings": {
     "title": "Pastas de importação MCP",
     "editNoteLabel": "Permitir que agentes editem notas (edit_note)",
@@ -1179,6 +1185,7 @@
     "CONVERSION_EMPTY": "A conversão não produziu nenhuma saída",
     "CONVERSION_FAILED": "A conversão falhou",
     "PDF_DAMAGED": "Este PDF parece incompleto ou danificado; o download pode ter sido interrompido. Baixe-o novamente e tente de novo.",
+    "FILE_THREAT_DETECTED": "A verificação de segurança encontrou uma ameaça ({threat}) neste arquivo, por isso ele não foi importado.",
     "CONVERTER_CRASHED": "O conversor parou inesperadamente, e uma nova tentativa também parou. Este arquivo pode estar acionando um bug conhecido do conversor. Tente novamente daqui a pouco.",
     "PROCESS_TIMEOUT": "Tempo do processo esgotado (>{seconds} s)",
     "PYTHON_NOT_FOUND": "Python não encontrado. Instale o Python 3 em python.org e tente novamente.",

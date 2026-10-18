@@ -918,6 +918,12 @@
     "genericSteps": "Klien MCP apa pun yang dapat menjalankan server stdio menerima blok mcpServers standar ini. Lihat dokumentasi klien Anda untuk tempat menaruhnya.",
     "secretsNote": "Cuplikan tidak berisi rahasia. Alat tulis (seperti impor) juga memerlukan aplikasi ini berjalan."
   },
+  "AvScanSettings": {
+      "label": "Pindai berkas yang diimpor untuk mencari virus",
+      "description": "Setiap berkas diperiksa dengan Windows Defender (atau ClamAV di Linux dan macOS) sebelum dikonversi. Berkas yang mengandung ancaman ditolak. Jika tidak ada pemindai, impor tetap berjalan tanpa pemindaian.",
+      "loadFailed": "Tidak dapat memuat pengaturan antivirus.",
+      "saveFailed": "Tidak dapat menyimpan pengaturan antivirus."
+  },
   "McpImportSettings": {
     "title": "Folder impor MCP",
     "editNoteLabel": "Izinkan agen mengedit catatan (edit_note)",
@@ -1163,6 +1169,7 @@
     "CONVERSION_EMPTY": "Konversi tidak menghasilkan keluaran",
     "CONVERSION_FAILED": "Konversi gagal",
     "PDF_DAMAGED": "PDF ini tampak tidak lengkap atau rusak; unduhannya mungkin terputus. Unduh ulang lalu coba lagi.",
+    "FILE_THREAT_DETECTED": "Pemindaian keamanan menemukan ancaman ({threat}) pada berkas ini, sehingga tidak diimpor.",
     "CONVERTER_CRASHED": "Konverter berhenti tiba-tiba, dan percobaan ulang juga berhenti. File ini mungkin memicu bug konverter yang sudah diketahui. Coba lagi sebentar lagi.",
     "PROCESS_TIMEOUT": "Waktu proses habis (>{seconds} dtk)",
     "PYTHON_NOT_FOUND": "Python tidak ditemukan. Pasang Python 3 dari python.org, lalu coba lagi.",
