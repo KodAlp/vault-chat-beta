@@ -368,7 +368,10 @@
 		"scanPageRunning": "Prohledávání…",
 		"scanPageEmpty": "Na této stránce nebyly nalezeny žádné odkazy na PDF.",
 		"scanPageError": "Stránku se nepodařilo prohledat",
-		"scanPageAddSelected": "Přidat odkazy: {count}"
+		"scanPageAddSelected": "Přidat odkazy: {count}",
+		"retryableHint": "{count} odkazů dříve selhalo",
+		"loadRetryable": "Načíst neúspěšné odkazy",
+		"retryFailed": "Zkusit neúspěšné znovu"
 	},
 	"LibraryTree": {
 		"loadError": "Knihovnu se nepodařilo načíst.",

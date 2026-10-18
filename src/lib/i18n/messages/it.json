@@ -369,7 +369,10 @@
 		"scanPageRunning": "Analisi...",
 		"scanPageEmpty": "Nessun link PDF trovato in questa pagina.",
 		"scanPageError": "Impossibile analizzare la pagina",
-		"scanPageAddSelected": "Aggiungi {count} link"
+		"scanPageAddSelected": "Aggiungi {count} link",
+		"retryableHint": "{count} link non riusciti nei tentativi precedenti",
+		"loadRetryable": "Carica i link non riusciti",
+		"retryFailed": "Riprova quelli falliti"
 	},
 	"LibraryTree": {
 		"loadError": "Impossibile caricare la biblioteca.",

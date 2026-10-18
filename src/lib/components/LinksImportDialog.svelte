@@ -46,8 +46,47 @@
 	let drafts = $state<Record<string, { title: string; domain: string; level: string }>>({});
 	let savingIds = $state<Set<string>>(new Set());
 
+	// Links that failed in earlier batches (server-side link manifest) — offered
+	// as a one-click refill so a flaky batch doesn't have to be re-pasted.
+	let retryable = $state<string[]>([]);
+
+	function mergeIntoLinksText(urls: string[]) {
+		const existing = linksText
+			.split('\n')
+			.map((l) => l.trim())
+			.filter(Boolean);
+		linksText = [...new Set([...existing, ...urls])].join('\n');
+	}
+
+	async function loadRetryable() {
+		try {
+			const res = await fetch('/api/import/links/retryable');
+			if (!res.ok) return;
+			const body = await res.json().catch(() => null);
+			const links: { url: string }[] = Array.isArray(body?.links) ? body.links : [];
+			// Drop the ones already typed into the textarea so the hint only shows
+			// when it would add something.
+			const typed = new Set(linksText.split('\n').map((l) => l.trim()));
+			retryable = links.map((l) => l.url).filter((u) => !typed.has(u));
+		} catch {
+			// the hint is a convenience; a failed lookup just hides it
+		}
+	}
+
+	function retryFailedFromRun() {
+		const failedUrls = items.filter((i) => i.status === 'failed').map((i) => i.fileName);
+		linksText = '';
+		mergeIntoLinksText(failedUrls);
+		phase = 'idle';
+		items = [];
+		drafts = {};
+		retryable = [];
+	}
+
 	function openDialog() {
 		open = true;
+		retryable = [];
+		void loadRetryable();
 		phase = 'idle';
 		items = [];
 		drafts = {};
@@ -95,12 +134,7 @@
 	function addSelectedScanLinks() {
 		const chosen = scanResults.filter((l) => scanSelected.has(l.url)).map((l) => l.url);
 		if (chosen.length === 0) return;
-		const existing = linksText
-			.split('\n')
-			.map((l) => l.trim())
-			.filter(Boolean);
-		const merged = [...new Set([...existing, ...chosen])];
-		linksText = merged.join('\n');
+		mergeIntoLinksText(chosen);
 		scanOpen = false;
 		scanUrl = '';
 		scanPhase = 'idle';
@@ -255,6 +289,24 @@
 				></textarea>
 			</label>
 
+			{#if retryable.length > 0}
+				<p class="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+					{t('LinksImportDialog.retryableHint', { count: retryable.length })}
+					<Button
+						type="button"
+						variant="ghost"
+						size="sm"
+						class="h-auto px-1 py-0 text-xs"
+						onclick={() => {
+							mergeIntoLinksText(retryable);
+							retryable = [];
+						}}
+					>
+						{t('LinksImportDialog.loadRetryable')}
+					</Button>
+				</p>
+			{/if}
+
 			<!-- Aşama 10 #1: scan one page for its own PDF links instead of
 			     pasting each one by hand. Inline sub-panel, not a second
 			     dialog, so results merge straight into linksText above. -->
@@ -361,6 +413,9 @@
 				{/each}
 			</div>
 			<Dialog.Footer>
+				{#if (counts.failed ?? 0) > 0}
+					<Button variant="outline" onclick={retryFailedFromRun}>{t('LinksImportDialog.retryFailed')}</Button>
+				{/if}
 				<Button onclick={() => (open = false)}>{t('Common.kapat')}</Button>
 			</Dialog.Footer>
 		{:else if phase === 'error'}

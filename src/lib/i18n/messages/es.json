@@ -371,6 +371,9 @@
     "scanPageEmpty": "No se encontraron enlaces a PDF en esta página.",
     "scanPageError": "No se pudo analizar la página",
     "scanPageAddSelected": "Añadir {count} enlaces",
+    "retryableHint": "{count} enlaces fallaron en intentos anteriores",
+    "loadRetryable": "Cargar enlaces fallidos",
+    "retryFailed": "Reintentar los fallidos",
     "scanPageAddSelected#one": "Añadir {count} enlace"
   },
   "LibraryTree": {

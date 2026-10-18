@@ -359,7 +359,10 @@
 		"scanPageRunning": "스캔하는 중...",
 		"scanPageEmpty": "이 페이지에서 PDF 링크를 찾지 못했어요.",
 		"scanPageError": "페이지를 스캔하지 못했어요",
-		"scanPageAddSelected": "링크 {count}개 추가"
+		"scanPageAddSelected": "링크 {count}개 추가",
+		"retryableHint": "이전 시도에서 링크 {count}개가 실패했습니다",
+		"loadRetryable": "실패한 링크 불러오기",
+		"retryFailed": "실패한 항목 다시 시도"
 	},
 	"LibraryTree": {
 		"loadError": "라이브러리를 불러오지 못했어요.",

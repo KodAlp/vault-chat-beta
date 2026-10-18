@@ -369,6 +369,9 @@
 		"scanPageEmpty": "Tältä sivulta ei löytynyt PDF-linkkejä.",
 		"scanPageError": "Sivua ei voitu skannata",
 		"scanPageAddSelected": "Lisää {count} linkkiä",
+		"retryableHint": "{count} linkkiä epäonnistui aiemmilla yrityksillä",
+		"loadRetryable": "Lataa epäonnistuneet linkit",
+		"retryFailed": "Yritä epäonnistuneita uudelleen",
 		"scanPageAddSelected#one": "Lisää {count} linkki"
 	},
 	"LibraryTree": {

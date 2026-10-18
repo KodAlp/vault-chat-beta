@@ -359,7 +359,10 @@
     "scanPageRunning": "اسکین ہو رہا ہے...",
     "scanPageEmpty": "اس صفحے پر کوئی PDF لنک نہیں ملا۔",
     "scanPageError": "صفحہ اسکین نہیں ہو سکا",
-    "scanPageAddSelected": "{count} لنکس شامل کریں"
+    "scanPageAddSelected": "{count} لنکس شامل کریں",
+    "retryableHint": "پچھلی کوششوں میں {count} لنکس ناکام ہوئے",
+    "loadRetryable": "ناکام لنکس لوڈ کریں",
+    "retryFailed": "ناکام کو دوبارہ آزمائیں"
   },
   "LibraryTree": {
     "loadError": "لائبریری لوڈ نہیں ہو سکی۔",

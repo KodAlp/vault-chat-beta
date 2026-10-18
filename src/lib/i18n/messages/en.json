@@ -380,7 +380,10 @@
 		"scanPageRunning": "Scanning...",
 		"scanPageEmpty": "No PDF links found on this page.",
 		"scanPageError": "Could not scan the page",
-		"scanPageAddSelected": "Add {count} links"
+		"scanPageAddSelected": "Add {count} links",
+		"retryableHint": "{count} links failed in earlier attempts",
+		"loadRetryable": "Load failed links",
+		"retryFailed": "Retry failed"
 	},
 
 	"LibraryTree": {

@@ -332,6 +332,32 @@ test('politeDelay does not wait for a host that has never been fetched, or one w
 	await politeDelay('elapsed.example', registry, () => 5000, sleep);
 });
 
+test('politeDelay spaces concurrent calls for the same host by the courtesy window and leaves other hosts alone', async () => {
+	const registry = new Map<string, number>();
+	let clock = 10_000;
+	const now = () => clock;
+	// Fake sleep: advances the clock to the wake-up time instead of waiting.
+	const woke: number[] = [];
+	const sleep = async (ms: number) => {
+		const target = clock + ms;
+		await Promise.resolve();
+		clock = Math.max(clock, target);
+		woke.push(target);
+	};
+
+	const calls = [
+		politeDelay('same.example', registry, now, sleep),
+		politeDelay('same.example', registry, now, sleep),
+		politeDelay('same.example', registry, now, sleep),
+		politeDelay('other.example', registry, now, sleep)
+	];
+	await Promise.all(calls);
+	// First same-host call and the other host need no wait; the next two wait 1000 and 2000 ms.
+	assert.deepEqual(woke, [11_000, 12_000]);
+	assert.equal(registry.get('same.example'), 12_000);
+	assert.equal(registry.get('other.example'), 10_000);
+});
+
 test('isTransientFetchError recognizes only the curated transport-level codes', () => {
 	assert.equal(isTransientFetchError(Object.assign(new Error('x'), { cause: { code: 'ECONNRESET' } })), true);
 	assert.equal(isTransientFetchError(Object.assign(new Error('x'), { cause: { code: 'ETIMEDOUT' } })), true);

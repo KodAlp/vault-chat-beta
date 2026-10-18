@@ -399,6 +399,9 @@
     "scanPageEmpty": "На этой странице не найдено ссылок на PDF.",
     "scanPageError": "Не удалось просканировать страницу",
     "scanPageAddSelected": "Добавить ссылок: {count}",
+    "retryableHint": "Ссылок, не загрузившихся в прошлых попытках: {count}",
+    "loadRetryable": "Загрузить неудавшиеся ссылки",
+    "retryFailed": "Повторить неудавшиеся",
     "scanPageAddSelected#one": "Добавить {count} ссылку",
     "scanPageAddSelected#few": "Добавить {count} ссылки",
     "scanPageAddSelected#many": "Добавить {count} ссылок"

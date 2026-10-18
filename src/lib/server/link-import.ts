@@ -502,12 +502,17 @@ export async function politeDelay(
 	now: () => number = Date.now,
 	sleep: (ms: number) => Promise<void> = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 ): Promise<void> {
+	// The registry holds the time the host's NEXT slot was reserved for. The
+	// slot is computed and stored before any await: with concurrent callers,
+	// reading "last fetch" and writing it after the sleep let two calls both
+	// see an old timestamp and skip the delay.
+	const t = now();
 	const last = registry.get(hostname);
-	const elapsed = last === undefined ? Infinity : now() - last;
-	if (elapsed < COURTESY_DELAY_MS) {
-		await sleep(COURTESY_DELAY_MS - elapsed);
+	const slot = last === undefined ? t : Math.max(t, last + COURTESY_DELAY_MS);
+	registry.set(hostname, slot);
+	if (slot > t) {
+		await sleep(slot - t);
 	}
-	registry.set(hostname, now());
 }
 
 const TRANSIENT_ERROR_CODES = new Set(['ECONNRESET', 'ETIMEDOUT', 'ECONNREFUSED', 'EAI_AGAIN', 'UND_ERR_CONNECT_TIMEOUT', 'UND_ERR_SOCKET']);
