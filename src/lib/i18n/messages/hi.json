@@ -359,7 +359,10 @@
     "scanPageRunning": "स्कैन हो रहा है...",
     "scanPageEmpty": "इस पेज पर कोई PDF लिंक नहीं मिला।",
     "scanPageError": "पेज स्कैन नहीं हो सका",
-    "scanPageAddSelected": "{count} लिंक जोड़ें"
+    "scanPageAddSelected": "{count} लिंक जोड़ें",
+    "retryableHint": "पिछले प्रयासों में {count} लिंक विफल रहे",
+    "loadRetryable": "विफल लिंक लोड करें",
+    "retryFailed": "विफल को फिर आज़माएँ"
   },
   "LibraryTree": {
     "loadError": "लाइब्रेरी लोड नहीं हो सकी।",

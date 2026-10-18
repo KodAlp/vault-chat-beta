@@ -1,6 +1,8 @@
 import crypto from 'node:crypto';
 import type { RequestHandler } from './$types';
 import { validateLinkUrl, loadImportedUrls, rewriteArxivAbsToPdf } from '$lib/server/link-import';
+import { runPool } from '$lib/server/concurrency';
+import { linkManifestPath, appendManifestEntry } from '$lib/server/link-manifest';
 import { stageUrl } from '$lib/server/stage-url';
 import { importLogPath } from '$lib/server/library';
 import { vaultFromId } from '$lib/server/requestVault';
@@ -10,6 +12,8 @@ import { fail, toCodedError } from '$lib/server/app-error';
 import type { ImportEvent, ImportResultItem, ImportSummary } from '$lib/types';
 
 const MAX_LINKS_PER_BATCH = 50;
+// Downloads overlap; conversion stays serialized by sharedJobMutex.
+const LINK_CONCURRENCY = 4;
 
 /** Builds a 'failed' ImportResultItem from any caught error — an AppError
  * thrown deliberately by link-import.ts/convertQueue.ts/youtubeQueue.ts, or
@@ -57,49 +61,74 @@ export const POST: RequestHandler = async ({ request }) => {
 		// different listings) — without this, both copies would fetch,
 		// convert and stage independently.
 		const seenInBatch = new Set<string>();
+		const batchId = crypto.randomUUID();
+		const manifest = linkManifestPath(v);
 
+		// Emits a finished item and records it in the link manifest. A manifest
+		// write failure must never fail the import itself.
+		const emit = (item: ImportResultItem, url: string) => {
+			items.push(item);
+			send({ type: 'item', item });
+			try {
+				appendManifestEntry(manifest, {
+					batchId,
+					url,
+					status: item.status === 'failed' ? 'failed' : item.status === 'pending' ? 'pending' : 'skipped',
+					...(item.status === 'failed' && item.code ? { code: item.code } : {}),
+					...(item.importId ? { importId: item.importId } : {}),
+					at: new Date().toISOString()
+				});
+			} catch (err) {
+				logAppEvent({ kind: 'fatal_error', message: `link manifest write: ${err instanceof Error ? err.message : String(err)}` });
+			}
+		};
+
+		// Dedup runs synchronously, before anything is scheduled, so two identical
+		// urls can never both start. Only links that survive become pool tasks.
+		const tasks: { rawLink: string; url: URL }[] = [];
 		for (const rawLink of links) {
-			send({ type: 'progress', stage: 'fetching', fileName: rawLink });
-
 			let url: URL;
 			try {
 				url = rewriteArxivAbsToPdf(validateLinkUrl(rawLink));
 			} catch (err) {
-				const item = failedItem(rawLink, err);
-				items.push(item);
-				send({ type: 'item', item });
+				send({ type: 'progress', stage: 'fetching', fileName: rawLink });
+				emit(failedItem(rawLink, err), rawLink);
 				continue;
 			}
 
 			if (alreadyImported.has(url.href) || seenInBatch.has(url.href)) {
-				const item: ImportResultItem = { id: crypto.randomUUID(), fileName: rawLink, status: 'skipped' };
-				items.push(item);
-				send({ type: 'item', item });
+				emit({ id: crypto.randomUUID(), fileName: rawLink, status: 'skipped' }, url.href);
 				continue;
 			}
 			seenInBatch.add(url.href);
+			tasks.push({ rawLink, url });
+		}
 
+		// Conversion is already serialized by sharedJobMutex, so concurrency here
+		// only overlaps the downloads of later links with the conversion of
+		// earlier ones. Items are emitted in completion order.
+		await runPool(tasks, LINK_CONCURRENCY, async ({ rawLink, url }) => {
+			send({ type: 'progress', stage: 'fetching', fileName: rawLink });
 			const importId = crypto.randomUUID();
 			try {
 				// The whole fetch/convert/stage pipeline (YouTube branch, SSRF guard, robots, size cap) lives in
 				// stage-url.ts so the MCP import route runs the very same code.
 				const { title, warnings } = await stageUrl(v, url, importId);
-				const item: ImportResultItem = {
-					id: crypto.randomUUID(),
-					fileName: rawLink,
-					status: 'pending',
-					importId,
-					proposed: { title, domain, level: 'undergraduate' },
-					warnings
-				};
-				items.push(item);
-				send({ type: 'item', item });
+				emit(
+					{
+						id: crypto.randomUUID(),
+						fileName: rawLink,
+						status: 'pending',
+						importId,
+						proposed: { title, domain, level: 'undergraduate' },
+						warnings
+					},
+					url.href
+				);
 			} catch (err) {
-				const item = failedItem(rawLink, err);
-				items.push(item);
-				send({ type: 'item', item });
+				emit(failedItem(rawLink, err), url.href);
 			}
-		}
+		});
 
 		const summary: ImportSummary = { items };
 		send({ type: 'done', summary });

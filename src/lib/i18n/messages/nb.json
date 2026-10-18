@@ -368,6 +368,9 @@
 		"scanPageEmpty": "Fant ingen PDF-lenker på denne siden.",
 		"scanPageError": "Kunne ikke skanne siden",
 		"scanPageAddSelected": "Legg til {count} lenker",
+		"retryableHint": "{count} lenker feilet i tidligere forsøk",
+		"loadRetryable": "Last inn mislykkede lenker",
+		"retryFailed": "Prøv de mislykkede på nytt",
 		"scanPageAddSelected#one": "Legg til {count} lenke"
 	},
 	"LibraryTree": {

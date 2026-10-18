@@ -367,6 +367,9 @@
     "scanPageEmpty": "Keine PDF-Links auf dieser Seite gefunden.",
     "scanPageError": "Die Seite konnte nicht durchsucht werden",
     "scanPageAddSelected": "{count} Links hinzufügen",
+    "retryableHint": "{count} Links sind bei früheren Versuchen fehlgeschlagen",
+    "loadRetryable": "Fehlgeschlagene Links laden",
+    "retryFailed": "Fehlgeschlagene erneut versuchen",
     "scanPageAddSelected#one": "{count} Link hinzufügen"
   },
   "LibraryTree": {

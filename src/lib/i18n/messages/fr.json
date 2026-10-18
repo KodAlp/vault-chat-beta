@@ -369,6 +369,9 @@
     "scanPageEmpty": "Aucun lien PDF trouvé sur cette page.",
     "scanPageError": "Impossible d'analyser la page",
     "scanPageAddSelected": "Ajouter {count} liens",
+    "retryableHint": "{count} liens ont échoué lors de tentatives précédentes",
+    "loadRetryable": "Charger les liens échoués",
+    "retryFailed": "Réessayer les échecs",
     "scanPageAddSelected#one": "Ajouter {count} lien"
   },
   "LibraryTree": {

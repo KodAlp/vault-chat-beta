@@ -359,7 +359,10 @@
     "scanPageRunning": "スキャン中…",
     "scanPageEmpty": "このページに PDF リンクは見つかりませんでした。",
     "scanPageError": "ページをスキャンできませんでした",
-    "scanPageAddSelected": "{count} 件のリンクを追加"
+    "scanPageAddSelected": "{count} 件のリンクを追加",
+    "retryableHint": "以前の試行で {count} 件のリンクが失敗しました",
+    "loadRetryable": "失敗したリンクを読み込む",
+    "retryFailed": "失敗したものを再試行"
   },
   "LibraryTree": {
     "loadError": "ライブラリを読み込めませんでした。",

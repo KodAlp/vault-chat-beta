@@ -372,6 +372,9 @@
 		"scanPageEmpty": "Ingen PDF-links fundet på denne side.",
 		"scanPageError": "Kunne ikke scanne siden",
 		"scanPageAddSelected": "Tilføj {count} links",
+		"retryableHint": "{count} links fejlede ved tidligere forsøg",
+		"loadRetryable": "Indlæs mislykkede links",
+		"retryFailed": "Prøv de mislykkede igen",
 		"scanPageAddSelected#one": "Tilføj {count} link"
 	},
 	"LibraryTree": {

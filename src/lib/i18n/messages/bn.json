@@ -359,7 +359,10 @@
     "scanPageRunning": "স্ক্যান হচ্ছে...",
     "scanPageEmpty": "এই পেজে কোনো PDF লিংক পাওয়া যায়নি।",
     "scanPageError": "পেজ স্ক্যান করা যায়নি",
-    "scanPageAddSelected": "{count}টি লিংক যোগ করুন"
+    "scanPageAddSelected": "{count}টি লিংক যোগ করুন",
+    "retryableHint": "আগের চেষ্টায় {count}টি লিংক ব্যর্থ হয়েছিল",
+    "loadRetryable": "ব্যর্থ লিংক লোড করুন",
+    "retryFailed": "ব্যর্থগুলো আবার চেষ্টা করুন"
   },
   "LibraryTree": {
     "loadError": "লাইব্রেরি লোড করা যায়নি।",

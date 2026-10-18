@@ -380,7 +380,10 @@
 		"scanPageRunning": "Taranıyor...",
 		"scanPageEmpty": "Bu sayfada PDF bağlantısı bulunamadı.",
 		"scanPageError": "Sayfa taranamadı",
-		"scanPageAddSelected": "{count} bağlantıyı ekle"
+		"scanPageAddSelected": "{count} bağlantıyı ekle",
+		"retryableHint": "Önceki denemelerde {count} link başarısız oldu",
+		"loadRetryable": "Başarısız linkleri yükle",
+		"retryFailed": "Başarısızları yeniden dene"
 	},
 
 	"LibraryTree": {

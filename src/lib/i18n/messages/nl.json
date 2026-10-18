@@ -365,7 +365,10 @@
 		"scanPageRunning": "Scannen...",
 		"scanPageEmpty": "Geen PDF-links gevonden op deze pagina.",
 		"scanPageError": "De pagina kon niet worden gescand",
-		"scanPageAddSelected": "{count} links toevoegen"
+		"scanPageAddSelected": "{count} links toevoegen",
+		"retryableHint": "{count} links zijn eerder mislukt",
+		"loadRetryable": "Mislukte links laden",
+		"retryFailed": "Mislukte opnieuw proberen"
 	},
 	"LibraryTree": {
 		"loadError": "De bibliotheek kon niet worden geladen.",

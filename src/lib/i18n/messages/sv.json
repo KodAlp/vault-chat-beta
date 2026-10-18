@@ -390,6 +390,9 @@
 		"scanPageEmpty": "Inga PDF-länkar hittades på den här sidan.",
 		"scanPageError": "Kunde inte skanna sidan",
 		"scanPageAddSelected": "Lägg till {count} länkar",
+		"retryableHint": "{count} länkar misslyckades vid tidigare försök",
+		"loadRetryable": "Läs in misslyckade länkar",
+		"retryFailed": "Försök igen med misslyckade",
 		"scanPageAddSelected#one": "Lägg till {count} länk"
 	},
 

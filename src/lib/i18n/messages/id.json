@@ -359,7 +359,10 @@
     "scanPageRunning": "Memindai…",
     "scanPageEmpty": "Tidak ada tautan PDF di halaman ini.",
     "scanPageError": "Gagal memindai halaman",
-    "scanPageAddSelected": "Tambahkan {count} tautan"
+    "scanPageAddSelected": "Tambahkan {count} tautan",
+    "retryableHint": "{count} tautan gagal pada percobaan sebelumnya",
+    "loadRetryable": "Muat tautan yang gagal",
+    "retryFailed": "Coba lagi yang gagal"
   },
   "LibraryTree": {
     "loadError": "Gagal memuat pustaka.",

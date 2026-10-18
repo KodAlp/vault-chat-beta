@@ -359,7 +359,10 @@
     "scanPageRunning": "正在扫描…",
     "scanPageEmpty": "此页面上未找到 PDF 链接。",
     "scanPageError": "无法扫描该页面",
-    "scanPageAddSelected": "添加 {count} 个链接"
+    "scanPageAddSelected": "添加 {count} 个链接",
+    "retryableHint": "之前的尝试中有 {count} 个链接失败",
+    "loadRetryable": "加载失败的链接",
+    "retryFailed": "重试失败项"
   },
   "LibraryTree": {
     "loadError": "无法加载资料库。",

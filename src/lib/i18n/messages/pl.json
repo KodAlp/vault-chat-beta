@@ -365,7 +365,10 @@
 		"scanPageRunning": "Skanowanie...",
 		"scanPageEmpty": "Nie znaleziono linków do PDF na tej stronie.",
 		"scanPageError": "Nie udało się przeskanować strony",
-		"scanPageAddSelected": "Dodaj linki ({count})"
+		"scanPageAddSelected": "Dodaj linki ({count})",
+		"retryableHint": "{count} linków nie powiodło się we wcześniejszych próbach",
+		"loadRetryable": "Wczytaj nieudane linki",
+		"retryFailed": "Ponów nieudane"
 	},
 	"LibraryTree": {
 		"loadError": "Nie udało się wczytać biblioteki.",
