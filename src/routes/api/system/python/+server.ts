@@ -8,6 +8,7 @@ import { dataDir } from '$lib/server/env';
 import {
 	checkPythonVersion,
 	defaultPythonDeps,
+	existingBundledPython,
 	formatPythonVersion,
 	isPythonVersionSupported,
 	isVenvModuleMissing,
@@ -39,6 +40,8 @@ const CHECK_TIMEOUT_MS = 5000;
  * was killed, and every module (markitdown included) was reported missing
  * although all were installed. */
 const MODULE_CHECK_TIMEOUT_MS = 30000;
+/** Upper bound for the post-install warm-up start of the venv python (see the pip exit handler). */
+const PIP_WARMUP_TIMEOUT_MS = 120000;
 /** `python -m venv` (with ensurepip) — a few seconds normally, generous cap. */
 const VENV_CREATE_TIMEOUT_MS = 120000;
 
@@ -154,6 +157,12 @@ export const POST: RequestHandler = async () => {
 	const isWin = process.platform === 'win32';
 	const explicitBin = !!process.env.PYTHON_BIN;
 	let bin = pythonBin();
+	const pythonDeps = defaultPythonDeps(dataDir());
+	// Windows: the Python shipped inside the installer lives in the (possibly read-only) install folder, so
+	// it is never pip-installed into directly; like POSIX it gets an app-owned venv. A docling system
+	// Python (or an explicit PYTHON_BIN) is resolved BEFORE the bundled one, so that flow is unchanged.
+	const bundledBase = isWin && !explicitBin ? existingBundledPython(pythonDeps) : null;
+	const bundledInUse = bundledBase !== null && path.win32.normalize(bin).toLowerCase() === path.win32.normalize(bundledBase).toLowerCase();
 	const versionCheck = await checkPythonVersion(bin);
 	if (!versionCheck.ok) {
 		return sseStream<PythonSetupEvent>(async (send) => {
@@ -173,11 +182,11 @@ export const POST: RequestHandler = async () => {
 		// app-owned venv under the data dir; the resolver then picks it up
 		// automatically. An explicit PYTHON_BIN is the user's choice and is
 		// used as-is, like Windows (which keeps the old direct-pip behavior).
-		if (!isWin && !explicitBin) {
+		if ((!isWin && !explicitBin) || bundledInUse) {
 			const root = dataDir();
 			const venvPy = venvPythonPath(root);
 			if (!fs.existsSync(venvPy)) {
-				const base = await pickSupportedPython(systemPythonCandidates(defaultPythonDeps(root)));
+				const base = await pickSupportedPython(bundledInUse ? [bundledBase!] : systemPythonCandidates(pythonDeps));
 				if (!base) {
 					send({ type: 'error', ...errorPayload(new AppError('PYTHON_NOT_FOUND')) });
 					return;
@@ -229,7 +238,11 @@ export const POST: RequestHandler = async () => {
 				resolve();
 			});
 
-			child.on('exit', (code) => {
+			child.on('exit', async (code) => {
+				// Windows: the first start of a freshly pip-populated venv's python.exe can take 10+ s in the
+				// server (antivirus scan), longer than the 5 s version check behind the banner's re-check, which
+				// then reported "Python not installed". Pay that cost here, once, before telling the UI we are done.
+				if (code === 0 && isWin) await run(bin, ['--version'], PIP_WARMUP_TIMEOUT_MS);
 				invalidateStatus();
 				send({ type: 'done', ok: code === 0 });
 				resolve();

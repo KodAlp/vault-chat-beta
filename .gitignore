@@ -44,3 +44,6 @@ data/mcp-settings.json
 # Playwright
 test-results/
 playwright-report/
+
+# TODO #53 — downloaded runtime archives (python-build-standalone) cached by scripts/fetch-python-runtime.mjs.
+.cache/

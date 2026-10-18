@@ -103,9 +103,11 @@ fn parse_node_major_version(version_text: &str) -> Option<u32> {
 /// `require()` better-sqlite3's compiled `.node` file inside the sidecar,
 /// so this gate runs BEFORE the sidecar is ever spawned rather than letting
 /// it crash after the fact with a much less legible native-addon error.
-fn resolve_and_verify_node() -> Result<PathBuf, NodeProblem> {
+fn resolve_and_verify_node(bundled: Option<PathBuf>) -> Result<PathBuf, NodeProblem> {
     let required = VAULTCHAT_NODE_MAJOR.to_string();
-    let Some(node_bin) = resolve_node_binary() else {
+    // Windows installer: the Node 22 shipped inside the app is ALWAYS the one used (a user-installed Node of
+    // any version is ignored); it is still version-checked below like any other candidate.
+    let Some(node_bin) = bundled.or_else(resolve_node_binary) else {
         return Err(NodeProblem {
             kind: "missing".to_string(),
             found: None,
@@ -148,6 +150,30 @@ fn resolve_and_verify_node() -> Result<PathBuf, NodeProblem> {
     }
 }
 
+/// The Node 22 shipped in the Windows installer (`dist-server/node/node.exe`,
+/// staged by scripts/stage-server.mjs), if `server_dir` has one. Always `None`
+/// off Windows (the other platforms keep resolving a system Node) and for
+/// dev runs / older layouts without the file, which fall back to
+/// `resolve_node_binary`.
+fn bundled_node_in(server_dir: &Path) -> Option<PathBuf> {
+    if !cfg!(windows) {
+        return None;
+    }
+    let node = server_dir.join("node").join("node.exe");
+    node.is_file().then_some(node)
+}
+
+/// The sidecar's resource directory (`<resources>\_up_\dist-server`). See the
+/// layout comment in `spawn_sidecar` for why `_up_`.
+fn sidecar_server_dir(app: &AppHandle) -> Result<PathBuf, String> {
+    let resource_dir = strip_verbatim_prefix(&app.path().resource_dir().map_err(|e| {
+        let msg = format!("resource_dir() başarısız: {e}");
+        log_line(app, &msg);
+        msg
+    })?);
+    Ok(resource_dir.join("_up_").join("dist-server"))
+}
+
 /// Re-checks Node without touching the sidecar — called from the splash
 /// page right after a winget-driven Node install finishes, before it
 /// retries `check_and_start`. Finds a just-installed Node with NO relaunch
@@ -166,8 +192,9 @@ struct NodeStatus {
 }
 
 #[tauri::command]
-async fn recheck_node() -> NodeStatus {
-    match resolve_and_verify_node() {
+async fn recheck_node(app: AppHandle) -> NodeStatus {
+    let bundled = sidecar_server_dir(&app).ok().and_then(|dir| bundled_node_in(&dir));
+    match resolve_and_verify_node(bundled) {
         Ok(_) => NodeStatus {
             ok: true,
             node_problem: None,
@@ -652,7 +679,8 @@ async fn spawn_sidecar(app: &AppHandle, cfg: &VaultConfig) -> Result<SidecarOutc
     // See resolve_and_verify_node's doc comment — a wrong-major Node is
     // reported back as a NodeProblem (a normal, UI-visible outcome the
     // splash renders its own panel for), not as a generic Err(String).
-    let node_bin = match resolve_and_verify_node() {
+    let server_dir = sidecar_server_dir(app)?;
+    let node_bin = match resolve_and_verify_node(bundled_node_in(&server_dir)) {
         Ok(p) => p,
         Err(problem) => {
             log_line(
@@ -666,11 +694,6 @@ async fn spawn_sidecar(app: &AppHandle, cfg: &VaultConfig) -> Result<SidecarOutc
         }
     };
 
-    let resource_dir = strip_verbatim_prefix(&app.path().resource_dir().map_err(|e| {
-        let msg = format!("resource_dir() başarısız: {e}");
-        log_line(app, &msg);
-        msg
-    })?);
     // `bundle.resources` is the ARRAY form (["../dist-server/**/*"]) rather
     // than the map form, because the map form ({"../dist-server/build":
     // "server/build", ...}) deterministically fails to build on this project
@@ -681,8 +704,7 @@ async fn spawn_sidecar(app: &AppHandle, cfg: &VaultConfig) -> Result<SidecarOutc
     // adapter-node's index.js imports ./server/chunks/handler-*.js by
     // relative path. The array form preserves structure correctly; Tauri
     // encodes the leading `../` of the source glob as a literal `_up_`
-    // directory, hence this path.
-    let server_dir = resource_dir.join("_up_").join("dist-server");
+    // directory, hence this path (see sidecar_server_dir).
     let entry = server_dir.join("build").join("index.js");
     if !entry.exists() {
         let msg = format!("Sunucu dosyası bulunamadı: {}", entry.display());
@@ -1239,7 +1261,22 @@ pub fn run() {
 
 #[cfg(test)]
 mod node_version_tests {
-    use super::{parse_node_major_version, required_node_major};
+    use super::{bundled_node_in, parse_node_major_version, required_node_major};
+
+    #[test]
+    fn bundled_node_is_found_only_on_windows_and_only_when_present() {
+        let dir = std::env::temp_dir().join(format!("vc-bundled-node-test-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(dir.join("node")).unwrap();
+        assert_eq!(bundled_node_in(&dir), None, "no node.exe staged: dev run / older layout");
+        std::fs::write(dir.join("node").join("node.exe"), b"").unwrap();
+        if cfg!(windows) {
+            assert_eq!(bundled_node_in(&dir), Some(dir.join("node").join("node.exe")));
+        } else {
+            assert_eq!(bundled_node_in(&dir), None, "macOS/Linux keep the system Node");
+        }
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
 
     #[test]
     fn parses_standard_v_prefixed_version() {

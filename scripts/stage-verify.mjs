@@ -50,14 +50,19 @@ export function validateDefaultProviders(parsed) {
  *    data/providers.json — with whatever keys/picks a developer set — must not be what ships);
  *  - dist-server/data/ holds nothing but providers.json;
  *  - dist-server/build/index.js (the server entry) and dist-server/ingest/convert.py (document import) and dist-server/mcp/vault-chat-mcp.mjs (the self-contained MCP server) exist.
+ * On Windows the bundled runtimes must be there too (TODO #53): dist-server/node/node.exe and
+ * dist-server/python/python.exe. "stagedNodeExists" / "stagedPythonExists" are booleans on win32 and
+ * null/undefined elsewhere (not bundled there, check skipped).
  * "stagedProviders" / "defaultProviders" are Buffers (or null when missing); "stagedDataEntries" the names
  * directly under dist-server/data/. Returns problem strings; empty array = OK.
  */
-export function verifyStagedData({ stagedProviders, defaultProviders, stagedDataEntries, stagedBuildIndexExists, stagedConvertPyExists, stagedMcpBundleExists }) {
+export function verifyStagedData({ stagedProviders, defaultProviders, stagedDataEntries, stagedBuildIndexExists, stagedConvertPyExists, stagedMcpBundleExists, stagedNodeExists, stagedPythonExists }) {
 	const problems = [];
 	if (!stagedBuildIndexExists) problems.push('dist-server/build/index.js bulunamadı');
 	if (!stagedConvertPyExists) problems.push('dist-server/ingest/convert.py bulunamadı');
 	if (!stagedMcpBundleExists) problems.push('dist-server/mcp/vault-chat-mcp.mjs bulunamadı');
+	if (stagedNodeExists === false) problems.push('dist-server/node/node.exe bulunamadı');
+	if (stagedPythonExists === false) problems.push('dist-server/python/python.exe bulunamadı');
 	if (!defaultProviders) problems.push('data/providers.default.json bulunamadı');
 	if (!stagedProviders) problems.push('dist-server/data/providers.json bulunamadı');
 	if (stagedProviders && defaultProviders && !Buffer.from(stagedProviders).equals(Buffer.from(defaultProviders))) {
@@ -69,4 +74,14 @@ export function verifyStagedData({ stagedProviders, defaultProviders, stagedData
 		problems.push(`dist-server/data/${name} sahnelenmemeli${known ? ' (kişisel veri)' : ''}`);
 	}
 	return problems;
+}
+
+/**
+ * The Node major the packaged app requires, from package.json's "engines.node" lower bound (">=22 <23" -> 22).
+ * One source of truth for the bundled Node: stage-server.mjs asserts the build Node matches it before copying
+ * it into the installer (src-tauri/build.rs derives VAULTCHAT_NODE_MAJOR from the same build machine's Node).
+ */
+export function requiredNodeMajor(enginesNode) {
+	const m = /^\s*>=\s*(\d+)/.exec(String(enginesNode ?? ''));
+	return m ? Number(m[1]) : null;
 }

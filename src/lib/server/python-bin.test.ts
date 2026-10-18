@@ -5,6 +5,8 @@ import {
 	parsePythonVersion,
 	isPythonVersionSupported,
 	venvPythonPath,
+	pythonHasDocling,
+	bundledPythonPath,
 	venvCreateCommand,
 	pipInstallCommand,
 	pickSupportedPython,
@@ -166,4 +168,65 @@ test('pickSupportedPython prefers a supported interpreter over an older earlier 
 	const r2 = await pickSupportedPython(['/a'], async (b) => table[b]);
 	assert.equal(r2?.bin, '/a');
 	assert.equal(await pickSupportedPython([], async (b) => table[b]), null);
+});
+
+// --- Windows: bundled Python + the "docling is never shadowed" invariant (TODO #53) ---
+const BUNDLED = 'C:\\App\\_up_\\dist-server\\python\\python.exe';
+const VENV = 'C:\\data\\python-venv\\Scripts\\python.exe';
+const SYS = 'C:\\Py\\python.exe';
+const DOCLING_SYS = 'C:\\Py\\Lib\\site-packages\\docling';
+const DOCLING_VENV = 'C:\\data\\python-venv\\Lib\\site-packages\\docling';
+const win = (files: string[], over: Partial<PythonResolveDeps> & { dirs?: Record<string, string[]> } = {}) =>
+	deps({ ...winBase, env: { PATH: 'C:\\Py' }, bundledPython: BUNDLED, files, ...over });
+
+test('windows: bundledPythonPath sits at <server root>\\python\\python.exe', () => {
+	assert.equal(bundledPythonPath('C:\\App\\_up_\\dist-server'), BUNDLED);
+});
+
+test('windows: bundled Python is used when nothing else exists, and beats a docling-less system Python', () => {
+	assert.equal(resolvePythonBin(win([BUNDLED])), BUNDLED);
+	assert.equal(resolvePythonBin(win([BUNDLED, SYS])), BUNDLED);
+});
+
+test('windows: a bundledPython path that is not on disk is ignored (dev run / older layout)', () => {
+	assert.equal(resolvePythonBin(win([SYS])), SYS);
+	assert.equal(resolvePythonBin(win([])), 'python');
+});
+
+test('windows: a system Python with docling is never shadowed by bundled or a docling-less venv', () => {
+	assert.equal(resolvePythonBin(win([BUNDLED, SYS, DOCLING_SYS])), SYS);
+	assert.equal(resolvePythonBin(win([BUNDLED, SYS, DOCLING_SYS, VENV])), SYS);
+});
+
+test('windows: docling is also found in the per-user site-packages', () => {
+	const user = 'C:\\Users\\Alp\\AppData\\Roaming\\Python';
+	const d = win([BUNDLED, SYS, user, `${user}\\Python312\\site-packages\\docling`], {
+		env: { PATH: 'C:\\Py', APPDATA: 'C:\\Users\\Alp\\AppData\\Roaming' },
+		dirs: { [user]: ['Python312'] }
+	});
+	assert.equal(resolvePythonBin(d), SYS);
+});
+
+test('windows: the app venv with docling beats a system Python with docling; without docling it loses to one', () => {
+	assert.equal(resolvePythonBin(win([VENV, DOCLING_VENV, SYS, DOCLING_SYS, BUNDLED])), VENV);
+	assert.equal(resolvePythonBin(win([VENV, SYS, DOCLING_SYS, BUNDLED])), SYS);
+});
+
+test('windows: the docling-less app venv (created from the bundled Python) beats bundled and system', () => {
+	assert.equal(resolvePythonBin(win([VENV, BUNDLED, SYS])), VENV);
+});
+
+test('windows: PYTHON_BIN still wins over a docling Python', () => {
+	assert.equal(resolvePythonBin(win([SYS, DOCLING_SYS, BUNDLED], { env: { PYTHON_BIN: 'D:\\py.exe', PATH: 'C:\\Py' } })), 'D:\\py.exe');
+});
+
+test('pythonHasDocling: venv layout, never off Windows', () => {
+	assert.equal(pythonHasDocling(win([DOCLING_VENV]), VENV), true);
+	assert.equal(pythonHasDocling(win([]), VENV), false);
+	assert.equal(pythonHasDocling(deps({ files: ['/usr/lib/docling'] }), '/usr/bin/python3'), false);
+});
+
+test('posix: unchanged order (venv, then PATH), no docling logic', () => {
+	const d = deps({ files: ['/data/python-venv/bin/python3', '/usr/bin/python3'], bundledPython: '/nope' });
+	assert.equal(resolvePythonBin(d), '/data/python-venv/bin/python3');
 });

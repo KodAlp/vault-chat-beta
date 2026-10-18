@@ -60,6 +60,15 @@ NSIS installer'ı, `dist-server/` altında sidecar'ın üretim `node_modules` kl
 | `pypdf` | BSD-3-Clause |
 | `lxml` (trafilatura/py-asciimath'ın geçişli bağımlılığı, ayrıca doğrudan içe aktarılıyor) | BSD-3-Clause |
 
+## Windows paketine gömülü çalışma zamanları
+
+Windows kurulum dosyası (`dist-server/`, bkz. `scripts/stage-server.mjs` ve `scripts/fetch-python-runtime.mjs`) iki çalışma zamanını yeniden dağıtır:
+
+| Bileşen | Lisans | Not |
+|---|---|---|
+| **Node.js 22** (`node/node.exe`) | MIT (Node.js'in kendi lisansı; içindeki V8, OpenSSL, ICU, libuv, zlib, undici vb. bileşenlerin lisansları için bkz. https://github.com/nodejs/node/blob/main/LICENSE) | Derleme makinesindeki resmi Node binary'si olduğu gibi kopyalanır; Node'un `LICENSE` dosyası binary'nin yanında bulunursa `node/LICENSE` olarak pakete konur. |
+| **CPython 3.12** (`python/`) — [python-build-standalone](https://github.com/astral-sh/python-build-standalone) (Astral) derlemesi | Python: PSF License (`python/LICENSE.txt`, derlemeyle birlikte gelir); python-build-standalone betikleri MPL-2.0; derlemenin içindeki üçüncü taraf bileşenlerin (OpenSSL, SQLite, zlib, Tcl/Tk, libffi, bzip2, xz vb.) lisansları da `python/LICENSE.txt` içinde listelenir | Sürüm/özet `scripts/fetch-python-runtime.mjs` içinde sabitlenir (SHA256 doğrulanır). |
+
 ## Python (`ingest/requirements-optional.txt` — varsayılan kurulu değil)
 
 Yalnızca kullanıcı matematik-yoğun/taranmış PDF dönüştürme için elle kurarsa devreye girer (bkz. `.claude/skills/source-ingest/SKILL.md`).

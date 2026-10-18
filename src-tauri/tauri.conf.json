@@ -39,6 +39,9 @@
       "icons/icon.ico"
     ],
     "resources": ["../dist-server/**/*"],
+    "windows": {
+      "webviewInstallMode": { "type": "embedBootstrapper" }
+    },
     "android": {
       "debugApplicationIdSuffix": ".debug"
     }
