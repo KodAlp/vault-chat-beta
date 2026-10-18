@@ -2,7 +2,7 @@
 
 Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncellenir.
 
-**Son güncelleme:** 2026-10-18 · Acil boşaldı. main origin'e push edildi (`e4b2729`): #30, #33, #37, #3, #5, #43. #53 (Windows paketinde gömülü Node 22 + Python, WebView2 önyükleyicisi) `claude/devam-edelim-0a885a` dalından yerel main'e alındı; push yok.
+**Son güncelleme:** 2026-10-18 · Acil boşaldı. main origin'e push edildi (`e4b2729`): #30, #33, #37, #3, #5, #43. #53 (Windows paketinde gömülü Node 22 + Python, WebView2 önyükleyicisi) `claude/devam-edelim-0a885a` dalından yerel main'e alındı (`e18335d`), kurulum dosyası kuruldu; push yok.
 
 ## Kurallar
 
@@ -96,7 +96,9 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 
 - [ ] **`npx vault-chat-mcp setup`'ı gerçek istemcilerle dene.** Ana klasörden (worktree'den değil) çalıştır; Claude Code yolu (`claude mcp add`, var olan kayıtta "already exists" → kaldır + ekle) ve Microsoft Store Claude Desktop'ın sanal yapılandırma yolu yalnız birim testte. Yerel kasada gömme sunucusu (Ollama) kapalıyken indeksleme hatası ve ipucu da denenmedi. `K`
 - [ ] **Paketli MCP'yi kurulu uygulamada dene.** Tauri derlemesi yapılmadı; kurulumdan sonra kartın verdiği yol (`%LOCALAPPDATA%\vault-chat\_up_\dist-server\mcp\vault-chat-mcp.mjs`) ile Claude Desktop/Code'a bağlan. Bu makinedeki genel MCP kaydı hâlâ kaynak klasörü (`mcp/launch.mjs`) gösteriyor; pakete çevrilebilir. Vektör/hibrit arama pakette denenmedi (gömme sağlayıcısı yoktu). `K`
-- [ ] **Gömülü Node/Python'lu kurulumu dene (#53).** `vault-chat_0.3.0_2026-10-17_6417b05_gomulu_x64-setup.exe` masaüstünde; kurulmadı. Bakılacaklar: açılışta sistem Node'u yerine `_up_\dist-server\node\node.exe`, Python durumunda docling'li sistem Python'u, Node/Python'suz temiz bir makinede (ya da kullanıcı hesabında) "Şimdi kur"un gömülü Python'dan venv açması, WebView2 önyükleyicisi. Aynı kurulumda paketli MCP ve "Yeniden oku" önerileri de denenebilir. `K`
+- [ ] **Gömülü Node/Python'lu kurulumu dene (#53).** 2026-10-18'de kuruldu: sunucu `_up_\dist-server
+ode
+ode.exe` ile açılıyor, Ollama'yı uygulama başlatıyor (`ollama serve`, üst süreç vault-chat.exe). Kalan: uygulamada sohbetle Ollama yanıtı, Python durumunda docling'li sistem Python'u, Node/Python'suz temiz bir hesapta "Şimdi kur"un gömülü Python'dan venv açması, WebView2 önyükleyicisi. `K`
 - [ ] **Uygulama venv'i kurulum klasörüne bağlı.** `pyvenv.cfg` gömülü Python'un mutlak yolunu tutuyor; uygulama başka klasöre kurulursa venv bozulur. Açılışta venv Python'u çalışmıyorsa yeniden oluştur. `K`
 - [ ] **Doğrulanamayan 3 KaTeX formülü.** Ters basılmış ipucu (book (2) s.364), Proakis'te sayfası bulunamayan 600 karakterlik OCR çöpü (satır 6232), Valvano'da PDF'te görsel olan bayrak formülü (satır 13312). Gözle bakılıp yazılabilir. `K`
 - [ ] **"Yeniden oku"yu paketli sürümde dene.** Geliştirme sunucusunda uçtan uca denendi (String Theory s. 87); kurulu uygulamada Python/KaTeX yolu, GPU sırası (sohbet modeli yüklüyken) ve görsel düzenleyici modundaki liste denenmedi. `K`
