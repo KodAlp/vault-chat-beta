@@ -78,5 +78,8 @@ Koşu: `results/2026-10-18T12-13-53-527Z-full-330`, git `24509c6`, veri seti sha
 
 ## Açık
 
-- Üretim ve yargıç koşusu (330 cevap, qwen3:8b + deepseek-v4-pro). Pilot 70 soruda ~1,30 $ tuttu; tam sette ~6 $ bekleniyor.
+- **Yargıç koşusu.** 330 cevap üretildi (`results/2026-10-18T12-31-21-791Z-full-sut`; qwen3:8b, skill'ler kapalı, hata 0). Performans: TTFT P50 1,7 s / P95 2,3 s; üretim süresi P50 29 s / P95 73 s; 15,1 tok/s. Yanıt dili uyumu %99,4 (n=320).
+  - İlk yargıç koşusu 76. soruda DeepSeek bakiyesi bitince (HTTP 402) bozuldu. Harcama yaklaşık 1,2 $; yargılar diske yazılmadığı için kayboldu.
+  - `run-generation.ts` artık başarılı her yargıyı `bench/cache/judge.jsonl`'e anında yazıyor. Anahtar, model ile yargıç isteminin sha1'i. Yeniden koşu önbellekteki yargıları atlıyor; 401/402'de koşu yeniden denemeden duruyor.
+  - Bakiye yüklenince aynı komutla sürdürülür: `--answers <full-sut>/answers.jsonl --allow-cloud deepseek-api --max-cost-usd 8 --rejudge 10 --sanity`.
 - `default` indeksinde 6 `_meta` parçası duruyor. `c2f2b49`'dan beri `_meta` indekslenmiyor, ama bu kasa o tarihten sonra yeniden indekslenmedi.

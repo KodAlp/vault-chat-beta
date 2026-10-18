@@ -53,7 +53,7 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 - [ ] **Public öncesi kalan.** Public olunca iş akışı tetikleyicilerini aç (adımlar `docs/dev/public-oncesi.md`). Yerel Windows ARM64 derlemesi sqlite-vec'in ARM64 paketi olmadığı için engelli. `K` · #51
 
 ### 2. RAG ve benchmark
-- [ ] **Tam altın set: üretim ve yargıç koşusu.** 330 soru ve retrieval hazır (`docs/rag-benchmark-tam-set-2026-10-18.md`); kalan qwen3:8b cevapları + deepseek yargıcı (~6 $). `O` · #27
+- [ ] **Tam altın set: yargıç koşusu.** 330 soru, retrieval ve qwen3:8b cevapları hazır (`docs/rag-benchmark-tam-set-2026-10-18.md`); DeepSeek bakiyesi 76. soruda bitti. Bakiye yüklenince aynı komutla sürdür (yargılar artık önbellekte, ~6 $). `K` · #27
 - [ ] **Reranker'ı üretime al.** Tam sette R@5 0,688 → 0,748, nDCG@10 0,706 → 0,788 (p<0,001); en iyi aday skoru < 0,02 ise boş sonuç: cevapsızların 15/15'i süzülüyor, 305 cevaplıdan 7'si düşüyor (4'ü belirsiz). ONNX int8 ölçülmedi. `O` · #29
 - [ ] **İstem/skill dili A/B.** qwen3:8b için İngilizce çekirdek istem; educational-agent açık/kapalı. Kullanıcı notu: "olabilir". `O` · #28
 

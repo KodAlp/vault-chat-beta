@@ -298,6 +298,8 @@ let spentUsd = 0;
 let lastCallUsd = 0;
 let usageEstimated = false;
 let budgetStop = false;
+/** Set on an error no retry can fix (HTTP 401/402: bad key, empty balance); the main judge loop stops there. */
+let fatalJudgeError: string | null = null;
 /** True when the next call (sized like the last one, or 0.03 USD before any call) would pass the cap. */
 function overBudget(): boolean {
 	if (budgetStop) return true;
@@ -362,6 +364,7 @@ if (needsJudge) {
 		 * connection costs one item instead of the whole run. A failed attempt is charged the
 		 * prompt's estimated input cost, in case it was billed before the connection dropped. */
 		async call(prompt: string): Promise<JudgeCallResult> {
+			if (fatalJudgeError) return { content: '' };
 			for (let attempt = 1; attempt <= 3; attempt++) {
 				try {
 					return await streamOnce(prompt);
@@ -369,6 +372,11 @@ if (needsJudge) {
 					spentUsd += callCostUsd(Math.ceil(prompt.length / 3), 0, new Date());
 					const message = err instanceof Error ? err.message : String(err);
 					console.log(`[judge] ağ hatası (deneme ${attempt}/3): ${message}`);
+					if (/HTTP 40[12]\b/.test(message)) {
+						fatalJudgeError = message;
+						console.log('[judge] DURDURULDU: anahtar ya da bakiye sorunu, yeniden denemek işe yaramaz');
+						break;
+					}
 					if (attempt < 3) await new Promise((r) => setTimeout(r, 5000 * attempt));
 				}
 			}
@@ -406,22 +414,60 @@ interface JudgedRecord {
 	error?: string;
 }
 
+// Successful main-pass judgments persist as they arrive, keyed by model + sha1 of the exact judge
+// prompt (template, question, retrieved chunks, answer), so a run cut short (budget, empty balance,
+// crash) is resumed for free. --rejudge/--sanity never read it: they exist to call the judge again.
+const judgeCachePath = path.join(dataDir(), 'vaults', 'default', 'bench', 'cache', 'judge.jsonl');
+const judgeCache = new Map<string, JudgeResult>();
+if (needsJudge && fs.existsSync(judgeCachePath)) {
+	for (const line of fs.readFileSync(judgeCachePath, 'utf-8').split('\n')) {
+		if (!line.trim()) continue;
+		try {
+			const rec = JSON.parse(line) as { key: string; result: JudgeResult };
+			judgeCache.set(rec.key, rec.result);
+		} catch {
+			// a line cut by a killed process; that item is simply judged again
+		}
+	}
+}
+const judgeCacheKey = (prompt: string) => `${judgeModel}:${createHash('sha1').update(prompt).digest('hex')}`;
+
 const judgedRecords: JudgedRecord[] = [];
 if (needsJudge && judgeAdapter) {
+	fs.mkdirSync(path.dirname(judgeCachePath), { recursive: true });
 	let done = 0;
+	let cacheHits = 0;
 	for (const a of answers) {
+		const item = toJudgeItem(a);
+		const key = judgeCacheKey(buildJudgePrompt(item));
+		const cached = judgeCache.get(key);
+		if (cached) {
+			judgedRecords.push({ answer: a, judgeFailed: false, judge: cached });
+			cacheHits++;
+			done++;
+			continue;
+		}
+		if (fatalJudgeError) {
+			judgedRecords.push({ answer: a, judgeFailed: true, error: fatalJudgeError });
+			continue;
+		}
 		if (overBudget()) {
 			judgedRecords.push({ answer: a, judgeFailed: true, error: 'bütçe tavanı' });
 			continue;
 		}
-		const outcome = await callJudge(judgeAdapter, toJudgeItem(a));
+		const outcome = await callJudge(judgeAdapter, item);
 		usageTotals.promptTokens += outcome.usage.promptTokens;
 		usageTotals.completionTokens += outcome.usage.completionTokens;
 		usageTotals.calls += outcome.attempts;
 		judgedRecords.push({ answer: a, judgeFailed: outcome.judge_failed, judge: outcome.result, error: outcome.error });
+		if (!outcome.judge_failed && outcome.result) {
+			fs.appendFileSync(judgeCachePath, JSON.stringify({ key, id: a.id, result: outcome.result }) + '\n', 'utf-8');
+		}
 		done++;
 		console.log(`[judge] ${done}/${answers.length} id=${a.id} ${outcome.judge_failed ? 'JUDGE_FAILED' : `correctness=${outcome.result?.correctness} relevance=${outcome.result?.relevance}`}  harcanan ~$${spentUsd.toFixed(3)}`);
 	}
+	if (cacheHits > 0) console.log(`[judge] önbellekten ${cacheHits} yargı: ${judgeCachePath}`);
+	if (fatalJudgeError) console.log(`[judge] ${answers.length - done} soru yargılanmadı: ${fatalJudgeError}`);
 } else {
 	for (const a of answers) judgedRecords.push({ answer: a, judgeFailed: true, error: 'judge devre dışı (--no-judge)' });
 }
@@ -455,7 +501,7 @@ if (needsJudge && judgeAdapter && rejudgeN > 0) {
 	const picked = shuffled.slice(0, Math.min(rejudgeN, shuffled.length));
 	const pairs = [];
 	for (const rec of picked) {
-		if (overBudget()) break;
+		if (fatalJudgeError || overBudget()) break;
 		const outcome = await callJudge(judgeAdapter, toJudgeItem(rec.answer));
 		usageTotals.promptTokens += outcome.usage.promptTokens;
 		usageTotals.completionTokens += outcome.usage.completionTokens;
@@ -486,7 +532,7 @@ if (needsJudge && judgeAdapter && doSanity) {
 	const candidates = judgedRecords.filter((r) => r.answer.answerable && !r.judgeFailed).slice(0, 3);
 	const pairs = [];
 	for (const rec of candidates) {
-		if (overBudget()) break;
+		if (fatalJudgeError || overBudget()) break;
 		const fabricated: AnswerRecord = { ...rec.answer, sut: { ...rec.answer.sut, answer: rec.answer.sut.answer + FABRICATED_SENTENCE } };
 		const outcome = await callJudge(judgeAdapter, toJudgeItem(fabricated));
 		usageTotals.promptTokens += outcome.usage.promptTokens;
