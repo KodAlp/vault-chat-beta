@@ -46,6 +46,7 @@
 </script>
 
 <div class="window-titlebar" data-tauri-drag-region>
+	<img class="app-logo" src="/logo.png" alt="" width="16" height="16" draggable="false" data-tauri-drag-region />
 	<span class="app-name" data-tauri-drag-region>Vault Chat</span>
 	<div class="caption-buttons">
 		<button type="button" class="cap" onclick={minimize} aria-label={t('WindowTitleBar.minimize')} title={t('WindowTitleBar.minimize')}>
@@ -89,10 +90,16 @@
 		-webkit-user-select: none;
 	}
 
+	.app-logo {
+		margin-inline-start: var(--space-3);
+		flex-shrink: 0;
+		pointer-events: none;
+	}
+
 	.app-name {
 		flex: 1;
 		min-width: 0;
-		padding-inline: var(--space-3);
+		padding-inline: var(--space-2) var(--space-3);
 		font: 500 12px/32px var(--font-sans);
 		color: var(--label-secondary);
 		white-space: nowrap;
