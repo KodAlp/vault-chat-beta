@@ -6,11 +6,9 @@
 	import { t } from '$lib/i18n/index.svelte';
 	import Icon from './Icon.svelte';
 	import { scopeSummary, type ScopeCounts } from '$lib/source-summary';
-	import FolderIcon from '@lucide/svelte/icons/folder';
 	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
-	import PanelLeftCloseIcon from '@lucide/svelte/icons/panel-left-close';
-	import PanelLeftOpenIcon from '@lucide/svelte/icons/panel-left-open';
+	import AnimatedIcon from './AnimatedIcon.svelte';
 
 	/**
 	 * Chat-history sidebar (Sidebar.html): vault name + collapse toggle, a
@@ -139,11 +137,7 @@
 			aria-label={collapsed ? t('VaultChatPage.expandPanel') : t('VaultChatPage.collapsePanel')}
 			aria-expanded={!collapsed}
 		>
-			{#if collapsed}
-				<PanelLeftOpenIcon size={20} strokeWidth={1.75} aria-hidden="true" />
-			{:else}
-				<PanelLeftCloseIcon size={20} strokeWidth={1.75} aria-hidden="true" />
-			{/if}
+			<AnimatedIcon name="panel-left" active={!collapsed} />
 		</button>
 	</div>
 
@@ -189,7 +183,7 @@
 					aria-label={t('SourceTrigger.open', { summary: sourcesSubtitle })}
 					onclick={onOpenSources}
 				>
-					<span class="g"><FolderIcon size={18} strokeWidth={1.75} aria-hidden="true" /></span>
+					<span class="g"><AnimatedIcon name="sources" size={18} /></span>
 				</button>
 			{:else}
 				<button
@@ -200,7 +194,7 @@
 					aria-label={t('SourceTrigger.open', { summary: sourcesSubtitle })}
 					onclick={onOpenSources}
 				>
-					<span class="g"><FolderIcon size={18} strokeWidth={1.75} aria-hidden="true" /></span>
+					<span class="g"><AnimatedIcon name="sources" size={18} /></span>
 					<span class="txt">
 						<b>{t('SourcesSheet.title')}</b>
 						<small title={sourcesSubtitle}>{sourcesSubtitle}</small>

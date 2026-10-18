@@ -213,3 +213,122 @@ test('after evictAllForExclusiveJob, the old model waits behind the job holding 
 	assert.equal(await pChat, 'chat-done');
 	assert.equal(chatRan, true);
 });
+
+test('a nested lease on a different model inside withModel throws instead of deadlocking', async () => {
+	const { deps, unloadCalls } = fakeDeps(() => new Set(['a', 'b']));
+	const gate = createOllamaGate(deps, { mutex: createMutex(), residentModels: [] });
+
+	await assert.rejects(
+		gate.withModel('a', async () => {
+			await gate.withModel('b', async () => 'never');
+		}),
+		/nested lease on "b" while holding "a"/
+	);
+
+	// Nothing stuck: the mutex is free and a's refcount is back to zero, so a
+	// normal swap proceeds and unloads 'a'.
+	assert.equal(await gate.withModel('b', async () => 'b-done'), 'b-done');
+	assert.deepEqual(unloadCalls, ['a']);
+});
+
+test('a nested lease on a different model inside withModelStream\'s generator throws', async () => {
+	const { deps, unloadCalls } = fakeDeps(() => new Set(['a', 'b']));
+	const gate = createOllamaGate(deps, { mutex: createMutex(), residentModels: [] });
+
+	async function* outer() {
+		yield 1;
+		// Runs after a yield (resumed by the consumer's next()) — the guard
+		// must still see the outer lease here.
+		await gate.withModel('b', async () => 'never');
+		yield 2;
+	}
+
+	const seen: number[] = [];
+	await assert.rejects(
+		(async () => {
+			for await (const v of gate.withModelStream('a', outer)) seen.push(v);
+		})(),
+		/nested lease on "b" while holding "a"/
+	);
+	assert.deepEqual(seen, [1]);
+
+	assert.equal(await gate.withModel('b', async () => 'b-done'), 'b-done');
+	assert.deepEqual(unloadCalls, ['a']);
+});
+
+test('re-acquiring the same model while holding it works, even behind a busy mutex', async () => {
+	const { deps, unloadCalls } = fakeDeps(() => new Set(['a']));
+	const mutex = createMutex();
+	const gate = createOllamaGate(deps, { mutex, residentModels: [] });
+
+	const result = await gate.withModel('a', async () => {
+		const inner = await gate.withModel('a', async () => 'inner');
+		// After an evict cleared currentModel the fast path is gone; the nested
+		// join must still not queue on the mutex.
+		const job = deferred();
+		const pJob = mutex.run(() => job.promise);
+		const rejoined = await gate.withModel('a', async () => 'rejoined');
+		job.resolve();
+		await pJob;
+		return `${inner}/${rejoined}`;
+	});
+	assert.equal(result, 'inner/rejoined');
+
+	for await (const _ of gate.withModelStream('a', async function* () {
+		yield await gate.withModel('a', async () => 1);
+	})) {
+		// consumed
+	}
+	await gate.withModel('b', async () => 'ok');
+	assert.deepEqual(unloadCalls, ['a']);
+});
+
+test('a resident model may be leased while holding a non-resident one', async () => {
+	const { deps, unloadCalls } = fakeDeps(() => new Set(['a']));
+	const gate = createOllamaGate(deps, { mutex: createMutex(), residentModels: ['embed-model'] });
+
+	const result = await gate.withModel('a', () => gate.withModel('embed-model', async () => 'embedded'));
+	assert.equal(result, 'embedded');
+
+	// A resident lease is never recorded as held, so inside it a non-resident
+	// model is still free to be acquired.
+	const reverse = await gate.withModel('embed-model', () => gate.withModel('b', async () => 'b-done'));
+	assert.equal(reverse, 'b-done');
+	assert.deepEqual(unloadCalls, ['a']);
+});
+
+test('":latest" is stripped on both sides: swap unloads an untagged current model', async () => {
+	// /api/ps reports "a:latest" while the lease was taken as "a".
+	const { deps, unloadCalls } = fakeDeps(() => new Set(['a:latest']));
+	const gate = createOllamaGate(deps, { mutex: createMutex(), residentModels: [] });
+
+	await gate.withModel('a', async () => 'a-done');
+	await gate.withModel('b', async () => 'b-done');
+	assert.deepEqual(unloadCalls, ['a']);
+
+	// Same model spelled with and without the suffix shares one lease state.
+	const { deps: deps2, unloadCalls: unload2 } = fakeDeps(() => new Set(['a']));
+	const gate2 = createOllamaGate(deps2, { mutex: createMutex(), residentModels: [] });
+	const work = deferred<string>();
+	const p1 = gate2.withModel('a:latest', () => work.promise);
+	const p2 = gate2.withModel('a', async () => 'second');
+	assert.equal(await p2, 'second');
+	assert.deepEqual(unload2, []);
+	work.resolve('first');
+	assert.equal(await p1, 'first');
+});
+
+test('":latest" normalization: evict keeps an untagged resident model that has an open lease', async () => {
+	const { deps, unloadCalls } = fakeDeps(() => new Set(['embed-model:latest', 'stray:latest']));
+	const gate = createOllamaGate(deps, { mutex: createMutex(), residentModels: ['embed-model'] });
+
+	const embedWork = deferred<string>();
+	const pEmbed = gate.withModel('embed-model', () => embedWork.promise);
+	await new Promise((r) => setTimeout(r, 0));
+
+	await gate.evictAllForExclusiveJob();
+	assert.deepEqual(unloadCalls, ['stray:latest']);
+
+	embedWork.resolve('embed-done');
+	assert.equal(await pEmbed, 'embed-done');
+});

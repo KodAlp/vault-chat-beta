@@ -1,5 +1,5 @@
 <script lang="ts">
-	import FileTextIcon from '@lucide/svelte/icons/file-text';
+	import AnimatedIcon from './AnimatedIcon.svelte';
 	import { t } from '$lib/i18n/index.svelte';
 	import { scopeSummary } from '$lib/source-summary';
 
@@ -40,7 +40,7 @@
 	aria-label={t('SourceTrigger.open', { summary })}
 	{onclick}
 >
-	<FileTextIcon size={14} strokeWidth={1.75} aria-hidden="true" />
+	<AnimatedIcon name="sources" size={14} />
 	{summary}
 </button>
 
