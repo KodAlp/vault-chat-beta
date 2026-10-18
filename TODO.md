@@ -2,7 +2,7 @@
 
 Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncellenir.
 
-**Son güncelleme:** 2026-10-17 · #53 bitti: Windows paketinde gömülü Node 22 + Python, WebView2 önyükleyicisi (kurulu uygulamada denenmedi); #37 bitti: MCP sunucusu paketli uygulamada tek dosya; #3 bitti: not görünümünde okunamayan formüle "Yeniden oku" (asıl PDF'in sayfa + kutusundan aday seçimi); #5 ve #43 bitti
+**Son güncelleme:** 2026-10-18 · Acil boşaldı. 2026-10-17'de biten: #53 (Windows paketinde gömülü Node 22 + Python, WebView2 önyükleyicisi), #37 (MCP sunucusu paketli uygulamada tek dosya), #3 (okunamayan formüle "Yeniden oku"), #5, #43. Bekleyen durum: #3 ve #37 yerel main'de (`9e6cbd0`); #53 yalnız `claude/devam-edelim-0a885a` dalında (`6417b05`), main'e alınmadı; kurulum dosyası `vault-chat_0.3.0_2026-10-17_6417b05_gomulu_x64-setup.exe` masaüstünde, kurulmadı; push yok (origin/main `893e2f8`).
 
 ## Kurallar
 
