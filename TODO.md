@@ -2,7 +2,7 @@
 
 Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncellenir.
 
-**Son güncelleme:** 2026-10-17 · #30 bitti: bench sorgu gömmesi yapılandırılmış sağlayıcıdan; #33 bitti: alıntı bağlantısı kaynaktaki başlığa kayıyor; #37 bitti: MCP sunucusu paketli uygulamada tek dosya; #3 bitti: not görünümünde okunamayan formüle "Yeniden oku" (asıl PDF'in sayfa + kutusundan aday seçimi); #5 ve #43 bitti
+**Son güncelleme:** 2026-10-18 · main origin'e push edildi (`e4b2729`); #30 bitti: bench sorgu gömmesi yapılandırılmış sağlayıcıdan; #33 bitti: alıntı bağlantısı kaynaktaki başlığa kayıyor; #37 bitti: MCP sunucusu paketli uygulamada tek dosya; #3 bitti: not görünümünde okunamayan formüle "Yeniden oku" (asıl PDF'in sayfa + kutusundan aday seçimi); #5 ve #43 bitti
 
 ## Kurallar
 
@@ -134,6 +134,7 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 
 Yalnız son iki haftanın kaydı tutulur; daha eskisi git geçmişindedir.
 
+- 2026-10-18: main origin'e push edildi (`893e2f8` → `e4b2729`, 17 commit): #3, #37, #43, #5 elle düzeltmeler, #30 ve #33 artık uzak depoda.
 - 2026-10-17: alıntı bağlantısı kaynaktaki başlığa kayıyor (#33): `libraryViewerUrl`'e `heading` (parçanın `heading_path`'i); not görünümü başlığı metniyle bulup (`heading-target.ts`: Markdown işaretleri ayıklanır, aynı adlı başlıkta üst başlıklar eşleşen seçilir) kayıyor ve kısa vurguluyor. Sohbet çipi (önizlemedeki her bölüm ayrı bağlantı), bilgi kartı ve test sonucu geçiriyor. Geçici kasada geliştirme sunucusunda denendi. `8bdaabc`
 - 2026-10-17: `bench/` sorgu gömmesi uygulamanın `embedTexts()`'i ve providers.json'daki sağlayıcıyla; indeksin `index_meta`'sıyla uyuşmazlıkta açık hata (#30). Önbellek anahtarı `embeddingKey()`, varsayılanda yine `bge-m3`: eski önbellek geçerli, 3 soruluk koşu eski kodla birebir aynı. `f56863b`
 - 2026-10-17: MCP sunucusu Tauri paketinde (#37): `scripts/build-mcp.mjs` `mcp/bundle-entry.mjs`'i esbuild ile tek ESM dosyaya paketliyor (1,4 MB; SDK dahil, better-sqlite3/sqlite-vec dist-server/node_modules'tan), `stage-server` her sahnelemede üretiyor, `stage-verify` denetliyor. DATA_DIR verilmezse kurulu uygulamanın veri klasörü. "MCP istemcisine bağla" kartı paketli dosyayı gösteriyor; eskiyen "paketli değil" metni 23 dilde "bu kurulumda bulunamadı" oldu. Tam sahnelemede (npm ci + build + stage-server) tsx'siz dist-server'da gerçek MCP istemcisiyle tools/list, list_vaults, get_note çalıştı. `5ce6a7c`
