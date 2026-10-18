@@ -2,7 +2,7 @@
 
 Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncellenir.
 
-**Son güncelleme:** 2026-10-18 · Acil boşaldı. main origin'e push edildi (`e4b2729`): #30, #33, #37, #3, #5, #43. #53 (gömülü Node 22 + Python, WebView2 önyükleyicisi) yerel main'e alındı (`e18335d`); kurulum dosyası kuruldu, Ollama ile sohbet çalışıyor; push yok.
+**Son güncelleme:** 2026-10-18 · Acil boşaldı. main origin'e push edildi (`e4b2729`): #30, #33, #37, #3, #5, #43. #53 (gömülü Node 22 + Python, WebView2 önyükleyicisi) yerel main'e alındı (`e18335d`); kurulum dosyası kuruldu: Ollama ile sohbet, docling'li Python seçimi ve gömülü Python'dan "Şimdi kur" çalışıyor; WebView2 önyükleyicisi canlı denenmedi; push yok.
 
 ## Kurallar
 
@@ -96,7 +96,8 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 
 - [ ] **`npx vault-chat-mcp setup`'ı gerçek istemcilerle dene.** Ana klasörden (worktree'den değil) çalıştır; Claude Code yolu (`claude mcp add`, var olan kayıtta "already exists" → kaldır + ekle) ve Microsoft Store Claude Desktop'ın sanal yapılandırma yolu yalnız birim testte. Yerel kasada gömme sunucusu (Ollama) kapalıyken indeksleme hatası ve ipucu da denenmedi. `K`
 - [ ] **Paketli MCP'yi kurulu uygulamada dene.** Tauri derlemesi yapılmadı; kurulumdan sonra kartın verdiği yol (`%LOCALAPPDATA%\vault-chat\_up_\dist-server\mcp\vault-chat-mcp.mjs`) ile Claude Desktop/Code'a bağlan. Bu makinedeki genel MCP kaydı hâlâ kaynak klasörü (`mcp/launch.mjs`) gösteriyor; pakete çevrilebilir. Vektör/hibrit arama pakette denenmedi (gömme sağlayıcısı yoktu). `K`
-- [ ] **Gömülü Node/Python'lu kurulumu dene (#53).** Kurulum, gömülü Node ve Ollama ile sohbet 2026-10-18'de doğrulandı (Son tamamlananlar). Kalan: Python durumunda docling'li sistem Python'unun seçilmesi, Node/Python'suz temiz bir hesapta "Şimdi kur"un gömülü Python'dan venv açması, WebView2 önyükleyicisi. `K`
+- [ ] **WebView2 önyükleyicisini WebView2'siz makinede dene (#53).** Kurulum betiğinde `embedBootstrapper` var, gömülü `MicrosoftEdgeWebview2Setup.exe` Microsoft imzalı; bu makinede WebView2 155 kurulu olduğu için bölüm atlanıyor. WebView2'siz bir Windows 10 (ör. LTSC) VM'de kurulumun önyükleyiciyi sessiz çalıştırdığına bak. `K`
+- [ ] **Python modül denetimi import hatasını yutuyor.** Venv uzun bir yolda açılınca onnxruntime/charset DLL'leri "dosya adı çok uzun" ile yüklenmedi; pip başarılı bittiği hâlde bant markitdown/trafilatura'yı "kurulu değil" gösterdi, nedeni söylenmedi. Denetim betiği ilk import hatasını döndürsün; kullanıcı adı uzun profillerde MAX_PATH'e de bak. `K`
 - [ ] **Uygulama venv'i kurulum klasörüne bağlı.** `pyvenv.cfg` gömülü Python'un mutlak yolunu tutuyor; uygulama başka klasöre kurulursa venv bozulur. Açılışta venv Python'u çalışmıyorsa yeniden oluştur. `K`
 - [ ] **Doğrulanamayan 3 KaTeX formülü.** Ters basılmış ipucu (book (2) s.364), Proakis'te sayfası bulunamayan 600 karakterlik OCR çöpü (satır 6232), Valvano'da PDF'te görsel olan bayrak formülü (satır 13312). Gözle bakılıp yazılabilir. `K`
 - [ ] **"Yeniden oku"yu paketli sürümde dene.** Geliştirme sunucusunda uçtan uca denendi (String Theory s. 87); kurulu uygulamada Python/KaTeX yolu, GPU sırası (sohbet modeli yüklüyken) ve görsel düzenleyici modundaki liste denenmedi. `K`
@@ -135,6 +136,7 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 
 Yalnız son iki haftanın kaydı tutulur; daha eskisi git geçmişindedir.
 
+- 2026-10-18: #53 Python yolları kurulu sunucuyla (gömülü `node.exe` + `build`, geçici DATA_DIR, ayrı port) denendi: gerçek PATH'te docling'li sistem Python'u (3.12.0rc2) seçiliyor; Python'suz ortamda (dar PATH, Python'suz profil) gömülü 3.12.15 seçiliyor, "Şimdi kur" venv'i gömülü Python'dan açıp (`pyvenv.cfg` home = `dist-server\python`) altı modülü 157 sn'de kurdu, yeniden denetimde hepsi kurulu. `e18335d`
 - 2026-10-18: #53 kurulumu denendi (`6417b05_gomulu` kurulum dosyası, sessiz kurulum): sunucu `_up_\dist-server\node\node.exe` ile açılıyor; Ollama'yı uygulama başlatıyor (`ollama serve`, üst süreç vault-chat.exe). Fizik kasasında sohbet uçtan uca çalıştı: small-talk kapısı ilk mesajı kaynaksız geçirdi (ilk model yüklemesi 6,8 sn), "optikten bahset" 5 kaynakla 325 token / 8,6 sn; qwen3:8b-bart-iq4xs tamamen GPU'da, sohbet `chats.db`'ye yazıldı. `e18335d`
 - 2026-10-18: main origin'e push edildi (`893e2f8` → `e4b2729`, 17 commit): #3, #37, #43, #5 elle düzeltmeler, #30 ve #33 artık uzak depoda.
 - 2026-10-17: alıntı bağlantısı kaynaktaki başlığa kayıyor (#33): `libraryViewerUrl`'e `heading` (parçanın `heading_path`'i); not görünümü başlığı metniyle bulup (`heading-target.ts`: Markdown işaretleri ayıklanır, aynı adlı başlıkta üst başlıklar eşleşen seçilir) kayıyor ve kısa vurguluyor. Sohbet çipi (önizlemedeki her bölüm ayrı bağlantı), bilgi kartı ve test sonucu geçiriyor. Geçici kasada geliştirme sunucusunda denendi. `8bdaabc`
