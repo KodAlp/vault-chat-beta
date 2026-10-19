@@ -6,6 +6,8 @@ import { QUERY_PREFIX } from './embed-config';
 import { getEmbeddingConfig } from './providers/config-store';
 import { AppError } from './app-error';
 import { selectChunks, type CandidateChunk } from './select-chunks';
+import { RERANK_CANDIDATES, pickRerankCandidates, rerankPassage, selectReranked } from './rerank-select';
+import { rerank } from './reranker';
 import { getLibrarySettings } from './library-read';
 import type { RetrieveResult } from '$lib/types';
 import type { VaultContext } from './vaults';
@@ -247,12 +249,20 @@ export async function retrieve(
 		 * terms, no embedding call). 'hybrid': vector KNN and FTS5 BM25 fused with reciprocal rank fusion
 		 * (rrf.ts); falls back to keyword-only exactly like 'auto' when vectors cannot run. */
 		mode?: 'auto' | 'vector' | 'keyword' | 'hybrid';
+		/** Chat only, and only when the user turned the reranker on (providers.json `reranker`): score the
+		 * vector candidates with the cross-encoder (reranker.ts) instead of cutting by distance. A best
+		 * score under RERANK_MIN_SCORE returns reason 'rerank-no-match' with no sources and no keyword
+		 * fallback; a reranker that cannot run changes nothing. Applies to mode 'auto' only. */
+		rerank?: boolean;
 	} = {}
 ): Promise<RetrieveResult> {
 	const database = getDb(v);
 	if (!database) return { chunks: [], narrowScope: false, reason: 'unindexed' };
 	const k = opts.k ?? DEFAULT_K;
 	const overfetch = opts.includedPaths?.length ? SCOPED_OVERFETCH_FACTOR : OVERFETCH_FACTOR;
+	const rerankWanted = opts.rerank === true && (opts.mode === undefined || opts.mode === 'auto');
+	// The cross-encoder wants RERANK_CANDIDATES survivors of the filters, so the pool may not be smaller than that.
+	const knnLimit = rerankWanted ? Math.max(k * overfetch, RERANK_CANDIDATES) : k * overfetch;
 
 	const config = getEmbeddingConfig();
 	const indexMeta = readIndexEmbedding(database);
@@ -300,7 +310,7 @@ export async function retrieve(
 			? []
 			: (database
 					.prepare(`SELECT chunk_id, distance FROM vec_chunks WHERE embedding MATCH ? AND k = ? ORDER BY distance`)
-					.all(Buffer.from(new Float32Array(vector).buffer), k * overfetch) as { chunk_id: number; distance: number }[]);
+					.all(Buffer.from(new Float32Array(vector).buffer), knnLimit) as { chunk_id: number; distance: number }[]);
 
 	const bestDistance = matches[0]?.distance;
 
@@ -350,6 +360,31 @@ export async function retrieve(
 		const c = toCandidate(match.chunk_id, match.distance);
 		if (c) candidates.push(c);
 	}
+	// Reranker (chat, opt-in): the filters run first so the cross-encoder's slots go to chunks the chat may
+	// use; no distance threshold, the score replaces it. An empty filtered pool keeps the plain path below,
+	// which is what reports 'scope' / 'filtered'. A reranker that cannot run (null) also keeps that path.
+	if (rerankWanted && vector !== null && candidates.length > 0) {
+		const pool = pickRerankCandidates(candidates, {
+			domains: opts.domains,
+			levels: opts.levels,
+			includedPaths: opts.includedPaths,
+			excludedPrefixes
+		});
+		const scores = pool.length > 0 ? await rerank(query, pool.map(rerankPassage)) : null;
+		if (scores) {
+			const picked = selectReranked(pool, scores, { k });
+			return {
+				chunks: picked.chunks,
+				narrowScope: false,
+				...(picked.noMatch ? { reason: 'rerank-no-match' as const } : {}),
+				rerankBest: picked.best,
+				bestDistance,
+				...(gateInfo ? { gate: gateInfo } : {}),
+				...(embeddingIssue ? { embeddingIssue } : {})
+			};
+		}
+	}
+
 	// Hybrid: fuse the vector ranking with a BM25 (OR) ranking by rank only. Keyword-only hits carry
 	// via 'keyword' (distance meaningless, threshold skipped); chunks the vector search also found keep
 	// their real distance and the threshold. Needs both a vector and a keyword index, else plain 'auto'.
