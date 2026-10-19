@@ -1555,6 +1555,10 @@
 		"needModel": "Download the model first, then turn this on.",
 		"downloadFailed": "The download failed",
 		"saveFailed": "Couldn't save the setting",
-		"loadError": "Couldn't read the re-ranking status"
+		"loadError": "Couldn't read the re-ranking status",
+		"fitNote": "If the chat model and the reranker would not fit on the GPU together, re-ranking is skipped automatically.",
+		"skipNotLoaded": "Last answer: re-ranking skipped (the chat model was still loading)",
+		"skipOffloaded": "Last answer: re-ranking skipped (the chat model does not fit on the GPU together with it)",
+		"skipVram": "Last answer: re-ranking skipped (not enough free GPU memory)"
 	}
 }

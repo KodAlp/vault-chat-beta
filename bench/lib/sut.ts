@@ -171,7 +171,8 @@ export async function runSut(ctx: SutContext, item: SutItemInput): Promise<SutRe
 		k: chatRetrievalK(),
 		keywordFallback: true,
 		keywordQuery: item.question,
-		rerank: ctx.rerank === true
+		rerank: ctx.rerank === true,
+		rerankLocalModel: ctx.rerank === true ? ctx.model : undefined
 		// smallTalkGate intentionally omitted — see this module's doc comment
 		// and run-generation.ts's printed deviations list.
 	});

@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
 import { PassThrough } from 'node:stream';
-import { createReranker, type RerankChild } from './reranker';
+import { createReranker, decideRerankGate, RERANKER_VRAM_MB, type PsModel, type RerankChild } from './reranker';
 
 type Behaviour = {
 	/** First stdout line; null = never send it (a hung start). */
@@ -183,4 +183,44 @@ test('an idle process is shut down by itself', async () => {
 	await new Promise((res) => setTimeout(res, 120));
 	assert.equal(children[0].stdinEnded, true);
 	assert.equal(r.isRunning(), false);
+});
+
+// --- VRAM gate -------------------------------------------------------------
+
+const GB = 1024 ** 3;
+const full = (name: string): PsModel => ({ name, size: 5.6 * GB, size_vram: 5.6 * GB });
+const partial = (name: string): PsModel => ({ name, size: 5.6 * GB, size_vram: 4.59 * GB });
+
+test('gate: chat model not in /api/ps -> skip and release (it loads this turn without the reranker)', () => {
+	assert.deepEqual(decideRerankGate({ localModel: 'qwen3:8b', ps: [], running: true, freeVramMb: null }), { action: 'skip-release', reason: 'chat-model-not-loaded' });
+	assert.deepEqual(decideRerankGate({ localModel: 'qwen3:8b', ps: [full('bge-m3:latest')], running: false, freeVramMb: 4000 }), {
+		action: 'skip-release',
+		reason: 'chat-model-not-loaded'
+	});
+	// Ollama unreachable counts as not loaded
+	assert.equal(decideRerankGate({ localModel: 'qwen3:8b', ps: null, running: false, freeVramMb: 4000 }).action, 'skip-release');
+});
+
+test('gate: chat model partly on the CPU -> skip and release', () => {
+	assert.deepEqual(decideRerankGate({ localModel: 'qwen3:8b', ps: [partial('qwen3:8b')], running: true, freeVramMb: null }), {
+		action: 'skip-release',
+		reason: 'chat-model-offloaded'
+	});
+});
+
+test('gate: chat model fully on the GPU -> run (latest tag and bare name are one model)', () => {
+	assert.deepEqual(decideRerankGate({ localModel: 'qwen3-x', ps: [full('qwen3-x:latest')], running: true, freeVramMb: null }), { action: 'run' });
+	assert.deepEqual(decideRerankGate({ localModel: 'qwen3:8b-bart-iq4xs', ps: [full('qwen3:8b-bart-iq4xs')], running: false, freeVramMb: 2000 }), { action: 'run' });
+});
+
+test('gate: not running and too little free VRAM -> skip without releasing', () => {
+	assert.deepEqual(decideRerankGate({ localModel: 'm', ps: [full('m')], running: false, freeVramMb: RERANKER_VRAM_MB - 1 }), { action: 'skip', reason: 'insufficient-vram' });
+	assert.deepEqual(decideRerankGate({ ps: null, running: false, freeVramMb: 300 }), { action: 'skip', reason: 'insufficient-vram' });
+});
+
+test('gate: enough free VRAM, unknown VRAM (no nvidia-smi) or a live process -> run; cloud chat needs no ps', () => {
+	assert.deepEqual(decideRerankGate({ ps: null, running: false, freeVramMb: RERANKER_VRAM_MB }), { action: 'run' });
+	assert.deepEqual(decideRerankGate({ ps: null, running: false, freeVramMb: null }), { action: 'run' });
+	// a running process's own memory is already counted as used: no VRAM check
+	assert.deepEqual(decideRerankGate({ ps: null, running: true, freeVramMb: 10 }), { action: 'run' });
 });

@@ -1513,6 +1513,10 @@
     "needModel": "Descarga primero el modelo y luego activa esto.",
     "downloadFailed": "La descarga falló",
     "saveFailed": "No se pudo guardar el ajuste",
-    "loadError": "No se pudo leer el estado de la reordenación"
+    "loadError": "No se pudo leer el estado de la reordenación",
+		"fitNote": "Si el modelo de chat y el reordenador no caben juntos en la GPU, el reordenamiento se omite automáticamente.",
+		"skipNotLoaded": "Última respuesta: reordenamiento omitido (el modelo de chat aún se estaba cargando)",
+		"skipOffloaded": "Última respuesta: reordenamiento omitido (el modelo de chat no cabe en la GPU junto con él)",
+		"skipVram": "Última respuesta: reordenamiento omitido (no hay suficiente memoria libre en la GPU)"
   }
 }

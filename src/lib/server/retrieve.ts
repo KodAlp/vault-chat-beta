@@ -254,6 +254,9 @@ export async function retrieve(
 		 * score under RERANK_MIN_SCORE returns reason 'rerank-no-match' with no sources and no keyword
 		 * fallback; a reranker that cannot run changes nothing. Applies to mode 'auto' only. */
 		rerank?: boolean;
+		/** With `rerank`: the Ollama chat model this turn will generate with (normalized name), so the reranker's VRAM
+		 * gate can skip a turn it would hurt. Omit for a cloud chat provider. */
+		rerankLocalModel?: string;
 	} = {}
 ): Promise<RetrieveResult> {
 	const database = getDb(v);
@@ -370,7 +373,7 @@ export async function retrieve(
 			includedPaths: opts.includedPaths,
 			excludedPrefixes
 		});
-		const scores = pool.length > 0 ? await rerank(query, pool.map(rerankPassage)) : null;
+		const scores = pool.length > 0 ? await rerank(query, pool.map(rerankPassage), { localModel: opts.rerankLocalModel }) : null;
 		if (scores) {
 			const picked = selectReranked(pool, scores, { k });
 			return {

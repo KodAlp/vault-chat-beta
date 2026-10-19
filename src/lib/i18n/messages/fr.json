@@ -1513,6 +1513,10 @@
     "needModel": "Téléchargez d'abord le modèle, puis activez cette option.",
     "downloadFailed": "Le téléchargement a échoué",
     "saveFailed": "Impossible d'enregistrer le réglage",
-    "loadError": "Impossible de lire l'état du reclassement"
+    "loadError": "Impossible de lire l'état du reclassement",
+		"fitNote": "Si le modèle de chat et le reclasseur ne tiennent pas ensemble sur le GPU, le reclassement est ignoré automatiquement.",
+		"skipNotLoaded": "Dernière réponse : reclassement ignoré (le modèle de chat était encore en cours de chargement)",
+		"skipOffloaded": "Dernière réponse : reclassement ignoré (le modèle de chat ne tient pas sur le GPU avec lui)",
+		"skipVram": "Dernière réponse : reclassement ignoré (pas assez de mémoire GPU libre)"
   }
 }

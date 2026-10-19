@@ -4,7 +4,7 @@ import type { ErrorCode, ErrorParams } from '$lib/errors';
 import { retrieve } from '$lib/server/retrieve';
 import { buildRetrievalQuery } from '$lib/server/retrieval-query';
 import { buildPromptMessages } from '$lib/server/prompt';
-import { chatWithFallback, modelCaps, servedContext, supportsPrefixResume } from '$lib/server/providers/registry';
+import { chatLocalModel, chatWithFallback, modelCaps, servedContext, supportsPrefixResume } from '$lib/server/providers/registry';
 import { startFlight, endFlight } from '$lib/server/providers/inflight';
 import type { ChatMessage as ProviderChatMessage } from '$lib/server/providers/types';
 import { getRerankerConfig, readProvidersFile } from '$lib/server/providers/config-store';
@@ -262,7 +262,9 @@ export const POST: RequestHandler = async ({ request }) => {
 						smallTalkGate: checkSmallTalk,
 						forceSources: body.forceSources === true,
 						// Opt-in cross-encoder (Ayarlar > Gömme); a reranker that cannot run changes nothing.
-						rerank: getRerankerConfig().enabled
+						rerank: getRerankerConfig().enabled,
+						// The VRAM gate checks this model in Ollama's /api/ps (undefined for a cloud provider).
+						rerankLocalModel: chatLocalModel(body.provider, body.model)
 					});
 					noRelevantSources = result.reason === 'rerank-no-match';
 					sources = result.chunks;

@@ -7,15 +7,18 @@ import type { Readable, Writable } from 'node:stream';
 import { logAppEvent } from './app-log';
 import { dataDir } from './env';
 import { defaultPythonDeps, resolvePythonBin } from './python-bin';
-import { getRerankerConfig } from './providers/config-store';
+import { getOllamaBaseUrl, getRerankerConfig } from './providers/config-store';
 
 /**
  * Chat-retrieval cross-encoder (BAAI/bge-reranker-v2-m3) behind a persistent
  * `python ingest/rerank_server.py` process: one JSON line in, one JSON line out (protocol in the
  * script's docstring). Same life cycle as convert-worker.ts: one process, started on first use,
  * stopped after IDLE_SHUTDOWN_MS without a request, and released (releaseReranker) before the
- * converter or formula repair claims the GPU. The chat model is NOT a reason to release it: both
- * ran side by side on the 6 GB card (rerank ~0.8 s, chat speed unchanged, 5.8/6 GB VRAM).
+ * converter or formula repair claims the GPU. Chat model and reranker fit side by side on the 6 GB
+ * card only in one order: chat model resident first, reranker second (rerank ~0.8 s, chat speed
+ * unchanged). Started first, the reranker makes Ollama load the chat model partly onto the CPU
+ * (prompt 1.4 s -> 16 s, 15 -> 9 tok/s). rerank() therefore runs a VRAM gate (decideRerankGate)
+ * before every call and answers null, releasing the process where needed, when the pair would not fit.
  *
  * GPU only. On CPU 30 candidates take 9-22 s (fp32 and ONNX int8 alike), so the server is started
  * with --require-cuda and a missing CUDA means "no reranker", never a slow fallback. The chat
@@ -365,13 +368,117 @@ function getReranker(): Reranker {
 	return shared;
 }
 
+
+// ---------------------------------------------------------------------------
+// VRAM gate: the reranker may only run when it cannot hurt the chat model.
+// ---------------------------------------------------------------------------
+
+/** Free VRAM the reranker process needs to start (~1.2 GB measured, plus margin). */
+export const RERANKER_VRAM_MB = 1400;
+const PS_TIMEOUT_MS = 1_000;
+const NVIDIA_SMI_TIMEOUT_MS = 2_000;
+
+export type RerankSkipReason = 'chat-model-not-loaded' | 'chat-model-offloaded' | 'insufficient-vram';
+
+export interface PsModel {
+	name: string;
+	size: number;
+	size_vram: number;
+}
+
+export interface GateInputs {
+	/** Normalized Ollama chat model; undefined for a cloud chat provider. */
+	localModel?: string;
+	/** /api/ps models, or null when Ollama did not answer. Only read when localModel is set. */
+	ps: PsModel[] | null;
+	/** The reranker process is alive (its own memory then already shows as used). */
+	running: boolean;
+	/** nvidia-smi memory.free in MiB, or null when unknown. Only read when the process is not running. */
+	freeVramMb: number | null;
+}
+
+export type GateDecision = { action: 'run' } | { action: 'skip-release'; reason: RerankSkipReason } | { action: 'skip'; reason: RerankSkipReason };
+
+/** `bge-m3:latest` and `bge-m3` are one model. */
+export function normalizeOllamaName(model: string): string {
+	return model.endsWith(':latest') ? model.slice(0, -':latest'.length) : model;
+}
+
+/**
+ * Pure decision. 'skip-release': this turn goes without the reranker AND the process must exit (the chat
+ * model is about to load, or is already squeezed). 'skip': just this turn.
+ */
+export function decideRerankGate(i: GateInputs): GateDecision {
+	if (i.localModel !== undefined) {
+		const wanted = normalizeOllamaName(i.localModel);
+		const entry = i.ps?.find((m) => normalizeOllamaName(m.name) === wanted);
+		if (!entry) return { action: 'skip-release', reason: 'chat-model-not-loaded' };
+		if (entry.size_vram < entry.size) return { action: 'skip-release', reason: 'chat-model-offloaded' };
+	}
+	if (!i.running && i.freeVramMb !== null && i.freeVramMb < RERANKER_VRAM_MB) {
+		return { action: 'skip', reason: 'insufficient-vram' };
+	}
+	return { action: 'run' };
+}
+
+async function readOllamaPs(): Promise<PsModel[] | null> {
+	try {
+		const res = await fetch(`${getOllamaBaseUrl()}/api/ps`, { signal: AbortSignal.timeout(PS_TIMEOUT_MS) });
+		if (!res.ok) return null;
+		const data = (await res.json()) as { models?: { name?: string; model?: string; size?: number; size_vram?: number }[] };
+		return (data.models ?? []).map((m) => ({ name: m.name ?? m.model ?? '', size: m.size ?? 0, size_vram: m.size_vram ?? 0 }));
+	} catch {
+		return null;
+	}
+}
+
+function readFreeVramMb(): Promise<number | null> {
+	return new Promise((resolve) => {
+		try {
+			execFile(
+				'nvidia-smi',
+				['--query-gpu=memory.free', '--format=csv,noheader,nounits'],
+				{ windowsHide: true, timeout: NVIDIA_SMI_TIMEOUT_MS, encoding: 'utf8' },
+				(err, stdout) => {
+					if (err) return resolve(null);
+					// One line per GPU; the reranker runs on device 0.
+					const n = Number.parseInt(String(stdout).split('\n')[0].trim(), 10);
+					resolve(Number.isFinite(n) ? n : null);
+				}
+			);
+		} catch {
+			resolve(null);
+		}
+	});
+}
+
+let lastSkip: RerankSkipReason | undefined;
+let lastLoggedSkip: RerankSkipReason | undefined;
+
+function recordGate(decision: GateDecision): void {
+	if (decision.action === 'run') {
+		lastSkip = undefined;
+		lastLoggedSkip = undefined;
+		return;
+	}
+	lastSkip = decision.reason;
+	// 'not loaded' is the normal cold start (the model loads this turn); only the real problems are logged, once.
+	if (decision.reason !== 'chat-model-not-loaded' && lastLoggedSkip !== decision.reason) {
+		lastLoggedSkip = decision.reason;
+		logAppEvent({
+			kind: 'reranker_issue',
+			message: `reranker bu tur atlandı (${decision.reason}): sohbet modeliyle birlikte GPU'ya sığmıyor, vektör sırası kullanılıyor`
+		});
+	}
+}
+
 let missingModelReported = false;
 
 /**
  * Scores passages against the query, or null when the reranker cannot (no model, no CUDA, no
  * Python, timeout, error). Callers must treat null as "behave as without a reranker".
  */
-export async function rerank(query: string, passages: string[]): Promise<number[] | null> {
+export async function rerank(query: string, passages: string[], opts: { localModel?: string } = {}): Promise<number[] | null> {
 	if (passages.length === 0) return [];
 	if (!rerankerModelPresent()) {
 		if (!missingModelReported) {
@@ -380,6 +487,16 @@ export async function rerank(query: string, passages: string[]): Promise<number[
 		}
 		return null;
 	}
+	const running = rerankerIsRunning();
+	const decision = decideRerankGate({
+		localModel: opts.localModel,
+		ps: opts.localModel !== undefined ? await readOllamaPs() : null,
+		running,
+		freeVramMb: running ? null : await readFreeVramMb()
+	});
+	recordGate(decision);
+	if (decision.action === 'skip-release') await releaseReranker();
+	if (decision.action !== 'run') return null;
 	return getReranker().rerank(query, passages);
 }
 
@@ -406,6 +523,8 @@ export interface RerankerStatus {
 	running: boolean;
 	/** A model download is in progress. */
 	downloading: boolean;
+	/** Why the last chat turn went without the reranker (VRAM gate); undefined when it ran. */
+	lastSkip?: RerankSkipReason;
 }
 
 interface ProbeResult {
@@ -473,7 +592,8 @@ export async function rerankerStatus(): Promise<RerankerStatus> {
 		cuda: probe.cuda,
 		modelPresent: rerankerModelPresent(),
 		running,
-		downloading: rerankerDownloading()
+		downloading: rerankerDownloading(),
+		...(lastSkip ? { lastSkip } : {})
 	};
 }
 

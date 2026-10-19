@@ -1514,6 +1514,10 @@
 		"needModel": "Last ned modellen først, og slå så på dette.",
 		"downloadFailed": "Nedlastingen mislyktes",
 		"saveFailed": "Kunne ikke lagre innstillingen",
-		"loadError": "Kunne ikke lese statusen for omrangering"
+		"loadError": "Kunne ikke lese statusen for omrangering",
+		"fitNote": "Hvis chatmodellen og omrangeringsmodellen ikke får plass på GPU-en samtidig, hoppes omrangeringen over automatisk.",
+		"skipNotLoaded": "Siste svar: omrangering hoppet over (chatmodellen ble fortsatt lastet)",
+		"skipOffloaded": "Siste svar: omrangering hoppet over (chatmodellen får ikke plass på GPU-en sammen med den)",
+		"skipVram": "Siste svar: omrangering hoppet over (ikke nok ledig GPU-minne)"
 	}
 }

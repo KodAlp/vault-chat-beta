@@ -1501,6 +1501,10 @@
 		"needModel": "Najpierw pobierz model, potem włącz tę opcję.",
 		"downloadFailed": "Pobieranie nie powiodło się",
 		"saveFailed": "Nie udało się zapisać ustawienia",
-		"loadError": "Nie udało się odczytać stanu porządkowania"
+		"loadError": "Nie udało się odczytać stanu porządkowania",
+		"fitNote": "Jeśli model czatu i reranker nie mieszczą się razem w GPU, ponowne rankingowanie jest automatycznie pomijane.",
+		"skipNotLoaded": "Ostatnia odpowiedź: pominięto ponowne rankingowanie (model czatu był jeszcze ładowany)",
+		"skipOffloaded": "Ostatnia odpowiedź: pominięto ponowne rankingowanie (model czatu nie mieści się z nim w GPU)",
+		"skipVram": "Ostatnia odpowiedź: pominięto ponowne rankingowanie (za mało wolnej pamięci GPU)"
 	}
 }

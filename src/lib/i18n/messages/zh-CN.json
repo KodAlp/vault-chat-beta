@@ -1496,6 +1496,10 @@
     "needModel": "请先下载模型,再开启此项。",
     "downloadFailed": "下载失败",
     "saveFailed": "无法保存设置",
-    "loadError": "无法读取重排状态"
+    "loadError": "无法读取重排状态",
+		"fitNote": "如果聊天模型和重排序模型无法同时放入 GPU,将自动跳过重排序。",
+		"skipNotLoaded": "上一次回答:已跳过重排序(聊天模型当时仍在加载)",
+		"skipOffloaded": "上一次回答:已跳过重排序(聊天模型与它无法同时放入 GPU)",
+		"skipVram": "上一次回答:已跳过重排序(GPU 空闲显存不足)"
   }
 }

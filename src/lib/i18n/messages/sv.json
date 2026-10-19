@@ -1576,6 +1576,10 @@
 		"needModel": "Ladda ner modellen först och slå sedan på detta.",
 		"downloadFailed": "Nedladdningen misslyckades",
 		"saveFailed": "Det gick inte att spara inställningen",
-		"loadError": "Det gick inte att läsa omrankningens status"
+		"loadError": "Det gick inte att läsa omrankningens status",
+		"fitNote": "Om chattmodellen och omrankaren inte får plats på GPU:n samtidigt hoppas omrankningen över automatiskt.",
+		"skipNotLoaded": "Senaste svar: omrankning överhoppad (chattmodellen laddades fortfarande)",
+		"skipOffloaded": "Senaste svar: omrankning överhoppad (chattmodellen får inte plats på GPU:n tillsammans med den)",
+		"skipVram": "Senaste svar: omrankning överhoppad (för lite ledigt GPU-minne)"
 	}
 }

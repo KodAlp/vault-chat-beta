@@ -1508,6 +1508,10 @@
 		"needModel": "Download eerst het model en zet dit dan aan.",
 		"downloadFailed": "De download is mislukt",
 		"saveFailed": "De instelling kon niet worden opgeslagen",
-		"loadError": "De status van het herordenen kon niet worden gelezen"
+		"loadError": "De status van het herordenen kon niet worden gelezen",
+		"fitNote": "Als het chatmodel en de herrangschikker niet samen op de GPU passen, wordt het herrangschikken automatisch overgeslagen.",
+		"skipNotLoaded": "Laatste antwoord: herrangschikken overgeslagen (het chatmodel werd nog geladen)",
+		"skipOffloaded": "Laatste antwoord: herrangschikken overgeslagen (het chatmodel past er niet samen mee op de GPU)",
+		"skipVram": "Laatste antwoord: herrangschikken overgeslagen (te weinig vrij GPU-geheugen)"
 	}
 }

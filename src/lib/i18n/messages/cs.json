@@ -1504,6 +1504,10 @@
 		"needModel": "Nejprve stáhněte model, potom to zapněte.",
 		"downloadFailed": "Stahování se nezdařilo",
 		"saveFailed": "Nastavení se nepodařilo uložit",
-		"loadError": "Stav přeřazování se nepodařilo načíst"
+		"loadError": "Stav přeřazování se nepodařilo načíst",
+		"fitNote": "Pokud se chatovací model a přeřazovač nevejdou společně do GPU, přeřazování se automaticky přeskočí.",
+		"skipNotLoaded": "Poslední odpověď: přeřazování přeskočeno (chatovací model se ještě načítal)",
+		"skipOffloaded": "Poslední odpověď: přeřazování přeskočeno (chatovací model se s ním nevejde do GPU)",
+		"skipVram": "Poslední odpověď: přeřazování přeskočeno (nedostatek volné paměti GPU)"
 	}
 }

@@ -1496,6 +1496,10 @@
     "needModel": "Unduh model terlebih dahulu, lalu aktifkan ini.",
     "downloadFailed": "Pengunduhan gagal",
     "saveFailed": "Pengaturan tidak dapat disimpan",
-    "loadError": "Status pengurutan ulang tidak dapat dibaca"
+    "loadError": "Status pengurutan ulang tidak dapat dibaca",
+		"fitNote": "Jika model obrolan dan peringkat ulang tidak muat bersama di GPU, peringkat ulang dilewati secara otomatis.",
+		"skipNotLoaded": "Jawaban terakhir: peringkat ulang dilewati (model obrolan masih dimuat)",
+		"skipOffloaded": "Jawaban terakhir: peringkat ulang dilewati (model obrolan tidak muat di GPU bersamanya)",
+		"skipVram": "Jawaban terakhir: peringkat ulang dilewati (memori GPU kosong tidak cukup)"
   }
 }

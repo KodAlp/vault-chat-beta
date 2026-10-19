@@ -1516,6 +1516,10 @@
 		"needModel": "Lataa ensin malli ja ota tämä sitten käyttöön.",
 		"downloadFailed": "Lataus epäonnistui",
 		"saveFailed": "Asetusta ei voitu tallentaa",
-		"loadError": "Uudelleenjärjestyksen tilaa ei voitu lukea"
+		"loadError": "Uudelleenjärjestyksen tilaa ei voitu lukea",
+		"fitNote": "Jos keskustelumalli ja uudelleenjärjestäjä eivät mahdu yhdessä GPU:lle, uudelleenjärjestys ohitetaan automaattisesti.",
+		"skipNotLoaded": "Viimeisin vastaus: uudelleenjärjestys ohitettu (keskustelumallia ladattiin vielä)",
+		"skipOffloaded": "Viimeisin vastaus: uudelleenjärjestys ohitettu (keskustelumalli ei mahdu GPU:lle sen kanssa)",
+		"skipVram": "Viimeisin vastaus: uudelleenjärjestys ohitettu (GPU:n vapaa muisti ei riittänyt)"
 	}
 }
