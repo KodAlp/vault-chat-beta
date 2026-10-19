@@ -44,6 +44,7 @@
 
 	"Message": {
 		"narrowScope": "Hittades inte i de valda källorna.",
+		"noRelevantSources": "Ingen relevant källa till frågan hittades i anteckningarna; svaret bygger på allmän kunskap.",
 		"expandScope": "Utöka omfånget?",
 		"smallTalk": "Tolkades som småprat, så inga källor söktes.",
 		"forceSources": "Sök i källorna ändå",

@@ -44,6 +44,7 @@
 
 	"Message": {
 		"narrowScope": "Not found in the selected sources.",
+		"noRelevantSources": "No relevant source for this question was found in the notes; this answer is based on general knowledge.",
 		"expandScope": "Expand scope?",
 		"smallTalk": "Read as small talk, so no sources were looked up.",
 		"forceSources": "Search sources anyway",

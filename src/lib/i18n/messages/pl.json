@@ -42,6 +42,7 @@
 	},
 	"Message": {
 		"narrowScope": "Nie znaleziono w wybranych źródłach.",
+		"noRelevantSources": "W notatkach nie znaleziono źródła związanego z tym pytaniem; odpowiedź opiera się na wiedzy ogólnej.",
 		"expandScope": "Rozszerzyć zakres?",
 		"smallTalk": "Rozpoznano jako rozmowę towarzyską, więc nie szukano źródeł.",
 		"forceSources": "Mimo to przeszukaj źródła",

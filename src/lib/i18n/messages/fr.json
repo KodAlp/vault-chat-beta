@@ -42,6 +42,7 @@
   },
   "Message": {
     "narrowScope": "Introuvable dans les sources sélectionnées.",
+    "noRelevantSources": "Aucune source pertinente pour cette question n’a été trouvée dans les notes ; cette réponse s’appuie sur des connaissances générales.",
     "expandScope": "Élargir la portée ?",
     "smallTalk": "Interprété comme un échange informel : aucune source n'a été consultée.",
     "forceSources": "Chercher quand même dans les sources",

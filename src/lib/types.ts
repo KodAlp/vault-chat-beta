@@ -114,6 +114,9 @@ export interface ChatMessage {
 	smallTalk?: boolean;
 	/** Client-only: the user pressed "Kaynaklar alakasız" on this answer. */
 	taughtSmallTalk?: boolean;
+	/** The reranker searched the notes and judged nothing relevant (RetrieveResult reason 'rerank-no-match').
+	 * Drives Message.svelte's "not in your notes" banner, which does not depend on the model saying so. Client-only. */
+	noRelevantSources?: boolean;
 	/** Hedge/uncertainty phrases detected in this message's reasoning trace (when there was one) and its
 	 * final answer text (always) — see $lib/server/hallucination.ts. Empty/absent means none found. */
 	hedges?: string[];
@@ -211,6 +214,8 @@ export type StreamEvent =
 			sources: RetrievedChunk[];
 			narrowScope?: boolean;
 			smallTalk?: boolean;
+			/** See ChatMessage.noRelevantSources. */
+			noRelevantSources?: boolean;
 			hedges?: string[];
 			nearCtxLimit?: boolean;
 			/** Mirrors RetrieveResult.embeddingIssue — set when this answer's sources

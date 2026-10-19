@@ -42,6 +42,7 @@
   },
   "Message": {
     "narrowScope": "在所选来源中未找到。",
+    "noRelevantSources": "笔记中未找到与此问题相关的来源；此回答基于一般知识。",
     "expandScope": "扩大范围？",
     "smallTalk": "被识别为闲聊，因此未检索来源。",
     "forceSources": "仍然搜索来源",

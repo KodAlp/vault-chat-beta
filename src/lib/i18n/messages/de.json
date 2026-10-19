@@ -42,6 +42,7 @@
   },
   "Message": {
     "narrowScope": "In den ausgewählten Quellen nicht gefunden.",
+    "noRelevantSources": "In den Notizen wurde keine passende Quelle zu dieser Frage gefunden; die Antwort beruht auf Allgemeinwissen.",
     "expandScope": "Umfang erweitern?",
     "smallTalk": "Als Smalltalk gewertet, daher wurden keine Quellen abgefragt.",
     "forceSources": "Trotzdem in Quellen suchen",

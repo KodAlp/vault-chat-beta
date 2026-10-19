@@ -42,6 +42,7 @@
 	},
 	"Message": {
 		"narrowScope": "Ei löytynyt valituista lähteistä.",
+		"noRelevantSources": "Muistiinpanoista ei löytynyt kysymykseen liittyvää lähdettä; vastaus perustuu yleistietoon.",
 		"expandScope": "Laajennetaanko rajausta?",
 		"smallTalk": "Tulkittiin jutusteluksi, joten lähteitä ei haettu.",
 		"forceSources": "Hae lähteistä silti",

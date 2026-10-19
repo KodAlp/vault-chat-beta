@@ -42,6 +42,7 @@
   },
   "Message": {
     "narrowScope": "Tidak ditemukan di sumber yang dipilih.",
+    "noRelevantSources": "Tidak ada sumber yang relevan dengan pertanyaan ini di catatan; jawaban ini berdasarkan pengetahuan umum.",
     "expandScope": "Perluas cakupan?",
     "smallTalk": "Dianggap obrolan santai, sehingga tidak ada sumber yang dicari.",
     "forceSources": "Tetap cari di sumber",

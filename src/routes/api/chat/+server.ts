@@ -661,6 +661,7 @@ export const POST: RequestHandler = async ({ request }) => {
 						sources,
 						narrowScope,
 						smallTalk: smallTalk || undefined,
+						noRelevantSources: noRelevantSources || undefined,
 						hedges: hedges.length ? hedges : undefined,
 						nearCtxLimit: nearCtxLimit || undefined,
 						embeddingIssue
