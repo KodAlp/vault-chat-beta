@@ -41,6 +41,7 @@ import { providersPath } from '../src/lib/server/env';
 import { parseGoldenLine, checkAnswerabilityRules, type GoldenLine } from './dataset/golden';
 import { chunkAnchor } from './lib/anchor';
 import { defaultSutContext, runSut, setupIsolation, type SutContext, type SutResult } from './lib/sut';
+import { releaseReranker } from '../src/lib/server/reranker';
 import {
 	buildJudgePrompt,
 	callJudge,
@@ -854,3 +855,6 @@ console.log('  answers.jsonl');
 console.log('  generation.json');
 console.log('  generation.md');
 if (pooledLines.length > 0) console.log('  pooled-qrels.jsonl');
+// The --rerank path's Python child keeps this process (and ~1.2 GB of VRAM) alive until its 10-minute idle
+// shutdown; the next run's VRAM gate then sees too little free memory and skips the reranker.
+await releaseReranker();
