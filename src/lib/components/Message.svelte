@@ -140,6 +140,12 @@
 			</div>
 		</div>
 	{/if}
+	{#if message.role === 'assistant' && message.noRelevantSources && !streaming}
+		<div class="vc-banner info extra">
+			<Icon name="info" />
+			<div class="d">{t('Message.noRelevantSources')}</div>
+		</div>
+	{/if}
 	{#if message.role === 'assistant' && message.narrowScope && !streaming}
 		<div class="vc-banner warning extra">
 			<Icon name="warning" />

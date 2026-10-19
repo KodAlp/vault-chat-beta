@@ -42,6 +42,7 @@
 	},
 	"Message": {
 		"narrowScope": "Non trovato nelle fonti selezionate.",
+		"noRelevantSources": "Nelle note non è stata trovata alcuna fonte pertinente a questa domanda; la risposta si basa su conoscenze generali.",
 		"expandScope": "Ampliare l'ambito?",
 		"smallTalk": "Interpretato come una chiacchiera, quindi non sono state cercate fonti.",
 		"forceSources": "Cerca comunque nelle fonti",

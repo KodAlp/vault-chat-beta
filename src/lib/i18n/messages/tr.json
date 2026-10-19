@@ -44,6 +44,7 @@
 
 	"Message": {
 		"narrowScope": "Seçili kaynaklarda bulunamadı.",
+		"noRelevantSources": "Notlarda bu soruyla ilgili bir kaynak bulunamadı; bu cevap genel bilgiye dayanıyor.",
 		"expandScope": "Kapsamı genişlet?",
 		"smallTalk": "Sohbet olarak algılandı, kaynak aranmadı.",
 		"forceSources": "Yine de kaynak ara",

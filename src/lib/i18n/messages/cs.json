@@ -42,6 +42,7 @@
 	},
 	"Message": {
 		"narrowScope": "Ve vybraných zdrojích nic nenalezeno.",
+		"noRelevantSources": "V poznámkách se k této otázce nenašel žádný relevantní zdroj; odpověď vychází z obecných znalostí.",
 		"expandScope": "Rozšířit rozsah?",
 		"smallTalk": "Vyhodnoceno jako běžná konverzace, zdroje se proto nehledaly.",
 		"forceSources": "Přesto hledat ve zdrojích",

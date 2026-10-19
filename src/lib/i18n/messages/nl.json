@@ -42,6 +42,7 @@
 	},
 	"Message": {
 		"narrowScope": "Niet gevonden in de gekozen bronnen.",
+		"noRelevantSources": "In de notities is geen relevante bron voor deze vraag gevonden; dit antwoord is gebaseerd op algemene kennis.",
 		"expandScope": "Bereik vergroten?",
 		"smallTalk": "Gelezen als een gewoon gesprekje, dus er zijn geen bronnen opgezocht.",
 		"forceSources": "Toch in bronnen zoeken",

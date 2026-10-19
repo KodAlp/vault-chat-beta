@@ -42,6 +42,7 @@
 	},
 	"Message": {
 		"narrowScope": "선택한 출처에서 찾지 못했어요.",
+		"noRelevantSources": "노트에서 이 질문과 관련된 출처를 찾지 못했어요. 이 답변은 일반 지식에 기반해요.",
 		"expandScope": "범위를 넓힐까요?",
 		"smallTalk": "일상 대화로 판단해서 출처를 검색하지 않았어요.",
 		"forceSources": "그래도 출처 검색",

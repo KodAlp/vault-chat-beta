@@ -313,6 +313,7 @@
 						assistantMessage.sources = event.sources;
 						assistantMessage.narrowScope = event.narrowScope;
 						assistantMessage.smallTalk = event.smallTalk;
+						assistantMessage.noRelevantSources = event.noRelevantSources;
 						assistantMessage.hedges = event.hedges;
 						assistantMessage.nearCtxLimit = event.nearCtxLimit;
 						assistantMessage.embeddingIssue = event.embeddingIssue;
