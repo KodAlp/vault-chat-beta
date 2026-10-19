@@ -52,6 +52,9 @@ export interface SutContext {
 	think: boolean;
 	/** Resource sampling interval in ms during generation (spec: 500ms). */
 	sampleIntervalMs?: number;
+	/** Production path with the chat reranker (providers.json is never touched; run-generation.ts --rerank or VC_RERANK=1):
+	 * retrieve(..., { rerank: true }) and, like the chat route, the no-relevant-sources notice on 'rerank-no-match'. */
+	rerank?: boolean;
 }
 
 export interface SutItemInput {
@@ -92,6 +95,7 @@ export interface SutResult {
 		reason?: string;
 		keyword?: boolean;
 		bestDistance?: number;
+		rerankBest?: number;
 		narrowScope: boolean;
 		smallTalk?: boolean;
 	};
@@ -144,7 +148,8 @@ export function defaultSutContext(v: VaultContext, model: string, opts: Partial<
 		responseLanguage: opts.responseLanguage ?? 'match',
 		numCtx: opts.numCtx ?? 8192,
 		think: opts.think ?? false,
-		sampleIntervalMs: opts.sampleIntervalMs ?? 500
+		sampleIntervalMs: opts.sampleIntervalMs ?? 500,
+		rerank: opts.rerank ?? process.env.VC_RERANK === '1'
 	};
 }
 
@@ -165,7 +170,8 @@ export async function runSut(ctx: SutContext, item: SutItemInput): Promise<SutRe
 	const result = await retrieve(ctx.v, query, {
 		k: chatRetrievalK(),
 		keywordFallback: true,
-		keywordQuery: item.question
+		keywordQuery: item.question,
+		rerank: ctx.rerank === true
 		// smallTalkGate intentionally omitted — see this module's doc comment
 		// and run-generation.ts's printed deviations list.
 	});
@@ -173,7 +179,8 @@ export async function runSut(ctx: SutContext, item: SutItemInput): Promise<SutRe
 
 	const promptBuildStart = Date.now();
 	const promptMessages = await buildPromptMessages(messages, result.chunks, ctx.allowedLanguages, ctx.v, 'free_chat', {
-		responseLanguage: ctx.responseLanguage
+		responseLanguage: ctx.responseLanguage,
+		noRelevantSources: result.reason === 'rerank-no-match'
 	});
 	const promptBuildMs = Date.now() - promptBuildStart;
 
@@ -289,6 +296,7 @@ export async function runSut(ctx: SutContext, item: SutItemInput): Promise<SutRe
 			reason: result.reason,
 			keyword: result.keyword,
 			bestDistance: result.bestDistance,
+			rerankBest: result.rerankBest,
 			narrowScope: result.narrowScope,
 			smallTalk: result.smallTalk
 		},

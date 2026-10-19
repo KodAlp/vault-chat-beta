@@ -9,7 +9,7 @@
  *   npx tsx bench/run-generation.ts --vault default --file <golden.jsonl>
  *     [--label x] [--limit N] [--model qwen3:8b] [--answers <answers.jsonl>]
  *     [--judge-model deepseek-v4-pro] [--allow-cloud deepseek-api] [--no-judge]
- *     [--rejudge N] [--sanity]
+ *     [--rejudge N] [--sanity] [--rerank]
  *
  * Writes data/vaults/default/bench/results/<ISO>-<label>/{answers.jsonl,
  * generation.json, generation.md, pooled-qrels.jsonl}. Opens index.db
@@ -94,6 +94,8 @@ const noJudge = hasFlag('--no-judge');
 const rejudgeArg = argValue('--rejudge');
 const rejudgeN = rejudgeArg ? Number(rejudgeArg) : 0;
 const doSanity = hasFlag('--sanity');
+// Production path with the chat reranker (same switch as VC_RERANK=1; never writes providers.json).
+const useRerank = hasFlag('--rerank') || process.env.VC_RERANK === '1';
 
 if (!file && !answersInputPath) {
 	console.error('en az bir --file <golden.jsonl> ya da --answers <answers.jsonl> gerekli');
@@ -229,7 +231,8 @@ if (answersInputPath) {
 	const librarySettings = getLibrarySettings(vault);
 	const sutCtx: SutContext = defaultSutContext(vault, model, {
 		allowedLanguages: librarySettings.allowedLanguages,
-		responseLanguage: librarySettings.responseLanguage
+		responseLanguage: librarySettings.responseLanguage,
+		rerank: useRerank
 	});
 	let done = 0;
 	for (const item of items) {
