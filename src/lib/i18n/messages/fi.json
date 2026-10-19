@@ -1343,7 +1343,9 @@
 		"SKILL_ZIP_TOO_MANY_ENTRIES": "Zip sisältää liian monta tiedostoa (raja {max})",
 		"SKILL_ZIP_ENTRY_PATH_INVALID": "Virheellinen tiedostopolku: {name}",
 		"SKILL_ZIP_TOTAL_TOO_LARGE": "Zip ylittää purettuna kokonaiskokorajan ({limitMb} Mt)",
-		"GEN_STREAM_ENDED": "Luonti päättyi palauttamatta tulosta."
+		"GEN_STREAM_ENDED": "Luonti päättyi palauttamatta tulosta.",
+		"RERANKER_MODEL_MISSING": "Uudelleenjärjestysmallia ei ole vielä ladattu",
+		"RERANKER_DOWNLOAD_FAILED": "Uudelleenjärjestysmallin lataus epäonnistui: {detail}"
 	},
 	"ErrorPage": {
 		"title": "Jokin meni pieleen",
@@ -1498,5 +1500,22 @@
 		"done": "Valmis",
 		"treeLabel": "Lähdepuu",
 		"noReview": "Vaatii tarkistuksen"
+	},
+	"RerankerSettingsCard": {
+		"title": "Lähteiden uudelleenjärjestys",
+		"description": "Toinen malli (bge-reranker-v2-m3) pisteyttää löydetyt kohdat ennen kuin chat käyttää niitä, ja chat kertoo, kun muistiinpanosi eivät kata kysymystä. Vaatii NVIDIA-näytönohjaimen (CUDA) ja noin 2,3 Gt:n mallilatauksen; lisää noin 1 sekunnin vastausta kohti.",
+		"enabledLabel": "Järjestä lähteet uudelleen chatissa",
+		"checking": "Tarkistetaan tätä tietokonetta…",
+		"cudaOk": "GPU (CUDA): löytyi",
+		"cudaMissing": "GPU (CUDA): ei löytynyt. Uudelleenjärjestys tarvitsee sellaisen.",
+		"pythonMissing": "Python ja PyTorch: ei löytynyt",
+		"modelPresent": "Malli: ladattu",
+		"modelMissing": "Malli: ei ladattu",
+		"downloadButton": "Lataa malli",
+		"downloading": "Ladataan, tämä voi kestää useita minuutteja…",
+		"needModel": "Lataa ensin malli ja ota tämä sitten käyttöön.",
+		"downloadFailed": "Lataus epäonnistui",
+		"saveFailed": "Asetusta ei voitu tallentaa",
+		"loadError": "Uudelleenjärjestyksen tilaa ei voitu lukea"
 	}
 }

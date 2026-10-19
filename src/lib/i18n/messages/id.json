@@ -1271,7 +1271,9 @@
     "GEN_STREAM_ENDED": "Pembuatan berakhir tanpa mengembalikan hasil.",
     "LIBRARY_EDIT_CONFLICT": "Berkas berubah di disk saat Anda mengeditnya",
     "LIBRARY_EDIT_FORBIDDEN": "Berkas ini tidak dapat diubah (hanya catatan .md yang sudah ada di pustaka yang dapat diubah)",
-    "LIBRARY_REVISION_NOT_FOUND": "Versi sebelumnya tidak ditemukan"
+    "LIBRARY_REVISION_NOT_FOUND": "Versi sebelumnya tidak ditemukan",
+    "RERANKER_MODEL_MISSING": "Model pengurutan ulang belum diunduh",
+    "RERANKER_DOWNLOAD_FAILED": "Gagal mengunduh model pengurutan ulang: {detail}"
   },
   "ErrorPage": {
     "title": "Terjadi kesalahan",
@@ -1478,5 +1480,22 @@
   "LanguageCombobox": {
     "searchPlaceholder": "Cari bahasa…",
     "noResults": "Bahasa tidak ditemukan"
+  },
+  "RerankerSettingsCard": {
+    "title": "Pengurutan ulang sumber",
+    "description": "Model kedua (bge-reranker-v2-m3) menilai potongan yang ditemukan sebelum chat menggunakannya, dan chat akan memberi tahu Anda saat catatan Anda tidak mencakup suatu pertanyaan. Membutuhkan GPU NVIDIA (CUDA) dan unduhan model sekitar 2,3 GB; menambah sekitar 1 detik per jawaban.",
+    "enabledLabel": "Urutkan ulang sumber di chat",
+    "checking": "Memeriksa komputer ini…",
+    "cudaOk": "GPU (CUDA): ditemukan",
+    "cudaMissing": "GPU (CUDA): tidak ditemukan. Pengurutan ulang membutuhkannya.",
+    "pythonMissing": "Python dengan PyTorch: tidak ditemukan",
+    "modelPresent": "Model: sudah diunduh",
+    "modelMissing": "Model: belum diunduh",
+    "downloadButton": "Unduh model",
+    "downloading": "Mengunduh, ini bisa memakan waktu beberapa menit…",
+    "needModel": "Unduh model terlebih dahulu, lalu aktifkan ini.",
+    "downloadFailed": "Pengunduhan gagal",
+    "saveFailed": "Pengaturan tidak dapat disimpan",
+    "loadError": "Status pengurutan ulang tidak dapat dibaca"
   }
 }

@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import type { ProviderStatus } from '$lib/types';
 	import EmbeddingSettingsCard from '$lib/components/EmbeddingSettingsCard.svelte';
+	import RerankerSettingsCard from '$lib/components/RerankerSettingsCard.svelte';
 	import { t } from '$lib/i18n/index.svelte';
 
 	let providers = $state<ProviderStatus[]>([]);
@@ -30,4 +31,5 @@
 		<p class="text-sm text-destructive" role="alert">{loadError}</p>
 	{/if}
 	<EmbeddingSettingsCard {providers} />
+	<RerankerSettingsCard />
 </div>

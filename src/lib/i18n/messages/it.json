@@ -1343,7 +1343,9 @@
 		"SKILL_ZIP_TOO_MANY_ENTRIES": "Lo zip contiene troppi file (limite di {max})",
 		"SKILL_ZIP_ENTRY_PATH_INVALID": "Percorso di file non valido: {name}",
 		"SKILL_ZIP_TOTAL_TOO_LARGE": "Una volta estratto, lo zip supera il limite di dimensione totale ({limitMb} MB)",
-		"GEN_STREAM_ENDED": "La generazione è terminata senza restituire un risultato."
+		"GEN_STREAM_ENDED": "La generazione è terminata senza restituire un risultato.",
+		"RERANKER_MODEL_MISSING": "Il modello di riordinamento non è ancora stato scaricato",
+		"RERANKER_DOWNLOAD_FAILED": "Download del modello di riordinamento non riuscito: {detail}"
 	},
 	"ErrorPage": {
 		"title": "Qualcosa è andato storto",
@@ -1498,5 +1500,22 @@
 		"done": "Fatto",
 		"treeLabel": "Albero delle fonti",
 		"noReview": "Da rivedere"
+	},
+	"RerankerSettingsCard": {
+		"title": "Riordinamento delle fonti",
+		"description": "Un secondo modello (bge-reranker-v2-m3) valuta i passaggi trovati prima che la chat li usi, e la chat ti avvisa quando le tue note non coprono una domanda. Richiede una GPU NVIDIA (CUDA) e il download di un modello da circa 2,3 GB; aggiunge circa 1 secondo a risposta.",
+		"enabledLabel": "Riordina le fonti nella chat",
+		"checking": "Controllo di questo computer…",
+		"cudaOk": "GPU (CUDA): trovata",
+		"cudaMissing": "GPU (CUDA): non trovata. Il riordinamento ne ha bisogno.",
+		"pythonMissing": "Python con PyTorch: non trovato",
+		"modelPresent": "Modello: scaricato",
+		"modelMissing": "Modello: non scaricato",
+		"downloadButton": "Scarica il modello",
+		"downloading": "Download in corso, può richiedere alcuni minuti…",
+		"needModel": "Scarica prima il modello, poi attiva questa opzione.",
+		"downloadFailed": "Il download non è riuscito",
+		"saveFailed": "Impossibile salvare l'impostazione",
+		"loadError": "Impossibile leggere lo stato del riordinamento"
 	}
 }

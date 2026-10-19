@@ -1323,7 +1323,9 @@
 		"SKILL_ZIP_TOO_MANY_ENTRIES": "zip에 파일이 너무 많아요 ({max}개 제한)",
 		"SKILL_ZIP_ENTRY_PATH_INVALID": "올바르지 않은 파일 경로: {name}",
 		"SKILL_ZIP_TOTAL_TOO_LARGE": "압축을 풀면 zip이 전체 크기 제한을 초과해요 ({limitMb}MB)",
-		"GEN_STREAM_ENDED": "생성이 결과를 반환하지 않고 끝났어요."
+		"GEN_STREAM_ENDED": "생성이 결과를 반환하지 않고 끝났어요.",
+		"RERANKER_MODEL_MISSING": "재정렬 모델이 아직 다운로드되지 않았습니다",
+		"RERANKER_DOWNLOAD_FAILED": "재정렬 모델을 다운로드하지 못했습니다: {detail}"
 	},
 	"ErrorPage": {
 		"title": "문제가 발생했어요",
@@ -1477,5 +1479,22 @@
 		"done": "완료",
 		"treeLabel": "출처 트리",
 		"noReview": "검토 필요"
+	},
+	"RerankerSettingsCard": {
+		"title": "출처 재정렬",
+		"description": "두 번째 모델(bge-reranker-v2-m3)이 채팅이 사용하기 전에 찾은 구절의 점수를 매기고, 노트가 질문을 다루지 않으면 채팅이 그렇게 알려 줍니다. NVIDIA GPU(CUDA)와 약 2.3GB 모델 다운로드가 필요하며, 답변마다 약 1초가 더 걸립니다.",
+		"enabledLabel": "채팅에서 출처 재정렬",
+		"checking": "이 컴퓨터를 확인하는 중…",
+		"cudaOk": "GPU(CUDA): 찾음",
+		"cudaMissing": "GPU(CUDA): 찾을 수 없음. 재정렬에 필요합니다.",
+		"pythonMissing": "PyTorch가 있는 Python: 찾을 수 없음",
+		"modelPresent": "모델: 다운로드됨",
+		"modelMissing": "모델: 다운로드 안 됨",
+		"downloadButton": "모델 다운로드",
+		"downloading": "다운로드 중입니다. 몇 분 걸릴 수 있습니다…",
+		"needModel": "먼저 모델을 다운로드한 다음 이 기능을 켜세요.",
+		"downloadFailed": "다운로드하지 못했습니다",
+		"saveFailed": "설정을 저장하지 못했습니다",
+		"loadError": "재정렬 상태를 읽지 못했습니다"
 	}
 }

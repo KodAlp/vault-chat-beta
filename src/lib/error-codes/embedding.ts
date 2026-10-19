@@ -43,5 +43,10 @@ export const EMBEDDING_CODES = [
 	// index over the old one after retrying — almost always another process
 	// (the MCP server) still has index.db open. The OLD index is guaranteed
 	// intact; the freshly built one was discarded and must be rebuilt.
-	'REINDEX_INDEX_LOCKED'
+	'REINDEX_INDEX_LOCKED',
+
+	// Chat reranker (reranker.ts, /api/settings/reranker): turning it on before the model is in the cache,
+	// and a failed model download.
+	'RERANKER_MODEL_MISSING',
+	'RERANKER_DOWNLOAD_FAILED'
 ] as const;

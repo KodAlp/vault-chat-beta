@@ -1271,7 +1271,9 @@
     "GEN_STREAM_ENDED": "تخلیق بغیر نتیجہ دیے ختم ہو گئی۔",
     "LIBRARY_EDIT_CONFLICT": "آپ کی ترمیم کے دوران فائل ڈسک پر تبدیل ہو گئی",
     "LIBRARY_EDIT_FORBIDDEN": "یہ فائل ترمیم نہیں کی جا سکتی (لائبریری میں صرف موجودہ .md نوٹس میں ترمیم ہو سکتی ہے)",
-    "LIBRARY_REVISION_NOT_FOUND": "پچھلا ورژن نہیں ملا"
+    "LIBRARY_REVISION_NOT_FOUND": "پچھلا ورژن نہیں ملا",
+    "RERANKER_MODEL_MISSING": "ازسرِنو ترتیب کا ماڈل ابھی ڈاؤن لوڈ نہیں ہوا",
+    "RERANKER_DOWNLOAD_FAILED": "ازسرِنو ترتیب کا ماڈل ڈاؤن لوڈ نہیں ہو سکا: {detail}"
   },
   "ErrorPage": {
     "title": "کچھ غلط ہو گیا",
@@ -1478,5 +1480,22 @@
   "LanguageCombobox": {
     "searchPlaceholder": "زبان تلاش کریں…",
     "noResults": "کوئی زبان نہیں ملی"
+  },
+  "RerankerSettingsCard": {
+    "title": "ماخذ کی ازسرِنو ترتیب",
+    "description": "دوسرا ماڈل (bge-reranker-v2-m3) چیٹ کے استعمال سے پہلے ملنے والے حصوں کو نمبر دیتا ہے، اور جب آپ کے نوٹس کسی سوال کا احاطہ نہ کریں تو چیٹ صاف بتا دیتی ہے۔ اس کے لیے NVIDIA GPU (CUDA) اور تقریباً 2.3 GB کا ماڈل ڈاؤن لوڈ درکار ہے؛ ہر جواب میں تقریباً 1 سیکنڈ کا اضافہ ہوتا ہے۔",
+    "enabledLabel": "چیٹ میں ماخذ کی ازسرِنو ترتیب",
+    "checking": "اس کمپیوٹر کی جانچ ہو رہی ہے…",
+    "cudaOk": "GPU (CUDA): مل گیا",
+    "cudaMissing": "GPU (CUDA): نہیں ملا۔ ازسرِنو ترتیب کے لیے یہ ضروری ہے۔",
+    "pythonMissing": "PyTorch والا Python: نہیں ملا",
+    "modelPresent": "ماڈل: ڈاؤن لوڈ ہو چکا ہے",
+    "modelMissing": "ماڈل: ڈاؤن لوڈ نہیں ہوا",
+    "downloadButton": "ماڈل ڈاؤن لوڈ کریں",
+    "downloading": "ڈاؤن لوڈ ہو رہا ہے، اس میں چند منٹ لگ سکتے ہیں…",
+    "needModel": "پہلے ماڈل ڈاؤن لوڈ کریں، پھر اسے آن کریں۔",
+    "downloadFailed": "ڈاؤن لوڈ ناکام رہا",
+    "saveFailed": "ترتیب محفوظ نہیں ہو سکی",
+    "loadError": "ازسرِنو ترتیب کی حالت پڑھی نہیں جا سکی"
   }
 }

@@ -1344,7 +1344,9 @@
 		"SKILL_ZIP_TOO_MANY_ENTRIES": "Zip-filen indeholder for mange filer (grænse på {max})",
 		"SKILL_ZIP_ENTRY_PATH_INVALID": "Ugyldig filsti: {name}",
 		"SKILL_ZIP_TOTAL_TOO_LARGE": "Zip-filen overskrider den samlede størrelsesgrænse, når den er udpakket ({limitMb} MB)",
-		"GEN_STREAM_ENDED": "Genereringen sluttede uden at returnere et resultat."
+		"GEN_STREAM_ENDED": "Genereringen sluttede uden at returnere et resultat.",
+		"RERANKER_MODEL_MISSING": "Omrangeringsmodellen er ikke downloadet endnu",
+		"RERANKER_DOWNLOAD_FAILED": "Download af omrangeringsmodellen mislykkedes: {detail}"
 	},
 	"ErrorPage": {
 		"title": "Noget gik galt",
@@ -1499,5 +1501,22 @@
 		"done": "Færdig",
 		"treeLabel": "Kildetræ",
 		"noReview": "Kræver gennemsyn"
+	},
+	"RerankerSettingsCard": {
+		"title": "Omrangering af kilder",
+		"description": "En anden model (bge-reranker-v2-m3) vurderer de fundne afsnit, før chatten bruger dem, og chatten siger til, når dine noter ikke dækker et spørgsmål. Kræver et NVIDIA-grafikkort (CUDA) og en modeldownload på omkring 2,3 GB; tilføjer omkring 1 sekund pr. svar.",
+		"enabledLabel": "Rangér kilder igen i chatten",
+		"checking": "Tjekker denne computer…",
+		"cudaOk": "GPU (CUDA): fundet",
+		"cudaMissing": "GPU (CUDA): ikke fundet. Omrangering har brug for et.",
+		"pythonMissing": "Python med PyTorch: ikke fundet",
+		"modelPresent": "Model: downloadet",
+		"modelMissing": "Model: ikke downloadet",
+		"downloadButton": "Download model",
+		"downloading": "Downloader, det kan tage nogle minutter…",
+		"needModel": "Download modellen først, og slå det så til.",
+		"downloadFailed": "Downloadet mislykkedes",
+		"saveFailed": "Indstillingen kunne ikke gemmes",
+		"loadError": "Status for omrangering kunne ikke læses"
 	}
 }

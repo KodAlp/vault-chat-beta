@@ -1287,7 +1287,9 @@
     "GEN_STREAM_ENDED": "A geração terminou sem retornar um resultado.",
     "LIBRARY_EDIT_CONFLICT": "O arquivo mudou no disco enquanto você o editava",
     "LIBRARY_EDIT_FORBIDDEN": "Este arquivo não pode ser editado (somente as notas .md já existentes na biblioteca podem ser editadas)",
-    "LIBRARY_REVISION_NOT_FOUND": "Versão anterior não encontrada"
+    "LIBRARY_REVISION_NOT_FOUND": "Versão anterior não encontrada",
+    "RERANKER_MODEL_MISSING": "O modelo de reordenação ainda não foi baixado",
+    "RERANKER_DOWNLOAD_FAILED": "Falha ao baixar o modelo de reordenação: {detail}"
   },
   "ErrorPage": {
     "title": "Algo deu errado",
@@ -1495,5 +1497,22 @@
   "LanguageCombobox": {
     "searchPlaceholder": "Pesquisar idiomas…",
     "noResults": "Nenhum idioma encontrado"
+  },
+  "RerankerSettingsCard": {
+    "title": "Reordenação de fontes",
+    "description": "Um segundo modelo (bge-reranker-v2-m3) pontua os trechos encontrados antes de o chat usá-los, e o chat avisa quando suas notas não cobrem uma pergunta. Requer uma GPU NVIDIA (CUDA) e o download de um modelo de cerca de 2,3 GB; adiciona cerca de 1 segundo por resposta.",
+    "enabledLabel": "Reordenar as fontes no chat",
+    "checking": "Verificando este computador…",
+    "cudaOk": "GPU (CUDA): encontrada",
+    "cudaMissing": "GPU (CUDA): não encontrada. A reordenação precisa de uma.",
+    "pythonMissing": "Python com PyTorch: não encontrado",
+    "modelPresent": "Modelo: baixado",
+    "modelMissing": "Modelo: não baixado",
+    "downloadButton": "Baixar modelo",
+    "downloading": "Baixando, isso pode levar vários minutos…",
+    "needModel": "Baixe o modelo primeiro e depois ative isto.",
+    "downloadFailed": "O download falhou",
+    "saveFailed": "Não foi possível salvar a configuração",
+    "loadError": "Não foi possível ler o estado da reordenação"
   }
 }

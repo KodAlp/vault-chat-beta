@@ -1375,7 +1375,9 @@
 		"SKILL_ZIP_TOO_MANY_ENTRIES": "Zip içinde çok fazla dosya var ({max} sınırı)",
 		"SKILL_ZIP_ENTRY_PATH_INVALID": "Geçersiz dosya yolu: {name}",
 		"SKILL_ZIP_TOTAL_TOO_LARGE": "Zip açıldığında toplam boyut sınırı aşılıyor ({limitMb}MB)",
-		"GEN_STREAM_ENDED": "Üretim bir sonuç göndermeden sona erdi."
+		"GEN_STREAM_ENDED": "Üretim bir sonuç göndermeden sona erdi.",
+		"RERANKER_MODEL_MISSING": "Yeniden sıralama modeli henüz indirilmedi",
+		"RERANKER_DOWNLOAD_FAILED": "Yeniden sıralama modeli indirilemedi: {detail}"
 	},
 
 	"ErrorPage": {
@@ -1537,5 +1539,22 @@
 		"done": "Bitti",
 		"treeLabel": "Kaynak ağacı",
 		"noReview": "İnceleme gerekiyor"
+	},
+	"RerankerSettingsCard": {
+		"title": "Kaynak yeniden sıralama",
+		"description": "İkinci bir model (bge-reranker-v2-m3), bulunan parçaları sohbet kullanmadan önce puanlar; notların bir soruyu kapsamadığında sohbet bunu açıkça söyler. NVIDIA GPU (CUDA) ve yaklaşık 2,3 GB'lık bir model indirmesi gerekir; her cevaba yaklaşık 1 saniye ekler.",
+		"enabledLabel": "Sohbette kaynakları yeniden sırala",
+		"checking": "Bu bilgisayar denetleniyor…",
+		"cudaOk": "GPU (CUDA): bulundu",
+		"cudaMissing": "GPU (CUDA): bulunamadı. Yeniden sıralama için gerekli.",
+		"pythonMissing": "PyTorch'lu Python: bulunamadı",
+		"modelPresent": "Model: indirildi",
+		"modelMissing": "Model: indirilmedi",
+		"downloadButton": "Modeli indir",
+		"downloading": "İndiriliyor, birkaç dakika sürebilir…",
+		"needModel": "Önce modeli indir, sonra bunu aç.",
+		"downloadFailed": "İndirme başarısız oldu",
+		"saveFailed": "Ayar kaydedilemedi",
+		"loadError": "Yeniden sıralama durumu okunamadı"
 	}
 }

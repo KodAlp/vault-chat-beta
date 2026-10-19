@@ -1271,7 +1271,9 @@
     "GEN_STREAM_ENDED": "生成结束，但未返回结果。",
     "LIBRARY_EDIT_CONFLICT": "你编辑时，文件在磁盘上已更改",
     "LIBRARY_EDIT_FORBIDDEN": "此文件无法编辑（只能编辑资料库中已有的 .md 笔记）",
-    "LIBRARY_REVISION_NOT_FOUND": "未找到历史版本"
+    "LIBRARY_REVISION_NOT_FOUND": "未找到历史版本",
+    "RERANKER_MODEL_MISSING": "重排模型尚未下载",
+    "RERANKER_DOWNLOAD_FAILED": "重排模型下载失败:{detail}"
   },
   "ErrorPage": {
     "title": "出错了",
@@ -1478,5 +1480,22 @@
   "LanguageCombobox": {
     "searchPlaceholder": "搜索语言…",
     "noResults": "未找到语言"
+  },
+  "RerankerSettingsCard": {
+    "title": "来源重排",
+    "description": "第二个模型(bge-reranker-v2-m3)会在聊天使用检索到的段落之前先为其打分,当你的笔记没有涵盖某个问题时,聊天会明确告诉你。需要 NVIDIA GPU(CUDA)并下载约 2.3 GB 的模型;每次回答约增加 1 秒。",
+    "enabledLabel": "在聊天中重排来源",
+    "checking": "正在检查这台电脑…",
+    "cudaOk": "GPU(CUDA):已找到",
+    "cudaMissing": "GPU(CUDA):未找到。重排需要它。",
+    "pythonMissing": "带 PyTorch 的 Python:未找到",
+    "modelPresent": "模型:已下载",
+    "modelMissing": "模型:未下载",
+    "downloadButton": "下载模型",
+    "downloading": "正在下载,可能需要几分钟…",
+    "needModel": "请先下载模型,再开启此项。",
+    "downloadFailed": "下载失败",
+    "saveFailed": "无法保存设置",
+    "loadError": "无法读取重排状态"
   }
 }
