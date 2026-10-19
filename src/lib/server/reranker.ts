@@ -375,6 +375,8 @@ function getReranker(): Reranker {
 
 /** Free VRAM the reranker process needs to start: 1217 MiB measured (fp16, CUDA context included) plus ~80 MiB margin. */
 export const RERANKER_VRAM_MB = 1300;
+/** Free VRAM needed to start beside a fully resident Ollama chat model (see decideRerankGate). */
+export const RERANKER_VRAM_MB_BESIDE_RESIDENT = 900;
 const PS_TIMEOUT_MS = 1_000;
 const NVIDIA_SMI_TIMEOUT_MS = 2_000;
 
@@ -415,7 +417,12 @@ export function decideRerankGate(i: GateInputs): GateDecision {
 		if (!entry) return { action: 'skip-release', reason: 'chat-model-not-loaded' };
 		if (entry.size_vram < entry.size) return { action: 'skip-release', reason: 'chat-model-offloaded' };
 	}
-	if (!i.running && i.freeVramMb !== null && i.freeVramMb < RERANKER_VRAM_MB) {
+	// With the local chat model already fully resident, part of the reranker may spill to shared memory
+	// without touching it (measured: qwen3:8b-bart-iq4xs at num_ctx 8192, 1075 MiB free, rerank 0.5 -> 0.8 s,
+	// chat 35 tok/s unchanged over 4 rounds). Only a model loading AFTER the reranker gets pushed off the GPU,
+	// and the checks above already prevent that. A cloud chat has nothing to protect but needs real headroom.
+	const needMb = i.localModel !== undefined ? RERANKER_VRAM_MB_BESIDE_RESIDENT : RERANKER_VRAM_MB;
+	if (!i.running && i.freeVramMb !== null && i.freeVramMb < needMb) {
 		return { action: 'skip', reason: 'insufficient-vram' };
 	}
 	return { action: 'run' };
