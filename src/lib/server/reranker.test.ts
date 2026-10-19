@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
 import { PassThrough } from 'node:stream';
-import { createReranker, decideRerankGate, RERANKER_VRAM_MB, type PsModel, type RerankChild } from './reranker';
+import { createReranker, decideRerankGate, RERANKER_VRAM_MB, RERANKER_VRAM_MB_BESIDE_RESIDENT, type PsModel, type RerankChild } from './reranker';
 
 type Behaviour = {
 	/** First stdout line; null = never send it (a hung start). */
@@ -214,8 +214,14 @@ test('gate: chat model fully on the GPU -> run (latest tag and bare name are one
 });
 
 test('gate: not running and too little free VRAM -> skip without releasing', () => {
-	assert.deepEqual(decideRerankGate({ localModel: 'm', ps: [full('m')], running: false, freeVramMb: RERANKER_VRAM_MB - 1 }), { action: 'skip', reason: 'insufficient-vram' });
+	assert.deepEqual(decideRerankGate({ localModel: 'm', ps: [full('m')], running: false, freeVramMb: RERANKER_VRAM_MB_BESIDE_RESIDENT - 1 }), { action: 'skip', reason: 'insufficient-vram' });
+	assert.deepEqual(decideRerankGate({ ps: null, running: false, freeVramMb: RERANKER_VRAM_MB - 1 }), { action: 'skip', reason: 'insufficient-vram' });
 	assert.deepEqual(decideRerankGate({ ps: null, running: false, freeVramMb: 300 }), { action: 'skip', reason: 'insufficient-vram' });
+});
+
+test('gate: beside a fully resident local chat model the lower threshold applies (measured spill is harmless)', () => {
+	assert.deepEqual(decideRerankGate({ localModel: 'm', ps: [full('m')], running: false, freeVramMb: 1075 }), { action: 'run' });
+	assert.deepEqual(decideRerankGate({ localModel: 'm', ps: [full('m')], running: false, freeVramMb: RERANKER_VRAM_MB_BESIDE_RESIDENT }), { action: 'run' });
 });
 
 test('gate: enough free VRAM, unknown VRAM (no nvidia-smi) or a live process -> run; cloud chat needs no ps', () => {

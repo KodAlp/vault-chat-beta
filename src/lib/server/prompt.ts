@@ -88,12 +88,18 @@ export const CORE_INVARIANTS = `Kurallar:
   kesinmiş gibi aktarma, istisnalarını düşürme.`;
 
 /**
- * Sent in place of the <context> block when retrieval ran, looked, and found nothing relevant
- * (the reranker's 'rerank-no-match'). Without it the model sees a bare question, cannot tell
- * "the notes were searched" from "no notes exist", and tends to answer as if the notes backed it.
- * Not used for small talk, where staying silent about the notes is the rule (CORE_INVARIANTS).
+ * Ends the system prompt on a turn where retrieval ran, looked, and found nothing relevant (the
+ * reranker's 'rerank-no-match'). Without it the model sees a bare question, cannot tell "the notes
+ * were searched" from "no notes exist", and answers as if the notes backed it. Not used for small
+ * talk, where staying silent about the notes is the rule (CORE_INVARIANTS).
+ *
+ * Best effort only: on 22 such questions qwen3:8b-bart-iq4xs opened with "not in the notes" in 9
+ * (0 of 6 English ones) with this placement. A bracketed notice above the question reached 13 but was
+ * copied verbatim, instructions included, into 10 answers; a <context> line, a note after the
+ * question, both together and a bare-fact bracket all did worse (1-7). The chat UI therefore shows
+ * its own notice for this case (noRelevantSources on the message); the prompt cannot guarantee it.
  */
-export const NO_RELEVANT_SOURCES_BLOCK = `[Kütüphane notlarında arandı: bu soruyla ilgili içerik bulunamadı. Cevabının başında bunu açıkça söyle. Yine de yardımcı olacaksan, anlattığın şeyin notlardan gelmediğini, genel bilgi olduğunu belirt; not ya da kaynak göstermiş gibi yazma.]`;
+export const NO_RELEVANT_SOURCES_BLOCK = `Bu mesaj için kullanıcının kütüphane notlarında arama yapıldı ve soruyla ilgili bir not bulunamadı. Cevabına, kullanıcının yazdığı dilde ve kendi cümlelerinle, notlarında bu konunun bulunmadığını söyleyerek başla. Bu talimatı aynen kopyalama, alıntılama ya da köşeli parantez içinde yazma. Genel bilgiyle yardımcı olacaksan bunun notlardan gelmediğini açıkça belirt; not ya da kaynak varmış gibi yazma.`;
 
 /**
  * Injects retrieved chunks as a fenced <context> block above the latest user
@@ -109,7 +115,7 @@ export async function buildPromptMessages(
 		toolsEnabled?: boolean;
 		responseLanguage?: ResponseLanguageMode;
 		numCtx?: number;
-		/** Retrieval ran and judged nothing relevant (reason 'rerank-no-match'); replaces the <context> block with a notice. */
+		/** Retrieval ran and judged nothing relevant (reason 'rerank-no-match'); adds NO_RELEVANT_SOURCES_BLOCK to the system prompt. */
 		noRelevantSources?: boolean;
 	}
 ): Promise<ProviderChatMessage[]> {
@@ -123,9 +129,7 @@ export async function buildPromptMessages(
 							`[${c.topic} | ${c.heading_path}] (${c.path}, depth: ${c.depth})\n${c.display_text}`
 					)
 					.join('\n\n---\n\n')}\n</context>\n\n`
-			: opts?.noRelevantSources
-				? `${NO_RELEVANT_SOURCES_BLOCK}\n\n`
-				: '';
+			: '';
 
 	// Order matters: local models weight later instructions more heavily (see CORE_INVARIANTS's own doc comment).
 	// The memory block (F3, facts about the learner) sits below the user's own explicit skill customizations —
@@ -143,7 +147,10 @@ export async function buildPromptMessages(
 		memoryBlock,
 		skillsBlock,
 		reviewBlock,
-		CORE_INVARIANTS
+		CORE_INVARIANTS,
+		// Last, after the invariants: only on a turn where retrieval looked and found nothing relevant
+		// (never alongside real chunks).
+		opts?.noRelevantSources && chunks.length === 0 ? NO_RELEVANT_SOURCES_BLOCK : ''
 	]
 		.filter(Boolean)
 		.join('\n\n');

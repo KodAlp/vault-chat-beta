@@ -236,7 +236,7 @@ test('the core prompt does not position the app as Obsidian-based', () => {
 	}
 });
 
-test('noRelevantSources: a notice replaces the <context> block, above the question', async () => {
+test('noRelevantSources: the notice ends the system prompt and the question stays bare', async () => {
 	process.env.CHAT_MEMORY_GATE = '0';
 	useEmptySkillsDir();
 	await withVaultAsync(async (v) => {
@@ -245,8 +245,8 @@ test('noRelevantSources: a notice replaces the <context> block, above the questi
 			noRelevantSources: true
 		});
 		const last = messages[messages.length - 1];
-		assert.equal(last.content, `${NO_RELEVANT_SOURCES_BLOCK}\n\nKotlin coroutine nedir?`);
-		assert.doesNotMatch(last.content, /<context>/);
+		assert.equal(last.content, 'Kotlin coroutine nedir?');
+		assert.ok(messages[0].content.endsWith(NO_RELEVANT_SOURCES_BLOCK));
 		assert.match(NO_RELEVANT_SOURCES_BLOCK, /bulunamadı/);
 		assert.match(NO_RELEVANT_SOURCES_BLOCK, /notlardan gelmediğini/);
 	});
@@ -260,8 +260,10 @@ test('noRelevantSources never overrides real chunks and is absent by default', a
 	await withVaultAsync(async (v) => {
 		const withChunk = await buildPromptMessages([userMessage('Soru?')], [chunk], ['Türkçe'], v, 'free_chat', { responseLanguage: 'fixed', noRelevantSources: true });
 		assert.match(withChunk[withChunk.length - 1].content, /^<context>/);
+		assert.ok(!withChunk[0].content.includes(NO_RELEVANT_SOURCES_BLOCK));
 		const plain = await buildPromptMessages([userMessage('Soru?')], [], ['Türkçe'], v, 'free_chat', { responseLanguage: 'fixed' });
 		assert.equal(plain[plain.length - 1].content, 'Soru?');
+		assert.ok(!plain[0].content.includes(NO_RELEVANT_SOURCES_BLOCK));
 	});
 	delete process.env.CHAT_MEMORY_GATE;
 });
