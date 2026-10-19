@@ -1271,7 +1271,9 @@
     "GEN_STREAM_ENDED": "जनरेशन बिना कोई परिणाम लौटाए समाप्त हो गया।",
     "LIBRARY_EDIT_CONFLICT": "आपके संपादन के दौरान फ़ाइल डिस्क पर बदल गई",
     "LIBRARY_EDIT_FORBIDDEN": "यह फ़ाइल संपादित नहीं की जा सकती (लाइब्रेरी में केवल मौजूदा .md नोट्स ही संपादित हो सकते हैं)",
-    "LIBRARY_REVISION_NOT_FOUND": "पिछला संस्करण नहीं मिला"
+    "LIBRARY_REVISION_NOT_FOUND": "पिछला संस्करण नहीं मिला",
+    "RERANKER_MODEL_MISSING": "पुनःक्रम मॉडल अभी डाउनलोड नहीं हुआ है",
+    "RERANKER_DOWNLOAD_FAILED": "पुनःक्रम मॉडल डाउनलोड नहीं हो सका: {detail}"
   },
   "ErrorPage": {
     "title": "कुछ गड़बड़ हो गई",
@@ -1478,5 +1480,22 @@
   "LanguageCombobox": {
     "searchPlaceholder": "भाषा खोजें…",
     "noResults": "कोई भाषा नहीं मिली"
+  },
+  "RerankerSettingsCard": {
+    "title": "स्रोतों का पुनःक्रम",
+    "description": "दूसरा मॉडल (bge-reranker-v2-m3) चैट के उपयोग से पहले मिले अंशों को अंक देता है, और जब आपके नोट्स किसी प्रश्न को कवर नहीं करते तो चैट साफ़ बता देता है। इसके लिए NVIDIA GPU (CUDA) और लगभग 2.3 GB का मॉडल डाउनलोड चाहिए; हर उत्तर में लगभग 1 सेकंड जुड़ता है।",
+    "enabledLabel": "चैट में स्रोतों को पुनःक्रमित करें",
+    "checking": "इस कंप्यूटर की जाँच हो रही है…",
+    "cudaOk": "GPU (CUDA): मिला",
+    "cudaMissing": "GPU (CUDA): नहीं मिला। पुनःक्रम के लिए यह ज़रूरी है।",
+    "pythonMissing": "PyTorch वाला Python: नहीं मिला",
+    "modelPresent": "मॉडल: डाउनलोड हो चुका है",
+    "modelMissing": "मॉडल: डाउनलोड नहीं हुआ",
+    "downloadButton": "मॉडल डाउनलोड करें",
+    "downloading": "डाउनलोड हो रहा है, इसमें कुछ मिनट लग सकते हैं…",
+    "needModel": "पहले मॉडल डाउनलोड करें, फिर इसे चालू करें।",
+    "downloadFailed": "डाउनलोड विफल रहा",
+    "saveFailed": "सेटिंग सहेजी नहीं जा सकी",
+    "loadError": "पुनःक्रम की स्थिति पढ़ी नहीं जा सकी"
   }
 }

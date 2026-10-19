@@ -1287,7 +1287,9 @@
     "GEN_STREAM_ENDED": "La génération s'est terminée sans renvoyer de résultat.",
     "LIBRARY_EDIT_CONFLICT": "Le fichier a changé sur le disque pendant que vous l'éditiez",
     "LIBRARY_EDIT_FORBIDDEN": "Ce fichier ne peut pas être modifié (seules les notes .md existantes de la bibliothèque sont modifiables)",
-    "LIBRARY_REVISION_NOT_FOUND": "Version précédente introuvable"
+    "LIBRARY_REVISION_NOT_FOUND": "Version précédente introuvable",
+    "RERANKER_MODEL_MISSING": "Le modèle de reclassement n'est pas encore téléchargé",
+    "RERANKER_DOWNLOAD_FAILED": "Le téléchargement du modèle de reclassement a échoué : {detail}"
   },
   "ErrorPage": {
     "title": "Une erreur s'est produite",
@@ -1495,5 +1497,22 @@
   "LanguageCombobox": {
     "searchPlaceholder": "Rechercher des langues…",
     "noResults": "Aucune langue trouvée"
+  },
+  "RerankerSettingsCard": {
+    "title": "Reclassement des sources",
+    "description": "Un second modèle (bge-reranker-v2-m3) note les passages trouvés avant que le chat ne les utilise, et le chat vous le dit quand vos notes ne couvrent pas une question. Nécessite un GPU NVIDIA (CUDA) et le téléchargement d'un modèle d'environ 2,3 Go ; ajoute environ 1 seconde par réponse.",
+    "enabledLabel": "Reclasser les sources dans le chat",
+    "checking": "Vérification de cet ordinateur…",
+    "cudaOk": "GPU (CUDA) : trouvé",
+    "cudaMissing": "GPU (CUDA) : introuvable. Le reclassement en a besoin.",
+    "pythonMissing": "Python avec PyTorch : introuvable",
+    "modelPresent": "Modèle : téléchargé",
+    "modelMissing": "Modèle : non téléchargé",
+    "downloadButton": "Télécharger le modèle",
+    "downloading": "Téléchargement en cours, cela peut prendre plusieurs minutes…",
+    "needModel": "Téléchargez d'abord le modèle, puis activez cette option.",
+    "downloadFailed": "Le téléchargement a échoué",
+    "saveFailed": "Impossible d'enregistrer le réglage",
+    "loadError": "Impossible de lire l'état du reclassement"
   }
 }

@@ -1332,7 +1332,9 @@
 		"SKILL_ZIP_TOO_MANY_ENTRIES": "Zip obsahuje příliš mnoho souborů (limit {max})",
 		"SKILL_ZIP_ENTRY_PATH_INVALID": "Neplatná cesta k souboru: {name}",
 		"SKILL_ZIP_TOTAL_TOO_LARGE": "Zip po rozbalení překračuje celkový limit velikosti ({limitMb} MB)",
-		"GEN_STREAM_ENDED": "Generování skončilo bez vrácení výsledku."
+		"GEN_STREAM_ENDED": "Generování skončilo bez vrácení výsledku.",
+		"RERANKER_MODEL_MISSING": "Model pro přeřazení ještě není stažen",
+		"RERANKER_DOWNLOAD_FAILED": "Stažení modelu pro přeřazení se nezdařilo: {detail}"
 	},
 	"ErrorPage": {
 		"title": "Něco se pokazilo",
@@ -1486,5 +1488,22 @@
 		"done": "Hotovo",
 		"treeLabel": "Strom zdrojů",
 		"noReview": "Ke kontrole"
+	},
+	"RerankerSettingsCard": {
+		"title": "Přeřazení zdrojů",
+		"description": "Druhý model (bge-reranker-v2-m3) ohodnotí nalezené úryvky dříve, než je chat použije, a chat řekne, když vaše poznámky otázku nepokrývají. Vyžaduje GPU NVIDIA (CUDA) a stažení modelu o velikosti asi 2,3 GB; přidá přibližně 1 sekundu na odpověď.",
+		"enabledLabel": "Přeřazovat zdroje v chatu",
+		"checking": "Kontroluje se tento počítač…",
+		"cudaOk": "GPU (CUDA): nalezeno",
+		"cudaMissing": "GPU (CUDA): nenalezeno. Přeřazení ji potřebuje.",
+		"pythonMissing": "Python s PyTorch: nenalezen",
+		"modelPresent": "Model: stažen",
+		"modelMissing": "Model: nestažen",
+		"downloadButton": "Stáhnout model",
+		"downloading": "Stahování probíhá, může trvat několik minut…",
+		"needModel": "Nejprve stáhněte model, potom to zapněte.",
+		"downloadFailed": "Stahování se nezdařilo",
+		"saveFailed": "Nastavení se nepodařilo uložit",
+		"loadError": "Stav přeřazování se nepodařilo načíst"
 	}
 }

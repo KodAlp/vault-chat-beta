@@ -1271,7 +1271,9 @@
     "GEN_STREAM_ENDED": "結果が返されないまま生成が終了しました。",
     "LIBRARY_EDIT_CONFLICT": "編集中にディスク上のファイルが変更されました",
     "LIBRARY_EDIT_FORBIDDEN": "このファイルは編集できません（編集できるのは、ライブラリ内の既存の .md ノートのみです）",
-    "LIBRARY_REVISION_NOT_FOUND": "以前のバージョンが見つかりません"
+    "LIBRARY_REVISION_NOT_FOUND": "以前のバージョンが見つかりません",
+    "RERANKER_MODEL_MISSING": "並べ替えモデルはまだダウンロードされていません",
+    "RERANKER_DOWNLOAD_FAILED": "並べ替えモデルのダウンロードに失敗しました: {detail}"
   },
   "ErrorPage": {
     "title": "問題が発生しました",
@@ -1478,5 +1480,22 @@
   "LanguageCombobox": {
     "searchPlaceholder": "言語を検索…",
     "noResults": "言語が見つかりません"
+  },
+  "RerankerSettingsCard": {
+    "title": "ソースの並べ替え",
+    "description": "2つ目のモデル(bge-reranker-v2-m3)が、チャットが使う前に見つかった箇所を採点し、ノートが質問に当てはまらないときはチャットがそう伝えます。NVIDIA GPU(CUDA)と約2.3 GBのモデルのダウンロードが必要で、回答ごとに約1秒かかります。",
+    "enabledLabel": "チャットでソースを並べ替える",
+    "checking": "このコンピューターを確認しています…",
+    "cudaOk": "GPU(CUDA): 見つかりました",
+    "cudaMissing": "GPU(CUDA): 見つかりません。並べ替えには必要です。",
+    "pythonMissing": "PyTorch入りのPython: 見つかりません",
+    "modelPresent": "モデル: ダウンロード済み",
+    "modelMissing": "モデル: 未ダウンロード",
+    "downloadButton": "モデルをダウンロード",
+    "downloading": "ダウンロード中です。数分かかることがあります…",
+    "needModel": "先にモデルをダウンロードしてから、これをオンにしてください。",
+    "downloadFailed": "ダウンロードに失敗しました",
+    "saveFailed": "設定を保存できませんでした",
+    "loadError": "並べ替えの状態を読み取れませんでした"
   }
 }

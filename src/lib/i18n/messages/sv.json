@@ -1395,7 +1395,9 @@
 		"SKILL_ZIP_TOO_MANY_ENTRIES": "Zip-filen innehåller för många filer (gräns {max})",
 		"SKILL_ZIP_ENTRY_PATH_INVALID": "Ogiltig filsökväg: {name}",
 		"SKILL_ZIP_TOTAL_TOO_LARGE": "Zip-filen överskrider den totala storleksgränsen när den packas upp ({limitMb} MB)",
-		"GEN_STREAM_ENDED": "Genereringen avslutades utan att returnera något resultat."
+		"GEN_STREAM_ENDED": "Genereringen avslutades utan att returnera något resultat.",
+		"RERANKER_MODEL_MISSING": "Omrankningsmodellen är inte nedladdad ännu",
+		"RERANKER_DOWNLOAD_FAILED": "Det gick inte att ladda ner omrankningsmodellen: {detail}"
 	},
 
 	"ErrorPage": {
@@ -1558,5 +1560,22 @@
 		"done": "Klart",
 		"treeLabel": "Källträd",
 		"noReview": "Behöver granskas"
+	},
+	"RerankerSettingsCard": {
+		"title": "Omrankning av källor",
+		"description": "En andra modell (bge-reranker-v2-m3) poängsätter de hittade avsnitten innan chatten använder dem, och chatten säger till när dina anteckningar inte täcker en fråga. Kräver ett NVIDIA-grafikkort (CUDA) och en modellnedladdning på cirka 2,3 GB; lägger till cirka 1 sekund per svar.",
+		"enabledLabel": "Ranka om källor i chatten",
+		"checking": "Kontrollerar den här datorn…",
+		"cudaOk": "GPU (CUDA): hittades",
+		"cudaMissing": "GPU (CUDA): hittades inte. Omrankning kräver ett.",
+		"pythonMissing": "Python med PyTorch: hittades inte",
+		"modelPresent": "Modell: nedladdad",
+		"modelMissing": "Modell: inte nedladdad",
+		"downloadButton": "Ladda ner modell",
+		"downloading": "Laddar ner, det kan ta några minuter…",
+		"needModel": "Ladda ner modellen först och slå sedan på detta.",
+		"downloadFailed": "Nedladdningen misslyckades",
+		"saveFailed": "Det gick inte att spara inställningen",
+		"loadError": "Det gick inte att läsa omrankningens status"
 	}
 }

@@ -1335,7 +1335,9 @@
 		"SKILL_ZIP_TOO_MANY_ENTRIES": "De zip bevat te veel bestanden (limiet {max})",
 		"SKILL_ZIP_ENTRY_PATH_INVALID": "Ongeldig bestandspad: {name}",
 		"SKILL_ZIP_TOTAL_TOO_LARGE": "De zip overschrijdt de totale groottelimiet na uitpakken ({limitMb} MB)",
-		"GEN_STREAM_ENDED": "Het genereren eindigde zonder een resultaat terug te geven."
+		"GEN_STREAM_ENDED": "Het genereren eindigde zonder een resultaat terug te geven.",
+		"RERANKER_MODEL_MISSING": "Het herordeningsmodel is nog niet gedownload",
+		"RERANKER_DOWNLOAD_FAILED": "Het downloaden van het herordeningsmodel is mislukt: {detail}"
 	},
 	"ErrorPage": {
 		"title": "Er is iets misgegaan",
@@ -1490,5 +1492,22 @@
 		"done": "Klaar",
 		"treeLabel": "Bronnenboom",
 		"noReview": "Nakijken nodig"
+	},
+	"RerankerSettingsCard": {
+		"title": "Bronnen herordenen",
+		"description": "Een tweede model (bge-reranker-v2-m3) beoordeelt de gevonden passages voordat de chat ze gebruikt, en de chat zegt het als je notities een vraag niet dekken. Vereist een NVIDIA-GPU (CUDA) en een modeldownload van ongeveer 2,3 GB; kost ongeveer 1 seconde per antwoord.",
+		"enabledLabel": "Bronnen in de chat herordenen",
+		"checking": "Deze computer wordt gecontroleerd…",
+		"cudaOk": "GPU (CUDA): gevonden",
+		"cudaMissing": "GPU (CUDA): niet gevonden. Herordenen heeft er een nodig.",
+		"pythonMissing": "Python met PyTorch: niet gevonden",
+		"modelPresent": "Model: gedownload",
+		"modelMissing": "Model: niet gedownload",
+		"downloadButton": "Model downloaden",
+		"downloading": "Bezig met downloaden, dit kan enkele minuten duren…",
+		"needModel": "Download eerst het model en zet dit dan aan.",
+		"downloadFailed": "De download is mislukt",
+		"saveFailed": "De instelling kon niet worden opgeslagen",
+		"loadError": "De status van het herordenen kon niet worden gelezen"
 	}
 }

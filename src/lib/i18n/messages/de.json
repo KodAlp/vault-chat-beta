@@ -1284,7 +1284,9 @@
     "GEN_STREAM_ENDED": "Die Generierung wurde beendet, ohne ein Ergebnis zurückzugeben.",
     "LIBRARY_EDIT_CONFLICT": "Die Datei hat sich auf dem Datenträger geändert, während du sie bearbeitet hast",
     "LIBRARY_EDIT_FORBIDDEN": "Diese Datei kann nicht bearbeitet werden (nur vorhandene .md-Notizen in der Bibliothek lassen sich bearbeiten)",
-    "LIBRARY_REVISION_NOT_FOUND": "Frühere Version nicht gefunden"
+    "LIBRARY_REVISION_NOT_FOUND": "Frühere Version nicht gefunden",
+    "RERANKER_MODEL_MISSING": "Das Modell zum Neusortieren ist noch nicht heruntergeladen",
+    "RERANKER_DOWNLOAD_FAILED": "Der Download des Modells zum Neusortieren ist fehlgeschlagen: {detail}"
   },
   "ErrorPage": {
     "title": "Etwas ist schiefgelaufen",
@@ -1492,5 +1494,22 @@
   "LanguageCombobox": {
     "searchPlaceholder": "Sprachen durchsuchen…",
     "noResults": "Keine Sprache gefunden"
+  },
+  "RerankerSettingsCard": {
+    "title": "Quellen neu sortieren",
+    "description": "Ein zweites Modell (bge-reranker-v2-m3) bewertet die gefundenen Textstellen, bevor der Chat sie nutzt, und der Chat sagt dir, wenn deine Notizen eine Frage nicht abdecken. Erfordert eine NVIDIA-GPU (CUDA) und einen Modell-Download von etwa 2,3 GB; kostet etwa 1 Sekunde pro Antwort.",
+    "enabledLabel": "Quellen im Chat neu sortieren",
+    "checking": "Dieser Computer wird geprüft…",
+    "cudaOk": "GPU (CUDA): gefunden",
+    "cudaMissing": "GPU (CUDA): nicht gefunden. Das Neusortieren braucht eine.",
+    "pythonMissing": "Python mit PyTorch: nicht gefunden",
+    "modelPresent": "Modell: heruntergeladen",
+    "modelMissing": "Modell: nicht heruntergeladen",
+    "downloadButton": "Modell herunterladen",
+    "downloading": "Wird heruntergeladen, das kann einige Minuten dauern…",
+    "needModel": "Lade zuerst das Modell herunter, dann schalte dies ein.",
+    "downloadFailed": "Der Download ist fehlgeschlagen",
+    "saveFailed": "Die Einstellung konnte nicht gespeichert werden",
+    "loadError": "Der Status des Neusortierens konnte nicht gelesen werden"
   }
 }

@@ -1375,7 +1375,9 @@
 		"SKILL_ZIP_TOO_MANY_ENTRIES": "The zip contains too many files ({max} limit)",
 		"SKILL_ZIP_ENTRY_PATH_INVALID": "Invalid file path: {name}",
 		"SKILL_ZIP_TOTAL_TOO_LARGE": "The zip exceeds the total size limit once extracted ({limitMb}MB)",
-		"GEN_STREAM_ENDED": "Generation ended without returning a result."
+		"GEN_STREAM_ENDED": "Generation ended without returning a result.",
+		"RERANKER_MODEL_MISSING": "The re-ranking model isn't downloaded yet",
+		"RERANKER_DOWNLOAD_FAILED": "Downloading the re-ranking model failed: {detail}"
 	},
 
 	"ErrorPage": {
@@ -1537,5 +1539,22 @@
 		"done": "Done",
 		"treeLabel": "Source tree",
 		"noReview": "Needs review"
+	},
+	"RerankerSettingsCard": {
+		"title": "Source re-ranking",
+		"description": "A second model (bge-reranker-v2-m3) scores the retrieved passages before the chat uses them, and the chat tells you when your notes don't cover a question. Needs an NVIDIA GPU (CUDA) and a model download of about 2.3 GB; adds about 1 second per answer.",
+		"enabledLabel": "Re-rank sources in chat",
+		"checking": "Checking this computer…",
+		"cudaOk": "GPU (CUDA): found",
+		"cudaMissing": "GPU (CUDA): not found. Re-ranking needs one.",
+		"pythonMissing": "Python with PyTorch: not found",
+		"modelPresent": "Model: downloaded",
+		"modelMissing": "Model: not downloaded",
+		"downloadButton": "Download model",
+		"downloading": "Downloading, this can take several minutes…",
+		"needModel": "Download the model first, then turn this on.",
+		"downloadFailed": "The download failed",
+		"saveFailed": "Couldn't save the setting",
+		"loadError": "Couldn't read the re-ranking status"
 	}
 }

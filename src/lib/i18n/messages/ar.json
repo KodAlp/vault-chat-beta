@@ -1368,7 +1368,9 @@
     "GEN_STREAM_ENDED": "انتهى التوليد دون إرجاع نتيجة.",
     "LIBRARY_EDIT_CONFLICT": "تغيّر الملف على القرص أثناء تعديلك له",
     "LIBRARY_EDIT_FORBIDDEN": "لا يمكن تعديل هذا الملف (يمكن تعديل ملاحظات .md الموجودة في المكتبة فقط)",
-    "LIBRARY_REVISION_NOT_FOUND": "لم يتم العثور على الإصدار السابق"
+    "LIBRARY_REVISION_NOT_FOUND": "لم يتم العثور على الإصدار السابق",
+    "RERANKER_MODEL_MISSING": "لم يتم تنزيل نموذج إعادة الترتيب بعد",
+    "RERANKER_DOWNLOAD_FAILED": "فشل تنزيل نموذج إعادة الترتيب: {detail}"
   },
   "ErrorPage": {
     "title": "حدث خطأ ما",
@@ -1580,5 +1582,22 @@
   "LanguageCombobox": {
     "searchPlaceholder": "ابحث عن اللغات…",
     "noResults": "لم يتم العثور على أي لغة"
+  },
+  "RerankerSettingsCard": {
+    "title": "إعادة ترتيب المصادر",
+    "description": "نموذج ثانٍ (bge-reranker-v2-m3) يقيّم المقاطع التي عُثر عليها قبل أن تستخدمها المحادثة، وتخبرك المحادثة صراحةً حين لا تغطي ملاحظاتك سؤالًا ما. يتطلب بطاقة NVIDIA (CUDA) وتنزيل نموذج بحجم نحو 2.3 غيغابايت؛ ويضيف نحو ثانية واحدة لكل إجابة.",
+    "enabledLabel": "إعادة ترتيب المصادر في المحادثة",
+    "checking": "جارٍ فحص هذا الكمبيوتر…",
+    "cudaOk": "GPU (CUDA): موجود",
+    "cudaMissing": "GPU (CUDA): غير موجود. إعادة الترتيب تحتاج إليه.",
+    "pythonMissing": "Python مع PyTorch: غير موجود",
+    "modelPresent": "النموذج: تم تنزيله",
+    "modelMissing": "النموذج: لم يتم تنزيله",
+    "downloadButton": "تنزيل النموذج",
+    "downloading": "جارٍ التنزيل، وقد يستغرق عدة دقائق…",
+    "needModel": "نزّل النموذج أولًا ثم فعّل هذا الخيار.",
+    "downloadFailed": "فشل التنزيل",
+    "saveFailed": "تعذر حفظ الإعداد",
+    "loadError": "تعذرت قراءة حالة إعادة الترتيب"
   }
 }
