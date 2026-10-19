@@ -2,7 +2,7 @@
 
 Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncellenir.
 
-**Son güncelleme:** 2026-10-18 · Acil boş. #51'in yerel kısmı ve #27 (tam altın set: retrieval + üretim + yargı) bitti. Dal `claude/kalan-adimlardan-devam-6e2e77`, main'e alınmadı, push yok.
+**Son güncelleme:** 2026-10-19 · Acil boş. #29 (sohbette reranker) bitti: ayar, süreç, retrieval, çekimserlik istemi, kart ve 23 dil, bench `--rerank`. Dal `claude/kalan-adimlardan-devam-6e2e77`, main'e alınmadı, push yok.
 
 ## Kurallar
 
@@ -53,7 +53,6 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 - [ ] **Public öncesi kalan.** Public olunca iş akışı tetikleyicilerini aç (adımlar `docs/dev/public-oncesi.md`). Yerel Windows ARM64 derlemesi sqlite-vec'in ARM64 paketi olmadığı için engelli. `K` · #51
 
 ### 2. RAG ve benchmark
-- [ ] **Reranker'ı üretime al.** Tam sette R@5 0,688 → 0,748, nDCG@10 0,706 → 0,788 (p<0,001); en iyi aday skoru < 0,02 ise boş sonuç: cevapsızların 15/15'i süzülüyor, 305 cevaplıdan 7'si düşüyor (4'ü belirsiz). ONNX int8 ölçülmedi. `O` · #29
 - [ ] **İstem/skill dili A/B.** qwen3:8b için İngilizce çekirdek istem; educational-agent açık/kapalı. Kullanıcı notu: "olabilir". `O` · #28
 
 ### 3. Notebook verileri
@@ -103,6 +102,9 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 
 - [ ] **`default` indeksinde 6 `_meta` parçası.** `c2f2b49`'dan sonra bu kasa yeniden indekslenmedi; benchmark etiketleri çapayla bağlı olduğundan yeniden indeksleme sonrası `validate-golden --targets full` yeniden çalıştırılmalı. `K`
 - [ ] **Model cevapsız soruda hiç çekimser kalmıyor (0/15).** Tam sette 15 cevapsız sorunun hepsinde kendi bilgisiyle uydurdu; reranker eşiği 0,02 bu 15'in hepsinde boş sonuç veriyor (#29 ile birlikte), ama boş sonuçta da modelin "notlarda yok" demesi ayrıca sınanmalı. `O`
+- [ ] **Reranker'lı üretim yolu ölçülmedi.** `run-generation.ts --rerank` ile 330 soruluk koşu (abstention, correctness, kaynak kesinliği) yapılmadı; istemdeki `NO_RELEVANT_SOURCES_BLOCK` metni de ölçümsüz. `O` · #29
+- [ ] **Türkçe soru İngilizce kasada reranker'a ulaşmıyor.** `default` kasasında "B-ağacında düğüm bölünmesi nasıl olur?" için vektör havuzunda B-ağacı parçası yok, en iyi skor 0,0007 ve `rerank-no-match` dönüyor (İngilizce eşdeğeri 0,37 ile kaynak buluyor). Reranker açıkken çapraz-dil sorularda yanlış "notlarda yok" riski; çapraz-dil altın seti ya da sorgu çevirisiyle sınanmalı. `O` · #29
+- [ ] **Reranker modeli paketli uygulamada.** İlk indirme `<dataDir>/models/hf` altına ~2,3 GB iner; bundled Python'da torch/transformers yok (pythonOk=false görünür). Kurulu uygulamada denenmedi. `O` · #29
 - [ ] **Belirsiz soruda netleştirme yok.** 15 ambiguous sorunun 9'u doğrulukta 2 aldı; model tek yorumu sessizce seçiyor. İstemde "birden çok anlam varsa sor" kuralı ya da retrieval'da farklı dosyalardan gelen eşit skorlu parçalarla tetikleme. `O`
 - [ ] **qwen3:8b çıktı bozulmaları.** 330 cevapta 4 tekrar döngüsü (biri 58 bin karakter), 5 cevaba Çince sözcük karışması, birkaç kesik cevap. Uygulamada tekrar algılayıp akışı kesme ve CJK sızıntısını işaretleme düşünülebilir. `K–O`
 - [ ] **Benchmark öz-tutarlılığı Sonnet yargıcıyla sınanmadı.** `--rejudge` ve `--sanity` alt ajan yolunda çalışmadı; 10 cevabı ayrı ajana yeniden puanlatıp uyumu ölç. `K`
@@ -138,6 +140,7 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 
 Yalnız son iki haftanın kaydı tutulur; daha eskisi git geçmişindedir.
 
+- 2026-10-19: #29 reranker sohbette üretimde, ayarlarda varsayılan kapalı (Ayarlar > Gömme). `ingest/rerank_server.py` (--offline, --download-only, --probe, --require-cuda), `src/lib/server/reranker.ts` (tembel tek süreç, 10 dk boşta kapanma, yalnız CUDA, hata/zaman aşımında null), dönüştürücü ve formül onarımı GPU'yu almadan reranker'ı kapatıyor; `retrieve(rerank)`: filtreler sonra ilk 30 aday, en iyi skor < 0,02 ise `rerank-no-match` ve istemde "notlarda yok" bildirimi; bench `--rerank`. Duman testi: 0,7 sn/sorgu. `af9da50` `3a0d9d2` `67b7843` `c7113a2`
 - 2026-10-18: #27 üretim ve yargı: qwen3:8b 330 cevap; DeepSeek bakiyesi 76. soruda bittiği için yargıyı aynı istemle 15 Sonnet alt ajanı verdi (DeepSeek ile 73 ortak cevapta Spearman 0,88). Correctness 3,67, faithfulness 0,745, abstention 0/15, kaynak kesinliği %48,5. Yargıç isteminde `String.replace` `$`-desen hatası bulundu ve düzeltildi (13 istem bozuluyordu, pilot da etkilenmiş); yargılar artık anında önbelleğe yazılıyor, 401/402'de koşu duruyor. `b2a86c2`
 - 2026-10-18: #27 tam altın set: 330 soru (pilot 70 + 5 Sonnet alt ajanının 260'ı; `FULL_TARGET`'la birebir, 934 etiketin hepsi çözülüyor) ve 7 varyantlı retrieval koşusu. `hybrid+rerank` R@5 0,748, `prod` 0,688 (p<0,001); mesafe eşiği 0,6 cevapsızların hiçbirini süzmüyor, reranker skoru 0,02 neredeyse bedelsiz süzüyor. `docs/rag-benchmark-tam-set-2026-10-18.md`
 - 2026-10-18: #51 gitleaks 8.30.1 tam kural setiyle (484 commit + çalışma ağacı): tek bulgu yanlış pozitif (YouTube altyazı dil anahtarı), `.gitleaksignore` ve `gitleaks:allow` ile işaretlendi. `24509c6`
