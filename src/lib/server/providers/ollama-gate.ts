@@ -1,6 +1,7 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { sharedJobMutex, type JobMutex } from '../jobMutex';
 import { releaseConverterWorker } from '../convert-worker';
+import { releaseReranker } from '../reranker';
 import { getEmbeddingConfig, getOllamaBaseUrl } from './config-store';
 
 export interface OllamaGate {
@@ -186,6 +187,8 @@ export function createOllamaGate(
 			// idle converter worker (its docling models sit in the GPU memory
 			// the chat model is about to load into). No-op when none exists.
 			await releaseConverterWorker();
+			// Same for the chat reranker (~1.2 GB): a model that loads while it is resident gets pushed partly onto the CPU.
+			await releaseReranker();
 			if (currentModel) {
 				await waitForDrain(currentModel);
 				const residentNow = await deps.reconcile();

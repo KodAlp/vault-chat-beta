@@ -19,6 +19,7 @@
 		modelPresent: boolean;
 		running: boolean;
 		downloading: boolean;
+		lastSkip?: 'chat-model-not-loaded' | 'chat-model-offloaded' | 'insufficient-vram';
 	}
 
 	let status = $state<Status | null>(null);
@@ -120,6 +121,14 @@
 					<li>{status.cuda ? t('RerankerSettingsCard.cudaOk') : t('RerankerSettingsCard.cudaMissing')}</li>
 				{/if}
 				<li>{status.modelPresent ? t('RerankerSettingsCard.modelPresent') : t('RerankerSettingsCard.modelMissing')}</li>
+				<li>{t('RerankerSettingsCard.fitNote')}</li>
+				{#if status.lastSkip === 'chat-model-not-loaded'}
+					<li>{t('RerankerSettingsCard.skipNotLoaded')}</li>
+				{:else if status.lastSkip === 'chat-model-offloaded'}
+					<li>{t('RerankerSettingsCard.skipOffloaded')}</li>
+				{:else if status.lastSkip === 'insufficient-vram'}
+					<li>{t('RerankerSettingsCard.skipVram')}</li>
+				{/if}
 			</ul>
 
 			{#if !status.modelPresent && status.pythonOk}

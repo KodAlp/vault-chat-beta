@@ -1555,6 +1555,10 @@
 		"needModel": "Önce modeli indir, sonra bunu aç.",
 		"downloadFailed": "İndirme başarısız oldu",
 		"saveFailed": "Ayar kaydedilemedi",
-		"loadError": "Yeniden sıralama durumu okunamadı"
+		"loadError": "Yeniden sıralama durumu okunamadı",
+		"fitNote": "Sohbet modeliyle birlikte GPU'ya sığmazsa yeniden sıralama otomatik atlanır.",
+		"skipNotLoaded": "Son cevap: yeniden sıralama atlandı (sohbet modeli o sırada yükleniyordu)",
+		"skipOffloaded": "Son cevap: yeniden sıralama atlandı (sohbet modeli onunla birlikte GPU'ya sığmıyor)",
+		"skipVram": "Son cevap: yeniden sıralama atlandı (boş GPU belleği yetmedi)"
 	}
 }

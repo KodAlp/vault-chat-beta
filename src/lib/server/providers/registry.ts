@@ -210,6 +210,22 @@ export function servedContext(pinnedProviderId: string | undefined, model: strin
 	}
 }
 
+/**
+ * The Ollama model a chat request will generate with (the pin's or the chain head's effective model), or undefined for
+ * any other provider kind and on failure. Lets the reranker's VRAM gate check that exact model in /api/ps.
+ */
+export function chatLocalModel(pinnedProviderId: string | undefined, model: string): string | undefined {
+	try {
+		const providerId = chatProviderId(pinnedProviderId);
+		if (!providerId) return undefined;
+		const entry = loadConfig().providers.find((p) => p.id === providerId);
+		if (!entry || entry.kind !== 'ollama') return undefined;
+		return model || entry.defaultModel || undefined;
+	} catch {
+		return undefined;
+	}
+}
+
 /** Which provider a chat request will actually go to: the pin when there is
  * one, else the first enabled provider of the 'chat' chain. */
 function chatProviderId(pinnedProviderId: string | undefined): string | undefined {

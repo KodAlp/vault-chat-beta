@@ -1516,6 +1516,10 @@
 		"needModel": "Scarica prima il modello, poi attiva questa opzione.",
 		"downloadFailed": "Il download non è riuscito",
 		"saveFailed": "Impossibile salvare l'impostazione",
-		"loadError": "Impossibile leggere lo stato del riordinamento"
+		"loadError": "Impossibile leggere lo stato del riordinamento",
+		"fitNote": "Se il modello di chat e il riclassificatore non entrano insieme nella GPU, la riclassificazione viene saltata automaticamente.",
+		"skipNotLoaded": "Ultima risposta: riclassificazione saltata (il modello di chat era ancora in caricamento)",
+		"skipOffloaded": "Ultima risposta: riclassificazione saltata (il modello di chat non entra nella GPU insieme ad essa)",
+		"skipVram": "Ultima risposta: riclassificazione saltata (memoria GPU libera insufficiente)"
 	}
 }

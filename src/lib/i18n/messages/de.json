@@ -1510,6 +1510,10 @@
     "needModel": "Lade zuerst das Modell herunter, dann schalte dies ein.",
     "downloadFailed": "Der Download ist fehlgeschlagen",
     "saveFailed": "Die Einstellung konnte nicht gespeichert werden",
-    "loadError": "Der Status des Neusortierens konnte nicht gelesen werden"
+    "loadError": "Der Status des Neusortierens konnte nicht gelesen werden",
+		"fitNote": "Passen Chat-Modell und Reranker nicht gemeinsam in die GPU, wird das Neusortieren automatisch übersprungen.",
+		"skipNotLoaded": "Letzte Antwort: Neusortieren übersprungen (das Chat-Modell wurde noch geladen)",
+		"skipOffloaded": "Letzte Antwort: Neusortieren übersprungen (das Chat-Modell passt damit nicht in die GPU)",
+		"skipVram": "Letzte Antwort: Neusortieren übersprungen (zu wenig freier GPU-Speicher)"
   }
 }
