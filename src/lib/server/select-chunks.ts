@@ -32,7 +32,7 @@ import { normalizeLevel } from '../../../indexer/chunk';
  * measured value, unchanged.
  */
 const DISTANCE_THRESHOLD = 0.6;
-const MAX_CHUNKS_PER_FILE = 3;
+export const MAX_CHUNKS_PER_FILE = 3;
 const DEFAULT_K = 8;
 
 /** A KNN match already joined with its chunk/file metadata — everything
@@ -64,6 +64,54 @@ function inScope(filePath: string, includedPaths: string[]): boolean {
  * came FROM retrieval, not that retrieval itself was sensible. */
 function isExcluded(filePath: string, excludedPrefixes: string[]): boolean {
 	return excludedPrefixes.some((p) => filePath === p || filePath.startsWith(`${p}/`));
+}
+
+/** The filters selectChunks and the rerank path share (everything except the distance threshold). */
+export interface CandidateFilters {
+	domains?: string[];
+	levels?: string[];
+	includedPaths?: string[];
+	excludedPrefixes?: string[];
+}
+
+export type FilterVerdict = 'pass' | 'excluded' | 'out-of-scope' | 'domain' | 'level';
+
+/**
+ * Which filter, if any, rejects a candidate; checked in this order. 'excluded' (a hidden
+ * folder) never counts as "out of the user's scope": "kapsamı genişlet?" wouldn't help there,
+ * the content is administratively excluded.
+ */
+export function candidateVerdict(c: CandidateChunk, opts: CandidateFilters): FilterVerdict {
+	// Checked before includedPaths and unconditionally (not gated on
+	// includedPaths being set): a hidden folder must disappear from
+	// retrieval the same way it disappears from SourceTree.svelte,
+	// regardless of whether the user has also scoped the chat further.
+	if (opts.excludedPrefixes?.length && isExcluded(c.path, opts.excludedPrefixes)) return 'excluded';
+
+	if (opts.includedPaths !== undefined && !inScope(c.path, opts.includedPaths)) return 'out-of-scope';
+
+	// Case-insensitive — matches list_sources's SQL-side `lower(d.value) =
+	// lower(?)`. Before this, search_library's domain filter was the only
+	// one of the two that was case-sensitive: `domain=Databases` returned
+	// 8 real matches from list_sources and 0 from search_library, for the
+	// same vault and the same domain string (Ö7).
+	if (opts.domains?.length && !opts.domains.some((d) => c.domains.some((cd) => cd.toLowerCase() === d.toLowerCase()))) {
+		return 'domain';
+	}
+
+	// Case-insensitive AND synonym-folded (normalizeLevel), because
+	// frontmatter's level/depth field is hand-written, not an enum: a
+	// caller (or Claude) can reasonably type "undergraduate" and expect it
+	// to match a chunk stored as the canonical "undergrad" (Ö7 — an old
+	// index that predated normalizeLevel stored the alias literally,
+	// which no query-side case fold alone could bridge).
+	if (
+		opts.levels?.length &&
+		!opts.levels.some((l) => normalizeLevel(l).toLowerCase() === normalizeLevel(c.depth).toLowerCase())
+	) {
+		return 'level';
+	}
+	return 'pass';
 }
 
 /**
@@ -99,41 +147,10 @@ export function selectChunks(
 	for (const c of candidates) {
 		if (c.via !== 'keyword' && c.distance > threshold) continue;
 
-		// Checked before includedPaths and unconditionally (not gated on
-		// includedPaths being set): a hidden folder must disappear from
-		// retrieval the same way it disappears from SourceTree.svelte,
-		// regardless of whether the user has also scoped the chat further.
-		// Never sets sawInThresholdOutOfScope — "kapsamı genişlet?" wouldn't
-		// help here, the content is administratively excluded, not just
-		// out of the user's chosen scope.
-		if (opts.excludedPrefixes?.length && isExcluded(c.path, opts.excludedPrefixes)) continue;
-
-		if (opts.includedPaths !== undefined && !inScope(c.path, opts.includedPaths)) {
-			sawInThresholdOutOfScope = true;
-			continue;
-		}
-
-		// Case-insensitive — matches list_sources's SQL-side `lower(d.value) =
-		// lower(?)`. Before this, search_library's domain filter was the only
-		// one of the two that was case-sensitive: `domain=Databases` returned
-		// 8 real matches from list_sources and 0 from search_library, for the
-		// same vault and the same domain string (Ö7).
-		if (opts.domains?.length && !opts.domains.some((d) => c.domains.some((cd) => cd.toLowerCase() === d.toLowerCase()))) {
-			continue;
-		}
-
-		// Case-insensitive AND synonym-folded (normalizeLevel), because
-		// frontmatter's level/depth field is hand-written, not an enum: a
-		// caller (or Claude) can reasonably type "undergraduate" and expect it
-		// to match a chunk stored as the canonical "undergrad" (Ö7 — an old
-		// index that predated normalizeLevel stored the alias literally,
-		// which no query-side case fold alone could bridge).
-		if (
-			opts.levels?.length &&
-			!opts.levels.some((l) => normalizeLevel(l).toLowerCase() === normalizeLevel(c.depth).toLowerCase())
-		) {
-			continue;
-		}
+		// A hidden folder never sets sawInThresholdOutOfScope (see candidateVerdict).
+		const verdict = candidateVerdict(c, opts);
+		if (verdict === 'out-of-scope') sawInThresholdOutOfScope = true;
+		if (verdict !== 'pass') continue;
 
 		const count = perFileCount.get(c.path) ?? 0;
 		if (count >= MAX_CHUNKS_PER_FILE) continue;

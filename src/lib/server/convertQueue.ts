@@ -7,6 +7,7 @@ import { resolvePandocBin } from './pandoc-bin';
 import { resolvePythonBin, defaultPythonDeps } from './python-bin';
 import { dataDir } from './env';
 import { evictForExclusiveJob } from './gpu-evict';
+import { releaseReranker, rerankerIsRunning } from './reranker';
 import { assertFileClean } from './av-guard';
 import { forwardedConvertCode } from './convert-error-codes';
 import { isNativeCrash, runWithCrashRetry, type AttemptOutcome } from './convert-crash';
@@ -350,6 +351,8 @@ export async function enqueueConversion(
 	if (!opts.skipAvScan) await assertFileClean(inPath);
 	return sharedJobMutex.runShared(async () => {
 		if (opts.exclusiveGpu) await evictForExclusiveJob();
+		// The converter (worker or per-file process) needs the VRAM the chat reranker may be holding.
+		if (rerankerIsRunning()) await releaseReranker();
 		return runConvert(inPath, outDir, tool, onEvent, sourceName, pages, opts.ocrLang);
 	}, opts.concurrency ?? 1);
 }

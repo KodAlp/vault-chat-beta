@@ -49,6 +49,9 @@ export interface AppLogRecord {
 		 * keyword fallback supplied them. Chat never wrote no_sources, so until this
 		 * existed nobody could say how often a question got no context at all. */
 		| 'retrieval'
+		/** The chat reranker (reranker.ts) could not score a query and retrieval fell back to the
+		 * plain vector order; `message` says why. Logged once per distinct cause, not per query. */
+		| 'reranker_issue'
 		/** The keyword (FTS5) fallback ran because the vector search left nothing
 		 * usable: which pass (`mode`), how many query terms, raw hits, and how many
 		 * survived the scope/domain/hidden-folder filters. */
@@ -150,6 +153,9 @@ export interface AppLogRecord {
 	chunks?: number;
 	bestDistance?: number;
 	keyword?: boolean;
+	/** retrieval: whether the reranker scored this turn's candidates, and its best score. */
+	rerank?: boolean;
+	rerankBest?: number;
 	mode?: 'and' | 'or' | 'co2';
 	terms?: number;
 	hits?: number;

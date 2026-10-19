@@ -7,6 +7,7 @@ import { forwardedConvertCode, type ForwardedConvertCode } from './convert-error
 import { isNativeCrash, type AttemptOutcome } from './convert-crash';
 import { PROCESS_TIMEOUT_MS, pdfEstimatedSeconds, pdfTimeoutMs } from './convert-timeouts';
 import type { ConvertEvent } from './convertQueue';
+import { releaseReranker, rerankerIsRunning } from './reranker';
 
 /**
  * A persistent `python ingest/convert.py --serve` process that converts one
@@ -359,6 +360,9 @@ export function createConvertWorker(deps: ConvertWorkerDeps): ConvertWorker {
 				clearIdle();
 				let c = child;
 				if (!c) {
+					// The chat reranker holds ~1.3 GB of VRAM; docling's models need it. The sync check keeps
+					// the common case (no reranker running) free of an extra await.
+					if (rerankerIsRunning()) await releaseReranker();
 					try {
 						c = startChild();
 					} catch (err) {
