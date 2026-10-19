@@ -20,6 +20,8 @@ import {
 	isCloud,
 	getEmbeddingConfig,
 	setEmbeddingConfig,
+	getRerankerConfig,
+	setRerankerConfig,
 	type ProvidersFile
 } from './config-store';
 import { AppError } from '../app-error';
@@ -508,4 +510,27 @@ test('a malformed providers.json is still reported, not replaced by the defaults
 	process.env.PROVIDERS_PATH = path.join(dir, 'providers.json');
 	fs.writeFileSync(process.env.PROVIDERS_PATH, '{ not json', 'utf-8');
 	assert.throws(() => readProvidersFile(), SyntaxError);
+});
+
+test('the reranker is off by default and an absent block reads as disabled', () => {
+	useTmpProvidersFile();
+	assert.deepEqual(getRerankerConfig(), { enabled: false });
+});
+
+test('setRerankerConfig round-trips and leaves the rest of providers.json untouched', () => {
+	useTmpProvidersFile();
+	assert.deepEqual(setRerankerConfig({ enabled: true }), { enabled: true });
+	assert.deepEqual(getRerankerConfig(), { enabled: true });
+	const data = readProvidersFile();
+	assert.deepEqual(data.reranker, { enabled: true });
+	assert.equal(data.providers.length, BASE.providers.length);
+	assert.deepEqual(data.chains, BASE.chains);
+	setRerankerConfig({ enabled: false });
+	assert.deepEqual(getRerankerConfig(), { enabled: false });
+});
+
+test('setRerankerConfig rejects a non-boolean enabled', () => {
+	useTmpProvidersFile();
+	assert.throws(() => setRerankerConfig({ enabled: 'yes' as unknown as boolean }), AppError);
+	assert.deepEqual(getRerankerConfig(), { enabled: false });
 });

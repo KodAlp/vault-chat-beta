@@ -171,6 +171,8 @@ export interface ProvidersFile {
 	chains: Record<string, string[]>;
 	/** Absent = "never configured" (see getEmbeddingConfig); null = explicitly FTS-only. */
 	embedding?: EmbeddingConfig | null;
+	/** Chat-retrieval cross-encoder reranker (reranker.ts). Absent = off. */
+	reranker?: { enabled: boolean };
 }
 
 /** Where the shipped defaults live when the user's providers.json does not exist yet (the setup wizard
@@ -421,6 +423,24 @@ export function setEmbeddingConfig(cfg: EmbeddingConfig | null): void {
 		...(cfg.distanceThreshold !== undefined ? { distanceThreshold: cfg.distanceThreshold } : {})
 	};
 	writeFile(data);
+}
+
+export interface RerankerConfig {
+	enabled: boolean;
+}
+
+/** Whether chat retrieval reranks its candidates. Off unless the user turned it on (it needs a CUDA GPU and a
+ * ~2.3 GB model, see reranker.ts), so an install that predates the field behaves exactly as before. */
+export function getRerankerConfig(): RerankerConfig {
+	return { enabled: readFile().reranker?.enabled === true };
+}
+
+export function setRerankerConfig(cfg: RerankerConfig): RerankerConfig {
+	if (typeof cfg?.enabled !== 'boolean') throw new AppError('VALIDATION_INVALID', { field: 'enabled' });
+	const data = readFile();
+	data.reranker = { enabled: cfg.enabled };
+	writeFile(data);
+	return getRerankerConfig();
 }
 
 function slugify(s: string): string {
