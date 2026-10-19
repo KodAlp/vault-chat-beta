@@ -373,8 +373,8 @@ function getReranker(): Reranker {
 // VRAM gate: the reranker may only run when it cannot hurt the chat model.
 // ---------------------------------------------------------------------------
 
-/** Free VRAM the reranker process needs to start (~1.2 GB measured, plus margin). */
-export const RERANKER_VRAM_MB = 1400;
+/** Free VRAM the reranker process needs to start: 1217 MiB measured (fp16, CUDA context included) plus ~80 MiB margin. */
+export const RERANKER_VRAM_MB = 1300;
 const PS_TIMEOUT_MS = 1_000;
 const NVIDIA_SMI_TIMEOUT_MS = 2_000;
 

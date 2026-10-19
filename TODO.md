@@ -2,7 +2,7 @@
 
 Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncellenir.
 
-**Son güncelleme:** 2026-10-19 · Acil boş. #29 (sohbette reranker) bitti: ayar, süreç, retrieval, çekimserlik istemi, kart ve 23 dil, bench `--rerank`. Dal `claude/kalan-adimlardan-devam-6e2e77`, main'e alınmadı, push yok.
+**Son güncelleme:** 2026-10-19 · Acil boş. #29 (sohbette reranker) bitti, VRAM kapısıyla (sohbet modeli GPU'dan itilmez): ayar, süreç, retrieval, çekimserlik istemi, kart ve 23 dil, bench `--rerank`. Dal `claude/kalan-adimlardan-devam-6e2e77`, main'e alınmadı, push yok.
 
 ## Kurallar
 
@@ -104,6 +104,7 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 - [ ] **Model cevapsız soruda hiç çekimser kalmıyor (0/15).** Tam sette 15 cevapsız sorunun hepsinde kendi bilgisiyle uydurdu; reranker eşiği 0,02 bu 15'in hepsinde boş sonuç veriyor (#29 ile birlikte), ama boş sonuçta da modelin "notlarda yok" demesi ayrıca sınanmalı. `O`
 - [ ] **Reranker'lı üretim yolu ölçülmedi.** `run-generation.ts --rerank` ile 330 soruluk koşu (abstention, correctness, kaynak kesinliği) yapılmadı; istemdeki `NO_RELEVANT_SOURCES_BLOCK` metni de ölçümsüz. `O` · #29
 - [ ] **Türkçe soru İngilizce kasada reranker'a ulaşmıyor.** `default` kasasında "B-ağacında düğüm bölünmesi nasıl olur?" için vektör havuzunda B-ağacı parçası yok, en iyi skor 0,0007 ve `rerank-no-match` dönüyor (İngilizce eşdeğeri 0,37 ile kaynak buluyor). Reranker açıkken çapraz-dil sorularda yanlış "notlarda yok" riski; çapraz-dil altın seti ya da sorgu çevirisiyle sınanmalı. `O` · #29
+- [ ] **Reranker, qwen3:8b (num_ctx 8192) ile 6 GB kartta hiç çalışmaz; küçük modelle de sınırda.** VRAM kapısı (`decideRerankGate`) ölçüldü: qwen3:8b zaten tek başına kısmen CPU'da (6,01 GB, 4,92 GB VRAM), `bart-iq4xs` 8192 bağlamda 1075 MiB boş bırakıyor (reranker 1217 MiB ister, eşik 1300), 4096 bağlamda 1385 boş ve sığıyor. Yani varsayılan bağlamda reranker 6 GB kartta pratikte hep atlanır; 8 GB+ kartta ya da daha küçük sohbet modeliyle anlamlı. Ayarlar kartı bunu son atlama satırıyla gösteriyor. Ölçüm: bench koşusu bittikten sonra da `run-generation` süreci reranker python'unu 10 dk tutup VRAM'i işgal ediyor. `O` · #29
 - [ ] **Reranker modeli paketli uygulamada.** İlk indirme `<dataDir>/models/hf` altına ~2,3 GB iner; bundled Python'da torch/transformers yok (pythonOk=false görünür). Kurulu uygulamada denenmedi. `O` · #29
 - [ ] **Belirsiz soruda netleştirme yok.** 15 ambiguous sorunun 9'u doğrulukta 2 aldı; model tek yorumu sessizce seçiyor. İstemde "birden çok anlam varsa sor" kuralı ya da retrieval'da farklı dosyalardan gelen eşit skorlu parçalarla tetikleme. `O`
 - [ ] **qwen3:8b çıktı bozulmaları.** 330 cevapta 4 tekrar döngüsü (biri 58 bin karakter), 5 cevaba Çince sözcük karışması, birkaç kesik cevap. Uygulamada tekrar algılayıp akışı kesme ve CJK sızıntısını işaretleme düşünülebilir. `K–O`
