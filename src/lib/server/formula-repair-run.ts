@@ -4,6 +4,7 @@ import { pythonBin, ingestScriptPath } from './convertQueue';
 import { convertProcessEnv, releaseConverterWorker } from './convert-worker';
 import { resolvePandocBin } from './pandoc-bin';
 import { evictForExclusiveJob } from './gpu-evict';
+import { releaseReranker } from './reranker';
 import { sharedJobMutex } from './jobMutex';
 import { parseRepairOutput, type RepairResult } from './formula-repair-cli';
 
@@ -87,6 +88,7 @@ function runCli(args: string[]): Promise<RepairResult> {
 export function runFormulaRepair(args: RepairArgs): Promise<RepairResult> {
 	return sharedJobMutex.run(async () => {
 		await releaseConverterWorker();
+		await releaseReranker();
 		await evictForExclusiveJob();
 		return runCli(buildRepairArgs(args));
 	});

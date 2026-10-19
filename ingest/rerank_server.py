@@ -16,6 +16,9 @@ Protocol:
 The very first line on stdout, before anything else, is {"ready": true, "load_ms": ...}.
 All logging goes to stderr so stdout stays pure protocol.
 
+--require-cuda makes startup fail ({"error": "cuda-unavailable"}, exit code 3) instead of
+quietly falling back to the CPU, which is far too slow for chat.
+
 Other modes (one JSON line on stdout, then exit):
   --probe          {"ok": true, "cuda": bool} (or {"ok": false, "error": ...} when
                    torch/transformers are not importable). Loads no model.
@@ -50,6 +53,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--dtype", choices=["fp16", "fp32"], default="fp16")
     p.add_argument("--max-length", type=int, default=512)
     p.add_argument("--batch-size", type=int, default=16)
+    p.add_argument("--require-cuda", action="store_true", help="exit with an error instead of falling back to cpu")
     p.add_argument("--offline", action="store_true", help="never touch the network (HF_HUB_OFFLINE=1)")
     p.add_argument("--download-only", action="store_true", help="fetch the model into the cache and exit")
     p.add_argument("--probe", action="store_true", help="report whether torch and CUDA work, then exit")
@@ -89,6 +93,10 @@ def serve(args: argparse.Namespace) -> None:
 
     process = psutil.Process()
     device = args.device
+    if device == "cuda" and not torch.cuda.is_available() and args.require_cuda:
+        # CPU scoring takes 9-22 s for 30 candidates (measured): unusable in chat, so say so and stop.
+        emit({"error": "cuda-unavailable"})
+        sys.exit(3)
     if device == "cuda" and not torch.cuda.is_available():
         log("cuda requested but torch.cuda.is_available() is False — falling back to cpu")
         device = "cpu"

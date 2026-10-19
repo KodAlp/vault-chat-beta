@@ -15,6 +15,8 @@ export interface RetrievedChunk {
 	distance: number;
 	/** Set only for chunks the keyword fallback found (retrieve.ts). */
 	via?: 'keyword';
+	/** Cross-encoder relevance (sigmoid, 0-1); set only when the chat reranker ran (rerank-select.ts). */
+	rerankScore?: number;
 }
 
 /**
@@ -35,6 +37,8 @@ export interface RetrieveResult {
 		| 'filtered'
 		| 'scope'
 		| 'small-talk'
+		/** The reranker scored every candidate below RERANK_MIN_SCORE: the vault has nothing on this question (rerank-select.ts). */
+		| 'rerank-no-match'
 		/** Aşama 4a — vector search never ran: no embedding configured (FTS-only mode) and the keyword search found nothing. */
 		| 'fts-only'
 		/** Aşama 4a — vector search never ran because it could not (mismatch/unavailable) and the keyword fallback found nothing. */
@@ -60,6 +64,8 @@ export interface RetrieveResult {
 	 * passed the filters — logging only (app-log.ts 'retrieval'). Absent when KNN
 	 * returned nothing. */
 	bestDistance?: number;
+	/** Highest reranker score among the candidates — set only when the reranker ran. */
+	rerankBest?: number;
 	/**
 	 * Aşama 3a — set when retrieve() could not run vector search at all against
 	 * the currently configured embedding provider/model: 'mismatch' means the
