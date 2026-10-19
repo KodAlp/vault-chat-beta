@@ -7,7 +7,7 @@ import { buildPromptMessages } from '$lib/server/prompt';
 import { chatWithFallback, modelCaps, servedContext, supportsPrefixResume } from '$lib/server/providers/registry';
 import { startFlight, endFlight } from '$lib/server/providers/inflight';
 import type { ChatMessage as ProviderChatMessage } from '$lib/server/providers/types';
-import { readProvidersFile } from '$lib/server/providers/config-store';
+import { getRerankerConfig, readProvidersFile } from '$lib/server/providers/config-store';
 import { unreachableLocalServerLabel } from '$lib/server/providers/local-unreachable';
 import {
 	canRetryResume,
@@ -159,6 +159,8 @@ export const POST: RequestHandler = async ({ request }) => {
 			let sources: RetrievedChunk[] = [];
 			let narrowScope = false;
 			let smallTalk = false;
+			// Retrieval ran with the reranker and found nothing relevant: the prompt says so instead of staying silent.
+			let noRelevantSources = false;
 			// Asama 3a - mirrors RetrieveResult.embeddingIssue for this turns
 			// retrieval; sources may still be non-empty (the FTS keyword
 			// fallback) even when this is set, unlike the five generators, which
@@ -258,8 +260,11 @@ export const POST: RequestHandler = async ({ request }) => {
 						keywordQuery: lastUser.content,
 						// Greetings/slang/tests get no sources (smalltalk-gate.ts); "Yine de kaynak ara" bypasses it.
 						smallTalkGate: checkSmallTalk,
-						forceSources: body.forceSources === true
+						forceSources: body.forceSources === true,
+						// Opt-in cross-encoder (Ayarlar > Gömme); a reranker that cannot run changes nothing.
+						rerank: getRerankerConfig().enabled
 					});
+					noRelevantSources = result.reason === 'rerank-no-match';
 					sources = result.chunks;
 					narrowScope = result.narrowScope;
 					smallTalk = result.smallTalk === true;
@@ -273,6 +278,8 @@ export const POST: RequestHandler = async ({ request }) => {
 						reason: result.reason,
 						bestDistance: result.bestDistance === undefined ? undefined : Math.round(result.bestDistance * 1000) / 1000,
 						keyword: result.keyword ?? false,
+						rerank: result.rerankBest !== undefined,
+						...(result.rerankBest !== undefined ? { rerankBest: Math.round(result.rerankBest * 1000) / 1000 } : {}),
 						...(result.gate
 							? {
 									smallTalk,
@@ -294,7 +301,8 @@ export const POST: RequestHandler = async ({ request }) => {
 				const basePromptMessages = await buildPromptMessages(body.messages, sources, allowedLanguages, v, body.mode ?? 'free_chat', {
 					toolsEnabled,
 					responseLanguage,
-					numCtx: servedContext(body.provider, body.model)
+					numCtx: servedContext(body.provider, body.model),
+					noRelevantSources
 				});
 
 				for (let attempt = 0; ; attempt++) {

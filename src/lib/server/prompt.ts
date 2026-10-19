@@ -88,6 +88,14 @@ export const CORE_INVARIANTS = `Kurallar:
   kesinmiş gibi aktarma, istisnalarını düşürme.`;
 
 /**
+ * Sent in place of the <context> block when retrieval ran, looked, and found nothing relevant
+ * (the reranker's 'rerank-no-match'). Without it the model sees a bare question, cannot tell
+ * "the notes were searched" from "no notes exist", and tends to answer as if the notes backed it.
+ * Not used for small talk, where staying silent about the notes is the rule (CORE_INVARIANTS).
+ */
+export const NO_RELEVANT_SOURCES_BLOCK = `[Kütüphane notlarında arandı: bu soruyla ilgili içerik bulunamadı. Cevabının başında bunu açıkça söyle. Yine de yardımcı olacaksan, anlattığın şeyin notlardan gelmediğini, genel bilgi olduğunu belirt; not ya da kaynak göstermiş gibi yazma.]`;
+
+/**
  * Injects retrieved chunks as a fenced <context> block above the latest user
  * question, each prefixed with its source path and frontmatter summary.
  */
@@ -97,7 +105,13 @@ export async function buildPromptMessages(
 	allowedLanguages: string[],
 	v: VaultContext,
 	mode: string = 'free_chat',
-	opts?: { toolsEnabled?: boolean; responseLanguage?: ResponseLanguageMode; numCtx?: number }
+	opts?: {
+		toolsEnabled?: boolean;
+		responseLanguage?: ResponseLanguageMode;
+		numCtx?: number;
+		/** Retrieval ran and judged nothing relevant (reason 'rerank-no-match'); replaces the <context> block with a notice. */
+		noRelevantSources?: boolean;
+	}
 ): Promise<ProviderChatMessage[]> {
 	const responseLanguage: ResponseLanguageMode = opts?.responseLanguage ?? 'match';
 	const lastUser = history[history.length - 1];
@@ -109,7 +123,9 @@ export async function buildPromptMessages(
 							`[${c.topic} | ${c.heading_path}] (${c.path}, depth: ${c.depth})\n${c.display_text}`
 					)
 					.join('\n\n---\n\n')}\n</context>\n\n`
-			: '';
+			: opts?.noRelevantSources
+				? `${NO_RELEVANT_SOURCES_BLOCK}\n\n`
+				: '';
 
 	// Order matters: local models weight later instructions more heavily (see CORE_INVARIANTS's own doc comment).
 	// The memory block (F3, facts about the learner) sits below the user's own explicit skill customizations —

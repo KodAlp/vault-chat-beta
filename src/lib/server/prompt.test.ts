@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { CORE_INVARIANTS, DEFAULT_ALLOWED_LANGUAGES, buildPromptMessages, coreIntro } from './prompt';
+import { CORE_INVARIANTS, DEFAULT_ALLOWED_LANGUAGES, NO_RELEVANT_SOURCES_BLOCK, buildPromptMessages, coreIntro } from './prompt';
 import { closeVaultStudyDb } from './study-db';
 import type { VaultContext } from './vaults';
 import type { ChatMessage, RetrievedChunk } from '$lib/types';
@@ -234,4 +234,34 @@ test('the core prompt does not position the app as Obsidian-based', () => {
 		assert.ok(!/obsidian/i.test(text), 'core prompt mentions Obsidian');
 		assert.ok(!/ikinci beyin/i.test(text), 'core prompt mentions "ikinci beyin"');
 	}
+});
+
+test('noRelevantSources: a notice replaces the <context> block, above the question', async () => {
+	process.env.CHAT_MEMORY_GATE = '0';
+	useEmptySkillsDir();
+	await withVaultAsync(async (v) => {
+		const messages = await buildPromptMessages([userMessage('Kotlin coroutine nedir?')], [], ['Türkçe'], v, 'free_chat', {
+			responseLanguage: 'fixed',
+			noRelevantSources: true
+		});
+		const last = messages[messages.length - 1];
+		assert.equal(last.content, `${NO_RELEVANT_SOURCES_BLOCK}\n\nKotlin coroutine nedir?`);
+		assert.doesNotMatch(last.content, /<context>/);
+		assert.match(NO_RELEVANT_SOURCES_BLOCK, /bulunamadı/);
+		assert.match(NO_RELEVANT_SOURCES_BLOCK, /notlardan gelmediğini/);
+	});
+	delete process.env.CHAT_MEMORY_GATE;
+});
+
+test('noRelevantSources never overrides real chunks and is absent by default', async () => {
+	process.env.CHAT_MEMORY_GATE = '0';
+	useEmptySkillsDir();
+	const chunk: RetrievedChunk = { path: 'wiki/a.md', heading_path: 'A', display_text: 'x', topic: 'T', depth: 'undergrad', domains: [], distance: 0.3 };
+	await withVaultAsync(async (v) => {
+		const withChunk = await buildPromptMessages([userMessage('Soru?')], [chunk], ['Türkçe'], v, 'free_chat', { responseLanguage: 'fixed', noRelevantSources: true });
+		assert.match(withChunk[withChunk.length - 1].content, /^<context>/);
+		const plain = await buildPromptMessages([userMessage('Soru?')], [], ['Türkçe'], v, 'free_chat', { responseLanguage: 'fixed' });
+		assert.equal(plain[plain.length - 1].content, 'Soru?');
+	});
+	delete process.env.CHAT_MEMORY_GATE;
 });
