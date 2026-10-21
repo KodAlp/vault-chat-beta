@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3';
-import * as sqliteVec from 'sqlite-vec';
+import { tryLoadSqliteVec, hasSqliteVec } from '../src/lib/server/sqlite-vec-loader';
 import path from 'node:path';
 import fs from 'node:fs';
 import { EMBED_DIMS, EMBED_MODEL } from '../src/lib/server/embed-config';
@@ -92,7 +92,10 @@ export function openDb(dbPath: string, embedding?: IndexEmbeddingMeta | null): D
 	fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 	const db = new Database(dbPath);
 	db.pragma('journal_mode = WAL');
-	sqliteVec.load(db);
+	// Without sqlite-vec (e.g. windows-arm64) the index is written FTS-only: openDb behaves as if no embedding was
+	// configured, so a fresh index is recorded as 'none' and a later run WITH sqlite-vec sees the usual mismatch
+	// and goes through the reindex flow that adds the vectors. Callers ask hasSqliteVec(db) before embedding.
+	if (!tryLoadSqliteVec(db)) embedding = null;
 
 	db.exec(`
 		CREATE TABLE IF NOT EXISTS files (
@@ -134,7 +137,8 @@ export function openDb(dbPath: string, embedding?: IndexEmbeddingMeta | null): D
 	// CREATE ... IF NOT EXISTS is silently a no-op on an already-existing
 	// table, dimension mismatch or not, so this is the one chance to know
 	// whether the table (and therefore index_meta) is being created fresh.
-	const vecTableExisted = hasVecTable(db);
+	// Raw sqlite_master check, not hasVecTable(): a vectored index opened without sqlite-vec still HAS the table.
+	const vecTableExisted = db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'vec_chunks'").get() !== undefined;
 	db.exec(`
 		CREATE TABLE IF NOT EXISTS index_meta (
 			key TEXT PRIMARY KEY,
@@ -168,6 +172,8 @@ export function openDb(dbPath: string, embedding?: IndexEmbeddingMeta | null): D
 }
 
 function hasVecTable(db: Database.Database): boolean {
+	// An existing vec_chunks cannot be touched without the vec0 module.
+	if (!hasSqliteVec(db)) return false;
 	return db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'vec_chunks'").get() !== undefined;
 }
 
@@ -349,7 +355,7 @@ export function upsertFile(
 			`INSERT INTO chunks (path, heading_path, display_text) VALUES (?, ?, ?)`
 		);
 		// null embeddings = FTS-only write (Aşama 4a): the vec table may not even exist, so only prepare it when needed.
-		const insertVec = chunks.some((c) => c.embedding !== null) ? db.prepare(`INSERT INTO vec_chunks (chunk_id, embedding) VALUES (?, ?)`) : null;
+		const insertVec = hasSqliteVec(db) && chunks.some((c) => c.embedding !== null) ? db.prepare(`INSERT INTO vec_chunks (chunk_id, embedding) VALUES (?, ?)`) : null;
 		const insertFts = ftsEnabled.has(db)
 			? db.prepare('INSERT INTO chunks_fts (rowid, heading_path, display_text) VALUES (?, ?, ?)')
 			: null;

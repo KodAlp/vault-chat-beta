@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
+import { hasSqliteVec } from './sqlite-vec-loader';
 import { openDb, upsertFile, deleteFile, renameFileInIndex, readIndexEmbedding, markIndexFtsOnly, embeddingMismatches, type FileRow, type IndexEmbeddingMeta } from '../../../indexer/db';
 import { chunkMarkdown, normalizeLevel } from '../../../indexer/chunk';
 import { parsePrerequisites } from '../../../indexer/prerequisites';
@@ -61,7 +62,9 @@ export async function indexLibraryFile(v: VaultContext, absPath: string, relPath
 		// <id> --full`, or the app's own POST /api/vaults/[id]/reindex, Aşama
 		// 3b) before this config can take effect for this vault.
 		const existing = readIndexEmbedding(db);
-		if (embeddingMeta && embeddingMismatches(existing, config)) {
+		// No sqlite-vec on this machine: write FTS-only, same as an unconfigured embedding.
+		const wantsVectors = embeddingMeta !== null && hasSqliteVec(db);
+		if (embeddingMeta && wantsVectors && embeddingMismatches(existing, config)) {
 			throw new AppError('EMBEDDING_MISMATCH', {
 				detail: `index: ${existing.provider}/${existing.model}/${existing.dims} != config: ${embeddingMeta.provider}/${embeddingMeta.model}/${embeddingMeta.dims}`
 			});
@@ -69,8 +72,8 @@ export async function indexLibraryFile(v: VaultContext, absPath: string, relPath
 
 		// FTS-only: never refuse and never embed. If the index still claims real vectors, stop claiming it
 		// once a chunk is written without one (see markIndexFtsOnly).
-		const embeddings = embeddingMeta ? await embedDocuments(chunks.map((c) => c.embedText)) : null;
-		if (!embeddingMeta) markIndexFtsOnly(db);
+		const embeddings = wantsVectors ? await embedDocuments(chunks.map((c) => c.embedText)) : null;
+		if (!wantsVectors) markIndexFtsOnly(db);
 		const fileRow: FileRow = {
 			path: relPath,
 			sha256: sha256(raw),

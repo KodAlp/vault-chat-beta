@@ -7,6 +7,7 @@ import { openDb, listKnownFiles, setPrerequisites, readIndexEmbedding, embedding
 import { buildSlugIndex, findCycles, parsePrerequisites, resolvePrerequisites } from './prerequisites';
 import { hasKeywordIndex } from '../src/lib/server/keyword-search';
 import { rebuildIndex } from './rebuild';
+import { hasSqliteVec } from '../src/lib/server/sqlite-vec-loader';
 import { getEmbeddingConfig } from '../src/lib/server/providers/config-store';
 import { resolveIndexerVault } from './paths';
 import { walkMarkdownFiles as walk } from './walk-md';
@@ -135,7 +136,7 @@ async function main() {
 	// whole run up front rather than embedding some files under one vector
 	// space and leaving others under another — the fix is `--full`, which
 	// deletes and rebuilds the vec0 table at the new dimension.
-	if (db && !isFull && embeddingMeta) {
+	if (db && !isFull && embeddingMeta && hasSqliteVec(db)) {
 		const existing = readIndexEmbedding(db);
 		if (embeddingMismatches(existing, embeddingConfig)) {
 			console.error(
