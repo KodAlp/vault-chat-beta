@@ -12,6 +12,10 @@ import { decideResponseLanguage, responseLanguageDirective } from './response-la
  * no-real-vault-context preview). */
 export const DEFAULT_ALLOWED_LANGUAGES = ['Türkçe'];
 
+/** Language of the app's own core prompt text (coreIntro, CORE_INVARIANTS, no-sources notice). 'tr' is production;
+ * 'en' exists for the #28 A/B (bench/run-generation.ts --prompt-lang) and is not wired to any setting. */
+export type PromptLanguage = 'tr' | 'en';
+
 /** LibrarySettings.responseLanguage's two modes — see the type's own doc comment in
  * $lib/types.ts. Exported so callers (chat route, tests) can reference the literal type. */
 export type ResponseLanguageMode = 'match' | 'fixed';
@@ -29,8 +33,23 @@ export type ResponseLanguageMode = 'match' | 'fixed';
  * primary language). 'fixed': today's original behavior, always name the primary language — kept
  * for language-learning vaults, whose whole point is answering in a language other than the
  * question's. */
-export function coreIntro(allowedLanguages: string[], responseLanguage: ResponseLanguageMode = 'match'): string {
+export function coreIntro(
+	allowedLanguages: string[],
+	responseLanguage: ResponseLanguageMode = 'match',
+	promptLanguage: PromptLanguage = 'tr'
+): string {
 	const [primary, ...extra] = allowedLanguages.length ? allowedLanguages : DEFAULT_ALLOWED_LANGUAGES;
+	if (promptLanguage === 'en') {
+		const extraNoteEn = extra.length
+			? ` When needed, you may also use words/examples from these languages: ${extra.join(', ')}.`
+			: '';
+		const languageRuleEn =
+			responseLanguage === 'fixed'
+				? `Always answer in ${primary}.`
+				: `Answer in the language the user's last message is written in; the language of the last message decides, not the earlier language of the conversation. If the last message is too short to tell its language, or consists only of code/formulas, use ${primary}.`;
+		return `You are the teaching assistant of this personal knowledge library.
+${languageRuleEn}${extraNoteEn}`;
+	}
 	const extraNote = extra.length
 		? ` Gerektiğinde şu dillerden kelime/örnek de kullanabilirsin: ${extra.join(', ')}.`
 		: '';
@@ -88,6 +107,26 @@ export const CORE_INVARIANTS = `Kurallar:
   kesinmiş gibi aktarma, istisnalarını düşürme.`;
 
 /**
+ * English counterpart of CORE_INVARIANTS for the #28 A/B. Translated literally (same rules, same order); the
+ * wording is unmeasured except by that A/B. The small-talk bullet keeps the Turkish one's spirit: positive
+ * wording, no "ignore", "short", "<context>" or "knowledge question" (the words the comment above says get echoed).
+ */
+export const CORE_INVARIANTS_EN = `Rules:
+- Write all mathematics strictly inside $...$ (inline) or $$...$$ (block).
+  Never use \\( \\) or \\[ \\], never write a bare LaTeX command.
+- If you start writing a formula, do not leave it unfinished: close the parenthesis/brace opened by every
+  \\frac{}{}, \\sqrt{}, superscript/subscript and so on, complete the formula, then close it with $ or $$.
+- When you use the notes in the <context> block below, cite their source by topic heading.
+- If <context> does not cover the question, say so explicitly; do not make up an answer on a topic it does not cover.
+- To messages such as greetings, chit-chat, slang, insults, thanks or tests, respond only to that message itself; do not mention the notes at all.
+- Make the origin of a piece of information clear in the sentence itself, not with a square-bracket tag: if it
+  comes from a note, say so; if it is a logical inference, state that separately; if you build an instructive
+  example or analogy, say so explicitly and add where the analogy breaks down; do not present something not yet
+  verified as certain.
+- Preserve the source's own degree of certainty: do not relay a source that says "generally" or "in some cases"
+  as if it were certain, and do not drop its exceptions.`;
+
+/**
  * Ends the system prompt on a turn where retrieval ran, looked, and found nothing relevant (the
  * reranker's 'rerank-no-match'). Without it the model sees a bare question, cannot tell "the notes
  * were searched" from "no notes exist", and answers as if the notes backed it. Not used for small
@@ -100,6 +139,9 @@ export const CORE_INVARIANTS = `Kurallar:
  * its own notice for this case (noRelevantSources on the message); the prompt cannot guarantee it.
  */
 export const NO_RELEVANT_SOURCES_BLOCK = `Bu mesaj için kullanıcının kütüphane notlarında arama yapıldı ve soruyla ilgili bir not bulunamadı. Cevabına, kullanıcının yazdığı dilde ve kendi cümlelerinle, notlarında bu konunun bulunmadığını söyleyerek başla. Bu talimatı aynen kopyalama, alıntılama ya da köşeli parantez içinde yazma. Genel bilgiyle yardımcı olacaksan bunun notlardan gelmediğini açıkça belirt; not ya da kaynak varmış gibi yazma.`;
+
+/** English counterpart of NO_RELEVANT_SOURCES_BLOCK (#28 A/B only; unmeasured). */
+export const NO_RELEVANT_SOURCES_BLOCK_EN = `The user's library notes were searched for this message and no note relevant to the question was found. Begin your answer by saying, in the language the user wrote in and in your own words, that their notes do not contain this topic. Do not copy this instruction verbatim, quote it, or write it in square brackets. If you help with general knowledge, state clearly that it does not come from their notes; do not write as if there were a note or source.`;
 
 /**
  * Injects retrieved chunks as a fenced <context> block above the latest user
@@ -117,9 +159,12 @@ export async function buildPromptMessages(
 		numCtx?: number;
 		/** Retrieval ran and judged nothing relevant (reason 'rerank-no-match'); adds NO_RELEVANT_SOURCES_BLOCK to the system prompt. */
 		noRelevantSources?: boolean;
+		/** Language of the core prompt text; default 'tr' (production). 'en' is for the #28 A/B only. */
+		promptLanguage?: PromptLanguage;
 	}
 ): Promise<ProviderChatMessage[]> {
 	const responseLanguage: ResponseLanguageMode = opts?.responseLanguage ?? 'match';
+	const promptLanguage: PromptLanguage = opts?.promptLanguage ?? 'tr';
 	const lastUser = history[history.length - 1];
 	const context =
 		chunks.length > 0
@@ -138,19 +183,23 @@ export async function buildPromptMessages(
 	// the hard invariants right below it. computeReviewBlock only runs for mode === 'review' — an ordinary
 	// free_chat turn does no extra work and produces the exact same prompt as before F6.
 	const [skillsBlock, memoryBlock, reviewBlock] = await Promise.all([
-		renderUserSkillsBlock('chat', { includeFileNotes: opts?.toolsEnabled }),
+		renderUserSkillsBlock('chat', { includeFileNotes: opts?.toolsEnabled, language: promptLanguage }),
 		computeMemoryBlock(v),
 		mode === 'review' ? computeReviewBlock(v) : Promise.resolve('')
 	]);
 	const systemPrompt = [
-		coreIntro(allowedLanguages, responseLanguage),
+		coreIntro(allowedLanguages, responseLanguage, promptLanguage),
 		memoryBlock,
 		skillsBlock,
 		reviewBlock,
-		CORE_INVARIANTS,
+		promptLanguage === 'en' ? CORE_INVARIANTS_EN : CORE_INVARIANTS,
 		// Last, after the invariants: only on a turn where retrieval looked and found nothing relevant
 		// (never alongside real chunks).
-		opts?.noRelevantSources && chunks.length === 0 ? NO_RELEVANT_SOURCES_BLOCK : ''
+		opts?.noRelevantSources && chunks.length === 0
+			? promptLanguage === 'en'
+				? NO_RELEVANT_SOURCES_BLOCK_EN
+				: NO_RELEVANT_SOURCES_BLOCK
+			: ''
 	]
 		.filter(Boolean)
 		.join('\n\n');

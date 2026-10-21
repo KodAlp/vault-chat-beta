@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { CORE_INVARIANTS, DEFAULT_ALLOWED_LANGUAGES, NO_RELEVANT_SOURCES_BLOCK, buildPromptMessages, coreIntro } from './prompt';
+import { CORE_INVARIANTS, CORE_INVARIANTS_EN, DEFAULT_ALLOWED_LANGUAGES, NO_RELEVANT_SOURCES_BLOCK, NO_RELEVANT_SOURCES_BLOCK_EN, buildPromptMessages, coreIntro } from './prompt';
+import { renderUserSkillsBlock, writeSkill } from './userSkills';
 import { closeVaultStudyDb } from './study-db';
 import type { VaultContext } from './vaults';
 import type { ChatMessage, RetrievedChunk } from '$lib/types';
@@ -266,4 +267,67 @@ test('noRelevantSources never overrides real chunks and is absent by default', a
 		assert.ok(!plain[0].content.includes(NO_RELEVANT_SOURCES_BLOCK));
 	});
 	delete process.env.CHAT_MEMORY_GATE;
+});
+
+// --- #28: promptLanguage ('tr' production default must stay byte-identical; 'en' only for the A/B) ---
+
+const ORIGINAL_MATCH_INTRO = `Sen bu kişisel bilgi kütüphanesinin öğretici asistanısın.
+Kullanıcının son mesajı hangi dilde yazılmışsa o dilde cevap ver; sohbetin önceki dili değil, son mesajın dili belirleyicidir. Son mesaj dili anlaşılamayacak kadar kısaysa ya da yalnızca kod/formülden oluşuyorsa Türkçe kullan.`;
+
+test("promptLanguage 'tr' and omitted give the exact production system prompt", async () => {
+	process.env.CHAT_MEMORY_GATE = '0';
+	useEmptySkillsDir();
+	await withVaultAsync(async (v) => {
+		const omitted = await buildPromptMessages([userMessage('Merhaba')], [], ['Türkçe'], v, 'free_chat');
+		const explicit = await buildPromptMessages([userMessage('Merhaba')], [], ['Türkçe'], v, 'free_chat', { promptLanguage: 'tr' });
+		const expected = `${ORIGINAL_MATCH_INTRO}\n\n${ORIGINAL_CORE_INVARIANTS}`;
+		assert.equal(omitted[0].content, expected);
+		assert.deepEqual(explicit, omitted);
+		const withNotice = await buildPromptMessages([userMessage('Soru?')], [], ['Türkçe'], v, 'free_chat', {
+			promptLanguage: 'tr',
+			noRelevantSources: true
+		});
+		assert.equal(withNotice[0].content, `${expected}\n\n${NO_RELEVANT_SOURCES_BLOCK}`);
+	});
+	delete process.env.CHAT_MEMORY_GATE;
+});
+
+test("promptLanguage 'en' carries no Turkish rule text and uses the English blocks", async () => {
+	process.env.CHAT_MEMORY_GATE = '0';
+	useEmptySkillsDir();
+	await withVaultAsync(async (v) => {
+		const messages = await buildPromptMessages([userMessage('Hello')], [], ['Türkçe'], v, 'free_chat', {
+			promptLanguage: 'en',
+			noRelevantSources: true
+		});
+		const system = messages[0].content;
+		assert.equal(
+			system,
+			`${coreIntro(['Türkçe'], 'match', 'en')}\n\n${CORE_INVARIANTS_EN}\n\n${NO_RELEVANT_SOURCES_BLOCK_EN}`
+		);
+		// The language name itself ("Türkçe") comes from vault settings and is the only allowed Turkish.
+		const withoutName = system.replaceAll('Türkçe', '');
+		assert.ok(!/[çğıöşüÇĞİÖŞÜ]/.test(withoutName), 'no Turkish letters outside the language name');
+		for (const word of ['Kurallar', 'Sen bu', 'cevap ver', 'kaynağını', 'uydurma', 'notlardan']) {
+			assert.ok(!system.includes(word), word);
+		}
+		assert.match(CORE_INVARIANTS_EN, /\$\.\.\.\$ \(inline\) or \$\$\.\.\.\$\$ \(block\)/);
+		assert.ok(CORE_INVARIANTS_EN.includes('\\( \\)'));
+	});
+	delete process.env.CHAT_MEMORY_GATE;
+});
+
+test("coreIntro 'en': fixed mode and the secondary-language note", () => {
+	assert.equal(
+		coreIntro(['Türkçe', 'Korece'], 'fixed', 'en'),
+		'You are the teaching assistant of this personal knowledge library.\nAlways answer in Türkçe. When needed, you may also use words/examples from these languages: Korece.'
+	);
+	assert.match(coreIntro(['Türkçe'], 'match', 'en'), /use Türkçe\.$/);
+});
+
+test("renderUserSkillsBlock: 'en' renders an English header, default stays Turkish", async () => {
+	useEmptySkillsDir();
+	writeSkill('demo-rule', '---\ndescription: demo\n---\nBody text.');
+	assert.match(await renderUserSkillsBlock('chat'), /^## Kullanıcı kuralı: demo-rule\nBody text\./);
+	assert.match(await renderUserSkillsBlock('chat', { language: 'en' }), /^## User rule: demo-rule\nBody text\./);
 });
