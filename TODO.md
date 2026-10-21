@@ -2,7 +2,7 @@
 
 Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncellenir.
 
-**Son güncelleme:** 2026-10-21 · Acil boş. #28 ölçüldü: istem dili ve educational-agent doğruluğu değiştirmiyor, üretim Türkçe kalıyor. #51'de eylemler SHA'ya sabitlendi, sqlite-vec'siz kasa yalnız-FTS ile açılıyor. Dal `claude/laughing-hamilton-7bad8a`, main'e alınmadı, push yok.
+**Son güncelleme:** 2026-10-21 · Acil boş. #28 ölçüldü: istem dili ve educational-agent doğruluğu değiştirmiyor, üretim Türkçe kalıyor. #51'de eylemler SHA'ya sabitlendi, sqlite-vec'siz kasa yalnız-FTS ile açılıyor. Yerel main'e alındı (`0d75d17`), push yok.
 
 ## Kurallar
 
