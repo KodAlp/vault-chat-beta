@@ -417,8 +417,9 @@ export function hasFetchableFolderSkills(scope: UserSkillScope): boolean {
 
 export async function renderUserSkillsBlock(
 	scope: UserSkillScope,
-	opts?: { includeFileNotes?: boolean }
+	opts?: { includeFileNotes?: boolean; /** Header/note language; 'en' is for the #28 A/B only. */ language?: 'tr' | 'en' }
 ): Promise<string> {
+	const en = opts?.language === 'en';
 	const skills = loadUserSkills(scope);
 	if (skills.length === 0) return '';
 	return skills
@@ -429,9 +430,11 @@ export async function renderUserSkillsBlock(
 			// model, or a cloud provider — see registry.ts's modelCaps).
 			const note =
 				opts?.includeFileNotes && s.isFolder && s.files.length > 0
-					? `\n\n_Ek dosyalar: ${s.files.join(', ')} — gerekirse read_skill_file ile oku (skill: "${s.name}")._`
+					? en
+						? `\n\n_Extra files: ${s.files.join(', ')} — read them with read_skill_file when needed (skill: "${s.name}")._`
+						: `\n\n_Ek dosyalar: ${s.files.join(', ')} — gerekirse read_skill_file ile oku (skill: "${s.name}")._`
 					: '';
-			return `## Kullanıcı kuralı: ${s.name}\n${s.body}${note}`;
+			return `## ${en ? 'User rule' : 'Kullanıcı kuralı'}: ${s.name}\n${s.body}${note}`;
 		})
 		.join('\n\n');
 }
