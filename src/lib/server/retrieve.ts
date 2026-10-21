@@ -1,6 +1,6 @@
 import { existsSync, statSync } from 'node:fs';
 import Database from 'better-sqlite3';
-import * as sqliteVec from 'sqlite-vec';
+import { tryLoadSqliteVec, hasSqliteVec } from './sqlite-vec-loader';
 import { embedTexts } from './embeddings';
 import { QUERY_PREFIX } from './embed-config';
 import { getEmbeddingConfig } from './providers/config-store';
@@ -149,10 +149,11 @@ function getDb(v: VaultContext): Database.Database | null {
 	}
 	if (!existsSync(v.indexDbPath)) return null;
 	const instance = new Database(v.indexDbPath, { readonly: true, fileMustExist: true });
-	// sqliteVec.load() failing must not leave an open handle uncached — same
+	// A failed sqlite-vec load is not an error: the connection just has no vector search (hasSqliteVec) and
+	// retrieve() takes the keyword path. Anything else throwing must not leave an open handle uncached — same
 	// EBUSY-class fix as chats-db.ts/study-db.ts's getDb().
 	try {
-		sqliteVec.load(instance);
+		tryLoadSqliteVec(instance);
 	} catch (err) {
 		instance.close();
 		const message = err instanceof Error ? err.message : 'Bilinmeyen hata';
@@ -199,7 +200,8 @@ export function checkEmbeddingMismatch(v: VaultContext): EmbeddingMismatchInfo {
 	const database = getDb(v);
 	if (!database) return { mismatch: false, config: configInfo };
 	const indexMeta = readIndexEmbedding(database);
-	const mismatch = embeddingMismatches(indexMeta, config);
+	// Without sqlite-vec a reindex cannot help and no vectors are searched, so nothing to warn about.
+	const mismatch = hasSqliteVec(database) && embeddingMismatches(indexMeta, config);
 	return { mismatch, index: indexMeta, config: configInfo };
 }
 
@@ -281,8 +283,9 @@ export async function retrieve(
 	if (opts.mode === 'keyword') {
 		// Explicit keyword mode: no embedding call at all; same typed state as the configured FTS-only mode.
 		embeddingIssue = 'fts-only';
-	} else if (config === null) {
-		// FTS-only mode: an expected, configured state — typed, but deliberately NOT logged per query.
+	} else if (config === null || !hasSqliteVec(database)) {
+		// FTS-only mode: an expected, configured state (or sqlite-vec cannot load on this platform) — typed, but
+		// deliberately NOT logged per query.
 		embeddingIssue = 'fts-only';
 	} else if (metaMismatch) {
 		embeddingIssue = 'mismatch';

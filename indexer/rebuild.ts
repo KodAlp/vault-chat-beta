@@ -3,6 +3,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import matter from 'gray-matter';
 import Database from 'better-sqlite3';
+import { hasSqliteVec } from '../src/lib/server/sqlite-vec-loader';
 import { listKnownFiles, deleteFile, upsertFile, markIndexFtsOnly, type FileRow } from './db';
 import { chunkMarkdown, normalizeLevel, HARD_MAX_CHARS } from './chunk';
 import { parsePrerequisites } from './prerequisites';
@@ -119,7 +120,8 @@ export async function rebuildIndex(db: Database.Database | null, libraryRoot: st
 	// Aşama 4a: no embedding configured (FTS-only mode) — chunks and keyword data are still written, the
 	// embed call and vec_chunks are skipped. An existing vectored index written to this way stops being
 	// recorded as vectored (markIndexFtsOnly), so choosing a provider later triggers the mismatch/reindex flow.
-	const ftsOnly = getEmbeddingConfig() === null;
+	// Also FTS-only when sqlite-vec could not load on this connection (no vec_chunks to write to).
+	const ftsOnly = getEmbeddingConfig() === null || (db !== null && !hasSqliteVec(db));
 	if (ftsOnly && db && !dryRun) markIndexFtsOnly(db);
 
 	const known = db ? listKnownFiles(db) : new Map<string, FileRow>();
