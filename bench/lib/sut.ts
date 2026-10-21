@@ -17,7 +17,7 @@ import path from 'node:path';
 import { execFile } from 'node:child_process';
 import { retrieve } from '../../src/lib/server/retrieve';
 import { buildRetrievalQuery } from '../../src/lib/server/retrieval-query';
-import { buildPromptMessages, type ResponseLanguageMode } from '../../src/lib/server/prompt';
+import { buildPromptMessages, type PromptLanguage, type ResponseLanguageMode } from '../../src/lib/server/prompt';
 import { chatRetrievalK } from '../../src/lib/server/env';
 // Dev-tooling default only — the app itself reads the Ollama provider's baseUrl from providers.json.
 const prodOllamaUrl = (): string => process.env.OLLAMA_URL ?? 'http://127.0.0.1:11434';
@@ -45,6 +45,8 @@ export interface SutContext {
 	ollamaUrl: string;
 	allowedLanguages: string[];
 	responseLanguage: ResponseLanguageMode;
+	/** Language of the core prompt text (#28 A/B); 'tr' is production. */
+	promptLanguage?: PromptLanguage;
 	/** What options.num_ctx to request — mirrors providers/ollama.ts's
 	 * serveCtxFor() table for qwen3 (8192) without importing that private
 	 * function. See run-generation.ts's `deviations` list. */
@@ -146,6 +148,7 @@ export function defaultSutContext(v: VaultContext, model: string, opts: Partial<
 		ollamaUrl: opts.ollamaUrl ?? prodOllamaUrl(),
 		allowedLanguages: opts.allowedLanguages ?? ['Türkçe'],
 		responseLanguage: opts.responseLanguage ?? 'match',
+		promptLanguage: opts.promptLanguage ?? 'tr',
 		numCtx: opts.numCtx ?? 8192,
 		think: opts.think ?? false,
 		sampleIntervalMs: opts.sampleIntervalMs ?? 500,
@@ -181,6 +184,7 @@ export async function runSut(ctx: SutContext, item: SutItemInput): Promise<SutRe
 	const promptBuildStart = Date.now();
 	const promptMessages = await buildPromptMessages(messages, result.chunks, ctx.allowedLanguages, ctx.v, 'free_chat', {
 		responseLanguage: ctx.responseLanguage,
+		promptLanguage: ctx.promptLanguage ?? 'tr',
 		noRelevantSources: result.reason === 'rerank-no-match'
 	});
 	const promptBuildMs = Date.now() - promptBuildStart;

@@ -10,6 +10,18 @@
  *     [--label x] [--limit N] [--model qwen3:8b] [--answers <answers.jsonl>]
  *     [--judge-model deepseek-v4-pro] [--allow-cloud deepseek-api] [--no-judge]
  *     [--rejudge N] [--sanity] [--rerank]
+ *     [--prompt-lang tr|en] [--skills-dir <path>]
+ *     [--dump-judge-prompts <out.jsonl>] [--judge-cache-only]
+ *
+ * #28 A/B (prompt language x user skill) and offline judging, no cloud call anywhere:
+ *   --prompt-lang en     core prompt text in English (default tr = production wording).
+ *   --skills-dir <path>  SKILLS_DIR for the run (default: an empty temp dir = no user skill). Skills actually
+ *                        loaded are printed at startup and recorded in generation.json/.md.
+ *   --dump-judge-prompts <out.jsonl>  after the SUT phase (also with --answers), write {key, id, numChunks, prompt}
+ *                        for every answer missing from the judge cache and exit 0; no network. Answer the prompts
+ *                        elsewhere, then `npx tsx bench/import-judgments.ts --prompts <out.jsonl> --responses <r.jsonl>`.
+ *   --judge-cache-only   run the judge/metrics phase from the cache alone (no adapter, no --allow-cloud);
+ *                        answers absent from the cache count as judge_failed ('önbellekte yok').
  *
  * Writes data/vaults/default/bench/results/<ISO>-<label>/{answers.jsonl,
  * generation.json, generation.md, pooled-qrels.jsonl}. Opens index.db
@@ -32,6 +44,8 @@ import { stripForDetection, countLetters } from '../src/lib/server/response-lang
 import { francAll } from 'franc-min';
 import tls from 'node:tls';
 import { installSystemCa } from '../src/lib/server/system-ca';
+import { loadUserSkills } from '../src/lib/server/userSkills';
+import type { PromptLanguage } from '../src/lib/server/prompt';
 
 // Same as the app's hooks.server.ts: antivirus/proxy HTTPS inspection needs the OS roots (was NODE_OPTIONS=--use-system-ca).
 installSystemCa(tls, process.env);
@@ -97,6 +111,24 @@ const rejudgeN = rejudgeArg ? Number(rejudgeArg) : 0;
 const doSanity = hasFlag('--sanity');
 // Production path with the chat reranker (same switch as VC_RERANK=1; never writes providers.json).
 const useRerank = hasFlag('--rerank') || process.env.VC_RERANK === '1';
+const promptLangArg = argValue('--prompt-lang') ?? 'tr';
+if (promptLangArg !== 'tr' && promptLangArg !== 'en') {
+	console.error(`--prompt-lang tr ya da en olmalı: ${promptLangArg}`);
+	process.exit(1);
+}
+const promptLang: PromptLanguage = promptLangArg;
+const skillsDirArg = argValue('--skills-dir');
+const dumpJudgePromptsPath = argValue('--dump-judge-prompts');
+const judgeCacheOnly = hasFlag('--judge-cache-only');
+
+if (skillsDirArg) {
+	if (!fs.existsSync(skillsDirArg) || !fs.statSync(skillsDirArg).isDirectory()) {
+		console.error(`--skills-dir klasörü yok: ${skillsDirArg}`);
+		process.exit(1);
+	}
+	// Must happen before setupIsolation(), which only creates its empty temp dir when SKILLS_DIR is unset.
+	process.env.SKILLS_DIR = path.resolve(skillsDirArg);
+}
 
 if (!file && !answersInputPath) {
 	console.error('en az bir --file <golden.jsonl> ya da --answers <answers.jsonl> gerekli');
@@ -109,7 +141,9 @@ if (!file && !answersInputPath) {
 // ---------------------------------------------------------------------------
 
 const needsJudge = !noJudge;
-if (needsJudge && allowCloud !== 'deepseek-api') {
+// The cache-only and dump modes never construct an adapter, so they cannot reach the network.
+const usesAdapter = needsJudge && !judgeCacheOnly && !dumpJudgePromptsPath;
+if (usesAdapter && allowCloud !== 'deepseek-api') {
 	console.error(
 		'REDDEDILDI: yargıç (judge) DeepSeek bulut API\'sine istek atacaktı ama --allow-cloud deepseek-api verilmedi.\n' +
 			'Kasa içeriğinin buluta gitmesi kullanıcı onayı gerektirir (ABSOLUTE RULE). ' +
@@ -138,6 +172,10 @@ function snapshot(p: string): FileSnapshot {
 }
 
 setupIsolation();
+
+// Proves which skill variant this run used: loadUserSkills is what buildPromptMessages renders (chat scope).
+const loadedSkills = loadUserSkills('chat').map((s) => s.name);
+console.log(`[variant] prompt-lang=${promptLang} skills-dir=${process.env.SKILLS_DIR} yüklenen skill'ler: ${loadedSkills.length ? loadedSkills.join(', ') : '(yok)'}`);
 
 const vault = resolveVault(vaultId);
 const watchedPaths = [path.join(dataDir(), 'chats.db'), vault.indexDbPath, vault.studyDbPath];
@@ -233,6 +271,7 @@ if (answersInputPath) {
 	const sutCtx: SutContext = defaultSutContext(vault, model, {
 		allowedLanguages: librarySettings.allowedLanguages,
 		responseLanguage: librarySettings.responseLanguage,
+		promptLanguage: promptLang,
 		rerank: useRerank
 	});
 	let done = 0;
@@ -316,7 +355,7 @@ function overBudget(): boolean {
 }
 
 let judgeAdapter: JudgeAdapter | null = null;
-if (needsJudge) {
+if (usesAdapter) {
 	const providers = JSON.parse(fs.readFileSync(providersPath(), 'utf-8')) as {
 		providers: { id: string; baseUrl: string; reasoningDialect: 'think-tags' | 'reasoning_content' | 'none'; timeouts: { connectMs: number; firstTokenMs: number; idleMs: number } }[];
 	};
@@ -423,7 +462,7 @@ interface JudgedRecord {
 // crash) is resumed for free. --rejudge/--sanity never read it: they exist to call the judge again.
 const judgeCachePath = path.join(dataDir(), 'vaults', 'default', 'bench', 'cache', 'judge.jsonl');
 const judgeCache = new Map<string, JudgeResult>();
-if (needsJudge && fs.existsSync(judgeCachePath)) {
+if ((needsJudge || dumpJudgePromptsPath) && fs.existsSync(judgeCachePath)) {
 	for (const line of fs.readFileSync(judgeCachePath, 'utf-8').split('\n')) {
 		if (!line.trim()) continue;
 		try {
@@ -436,8 +475,37 @@ if (needsJudge && fs.existsSync(judgeCachePath)) {
 }
 const judgeCacheKey = (prompt: string) => `${judgeModel}:${createHash('sha1').update(prompt).digest('hex')}`;
 
+if (dumpJudgePromptsPath) {
+	const lines: string[] = [];
+	for (const a of answers) {
+		const item = toJudgeItem(a);
+		const prompt = buildJudgePrompt(item);
+		const key = judgeCacheKey(prompt);
+		if (judgeCache.has(key)) continue;
+		lines.push(JSON.stringify({ key, id: a.id, numChunks: item.chunks.length, prompt }));
+	}
+	fs.mkdirSync(path.dirname(path.resolve(dumpJudgePromptsPath)), { recursive: true });
+	fs.writeFileSync(dumpJudgePromptsPath, lines.length ? lines.join('\n') + '\n' : '', 'utf-8');
+	console.log(`[judge] ${lines.length}/${answers.length} yargı istemi yazıldı (önbellekte olmayanlar, anahtar modeli: ${judgeModel}): ${dumpJudgePromptsPath}`);
+	console.log(`[judge] cevaplar: ${path.join(outDir, 'answers.jsonl')}`);
+	await releaseReranker();
+	process.exit(0);
+}
+
 const judgedRecords: JudgedRecord[] = [];
-if (needsJudge && judgeAdapter) {
+if (needsJudge && judgeCacheOnly) {
+	let hits = 0;
+	for (const a of answers) {
+		const cached = judgeCache.get(judgeCacheKey(buildJudgePrompt(toJudgeItem(a))));
+		if (cached) {
+			judgedRecords.push({ answer: a, judgeFailed: false, judge: cached });
+			hits++;
+		} else {
+			judgedRecords.push({ answer: a, judgeFailed: true, error: 'önbellekte yok' });
+		}
+	}
+	console.log(`[judge] --judge-cache-only: ${hits}/${answers.length} yargı önbellekte (${judgeCachePath})`);
+} else if (needsJudge && judgeAdapter) {
 	fs.mkdirSync(path.dirname(judgeCachePath), { recursive: true });
 	let done = 0;
 	let cacheHits = 0;
@@ -685,6 +753,11 @@ const report = {
 		vault: vaultId,
 		file: file ?? null,
 		answersInput: answersInputPath ?? null,
+		// The answers' own variant is unknown when they come from --answers; see that run's generation.json.
+		promptLang: answersInputPath ? null : promptLang,
+		skillsDir: answersInputPath ? null : process.env.SKILLS_DIR ?? null,
+		loadedSkills: answersInputPath ? null : loadedSkills,
+		judgeCacheOnly,
 		label,
 		limit: limit ?? null,
 		model,
@@ -757,6 +830,7 @@ const md: string[] = [];
 md.push(`# Generation Benchmark — ${label}`);
 md.push('');
 md.push(`Vault: \`${vaultId}\` · Model: \`${model}\`${needsJudge ? ` · Yargıç: \`${judgeModel}\` (deepseek-api)` : ' · Yargıç: yok (--no-judge)'}`);
+md.push(answersInputPath ? `Prompt dili / skill'ler: bilinmiyor (--answers ile yüklendi: \`${answersInputPath}\`)` : `Prompt dili: \`${promptLang}\` · Skills dir: \`${process.env.SKILLS_DIR}\` · Yüklenen skill'ler: ${loadedSkills.length ? loadedSkills.map((n) => `\`${n}\``).join(', ') : '(yok)'}`);
 md.push(`Git SHA: \`${report.gitSha ?? 'yok'}\`${datasetSha1 ? ` · Dataset SHA1: \`${datasetSha1}\`` : ''}${needsJudge ? ` · Judge prompt SHA1: \`${judgePromptSha1()}\`` : ''}`);
 md.push(`Toplam: ${answers.length}, yargılanan: ${report.counts.judged}, judge_failed: ${report.counts.judgeFailed}`);
 md.push('');
