@@ -1,6 +1,6 @@
 # Repo public olmadan önce (TODO #51)
 
-Durum: 2026-10-18. Repo hâlâ özel; Actions dakikaları bitti, bu yüzden iş akışları yalnız `ci` dalına push'ta ve elle çalışıyor.
+Durum: 2026-10-21. Repo hâlâ özel; Actions dakikaları bitti, bu yüzden iş akışları yalnız `ci` dalına push'ta ve elle çalışıyor.
 
 ## 1. Geçmişte sır taraması
 
@@ -24,15 +24,13 @@ Durum: 2026-10-18. Repo hâlâ özel; Actions dakikaları bitti, bu yüzden iş 
 - Her iki iş akışında `permissions: contents: read` var; yazma izni isteyen adım yok.
 - İş akışları sır kullanmıyor (imza yok). macOS imzası (#49) eklenince sırlar yalnız `main`/etiket push'unda kullanılmalı, PR'da asla.
 - Ayarlar → Actions → "Fork pull request workflows from outside collaborators": **Require approval for all outside collaborators**.
-- Üçüncü taraf eylemler sürüm etiketine sabit (`@v4`). Public olunca commit SHA'ya sabitlemek daha güvenli.
+- Üçüncü taraf eylemler commit SHA'ya sabit, yanında sürüm yorumu var (`# v4`), 2026-10-21 `946a100`.
 
 ## 4. Windows ARM64
 
 - `desktop.yml`'ye `windows-11-arm` satırı eklendi. Tetikleyici değişmediği için hiçbir şey çalışmadı, derleme denenmedi.
 - `scripts/fetch-python-runtime.mjs` mimariye göre seçiyor: aynı python-build-standalone sürümünün (20261013, CPython 3.12.15) `aarch64-pc-windows-msvc` arşivi SHA256'sıyla sabitlendi.
 - Gömülü Node, sahnelemeyi yapan Node'un kopyası. ARM koşucusunda ARM64 Node gelir.
-- **Engel: sqlite-vec 0.1.9'un `windows-arm64` paketi yok.** `indexer/db.ts` ve `retrieve.ts` onu koşulsuz yüklüyor. Yüklenemezse yalnız vektör arama değil, FTS de açılmaz. Yerel ARM derlemesi için iki yol var:
-  - sqlite-vec yüklenemezse kasayı yalnız-FTS moduna düşür (kod değişikliği), ya da
-  - sqlite-vec'i ARM64 için kaynaktan derleyip pakete koy.
+- **sqlite-vec 0.1.9'un `windows-arm64` paketi yok.** 2026-10-21'den beri (`014b43e`) yüklenemezse kasa yalnız-FTS ile açılıyor: indeksleyici gömmesiz yazar, arama anahtar kelimeyle çalışır. Vektör arama ARM64'te ancak sqlite-vec kaynaktan derlenip pakete konursa gelir. Gerçek ARM makinede denenmedi.
 - Ara çözüm: x64 kurulum dosyası Windows 11 ARM'de emülasyonla çalışır (Node, Python ve sqlite-vec x64). Gerçek ARM makinede denenmedi.
 - Python tarafında docling/torch için Windows ARM64 tekerlekleri sınırlı. Ağır PDF hattı ARM'de büyük olasılıkla çalışmaz; hafif paketler (markitdown, trafilatura, pypdf) saf Python ya da ARM tekerlekli.

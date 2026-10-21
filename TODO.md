@@ -2,7 +2,7 @@
 
 Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncellenir.
 
-**Son güncelleme:** 2026-10-19 · Acil boş. #29 (sohbette reranker) bitti: VRAM kapısı, sistem istemindeki bildirim ve arayüz uyarısı ölçüldü. Dal `claude/kalan-adimlardan-devam-6e2e77`, main'e alınmadı, push yok.
+**Son güncelleme:** 2026-10-21 · Acil boş. #28 ölçüldü: istem dili ve educational-agent doğruluğu değiştirmiyor, üretim Türkçe kalıyor. #51'de eylemler SHA'ya sabitlendi, sqlite-vec'siz kasa yalnız-FTS ile açılıyor. Dal `claude/laughing-hamilton-7bad8a`, main'e alınmadı, push yok.
 
 ## Kurallar
 
@@ -50,12 +50,9 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 ## Yapılabilir
 
 ### 1. Güvenlik ve CI
-- [ ] **Public öncesi kalan.** Public olunca iş akışı tetikleyicilerini aç (adımlar `docs/dev/public-oncesi.md`). Yerel Windows ARM64 derlemesi sqlite-vec'in ARM64 paketi olmadığı için engelli. `K` · #51
+- [ ] **Public öncesi kalan.** Repo public olunca tetikleyicileri aç ve dal korumasını kur (adımlar `docs/dev/public-oncesi.md`). Eylemler SHA'ya sabit, sqlite-vec'siz kasa yalnız-FTS ile açılıyor; ARM64 derlemesi ve gerçek ARM makinesi denenmedi. `K` · #51
 
-### 2. RAG ve benchmark
-- [ ] **İstem/skill dili A/B.** qwen3:8b için İngilizce çekirdek istem; educational-agent açık/kapalı. Kullanıcı notu: "olabilir". `O` · #28
-
-### 3. Notebook verileri
+### 2. Notebook verileri
 - [ ] **Rusça kasası onarımı.** 14 uyarılı bekleyen; İngilizce/Mandarin/İspanyolca kasa sorusu. `O` · #21
 - [ ] **Notebook verileri dönüşümü.** 12 klasör → ayrı kasalar; Fizik bitti, dil ve bilim klasörleri kaldı. `B` · #20
 
@@ -98,7 +95,9 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 - [ ] **Renksiz `border` düzeltmesinin yan etkisine bak.** `app.css`'e eklenen genel `border-color: var(--color-border)` kuralı çıplak `border` kullanan ~11 yeri düzeltti (LauncherPanel, gömme/MCP/link kartları); başka bir yerde bilerek koyu çerçeve kullanılıyorsa açıkça renk sınıfı ister. LauncherPanel kart içinde dar: "Yeniden algıla" alt satıra kayıyor, "Etkin" düğmesi uzun panelin ortasında. `K`
 - [ ] **İkonlarda kalanlar.** `minus` için SVG yok (checkbox ve dropdown onay öğesi hâlâ lucide); model seçicideki `bot` ikonu artık civciv maskotu, genel "model" anlamı için başka glif istenebilir. Başlık çubuğundaki logo gerçek Tauri penceresinde görülmedi. `K`
 - [ ] **npm audit'te kalan orta düzey açıklar.** katex (marp-core, markmap, remark-math üzerinden) ve sprintf-js (gray-matter) yalnız kırıcı sürümle düzeliyor; `security-audit.mjs` high/critical'da düşüyor, bunlar geçiyor. `O`
-- [ ] **sqlite-vec yüklenemezse kasa yalnız-FTS'e düşsün.** Şu an `indexer/db.ts` ve `retrieve.ts` koşulsuz yüklüyor; yüklenemezse FTS de açılmıyor. Windows ARM64 için ön koşul (#51). `O`
+- [ ] **educational-agent'ın bedeli.** #28'de doğruluğa etkisi sıfır, ama istem +1000–1400 token, üretim süresi +%55–80. Asıl hedefi (çok turlu öğretme, kontrol sorusu, hatayı onaylamama) altın setle ölçülmüyor; çok turlu küçük bir set ya da varsayılanı kapalı yapma kararı. `O`
+- [ ] **`--judge-cache-only` rapor başlığı.** generation.md hâlâ "Yargıç: … (deepseek-api)" yazıyor; önbellekten yargıda sağlayıcıyı doğru göster. `K`
+- [ ] **bench'te kalan iki koşulsuz sqlite-vec yüklemesi.** `bench/dataset/sample-chunks.ts` ve `bench/lib/pipelines.ts` `tryLoadSqliteVec` kullanmıyor; ARM64'te bench çalışmaz (uygulama etkilenmez). `K`
 
 - [ ] **`default` indeksinde 6 `_meta` parçası.** `c2f2b49`'dan sonra bu kasa yeniden indekslenmedi; benchmark etiketleri çapayla bağlı olduğundan yeniden indeksleme sonrası `validate-golden --targets full` yeniden çalıştırılmalı. `K`
 - [ ] **Yerel model "notlarda yok" demiyor, istem güvenilir değil.** Reranker'lı 62 soruluk koşuda (qwen3:8b) cevapsız 15 sorunun 9'unda çekimser kaldı (tabanda 0). Eşik altındaki 22 soruda qwen3:8b-bart-iq4xs ile altı istem yerleşimi ölçüldü: en iyisi soru üstünde köşeli parantez (13/22), ama 10 cevaba talimatıyla birlikte kopyalandı. Şimdiki sistem istemi 9/22, İngilizcede 0/6. Arayüz artık modelden bağımsız uyarı gösteriyor (`b1aadb5`). Daha büyük model ya da cevabın başına sabit cümleyi uygulamanın eklemesi denenebilir. `O`
@@ -141,6 +140,8 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 
 Yalnız son iki haftanın kaydı tutulur; daha eskisi git geçmişindedir.
 
+- 2026-10-21: #28 istem dili × educational-agent A/B, 40 soru × 4 varyant, kör Sonnet yargısı: correctness 3,73–3,76, hiçbir eşli fark anlamlı değil (p ≥ 0,5); skill +%55–80 üretim süresi. Üretim istemi Türkçe kalıyor. `docs/rag-ab28-istem-dili-2026-10-21.md` `b3aa832` `15a04a1`
+- 2026-10-21: #51 sqlite-vec yüklenemezse kasa yalnız-FTS ile açılıyor (indeksleyici gömmesiz yazar, retrieve anahtar kelime yoluna düşer); iş akışı eylemleri commit SHA'ya sabitlendi. `014b43e` `946a100`
 - 2026-10-19: #29 reranker sohbette üretimde, ayarlarda varsayılan kapalı (Ayarlar > Gömme). `ingest/rerank_server.py` (--offline, --download-only, --probe, --require-cuda), `src/lib/server/reranker.ts` (tembel tek süreç, 10 dk boşta kapanma, yalnız CUDA, hata/zaman aşımında null), dönüştürücü ve formül onarımı GPU'yu almadan reranker'ı kapatıyor; `retrieve(rerank)`: filtreler sonra ilk 30 aday, en iyi skor < 0,02 ise `rerank-no-match` ve istemde "notlarda yok" bildirimi; bench `--rerank`. Duman testi: 0,7 sn/sorgu. `af9da50` `3a0d9d2` `67b7843` `c7113a2`
 - 2026-10-19: #29 ölçümle düzeltildi: reranker sohbet modelinden önce açılınca Ollama modeli kısmen CPU'ya koyuyordu (istem işleme 1,4 → 16 sn, 15 → 9 tok/s); VRAM kapısı modeli tam GPU'da değilse reranker'ı atlayıp kapatıyor, model değişiminde bırakıyor (`df81c73` `cb26418`). "Notlarda yok" bildirimi sistem isteminde (sızıntısız), arayüzde ayrıca uyarı (`b1aadb5`). iq4xs ile 62 soru: 33,6 tok/s, retrieval 0,93 sn, 62/62 rerank edildi.
 - 2026-10-18: #27 üretim ve yargı: qwen3:8b 330 cevap; DeepSeek bakiyesi 76. soruda bittiği için yargıyı aynı istemle 15 Sonnet alt ajanı verdi (DeepSeek ile 73 ortak cevapta Spearman 0,88). Correctness 3,67, faithfulness 0,745, abstention 0/15, kaynak kesinliği %48,5. Yargıç isteminde `String.replace` `$`-desen hatası bulundu ve düzeltildi (13 istem bozuluyordu, pilot da etkilenmiş); yargılar artık anında önbelleğe yazılıyor, 401/402'de koşu duruyor. `b2a86c2`
