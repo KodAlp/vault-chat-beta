@@ -1222,6 +1222,8 @@
 		"CHAT_CORRUPTION_RETRY": "Ødelagte tegn registreret i svaret, genererer igen…",
 		"CHAT_CORRUPTION_RESUME": "Et ødelagt tegn blev registreret i svaret, fortsætter fra det sted, hvor det slap…",
 		"CHAT_CORRUPTION_GAVE_UP": "Svaret kan indeholde ødelagte tegn (et kendt modelproblem) – en ren version kunne ikke produceres efter flere forsøg.",
+		"CHAT_REPETITION_STOPPED": "Modellen begyndte at gentage sig selv; genereringen blev stoppet, og den gentagne del er fjernet.",
+		"CHAT_THINK_LEAK_MOVED": "Modellens ræsonnement var kommet med i svaret; det er flyttet til tænkesektionen.",
 		"CHAT_NO_ANSWER": "Modellen gav intet svar. Prøv igen.",
 		"CHAT_SAVE_FAILED": "Kunne ikke gemme chatten",
 		"LOCAL_SERVER_UNREACHABLE": "Kan ikke nå {provider} – kører den lokale server?",

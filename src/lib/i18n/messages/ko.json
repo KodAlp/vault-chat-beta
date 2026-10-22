@@ -1201,6 +1201,8 @@
 		"CHAT_CORRUPTION_RETRY": "응답에서 깨진 문자가 감지되어 다시 생성하는 중…",
 		"CHAT_CORRUPTION_RESUME": "응답에서 깨진 문자가 감지되어 중단된 지점부터 이어서 생성하는 중…",
 		"CHAT_CORRUPTION_GAVE_UP": "응답에 깨진 문자가 포함되어 있을 수 있어요(알려진 모델 문제). 여러 번 시도했지만 깨끗한 버전을 만들지 못했어요.",
+		"CHAT_REPETITION_STOPPED": "모델이 같은 내용을 반복하기 시작했습니다. 생성을 중단하고 반복된 부분을 제거했습니다.",
+		"CHAT_THINK_LEAK_MOVED": "모델의 추론이 답변에 섞여 있어 생각 섹션으로 옮겼습니다.",
 		"CHAT_NO_ANSWER": "모델이 응답을 만들지 않았어요. 다시 시도하세요.",
 		"CHAT_SAVE_FAILED": "채팅을 저장하지 못했어요",
 		"LOCAL_SERVER_UNREACHABLE": "{provider}에 연결할 수 없어요. 로컬 서버가 실행 중인가요?",

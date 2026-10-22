@@ -1149,6 +1149,8 @@
     "CHAT_CORRUPTION_RETRY": "在响应中检测到乱码字符，正在重新生成…",
     "CHAT_CORRUPTION_RESUME": "在响应中检测到乱码字符，正从中断处继续…",
     "CHAT_CORRUPTION_GAVE_UP": "响应可能包含乱码字符（已知的模型问题）——多次尝试后仍无法生成干净的版本。",
+    "CHAT_REPETITION_STOPPED": "模型开始重复自己的内容；已停止生成并删除了重复的部分。",
+    "CHAT_THINK_LEAK_MOVED": "模型的推理内容混入了回答；已将其移至思考部分。",
     "CHAT_NO_ANSWER": "模型没有生成响应，请重试。",
     "CHAT_SAVE_FAILED": "无法保存聊天",
     "LOCAL_SERVER_UNREACHABLE": "无法连接 {provider}——本地服务器是否在运行？",

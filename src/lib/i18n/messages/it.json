@@ -1221,6 +1221,8 @@
 		"CHAT_CORRUPTION_RETRY": "Rilevati caratteri corrotti nella risposta, rigenerazione…",
 		"CHAT_CORRUPTION_RESUME": "Rilevato un carattere corrotto nella risposta, si riprende da dove si era interrotta…",
 		"CHAT_CORRUPTION_GAVE_UP": "La risposta potrebbe contenere caratteri corrotti (un problema noto dei modelli): dopo diversi tentativi non è stato possibile produrne una versione pulita.",
+		"CHAT_REPETITION_STOPPED": "Il modello ha iniziato a ripetersi; la generazione è stata interrotta e la parte ripetuta è stata rimossa.",
+		"CHAT_THINK_LEAK_MOVED": "Il ragionamento del modello era finito nella risposta; è stato spostato nella sezione di pensiero.",
 		"CHAT_NO_ANSWER": "Il modello non ha prodotto una risposta, riprova.",
 		"CHAT_SAVE_FAILED": "Impossibile salvare la chat",
 		"LOCAL_SERVER_UNREACHABLE": "Impossibile raggiungere {provider}: il server locale è in esecuzione?",

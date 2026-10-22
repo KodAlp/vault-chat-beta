@@ -309,6 +309,19 @@
 						// (or skips) those reads.
 						assistantMessage.toolCalls = [];
 					}
+					else if (event.type === 'replaceContent') {
+						// Server trimmed a repetition loop or moved leaked reasoning to the thinking
+						// section: the shown text is replaced as a whole. Notices, sources and tool
+						// calls stay (unlike `regenerate`).
+						rawContent = event.content;
+						flushedContent = event.content;
+						assistantMessage.content = event.content;
+						if (event.thinking !== undefined) {
+							rawThinking = event.thinking;
+							flushedThinking = event.thinking;
+							assistantMessage.thinking = event.thinking;
+						}
+					}
 					else if (event.type === 'done') {
 						assistantMessage.sources = event.sources;
 						assistantMessage.narrowScope = event.narrowScope;

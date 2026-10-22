@@ -1165,6 +1165,8 @@
     "CHAT_CORRUPTION_RETRY": "Se detectaron caracteres corruptos en la respuesta, regenerando…",
     "CHAT_CORRUPTION_RESUME": "Se detectó un carácter corrupto en la respuesta, continuando desde donde se quedó…",
     "CHAT_CORRUPTION_GAVE_UP": "La respuesta puede contener caracteres corruptos (un problema conocido de los modelos): no se pudo producir una versión limpia tras varios intentos.",
+    "CHAT_REPETITION_STOPPED": "El modelo empezó a repetirse; se detuvo la generación y se eliminó la parte repetida.",
+    "CHAT_THINK_LEAK_MOVED": "El razonamiento del modelo se había mezclado con la respuesta; se movió a la sección de pensamiento.",
     "CHAT_NO_ANSWER": "El modelo no produjo una respuesta, inténtalo de nuevo.",
     "CHAT_SAVE_FAILED": "No se pudo guardar el chat",
     "LOCAL_SERVER_UNREACHABLE": "No se puede conectar con {provider}: ¿está en ejecución el servidor local?",
