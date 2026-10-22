@@ -1149,6 +1149,8 @@
     "CHAT_CORRUPTION_RETRY": "応答に文字化けが検出されました。再生成しています…",
     "CHAT_CORRUPTION_RESUME": "応答に文字化けが検出されました。途中から続けています…",
     "CHAT_CORRUPTION_GAVE_UP": "応答に文字化けが含まれている可能性があります（既知のモデルの問題）。数回試しても正常な応答を生成できませんでした。",
+    "CHAT_REPETITION_STOPPED": "モデルが同じ内容を繰り返し始めたため、生成を停止し、繰り返された部分を削除しました。",
+    "CHAT_THINK_LEAK_MOVED": "モデルの推論が回答に混入していたため、思考セクションに移動しました。",
     "CHAT_NO_ANSWER": "モデルが応答を生成しませんでした。もう一度お試しください。",
     "CHAT_SAVE_FAILED": "チャットを保存できませんでした",
     "LOCAL_SERVER_UNREACHABLE": "{provider} に接続できません。ローカルサーバーは起動していますか？",

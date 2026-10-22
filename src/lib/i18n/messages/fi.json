@@ -1221,6 +1221,8 @@
 		"CHAT_CORRUPTION_RETRY": "Vastauksesta havaittiin vioittuneita merkkejä, luodaan uudelleen…",
 		"CHAT_CORRUPTION_RESUME": "Vastauksesta havaittiin vioittunut merkki, jatketaan siitä, mihin jäätiin…",
 		"CHAT_CORRUPTION_GAVE_UP": "Vastaus voi sisältää vioittuneita merkkejä (tunnettu mallin ongelma) – puhdasta versiota ei saatu tuotettua usean yrityksen jälkeen.",
+		"CHAT_REPETITION_STOPPED": "Malli alkoi toistaa itseään; generointi pysäytettiin ja toistuva osa poistettiin.",
+		"CHAT_THINK_LEAK_MOVED": "Mallin päättely oli päätynyt vastaukseen; se siirrettiin ajattelun osioon.",
 		"CHAT_NO_ANSWER": "Malli ei tuottanut vastausta, yritä uudelleen.",
 		"CHAT_SAVE_FAILED": "Keskustelua ei voitu tallentaa",
 		"LOCAL_SERVER_UNREACHABLE": "Palveluun {provider} ei saada yhteyttä – onko paikallinen palvelin käynnissä?",

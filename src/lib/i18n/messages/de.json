@@ -1162,6 +1162,8 @@
     "CHAT_CORRUPTION_RETRY": "In der Antwort wurden fehlerhafte Zeichen erkannt, wird neu erzeugt…",
     "CHAT_CORRUPTION_RESUME": "In der Antwort wurde ein fehlerhaftes Zeichen erkannt, es geht an der Stelle weiter, an der sie abgebrochen war…",
     "CHAT_CORRUPTION_GAVE_UP": "Die Antwort enthält möglicherweise fehlerhafte Zeichen (ein bekanntes Modellproblem) – nach mehreren Versuchen konnte keine saubere Version erzeugt werden.",
+    "CHAT_REPETITION_STOPPED": "Das Modell hat begonnen, sich zu wiederholen; die Generierung wurde gestoppt und der wiederholte Teil entfernt.",
+    "CHAT_THINK_LEAK_MOVED": "Die Überlegungen des Modells waren in die Antwort gelangt; sie wurden in den Denkbereich verschoben.",
     "CHAT_NO_ANSWER": "Das Modell hat keine Antwort erzeugt, bitte versuche es erneut.",
     "CHAT_SAVE_FAILED": "Der Chat konnte nicht gespeichert werden",
     "LOCAL_SERVER_UNREACHABLE": "{provider} ist nicht erreichbar – läuft der lokale Server?",

@@ -44,6 +44,12 @@ export interface AppLogRecord {
 		 * attempt had been running, and what was done about it — the numbers that
 		 * were missing to judge how often this happens and what it costs. */
 		| 'output_corruption'
+		/** A repetition loop (repetition-guard.ts findRepetitionLoop) was cut and the attempt stopped:
+		 * `keptChars`, `removedChars`, `elapsedMs`. The turn ends normally with the trimmed answer. */
+		| 'output_repetition'
+		/** Reasoning that had leaked into the answer text before a stray `</think>` line was moved to
+		 * the thinking section: `movedChars` (moved), `keptChars` (answer left), `elapsedMs`. */
+		| 'output_think_leak'
 		/** One record per chat retrieval: how many chunks came back, why none did
 		 * (`reason`), how close the nearest vector match was, and whether the
 		 * keyword fallback supplied them. Chat never wrote no_sources, so until this
@@ -146,6 +152,9 @@ export interface AppLogRecord {
 	elapsedMs?: number;
 	action?: 'resume' | 'restart' | 'resume_mismatch' | 'resume_retry';
 	restartReason?: string;
+	/** output_repetition: characters cut from the answer. output_think_leak: characters moved to thinking. */
+	removedChars?: number;
+	movedChars?: number;
 	/** retrieval, retrieval_fallback. `chunks`: usable chunks returned.
 	 * `bestDistance`: nearest vector match's cosine distance (retrieval only).
 	 * `keyword`: the chunks came from the keyword fallback. `mode`/`terms`/`hits`:

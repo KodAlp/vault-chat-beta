@@ -1149,6 +1149,8 @@
     "CHAT_CORRUPTION_RETRY": "Karakter rusak terdeteksi pada respons, membuat ulang…",
     "CHAT_CORRUPTION_RESUME": "Karakter rusak terdeteksi pada respons, melanjutkan dari titik terakhir…",
     "CHAT_CORRUPTION_GAVE_UP": "Respons mungkin mengandung karakter rusak (masalah model yang sudah diketahui) — versi yang bersih tidak dapat dihasilkan setelah beberapa kali percobaan.",
+    "CHAT_REPETITION_STOPPED": "Model mulai mengulang dirinya sendiri; pembuatan dihentikan dan bagian yang berulang dihapus.",
+    "CHAT_THINK_LEAK_MOVED": "Penalaran model telah bocor ke dalam jawaban; bagian itu dipindahkan ke bagian berpikir.",
     "CHAT_NO_ANSWER": "Model tidak menghasilkan respons, silakan coba lagi.",
     "CHAT_SAVE_FAILED": "Gagal menyimpan obrolan",
     "LOCAL_SERVER_UNREACHABLE": "Tidak dapat menjangkau {provider} — apakah server lokal sedang berjalan?",

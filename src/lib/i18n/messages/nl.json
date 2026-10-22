@@ -1213,6 +1213,8 @@
 		"CHAT_CORRUPTION_RETRY": "Beschadigde tekens in het antwoord gedetecteerd, opnieuw genereren…",
 		"CHAT_CORRUPTION_RESUME": "Er is een beschadigd teken in het antwoord gedetecteerd, verdergaan vanaf waar het was gebleven…",
 		"CHAT_CORRUPTION_GAVE_UP": "Het antwoord bevat mogelijk beschadigde tekens (een bekend modelprobleem) — na meerdere pogingen kon geen schone versie worden gemaakt.",
+		"CHAT_REPETITION_STOPPED": "Het model begon zichzelf te herhalen; de generatie is gestopt en het herhaalde deel is verwijderd.",
+		"CHAT_THINK_LEAK_MOVED": "De redenering van het model was in het antwoord terechtgekomen; deze is naar het denkgedeelte verplaatst.",
 		"CHAT_NO_ANSWER": "Het model gaf geen antwoord, probeer het opnieuw.",
 		"CHAT_SAVE_FAILED": "De chat kon niet worden opgeslagen",
 		"LOCAL_SERVER_UNREACHABLE": "{provider} is niet bereikbaar — draait de lokale server?",

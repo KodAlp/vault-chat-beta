@@ -1210,6 +1210,8 @@
 		"CHAT_CORRUPTION_RETRY": "V odpovědi byly zjištěny poškozené znaky, generuji znovu…",
 		"CHAT_CORRUPTION_RESUME": "V odpovědi byl zjištěn poškozený znak, pokračuji od místa přerušení…",
 		"CHAT_CORRUPTION_GAVE_UP": "Odpověď může obsahovat poškozené znaky (známý problém modelu) – ani po několika pokusech se nepodařilo vytvořit čistou verzi.",
+		"CHAT_REPETITION_STOPPED": "Model se začal opakovat; generování bylo zastaveno a opakující se část byla odstraněna.",
+		"CHAT_THINK_LEAK_MOVED": "Uvažování modelu se dostalo do odpovědi; bylo přesunuto do sekce myšlení.",
 		"CHAT_NO_ANSWER": "Model nevytvořil odpověď, zkuste to prosím znovu.",
 		"CHAT_SAVE_FAILED": "Chat se nepodařilo uložit",
 		"LOCAL_SERVER_UNREACHABLE": "{provider} není dostupný – běží lokální server?",

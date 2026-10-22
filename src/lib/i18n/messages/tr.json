@@ -1253,6 +1253,8 @@
 		"CHAT_CORRUPTION_RETRY": "Yanıtta bozuk karakterler algılandı, yeniden üretiliyor…",
 		"CHAT_CORRUPTION_RESUME": "Yanıtta bozuk karakter algılandı, kaldığı yerden devam ediliyor…",
 		"CHAT_CORRUPTION_GAVE_UP": "Yanıt bozuk karakterler içerebilir (bilinen bir model sorunu) — birkaç deneme sonrası temiz üretilemedi.",
+		"CHAT_REPETITION_STOPPED": "Model aynı metni tekrar etmeye başladı; üretim durduruldu ve tekrar eden kısım kaldırıldı.",
+		"CHAT_THINK_LEAK_MOVED": "Modelin akıl yürütmesi cevaba karışmıştı; düşünme bölümüne taşındı.",
 		"CHAT_NO_ANSWER": "Model bir yanıt üretmedi, lütfen tekrar deneyin.",
 		"CHAT_SAVE_FAILED": "Sohbet kaydedilemedi",
 		"LOCAL_SERVER_UNREACHABLE": "{provider} sağlayıcısına ulaşılamıyor — yerel sunucu çalışıyor mu?",

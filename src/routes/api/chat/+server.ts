@@ -19,6 +19,7 @@ import {
 	type SeamPlan,
 	type SeamTrimmer
 } from '$lib/server/resume-plan';
+import { closeOpenFence, findRepetitionLoop, findStrayThinkClose } from '$lib/server/repetition-guard';
 import { isNearCtxLimit } from '$lib/server/providers/ollama-usage';
 import { chatRetrievalK } from '$lib/server/env';
 import { afterSmallTalkGate, checkSmallTalk } from '$lib/server/smalltalk-runtime';
@@ -340,6 +341,12 @@ export const POST: RequestHandler = async ({ request }) => {
 					else flight.signal.addEventListener('abort', onFlightAbort);
 
 					let corrupted = false;
+					// Repetition guard (repetition-guard.ts). `repetitionStopped`: the loop was cut and
+					// the attempt aborted on purpose; the turn then ends normally with the trimmed answer
+					// (not an error, not a corruption retry, not a client abort — `flight` is untouched).
+					// `lastRepCheckLen`: answer length at the last check, so the scan runs per 40 new chars.
+					let repetitionStopped = false;
+					let lastRepCheckLen = 0;
 					// Corruption recovery (resume-plan.ts). A corrupted chunk in plain answer text
 					// is recovered by continuing from the clean text already shown instead of
 					// regenerating from scratch. `pendingResume` carries the seam from the moment a
@@ -507,6 +514,68 @@ export const POST: RequestHandler = async ({ request }) => {
 										finalContent += text;
 										hopContent += text;
 										send({ type: 'delta', content: text });
+
+										// Reasoning written as plain answer text, closed by a stray `</think>` line:
+										// everything before it is thinking, what follows is the real answer.
+										// Checked on the accumulated text, so a tag split across chunks is found.
+										const leakAt = findStrayThinkClose(finalContent);
+										if (leakAt >= 0) {
+											const before = finalContent.slice(0, leakAt).trim();
+											const after = finalContent.slice(leakAt + '</think>'.length).replace(/^\s+/, '');
+											const hopStart = finalContent.length - hopContent.length;
+											finalThinking = finalThinking ? (before ? `${finalThinking}
+
+${before}` : finalThinking) : before;
+											finalContent = after;
+											if (leakAt + '</think>'.length > hopStart) hopContent = after;
+											lastRepCheckLen = finalContent.length;
+											send({ type: 'replaceContent', content: finalContent, thinking: finalThinking });
+											// A bare `</think>` with nothing before it only needs removing, not announcing.
+											if (before) send(noticeEvent('CHAT_THINK_LEAK_MOVED'));
+											if (before) logAppEvent({
+												kind: 'output_think_leak',
+												chatId,
+												provider: body.provider,
+												model: body.model,
+												message: 'reasoning moved out of the answer',
+												movedChars: before.length,
+												keptChars: finalContent.length,
+												elapsedMs: Date.now() - attemptStartedAt
+											});
+										}
+
+										// A model stuck repeating itself fills the token cap with garbage: cut the
+										// loop (one copy stays), stop this attempt, and finish the turn normally.
+										if (finalContent.length - lastRepCheckLen >= 40) {
+											lastRepCheckLen = finalContent.length;
+											const loop = findRepetitionLoop(finalContent);
+											if (loop) {
+												const before = finalContent.length;
+												const kept = closeOpenFence(finalContent.slice(0, loop.cutAt).trimEnd());
+												const hopStart = before - hopContent.length;
+												hopContent = hopContent.slice(0, Math.max(0, kept.length - hopStart));
+												finalContent = kept;
+												repetitionStopped = true;
+												send({
+													type: 'replaceContent',
+													content: kept,
+													...(finalThinking ? { thinking: finalThinking } : {})
+												});
+												send(noticeEvent('CHAT_REPETITION_STOPPED'));
+												logAppEvent({
+													kind: 'output_repetition',
+													chatId,
+													provider: body.provider,
+													model: body.model,
+													message: 'repetition loop stopped',
+													keptChars: kept.length,
+													removedChars: before - kept.length,
+													elapsedMs: Date.now() - attemptStartedAt
+												});
+												attemptController.abort();
+												break;
+											}
+										}
 									}
 								} else if (event.type === 'tool_call') {
 									hopToolCalls.push({ id: event.id, name: event.name, arguments: event.arguments });
@@ -590,7 +659,9 @@ export const POST: RequestHandler = async ({ request }) => {
 								continue;
 							}
 
-							if (corrupted || hopToolCalls.length === 0) break;
+							// A stopped repetition loop ends the turn here: no tool round trip for a call the
+							// looping model may have attached, and no retry.
+							if (corrupted || repetitionStopped || hopToolCalls.length === 0) break;
 
 							// The model asked for one or more files — collect them into ONE
 							// assistant message (matches how Ollama/OpenAI expect a single

@@ -1207,6 +1207,8 @@
 		"CHAT_CORRUPTION_RETRY": "Wykryto uszkodzone znaki w odpowiedzi, generowanie od nowa…",
 		"CHAT_CORRUPTION_RESUME": "Wykryto uszkodzony znak w odpowiedzi, kontynuowanie od miejsca przerwania…",
 		"CHAT_CORRUPTION_GAVE_UP": "Odpowiedź może zawierać uszkodzone znaki (znany problem modelu) — po kilku próbach nie udało się uzyskać czystej wersji.",
+		"CHAT_REPETITION_STOPPED": "Model zaczął się powtarzać; generowanie zatrzymano, a powtarzającą się część usunięto.",
+		"CHAT_THINK_LEAK_MOVED": "Rozumowanie modelu przedostało się do odpowiedzi; zostało przeniesione do sekcji myślenia.",
 		"CHAT_NO_ANSWER": "Model nie wygenerował odpowiedzi, spróbuj ponownie.",
 		"CHAT_SAVE_FAILED": "Nie udało się zapisać czatu",
 		"LOCAL_SERVER_UNREACHABLE": "Nie można połączyć się z {provider} — czy serwer lokalny działa?",

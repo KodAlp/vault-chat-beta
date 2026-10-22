@@ -231,7 +231,12 @@ export type StreamEvent =
 	 * this message before further `delta`/`thinking` events arrive, since
 	 * the server is regenerating from scratch. See api/chat/+server.ts's
 	 * corruption-retry loop. */
-	| { type: 'regenerate' };
+	| { type: 'regenerate' }
+	/** The visible answer (and, when given, the thinking) is replaced as a whole by these texts —
+	 * unlike `regenerate` nothing else is reset: notices, sources and tool calls stay. Sent when the
+	 * server trims a repetition loop off the answer, or moves reasoning that leaked into the answer
+	 * (before a stray `</think>`) to the thinking section. */
+	| { type: 'replaceContent'; content: string; thinking?: string };
 
 export interface QuizGenerationRequest {
 	domains?: string[];

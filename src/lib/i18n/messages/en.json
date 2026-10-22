@@ -1253,6 +1253,8 @@
 		"CHAT_CORRUPTION_RETRY": "Corrupted characters detected in the response, regenerating…",
 		"CHAT_CORRUPTION_RESUME": "A corrupted character was detected in the response, continuing from where it left off…",
 		"CHAT_CORRUPTION_GAVE_UP": "The response may contain corrupted characters (a known model issue) — a clean version couldn't be produced after several attempts.",
+		"CHAT_REPETITION_STOPPED": "The model started repeating itself; generation was stopped and the repeated part was removed.",
+		"CHAT_THINK_LEAK_MOVED": "The model's reasoning had leaked into the answer; it was moved to the thinking section.",
 		"CHAT_NO_ANSWER": "The model didn't produce a response, please try again.",
 		"CHAT_SAVE_FAILED": "Couldn't save the chat",
 		"LOCAL_SERVER_UNREACHABLE": "Can't reach {provider} — is the local server running?",

@@ -1273,6 +1273,8 @@
 		"CHAT_CORRUPTION_RETRY": "Korrupta tecken upptäcktes i svaret, genererar om…",
 		"CHAT_CORRUPTION_RESUME": "Ett korrupt tecken upptäcktes i svaret, fortsätter där det slutade…",
 		"CHAT_CORRUPTION_GAVE_UP": "Svaret kan innehålla korrupta tecken (ett känt modellproblem) – en felfri version kunde inte skapas efter flera försök.",
+		"CHAT_REPETITION_STOPPED": "Modellen började upprepa sig själv; genereringen stoppades och den upprepade delen togs bort.",
+		"CHAT_THINK_LEAK_MOVED": "Modellens resonemang hade hamnat i svaret; det flyttades till tankeavsnittet.",
 		"CHAT_NO_ANSWER": "Modellen gav inget svar, försök igen.",
 		"CHAT_SAVE_FAILED": "Kunde inte spara chatten",
 		"LOCAL_SERVER_UNREACHABLE": "Kan inte nå {provider} – körs den lokala servern?",
