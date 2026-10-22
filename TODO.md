@@ -2,7 +2,7 @@
 
 Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncellenir.
 
-**Son güncelleme:** 2026-10-22 · Acil boş. Sohbette tekrar döngüsü kesiliyor, sızan `</think>` öncesi düşünmeye taşınıyor (`8715f15`); belirsiz soru için konu çipi (`a7c19f3`). Dal `claude/neredeyiz-12615d`, main'e alınmadı.
+**Son güncelleme:** 2026-10-22 · Acil boş. Sohbette tekrar döngüsü kesiliyor, sızan `</think>` öncesi düşünmeye taşınıyor (`8715f15`); belirsiz soru için konu çipi (`a7c19f3`); -asyon ile biten kısa sorular artık Cebuano cevaplanmıyor (`50e99a7`). Dal `claude/neredeyiz-12615d`, main'e alınmadı.
 
 ## Kurallar
 
@@ -105,7 +105,7 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 - [ ] **Reranker 6 GB kartta sınırda.** qwen3:8b ile hiç sığmaz (kapı atlıyor). `qwen3:8b-bart-iq4xs` (num_ctx 8192, flash attention + q8_0 KV) 4,63 GB tutuyor, ~1075 MiB boş kalıyor: model önce yüklüyken reranker yanında çalışıyor (eşik 900 MiB, kısmen paylaşımlı belleğe taşıyor; sohbet 33–35 tok/s, retrieval 0,9 sn). GPU'yu kullanan başka bir uygulama (Google Play Games emülatörü ~600 MiB) varken kapı atlıyor. Ollama'yı `OLLAMA_FLASH_ATTENTION`/`OLLAMA_KV_CACHE_TYPE` olmadan başlatmak modeli 4,98 GB'a çıkarıyor ve reranker'ı dışarıda bırakıyor. `O` · #29
 - [ ] **Reranker modeli paketli uygulamada.** İlk indirme `<dataDir>/models/hf` altına ~2,3 GB iner; bundled Python'da torch/transformers yok (pythonOk=false görünür). Kurulu uygulamada denenmedi. `O` · #29
 - [ ] **Konu çipi iki konulu belirsizliği kaçırıyor.** Belirsiz soruların yarısı ("Heap": dsa + c, "lock": databases + os) yalnız iki konuya yayılıyor; iki konuda bant normal soruların %46'sında çıkardı. Konu başına parça skorlarının yakınlığı gibi ek bir koşul ölçülebilir. `O`
-- [ ] **qwen3:8b "İzolasyon nasıl sağlanıyor?" sorusunda Cebuano metne kayıyor.** Bench'te (f3_044) ve canlıda üç kez aynı; döngü koruması kesiyor ama cevap anlamsız. Konu sınırlı yeniden soruda da sürdü (geçmişteki bozuk cevap etkiliyor olabilir). Dil denetimi (cevap kasa dillerinde mi) düşünülebilir. `O`
+- [ ] **Cevap dili algılayıcısı kısa mesajlarda zayıf.** franc-min düz bir Türkçe cümleyi Lingala, kısa Almanca/İspanyolca soruları İngilizce ya da Türkçe okuyabiliyor (15 kısa yabancı sorudan 11'i). Cebuano vakası düzeldi (`50e99a7`), ama kısa İspanyolca soru hâlâ "(Answer in Turkish.)" alıyor. Daha iyi bir algılayıcı ya da kısa mesajda daraltılmış katmanı yeniden ölçmek. `O`
 - [ ] **`</think>` taşımasını canlı gör.** Döngü kesme canlıda çalıştı; başıboş `</think>` yalnız birim testli. Rota düzeyinde test altyapısı yok. `K`
 - [ ] **Benchmark öz-tutarlılığı Sonnet yargıcıyla sınanmadı.** `--rejudge` ve `--sanity` alt ajan yolunda çalışmadı; 10 cevabı ayrı ajana yeniden puanlatıp uyumu ölç. `K`
 - [ ] **Reranker multi_hop ve ambiguous'ta kazanç vermiyor.** Tam sette multi_hop R@5 0,62 → 0,60, ambiguous 0,40 → 0,37 (tek yorumu öne çekiyor); üretime alırken dosya başına çeşitlilik ya da iki aşamalı sorgu düşünülebilir. `O`
@@ -141,6 +141,7 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 Yalnız son iki haftanın kaydı tutulur; daha eskisi git geçmişindedir.
 
 - 2026-10-22: qwen3 çıktı bozulmaları: sohbette tekrar döngüsü algılanıyor (son 200 karakter 3. kez görülünce), üretim durup tekrar kırpılıyor, açık kod bloğu kapatılıyor; başıboş `</think>` öncesi düşünme bölümüne taşınıyor; iki yeni bildirim 23 dilde. 896 gerçek cevapta 12 isabet, hepsi bozuk tekrar. Çince sızıntısı uygulamada zaten yakalanıyordu (bench bu korumayı atlıyor). Rota düzeyinde test yok, canlı döngüyle denenmedi. `docs/dev/cikti-bozulmasi-ve-belirsiz-soru-2026-10-22.md` `8715f15`
+- 2026-10-22: Filipince cevabın kök nedeni bizim dil talimatımızdı: franc-min "İzolasyon nasıl sağlanıyor?" gibi -asyon ile biten kısa soruları Cebuano sanıp istemin sonuna "(Answer in Cebuano.)" ekliyordu (soru biçimi ve kaynaklardan bağımsız, 0/9 Türkçe). 40 harften kısa mesaj kullanımda olmayan bir dile çıkarsa artık dil adı verilmiyor. qwen3:8b ile 18/18 doğru dil (dört -asyon sorusu Türkçe; İngilizce/Türkçe değişmedi; kısa Almanca/Fransızca kendi dilinde). `50e99a7`
 - 2026-10-22: belirsiz soru için konu çipi: kaynaklar ≥3 konudan (frontmatter `domains`, "genel" hariç) geliyorsa cevabın altında bant ve konu düğmeleri, tıklayınca soru yalnız o konuyla yeniden soruluyor; `domains` filtresi artık geniş aday havuzu kullanıyor. Sohbette ilk bildirimin hiç görünmemesi (Temmuz'dan beri, `??=` + `$state`) düzeldi. Yalıtılmış veriyle canlı denendi: 4 konulu cevapta bant, "databases" ile 6/6 databases kaynağı, döngü kesme ve bildirimi, mobilde sarma. `a7c19f3`
 - 2026-10-22: belirsiz soru istem kuralı pilotu (15 belirsiz + 15 kontrol, kör Sonnet yargısı): kural netleştirme sorusunu 1/15 → 10/15'e çıkarıyor ama net soruların 11/15'ine de ekliyor, anlamları ayırmıyor, doğruluk değişmiyor. Üretime alınmadı.
 
