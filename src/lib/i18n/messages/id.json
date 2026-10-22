@@ -46,6 +46,8 @@
     "expandScope": "Perluas cakupan?",
     "smallTalk": "Dianggap obrolan santai, sehingga tidak ada sumber yang dicari.",
     "forceSources": "Tetap cari di sumber",
+    "topicSpread": "Jawaban ini disusun dari catatan dengan topik berbeda. Jika pertanyaanmu hanya tentang salah satunya, tanyakan lagi dalam topik itu:",
+    "topicSpreadAsk": "Tanyakan lagi hanya dalam {topic}",
     "notRelevant": "Sumber tidak relevan",
     "taught": "Dipelajari: pesan seperti ini tidak akan mencari sumber lagi.",
     "hedgeBadgeTitle": "Ungkapan ragu-ragu: {hedges}",

@@ -46,6 +46,8 @@
     "expandScope": "Élargir la portée ?",
     "smallTalk": "Interprété comme un échange informel : aucune source n'a été consultée.",
     "forceSources": "Chercher quand même dans les sources",
+    "topicSpread": "Cette réponse s'appuie sur des notes de sujets différents. Si ta question ne visait que l'un d'eux, pose-la à nouveau dans ce sujet :",
+    "topicSpreadAsk": "Poser à nouveau la question uniquement dans {topic}",
     "notRelevant": "Sources non pertinentes",
     "taught": "Retenu : les messages de ce type n'utiliseront plus de sources.",
     "hedgeBadgeTitle": "Formules d'hésitation : {hedges}",

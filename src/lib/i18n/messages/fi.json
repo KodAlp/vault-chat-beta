@@ -46,6 +46,8 @@
 		"expandScope": "Laajennetaanko rajausta?",
 		"smallTalk": "Tulkittiin jutusteluksi, joten lähteitä ei haettu.",
 		"forceSources": "Hae lähteistä silti",
+		"topicSpread": "Tämä vastaus perustuu eri aiheiden muistiinpanoihin. Jos kysymyksesi koski vain yhtä niistä, kysy uudelleen sen sisällä:",
+		"topicSpreadAsk": "Kysy uudelleen vain aiheessa {topic}",
 		"notRelevant": "Lähteet eivät liity asiaan",
 		"taught": "Opittu: tämänkaltaisille viesteille ei haeta lähteitä jatkossa.",
 		"hedgeBadgeTitle": "Epäröintifraasit: {hedges}",

@@ -46,6 +46,8 @@
 		"expandScope": "Rozszerzyć zakres?",
 		"smallTalk": "Rozpoznano jako rozmowę towarzyską, więc nie szukano źródeł.",
 		"forceSources": "Mimo to przeszukaj źródła",
+		"topicSpread": "Ta odpowiedź korzysta z notatek z różnych tematów. Jeśli pytanie dotyczyło tylko jednego z nich, zapytaj ponownie w jego obrębie:",
+		"topicSpreadAsk": "Zapytaj ponownie tylko w temacie {topic}",
 		"notRelevant": "Źródła są nieistotne",
 		"taught": "Zapamiętano: przy podobnych wiadomościach źródła nie będą już wyszukiwane.",
 		"hedgeBadgeTitle": "Frazy asekuracyjne: {hedges}",

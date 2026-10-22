@@ -117,6 +117,10 @@ export interface ChatMessage {
 	/** The reranker searched the notes and judged nothing relevant (RetrieveResult reason 'rerank-no-match').
 	 * Drives Message.svelte's "not in your notes" banner, which does not depend on the model saying so. Client-only. */
 	noRelevantSources?: boolean;
+	/** The 3-4 distinct topics (frontmatter domains) this answer's sources came from, set only when there
+	 * are at least 3 and the request had no topic filter. Drives Message.svelte's "ask within one topic"
+	 * banner. Client-only, never persisted — same footing as narrowScope/smallTalk. */
+	topicSpread?: string[];
 	/** Hedge/uncertainty phrases detected in this message's reasoning trace (when there was one) and its
 	 * final answer text (always) — see $lib/server/hallucination.ts. Empty/absent means none found. */
 	hedges?: string[];
@@ -216,6 +220,8 @@ export type StreamEvent =
 			smallTalk?: boolean;
 			/** See ChatMessage.noRelevantSources. */
 			noRelevantSources?: boolean;
+			/** See ChatMessage.topicSpread. */
+			topicSpread?: string[];
 			hedges?: string[];
 			nearCtxLimit?: boolean;
 			/** Mirrors RetrieveResult.embeddingIssue — set when this answer's sources

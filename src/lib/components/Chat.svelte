@@ -174,6 +174,12 @@
 		if (question && !isStreaming) void ask(question, true);
 	}
 
+	/** "Yalnız bu konuda sor": the same question again, limited to one topic (domain). */
+	function askInTopic(i: number, domain: string) {
+		const question = questionBefore(i);
+		if (question && !isStreaming) void ask(question, false, [domain]);
+	}
+
 	/** "Kaynaklar alakasız": this short message was small talk — remember it. */
 	async function teachNotRelevant(i: number) {
 		const question = questionBefore(i);
@@ -204,7 +210,7 @@
 		return question !== null && shouldOfferNotRelevant(messages[i].sources, question.length);
 	}
 
-	async function ask(question: string, forceSources = false) {
+	async function ask(question: string, forceSources = false, domains?: string[]) {
 		errorMessage = '';
 		messages.push({ id: crypto.randomUUID(), role: 'user', content: question });
 		messages.push({ id: crypto.randomUUID(), role: 'assistant', content: '' });
@@ -267,7 +273,8 @@
 				titleProvider: settings.defaultProvider,
 				vault: vaultId,
 				includedPaths,
-				forceSources: forceSources || undefined
+				forceSources: forceSources || undefined,
+				domains
 			};
 			const res = await fetch('/api/chat', {
 				method: 'POST',
@@ -327,6 +334,7 @@
 						assistantMessage.narrowScope = event.narrowScope;
 						assistantMessage.smallTalk = event.smallTalk;
 						assistantMessage.noRelevantSources = event.noRelevantSources;
+						assistantMessage.topicSpread = event.topicSpread;
 						assistantMessage.hedges = event.hedges;
 						assistantMessage.nearCtxLimit = event.nearCtxLimit;
 						assistantMessage.embeddingIssue = event.embeddingIssue;
@@ -336,10 +344,14 @@
 						sawErrorEvent = true;
 					}
 					else if (event.type === 'notice') {
-						(assistantMessage.notices ??= []).push({ message: event.message, code: event.code, params: event.params });
+						// Assign first, then push through the property: `(x.a ??= []).push()` pushes onto the
+						// plain array, not the $state proxy wrapping it, and the first entry is lost.
+						assistantMessage.notices ??= [];
+						assistantMessage.notices.push({ message: event.message, code: event.code, params: event.params });
 					}
 					else if (event.type === 'toolCall') {
-						(assistantMessage.toolCalls ??= []).push({
+						assistantMessage.toolCalls ??= [];
+						assistantMessage.toolCalls.push({
 							skill: event.skill,
 							path: event.path,
 							status: 'reading'
@@ -507,6 +519,7 @@
 						streaming={isStreaming && i === messages.length - 1}
 						{onExpandScope}
 						onForceSources={message.smallTalk ? () => retryWithSources(i) : undefined}
+						onTopic={message.topicSpread?.length ? (domain) => askInTopic(i, domain) : undefined}
 						onNotRelevant={message.sources?.length && canTeach(i) ? () => teachNotRelevant(i) : undefined}
 						onReindex={message.embeddingIssue === 'mismatch' ? () => (reindexDialogOpen = true) : undefined}
 					/>

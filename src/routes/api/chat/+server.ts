@@ -3,6 +3,7 @@ import { fail, errorPayload } from '$lib/server/app-error';
 import type { ErrorCode, ErrorParams } from '$lib/errors';
 import { retrieve } from '$lib/server/retrieve';
 import { buildRetrievalQuery } from '$lib/server/retrieval-query';
+import { topicSpread } from '$lib/server/topic-spread';
 import { buildPromptMessages } from '$lib/server/prompt';
 import { chatLocalModel, chatWithFallback, modelCaps, servedContext, supportsPrefixResume } from '$lib/server/providers/registry';
 import { startFlight, endFlight } from '$lib/server/providers/inflight';
@@ -727,12 +728,15 @@ ${before}` : finalThinking) : before;
 				}
 				if (!exhaustedEmpty) {
 					const hedges = computeHedges();
+					// Sources from 3+ topics: the question may have meant only one (ephemeral, like smallTalk).
+					const topics = body.domains?.length || smallTalk || noRelevantSources ? [] : topicSpread(sources);
 					send({
 						type: 'done',
 						sources,
 						narrowScope,
 						smallTalk: smallTalk || undefined,
 						noRelevantSources: noRelevantSources || undefined,
+						topicSpread: topics.length ? topics : undefined,
 						hedges: hedges.length ? hedges : undefined,
 						nearCtxLimit: nearCtxLimit || undefined,
 						embeddingIssue

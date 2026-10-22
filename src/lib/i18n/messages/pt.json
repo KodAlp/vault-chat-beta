@@ -46,6 +46,8 @@
     "expandScope": "Ampliar o escopo?",
     "smallTalk": "Interpretado como conversa informal, então nenhuma fonte foi consultada.",
     "forceSources": "Pesquisar nas fontes mesmo assim",
+    "topicSpread": "Esta resposta usa notas de assuntos diferentes. Se a sua pergunta se referia a apenas um deles, pergunte novamente dentro dele:",
+    "topicSpreadAsk": "Perguntar novamente só dentro de {topic}",
     "notRelevant": "As fontes não são relevantes",
     "taught": "Aprendido: da próxima vez, mensagens como esta não usarão fontes.",
     "hedgeBadgeTitle": "Expressões de incerteza: {hedges}",
