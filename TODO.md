@@ -2,7 +2,7 @@
 
 Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncellenir.
 
-**Son güncelleme:** 2026-10-22 · Acil boş. Sohbette tekrar döngüsü kesiliyor, sızan `</think>` öncesi düşünmeye taşınıyor (`8715f15`, dal `claude/neredeyiz-12615d`, main'e alınmadı). Belirsiz soru istem kuralı ölçüldü ve bırakıldı.
+**Son güncelleme:** 2026-10-22 · Acil boş. Sohbette tekrar döngüsü kesiliyor, sızan `</think>` öncesi düşünmeye taşınıyor (`8715f15`); belirsiz soru için konu çipi (`a7c19f3`). Dal `claude/neredeyiz-12615d`, main'e alınmadı.
 
 ## Kurallar
 
@@ -104,8 +104,9 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 - [ ] **Türkçe soru İngilizce kasada reranker'a ulaşmıyor.** `default` kasasında "B-ağacında düğüm bölünmesi nasıl olur?" için vektör havuzunda B-ağacı parçası yok, en iyi skor 0,0007 ve `rerank-no-match` dönüyor (İngilizce eşdeğeri 0,37 ile kaynak buluyor). Reranker açıkken çapraz-dil sorularda yanlış "notlarda yok" riski; çapraz-dil altın seti ya da sorgu çevirisiyle sınanmalı. `O` · #29
 - [ ] **Reranker 6 GB kartta sınırda.** qwen3:8b ile hiç sığmaz (kapı atlıyor). `qwen3:8b-bart-iq4xs` (num_ctx 8192, flash attention + q8_0 KV) 4,63 GB tutuyor, ~1075 MiB boş kalıyor: model önce yüklüyken reranker yanında çalışıyor (eşik 900 MiB, kısmen paylaşımlı belleğe taşıyor; sohbet 33–35 tok/s, retrieval 0,9 sn). GPU'yu kullanan başka bir uygulama (Google Play Games emülatörü ~600 MiB) varken kapı atlıyor. Ollama'yı `OLLAMA_FLASH_ATTENTION`/`OLLAMA_KV_CACHE_TYPE` olmadan başlatmak modeli 4,98 GB'a çıkarıyor ve reranker'ı dışarıda bırakıyor. `O` · #29
 - [ ] **Reranker modeli paketli uygulamada.** İlk indirme `<dataDir>/models/hf` altına ~2,3 GB iner; bundled Python'da torch/transformers yok (pythonOk=false görünür). Kurulu uygulamada denenmedi. `O` · #29
-- [ ] **Belirsiz soruda netleştirme yok.** Model tek yorumu sessizce seçiyor; istem kuralı 2026-10-22 pilotunda işe yaramadı (net sorulara da soru ekliyor). Kalan yol uygulama tarafı: parçalar ≥3 konu klasöründen geliyorsa (belirsizde %53, normalde ~%12) cevabın altında "Notlarda farklı bağlamlar var: os · embedded · db" çipi, tıklayınca soru o klasörle sınırlanır. `O`
-- [ ] **Döngü korumasını ve `</think>` taşımasını canlı dene.** Yalnız birim testli ve kayıtlı cevaplarla benzetimli; gerçek akışta `replaceContent` ile kırpma, bildirim ve kayıt denenmedi. Rota düzeyinde test altyapısı yok. `K`
+- [ ] **Konu çipi iki konulu belirsizliği kaçırıyor.** Belirsiz soruların yarısı ("Heap": dsa + c, "lock": databases + os) yalnız iki konuya yayılıyor; iki konuda bant normal soruların %46'sında çıkardı. Konu başına parça skorlarının yakınlığı gibi ek bir koşul ölçülebilir. `O`
+- [ ] **qwen3:8b "İzolasyon nasıl sağlanıyor?" sorusunda Cebuano metne kayıyor.** Bench'te (f3_044) ve canlıda üç kez aynı; döngü koruması kesiyor ama cevap anlamsız. Konu sınırlı yeniden soruda da sürdü (geçmişteki bozuk cevap etkiliyor olabilir). Dil denetimi (cevap kasa dillerinde mi) düşünülebilir. `O`
+- [ ] **`</think>` taşımasını canlı gör.** Döngü kesme canlıda çalıştı; başıboş `</think>` yalnız birim testli. Rota düzeyinde test altyapısı yok. `K`
 - [ ] **Benchmark öz-tutarlılığı Sonnet yargıcıyla sınanmadı.** `--rejudge` ve `--sanity` alt ajan yolunda çalışmadı; 10 cevabı ayrı ajana yeniden puanlatıp uyumu ölç. `K`
 - [ ] **Reranker multi_hop ve ambiguous'ta kazanç vermiyor.** Tam sette multi_hop R@5 0,62 → 0,60, ambiguous 0,40 → 0,37 (tek yorumu öne çekiyor); üretime alırken dosya başına çeşitlilik ya da iki aşamalı sorgu düşünülebilir. `O`
 
@@ -140,6 +141,7 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 Yalnız son iki haftanın kaydı tutulur; daha eskisi git geçmişindedir.
 
 - 2026-10-22: qwen3 çıktı bozulmaları: sohbette tekrar döngüsü algılanıyor (son 200 karakter 3. kez görülünce), üretim durup tekrar kırpılıyor, açık kod bloğu kapatılıyor; başıboş `</think>` öncesi düşünme bölümüne taşınıyor; iki yeni bildirim 23 dilde. 896 gerçek cevapta 12 isabet, hepsi bozuk tekrar. Çince sızıntısı uygulamada zaten yakalanıyordu (bench bu korumayı atlıyor). Rota düzeyinde test yok, canlı döngüyle denenmedi. `docs/dev/cikti-bozulmasi-ve-belirsiz-soru-2026-10-22.md` `8715f15`
+- 2026-10-22: belirsiz soru için konu çipi: kaynaklar ≥3 konudan (frontmatter `domains`, "genel" hariç) geliyorsa cevabın altında bant ve konu düğmeleri, tıklayınca soru yalnız o konuyla yeniden soruluyor; `domains` filtresi artık geniş aday havuzu kullanıyor. Sohbette ilk bildirimin hiç görünmemesi (Temmuz'dan beri, `??=` + `$state`) düzeldi. Yalıtılmış veriyle canlı denendi: 4 konulu cevapta bant, "databases" ile 6/6 databases kaynağı, döngü kesme ve bildirimi, mobilde sarma. `a7c19f3`
 - 2026-10-22: belirsiz soru istem kuralı pilotu (15 belirsiz + 15 kontrol, kör Sonnet yargısı): kural netleştirme sorusunu 1/15 → 10/15'e çıkarıyor ama net soruların 11/15'ine de ekliyor, anlamları ayırmıyor, doğruluk değişmiyor. Üretime alınmadı.
 
 - 2026-10-21: #28 istem dili × educational-agent A/B, 40 soru × 4 varyant, kör Sonnet yargısı: correctness 3,73–3,76, hiçbir eşli fark anlamlı değil (p ≥ 0,5); skill +%55–80 üretim süresi. Üretim istemi Türkçe kalıyor. `docs/rag-ab28-istem-dili-2026-10-21.md` `b3aa832` `15a04a1`
