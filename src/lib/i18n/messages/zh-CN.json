@@ -46,6 +46,8 @@
     "expandScope": "扩大范围？",
     "smallTalk": "被识别为闲聊，因此未检索来源。",
     "forceSources": "仍然搜索来源",
+    "topicSpread": "此回答综合了不同主题的笔记。如果你的问题只针对其中一个，请在该主题内重新提问：",
+    "topicSpreadAsk": "仅在 {topic} 主题内重新提问",
     "notRelevant": "来源不相关",
     "taught": "已学习：下次遇到此类消息将不再检索来源。",
     "hedgeBadgeTitle": "模糊措辞：{hedges}",

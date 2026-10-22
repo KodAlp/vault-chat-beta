@@ -48,6 +48,8 @@
 		"expandScope": "Utöka omfånget?",
 		"smallTalk": "Tolkades som småprat, så inga källor söktes.",
 		"forceSources": "Sök i källorna ändå",
+		"topicSpread": "Det här svaret bygger på anteckningar om olika ämnen. Om din fråga bara gällde ett av dem, fråga igen inom det:",
+		"topicSpreadAsk": "Fråga igen endast inom {topic}",
 		"notRelevant": "Källorna är irrelevanta",
 		"taught": "Inlärt: meddelanden som det här får inga källor nästa gång.",
 		"hedgeBadgeTitle": "Osäkerhetsfraser: {hedges}",

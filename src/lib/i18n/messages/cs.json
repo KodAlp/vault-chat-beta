@@ -46,6 +46,8 @@
 		"expandScope": "Rozšířit rozsah?",
 		"smallTalk": "Vyhodnoceno jako běžná konverzace, zdroje se proto nehledaly.",
 		"forceSources": "Přesto hledat ve zdrojích",
+		"topicSpread": "Tato odpověď čerpá z poznámek k různým tématům. Pokud se tvá otázka týkala jen jednoho z nich, zeptej se znovu v rámci něj:",
+		"topicSpreadAsk": "Zeptat se znovu jen v tématu {topic}",
 		"notRelevant": "Zdroje nejsou relevantní",
 		"taught": "Zapamatováno: u podobných zpráv se příště zdroje nepoužijí.",
 		"hedgeBadgeTitle": "Výrazy vyjadřující nejistotu: {hedges}",

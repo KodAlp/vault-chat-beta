@@ -48,6 +48,8 @@
 		"expandScope": "Kapsamı genişlet?",
 		"smallTalk": "Sohbet olarak algılandı, kaynak aranmadı.",
 		"forceSources": "Yine de kaynak ara",
+		"topicSpread": "Bu cevap farklı konulardaki notlardan derlendi. Sorun yalnız birini kastediyorsa, o konuyla yeniden sor:",
+		"topicSpreadAsk": "Soruyu yalnız {topic} konusunda yeniden sor",
 		"notRelevant": "Kaynaklar alakasız",
 		"taught": "Öğrenildi: bu tür mesajlara bir dahaki sefere kaynak eklenmeyecek.",
 		"hedgeBadgeTitle": "Belirsizlik ifadeleri: {hedges}",

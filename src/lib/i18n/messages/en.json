@@ -48,6 +48,8 @@
 		"expandScope": "Expand scope?",
 		"smallTalk": "Read as small talk, so no sources were looked up.",
 		"forceSources": "Search sources anyway",
+		"topicSpread": "This answer draws on notes from different topics. If your question meant only one of them, ask again within it:",
+		"topicSpreadAsk": "Ask again within {topic} only",
 		"notRelevant": "Sources are irrelevant",
 		"taught": "Learned: messages like this will get no sources next time.",
 		"hedgeBadgeTitle": "Hedging phrases: {hedges}",

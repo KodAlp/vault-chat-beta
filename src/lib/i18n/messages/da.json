@@ -46,6 +46,8 @@
 		"expandScope": "Udvid omfanget?",
 		"smallTalk": "Opfattet som småsnak, så der blev ikke slået kilder op.",
 		"forceSources": "Søg i kilder alligevel",
+		"topicSpread": "Dette svar bygger på noter om forskellige emner. Hvis dit spørgsmål kun handlede om et af dem, så spørg igen inden for det:",
+		"topicSpreadAsk": "Spørg igen kun inden for {topic}",
 		"notRelevant": "Kilderne er irrelevante",
 		"taught": "Lært: beskeder som denne får ingen kilder næste gang.",
 		"hedgeBadgeTitle": "Forbehold: {hedges}",

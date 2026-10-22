@@ -46,6 +46,8 @@
 		"expandScope": "Bereik vergroten?",
 		"smallTalk": "Gelezen als een gewoon gesprekje, dus er zijn geen bronnen opgezocht.",
 		"forceSources": "Toch in bronnen zoeken",
+		"topicSpread": "Dit antwoord put uit notities over verschillende onderwerpen. Als je vraag er maar één bedoelde, vraag het dan opnieuw binnen dat onderwerp:",
+		"topicSpreadAsk": "Opnieuw vragen alleen binnen {topic}",
 		"notRelevant": "Bronnen zijn niet relevant",
 		"taught": "Geleerd: bij berichten als dit worden voortaan geen bronnen opgezocht.",
 		"hedgeBadgeTitle": "Voorbehoudsformuleringen: {hedges}",

@@ -46,6 +46,8 @@
     "expandScope": "Umfang erweitern?",
     "smallTalk": "Als Smalltalk gewertet, daher wurden keine Quellen abgefragt.",
     "forceSources": "Trotzdem in Quellen suchen",
+    "topicSpread": "Diese Antwort stützt sich auf Notizen zu verschiedenen Themen. Wenn deine Frage nur eines davon meinte, frage innerhalb dieses Themas erneut:",
+    "topicSpreadAsk": "Nur innerhalb von {topic} erneut fragen",
     "notRelevant": "Quellen sind irrelevant",
     "taught": "Gemerkt: Bei solchen Nachrichten werden künftig keine Quellen verwendet.",
     "hedgeBadgeTitle": "Unsicherheitsformulierungen: {hedges}",

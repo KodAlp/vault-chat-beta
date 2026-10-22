@@ -90,7 +90,7 @@ export function countUnindexedFiles(v: VaultContext): number {
 
 const DEFAULT_K = 8;
 const OVERFETCH_FACTOR = 3;
-/** includedPaths narrows the candidate pool after the KNN search, not
+/** includedPaths (and likewise a domains filter) narrows the candidate pool after the KNN search, not
  * before it — a low overfetch factor means every one of the top k*N
  * nearest neighbors could legitimately fall outside the scope and the
  * result silently comes back empty. Raised from 10: with 2155 chunks
@@ -264,7 +264,8 @@ export async function retrieve(
 	const database = getDb(v);
 	if (!database) return { chunks: [], narrowScope: false, reason: 'unindexed' };
 	const k = opts.k ?? DEFAULT_K;
-	const overfetch = opts.includedPaths?.length ? SCOPED_OVERFETCH_FACTOR : OVERFETCH_FACTOR;
+	// A topic (domains) filter is a post-filter after the KNN search too, so it needs the same wide pool.
+	const overfetch = opts.includedPaths?.length || opts.domains?.length ? SCOPED_OVERFETCH_FACTOR : OVERFETCH_FACTOR;
 	const rerankWanted = opts.rerank === true && (opts.mode === undefined || opts.mode === 'auto');
 	// The cross-encoder wants RERANK_CANDIDATES survivors of the filters, so the pool may not be smaller than that.
 	const knnLimit = rerankWanted ? Math.max(k * overfetch, RERANK_CANDIDATES) : k * overfetch;
@@ -460,7 +461,7 @@ export async function retrieve(
 	// keyword candidates carry via 'keyword', which selectChunks exempts from it,
 	// so the co2 path is not dropped by the threshold any more than AND is.
 	const fallbackQuery = opts.keywordQuery ?? query;
-	const pool = k * (opts.includedPaths?.length ? SCOPED_OVERFETCH_FACTOR : OVERFETCH_FACTOR);
+	const pool = k * (opts.includedPaths?.length || opts.domains?.length ? SCOPED_OVERFETCH_FACTOR : OVERFETCH_FACTOR);
 	const mode: 'and' | 'co2' | 'or' = opts.mode === 'keyword' ? 'or' : embeddingIssue === 'fts-only' ? 'co2' : 'and';
 	let hits: KeywordHit[];
 	if (mode === 'or') {

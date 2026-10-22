@@ -15,6 +15,7 @@
 		streaming = false,
 		onExpandScope,
 		onForceSources,
+		onTopic,
 		onNotRelevant,
 		onReindex
 	}: {
@@ -24,6 +25,8 @@
 		onExpandScope?: () => void;
 		/** Shown when no sources were looked up because the message read as small talk. */
 		onForceSources?: () => void;
+		/** Offered when the sources span several topics: asks the same question again within one of them. */
+		onTopic?: (domain: string) => void;
 		/** Offered under a sourced answer to a short message: teaches the gate it was small talk. */
 		onNotRelevant?: () => void;
 		/** Aşama 3c — offered when message.embeddingIssue === 'mismatch': opens
@@ -146,6 +149,19 @@
 			<div class="d">{t('Message.noRelevantSources')}</div>
 		</div>
 	{/if}
+	{#if message.role === 'assistant' && message.topicSpread?.length && !streaming && onTopic}
+		<div class="vc-banner info extra">
+			<Icon name="info" />
+			<div class="d">
+				{t('Message.topicSpread')}
+				<span class="topic-buttons">
+					{#each message.topicSpread as topic (topic)}
+						<button type="button" class="vc-btn ghost" aria-label={t('Message.topicSpreadAsk', { topic })} onclick={() => onTopic(topic)}>{topic}</button>
+					{/each}
+				</span>
+			</div>
+		</div>
+	{/if}
 	{#if message.role === 'assistant' && message.narrowScope && !streaming}
 		<div class="vc-banner warning extra">
 			<Icon name="warning" />
@@ -241,6 +257,13 @@
 		align-items: center;
 		gap: var(--space-1) var(--space-2);
 		color: var(--label-secondary);
+	}
+
+	.topic-buttons {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--space-1) var(--space-2);
+		min-width: 0;
 	}
 
 	.extra .vc-btn {
