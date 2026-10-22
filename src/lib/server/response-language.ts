@@ -134,11 +134,26 @@ export function resolveLanguageName(name: string): string | undefined {
 export interface LanguageDecision {
 	iso3: string;
 	englishName: string;
-	tier: 'reliable' | 'narrowed' | 'fallback';
+	/** 'generic': no language is named; the directive asks for the message's own language (see
+	 * SHORT_TRUST_LETTERS). iso3 is 'und' and englishName empty for it. */
+	tier: 'reliable' | 'narrowed' | 'fallback' | 'generic';
 	/** Top1/top2 margin at whichever tier actually decided — full-language-set margin for
 	 * 'reliable', narrowed-candidate-set margin for 'narrowed', absent for 'fallback'. */
 	margin?: number;
 }
+
+/**
+ * Below this many letters, a full-set detection is trusted only when it names a language already
+ * in play (the vault's primary, English, or one reliably seen in an earlier turn). Turkish loanwords
+ * ending in -asyon ("İzolasyon nasıl sağlanıyor?", 24 letters) read as Cebuano with margin 0.20-0.23,
+ * and "(Answer in Cebuano.)" made qwen3:8b answer in Cebuano 6/6 times. Measured 2026-10-22: of the
+ * 310 non-follow-up golden questions only that one hits this case; telling the model to use the
+ * message's own language instead gave Turkish 8/8 on four -asyon questions and kept short German,
+ * Spanish, Italian and Portuguese questions in their language (5 of 6). Naming no language for every
+ * short message was worse ("thanks a lot, that really helped!" came back Turkish), hence this
+ * narrow gate.
+ */
+export const SHORT_TRUST_LETTERS = 40;
 
 /**
  * Decides what language to name in a single directive line appended to the LAST user message
@@ -175,21 +190,9 @@ export function decideResponseLanguage(
 		return { iso3: primaryIso3, englishName: primaryEnglishName, tier: 'fallback' };
 	}
 
-	// Tier 1: reliable on the full ~82-language set.
-	if (letters >= MIN_LETTERS) {
-		const all = francAll(stripped, { minLength: 1 });
-		if (all.length >= 2 && all[0][0] !== 'und') {
-			const margin = all[0][1] - all[1][1];
-			if (margin >= MARGIN_THRESHOLD) {
-				const name = iso3ToEnglishName(all[0][0]);
-				if (name) return { iso3: all[0][0], englishName: name, tier: 'reliable', margin };
-			}
-		}
-	}
-
-	// Tier 2: narrow the candidate set to {primary, English} union whatever languages were
-	// reliably detected (same full-set gate) in this conversation's earlier user turns, then
-	// re-run franc-min restricted to just those candidates via its `only` option.
+	// Candidate set for tier 2 (and for the short-message gate in tier 1): {primary, English} union
+	// whatever languages were reliably detected (same full-set gate) in this conversation's earlier
+	// user turns.
 	const candidates = new Set<string>(resolvedPrimary ? [resolvedPrimary, 'eng'] : ['eng']);
 	for (const prior of priorUserMessages) {
 		const priorStripped = stripForDetection(prior);
@@ -198,6 +201,25 @@ export function decideResponseLanguage(
 		if (priorAll.length < 2 || priorAll[0][0] === 'und') continue;
 		if (priorAll[0][1] - priorAll[1][1] >= MARGIN_THRESHOLD) candidates.add(priorAll[0][0]);
 	}
+
+	// Tier 1: reliable on the full ~82-language set.
+	if (letters >= MIN_LETTERS) {
+		const all = francAll(stripped, { minLength: 1 });
+		if (all.length >= 2 && all[0][0] !== 'und') {
+			const margin = all[0][1] - all[1][1];
+			if (margin >= MARGIN_THRESHOLD) {
+				const name = iso3ToEnglishName(all[0][0]);
+				const shortAndNew = letters < SHORT_TRUST_LETTERS && !candidates.has(all[0][0]);
+				if (name && !shortAndNew) return { iso3: all[0][0], englishName: name, tier: 'reliable', margin };
+				// A short message read as a language nobody in this conversation uses: name none. Tier 2
+				// is no better here — restricted to {tur, eng} it picks English for the -asyon questions
+				// (franc-min even reads a plain Turkish sentence as Lingala).
+				if (name) return { iso3: 'und', englishName: '', tier: 'generic' };
+			}
+		}
+	}
+
+	// Tier 2: re-run franc-min restricted to the candidate set via its `only` option.
 
 	const narrowed = francAll(stripped, { only: [...candidates], minLength: 1 });
 	let chosenIso3 = primaryIso3;
@@ -219,5 +241,6 @@ export function decideResponseLanguage(
  * prompt.ts's buildPromptMessages. No trailing/leading whitespace; the caller decides how to join
  * it onto the message (prompt.ts uses "\n\n" the same way V2/V3/V4 did in the eval script). */
 export function responseLanguageDirective(decision: LanguageDecision): string {
+	if (decision.tier === 'generic') return '(Answer in the same language as this message.)';
 	return `(Answer in ${decision.englishName}.)`;
 }

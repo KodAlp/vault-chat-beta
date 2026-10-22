@@ -85,6 +85,24 @@ test('resolveLanguageName maps language names as users type them, in any case or
 	assert.equal(resolveLanguageName('Klingonca'), undefined);
 });
 
+test('a short Turkish -asyon question misread as Cebuano names no language on a first message', () => {
+	for (const q of ['İzolasyon nasıl sağlanıyor?', 'izolasyon nasıl sağlanıyor?', 'Senkronizasyon nasıl yapılıyor?']) {
+		const d = decideResponseLanguage(q, [], 'Türkçe');
+		assert.equal(d.tier, 'generic', q);
+		assert.equal(responseLanguageDirective(d), '(Answer in the same language as this message.)');
+	}
+});
+
+test('the same short question after earlier turns still names no language (tier 2 would pick English)', () => {
+	const d = decideResponseLanguage('İzolasyon nasıl sağlanıyor?', ['Bir B-ağacına çok fazla yeni anahtar eklendiğinde denge nasıl korunuyor?'], 'Türkçe');
+	assert.equal(d.tier, 'generic');
+});
+
+test('a short message in a language already reliably used earlier is still named', () => {
+	const d = decideResponseLanguage('Wie funktioniert ein Mutex genau?', ['Wie bleibt ein B-Baum ausgeglichen, wenn man viele neue Schlüssel einfügt?'], 'Türkçe');
+	assert.notEqual(d.tier, 'generic');
+});
+
 test('an English primary language falls back to English, not to a misdetected one', () => {
 	const d = decideResponseLanguage('why?', [], 'English');
 	assert.equal(d.tier, 'fallback');
