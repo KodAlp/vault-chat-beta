@@ -2,7 +2,7 @@
 
 Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncellenir.
 
-**Son güncelleme:** 2026-10-21 · Acil boş. #28 ölçüldü: istem dili ve educational-agent doğruluğu değiştirmiyor, üretim Türkçe kalıyor. #51'de eylemler SHA'ya sabitlendi, sqlite-vec'siz kasa yalnız-FTS ile açılıyor. Yerel main'e alındı (`0d75d17`), push yok.
+**Son güncelleme:** 2026-10-22 · Acil boş. Sohbette tekrar döngüsü kesiliyor, sızan `</think>` öncesi düşünmeye taşınıyor (`8715f15`, dal `claude/neredeyiz-12615d`, main'e alınmadı). Belirsiz soru istem kuralı ölçüldü ve bırakıldı.
 
 ## Kurallar
 
@@ -89,7 +89,6 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 
 - [ ] **Aynı Ollama'ya ikinci istek 30 sn bağlantı zaman aşımına düşüyor.** #79 canlı denemesinde (ikinci Ollama, qwen3:4b) quiz+quiz+kart aynı anda başlatılınca kartlar `PROVIDER_TIMEOUT_CONNECT` ile düştü; sohbet de cevaptan hemen sonra (arka plandaki başlık üretimi sürerken) bir kez `timeout_connect` verdi. Yerel Ollama için `connectMs`'i büyüt ya da yerel istekleri sırala. `K–O`
 - [ ] **narrowScope küçük kasada tetiklenmiyor.** Varsayılan eşik 0,6'da bge-m3 alakasız parçaları da eşiğin altında buluyor; 12 parçalık kasada kapsam dışı soru "alakasız"/uydurma cevap aldı. Bildirim ve "Kapsamı genişlet?" ancak eşik 0,42 yapılınca çıktı (sohbette ve üretimde çalışıyor). Eşiği gerçek kasalarda ölç. `O`
-- [ ] **qwen3:4b cevabında düşünme metni gövdeye sızıyor.** #79 denemesinde cevap gövdesinde akıl yürütme ve sonda düz `</think>` göründü. `K`
 - [ ] **Antivirüs: Defender açık makinede EICAR denemesi.** Bu makinede Defender kapalı (Kaspersky etkin): MpCmdRun "tarayamadım" durumunda da çıkış 2 veriyor, çıktıdaki `Failed with hr` satırıyla ayrılıyor. Tehdit yolu yalnız sahte çalıştırıcıyla sınandı. Tarama hatasında içe aktarma sürüyor (karar gerekirse değiştir); ek görsel yükleme ve klasör/Markdown içe aktarma bilerek taranmıyor. `K`
 - [ ] **#77 öneri çipini gerçek veriyle gör.** Çip yalnız vadesi gelmiş kart ya da zayıf konu olunca çıkıyor; birim testli, tarayıcıda gerçek veriyle görülmedi. Yeni çeviri anahtarlarının (çip, antivirüs düğmesi) 21 dili ana dili konuşan biri tarafından okunmadı. `K`
 - [ ] **Renksiz `border` düzeltmesinin yan etkisine bak.** `app.css`'e eklenen genel `border-color: var(--color-border)` kuralı çıplak `border` kullanan ~11 yeri düzeltti (LauncherPanel, gömme/MCP/link kartları); başka bir yerde bilerek koyu çerçeve kullanılıyorsa açıkça renk sınıfı ister. LauncherPanel kart içinde dar: "Yeniden algıla" alt satıra kayıyor, "Etkin" düğmesi uzun panelin ortasında. `K`
@@ -105,8 +104,8 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 - [ ] **Türkçe soru İngilizce kasada reranker'a ulaşmıyor.** `default` kasasında "B-ağacında düğüm bölünmesi nasıl olur?" için vektör havuzunda B-ağacı parçası yok, en iyi skor 0,0007 ve `rerank-no-match` dönüyor (İngilizce eşdeğeri 0,37 ile kaynak buluyor). Reranker açıkken çapraz-dil sorularda yanlış "notlarda yok" riski; çapraz-dil altın seti ya da sorgu çevirisiyle sınanmalı. `O` · #29
 - [ ] **Reranker 6 GB kartta sınırda.** qwen3:8b ile hiç sığmaz (kapı atlıyor). `qwen3:8b-bart-iq4xs` (num_ctx 8192, flash attention + q8_0 KV) 4,63 GB tutuyor, ~1075 MiB boş kalıyor: model önce yüklüyken reranker yanında çalışıyor (eşik 900 MiB, kısmen paylaşımlı belleğe taşıyor; sohbet 33–35 tok/s, retrieval 0,9 sn). GPU'yu kullanan başka bir uygulama (Google Play Games emülatörü ~600 MiB) varken kapı atlıyor. Ollama'yı `OLLAMA_FLASH_ATTENTION`/`OLLAMA_KV_CACHE_TYPE` olmadan başlatmak modeli 4,98 GB'a çıkarıyor ve reranker'ı dışarıda bırakıyor. `O` · #29
 - [ ] **Reranker modeli paketli uygulamada.** İlk indirme `<dataDir>/models/hf` altına ~2,3 GB iner; bundled Python'da torch/transformers yok (pythonOk=false görünür). Kurulu uygulamada denenmedi. `O` · #29
-- [ ] **Belirsiz soruda netleştirme yok.** 15 ambiguous sorunun 9'u doğrulukta 2 aldı; model tek yorumu sessizce seçiyor. İstemde "birden çok anlam varsa sor" kuralı ya da retrieval'da farklı dosyalardan gelen eşit skorlu parçalarla tetikleme. `O`
-- [ ] **qwen3:8b çıktı bozulmaları.** 330 cevapta 4 tekrar döngüsü (biri 58 bin karakter), 5 cevaba Çince sözcük karışması, birkaç kesik cevap. Uygulamada tekrar algılayıp akışı kesme ve CJK sızıntısını işaretleme düşünülebilir. `K–O`
+- [ ] **Belirsiz soruda netleştirme yok.** Model tek yorumu sessizce seçiyor; istem kuralı 2026-10-22 pilotunda işe yaramadı (net sorulara da soru ekliyor). Kalan yol uygulama tarafı: parçalar ≥3 konu klasöründen geliyorsa (belirsizde %53, normalde ~%12) cevabın altında "Notlarda farklı bağlamlar var: os · embedded · db" çipi, tıklayınca soru o klasörle sınırlanır. `O`
+- [ ] **Döngü korumasını ve `</think>` taşımasını canlı dene.** Yalnız birim testli ve kayıtlı cevaplarla benzetimli; gerçek akışta `replaceContent` ile kırpma, bildirim ve kayıt denenmedi. Rota düzeyinde test altyapısı yok. `K`
 - [ ] **Benchmark öz-tutarlılığı Sonnet yargıcıyla sınanmadı.** `--rejudge` ve `--sanity` alt ajan yolunda çalışmadı; 10 cevabı ayrı ajana yeniden puanlatıp uyumu ölç. `K`
 - [ ] **Reranker multi_hop ve ambiguous'ta kazanç vermiyor.** Tam sette multi_hop R@5 0,62 → 0,60, ambiguous 0,40 → 0,37 (tek yorumu öne çekiyor); üretime alırken dosya başına çeşitlilik ya da iki aşamalı sorgu düşünülebilir. `O`
 
@@ -139,6 +138,9 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 ## Son tamamlananlar
 
 Yalnız son iki haftanın kaydı tutulur; daha eskisi git geçmişindedir.
+
+- 2026-10-22: qwen3 çıktı bozulmaları: sohbette tekrar döngüsü algılanıyor (son 200 karakter 3. kez görülünce), üretim durup tekrar kırpılıyor, açık kod bloğu kapatılıyor; başıboş `</think>` öncesi düşünme bölümüne taşınıyor; iki yeni bildirim 23 dilde. 896 gerçek cevapta 12 isabet, hepsi bozuk tekrar. Çince sızıntısı uygulamada zaten yakalanıyordu (bench bu korumayı atlıyor). Rota düzeyinde test yok, canlı döngüyle denenmedi. `docs/dev/cikti-bozulmasi-ve-belirsiz-soru-2026-10-22.md` `8715f15`
+- 2026-10-22: belirsiz soru istem kuralı pilotu (15 belirsiz + 15 kontrol, kör Sonnet yargısı): kural netleştirme sorusunu 1/15 → 10/15'e çıkarıyor ama net soruların 11/15'ine de ekliyor, anlamları ayırmıyor, doğruluk değişmiyor. Üretime alınmadı.
 
 - 2026-10-21: #28 istem dili × educational-agent A/B, 40 soru × 4 varyant, kör Sonnet yargısı: correctness 3,73–3,76, hiçbir eşli fark anlamlı değil (p ≥ 0,5); skill +%55–80 üretim süresi. Üretim istemi Türkçe kalıyor. `docs/rag-ab28-istem-dili-2026-10-21.md` `b3aa832` `15a04a1`
 - 2026-10-21: #51 sqlite-vec yüklenemezse kasa yalnız-FTS ile açılıyor (indeksleyici gömmesiz yazar, retrieve anahtar kelime yoluna düşer); iş akışı eylemleri commit SHA'ya sabitlendi. `014b43e` `946a100`
