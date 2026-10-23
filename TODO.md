@@ -2,7 +2,7 @@
 
 Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncellenir.
 
-**Son güncelleme:** 2026-10-23 · Acil boş. Public hazırlığı: FFL fontlar OFL'ye geçti, ikon atfı eklendi (`a191baa`), security.yml açıldı (`29f030d`); geçmişin yeniden yazılması ve desktop.yml tetikleyicisi kullanıcı onayı bekliyor. Dal `claude/derleme-durumu-c945b2`, main'e alınmadı.
+**Son güncelleme:** 2026-10-23 · Acil boş. Temiz geçmiş (e-posta noreply, FFL fontsuz, 521 commit) yeni özel repo `KodAlp/vault-chat-beta`'ya push edildi, sürüm 0.1.0 ve otomatik sürüm yükseltme (`npm run release`, `desktop:build` öncesi). Eski repo `vault-chat-alfa` (özel arşiv). Yerel repo ve worktree'ler hâlâ eski geçmişte.
 
 ## Kurallar
 
@@ -50,7 +50,7 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 ## Yapılabilir
 
 ### 1. Güvenlik ve CI
-- [ ] **Public öncesi kalan.** (1) Geçmişi yeniden yaz: 539 commit'te gerçek e-posta, `be531de`'den beri FFL font dosyaları ve prototiplere gömülü base64 fontlar (betik hazır, push yok); GitHub'daki `refs/pull/1/head` force push ile silinmediği için yeni repo önerildi. Sonra `.gitleaksignore` parmak izini yeni hash'le güncelle. (2) `desktop.yml`'ye main/PR tetikleyicisi (izin denetimi düzenlemeyi reddetti) ve README'deki CI cümlesi. (3) Fork PR onayı, dal koruması (adımlar `docs/dev/public-oncesi.md`). ARM64 derlemesi ve gerçek ARM makinesi denenmedi. `K–O` · #51
+- [ ] **Public öncesi kalan.** (1) Yerel repoyu yeni geçmişe geçir: `origin` → `vault-chat-beta`, eski v0.1.0/v0.2.0-beta.1 etiketleri, ana klasördeki commitsiz değişiklikler ve açık worktree dalları. (2) `desktop.yml`'ye main/PR tetikleyicisi (izin denetimi düzenlemeyi reddetti) ve README'deki CI cümlesi. (3) GitHub: fork PR onayı, dal koruması (`docs/dev/public-oncesi.md`), "Keep my email private" + "Block command line pushes that expose my email", sonra public. Genel `~/.gitconfig` e-postası hâlâ Gmail (bu repoda yerel ayar noreply). ARM64 denenmedi. `K–O` · #51
 
 ### 2. Notebook verileri
 - [ ] **Rusça kasası onarımı.** 14 uyarılı bekleyen; İngilizce/Mandarin/İspanyolca kasa sorusu. `O` · #21
@@ -139,6 +139,8 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 ## Son tamamlananlar
 
 Yalnız son iki haftanın kaydı tutulur; daha eskisi git geçmişindedir.
+
+- 2026-10-23: geçmiş git-filter-repo ile temizlendi (yazar e-postası noreply, Satoshi/Gambetta/FFL ve prototiplere gömülü fontlar tüm geçmişten çıktı, `.mailmap`/belgelerdeki adres; uç ağaç orijinalle aynı, gitleaks temiz) ve yeni `KodAlp/vault-chat-beta`'ya push edildi (`main` + `v0.1.0`). Sürüm 0.3.0 → 0.1.0; `scripts/release.mjs` Conventional Commits'ten patch/minor/major seçip `chore(release)` commit'i ve etiket oluşturuyor, `desktop:build` önce `--auto` ile çalıştırıyor (7 test). README rozeti etiketten otomatik. Bu repoda commit e-postası yerel ayarla noreply.
 
 - 2026-10-23: lisans denetimi (#51): kod bağımlılıkları ve indirilen modeller serbest lisanslı (copyleft yok); gitleaks 512 commit temiz. Fontshare FFL font dosyalarının repoda dağıtımını yasakladığı için Satoshi/Gambetta yerine OFL Figtree ve Newsreader (Google Fonts TTF → WOFF2, Türkçe kapsamı aynı; prototiplerdeki gömülü base64 fontlar da); Material Symbols (Apache-2.0) lisans dosyası ve THIRD_PARTY_NOTICES Fontlar/İkonlar tabloları. Geliştirme sunucusunda dört yüz yüklendi, slides testleri 31/31. `a191baa`; security.yml main/PR/haftalık `29f030d`.
 - 2026-10-23: main'den (`6721268`) Windows kurulum dosyası derlendi (worktree'de, 73 MB); kurulup denenmedi.
