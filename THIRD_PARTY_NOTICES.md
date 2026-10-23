@@ -84,7 +84,22 @@ Yalnızca kullanıcı matematik-yoğun/taranmış PDF dönüştürme için elle 
 
 ## Fontlar
 
-`static/fonts/` altında self-host edilen Satoshi (sans) ve Gambetta (serif) — ikisi de Fontshare'den, ITF Free Font License (FFL) ile lisanslı; uygulamada kullanımı ve yeniden dağıtımı serbest (bkz. `static/fonts/FFL-Satoshi.txt`, `static/fonts/FFL-Gambetta.txt`). Monospace için sistem yazı tipleri kullanılır, font dosyası dağıtılmaz.
+`static/fonts/` (ve tasarım kaynağı `yeni-dizayn/fonts/`) altında self-host edilen iki değişken font, ikisi de [SIL Open Font License 1.1](https://openfontlicense.org) ile lisanslı. OFL fontun yazılımla birlikte dağıtılmasına ve gömülmesine izin verir; lisans metni fontun yanında durur.
+
+| Font | Kullanım | Kaynak | Lisans |
+|---|---|---|---|
+| Figtree | Arayüz (sans) | [google/fonts `ofl/figtree`](https://github.com/google/fonts/tree/main/ofl/figtree), © The Figtree Project Authors | OFL-1.1 (`static/fonts/OFL-Figtree.txt`) |
+| Newsreader | Editoryal başlıklar (serif) | [google/fonts `ofl/newsreader`](https://github.com/google/fonts/tree/main/ofl/newsreader), © The Newsreader Project Authors | OFL-1.1 (`static/fonts/OFL-Newsreader.txt`) |
+
+Dosyalar Google Fonts deposundaki TTF'lerin değiştirilmeden WOFF2'ye çevrilmiş halidir (glif ya da ad değişikliği yok). Formüller için `static/mathlive-fonts/` altındaki KaTeX fontları MIT lisanslıdır (KaTeX). Monospace için sistem yazı tipleri kullanılır, font dosyası dağıtılmaz.
+
+## İkonlar
+
+| Kaynak | Dosyalar | Lisans |
+|---|---|---|
+| [Material Symbols](https://github.com/google/material-design-icons) (Google) | `static/icons/*.svg` (`repeat-stroke.svg` hariç) | Apache-2.0 (`static/icons/LICENSE-material-symbols.txt`) |
+| [Tabler Icons](https://github.com/tabler/tabler-icons) | `static/icons/repeat-stroke.svg` | MIT |
+| [Lucide](https://lucide.dev) (`@lucide/svelte`) | Arayüzde kalan birkaç ikon | ISC |
 
 ## Modeller (uygulamanın çalışma zamanında kullandığı, repoya dahil olmayan)
 

@@ -13,7 +13,7 @@ Tasarım sisteminin canlı hâli (önizlemeler, tokenlar, kapak) claude.ai'daki 
 | `tokens.css` | `tokens.json`'dan üretilmiş CSS değişkenleri + `@font-face` + `.text-*` tip sınıfları. Tema: `<html data-theme="light\|dark\|cream\|sand\|forest">` |
 | `components.css` | Bileşen stilleri (`vc-` önekli sınıflar), yalnızca token değişkenlerini okur |
 | `shadcn-kopru.css` | `src/app.css`'teki `@theme inline` bloğunun yeni sürümü + eski token adları için geçici takma adlar |
-| `fonts/` | Satoshi ve Gambetta değişken fontları (woff2) ve lisansları |
+| `fonts/` | Figtree ve Newsreader değişken fontları (woff2) ve lisansları |
 | `icons/` | Material Symbols SVG'leri (`#e3e3e3` mürekkep — CSS maskesi olarak kullan) |
 | `bilesenler/` | Her bileşenin bağımsız HTML önizlemesi; `index.html`'den başla. Üstten tema seçilir |
 | `animasyon/` | ThinkingChick bekleme animasyonu: çekirdek JS, Svelte 5 bileşeni, önerilen ChatBubble (bkz. `animasyon/README.md`) |
