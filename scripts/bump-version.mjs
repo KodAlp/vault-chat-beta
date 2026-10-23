@@ -7,7 +7,9 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const root = process.env.VC_RELEASE_ROOT
+	? path.resolve(process.env.VC_RELEASE_ROOT)
+	: path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const rel = (p) => path.join(root, p);
 const SEMVER = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
 
@@ -60,7 +62,7 @@ const cargoPkg = /(\[package\][^[]*?^version\s*=\s*")([^"]+)(")/m;
 add('src-tauri/Cargo.toml', (t) => [t.match(cargoPkg)?.[2]], (t, v) => sub(t, cargoPkg, `$1${v}$3`, 'Cargo.toml'));
 
 // Cargo.lock — uygulamanın kendi paketi (Cargo.toml'daki name)
-const cargoName = read('src-tauri/Cargo.toml').match(/\[package\][^[]*?^name\s*=\s*"([^"]+)"/m)?.[1];
+const cargoName = (existsSync(rel('src-tauri/Cargo.toml')) ? read('src-tauri/Cargo.toml') : '').match(/\[package\][^[]*?^name\s*=\s*"([^"]+)"/m)?.[1];
 if (cargoName) {
 	const lockRe = new RegExp(String.raw`(\[\[package\]\]\r?\nname = "${cargoName}"\r?\nversion = ")([^"]+)(")`);
 	add('src-tauri/Cargo.lock', (t) => [t.match(lockRe)?.[2]], (t, v) => sub(t, lockRe, `$1${v}$3`, 'Cargo.lock'));

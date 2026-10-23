@@ -11,7 +11,7 @@
 
 <p align="center">
   <img alt="Lisans: MIT" src="https://img.shields.io/badge/lisans-MIT-blue" />
-  <img alt="Sürüm 0.3.0" src="https://img.shields.io/badge/s%C3%BCr%C3%BCm-0.3.0-informational" />
+  <img alt="Sürüm" src="https://img.shields.io/github/v/tag/KodAlp/vault-chat-beta?sort=semver&label=s%C3%BCr%C3%BCm&color=informational" />
   <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey" />
   <img alt="Node.js 22" src="https://img.shields.io/badge/Node.js-22-339933?logo=nodedotjs&logoColor=white" />
   <img alt="SvelteKit" src="https://img.shields.io/badge/SvelteKit-FF3E00?logo=svelte&logoColor=white" />
@@ -75,8 +75,8 @@ Her şey tek bir Node sürecinde, `localhost`'ta çalışır. Docker ya da haric
 ## Hızlı başlangıç
 
 ```bash
-git clone https://github.com/KodAlp/vault-chat.git
-cd vault-chat
+git clone https://github.com/KodAlp/vault-chat-beta.git
+cd vault-chat-beta
 npm install
 npm run dev
 ```
@@ -138,7 +138,7 @@ npm run doctor
 ## Kurulum
 
 ```bash
-cd vault-chat
+cd vault-chat-beta
 npm install
 ```
 
@@ -265,6 +265,8 @@ gerekir, pakete gömülmez. macOS/Linux paketlerinde Node (ve Python) hâlâ ell
 npm run desktop:dev      # canlı Vite dev sunucusuna karşı native pencere, HMR çalışır
 npm run desktop:build    # çalıştığın işletim sisteminin paketini üretir
 ```
+
+**Sürüm numarası kendiliğinden artar.** `desktop:build`, derlemeden önce `scripts/release.mjs --auto`'yu çalıştırır: son `v*` etiketinden bu yana gelen commit'lere ([Conventional Commits](https://www.conventionalcommits.org)) bakar. `fix`/`perf`/`refactor` yama (0.1.0 → 0.1.1), `feat` küçük sürüm (0.1.x → 0.2.0), `!` ya da `BREAKING CHANGE` büyük sürüm (→ 1.0.0) demektir; `docs`, `chore`, `test`, `ci` sürümü değiştirmez. Yükseltme yalnız `main` dalında ve sürüm dosyaları temizken yapılır, `chore(release): vX.Y.Z` commit'i ve `vX.Y.Z` etiketi oluşur; göndermek için `git push --follow-tags`. Elle: `npm run release` (önizleme: `npm run release -- --dry-run`).
 
 Windows'ta `desktop:build` çıktısı: `src-tauri/target/release/bundle/nsis/vault-chat_<sürüm>_x64-setup.exe`
 (NSIS kurulum dosyası). Linux ve macOS paketleri aynı komutla, kendi işletim
