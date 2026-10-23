@@ -265,7 +265,7 @@
 		line-height: 1.6;
 	}
 
-	/* Flashcard front: Gambetta 28/34 (Flashcard.html's .q). */
+	/* Flashcard front: Newsreader 28/34 (Flashcard.html's .q). */
 	.face.front {
 		font: var(--text-display-title);
 		font-size: 28px;

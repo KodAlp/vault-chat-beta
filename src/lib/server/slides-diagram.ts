@@ -195,7 +195,7 @@ export function renderDiagramSvg(spec: DiagramSpec): string {
 	const boxes = nodes
 		.map((n, i) => {
 			const y = i * (boxHeight + rowGap) + padY;
-			return `<rect x="${boxX}" y="${y}" width="${BOX_WIDTH}" height="${boxHeight}" rx="12" fill="oklch(20% 0.02 165)" stroke="oklch(76% 0.17 155)" stroke-width="2"/><text x="${centerX}" y="${y + boxHeight / 2}" text-anchor="middle" dominant-baseline="central" font-family="Satoshi, system-ui, sans-serif" font-size="${nodeFont}" fill="oklch(93% 0.004 165)">${escapeSvgText(truncate(n.label, MAX_LABEL_CHARS))}</text>`;
+			return `<rect x="${boxX}" y="${y}" width="${BOX_WIDTH}" height="${boxHeight}" rx="12" fill="oklch(20% 0.02 165)" stroke="oklch(76% 0.17 155)" stroke-width="2"/><text x="${centerX}" y="${y + boxHeight / 2}" text-anchor="middle" dominant-baseline="central" font-family="Figtree, system-ui, sans-serif" font-size="${nodeFont}" fill="oklch(93% 0.004 165)">${escapeSvgText(truncate(n.label, MAX_LABEL_CHARS))}</text>`;
 		})
 		.join('');
 

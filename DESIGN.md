@@ -142,8 +142,8 @@ colors-forest:
   scrim: "rgba(0, 0, 0, 0.60)"
   material-bar: "rgba(15, 29, 28, 0.80)"
 typography:
-  sans: "Satoshi (variable 300–900)"
-  serif: "Gambetta (variable 300–700) — yalnızca editoryal anlar"
+  sans: "Figtree (variable 300–900)"
+  serif: "Newsreader (variable 200–800, opsz 6–72) — yalnızca editoryal anlar"
   mono: "sistem monospace"
   scale:
     display-hero: "45px/48px 400"
@@ -221,9 +221,9 @@ Beş tema aynı token adlarını paylaşır; bileşenler temayı bilmez, yalnız
 
 ## Tipografi
 
-- **Satoshi** (sans) tüm arayüzü taşır. HIG metin stilleri birebir uygulanır: `title-1` 28, `title-2` 22, `title-3` 20, `headline` 17/600, `body` 17, `callout` 16, `subheadline` 15/500, `footnote` 13, `caption-1` 12, `caption-2` 11. Negatif harf aralıkları SF Pro'nun izleme tablosundan alınmıştır.
+- **Figtree** (sans) tüm arayüzü taşır. HIG metin stilleri birebir uygulanır: `title-1` 28, `title-2` 22, `title-3` 20, `headline` 17/600, `body` 17, `callout` 16, `subheadline` 15/500, `footnote` 13, `caption-1` 12, `caption-2` 11. Negatif harf aralıkları SF Pro'nun izleme tablosundan alınmıştır.
 - Sohbet dökümü `body-reading` (17/27) kullanır ve satır uzunluğu `reading-measure` (720px) ile sınırlıdır.
-- **Gambetta** (serif) yalnızca editoryal anlarda: boş sohbet ekranı `display-hero` (45/48, ağırlık 400) ve üst düzey sayfa başlığı `display-title` (34/41). Bilgi kartının ön yüzü de Gambetta 28px'tir. Gambetta asla kalın, asla gövde metni değildir.
+- **Newsreader** (serif) yalnızca editoryal anlarda: boş sohbet ekranı `display-hero` (45/48, ağırlık 400) ve üst düzey sayfa başlığı `display-title` (34/41). Bilgi kartının ön yüzü de Newsreader 28px'tir. Newsreader asla kalın, asla gövde metni değildir.
 - Kod ve sayısal veri `code` (sistem monospace).
 - İkisi de Türkçe karakterlerin (ş, ğ, ı, İ, ç, ö, ü) tamamını içerir; değişken font olarak `static/fonts/` altında kendi sunucunuzdan yüklenir (CDN yok — ürün tamamen yereldir).
 

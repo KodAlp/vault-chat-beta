@@ -28,13 +28,13 @@
 
 export const SLIDES_THEME_NAME = 'vault-observatory';
 
-// Same Satoshi/Gambetta variable-font @font-face pairs as src/styles/tokens.css,
+// Same Figtree/Newsreader variable-font @font-face pairs as src/styles/tokens.css,
 // so slide text (including Turkish Ş/ş/Ğ/ğ) matches the rest of the app exactly.
 const FONT_FACES = `
-@font-face { font-family: 'Satoshi'; src: url('/fonts/Satoshi-Variable.woff2') format('woff2'); font-weight: 300 900; font-style: normal; font-display: swap; }
-@font-face { font-family: 'Satoshi'; src: url('/fonts/Satoshi-VariableItalic.woff2') format('woff2'); font-weight: 300 900; font-style: italic; font-display: swap; }
-@font-face { font-family: 'Gambetta'; src: url('/fonts/Gambetta-Variable.woff2') format('woff2'); font-weight: 300 700; font-style: normal; font-display: swap; }
-@font-face { font-family: 'Gambetta'; src: url('/fonts/Gambetta-VariableItalic.woff2') format('woff2'); font-weight: 300 700; font-style: italic; font-display: swap; }
+@font-face { font-family: 'Figtree'; src: url('/fonts/Figtree-Variable.woff2') format('woff2'); font-weight: 300 900; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Figtree'; src: url('/fonts/Figtree-VariableItalic.woff2') format('woff2'); font-weight: 300 900; font-style: italic; font-display: swap; }
+@font-face { font-family: 'Newsreader'; src: url('/fonts/Newsreader-Variable.woff2') format('woff2'); font-weight: 200 800; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Newsreader'; src: url('/fonts/Newsreader-VariableItalic.woff2') format('woff2'); font-weight: 200 800; font-style: italic; font-display: swap; }
 `;
 
 export const SLIDES_THEME_CSS = `/* @theme ${SLIDES_THEME_NAME} */
@@ -50,7 +50,7 @@ section {
 	height: 720px;
 	background: oklch(13% 0.008 165);
 	color: oklch(93% 0.004 165);
-	font-family: Satoshi, -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+	font-family: Figtree, -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
 	font-size: 30px;
 	line-height: 1.5;
 	padding: 64px 76px;
@@ -62,7 +62,7 @@ section {
 }
 
 section h1 {
-	font-family: Gambetta, 'New York', Georgia, serif;
+	font-family: Newsreader, 'New York', Georgia, serif;
 	font-weight: 480;
 	letter-spacing: -0.015em;
 	font-size: 52px;
@@ -185,7 +185,7 @@ section.quote {
 }
 section.quote blockquote {
 	border-left: none;
-	font-family: Gambetta, 'New York', Georgia, serif;
+	font-family: Newsreader, 'New York', Georgia, serif;
 	font-weight: 480;
 	font-size: 38px;
 	line-height: 1.3;
