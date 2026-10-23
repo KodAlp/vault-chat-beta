@@ -2,7 +2,7 @@
 
 Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncellenir.
 
-**Son güncelleme:** 2026-10-22 · Acil boş. Sohbette tekrar döngüsü kesiliyor, sızan `</think>` öncesi düşünmeye taşınıyor (`8715f15`); belirsiz soru için konu çipi (`a7c19f3`); -asyon ile biten kısa sorular artık Cebuano cevaplanmıyor (`50e99a7`). Dal `claude/neredeyiz-12615d`, main'e alınmadı.
+**Son güncelleme:** 2026-10-23 · Acil boş. Public hazırlığı: FFL fontlar OFL'ye geçti, ikon atfı eklendi (`a191baa`), security.yml açıldı (`29f030d`); geçmişin yeniden yazılması ve desktop.yml tetikleyicisi kullanıcı onayı bekliyor. Dal `claude/derleme-durumu-c945b2`, main'e alınmadı.
 
 ## Kurallar
 
@@ -50,7 +50,7 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 ## Yapılabilir
 
 ### 1. Güvenlik ve CI
-- [ ] **Public öncesi kalan.** Repo public olunca tetikleyicileri aç ve dal korumasını kur (adımlar `docs/dev/public-oncesi.md`). Eylemler SHA'ya sabit, sqlite-vec'siz kasa yalnız-FTS ile açılıyor; ARM64 derlemesi ve gerçek ARM makinesi denenmedi. `K` · #51
+- [ ] **Public öncesi kalan.** (1) Geçmişi yeniden yaz: 539 commit'te gerçek e-posta, `be531de`'den beri FFL font dosyaları ve prototiplere gömülü base64 fontlar (betik hazır, push yok); GitHub'daki `refs/pull/1/head` force push ile silinmediği için yeni repo önerildi. Sonra `.gitleaksignore` parmak izini yeni hash'le güncelle. (2) `desktop.yml`'ye main/PR tetikleyicisi (izin denetimi düzenlemeyi reddetti) ve README'deki CI cümlesi. (3) Fork PR onayı, dal koruması (adımlar `docs/dev/public-oncesi.md`). ARM64 derlemesi ve gerçek ARM makinesi denenmedi. `K–O` · #51
 
 ### 2. Notebook verileri
 - [ ] **Rusça kasası onarımı.** 14 uyarılı bekleyen; İngilizce/Mandarin/İspanyolca kasa sorusu. `O` · #21
@@ -139,6 +139,9 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 ## Son tamamlananlar
 
 Yalnız son iki haftanın kaydı tutulur; daha eskisi git geçmişindedir.
+
+- 2026-10-23: lisans denetimi (#51): kod bağımlılıkları ve indirilen modeller serbest lisanslı (copyleft yok); gitleaks 512 commit temiz. Fontshare FFL font dosyalarının repoda dağıtımını yasakladığı için Satoshi/Gambetta yerine OFL Figtree ve Newsreader (Google Fonts TTF → WOFF2, Türkçe kapsamı aynı; prototiplerdeki gömülü base64 fontlar da); Material Symbols (Apache-2.0) lisans dosyası ve THIRD_PARTY_NOTICES Fontlar/İkonlar tabloları. Geliştirme sunucusunda dört yüz yüklendi, slides testleri 31/31. `a191baa`; security.yml main/PR/haftalık `29f030d`.
+- 2026-10-23: main'den (`6721268`) Windows kurulum dosyası derlendi (worktree'de, 73 MB); kurulup denenmedi.
 
 - 2026-10-22: qwen3 çıktı bozulmaları: sohbette tekrar döngüsü algılanıyor (son 200 karakter 3. kez görülünce), üretim durup tekrar kırpılıyor, açık kod bloğu kapatılıyor; başıboş `</think>` öncesi düşünme bölümüne taşınıyor; iki yeni bildirim 23 dilde. 896 gerçek cevapta 12 isabet, hepsi bozuk tekrar. Çince sızıntısı uygulamada zaten yakalanıyordu (bench bu korumayı atlıyor). Rota düzeyinde test yok, canlı döngüyle denenmedi. `docs/dev/cikti-bozulmasi-ve-belirsiz-soru-2026-10-22.md` `8715f15`
 - 2026-10-22: Filipince cevabın kök nedeni bizim dil talimatımızdı: franc-min "İzolasyon nasıl sağlanıyor?" gibi -asyon ile biten kısa soruları Cebuano sanıp istemin sonuna "(Answer in Cebuano.)" ekliyordu (soru biçimi ve kaynaklardan bağımsız, 0/9 Türkçe). 40 harften kısa mesaj kullanımda olmayan bir dile çıkarsa artık dil adı verilmiyor. qwen3:8b ile 18/18 doğru dil (dört -asyon sorusu Türkçe; İngilizce/Türkçe değişmedi; kısa Almanca/Fransızca kendi dilinde). `50e99a7`
