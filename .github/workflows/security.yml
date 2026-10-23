@@ -1,16 +1,14 @@
 name: security
 
-# CI runs ONLY on the dedicated `ci` branch (and when started by hand from the Actions tab).
-# main, feature branches and pull requests never trigger it — GitHub Actions minutes are limited.
-# To run: git push origin <branch>:ci   (or Actions → security → Run workflow).
+# Runs on pushes to main and `ci`, on pull requests, weekly, and by hand from the Actions tab.
 # Same checks locally: node scripts/security-audit.mjs
 on:
   workflow_dispatch:
   push:
-    branches: [ci]
-  # Weekly run — enable once the repo is public (Actions minutes are free for public repos).
-  # schedule:
-  #   - cron: "0 6 * * 1"
+    branches: [main, ci]
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1"
 
 permissions:
   contents: read
