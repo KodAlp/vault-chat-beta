@@ -1,6 +1,6 @@
 [package]
 name = "app"
-version = "0.3.0"
+version = "0.1.0"
 description = "Vault Chat — local-first RAG study assistant (desktop shell)"
 authors = ["KodAlp"]
 license = "MIT"

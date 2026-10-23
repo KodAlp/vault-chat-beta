@@ -8,7 +8,7 @@ görüntüsü al. "Çalışmadı" yerine "şu pencere çıktı, şunu yazıyordu
 ## 0. Hangi dosya?
 - Apple menüsü → **Bu Mac Hakkında**. "Çip: Apple M1/M2/M3/M4" yazıyorsa → `vault-chat-macos-arm64`.
   "İşlemci: Intel" yazıyorsa → `vault-chat-macos-x64`.
-- Zip'i aç; içinde `dmg/vault-chat_0.3.0_<mimari>.dmg` var.
+- Zip'i aç; içinde `dmg/vault-chat_0.1.0_<mimari>.dmg` var.
 
 **Bildir:** macOS sürümü (ör. 14.6), çip türü.
 
