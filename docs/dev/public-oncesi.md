@@ -1,6 +1,6 @@
 # Repo public olmadan önce (TODO #51)
 
-Durum: 2026-10-21. Repo hâlâ özel; Actions dakikaları bitti, bu yüzden iş akışları yalnız `ci` dalına push'ta ve elle çalışıyor.
+Durum: 2026-10-25. Repo hâlâ özel. Tetikleyiciler açıldı; `desktop.yml` derlemesi repo özelken yalnız `ci` dalında ve elle çalışıyor (bkz. bölüm 2).
 
 ## 1. Geçmişte sır taraması
 
@@ -12,11 +12,12 @@ Durum: 2026-10-21. Repo hâlâ özel; Actions dakikaları bitti, bu yüzden iş 
 
 ## 2. Tetikleyiciyi açmak
 
-`desktop.yml` ve `security.yml` şu an yalnız `push: branches: [ci]` ve `workflow_dispatch` ile çalışıyor. Public olunca:
+Yapıldı, public olunca iş akışlarına dokunmak gerekmiyor:
 
-1. `desktop.yml`: `on:` bloğuna `push: branches: [main]` ve `pull_request:` ekle.
-2. `security.yml`: yorumdaki haftalık `schedule` satırını aç; `pull_request:` ekle.
-3. Dal koruması: main'e doğrudan push kapalı, `build (windows-x64)` ve `security` zorunlu kontrol.
+1. `security.yml`: main ve `ci` push'u, PR, haftalık (pazartesi 06:00 UTC) ve elle (2026-10-23 `29f030d`). Repo özelken de çalışır; ubuntu üzerinde kısa bir iş.
+2. `desktop.yml` (2026-10-25): main ve `ci` push'u, `v*` etiketleri, PR ve elle. Yalnız belge değişikliği (`*.md`, `docs/`) derleme başlatmaz. İşin `if` koşulu repo özelken main, etiket ve PR çalışmalarını atlıyor (koşucu açılmaz, dakika harcanmaz); public olunca kendiliğinden çalışırlar. Aynı dala yeni push eski derlemeyi iptal eder. Windows ARM64 `continue-on-error` ile çalışır, başarısızlığı sonucu kırmızıya çevirmez.
+
+Kalan, public olunca: dal koruması (main'e doğrudan push kapalı, `build (windows-x64)` ve `npm audit / cargo audit / gitleaks` zorunlu kontrol).
 
 ## 3. Fork PR güvenliği
 
@@ -28,7 +29,7 @@ Durum: 2026-10-21. Repo hâlâ özel; Actions dakikaları bitti, bu yüzden iş 
 
 ## 4. Windows ARM64
 
-- `desktop.yml`'ye `windows-11-arm` satırı eklendi. Tetikleyici değişmediği için hiçbir şey çalışmadı, derleme denenmedi.
+- `desktop.yml`'de `windows-11-arm` satırı var (`experimental: true`, başarısızlığı sonucu bozmaz). Henüz hiç çalışmadı, derleme denenmedi.
 - `scripts/fetch-python-runtime.mjs` mimariye göre seçiyor: aynı python-build-standalone sürümünün (20261013, CPython 3.12.15) `aarch64-pc-windows-msvc` arşivi SHA256'sıyla sabitlendi.
 - Gömülü Node, sahnelemeyi yapan Node'un kopyası. ARM koşucusunda ARM64 Node gelir.
 - **sqlite-vec 0.1.9'un `windows-arm64` paketi yok.** 2026-10-21'den beri (`014b43e`) yüklenemezse kasa yalnız-FTS ile açılıyor: indeksleyici gömmesiz yazar, arama anahtar kelimeyle çalışır. Vektör arama ARM64'te ancak sqlite-vec kaynaktan derlenip pakete konursa gelir. Gerçek ARM makinede denenmedi.

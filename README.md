@@ -273,12 +273,15 @@ Windows'ta `desktop:build` çıktısı: `src-tauri/target/release/bundle/nsis/va
 sisteminde üretilir (çapraz derleme yok); hedefler `src-tauri/tauri.linux.conf.json`
 (`deb`, `appimage`) ve `src-tauri/tauri.macos.conf.json`'da (`app`, `dmg`) — bkz.
 aşağıdaki "Linux ve macOS (yeni, beta)" bölümü. Hazır paketler için GitHub
-Actions'taki `desktop` iş akışı dört hedefi (Windows x64, Linux x64, macOS arm64,
-macOS x64) derleyip her biri için `vault-chat-<hedef>` adlı bir artifact yükler
-(`.github/workflows/desktop.yml`; artifact'lar 7 gün saklanır). İş akışı **yalnız
-`ci` dalına push'ta** (ya da Actions sekmesinden elle "Run workflow" ile) çalışır;
-`main`, özellik dalları ve PR'lar tetiklemez (Actions dakikaları sınırlı). Bir dalı
-derletmek için: `git push origin <dal>:ci` (gerekirse `--force`).
+Actions'taki `desktop` iş akışı Windows x64, Linux x64, macOS arm64 ve macOS x64
+paketlerini derleyip her biri için `vault-chat-<hedef>` adlı bir artifact yükler
+(`.github/workflows/desktop.yml`; artifact'lar 7 gün saklanır). Windows ARM64 da
+deneniyor ama şimdilik başarısız olması bekleniyor ve sonucu kırmızıya çevirmiyor.
+İş akışı `main`'e ve `ci` dalına push'ta, `v*` sürüm etiketlerinde, PR'larda ve
+Actions sekmesinden elle ("Run workflow") çalışır; yalnız belge değişikliği
+(`*.md`, `docs/`) derleme başlatmaz. Repo özelken `main`, etiket ve PR derlemeleri
+atlanır (Actions dakikaları sınırlı); o sürede bir dalı derletmek için
+`git push origin <dal>:ci` (gerekirse `--force`) ya da elle çalıştırma.
 
 Windows kurulum konumu ve veri klasörü:
 Kurulum kullanıcı bazlı (yönetici gerektirmez), `%LOCALAPPDATA%\vault-chat\`
