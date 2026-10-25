@@ -13,7 +13,7 @@ export const MAX_PHRASE_CHARS = 80;
  * (select-chunks.ts keeps anything up to 0.6, so 0.5 leaves a wide "weak" band just under the
  * cutoff — that band is where a greeting the gate missed ends up). Chat.svelte hides the
  * "Kaynaklar alakasız" button for confident hits: offering it on correct, used sources read as
- * the app doubting its own answer (#35).
+ * the app doubting its own answer.
  */
 export const CONFIDENT_DISTANCE = 0.5;
 

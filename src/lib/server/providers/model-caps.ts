@@ -1,7 +1,7 @@
 import type { ModelInfo } from './types';
 
 /**
- * Aşama 4b — what this app knows about a model FAMILY (context window, tool-calling / reasoning support,
+ * What this app knows about a model FAMILY (context window, tool-calling / reasoning support,
  * embedding-only, verified prefix-resume), moved out of ollama.ts so every provider kind shares one table
  * instead of only OllamaAdapter having it. Pure and dependency-free (types only) so it runs under plain
  * `tsx --test`.

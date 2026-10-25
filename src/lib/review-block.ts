@@ -1,8 +1,8 @@
 import { REVIEW_MAX_CHARS } from './review-limits';
 
 /**
- * F6 — formats the REVIEW-mode block spliced into the chat prompt (prompt.ts) when a chat is in review mode.
- * Pure and dependency-free, like memory-block.ts: the caller (review-mode.ts) shapes plain data from F1b/F2's
+ * Formats the REVIEW-mode block spliced into the chat prompt (prompt.ts) when a chat is in review mode.
+ * Pure and dependency-free, like memory-block.ts: the caller (review-mode.ts) shapes plain data from the
  * already-computed, already-validated learner profile and weak-spot list plus the existing due-card query — this
  * module never touches a database and never calls an LLM. It only templates what to prioritize; the model does
  * the actual asking/grading, as instructed.

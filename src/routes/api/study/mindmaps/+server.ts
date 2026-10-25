@@ -4,7 +4,7 @@ import { listMindMaps } from '$lib/server/study-db';
 import { vaultFromUrl } from '$lib/server/requestVault';
 import type { StudySummary } from '$lib/types';
 
-/** Faz 13 — see quizzes/+server.ts for the rationale. */
+/** See quizzes/+server.ts for the rationale. */
 export const GET: RequestHandler = async ({ url }) => {
 	const v = vaultFromUrl(url);
 	const items: StudySummary[] = listMindMaps(v).map((r) => ({

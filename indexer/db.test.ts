@@ -113,7 +113,7 @@ test('an index built before the keyword table existed is filled from chunks on t
 	const p = tmpDbPath();
 	let db = openDb(p);
 	upsertFile(db, file('a.md'), [chunk('a.md', 'h', 'legacy alpha'), chunk('a.md', 'h2', 'legacy beta')]);
-	db.exec('DROP TABLE chunks_fts'); // what a pre-F5 index looks like
+	db.exec('DROP TABLE chunks_fts'); // what a pre-FTS index looks like
 	db.close();
 
 	const ro = new Database(p, { readonly: true });
@@ -165,7 +165,7 @@ test('a failed upsert rolls the keyword rows back with the rest', () => {
 	db.close();
 });
 
-// Aşama 3a — index_meta (embedding provenance)
+// index_meta (embedding provenance)
 
 test('a fresh index (no embedding config given) records the legacy assumption', () => {
 	const db = openDb(tmpDbPath());
@@ -218,7 +218,7 @@ test('keywordSearch never throws on a malformed expression or a bad limit', () =
 	db.close();
 });
 
-// Aşama 4a — FTS-only index (no embedding provider configured)
+// FTS-only index (no embedding provider configured)
 const hasVecTable = (db: Database.Database) => db.prepare("SELECT 1 FROM sqlite_master WHERE name = 'vec_chunks'").get() !== undefined;
 const ftsChunk = (p: string, heading: string, text: string) => ({ insert: { path: p, heading_path: heading, display_text: text }, embedding: null });
 

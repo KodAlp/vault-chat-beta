@@ -4,7 +4,7 @@ import { isCloud, readProvidersFile } from '$lib/server/providers/config-store';
 import { grantProviderConsent, revokeProviderConsent } from '$lib/server/provider-consent';
 import { fail } from '$lib/server/app-error';
 
-/** İ2 (Aşama 8) — the model picker's first-use confirmation (ModelPickerRow,
+/** The model picker's first-use confirmation (ModelPickerRow,
  * GenerationDialog) POSTs here the moment the user accepts sending chat data
  * to a cloud provider; the settings page's own provider card can DELETE to
  * revoke it later. Ollama, and (problem A) a provider the user marked

@@ -2,7 +2,7 @@
 // so it works even before `npm install` has fully succeeded. Every check
 // that could drift from the actual code (which models are required, where
 // providers.json lives) reads the config directly instead of hardcoding a
-// duplicate value. No provider is required on its own (Aşama 4d): only the
+// duplicate value. No provider is required on its own: only the
 // chat chain's head and the embedding provider are checked, and an unreachable
 // local server that is neither is not a failure.
 import { existsSync, readFileSync, readdirSync } from 'node:fs';

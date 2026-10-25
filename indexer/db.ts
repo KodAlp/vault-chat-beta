@@ -25,7 +25,7 @@ export interface ChunkInsert {
 }
 
 /**
- * Aşama 3a (embedding-bagimsizligi) — which provider/model/dims this
+ * Embedding independence — which provider/model/dims this
  * particular index's vectors were built with, recorded in `index_meta` so a
  * later config change (providers/config-store.ts's embedding block) can be
  * detected instead of silently comparing incompatible vectors. `provider` is
@@ -46,7 +46,7 @@ export interface IndexEmbeddingMeta {
 export const LEGACY_INDEX_EMBEDDING: IndexEmbeddingMeta = { provider: 'ollama', model: EMBED_MODEL, dims: EMBED_DIMS };
 
 /**
- * Aşama 4a — what index_meta records for an FTS-only index (no embedding
+ * What index_meta records for an FTS-only index (no embedding
  * provider was configured when it was written): provider 'none', model 'none',
  * dims 0, and no vec_chunks table. An explicit sentinel rather than "no meta":
  * a missing meta means "built before index_meta existed" (= LEGACY_INDEX_EMBEDDING),
@@ -83,7 +83,7 @@ export function embeddingMismatches(index: IndexEmbeddingMeta, config: { provide
  * is baked into that table's DDL and changing it for real requires deleting
  * the DB and rebuilding (`npm run index -- --full`), never a silent rewrite.
  *
- * Aşama 4a: `embedding === null` is FTS-only mode — a fresh DB gets NO
+ * `embedding === null` is FTS-only mode — a fresh DB gets NO
  * vec_chunks table and index_meta records FTS_ONLY_INDEX_EMBEDDING. An
  * existing index already recorded as FTS-only never grows a vec_chunks table
  * on a later open, whatever `embedding` is passed (it stays 'none' until a
@@ -115,7 +115,7 @@ export function openDb(dbPath: string, embedding?: IndexEmbeddingMeta | null): D
 		);
 		CREATE INDEX IF NOT EXISTS idx_chunks_path ON chunks(path);
 	`);
-	// An index built before F4 has `files` without this column, and CREATE TABLE IF NOT EXISTS cannot
+	// An index built before prerequisite links existed has `files` without this column, and CREATE TABLE IF NOT EXISTS cannot
 	// add it (see sqlite-schema.ts). Additive: nothing needs `--full`; `npm run index -- --prereqs`
 	// fills it for files that are already indexed. The app opens the index read-only and cannot add it,
 	// so readers must cope with it missing (src/lib/server/prerequisites-query.ts does).
@@ -129,7 +129,7 @@ export function openDb(dbPath: string, embedding?: IndexEmbeddingMeta | null): D
 	// calibrated for cosine, ~0.55) so retrieval returned empty for nearly
 	// every query without ever raising an error.
 	//
-	// Aşama 3a: the dimension used to always be EMBED_DIMS (the hardcoded
+	// The dimension used to always be EMBED_DIMS (the hardcoded
 	// bge-m3 constant); it is now the caller's configured `embedding.dims`
 	// when given, falling back to EMBED_DIMS for every caller that predates
 	// this feature (this file's own tests, and any openDb() call sites not
@@ -235,7 +235,7 @@ export function readIndexEmbedding(db: Database.Database): IndexEmbeddingMeta {
 const ftsEnabled = new WeakSet<Database.Database>();
 
 /**
- * Keyword index for retrieve.ts's fallback (F5). A standalone FTS5 table, NOT
+ * Keyword index for retrieve.ts's fallback. A standalone FTS5 table, NOT
  * an external-content one: with `content='chunks'` every delete must replay the
  * exact original row through a special command or the index silently corrupts,
  * and it costs only a few MB to keep its own copy. `rowid` is `chunks.id`.
@@ -354,7 +354,7 @@ export function upsertFile(
 		const insertChunk = db.prepare(
 			`INSERT INTO chunks (path, heading_path, display_text) VALUES (?, ?, ?)`
 		);
-		// null embeddings = FTS-only write (Aşama 4a): the vec table may not even exist, so only prepare it when needed.
+		// null embeddings = FTS-only write: the vec table may not even exist, so only prepare it when needed.
 		const insertVec = hasSqliteVec(db) && chunks.some((c) => c.embedding !== null) ? db.prepare(`INSERT INTO vec_chunks (chunk_id, embedding) VALUES (?, ?)`) : null;
 		const insertFts = ftsEnabled.has(db)
 			? db.prepare('INSERT INTO chunks_fts (rowid, heading_path, display_text) VALUES (?, ?, ?)')

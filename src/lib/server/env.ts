@@ -14,8 +14,8 @@ import fs from 'node:fs';
  * process.env.DATA_DIR and then does `await import('./server.ts')` would
  * otherwise lose to a constant this module captured at its own load time.
  *
- * DATA_DIR (and the since-removed OLLAMA_URL) were the first migrated here (Faz 10's MCP path).
- * Faz 11 adds CHATS_DB_PATH/SKILLS_DIR/PROVIDERS_PATH/SECRETS_PATH — not
+ * DATA_DIR (and the since-removed OLLAMA_URL) were the first migrated here (the MCP path).
+ * The next batch adds CHATS_DB_PATH/SKILLS_DIR/PROVIDERS_PATH/SECRETS_PATH — not
  * because MCP needs them, but because their old per-module defaults
  * (`path.join('data', '...')`, cwd-relative) silently diverged from
  * dataDir()'s DATA_DIR-aware resolution: with DATA_DIR set and no explicit
@@ -94,18 +94,18 @@ export function secretsPath(): string {
 	return nonEmpty(process.env.SECRETS_PATH) ?? path.join(dataDir(), 'secrets.json');
 }
 
-/** F14-2 — where model-catalog.ts caches the OpenRouter/models.dev fetch (TTL'd, atomic write). */
+/** Where model-catalog.ts caches the OpenRouter/models.dev fetch (TTL'd, atomic write). */
 export function modelCatalogPath(): string {
 	return nonEmpty(process.env.MODEL_CATALOG_PATH) ?? path.join(dataDir(), 'model-catalog.json');
 }
 
-/** İ2 (Aşama 8) — provider-consent.ts's persisted "which cloud providers has
+/** provider-consent.ts's persisted "which cloud providers has
  * the user explicitly consented to send chat data to" set. */
 export function providerConsentPath(): string {
 	return nonEmpty(process.env.PROVIDER_CONSENT_PATH) ?? path.join(dataDir(), 'provider-consent.json');
 }
 
-/** F14-3 — a model whose catalog release date (or, failing that, its live `created` field) is older than
+/** A model whose catalog release date (or, failing that, its live `created` field) is older than
  * this many months is filtered out of the clean list. Closed by user decision at 12, adjustable. Unset,
  * empty, non-integer or non-positive values fall back to the default. */
 export function modelMaxAgeMonths(): number {

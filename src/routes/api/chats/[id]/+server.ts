@@ -30,8 +30,8 @@ export const GET: RequestHandler = async ({ params }) => {
 };
 
 /** Chat-header per-chat model/provider override (Chat.svelte's overrideModel/
- * overrideProvider), the source-tree scope selection (SourceTree.svelte, Faz 9
- * Adım 6), the chat-list rename button's title edit, and the F6 mode toggle
+ * overrideProvider), the source-tree scope selection (SourceTree.svelte),
+ * the chat-list rename button's title edit, and the mode toggle
  * (Chat.svelte's chatMode) — five independent, optional fields, any subset
  * may be present. */
 export const PATCH: RequestHandler = async ({ params, request }) => {

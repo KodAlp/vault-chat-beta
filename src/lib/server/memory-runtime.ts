@@ -8,7 +8,7 @@ import { logAppEvent } from './app-log';
 import type { VaultContext } from './vaults';
 
 /**
- * F3 — the glue between chats.db (manual notes), the vault's already-computed learner data (F1b/F2), and the
+ * The glue between chats.db (manual notes), the vault's already-computed learner data (learner profile and weak spots), and the
  * pure formatter (memory-block.ts). Separate from memory-store.ts on purpose: memory-store.ts must not import
  * chats-db.ts, because chats-db.ts imports memory-store.ts (for initMemorySchema) — putting getChatsDb() here
  * instead avoids that cycle, the same reason smalltalk-runtime.ts exists apart from smalltalk-store.ts.
@@ -40,7 +40,7 @@ const MAX_WEAK_DOMAINS = 3;
 const MAX_OPEN_WEAK_SPOTS = 3;
 
 /**
- * Picks and shapes the derived (never stored) part of the memory block out of F1b's learner profile and F2's
+ * Picks and shapes the derived (never stored) part of the memory block out of the learner profile and the weak-spot list's
  * weak-spot list — both already computed and already validated elsewhere, so this is templating, not a new
  * judgment call. Pure (plain in, plain out), separated from computeMemoryBlock so it can be tested with fabricated
  * profiles/weak-spot lists instead of a real vault + chats.db singleton.

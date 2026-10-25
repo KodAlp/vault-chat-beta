@@ -25,13 +25,13 @@ function moveFileWithWal(srcBase: string, destBase: string): void {
 
 /**
  * No-op if data/vaults.json already exists. Reads the same legacy env vars
- * the pre-Faz-8 code did, so an upgrade from an older build (or a first
+ * the pre-vault-registry code did, so an upgrade from an older build (or a first
  * Tauri launch after the upgrade) migrates automatically with no user
  * action — EXCEPT VAULT_PATH, deliberately never used as a move source: it
- * points at the user's real, live-edited Obsidian vault (pre-Faz-5, indexed
+ * points at the user's real, live-edited Obsidian vault (before the app-owned library folder, indexed
  * in place, never copied), not app-owned content. Renaming that into
  * data/vaults/default/ would relocate the user's actual personal vault.
- * Only LIBRARY_PATH (an app-owned folder, Faz 5) is safe to move; if unset,
+ * Only LIBRARY_PATH (an app-owned folder) is safe to move; if unset,
  * "default" starts with an empty library regardless of VAULT_PATH — its
  * content must be (re-)imported via the Kütüphane "Obsidian'dan İçe Aktar"
  * flow, same as any new vault.

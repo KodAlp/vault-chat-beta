@@ -29,7 +29,7 @@
 		onTopic?: (domain: string) => void;
 		/** Offered under a sourced answer to a short message: teaches the gate it was small talk. */
 		onNotRelevant?: () => void;
-		/** Aşama 3c — offered when message.embeddingIssue === 'mismatch': opens
+		/** Offered when message.embeddingIssue === 'mismatch': opens
 		 * Chat.svelte's ReindexDialog for the current vault. Not offered for
 		 * 'unavailable' — reindexing can't fix a provider that's down. */
 		onReindex?: () => void;

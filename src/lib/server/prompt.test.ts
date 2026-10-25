@@ -10,9 +10,9 @@ import type { VaultContext } from './vaults';
 import type { ChatMessage, RetrievedChunk } from '$lib/types';
 
 /**
- * F9 — a regression test for prompt.ts, which had none despite F3/F6/F7/F8 all editing it this session
+ * A regression test for prompt.ts, which had none despite the memory, review-mode and history features all editing it
  * (memory/review blocks, two new CORE_INVARIANTS bullets, the mode parameter). No database, no Ollama:
- * memoryBlock is forced empty via CHAT_MEMORY_GATE=0 (F3's own kill switch, checked before any DB read — never
+ * memoryBlock is forced empty via CHAT_MEMORY_GATE=0 (the memory gate's own kill switch, checked before any DB read — never
  * touches the chats.db singleton), skillsBlock via an empty SKILLS_DIR (same isolation userSkills.test.ts uses),
  * and reviewBlock either via mode='free_chat' (never computed at all, per prompt.ts's own guard) or a fresh
  * throwaway vault's own study.db (per-vault Map in study-db.ts, not a global singleton — safe to open per test,
@@ -269,7 +269,7 @@ test('noRelevantSources never overrides real chunks and is absent by default', a
 	delete process.env.CHAT_MEMORY_GATE;
 });
 
-// --- #28: promptLanguage ('tr' production default must stay byte-identical; 'en' only for the A/B) ---
+// --- promptLanguage ('tr' production default must stay byte-identical; 'en' only for the A/B) ---
 
 const ORIGINAL_MATCH_INTRO = `Sen bu kişisel bilgi kütüphanesinin öğretici asistanısın.
 Kullanıcının son mesajı hangi dilde yazılmışsa o dilde cevap ver; sohbetin önceki dili değil, son mesajın dili belirleyicidir. Son mesaj dili anlaşılamayacak kadar kısaysa ya da yalnızca kod/formülden oluşuyorsa Türkçe kullan.`;

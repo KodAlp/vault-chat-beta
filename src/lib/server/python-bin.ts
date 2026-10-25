@@ -17,7 +17,7 @@ import { execFile } from 'node:child_process';
  *   3. python3 found by scanning PATH ourselves
  *   4. well-known install locations
  * Windows adds the Python bundled with the installer (dist-server/python,
- * TODO #53) and one invariant: a Python that has docling (several GB with
+ * bundled Python) and one invariant: a Python that has docling (several GB with
  * torch/CUDA) is never shadowed by one that doesn't, or the user would
  * re-download it. Windows order:
  *   1. PYTHON_BIN

@@ -154,7 +154,7 @@
 				body: JSON.stringify({ title: title.trim(), domain: domain.trim(), level })
 			});
 			if (!res.ok) {
-				// #11: a failed-indexing rollback surfaces a specific reason here
+				// A failed-indexing rollback surfaces a specific reason here
 				// (confirm/+server.ts's fail('IMPORT_INDEX_FAILED', ...) body)
 				// rather than the generic "kaydedilemedi" — the user needs to
 				// know the file went back to staging, not just that something

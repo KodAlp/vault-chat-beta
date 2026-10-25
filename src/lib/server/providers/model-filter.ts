@@ -3,13 +3,13 @@ import { lookupCatalogEntry, type Catalog } from './model-catalog';
 import type { ProviderConfigEntry } from './config-store';
 
 /**
- * F14-3 — replaces the old `!m.embeddingOnly` one-liner (structurally Ollama-only: only ollama.ts's family
+ * Replaces the old `!m.embeddingOnly` one-liner (structurally Ollama-only: only ollama.ts's family
  * table ever set that flag) with a metadata-driven filter that works for every provider. Pure — takes an
  * already-loaded Catalog (model-catalog.ts owns the network/cache side), so this is trivially testable with
  * fabricated inputs.
  *
  * A model with a catalog entry is either APPROVED (kept) or dropped entirely (never shown, no override short
- * of the manual `enabledModels` list F14-4 adds elsewhere). A model with NO catalog entry is neither approved
+ * of the manual `enabledModels` list added elsewhere). A model with NO catalog entry is neither approved
  * nor dropped — it goes to OTHER, a demoted-but-not-deleted group, because "the catalog has never heard of
  * this id" is not the same claim as "this id is bad" (a very new or very small-provider model, e.g.).
  */

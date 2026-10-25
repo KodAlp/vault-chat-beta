@@ -1,6 +1,6 @@
-// One-time migration from the pre-Faz-8 single-library layout to the
+// One-time migration from the pre-multi-vault single-library layout to the
 // multi-vault registry (data/vaults.json). Idempotent: if vaults.json
-// already exists, this is a no-op. See vault-registry skill.
+// already exists, this is a no-op.
 //
 //   node scripts/migrate-vaults.mjs           # perform the migration
 //   node scripts/migrate-vaults.mjs --dry-run # report what would move, write nothing
@@ -20,9 +20,9 @@ if (existsSync(registryPath)) {
 	process.exit(0);
 }
 
-// LIBRARY_PATH only — NEVER VAULT_PATH. LIBRARY_PATH (Faz 5) names a folder
+// LIBRARY_PATH only — NEVER VAULT_PATH. LIBRARY_PATH names a folder
 // the app itself owns and writes into, safe to relocate with a rename.
-// VAULT_PATH (pre-Faz-5) is a raw pointer at the user's REAL, live-edited
+// VAULT_PATH (older layout) is a raw pointer at the user's REAL, live-edited
 // Obsidian vault, indexed in place and never copied — renaming that would
 // mean moving the user's actual personal vault into the app's data folder.
 // If only VAULT_PATH was set, the "default" vault starts empty; its content
@@ -102,8 +102,7 @@ function copyTree(src, dest) {
 /**
  * Same-disk fs.renameSync is a single atomic rename, not the recursive
  * directory walk that cpSync/rmSync hit Windows-specific EIO/EBUSY
- * failures on for this repo's non-ASCII path (documented in Faz 7 and the
- * vault-registry skill) — so it's tried first. The copy fallback (robocopy
+ * failures on for this repo's non-ASCII path — so it's tried first. The copy fallback (robocopy
  * on Windows, fs.cpSync elsewhere) only exists for the case renameSync itself
  * fails (e.g. EXDEV when DATA_DIR is on a different filesystem). The copy is
  * verified (same relative files + sizes) BEFORE the source is deleted; on any

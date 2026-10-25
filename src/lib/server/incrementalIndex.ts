@@ -33,7 +33,7 @@ function sha256(content: string): string {
  * waiting for a full `npm run index` pass over the whole library.
  */
 export async function indexLibraryFile(v: VaultContext, absPath: string, relPath: string): Promise<void> {
-	// Aşama 3b: a reindex (POST /api/vaults/[id]/reindex, reindex.ts) builds a
+	// A reindex (POST /api/vaults/[id]/reindex, reindex.ts) builds a
 	// brand-new index.db in a temp file and then swaps it over this vault's
 	// real one — a write landing here mid-rebuild would go into the OLD file
 	// right before it's replaced (silently lost) or race the swap itself.
@@ -46,13 +46,13 @@ export async function indexLibraryFile(v: VaultContext, absPath: string, relPath
 	if (chunks.length === 0) return;
 
 	const config = getEmbeddingConfig();
-	// null config = FTS-only mode (Aşama 4a): chunks + keyword data are written, vectors are not.
+	// null config = FTS-only mode: chunks + keyword data are written, vectors are not.
 	const embeddingMeta: IndexEmbeddingMeta | null = config
 		? { provider: config.providerId, model: config.model, dims: config.dims }
 		: null;
 	const db = openDb(v.indexDbPath, embeddingMeta);
 	try {
-		// Aşama 3a: refuse to write vectors from the CURRENT config into an
+		// Refuse to write vectors from the CURRENT config into an
 		// index whose vec_chunks table was baked with a different dimension
 		// (or was, per index_meta, built with a different provider/model) —
 		// the dimension is fixed in that table's DDL, so a silent write here

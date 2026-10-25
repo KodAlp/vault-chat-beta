@@ -1,5 +1,5 @@
 /**
- * Aşama 2b — maps a local server's port to the local-server catalog id it
+ * Maps a local server's port to the local-server catalog id it
  * most likely belongs to, mirroring each kind's DEFAULT port in
  * src-tauri/src/launchers.rs's CATALOG. Pure/string-only so it's
  * unit-testable without Tauri — used by both the setup page (to avoid

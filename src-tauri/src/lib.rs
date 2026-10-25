@@ -799,7 +799,7 @@ async fn spawn_sidecar(app: &AppHandle, cfg: &VaultConfig) -> Result<SidecarOutc
     };
 
     // DATA_DIR replaces the old LIBRARY_PATH/INDEX_DB_PATH/STUDY_DB_PATH trio
-    // (Faz 8) — vaults.ts derives every vault's paths from DATA_DIR/vaults/<id>/
+    // — vaults.ts derives every vault's paths from DATA_DIR/vaults/<id>/
     // itself now, migrating automatically on first launch after the upgrade
     // (see migrateVaults.ts, run from hooks.server.ts). VAULT_PATH is still
     // passed through — it's the folder the first-run picker chose — but is
@@ -1238,7 +1238,7 @@ pub fn run() {
                 });
             }
 
-            // Local-server launcher seed + auto-start (Aşama 1) — spawned as
+            // Local-server launcher seed + auto-start — spawned as
             // its own task rather than awaited here, so a slow `where`/WSL
             // detection pass can never delay this setup() closure returning,
             // which would in turn delay the sidecar/splash flow above.

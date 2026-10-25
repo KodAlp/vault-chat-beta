@@ -16,11 +16,11 @@
 
 	/**
 	 * Shared shell for the five generation dialogs (quiz/cards/report/
-	 * mindmap/slides) — Faz 9 Adim 4. Before this, each was a near-identical
+	 * mindmap/slides). Before this, each was a near-identical
 	 * ~215-260 line file differing only in labels, an optional extra field
 	 * (quiz mc/tf/open composition, cards count+due-badge+review CTA), and
 	 * which *-generation.svelte.ts store it called. Those five store
-	 * modules stay separate on purpose (see frontend-revamp skill) — they
+	 * modules stay separate on purpose — they
 	 * are state logic, not UI, and unifying them was not part of this pass.
 	 * This component owns only the generic UI: trigger button, model/
 	 * provider + domain/context/prompt fields, and the open/close/generate
@@ -70,7 +70,7 @@
 		canGenerate?: boolean;
 		badge?: number | null;
 		open?: boolean;
-		/** Chat's own source-tree scope selection (Faz 12) — forwarded as-is
+		/** Chat's own source-tree scope selection — forwarded as-is
 		 * into onGenerate's args so generation uses the same scope the chat
 		 * itself is currently answering from. */
 		includedPaths?: string[];
@@ -100,7 +100,7 @@
 	// Off by default. The chat's last messages are appended to the retrieval query, and a 1500-character chat swamps a
 	// 30-character topic: measured on the quiz generator, the pool shared 0.00-0.20 of its top parts with the topic-only
 	// pool (even a chat of pure greetings), and no automatic rule separated "chat is the topic" from "chat is noise"
-	// (see docs/plan-ogrenme-ajani-ve-performans.md, F1a). Tick it when the prompt has no topic of its own ("bu konudan sınav yap").
+	// Tick it when the prompt has no topic of its own ("bu konudan sınav yap").
 	let useChatContext = $state(false);
 	let prompt = $state('');
 
@@ -128,7 +128,7 @@
 		wasOpen = open;
 	});
 
-	// İ2 (Aşama 8): same first-use consent gate as ModelPickerRow.svelte —
+	// Same first-use consent gate as ModelPickerRow.svelte —
 	// the picker's onValueChange (not bind:value, see below) routes here
 	// instead of writing straight to selectionKeyState, so an unconsented
 	// cloud pick can still be cancelled back to the current selection

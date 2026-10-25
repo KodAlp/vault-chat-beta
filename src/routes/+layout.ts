@@ -52,7 +52,7 @@ export const load: LayoutLoad = async ({ fetch }) => {
 		if (prefs.settings !== undefined) applySettings(prefs.settings);
 		applyLocalServerSetupDone(prefs.localServerSetupDone);
 
-		// Aşama 4c: a saved model/provider pin whose provider was deleted or disabled is cleared, so requests
+		// A saved model/provider pin whose provider was deleted or disabled is cleared, so requests
 		// carry no pin and the server falls back to the task chain (and that provider's own default model).
 		try {
 			const providersRes = await fetch('/api/providers');

@@ -1,5 +1,5 @@
 /**
- * Aşama 3a (embedding-bagimsizligi) — codes for the provider-agnostic
+ * Codes for the provider-agnostic
  * embedding layer: src/lib/server/embeddings.ts (the single embed path),
  * providers/config-store.ts's embedding-config accessors, indexer/db.ts's
  * index_meta table, and retrieve.ts's mismatch/fallback handling.
@@ -24,7 +24,7 @@ export const EMBEDDING_CODES = [
 	'EMBEDDING_DIMS_MISMATCH',
 	// embedTexts() — network/HTTP failure reaching the configured provider.
 	'EMBEDDING_UNAVAILABLE',
-	// Aşama 4a — no embedding provider configured (FTS-only mode): thrown by
+	// No embedding provider configured (FTS-only mode): thrown by
 	// embedTexts()/embeddingKey() when called with no config. Retrieval and the
 	// generators do NOT raise it: they run on keyword search in FTS-only mode.
 	'EMBEDDING_NOT_CONFIGURED',
@@ -35,7 +35,7 @@ export const EMBEDDING_CODES = [
 	// than silently corrupting the index.
 	'EMBEDDING_MISMATCH',
 
-	// Aşama 3b — reindex.ts / POST /api/vaults/[id]/reindex.
+	// reindex.ts / POST /api/vaults/[id]/reindex.
 	// A second reindex (or an incremental write — incrementalIndex.ts checks
 	// the same lock) was attempted for a vault that's already being rebuilt.
 	'REINDEX_IN_PROGRESS',

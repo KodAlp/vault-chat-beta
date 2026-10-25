@@ -27,7 +27,7 @@ test('initChatsSchema creates a fresh DB with vault_id and its index', () => {
 });
 
 test('initChatsSchema backfills vault_id and provider on a pre-existing chats table that lacks them', () => {
-	// Simulates a pre-Faz-8 (or otherwise unmigrated) chats.db: the table
+	// Simulates a pre-vault-registry (or otherwise unmigrated) chats.db: the table
 	// already exists, but without vault_id — the exact shape that made
 	// `CREATE INDEX ... ON chats(vault_id)` blow up when it ran before the
 	// ALTER guard instead of after. Also predates the `provider` column

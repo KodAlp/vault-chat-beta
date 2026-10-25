@@ -1,4 +1,4 @@
-// Phase 2 owner: quiz/cards/report/mindmap/slides generation + study routes.
+// Owner: quiz/cards/report/mindmap/slides generation + study routes.
 //
 // Each generate-*.ts throws AppError with one of these when it fails for a
 // reason specific to that generator (see app-error.ts's fail()/AppError).

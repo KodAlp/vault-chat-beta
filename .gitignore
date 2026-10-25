@@ -2,48 +2,58 @@ node_modules/
 build/
 dist-server/
 .svelte-kit/
+
+# Local data: databases, vault content, indexes, secrets and per-install state.
 data/*.db
 data/*.db-wal
 data/*.db-shm
 data/skills/
 data/library/
 data/secrets.json
-# Faz 8 — vault registry + per-vault content, same reasons as the entries
-# above (personal library content, regenerable indexes, local-only DBs).
 data/vaults.json
 data/vaults/
-# Faz 10 — MCP server call log (tool name + param summary + duration
-# only, never content — but still local-instance-specific, same
-# treatment as the DB files above).
+# MCP call log (tool name, parameter summary and duration only, never content).
 data/mcp-log.jsonl*
-# Faz 11 — app-level error log (chat/fallback/title/db errors, metadata
-# only, same treatment as mcp-log.jsonl above).
+# App error log (metadata only).
 data/app-log.jsonl*
-# F14-2 — disk cache of the OpenRouter/models.dev catalog fetch, rebuilt
-# automatically (24h TTL); not source, same treatment as the DBs above.
+# Cached model catalog (OpenRouter/models.dev), rebuilt automatically every 24 h.
 data/model-catalog.json
-# İ2 (Aşama 8) — which cloud providers this instance's user has consented
-# to send chat data to; local-instance state, not source.
+# Which cloud providers this install's user agreed to send chat data to.
 data/provider-consent.json
 # Per-install UI preferences (theme, locale, models) written by /api/ui-prefs.
 data/ui-prefs.json
+# MCP: per-launch endpoint + token written by the app, and the user's allowed import folders.
+data/mcp-endpoint.json
+data/mcp-settings.json
 .env
 !.env.example
 
-# Python sidecar (ingest/) — venv and any downloaded model weights, never
-# tracked; requirements.txt itself is the reproducible spec.
+# Python sidecar (ingest/): venv and downloaded model weights; requirements.txt is the spec.
 ingest/__pycache__/
 ingest/.venv/
+__pycache__/
+.pytest_cache/
 
 # docker/linux-package.sh output (packages, launch log, screenshot).
 docker-out/
-# MCP: per-launch endpoint + token written by the app (never commit), and the user's allowed import folders.
-data/mcp-endpoint.json
-data/mcp-settings.json
 
 # Playwright
 test-results/
 playwright-report/
 
-# TODO #53 — downloaded runtime archives (python-build-standalone) cached by scripts/fetch-python-runtime.mjs.
+# Downloaded runtime archives (python-build-standalone) cached by scripts/fetch-python-runtime.mjs.
 .cache/
+
+# Local working notes and assistant configuration (kept on disk, not published).
+TODO.md
+CLAUDE.md
+.claude/
+.impeccable/
+PRODUCT.md
+.agents/
+skills-lock.json
+.worktreeinclude
+docs/dev/
+docs/*.md
+!docs/macos-deneme-listesi.md
+bench/

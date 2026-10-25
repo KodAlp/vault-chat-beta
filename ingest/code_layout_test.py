@@ -265,7 +265,8 @@ def test_golden_page_layout():
 
 
 # ---- slow, real scan -------------------------------------------------------
-FONK1 = Path(r"C:\Users\Alp\Desktop\Dersler\Phyton\15hafta\fonk1-NOTLU.pdf")
+# Optional real-file check: set VAULT_CHAT_TEST_PDF_DIR to a folder holding fonk1-NOTLU.pdf.
+FONK1 = Path(os.environ.get("VAULT_CHAT_TEST_PDF_DIR", "<unset>")) / "fonk1-NOTLU.pdf"
 
 
 @pytest.mark.skipif(

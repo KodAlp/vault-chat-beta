@@ -5,8 +5,8 @@ import type { PageServerLoad } from './$types';
 
 /** Visiting a vault's chat list is "using" that vault — same reasoning as
  * the chat route's own load (src/routes/vault/[id]/chat/[chatId]/+page.server.ts):
- * marks it active so `/`'s auto-redirect (no new client state, see
- * frontend-revamp skill) picks it up next time.
+ * marks it active so `/`'s auto-redirect (no new client state)
+ * picks it up next time.
  *
  * markVaultUsed is bookkeeping (remembers last-used vault,
  * updates a timestamp) — not required for this page's actual content, which

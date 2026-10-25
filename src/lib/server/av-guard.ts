@@ -4,7 +4,7 @@ import { scanFile, type AvScanResult } from './av-scan';
 import { readAvSettings } from './av-settings';
 
 /**
- * The import policy around av-scan.ts (TODO #60). Called once per file, right before conversion
+ * The import policy around av-scan.ts. Called once per file, right before conversion
  * (convertQueue.enqueueConversion), so every path that converts a user file is covered by one call.
  *
  *  - setting off              -> nothing happens

@@ -27,7 +27,7 @@ export const ALLOWED_EXTENSIONS = new Set([
 	'.md'
 ]);
 
-/** Kod dosyaları, Seçenek B (Aşama 11) — checked SEPARATELY from
+/** Kod dosyaları, Code files — checked SEPARATELY from
  * ALLOWED_EXTENSIONS (not merged into it) at each upload route, not folded
  * into it: ALLOWED_EXTENSIONS's own contract above is "what convert.py's
  * document converters route on", and a code file never reaches
@@ -96,7 +96,7 @@ export function libraryRoot(v: VaultContext): string {
 
 /** Files only — renaming a folder would require cascading the index update
  * across every file beneath it; deferred (stated scoping decision, see
- * Faz 5 plan), not silently unsupported: the API route rejects folder
+ * the folder-import design), not silently unsupported: the API route rejects folder
  * targets with a clear error rather than silently doing the fs rename
  * without fixing up the index. */
 export function renameLibraryEntry(v: VaultContext, oldRel: string, newRel: string): void {
@@ -159,7 +159,7 @@ export function appendImportLog(v: VaultContext, entry: object): void {
 }
 
 /**
- * Successfully-imported sources by their ORIGINAL file's sha256 (E5) — the
+ * Successfully-imported sources by their ORIGINAL file's sha256 — the
  * same shape as link-import.ts's loadImportedUrls, keyed by content instead
  * of URL, so a re-uploaded copy of a PDF already in the library (renamed,
  * or fetched from a different link) is still recognized as "already have

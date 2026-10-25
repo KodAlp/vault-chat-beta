@@ -8,8 +8,8 @@ export interface Settings {
 	fastModel: string;
 	reasoningModel: string;
 	/**
-	 * Which provider each of the three model ids above belongs to (Faz 17 —
-	 * providerId end-to-end). Before this, only a bare model id was ever
+	 * Which provider each of the three model ids above belongs to
+	 * (providerId end-to-end). Before this, only a bare model id was ever
 	 * stored, so `chatWithFallback` had no way to know a chosen model like
 	 * "deepseek-chat" wasn't just an unusual Ollama tag — it always routed
 	 * through providers.json's task chain (always `["ollama"]` today)
@@ -20,15 +20,15 @@ export interface Settings {
 	fastProvider: string;
 	reasoningProvider: string;
 	/**
-	 * Off by default (Faz 18): each of the 5 generation dialogs disables its
+	 * Off by default: each of the 5 generation dialogs disables its
 	 * own "Oluştur" button while ANY generation of that same type is still
 	 * running (see *Dialog.svelte's `alreadyGenerating` derived), purely to
 	 * stop the same weak local GPU from being asked to do two heavy
 	 * JSON-schema-constrained decodes at once. The *-generation.svelte.ts
-	 * stores were already array-based (Faz 13) and GenerationStatusToast
+	 * stores were already array-based and GenerationStatusToast
 	 * already stacks multiple toasts — concurrent generation is otherwise
 	 * fully supported UI-side, this is the only gate. A user with a
-	 * beefier machine (or a cloud provider pinned via Faz 17's per-task
+	 * beefier machine (or a cloud provider pinned via the per-task
 	 * provider) can turn it on to queue several at once.
 	 */
 	allowConcurrentGeneration: boolean;
@@ -53,7 +53,7 @@ export const STORAGE_KEY = 'vault-chat-settings';
 const DEFAULTS: Settings = {
 	theme: 'system',
 	motion: 'system',
-	// Aşama 4c: blank = "no choice made" — the client sends no model/provider and the server uses the first
+	// Blank = "no choice made" — the client sends no model/provider and the server uses the first
 	// provider of the task chain with ITS defaultModel (the first-run wizard, or Settings, fills these in).
 	defaultModel: '',
 	fastModel: '',

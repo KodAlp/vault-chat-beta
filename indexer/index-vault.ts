@@ -53,7 +53,7 @@ async function main() {
 
 	// `--prereqs`: fill files.prerequisites_json for notes that are ALREADY indexed, from their
 	// frontmatter alone. The normal pass skips a file whose sha256 is unchanged, so without this an index
-	// built before F4 would only get the column for notes edited afterwards, and `--full` would delete
+	// built before prerequisite links existed would only get the column for notes edited afterwards, and `--full` would delete
 	// the database and re-embed every chunk for a few lines of metadata. Nothing is embedded or chunked.
 	// With `--dry-run` the database is opened read-only: nothing is written, not even the new column.
 	if (isPrereqs) {
@@ -109,7 +109,7 @@ async function main() {
 		}
 	}
 
-	// Ö1: --dry-run claimed "hiçbir şey yazılmadı" but called openDb()
+	// --dry-run claimed "hiçbir şey yazılmadı" but called openDb()
 	// unconditionally, and openDb() runs CREATE TABLE IF NOT EXISTS, adds
 	// columns and creates the vec0/FTS virtual tables as a side effect of
 	// opening — real schema writes, dry-run or not. Measured on a copy: a
@@ -120,7 +120,7 @@ async function main() {
 	// anything — same pattern the --prereqs branch above already uses.
 	const dbExistedBeforeThisRun = fs.existsSync(DB_PATH);
 	const embeddingConfig = getEmbeddingConfig();
-	// null config = FTS-only mode (Aşama 4a): chunks + keyword data only, no vectors.
+	// null config = FTS-only mode: chunks + keyword data only, no vectors.
 	const embeddingMeta: IndexEmbeddingMeta | null = embeddingConfig
 		? { provider: embeddingConfig.providerId, model: embeddingConfig.model, dims: embeddingConfig.dims }
 		: null;
@@ -130,7 +130,7 @@ async function main() {
 			: null
 		: openDb(DB_PATH, embeddingMeta);
 
-	// Aşama 3a: after `--full` this is trivially true (openDb() just recorded
+	// After `--full` this is trivially true (openDb() just recorded
 	// embeddingMeta into a brand-new index_meta). On a plain incremental run
 	// against an EXISTING index built under a different config, refuse the
 	// whole run up front rather than embedding some files under one vector
@@ -147,7 +147,7 @@ async function main() {
 		}
 	}
 
-	// Aşama 3b: the actual walk/hash/chunk/embed/upsert loop now lives in
+	// The actual walk/hash/chunk/embed/upsert loop now lives in
 	// rebuild.ts, shared with the app's own in-process reindex — this CLI's
 	// console output is reconstructed from the returned stats so it reads
 	// identically to before the extraction.

@@ -6,7 +6,7 @@
  * can't be imported from a plain `tsx --test` unit test).
  *
  * ALL_ERROR_CODES is every code this app can emit, common infra plus each
- * Phase-2 domain list — kept as one flat union so a single ErrorCode type
+ * domain list — kept as one flat union so a single ErrorCode type
  * covers every fail()/AppError call site regardless of which surface it's
  * on.
  */

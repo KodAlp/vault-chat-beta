@@ -1,5 +1,5 @@
 /**
- * Aşama 4c — clears a saved model/provider pick whose provider is gone. Saved settings (localStorage or the
+ * Clears a saved model/provider pick whose provider is gone. Saved settings (localStorage or the
  * server's ui-prefs.json) can point at a provider that has since been deleted or disabled; sending that pin
  * makes chat-fallback drop it with a notice on every request. Clearing the pair instead sends no pin, so
  * the server uses the task chain's head with its own default model.

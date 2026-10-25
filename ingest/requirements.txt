@@ -1,9 +1,9 @@
-# Faz 5 (scoped): MarkItDown only — lightweight, CPU-only, installs in seconds.
+# MarkItDown only — lightweight, CPU-only, installs in seconds.
 # Pandoc is used for .tex when present on PATH (system tool, not a Python
 # package) but isn't a hard requirement — convert.py degrades gracefully
 # when it's missing, same as the tools below.
 #
-# Aşama 12: versions pinned to what this repo was last tested against —
+# Versions pinned to what this repo was last tested against —
 # reproducible installs, and a version bump is now a visible, reviewable
 # diff instead of a silent drift. Bump deliberately, not by habit.
 markitdown[all]==0.1.6
@@ -14,12 +14,12 @@ markitdown[all]==0.1.6
 # if YouTube import starts failing, bumping this first is the usual fix.
 yt-dlp==2026.7.4
 
-# Faz 15 (linkten içe aktarma, web sayfası kolu): ana-içerik ayıklama.
+# Linkten içe aktarma (web sayfası kolu): ana-içerik ayıklama.
 # MarkItDown'ın HTML'i de "çevirdiği" doğru ama nav/reklam/gövde-dışı öğeleri
 # ayıklamıyor — trafilatura tam olarak bu problemi çözüyor. Hafif, saf Python.
 trafilatura==2.2.0
 
-# Aşama 10 (#2): MathML -> LaTeX fallback for extract_web.py's math handling
+# MathML -> LaTeX fallback for extract_web.py's math handling
 # (mathml_convert.py) — used only when a <math> element carries neither an
 # alttext nor a TeX annotation (see that module's docstring for the two
 # preferred, source-preserving paths tried first). Pure Python, pulls only
@@ -45,7 +45,7 @@ fontTools==4.63.0
 
 # Marker and Docling are implemented in convert.py but stay OPTIONAL: they pull
 # PyTorch and multi-GB model weights, and the user's RAM belongs to Ollama
-# first (.claude/skills/source-ingest/SKILL.md). convert.py detects their
+# first. convert.py detects their
 # absence via ImportError and reports a clear "not installed" message rather
 # than crashing or silently degrading output quality.
 #

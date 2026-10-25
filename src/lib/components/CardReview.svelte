@@ -10,7 +10,7 @@
 	/**
 	 * The flashcard review session — front/reveal/grade, spaced-repetition
 	 * scheduling via /api/study/cards/[id]/grade — extracted from
-	 * /study/cards/+page.svelte (Faz — per-deck review) so /study/cards/[id]
+	 * /study/cards/+page.svelte (per-deck review) so /study/cards/[id]
 	 * (a specific deck) can reuse it instead of duplicating ~250 lines of
 	 * markup/CSS. The two callers differ only in WHICH cards get reviewed
 	 * (fetchUrl) and what "nothing to show" means for that source

@@ -25,7 +25,7 @@ import { normalizeLevel } from '../../../indexer/chunk';
  *
  * Changing EMBED_MODEL invalidates this number; re-measure before touching it.
  *
- * Aşama 3a: this is now only the FALLBACK — providers/config-store.ts's
+ * This is now only the FALLBACK — providers/config-store.ts's
  * embedding.distanceThreshold, when the user has set one, wins (selectChunks'
  * `opts.distanceThreshold` below). Absent config (the default ollama/bge-m3
  * pair, or an install that predates this field) keeps using exactly this
@@ -94,7 +94,7 @@ export function candidateVerdict(c: CandidateChunk, opts: CandidateFilters): Fil
 	// lower(?)`. Before this, search_library's domain filter was the only
 	// one of the two that was case-sensitive: `domain=Databases` returned
 	// 8 real matches from list_sources and 0 from search_library, for the
-	// same vault and the same domain string (Ö7).
+	// same vault and the same domain string.
 	if (opts.domains?.length && !opts.domains.some((d) => c.domains.some((cd) => cd.toLowerCase() === d.toLowerCase()))) {
 		return 'domain';
 	}
@@ -102,7 +102,7 @@ export function candidateVerdict(c: CandidateChunk, opts: CandidateFilters): Fil
 	// Case-insensitive AND synonym-folded (normalizeLevel), because
 	// frontmatter's level/depth field is hand-written, not an enum: a
 	// caller (or Claude) can reasonably type "undergraduate" and expect it
-	// to match a chunk stored as the canonical "undergrad" (Ö7 — an old
+	// to match a chunk stored as the canonical "undergrad" (an old
 	// index that predated normalizeLevel stored the alias literally,
 	// which no query-side case fold alone could bridge).
 	if (

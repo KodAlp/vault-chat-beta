@@ -11,7 +11,7 @@ import type { RetrieveResult } from '$lib/types';
 import { AppError } from './app-error';
 
 /**
- * Aşama 3a — every generate-*.ts calls this right after retrieve(), before
+ * Every generate-*.ts calls this right after retrieve(), before
  * its own `chunks.length === 0` / NoSourcesError check: retrieve() now runs
  * the FTS keyword fallback whenever embeddingIssue is set, REGARDLESS of
  * whether the caller asked for it (see retrieve.ts's wantsFallback), which
@@ -24,7 +24,7 @@ import { AppError } from './app-error';
  *    degrade to un-vetted keyword hits, so this fails loudly with a coded
  *    error instead of falling through to the normal chunks.length===0 check
  *    (which a non-empty keyword result would skip past).
- *  - 'fts-only' (Aşama 4a) is a DELIBERATE configuration: the user chose to
+ *  - 'fts-only' is a DELIBERATE configuration: the user chose to
  *    run without an embedding provider, so keyword hits are the only
  *    retrieval there is. The generators proceed with them (and still raise
  *    NoSourcesError when the keyword search finds nothing).

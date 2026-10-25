@@ -1,4 +1,4 @@
-"""OCR language selection for the docling pipeline (#8).
+"""OCR language selection for the docling pipeline.
 
 Engine today: RapidOCR (onnxruntime) with the PP-OCRv6 "multi" models that ship
 inside the `rapidocr` package (PP-OCRv6_det_small + PP-OCRv6_rec_small). One

@@ -58,7 +58,7 @@
 		return providerModels.filter((m) => m.providerId === providerId);
 	}
 
-	// F14-4 — "model listesini yönet": lazy per-provider (the catalog fetch/filter this hits is not free),
+	// "model listesini yönet": lazy per-provider (the catalog fetch/filter this hits is not free),
 	// loaded the first time that provider's <details> is opened, not on page mount.
 	// Problem B — `pinned` is the provider's raw pinnedModels list (see the /[id]/models GET's own doc
 	// comment); rendered as its own removable list regardless of whether the id also shows up in approved/other.
@@ -157,7 +157,7 @@
 		}
 	}
 
-	/** Aşama 4b — writes one capability flag of one model's override (providers.json modelCaps). The toggles
+	/** Writes one capability flag of one model's override (providers.json modelCaps). The toggles
 	 * show the EFFECTIVE value (family table default or an earlier override); flipping one stores an explicit
 	 * override for that flag, which wins over the table. */
 	async function setModelCap(providerId: string, modelId: string, key: 'tools' | 'reasoning', value: boolean) {
@@ -224,7 +224,7 @@
 		}
 	}
 
-	// -- Aşama 2b: local-server launcher panels (Tauri only) --------------
+	// -- local-server launcher panels (Tauri only) --------------
 
 	const tauri = isTauri();
 	let localServers = $state<DetectedServer[]>([]);

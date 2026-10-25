@@ -1,6 +1,6 @@
 <script lang="ts">
 	/**
-	 * Aşama 2b — first-run wizard for setting up a local LLM server (Ollama /
+	 * First-run wizard for setting up a local LLM server (Ollama /
 	 * LM Studio / llama.cpp / Jan), reached from the welcome screen's
 	 * "continue" action (see welcome/+page.svelte's proceed()) on the very
 	 * first launch of the Tauri desktop build only — localServerSetup.svelte.ts's
@@ -465,7 +465,7 @@
 		if (usedServer?.id === 'ollama' && modelCheck === 'idle') void checkOllamaModel();
 	});
 
-	// -- chat model + embedding choice (Aşama 4c) ----------------------------
+	// -- chat model + embedding choice ----------------------------
 	//
 	// The shipped providers.json has empty chains, no default model and no embedding (keyword search only),
 	// so once a server is running THIS is what makes chat work: pick a chat model, make it the default for

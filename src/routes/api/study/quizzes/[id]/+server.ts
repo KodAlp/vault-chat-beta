@@ -10,7 +10,7 @@ export const GET: RequestHandler = async ({ params, url }) => {
 	const quiz = getQuiz(v, params.id);
 	if (!quiz) fail('NOT_FOUND', { entity: 'quiz' }, 404);
 
-	// No answer/explanation here on purpose — the skill's UI spec is "no answer
+	// No answer/explanation here on purpose — the UI rule is "no answer
 	// reveal until submitted". Those come back from the attempt-submit endpoint.
 	// A question the user flagged as faulty is not asked again.
 	const items: QuizItemView[] = getQuizItems(v, params.id)

@@ -22,7 +22,7 @@ const CHUNK_TEXT = 'quicksort partition algorithm picks a pivot element';
 const QUERY = 'quicksort partition algorithm';
 
 /**
- * Aşama 3a — builds a real, tiny index.db (via indexer/db.ts, same as the
+ * Builds a real, tiny index.db (via indexer/db.ts, same as the
  * indexer/app write path) with one file/chunk embedded under `indexMeta`, so
  * retrieve() runs its real KNN + FTS5 machinery instead of a mock. Each test
  * gets a fresh vault id/dir (no dbCache collisions across tests — retrieve.ts
@@ -126,7 +126,7 @@ test('a mismatch with no keyword hit still reports embeddingIssue, with an empty
 	}
 });
 
-// Aşama 4a — FTS-only mode and a vanished embedding provider.
+// FTS-only mode and a vanished embedding provider.
 function setupFtsOnly(): VaultContext {
 	const vault = setup({ provider: 'ollama', model: 'bge-m3', dims: 3 });
 	fs.rmSync(vault.indexDbPath, { force: true });

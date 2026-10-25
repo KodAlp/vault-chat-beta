@@ -5,19 +5,19 @@ import { AppError, fail, toCodedError } from '$lib/server/app-error';
 import type { ErrorCode } from '$lib/errors';
 
 /**
- * Aşama 3a — settings surface for providers/config-store.ts's embedding
+ * Settings surface for providers/config-store.ts's embedding
  * config. GET is read-only (no side effects, matches every other settings
  * GET in this app — e.g. api/library/settings). PUT validates through
  * setEmbeddingConfig() (provider exists/enabled/kind, dims, consent for a
  * cloud provider) and never partially applies a bad config: a validation
  * failure leaves the previously saved embedding block untouched.
  *
- * Aşama 4a — GET returns `null` in FTS-only mode (no embedding provider
+ * GET returns `null` in FTS-only mode (no embedding provider
  * configured), and PUT `{ "providerId": null }` switches to that mode
  * explicitly (the index is then no longer vector-compatible, which the
  * normal mismatch flow reports once a provider is chosen again).
  *
- * No UI reads this yet (Aşama 3c) — this route exists now so the backend
+ * No UI reads this yet — this route exists now so the backend
  * contract is settled before that phase writes the settings card against it.
  */
 export const GET: RequestHandler = async () => {

@@ -32,12 +32,12 @@
 	let activateBusyId = $state<string | null>(null);
 	let deleteTarget = $state<{ vault: VaultRecord; chatCount: number } | null>(null);
 	let deleteError = $state('');
-	// Aşama 3c — the in-app reindex action, replacing "run npm run index"
+	// The in-app reindex action, replacing "run npm run index"
 	// instructions in this desktop/app context. One dialog for the page;
 	// reindexTargetId picks which vault it's currently aimed at.
 	let reindexTargetId = $state<string | null>(null);
 	let reindexOpen = $state(false);
-	// İ6 (Aşama 8): the one-time "keep existing vaults open to MCP, or close
+	// The one-time "keep existing vaults open to MCP, or close
 	// them?" prompt — see vaults.ts's RegistryFile doc comment. Hidden once
 	// answered, whichever way; never shown again after that.
 	let showMcpMigration = $state(false);
@@ -346,7 +346,7 @@
 	{/if}
 
 	{#if showMcpMigration}
-		<!-- İ6 one-time migration: pre-existing vaults default to CLOSED under
+		<!-- One-time migration: pre-existing vaults default to CLOSED under
 		     the new MCP-exposure gate, which would silently stop working for
 		     anyone whose MCP setup (Claude Desktop/Code) already reached every
 		     vault implicitly — this lets them keep that working exactly as it

@@ -1,6 +1,6 @@
 # Üçüncü Taraf Bildirimleri
 
-Bu proje (MIT lisanslı, bkz. `LICENSE`) aşağıdaki açık kaynak bağımlılıkları kullanır. Liste **doğrudan** bağımlılıklarla sınırlı (npm `dependencies` + Python `ingest/requirements*.txt`) — geçişli (transitive) bağımlılıkların tam listesi orantısız derecede uzun olurdu (233 üretim paketi); tam liste `npx license-checker --production` ile yeniden üretilebilir.
+Bu proje (Apache 2.0 lisanslı, bkz. `LICENSE` ve `NOTICE`) aşağıdaki açık kaynak bağımlılıkları kullanır. Liste **doğrudan** bağımlılıklarla sınırlı (npm `dependencies` + Python `ingest/requirements*.txt`) — geçişli (transitive) bağımlılıkların tam listesi orantısız derecede uzun olurdu (233 üretim paketi); tam liste `npx license-checker --production` ile yeniden üretilebilir.
 
 **Tarama sonucu (2026-09-24):** hiçbir bağımlılıkta (doğrudan ya da geçişli) copyleft lisans (GPL/AGPL/LGPL) yok — yalnızca MIT, Apache-2.0, BSD, ISC, MPL-2.0, Unlicense ve benzeri izin verici lisanslar.
 
@@ -71,7 +71,7 @@ Windows kurulum dosyası (`dist-server/`, bkz. `scripts/stage-server.mjs` ve `sc
 
 ## Python (`ingest/requirements-optional.txt` — varsayılan kurulu değil)
 
-Yalnızca kullanıcı matematik-yoğun/taranmış PDF dönüştürme için elle kurarsa devreye girer (bkz. `.claude/skills/source-ingest/SKILL.md`).
+Yalnızca kullanıcı matematik-yoğun/taranmış PDF dönüştürme için elle kurarsa devreye girer.
 
 | Paket | Lisans |
 |---|---|
@@ -80,7 +80,7 @@ Yalnızca kullanıcı matematik-yoğun/taranmış PDF dönüştürme için elle 
 
 **⚠️ marker model ağırlıkları ticari kısıtlıdır.** Ağırlıklar ilk kullanımda indirilir; bu repoda ya da installer'da yoktur. Lisansları araştırma, kişisel kullanım ve yıllık geliri/fonu 5 milyon doların altındaki girişimler için ücretsizdir; bunun ötesindeki ticari kullanım Datalab'dan ayrı lisans gerektirir (bkz. https://github.com/datalab-to/marker). Vault Chat marker'ı varsayılan olarak kurmaz; kurmaya karar veren kullanıcı bu koşulları kabul etmiş olur.
 
-**PyMuPDF kullanılmıyor** — hiçbir yerde import edilmiyor (Aşama 1'de kod incelemesiyle kapatılan bir karar, Aşama 12'de tekrar doğrulandı). Kullanılsaydı AGPL/ticari çift lisans riski olurdu; proje bunu bilinçli olarak dışarıda tutuyor.
+**PyMuPDF kullanılmıyor** — hiçbir yerde import edilmiyor (kod incelemesiyle kapatılan ve sonradan tekrar doğrulanan bir karar). Kullanılsaydı AGPL/ticari çift lisans riski olurdu; proje bunu bilinçli olarak dışarıda tutuyor.
 
 ## Fontlar
 

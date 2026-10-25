@@ -17,7 +17,7 @@
 	let linksText = $state('');
 	let domain = $state('genel');
 
-	// Aşama 10 #1: "list this page's PDF links, then let the user choose"
+	// "list this page's PDF links, then let the user choose"
 	// (D2 — no automatic crawling). A small inline sub-panel, not a second
 	// dialog, so the found links can be appended straight into linksText
 	// above without leaving this dialog.
@@ -28,7 +28,7 @@
 	let scanError = $state('');
 	let scanResults = $state<{ url: string; text: string }[]>([]);
 	let scanSelected = $state<Set<string>>(new Set());
-	// İ4 (Aşama 8): a rights checkbox that gates the start button — the app
+	// A rights checkbox that gates the start button — the app
 	// fetches whatever URL the user gives it, so this is the point where
 	// they're actually asked to confirm they're allowed to.
 	let rightsConfirmed = $state(false);
@@ -38,7 +38,7 @@
 	let errorMessage = $state('');
 	let statusLabel = $state('');
 
-	// #10: each 'pending' item (staged, not yet in the library) gets its own
+	// Each 'pending' item (staged, not yet in the library) gets its own
 	// editable title/domain/level draft, keyed by importId — mirrors
 	// SingleFileImport's single-item confirm form, just one per pending link
 	// instead of one for the whole dialog. savingIds tracks in-flight
@@ -307,7 +307,7 @@
 				</p>
 			{/if}
 
-			<!-- Aşama 10 #1: scan one page for its own PDF links instead of
+			<!-- Scan one page for its own PDF links instead of
 			     pasting each one by hand. Inline sub-panel, not a second
 			     dialog, so results merge straight into linksText above. -->
 			{#if !scanOpen}
@@ -373,7 +373,7 @@
 				{/each}
 			</div>
 			<div class="flex max-h-[50vh] flex-col gap-2 overflow-y-auto">
-				<!-- #10: a 'pending' item is staged but not yet in the library —
+				<!-- A 'pending' item is staged but not yet in the library —
 				     each gets its own editable title/domain form and a
 				     kaydet/yoksay pair, same review step file/YouTube upload
 				     already has, just one card per link instead of one dialog

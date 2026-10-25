@@ -1,5 +1,5 @@
 /**
- * Phase 1 (hardening) — stable, locale-independent error codes shared by
+ * Stable, locale-independent error codes shared by
  * every server surface. These are never shown to the user directly: the
  * client resolves each one through ServerErrors.<CODE> in
  * src/lib/i18n/messages/{tr,en}.json via formatCodedError() (error-format.ts).

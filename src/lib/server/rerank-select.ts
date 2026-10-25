@@ -5,7 +5,7 @@ import { candidateVerdict, MAX_CHUNKS_PER_FILE, type CandidateChunk, type Candid
  * Pure candidate handling around the cross-encoder (reranker.ts), kept free of
  * DB and process dependencies so it runs under plain `tsx --test`.
  *
- * Numbers are measured on the 330-question golden set (bench/, bge-reranker-v2-m3, sigmoid
+ * Numbers are measured on the 330-question golden set (the benchmark harness, bge-reranker-v2-m3, sigmoid
  * scores): vector top-30 -> rerank -> top 6 lifts Recall@5 0.688 -> 0.740. A best score below
  * 0.02 means the vault has nothing on the question (all 15 unanswerable questions fall under
  * it; 7 of 305 answerable ones do). Applied per chunk as well it raised source precision

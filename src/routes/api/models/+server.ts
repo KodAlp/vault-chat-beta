@@ -10,7 +10,7 @@ import type { ErrorCode, ErrorParams } from '$lib/errors';
 
 type PullEvent = { type: string; status?: string; error?: string; code?: string; params?: ErrorParams };
 
-/** Aşama 4d: the first enabled ollama-kind provider (preferring id 'ollama') — no longer a hardcoded id, and
+/** The first enabled ollama-kind provider (preferring id 'ollama') — no longer a hardcoded id, and
  * no Ollama provider at all is just "not configured", not a crash. */
 async function getOllamaAdapter(): Promise<OllamaAdapter> {
 	const id = getOllamaProviderId();

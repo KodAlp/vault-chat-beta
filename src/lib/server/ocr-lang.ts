@@ -1,5 +1,5 @@
 /**
- * OCR language argument for convert.py (`--ocr-lang`, #8).
+ * OCR language argument for convert.py (`--ocr-lang`).
  *
  * The vault's `allowedLanguages` are free-text names ("Türkçe", "English");
  * convert.py (ingest/ocr_lang.py) maps names and ISO codes to the OCR engine's

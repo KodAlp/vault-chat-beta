@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Formül ön-getirme (#82): bir sonraki grubun kırpımı ve işlemci girdisi, GPU decode'u sürerken hazırlanır.
+"""Formül ön-getirme: bir sonraki grubun kırpımı ve işlemci girdisi, GPU decode'u sürerken hazırlanır.
 
 docling 2.130'da zenginleştirme (`BasePipeline._enrich_document`) şöyle akar:
 

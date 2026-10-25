@@ -29,7 +29,7 @@ test('filters by domain when domains is provided', () => {
 	assert.equal(result.chunks[0].path, 'a.md');
 });
 
-// Ö7 (2026-09-23 report): search_library's domain filter was the only one
+// search_library's domain filter was the only one
 // of the two MCP filters that was case-sensitive — the same domain string
 // returned 8 real matches from list_sources (SQL `lower(d.value) =
 // lower(?)`) and 0 from search_library, for the same vault.
@@ -113,7 +113,7 @@ test('level filter is case-insensitive (frontmatter is hand-written, not an enum
 	assert.equal(result.chunks.length, 1);
 });
 
-// Ö7 (2026-09-23 report): an index built before normalizeLevel existed could
+// An index built before normalizeLevel existed could
 // still store the un-folded synonym ("undergraduate") in files.depth. A
 // query for the canonical spelling ("undergrad") — which is what a caller
 // would reasonably type, since that is what normalizeLevel folds every new

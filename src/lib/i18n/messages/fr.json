@@ -694,7 +694,7 @@
     "flattenFoldersPlaceholder": "wiki",
     "flattenFoldersHint": "Ces dossiers racine sont eux-mêmes masqués ; les dossiers qu'ils contiennent s'affichent directement à la racine de l'arborescence. Les chemins ne changent pas : seul l'aspect de l'arborescence est simplifié.",
     "libraryTreeTitle": "Arborescence de la bibliothèque",
-    "libraryTreeDescription": "Téléversez, renommez ou supprimez des documents. L'arborescence des sources de l'écran de chat (phase 9) utilise à la place une copie distincte, en lecture seule, pour la sélection du périmètre.",
+    "libraryTreeDescription": "Téléversez, renommez ou supprimez des documents. L'arborescence des sources de l'écran de chat utilise à la place une copie distincte, en lecture seule, pour la sélection du périmètre.",
     "loadError": "Impossible de charger les paramètres."
   },
   "ProvidersSettingsPage": {

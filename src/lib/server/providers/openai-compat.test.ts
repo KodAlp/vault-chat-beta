@@ -14,7 +14,7 @@ function stubFetch(handler: (url: string, init?: RequestInit) => Response) {
 	return () => (globalThis.fetch = realFetch);
 }
 
-test('listModels sends an AbortSignal on the /models request (F14-1 — health() already did, this one did not)', async () => {
+test('listModels sends an AbortSignal on the /models request (health() already did, this one did not)', async () => {
 	let sawSignal: AbortSignal | undefined;
 	const restore = stubFetch((url, init) => {
 		sawSignal = init?.signal ?? undefined;
@@ -64,7 +64,7 @@ test('listModels returns [] when the request itself fails (network error, abort)
 	}
 });
 
-// Aşama 4b — capability flags from the shared table, embedding-only drop, and chat_template_kwargs.
+// Capability flags from the shared table, embedding-only drop, and chat_template_kwargs.
 function localAdapter(opts: { local?: boolean; modelCaps?: Record<string, { tools?: boolean; reasoning?: boolean }> } = {}): OpenAICompatAdapter {
 	return new OpenAICompatAdapter({
 		id: 'lmstudio',

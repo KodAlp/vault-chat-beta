@@ -1,5 +1,5 @@
 /**
- * Pure rules for the one-time repair of existing library notes (TODO #4):
+ * Pure rules for the one-time repair of existing library notes:
  *   1. Adobe-Symbol private-use codes (U+F0xx, Likharev PDFs) -> real Unicode.
  *   2. `\infty` read where the PDF has "proportional to" -> `\propto`.
  *

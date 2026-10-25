@@ -1,5 +1,5 @@
 /**
- * Citation → heading anchor (#33). A cited chunk carries its breadcrumb
+ * Citation → heading anchor. A cited chunk carries its breadcrumb
  * (`heading_path`, indexer/chunk.ts's findHeadingPath: "Topic > H2 > H3"),
  * but the rendered note has no heading ids, so the viewer finds the heading by
  * its text. The breadcrumb holds the raw Markdown title (`**x**`, `` `y` ``)

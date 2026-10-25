@@ -1,4 +1,4 @@
-// Phase 2 owner: /api/import, /api/import/batch, /api/import/links(/scan),
+// Owner: /api/import, /api/import/batch, /api/import/links(/scan),
 // /api/import/youtube, /api/library/{attachment,file,rename,import-obsidian,
 // import/[id]/confirm}, /api/system/python — link-import.ts, library.ts,
 // library-read.ts, importObsidian.ts, convertQueue.ts, youtubeQueue.ts,

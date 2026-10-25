@@ -52,7 +52,7 @@
 
 	/** Replaces SourceList.svelte — that component deduped on `path +
 	 * heading_path`, so the same source cited from three chunks rendered as
-	 * three separate chips (Faz 9 Adım 6 bug list). This dedupes on `path`
+	 * three separate chips. This dedupes on `path`
 	 * alone and folds the count into a "×n bölüm" suffix instead. */
 	let { sources, vaultId }: { sources: RetrievedChunk[]; vaultId: string } = $props();
 

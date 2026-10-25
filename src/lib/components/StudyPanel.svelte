@@ -13,12 +13,12 @@
 	type StudyKind = 'quizzes' | 'reports' | 'mindmaps' | 'slidedecks' | 'decks';
 
 	/**
-	 * Light-version study panel (Faz 9 Adım 6, user-approved simplification):
+	 * Light-version study panel:
 	 * shows what's already generated/queued, never starts a new generation
 	 * itself — that still goes through the existing floating GenerationDialog
-	 * per type (Adım 4, untouched here).
+	 * per type.
 	 *
-	 * "Recently generated" list added in Faz 13 once quiz/report/mindmap/
+	 * "Recently generated" list added once quiz/report/mindmap/
 	 * slides got list-by-vault endpoints (previously only get-by-id existed,
 	 * so a generated item was reachable only via the moment's own
 	 * GenerationStatusToast — reload the page or miss that toast and it was
@@ -61,7 +61,7 @@
 	let slidedecks = $state<StudySummary[]>([]);
 
 	/**
-	 * "Unseen" tracking (Faz 18): a per-vault localStorage timestamp of the
+	 * "Unseen" tracking: a per-vault localStorage timestamp of the
 	 * newest generated item the user has actually looked at (opened the
 	 * panel for). Decks count toward this now, same as the other four types.
 	 */

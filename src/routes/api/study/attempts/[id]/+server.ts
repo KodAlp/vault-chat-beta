@@ -35,7 +35,7 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
 			// open answers ("Doğru cevap!" for an answer nobody wrote). See study-answers.ts.
 			isCorrect = false;
 		} else if (item.type === 'open') {
-			// Never graded by code — the skill requires the model here, clearly
+			// Never graded by code — the model grades it here, clearly
 			// labeled in the UI as "model değerlendirmesi".
 			const grade = await gradeOpenAnswer(
 				item.question,

@@ -73,7 +73,7 @@ function removeStageDirOrThrow(target = stageDir) {
 	);
 }
 
-// --- npm ci atlama (#57) ---
+// --- npm ci atlama ---
 // `npm ci` her sahnelemede ~dakikalar sürer; package.json + package-lock.json (ve better-sqlite3'ün
 // yerel ikilisinin bağlı olduğu Node sürümü/platform/mimari) değişmediyse önceki sahnelemenin
 // node_modules'ı birebir aynı olur. Güvenlik: damga dosyası YALNIZCA npm ci + rebuild BAŞARIYLA
@@ -186,7 +186,7 @@ if (canReuseNodeModules) {
 const mcpBundle = await buildMcpBundle({ root, outDir: stageDir });
 console.log(`MCP bundle: ${path.relative(root, mcpBundle.outfile)} (${(mcpBundle.size / 1024).toFixed(0)} KiB)`);
 
-// Windows only (#53): the installer carries its own Node and Python so the user installs neither. macOS/Linux
+// Windows only: the installer carries its own Node and Python so the user installs neither. macOS/Linux
 // keep resolving a system Node/Python.
 if (process.platform === 'win32') {
 	// Node: this very process's node.exe. better-sqlite3 in dist-server/node_modules was (re)built by this same

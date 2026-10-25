@@ -33,7 +33,7 @@ Vault Chat yerel-öncelikli çalışan bir SvelteKit uygulaması + Python ingest
 
 ## Bilerek dışarıda bırakılan / açık madde olarak duran riskler
 
-Bunlar reddedilmiş öneriler değil, ölçülüp bilinçli olarak ertelenmiş kararlar (yol haritasında gerekçeleriyle kayıtlı, `docs/yol-2026-09-23.md`):
+Bunlar reddedilmiş öneriler değil, ölçülüp bilinçli olarak ertelenmiş kararlar:
 
 - **İndirilen dosyaların (PDF vb.) kötü amaçlı yazılım taraması** yok — yalnızca ayrıştırılıyor, çalıştırılmıyor; yine de güvenmediğiniz kaynaklardan indirdiğiniz dosyaları içe aktarmadan önce kendi virüs tarayıcınızla kontrol etmeniz önerilir.
 - **TLS sertifika hatalarında işletim sistemi yedek zinciri** kullanılmıyor (bilinçli — TLS atlatma riskini açmamak için); sertifika hatası veren bir kaynak reddedilir, atlatılmaz.

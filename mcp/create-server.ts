@@ -22,8 +22,7 @@ import { registerEditNote } from './tools/edit-note';
  * DATA_DIR/mcp-endpoint.json), so there is one writer, the app's own
  * validation applies, and imports only land in a staging list that the user
  * confirms in the app. No study.db writes, no generator tools (Ollama's
- * single-model-in-RAM discipline is per-process only — see the skill's
- * "Üretici araçların erteleme şartları").
+ * single-model-in-RAM discipline is per-process only).
  */
 export function createServer(): McpServer {
 	const server = new McpServer(

@@ -6,7 +6,7 @@ import type { LearnerProfile } from '../learner-model';
 import { logAppEvent } from './app-log';
 
 /** Shared shape for every "what's been generated in this vault" list
- * (Faz 13) — id/title/model/created_at is the one thing all five
+ * — id/title/model/created_at is the one thing all five
  * generated-material tables have in common. Each list*() below selects
  * only these columns rather than `SELECT *`, so a large payload (e.g.
  * slidedecks.rendered_html/rendered_css) never gets dragged along just to
@@ -264,7 +264,7 @@ function addMissingColumns(db: Database.Database): void {
 		{ table: 'mindmap_nodes', column: 'summary', ddl: "TEXT NOT NULL DEFAULT ''" },
 		{ table: 'quiz_items', column: 'flagged_at', ddl: 'TEXT' },
 		{ table: 'quiz_items', column: 'cognitive_level', ddl: 'TEXT' },
-		// F13-1 (Aşama 9): a slide deck generated before this shipped keeps
+		// A slide deck generated before this shipped keeps
 		// rendering fine (rendered_html/rendered_css already has the old
 		// plain-theme markup baked in) — these just backfill the row shape
 		// so getSlides() doesn't return `undefined` for them.
@@ -515,7 +515,7 @@ export function deleteDeck(v: VaultContext, id: string): void {
 	getDb(v).prepare('DELETE FROM decks WHERE id = ?').run(id);
 }
 
-/** `deckId` optional (Faz — per-deck review): without it, counts due cards
+/** `deckId` optional (per-deck review): without it, counts due cards
  * across every deck, same as before — the flat /study/cards queue's global
  * badge. With it, scopes to one deck, e.g. StudyPanel's per-deck due badge. */
 export function getDueCount(v: VaultContext, nowIso: string, deckId?: string): number {
@@ -814,7 +814,7 @@ export function deleteSlideDeck(v: VaultContext, id: string): void {
 // ---- learner model (F1b) ----------------------------------------------------------------------------------------------------
 
 /** One stored answer with everything the evidence rules need (learner-evidence.ts decides what counts) — shared by the
- * learner model (F1b) and the weak-spot list (F2), so both read the exact same joined data. */
+ * learner model and the weak-spot list, so both read the exact same joined data. */
 export interface AnswerEvidenceRow {
 	item_id: string;
 	quiz_id: string;
@@ -861,7 +861,7 @@ export function getCardsForLearner(v: VaultContext): CardLearnerRow[] {
 	return getDb(v).prepare('SELECT source_path, domain, interval_days, due_at, reps, lapses FROM cards').all() as CardLearnerRow[];
 }
 
-/** A card with enough of its content to show as a weak spot (F2) — `CardLearnerRow` only carries what the mastery number needs. */
+/** A card with enough of its content to show as a weak spot — `CardLearnerRow` only carries what the mastery number needs. */
 export interface CardErrorRow {
 	id: string;
 	front: string;

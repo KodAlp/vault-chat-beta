@@ -5,8 +5,8 @@ import { dataDir } from '../src/lib/server/env';
 const MAX_BYTES = 5 * 1024 * 1024;
 
 /**
- * data/mcp-log.jsonl — content rule (ROADMAP: "içerik loglanmaz"), see the
- * mcp-server skill's per-tool table. Callers pass only metadata (path,
+ * data/mcp-log.jsonl — content rule ("içerik loglanmaz"):
+ * Callers pass only metadata (path,
  * character counts, filter values) — never note bodies, chunk text,
  * frontmatter values, or the raw query string. appendFileSync is
  * deliberate: handlers are already serialized (vault-scope.ts's mutex),

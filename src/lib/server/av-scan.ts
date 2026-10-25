@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 /**
- * Antivirus scan of ONE file on disk, before the converter ever opens it (TODO #60).
+ * Antivirus scan of ONE file on disk, before the converter ever opens it.
  *
  * Engines:
  *  - Windows: Microsoft Defender's command-line scanner, `MpCmdRun.exe -Scan -ScanType 3 -File <path> -DisableRemediation`

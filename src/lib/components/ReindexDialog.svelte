@@ -8,8 +8,8 @@
 	import type { ReindexEvent } from '$lib/types';
 
 	/**
-	 * Aşama 3c — reusable full-reindex dialog: opens, immediately starts
-	 * `POST /api/vaults/[id]/reindex` (Aşama 3b), shows progress, and lets
+	 * Reusable full-reindex dialog: opens, immediately starts
+	 * `POST /api/vaults/[id]/reindex`, shows progress, and lets
 	 * the user cancel via `DELETE` on the same route. Used from three
 	 * places: the vaults settings page (a vault card's own "Yeniden
 	 * indeksle" action), the embedding settings card (after a config change

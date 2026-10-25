@@ -25,7 +25,7 @@
 
 	let { children } = $props();
 
-	// Aşama 3c — one shared reindex dialog for every generation toast's
+	// One shared reindex dialog for every generation toast's
 	// "Yeniden indeksle" action (EMBEDDING_MISMATCH); each store's status
 	// entry already carries `vaultId`, so this just needs somewhere to open
 	// against.
@@ -211,14 +211,14 @@
 		});
 	});
 
-	// Faz 13: each store now holds an array of concurrent generations, not
+	// Each store now holds an array of concurrent generations, not
 	// one slot — so the fixed stackIndex={0..4} that used to give each
 	// *type* its own vertical position no longer works (a type can have
 	// 0, 1, or several active toasts at once). Cumulative bases keep every
 	// visible toast, across all five types, at a distinct non-overlapping
 	// position without changing the "quiz lane, then cards lane, then..."
 	// ordering anyone using this app today is already used to.
-	/** Faz 14: every /study/* item route needs to know which vault it
+	/** Every /study/* item route needs to know which vault it
 	 * belongs to (see study-db.ts's per-vault study.db) — status.vaultId
 	 * (captured from the request that started this generation) makes that
 	 * URL correct instead of silently falling back to "whatever vault is

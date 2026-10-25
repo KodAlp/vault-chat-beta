@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Conversion sidecar — CLI contract owned by the source-ingest skill doc:
+"""Conversion sidecar — CLI contract:
 
     python ingest/convert.py --in <file> --out-dir <dir> --tool auto|markitdown|marker|docling|pandoc [--dry-run] [--source-name <name>] [--pages START-END] [--pdf-backend default|hybrid] [--no-images]
 
@@ -36,7 +36,7 @@ Hugging Face is offline-first for docling/marker (see hf_offline_first): the
 models are already in the local cache, and without the flag every conversion
 process still made network requests to huggingface.co.
 
---source-name (2026-09-23, E5/K2-5): every caller (upload, batch upload, link
+--source-name (2026-09-23): every caller (upload, batch upload, link
 import) stages the input under a generic name (`original.pdf`) before calling
 this script, to keep the staging dir collision-free — so --in's own stem is
 never a usable title or source record. Pass the REAL filename here; it
@@ -103,8 +103,8 @@ PDF_EXT = ".pdf"
 TEX_EXT = ".tex"
 MD_EXT = ".md"
 
-# Kod dosyaları, Seçenek B (rapor §5.2, Aşama 11): "tek dosyalık örnekler
-# için" — a whole-repo import is option D, out of scope here. Extension ->
+# Kod dosyaları: "tek dosyalık örnekler
+# için" — a whole-repo import is out of scope here. Extension ->
 # Shiki language id, kept in sync BY HAND with src/lib/markdown.ts's LANGS
 # array (two different language runtimes, no shared module) so a wrapped
 # file actually gets highlighted instead of rendering as a plain block.
@@ -130,7 +130,7 @@ CODE_EXTENSIONS = {
     ".s": "asm",
 }
 
-# Heuristic straight from the skill doc: escalate a MarkItDown PDF result
+# Heuristic: escalate a MarkItDown PDF result
 # that smells broken rather than trusting it.
 SHORT_LINE_RATIO_THRESHOLD = 0.3
 MIN_PAGES_FOR_HEADING_CHECK = 5
@@ -138,7 +138,7 @@ CID_ARTIFACT = re.compile(r"\(cid:\d+\)")
 # A handful can appear in any PDF; hundreds mean the font mapping is gone.
 CID_ARTIFACT_THRESHOLD = 50
 # Below this, a MarkItDown pass that "looks broken" and couldn't be escalated
-# has nothing worth salvaging (S9's false-positive fallback below only makes
+# has nothing worth salvaging (the false-positive fallback below only makes
 # sense with real extracted text to fall back TO).
 MIN_FALLBACK_CHARS = 200
 
@@ -157,7 +157,7 @@ def emit(obj: dict) -> None:
 
 class PdfDamagedError(Exception):
     """The PDF is truncated or corrupt, or a converter returned fewer pages
-    than the file has. Deliberately NOT a RuntimeError: route_auto's S9
+    than the file has. Deliberately NOT a RuntimeError: route_auto's
     fallback catches RuntimeError and would hand back the MarkItDown text as
     a "successful" conversion of a document that is missing pages. This must
     propagate to main() and become a PDF_DAMAGED error instead."""
@@ -197,7 +197,7 @@ def pdf_title_from_metadata(path: Path) -> str | None:
 def pdf_title_from_first_large_line(path: Path) -> str | None:
     """The run of text set at the single largest size near the start of the
     document — the visual title, used when the PDF carries neither a usable
-    metadata Title nor a Markdown H1 in the converted body (K2-5: those two
+    metadata Title nor a Markdown H1 in the converted body (those two
     gaps are exactly how a converted PDF ends up titled "original" or
     "input", the staged filename convert.py was actually invoked with).
 
@@ -243,7 +243,7 @@ def title_from_fragments(window: list[tuple[str, float]]) -> str | None:
 
 
 def derive_pdf_title(path: Path) -> str | None:
-    """3-tier fallback (K2-5): metadata Title, then the first large-font
+    """3-tier fallback: metadata Title, then the first large-font
     line, then None — the caller falls back further to the real source
     filename (never in_path.stem, which is the staged "original"/"input").
     Only consulted when the converted body has no H1 of its own
@@ -462,7 +462,7 @@ _H1_LINE = re.compile(r"^#[ \t]+(.+)$", re.MULTILINE)
 
 
 def demote_slide_headings(text: str) -> str:
-    """K2-7: MarkItDown emits every slide's own title as `# `, so a 29-slide
+    """MarkItDown emits every slide's own title as `# `, so a 29-slide
     deck came back with 29 top-level H1s (measured: Ayrık Sistemler slides.01
     — the chunker's own heading tree assumes one H1 per document, and this
     is what "başlık araması" upstream then has to guess a single title
@@ -628,7 +628,7 @@ def pandoc_bin() -> str:
     just-completed winget install — see that module's doc comment for why a
     bare 'pandoc' PATH lookup can keep failing for the rest of the server's
     lifetime otherwise. A direct CLI invocation of this script (the
-    source-ingest skill doc's documented contract) sets no such env var, so
+    documented CLI contract) sets no such env var, so
     this falls back to the bare command name, exactly like the old
     hardcoded "pandoc" did."""
     return os.environ.get("PANDOC_BIN") or "pandoc"
@@ -916,8 +916,8 @@ def ocr_segments(page_range: tuple[int, int], textless: set[int] | list[int]) ->
     return out
 
 
-# Long PDFs are converted in page chunks of at most this size (#83, measured
-# 2026-10-15 on a 1151-page book, docs/dev/bellek-olcum-2026-10-15.md): with
+# Long PDFs are converted in page chunks of at most this size (measured
+# 2026-10-15 on a 1151-page book): with
 # formula/code enrichment and picture crops on, docling keeps every page's
 # image, PDF backend and parsed cells until the whole conversion ends — RAM
 # grew as ~2.4 GB + 20 MB/page (150 pages 5.5 GB, 600 pages 14.6 GB), so a
@@ -1020,7 +1020,7 @@ def _set_code_extraction(conv, on: bool) -> None:
 
 def _disable_ocr_cls(conv) -> None:
     """RapidOCR's text-angle classifier flips long, wide code lines upside down
-    (measured on fonk1, #8): switch it off on the OCR engine behind the auto
+    (measured on fonk1): switch it off on the OCR engine behind the auto
     model (the explicit-language branch sets use_cls=False in its options)."""
     try:
         from docling.datamodel.base_models import InputFormat
@@ -1108,7 +1108,7 @@ def convert_with_docling(
       `<!-- formula-not-decoded -->` placeholders and zero LaTeX. Good prose
       with holes where the mathematics was is worse than a failed conversion,
       because it looks complete. Measured limitation, not fixed by this app
-      (Aşama 7, 2026-09-23): the recognizer sometimes emits a bare operator
+      (2026-09-23): the recognizer sometimes emits a bare operator
       name as space-joined single-character tokens outside `\\text{}` (e.g.
       `A t t e n t i o n` for "Attention") rather than one word, and can
       misread a technical subscript outright (`d_model` came back
@@ -1132,7 +1132,7 @@ def convert_with_docling(
       the segment documents are concatenated. If docling's internals do not
       allow that, the whole document is OCR'd as before.
 
-    Device (Aşama 7, 2026-09-23, measured on an RTX 4050 6GB against an
+    Device (2026-09-23, measured on an RTX 4050 6GB against an
     8-page arXiv paper and a 12-page OSTEP chapter): CPU is categorically
     unusable — 79 s/page and 23 s/page respectively (635s/271s total), while
     GPU does the same documents in 3.4 s/page and 2.6 s/page (27s/32s) even
@@ -1148,7 +1148,7 @@ def convert_with_docling(
     here — it already resolves to CUDA on this machine, and degrades
     gracefully to CPU on a GPU-less one instead of hard-failing.
 
-    page_range (#37, Aşama 7): 1-indexed inclusive, docling's own convention
+    page_range: 1-indexed inclusive, docling's own convention
     — for a document too large to convert whole in one sitting. Independent
     of it, a scope longer than pdf_chunk_pages() is converted in chunks on
     the same converter and merged (#83, see PDF_CHUNK_PAGES).
@@ -1224,7 +1224,7 @@ def convert_with_docling(
     options.accelerator_options = AcceleratorOptions(device=AcceleratorDevice.AUTO)
     if images.COLLECTOR.enabled:
         # Crops of the detected pictures; 2.0 keeps small-print screenshots
-        # legible (measured cost: see the images.py commit notes / SKILL.md).
+        # legible (measured cost: see the images.py commit notes).
         options.generate_picture_images = True
         options.images_scale = 2.0
         images.COLLECTOR.candidates.clear()
@@ -1413,7 +1413,7 @@ def pandoc_not_installed_message() -> str:
 
 
 def convert_code_file(path: Path) -> str:
-    """Kod dosyaları, Seçenek B (Aşama 11): the file already IS the content —
+    """Kod dosyaları: the file already IS the content —
     wrapped as one fenced Markdown block, nothing to convert. No `# filename`
     heading is added here; main()'s existing title_fallback (from
     --source-name) already derives a title the same way it does for any
@@ -1435,7 +1435,7 @@ def convert_code_file(path: Path) -> str:
 def route_auto(
     path: Path, page_range: tuple[int, int] | None = None, pdf_backend: str = "default"
 ) -> tuple[str, str]:
-    """Returns (markdown_text, converted_by). page_range (#37) only ever
+    """Returns (markdown_text, converted_by). page_range only ever
     restricts the docling path below — MarkItDown's pass is fast enough on a
     huge document that there's nothing to save by partial-converting it too,
     and MarkItDown has no partial-page mode to give it anyway.
@@ -1466,7 +1466,7 @@ def route_auto(
         return convert_with_markitdown(path), "markitdown"
 
     if ext == MD_EXT:
-        # Ö6: already Markdown — no conversion tool has anything to do here.
+        # Already Markdown — no conversion tool has anything to do here.
         # Any pre-existing frontmatter is split off in main() before
         # postprocess() runs, so its YAML isn't mistaken for body text.
         return path.read_text(encoding="utf-8", errors="replace"), "already-markdown"
@@ -1494,7 +1494,7 @@ def route_auto(
                 return escalate_pdf(path, page_range=page_range, pdf_backend=pdf_backend, skip=skip)
             except RuntimeError as err:
                 if len(text.strip()) >= MIN_FALLBACK_CHARS:
-                    # S9: looks_broken() can be a false positive — a dense,
+                    # looks_broken() can be a false positive — a dense,
                     # multi-column or figure-heavy layout with a real text
                     # layer gets flagged as "looks scanned" the same way a
                     # genuinely scanned page does. When escalation is
@@ -1534,7 +1534,7 @@ def escalate_pdf(
     machine cannot convert math-heavy PDFs" and "it can".
 
     Both failures are reported, so a genuinely broken install still looks
-    broken rather than silently degrading. page_range (#37) only reaches
+    broken rather than silently degrading. page_range only reaches
     docling — marker has no equivalent option, and in practice never gets
     this far on Windows anyway (see above).
     """
@@ -1584,7 +1584,7 @@ _EXISTING_FRONTMATTER = re.compile(r"^---\n(.*?)\n---\n?", re.DOTALL)
 
 
 def split_existing_frontmatter(text: str) -> tuple[dict, str]:
-    """Ö6: a directly-uploaded .md may already carry its own frontmatter (a
+    """A directly-uploaded .md may already carry its own frontmatter (a
     prior vault-chat export re-imported, an Obsidian note) — postprocess()
     must not run its HTML-stripping/math-wrapping passes over that YAML
     block, and an existing title there should win over guessing one. Only
@@ -1618,9 +1618,9 @@ def sha256_of_file(path: Path) -> str:
 
 
 def unique_output_path(out_dir: Path, stem: str) -> Path:
-    """K2: convert.py used to always write `<stem>.md`, silently overwriting
+    """convert.py used to always write `<stem>.md`, silently overwriting
     whatever was already there — a real risk once source_sha256 makes
-    re-imports of a changed source routine (E5) rather than a rare manual
+    re-imports of a changed source routine rather than a rare manual
     re-run. A numeric suffix is appended instead of overwriting; the first
     free name wins, `<stem>.md` itself if nothing is there yet."""
     candidate = out_dir / f"{stem}.md"
@@ -1632,7 +1632,7 @@ def unique_output_path(out_dir: Path, stem: str) -> Path:
 
 
 def parse_page_range(raw: str) -> tuple[int, int]:
-    """--pages START-END (#37), 1-indexed inclusive — docling's own
+    """--pages START-END, 1-indexed inclusive — docling's own
     page_range convention, so the value round-trips straight through with
     no reindexing."""
     m = re.fullmatch(r"(\d+)-(\d+)", raw)
@@ -1703,15 +1703,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--tool",
         default="auto",
-        # pandoc was in the documented CLI contract (.claude/skills/source-ingest)
+        # pandoc was in the documented CLI contract
         # and in route_auto's .tex branch, but argparse rejected it — so a .tex
         # file could never be converted with an explicit --tool.
         choices=["auto", "markitdown", "marker", "docling", "pandoc"],
     )
     parser.add_argument("--dry-run", action="store_true")
-    # See the module docstring's --source-name section (E5/K2-5).
+    # See the module docstring's --source-name section.
     parser.add_argument("--source-name", dest="source_name", default=None)
-    # #37, Aşama 7: only ever restricts the docling path — see route_auto's
+    # Only ever restricts the docling path — see route_auto's
     # and escalate_pdf's own doc comments for why.
     parser.add_argument("--pages", dest="pages", default=None)
     # Fallback PDF reader for docling — see the module docstring.
@@ -1773,7 +1773,7 @@ def main(argv: list[str] | None = None) -> int:
         work_path, tex_fix = pdf_tounicode.prepare_pdf(in_path, work_dir)
         work_path = Path(work_path)
 
-    # Aşama 7: emitted before the (potentially many-minutes-long) conversion
+    # Emitted before the (potentially many-minutes-long) conversion
     # call, not after — a caller sizing a timeout or showing an ETA needs
     # the page count before that call blocks, not once it's already done.
     if in_path.suffix.lower() == PDF_EXT:
@@ -1816,7 +1816,7 @@ def main(argv: list[str] | None = None) -> int:
             candidate.strip() if isinstance(candidate, str) and not is_junk_title(candidate) else None
         )
 
-    # K2-5: in_path.stem is never a usable title or filename — every caller
+    # in_path.stem is never a usable title or filename — every caller
     # stages the real file under a generic name ("original.pdf") before
     # invoking this script, which is how five different real PDFs all came
     # back titled "original"/"input". --source-name carries the real one
@@ -1841,7 +1841,7 @@ def main(argv: list[str] | None = None) -> int:
     # in a textbook still reported zero warnings, so neither the import dialog
     # nor import-log.jsonl had anything to show.
     warnings = quality_warnings(final_text, is_pdf=is_pdf)
-    # Ö6: neither the source's own frontmatter nor its body had a usable
+    # Neither the source's own frontmatter nor its body had a usable
     # title — flag it, since guessing from the filename is the last resort,
     # not something to present as if it were the note's real title.
     if is_md and existing_md_title is None and not re.search(r"^#\s+\S", text, re.MULTILINE):
@@ -1891,7 +1891,7 @@ def main(argv: list[str] | None = None) -> int:
     if converted_by == "docling" and _READING_REPAIRED_PAGES:
         warnings.append(f"Okuma sırası düzeltildi (docling): sayfa {_page_list(_READING_REPAIRED_PAGES)}")
 
-    # E5: the idempotency key and provenance record for the WHOLE pipeline
+    # The idempotency key and provenance record for the WHOLE pipeline
     # (knowledge-editor's schemas/frontmatter.yaml documents source_sha256
     # this way already) were never actually written — hashing the final
     # curated Markdown (confirm/+server.ts) answers "did the note change",

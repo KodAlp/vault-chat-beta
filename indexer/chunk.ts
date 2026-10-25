@@ -50,7 +50,7 @@ const LEVEL_SYNONYMS: Record<string, string> = {
  * parses fine and reaches this function as a number or array. Before this
  * guard, `level.trim()` threw `TypeError: level.trim is not a function` and
  * aborted the whole indexing run partway through a directory walk: two files
- * after the bad one (alphabetically) were silently never indexed (Ö2).
+ * after the bad one (alphabetically) were silently never indexed.
  */
 export function normalizeLevel(level: unknown): string {
 	if (typeof level !== 'string') return '';
@@ -148,7 +148,7 @@ export function findAtomicSpans(text: string): AtomicSpan[] {
  * A copy of `content` with fenced code and $$ blocks blanked out, for the
  * heading scan below to search without matching inside them.
  *
- * Ö3: `## ` is a common comment marker in Python/shell. Before this mask, a
+ * `## ` is a common comment marker in Python/shell. Before this mask, a
  * `## not a heading` comment line inside a fenced code block was scanned as
  * a real section break — the code block was split in two mid-block, and the
  * second half's headingPath literally contained the comment text.
@@ -329,7 +329,7 @@ function unwrapAtomicBlock(block: Block): { open: string; body: string; close: s
  * pieces, each individually re-wrapped in the same fence/delimiter — never a
  * bare mid-block slice.
  *
- * Ö4: the chunker used to run plain hardSplit() over block.raw as a whole.
+ * The chunker used to run plain hardSplit() over block.raw as a whole.
  * That cuts on the block's own text without any notion of the wrapper, so
  * only the first piece kept the opening ``` / $$ and only the last kept the
  * closing one — a 150-line C block over budget became one real fenced block
@@ -428,7 +428,7 @@ function findHeadingPath(topicLabel: string, matches: HeadingMatch[], i: number,
 /**
  * Splits a wiki page into retrieval chunks: sectioned by ## and deeper headings,
  * each carrying its full breadcrumb, target 200-400 tokens with a 512 hard cap,
- * never splitting inside fenced code or $$ math blocks (see vault-rag-index skill).
+ * never splitting inside fenced code or $$ math blocks.
  */
 export function chunkMarkdown(rawFile: string): { frontmatter: Frontmatter; chunks: RawChunk[] } {
 	const { data, content: rawContent } = matter(rawFile);
@@ -490,7 +490,7 @@ export function chunkMarkdown(rawFile: string): { frontmatter: Frontmatter; chun
 				// fenced code or math block was appended whole regardless of size,
 				// so one huge block became one huge chunk — the same failure
 				// splitOnParagraphs had, by a different route. Each returned piece
-				// is itself a complete, re-fenced block (Ö4).
+				// is itself a complete, re-fenced block.
 				for (const piece of splitAtomicBlockPreserving(block)) {
 					if (buffer.length + piece.length > HARD_MAX_CHARS) flush();
 					buffer += piece;

@@ -1,4 +1,4 @@
-// One-time cleanup for chats.db rows written by the pre-Faz-11 bug where
+// One-time cleanup for chats.db rows written by an earlier bug where
 // the SSE route's `finally` block unconditionally persisted an assistant
 // message even when retrieval/the provider failed before any content
 // streamed in. Safe to run repeatedly — idempotent, since a fixed server

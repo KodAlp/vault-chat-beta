@@ -7,7 +7,7 @@ import path from 'node:path';
 import { _setEmbedFnForTests, checkSmallTalk, teachSmallTalk, afterSmallTalkGate, learnFromMessage, smallTalkGateActive } from './smalltalk-runtime';
 import { setEmbeddingConfig, type ProvidersFile } from './providers/config-store';
 
-// Aşama 4a — FTS-only mode (embedding null): every entry point of the small-talk glue must be a quiet no-op.
+// FTS-only mode (embedding null): every entry point of the small-talk glue must be a quiet no-op.
 function useFtsOnlyConfig(): void {
 	const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'smalltalk-runtime-test-'));
 	const data: ProvidersFile = { providers: [], chains: {} };

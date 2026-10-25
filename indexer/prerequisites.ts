@@ -1,5 +1,5 @@
 /**
- * Prerequisite links between notes (F4). Pure and dependency-free, so both the
+ * Prerequisite links between notes. Pure and dependency-free, so both the
  * indexer CLI and the app can use it and `tsx --test` can run it.
  *
  * Frontmatter says `prerequisites: ['[[online-algorithms]]', '[[np-completeness]]']`

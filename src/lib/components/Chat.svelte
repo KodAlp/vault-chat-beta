@@ -45,7 +45,7 @@
 	const STICK_THRESHOLD_PX = 80;
 
 	let messages = $state<ChatMessage[]>([]);
-	// Aşama 3c — opened by a message's "Yeniden indeksle" action (embeddingIssue
+	// Opened by a message's "Yeniden indeksle" action (embeddingIssue
 	// === 'mismatch', see Message.svelte); one dialog instance for the whole
 	// chat rather than one per message, since only one reindex can run at a
 	// time for this vault anyway (reindex.ts's per-vault lock).
@@ -64,7 +64,7 @@
 	 * picks one from the header dropdown. */
 	let overrideModel = $state<string | undefined>(undefined);
 	/**
-	 * Faz 17 — providerId end-to-end. ChatRow.provider is null for chats
+	 * providerId end-to-end. ChatRow.provider is null for chats
 	 * created before this column existed (or where no explicit provider was
 	 * ever chosen); loadChat() below falls back to undefined for those,
 	 * i.e. the current task-default provider — same as always. A chat
@@ -76,7 +76,7 @@
 	 */
 	let overrideProvider = $state<string | undefined>(undefined);
 	let hasChatRow = $state(false);
-	/** F6 — this chat's mode toggle. Persisted to chats.mode (unlike thinkMode, which is per-request only) so
+	/** This chat's mode toggle. Persisted to chats.mode (unlike thinkMode, which is per-request only) so
 	 * reopening a review chat keeps showing it as one. See onReviewModeChange. */
 	let reviewMode = $state(false);
 

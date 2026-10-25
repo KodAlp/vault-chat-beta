@@ -30,8 +30,8 @@ test('inline math delimiter whitespace is trimmed (marp-core/katex requires no i
 	assert.doesNotMatch(deck, /\$ x\^2 \$/);
 });
 
-// The end-to-end proof the plan's own acceptance criterion (docs/plan-ogrenme-ajani-ve-performans.md
-// §7, F13) asks for: "üretilen deck'te layout çeşitliliği görünmeli, Marp render'ı hata vermemeli,
+// The end-to-end proof the slide-layout acceptance criterion
+// asks for: "üretilen deck'te layout çeşitliliği görünmeli, Marp render'ı hata vermemeli,
 // $...$ matematik hâlâ KaTeX ile çizilmeli" — run through the REAL @marp-team/marp-core renderer with
 // this app's real theme, not just checked as a markdown string.
 test('every SLIDE_LAYOUTS value renders via the real Marp/theme pipeline without throwing, with a distinct section class and working KaTeX', () => {
@@ -55,7 +55,7 @@ test('every SLIDE_LAYOUTS value renders via the real Marp/theme pipeline without
 	assert.doesNotMatch(html, /\$x\^2\$/);
 });
 
-test('a diagram layout with valid node/edge data renders the deterministic SVG through the real Marp pipeline (F13-3)', () => {
+test('a diagram layout with valid node/edge data renders the deterministic SVG through the real Marp pipeline', () => {
 	const deck = buildMarpDeck([
 		{
 			layout: 'diagram',

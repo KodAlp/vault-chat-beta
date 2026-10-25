@@ -746,7 +746,7 @@
 		"flattenFoldersPlaceholder": "wiki",
 		"flattenFoldersHint": "Disse rotmappene skjules selv, mens mappene under dem vises direkte i trærot i stedet. Stiene er uendret – bare trevisningen forenkles.",
 		"libraryTreeTitle": "Bibliotektre",
-		"libraryTreeDescription": "Last opp, gi nytt navn til eller slett dokumenter. Chatskjermens eget kildetre (Faz 9) bruker en egen, skrivebeskyttet kopi av dette til valg av omfang.",
+		"libraryTreeDescription": "Last opp, gi nytt navn til eller slett dokumenter. Chatskjermens eget kildetre bruker en egen, skrivebeskyttet kopi av dette til valg av omfang.",
 		"loadError": "Kunne ikke laste innstillingene."
 	},
 	"ProvidersSettingsPage": {

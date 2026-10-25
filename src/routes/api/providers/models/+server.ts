@@ -15,7 +15,7 @@ import type { ProviderModelOption } from '$lib/types';
  * list (each adapter's own listModels() already swallows its own
  * fetch failures, see openai-compat.ts).
  *
- * F14: the old single `!m.embeddingOnly` line (structurally Ollama-only) is now the FIRST pass; the second
+ * The old single `!m.embeddingOnly` line (structurally Ollama-only) is now the FIRST pass; the second
  * pass runs every model through model-filter.ts's pickerModels — catalog filter (skipped for Ollama, a
  * problem-A local provider, and Azure OpenAI), narrowed by enabledModels when curated, unioned with
  * pinnedModels (problem B: a catalog-unknown or /models-unlisted model id the user explicitly pinned).
@@ -30,7 +30,7 @@ export const GET: RequestHandler = async () => {
 				const adapter = await getAdapter(p.id);
 				const models = (await adapter.listModels()).filter((m) => !m.embeddingOnly);
 				const final = pickerModels(p, models, catalog, { maxAgeMonths });
-				// İ2 (Aşama 8): computed once per provider, not per model —
+				// Computed once per provider, not per model —
 				// consent is granted/revoked for the whole provider, never a
 				// single model within it.
 				const cloud = isCloud(p);

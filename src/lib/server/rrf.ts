@@ -3,7 +3,7 @@
  * vector search + keyword search) into one ranking, without needing the
  * lists' scores to be on comparable scales — RRF only looks at rank.
  *
- * Lives in src/lib/server so the app and the MCP server can use it; bench/lib/fusion.ts re-exports it.
+ * Lives in src/lib/server so the app and the MCP server can use it; the benchmark harness re-exports it.
  */
 
 export interface RRFOptions {

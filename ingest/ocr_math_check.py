@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Known OCR confusions inside formulas (TODO #9).
+"""Known OCR confusions inside formulas.
 
 OCR'd math can be valid LaTeX and still wrong: Sigma recognised as `\\S`
 (section sign) compiles in KaTeX, so the KaTeX validation path never objects.

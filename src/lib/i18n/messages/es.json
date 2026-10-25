@@ -696,7 +696,7 @@
     "flattenFoldersPlaceholder": "wiki",
     "flattenFoldersHint": "Estas carpetas raíz se ocultan; en su lugar, las carpetas que contienen se muestran directamente en la raíz del árbol. Las rutas no cambian: solo se simplifica el aspecto del árbol.",
     "libraryTreeTitle": "Árbol de la biblioteca",
-    "libraryTreeDescription": "Sube, renombra o elimina documentos. El árbol de fuentes propio de la pantalla del chat (Fase 9) usa en su lugar una copia independiente de solo lectura para seleccionar el alcance.",
+    "libraryTreeDescription": "Sube, renombra o elimina documentos. El árbol de fuentes propio de la pantalla del chat usa en su lugar una copia independiente de solo lectura para seleccionar el alcance.",
     "loadError": "No se pudieron cargar los ajustes."
   },
   "ProvidersSettingsPage": {

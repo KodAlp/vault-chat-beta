@@ -4,7 +4,7 @@ import { listQuizzes } from '$lib/server/study-db';
 import { vaultFromUrl } from '$lib/server/requestVault';
 import type { StudySummary } from '$lib/types';
 
-/** Faz 13 — the collection-level counterpart to [id]/+server.ts's
+/** The collection-level counterpart to [id]/+server.ts's
  * get-by-id: lets the UI show what's already been generated in this
  * vault, not just fetch a specific item once its id is already known. */
 export const GET: RequestHandler = async ({ url }) => {

@@ -2,7 +2,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { resolveMcpMigration } from '$lib/server/vaults';
 
-/** İ6 one-time migration answer — see vaults.ts's RegistryFile doc comment.
+/** One-time migration answer — see vaults.ts's RegistryFile doc comment.
  * Idempotent: calling it again after mcpMigrationAsked is already true just
  * re-applies exposeAll to every vault, which is harmless (the settings page
  * only ever shows the prompt once, but a stray double-submit must not do

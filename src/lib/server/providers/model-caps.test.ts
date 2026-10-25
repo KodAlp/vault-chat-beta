@@ -75,7 +75,7 @@ test('an override wins over the table, flag by flag; absent flags fall through',
 	assert.deepEqual(capsFor('qwen3:8b', {}), REASONING);
 });
 
-// Aşama 4b — OllamaAdapter keeps its exact pre-move behavior for the ids Ollama actually lists.
+// OllamaAdapter keeps its exact pre-move behavior for the ids Ollama actually lists.
 test('Ollama ids: modelInfoFor is identical to the old ollama.ts table lookup (ctx, serveCtx, caps, flags)', () => {
 	assert.deepEqual(modelInfoFor('qwen3:8b'), {
 		id: 'qwen3:8b',

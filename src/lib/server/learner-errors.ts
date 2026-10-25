@@ -3,7 +3,7 @@ import { isCountableAnswer } from './learner-evidence';
 import { questionKey } from './quiz-dedupe';
 
 /**
- * F2: weak spots — notes where the person keeps getting a question wrong or keeps forgetting a card, grouped by
+ * Weak spots — notes where the person keeps getting a question wrong or keeps forgetting a card, grouped by
  * `(source_path, heading_path)`. Pure, like learner-model.ts; the SQL lives in study-db.ts.
  *
  * Deliberately NO stored `errors` table. A weak spot is computed fresh from the same answers and cards every time,
@@ -11,13 +11,13 @@ import { questionKey } from './quiz-dedupe';
  * re-answers, and the one thing a stored row would add — a user "this isn't really wrong" flag — already exists as
  * the "Bu soru hatalı" flag on the question itself, which `isCountableAnswer` already excludes.
  *
- * What counts as wrong here reuses `isCountableAnswer` from learner-evidence.ts on purpose: F1b and F2 read the same
+ * What counts as wrong here reuses `isCountableAnswer` from learner-evidence.ts on purpose: the learner profile and the weak-spot list read the same
  * stored answers, and if they disagreed about what a "real" answer is (a blank counted as wrong here but not there,
  * say) the two features would tell two different stories about the same quiz. A question is grouped and deduplicated
  * exactly like F1b too (`questionKey`), so five retakes of the same quiz are one weak spot with one wrong-count, not
  * five.
  *
- * Measured on the real study.db (see the F2 plan): of 97 stored answers only 8 were real, ungraded-blank wrong
+ * Measured on the real study.db: of 97 stored answers only 8 were real, ungraded-blank wrong
  * answers, and at least half of those were not the person's fault (a stored question without options, or a question
  * with more than one defensible correct option) — this module cannot tell those apart, which is exactly why "Bu soru
  * hatalı" stays the escape hatch rather than something this module tries to guess. Reviewed cards were a much richer

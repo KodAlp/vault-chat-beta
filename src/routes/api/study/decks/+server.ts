@@ -4,7 +4,7 @@ import { listDecks } from '$lib/server/study-db';
 import { vaultFromUrl } from '$lib/server/requestVault';
 import type { StudySummary } from '$lib/types';
 
-/** Faz 13 — see quizzes/+server.ts for the rationale. Not yet wired into
+/** See quizzes/+server.ts for the rationale. Not yet wired into
  * StudyPanel.svelte's UI: there's no /study/cards/[deckId] view route to
  * navigate a clicked deck to today (cards/ reviews the due queue across
  * all decks, not a single deck), so this exists for parity/future use. */

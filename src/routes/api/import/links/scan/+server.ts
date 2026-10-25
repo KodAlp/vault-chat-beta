@@ -14,7 +14,7 @@ import { AppError, fail, toCodedError } from '$lib/server/app-error';
 import type { ErrorCode } from '$lib/errors';
 
 /**
- * Aşama 10 #1: "list this page's PDF links, then let the user choose" —
+ * "List this page's PDF links, then let the user choose" —
  * not a crawl. Reads the given page (SSRF-checked, robots.txt-checked,
  * courtesy-delayed, one retry on a transient failure — same guards the
  * main /api/import/links POST applies per link) and returns same-origin

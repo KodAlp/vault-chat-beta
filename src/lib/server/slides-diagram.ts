@@ -1,11 +1,11 @@
 /**
- * F13-3 (Aşama 11) — deterministic SVG renderer for the `diagram` slide
+ * Deterministic SVG renderer for the `diagram` slide
  * layout. Pure module (no provider/env import), own *.test.ts, same reason
  * mindmap-validate.ts and slides-deck.ts were split out: importable from
  * plain `tsx --test`.
  *
- * Design note (see docs/yol-2026-09-23.md Aşama 11, Bulgu 3): the slide
- * display iframe has no `allow-scripts` (Aşama 9), which rules out
+ * Design note: the slide
+ * display iframe has no `allow-scripts` which rules out
  * client-side Mermaid. Rather than have the model emit raw SVG/Mermaid text
  * (an injection surface, and a format small local models render unreliably),
  * the model only ever supplies structured node/edge labels (validated by

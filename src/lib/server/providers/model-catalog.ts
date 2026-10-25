@@ -3,7 +3,7 @@ import path from 'node:path';
 import { modelCatalogPath } from '../env';
 
 /**
- * F14-2 — external metadata for filtering the model list (F14-3): which id is deprecated, text-output-only,
+ * External models.dev/OpenRouter metadata for filtering the model list: which id is deprecated, text-output-only,
  * how old, how large a context window. Two anonymous, keyless public catalogs (real shapes confirmed by
  * fetching both live before writing this):
  *

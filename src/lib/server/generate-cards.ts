@@ -156,8 +156,7 @@ parçalarından oluşuyor. Tam olarak ${count} adet bilgi kartı hazırla.
 - "back" alanı front'un cevabı: tanım, türetim özeti veya somut sonuç. Kısa ve öz, ama eksiksiz
   (self-contained — kart tek başına anlaşılır olmalı).`;
 
-	// Non-overridable, appended after any user skills — see userSkills.ts and
-	// the user-skills skill doc's "assembly order" section.
+	// Non-overridable, appended after any user skills — see userSkills.ts's assembly order.
 	const invariants = `Kurallar:
 - SADECE <context> bloğundaki bilgiye dayanarak kart üret. Context dışında hiçbir bilgi
   kullanma — context'te olmayan bir konuda kart üretme.

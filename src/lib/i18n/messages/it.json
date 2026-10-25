@@ -747,7 +747,7 @@
 		"flattenFoldersPlaceholder": "wiki",
 		"flattenFoldersHint": "Queste cartelle radice vengono nascoste, e le cartelle al loro interno compaiono direttamente alla radice dell'albero. I percorsi non cambiano: si semplifica solo l'aspetto dell'albero.",
 		"libraryTreeTitle": "Albero della biblioteca",
-		"libraryTreeDescription": "Carica, rinomina o elimina documenti. L'albero delle fonti della schermata di chat (Faz 9) usa invece una copia separata, di sola lettura, per la selezione dell'ambito.",
+		"libraryTreeDescription": "Carica, rinomina o elimina documenti. L'albero delle fonti della schermata di chat usa invece una copia separata, di sola lettura, per la selezione dell'ambito.",
 		"loadError": "Impossibile caricare le impostazioni."
 	},
 	"ProvidersSettingsPage": {

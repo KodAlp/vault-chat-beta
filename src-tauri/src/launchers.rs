@@ -1,4 +1,4 @@
-//! Aşama 1 — local server detection + launchers.
+//! Local server detection + launchers.
 //!
 //! This module gives the Rust/Tauri side (and ONLY this side — see the
 //! module-level security note below) the ability to:
@@ -79,9 +79,9 @@ const ADDR_PLACEHOLDER: &str = "<addr>";
 ///
 /// Winget ids below were checked with `winget show --id <id> -e` while
 /// building this module (all four resolved on this machine: Ollama.Ollama,
-/// ElementLabs.LMStudio, ggml.llamacpp, Jan.Jan) — see the Aşama 1 report
-/// for the full output. They are still "unverified" in the sense that
-/// Aşama 2 (actual install flow) should re-check them, since a winget
+/// ElementLabs.LMStudio, ggml.llamacpp, Jan.Jan) on that machine.
+/// They are still \"unverified\" in the sense that
+/// the actual install flow should re-check them, since a winget
 /// manifest id can be retired/renamed between now and then.
 struct CatalogEntry {
     id: &'static str,
@@ -145,7 +145,7 @@ static CATALOG: &[CatalogEntry] = &[
         stop_args: None,
     },
     CatalogEntry {
-        // Aşama 2a: confirmed via https://lmstudio.ai/docs/cli/server-start
+        // Confirmed via https://lmstudio.ai/docs/cli/server-start
         // (the "Options" section of `lms server start`) that it takes both
         // `--port <number>` ("Port to run the server on. If not provided,
         // uses the last used port") and `--bind <string>` ("Network address
@@ -210,7 +210,7 @@ static CATALOG: &[CatalogEntry] = &[
         stop_args: None,
     },
     CatalogEntry {
-        // Aşama 2a: confirmed directly from LocalAI's own CLI flag
+        // Confirmed directly from LocalAI's own CLI flag
         // definition (core/cli/run.go in mudler/LocalAI —
         // https://github.com/mudler/LocalAI/blob/master/core/cli/run.go):
         // `Address string `env:"LOCALAI_ADDRESS,ADDRESS" default:":8080" ...``
@@ -228,7 +228,7 @@ static CATALOG: &[CatalogEntry] = &[
         launchable: true,
         // No winget package for LocalAI as of this writing — it's normally
         // distributed as a Docker image. Detecting a `docker`-hosted
-        // LocalAI is out of scope for this stage (see the Aşama 1 report);
+        // LocalAI is out of scope for now;
         // only a `local-ai` binary directly on PATH is detected.
         winget_id: None,
         download_url: "https://localai.io",
@@ -1021,8 +1021,8 @@ fn detect_one(entry: &CatalogEntry) -> DetectedServer {
 pub(crate) async fn detect_local_servers(_app: AppHandle) -> Result<Vec<DetectedServer>, String> {
     // One blocking-pool thread per entry so the ~3s WSL timeout and the up-
     // to-five-probes-times-500ms-timeout worst case for a non-responding
-    // port don't serialize into N× the wait — see the module's Aşama 1
-    // report for the measured worst case.
+    // port don't serialize into N× the wait — see the module's
+    // docs for the worst case.
     let mut handles = Vec::with_capacity(CATALOG.len());
     for entry in CATALOG.iter() {
         handles.push(tauri::async_runtime::spawn_blocking(move || detect_one(entry)));
@@ -1649,7 +1649,7 @@ pub(crate) async fn startup(app: AppHandle) {
         }
     };
 
-    // #87: a user whose providers.json uses a local Ollama but who has NO
+    // A user whose providers.json uses a local Ollama but who has NO
     // "ollama" launcher entry at all (installed Ollama after the first-run
     // seed, or the seed never found it) used to get no server until they
     // started it by hand. Start it for this session only — nothing is written
@@ -2243,7 +2243,7 @@ mod tests {
     fn launcher_config_roundtrips_through_json() {
         let original = vec![LauncherConfig {
             id: "ollama".to_string(),
-            program: r"C:\Users\Alp\AppData\Local\Programs\Ollama\ollama.exe".to_string(),
+            program: r"C:\Users\user\AppData\Local\Programs\Ollama\ollama.exe".to_string(),
             args: vec!["serve".to_string()],
             port: 11434,
             auto_start: true,
@@ -2278,7 +2278,7 @@ mod tests {
         let path = dir.join("launchers.json");
         let launchers = vec![LauncherConfig {
             id: "lmstudio".to_string(),
-            program: r"C:\Users\Alp\.lmstudio\bin\lms.exe".to_string(),
+            program: r"C:\Users\user\.lmstudio\bin\lms.exe".to_string(),
             args: vec!["server".to_string(), "start".to_string()],
             port: 1234,
             auto_start: false,

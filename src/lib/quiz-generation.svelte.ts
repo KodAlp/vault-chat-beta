@@ -16,7 +16,7 @@ export type QuizGenerationStatus =
  * fetch loop itself lives here so it isn't tied to any one component's
  * lifetime.
  *
- * An array of entries, not a single `status` slot (Faz 13) — the old
+ * An array of entries, not a single `status` slot — the old
  * singleton meant a second generation starting before the first one's
  * "done" toast was dismissed silently overwrote it, erasing the only
  * pointer to that first quiz's id from the UI (it still existed in

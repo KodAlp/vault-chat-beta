@@ -692,7 +692,7 @@
     "flattenFoldersPlaceholder": "wiki",
     "flattenFoldersHint": "Diese Stammordner selbst werden ausgeblendet; die darunterliegenden Ordner erscheinen stattdessen direkt an der Wurzel des Baums. Die Pfade bleiben unverändert – nur die Darstellung des Baums wird vereinfacht.",
     "libraryTreeTitle": "Bibliotheksbaum",
-    "libraryTreeDescription": "Dokumente hochladen, umbenennen oder löschen. Der Quellenbaum des Chat-Bildschirms (Phase 9) nutzt für die Umfangsauswahl stattdessen eine separate, schreibgeschützte Kopie davon.",
+    "libraryTreeDescription": "Dokumente hochladen, umbenennen oder löschen. Der Quellenbaum des Chat-Bildschirms nutzt für die Umfangsauswahl stattdessen eine separate, schreibgeschützte Kopie davon.",
     "loadError": "Die Einstellungen konnten nicht geladen werden."
   },
   "ProvidersSettingsPage": {

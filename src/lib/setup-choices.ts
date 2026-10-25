@@ -1,5 +1,5 @@
 /**
- * Aşama 4c — the small decisions the first-run local-server wizard (routes/setup/local-server) makes, pulled
+ * The small decisions the first-run local-server wizard (routes/setup/local-server) makes, pulled
  * out as pure functions so they are unit-testable without a browser.
  */
 

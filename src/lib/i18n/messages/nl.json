@@ -743,7 +743,7 @@
 		"flattenFoldersPlaceholder": "wiki",
 		"flattenFoldersHint": "Deze hoofdmappen zelf zijn verborgen; de mappen eronder worden in plaats daarvan direct op het hoofdniveau van de boom getoond. Paden blijven ongewijzigd — alleen het uiterlijk van de boom wordt vereenvoudigd.",
 		"libraryTreeTitle": "Bibliotheekboom",
-		"libraryTreeDescription": "Documenten uploaden, hernoemen of verwijderen. De eigen bronnenboom van het chatscherm (Faz 9) gebruikt hiervoor een aparte, alleen-lezen kopie om het bereik te kiezen.",
+		"libraryTreeDescription": "Documenten uploaden, hernoemen of verwijderen. De eigen bronnenboom van het chatscherm gebruikt hiervoor een aparte, alleen-lezen kopie om het bereik te kiezen.",
 		"loadError": "Instellingen laden mislukt."
 	},
 	"ProvidersSettingsPage": {

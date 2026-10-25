@@ -1,4 +1,4 @@
-/** Aşama 2b — turns ingest/requirements.txt into the list of top-level
+/** Turns ingest/requirements.txt into the list of top-level
  * Python import names this app needs to be able to `import` at runtime.
  * Pure/pulled out of the /api/system/python route so it's unit-testable
  * without spawning python, and so the route's "one process checks every

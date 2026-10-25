@@ -65,10 +65,10 @@ export interface AppLogRecord {
 		/** The small-talk gate (smalltalk-gate.ts) learned, was taught, was overridden or failed:
 		 * `smallTalkAction` and, where there is one, `gatePhraseId`. Ids only, never the text. */
 		| 'smalltalk'
-		/** computeMemoryBlock (memory-runtime.ts, F3) failed and fell back to no memory block —
+		/** computeMemoryBlock (memory-runtime.ts) failed and fell back to no memory block —
 		 * never an error in the user's answer. `message` only, no note/domain content. */
 		| 'memory_error'
-		/** computeReviewBlock (review-mode.ts, F6) failed and fell back to no review block —
+		/** computeReviewBlock (review-mode.ts) failed and fell back to no review block —
 		 * same posture, `message` only. */
 		| 'review_error'
 		/** Güvenlik sertleştirme — hooks.server.ts's `handle` rejected a request:
@@ -80,7 +80,7 @@ export interface AppLogRecord {
 		 * (a local port scanner must not be able to grow this file unboundedly
 		 * between size-based rotations — see rotateIfNeeded above). */
 		| 'security_block'
-		/** Aşama 3a — retrieve() skipped vector search entirely: either the
+		/** retrieve() skipped vector search entirely: either the
 		 * index's recorded embedding (index_meta) differs from the currently
 		 * configured provider/model/dims (`reason: 'mismatch'`), or embedTexts()
 		 * itself threw (`reason: 'unavailable'` — consent/network/dims-mismatch

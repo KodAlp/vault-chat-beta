@@ -747,7 +747,7 @@
 		"flattenFoldersPlaceholder": "wiki",
 		"flattenFoldersHint": "Nämä juurikansiot itse piilotetaan; niiden alla olevat kansiot näytetään sen sijaan suoraan puun juurella. Polut eivät muutu – vain puun ulkoasu yksinkertaistuu.",
 		"libraryTreeTitle": "Kirjastopuu",
-		"libraryTreeDescription": "Lataa, nimeä uudelleen tai poista asiakirjoja. Keskustelunäkymän oma lähdepuu (Faz 9) käyttää tämän erillistä, vain luku -kopiota rajauksen valintaan.",
+		"libraryTreeDescription": "Lataa, nimeä uudelleen tai poista asiakirjoja. Keskustelunäkymän oma lähdepuu käyttää tämän erillistä, vain luku -kopiota rajauksen valintaan.",
 		"loadError": "Asetuksia ei voitu ladata."
 	},
 	"ProvidersSettingsPage": {

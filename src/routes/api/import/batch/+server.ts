@@ -38,8 +38,7 @@ import type { ImportEvent, ImportResultItem, ImportSummary } from '$lib/types';
  * the folder the user dropped into, level = form-supplied, default
  * undergraduate), needs_review carried through from the converter, and the
  * whole thing ends in a pdf2md-style summary. Single-file upload
- * (/api/import) keeps the nicer confirm-dialog flow — see the Faz 5 plan for
- * why the two differ.
+ * (/api/import) keeps the nicer confirm-dialog flow.
  *
  * BatchImport.svelte (multi-file/folder import) now sends ONE file per
  * request — a sequential client-side loop, not a single multi-file POST —
@@ -114,7 +113,7 @@ export const POST: RequestHandler = async ({ request }) => {
 				return;
 			}
 		}
-		// E5: content-addressed, not just "have we seen this exact URL/name
+		// Content-addressed, not just "have we seen this exact URL/name
 		// before" — catches the same PDF re-dropped under a different
 		// filename, which a name-only check never would. The log is re-read
 		// per file (below), right before the in-flight reservation, so a

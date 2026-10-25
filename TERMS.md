@@ -2,7 +2,7 @@
 
 ## Yazılım "olduğu gibi" sunulur
 
-Vault Chat, `LICENSE` dosyasındaki MIT lisansı koşullarıyla, **hiçbir garanti verilmeden** ("olduğu gibi") sunulur. Yazılımı kullanmanın veya kullanamamanın doğurduğu hiçbir doğrudan/dolaylı zarardan yazar(lar) sorumlu tutulamaz. Ayrıntılı hukuki metin için `LICENSE` bağlayıcıdır; bu belge onu tekrarlamak değil, pratik anlamını açıklamak içindir.
+Vault Chat, `LICENSE` dosyasındaki Apache 2.0 lisansı koşullarıyla, **hiçbir garanti verilmeden** ("olduğu gibi") sunulur. Yazılımı kullanmanın veya kullanamamanın doğurduğu hiçbir doğrudan/dolaylı zarardan yazar(lar) sorumlu tutulamaz. Ayrıntılı hukuki metin için `LICENSE` bağlayıcıdır; bu belge onu tekrarlamak değil, pratik anlamını açıklamak içindir.
 
 ## Üçüncü taraf içerik sorumluluğu size aittir
 
@@ -12,7 +12,7 @@ Vault Chat bir **araçtır** — kendi kasanızdaki notları, yüklediğiniz dos
 - kaynağın kullanım şartlarına (ör. bir web sitesinin `robots.txt`'i veya hizmet şartları) uygunluğu,
 - yasallığı ve doğruluğu
 
-**yalnızca sizin sorumluluğunuzdadır.** Uygulama, link/YouTube içe aktarmadan önce bir hak-beyanı onay kutusu gösterir (İ4/İ5) — bu, sorumluluğu size hatırlatan bir kullanıcı arayüzü adımıdır, bir hukuki garanti değildir.
+**yalnızca sizin sorumluluğunuzdadır.** Uygulama, link/YouTube içe aktarmadan önce bir hak-beyanı onay kutusu gösterir — bu, sorumluluğu size hatırlatan bir kullanıcı arayüzü adımıdır, bir hukuki garanti değildir.
 
 ## Üretilen içerik (sınav, kart, rapor, slayt, sohbet yanıtları)
 
@@ -30,7 +30,7 @@ Bu proje aktif geliştirme altında; bu belge ve davranışı zamanla değişebi
 
 # Terms of Use (EN)
 
-Vault Chat is provided **"as is"**, under the MIT License (`LICENSE`) — no warranty, no liability for direct or indirect damages from using or being unable to use the software. `LICENSE` is the binding legal text; this document explains its practical meaning.
+Vault Chat is provided **"as is"**, under the Apache License 2.0 (`LICENSE`) — no warranty, no liability for direct or indirect damages from using or being unable to use the software. `LICENSE` is the binding legal text; this document explains its practical meaning.
 
 **You are responsible for third-party content** you import (a web page, a YouTube video, an uploaded file) — its copyright status, compliance with the source's own terms, legality and accuracy. The app shows a copyright-acknowledgment checkbox before link/YouTube import as a UI reminder, not a legal guarantee.
 

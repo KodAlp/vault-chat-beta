@@ -176,7 +176,7 @@ def test_entities() -> None:
 
 
 def test_html_stripping() -> None:
-    # Table from the 2026-09-23 report (Ö5): `_HTML_TAG` used to treat any
+    # Table: `_HTML_TAG` used to treat any
     # `<word ...>` as markup, so it ate C++ generics, headers and inequalities
     # wherever they appeared — inside code, inside math, or in plain prose.
     # Measured on real content: craftinginterpreters' scanning.html turned
@@ -224,7 +224,7 @@ def test_junk_titles() -> None:
 
 
 def test_derive_title() -> None:
-    # K3-7: craftinginterpreters' scanning.html converted with a self-
+    # craftinginterpreters' scanning.html converted with a self-
     # referencing anchor wrapped around its H1 — the title used to come out
     # as the literal "[Scanning4](#top)", brackets and anchor target intact.
     check(

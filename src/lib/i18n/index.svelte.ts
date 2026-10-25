@@ -6,7 +6,7 @@ import { resolveMessage, type MessageTree } from './resolve';
 export type { Locale } from './locales';
 
 /**
- * Faz 19 — i18n scaffolding. This app was built Turkish-only from Faz 1
+ * i18n scaffolding. This app was first built Turkish-only
  * (every string hardcoded inline, see any *.svelte file's template); this
  * module is the seam that lets a locale be a runtime choice instead. No
  * library (no paraglide/i18next/svelte-i18n) — a component list + one

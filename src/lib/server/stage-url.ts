@@ -43,7 +43,7 @@ export async function stageUrl(
 	importId: string,
 	onEvent?: (event: ConvertEvent) => void
 ): Promise<{ title: string; warnings: string[] }> {
-	// #17: a YouTube link must go through the transcript sidecar, not be
+	// A YouTube link must go through the transcript sidecar, not be
 	// fetched as an ordinary web page (trafilatura would extract youtube.com's
 	// JS-shell boilerplate, never the actual video content).
 	if (isYoutubeUrl(url)) {
@@ -61,7 +61,7 @@ export async function stageUrl(
 
 	await assertPublicHost(url);
 
-	// Aşama 10 #3: robots.txt is cached per origin (fetchRobotsTxt), so a batch
+	// robots.txt is cached per origin (fetchRobotsTxt), so a batch
 	// of several links from the same site fetches it once, not once per link.
 	const robotsTxt = await fetchRobotsTxt(url.origin);
 	if (!isAllowedByRobots(url, robotsTxt)) {

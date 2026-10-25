@@ -1,11 +1,11 @@
 const STORAGE_KEY = 'vault-chat-local-server-setup-done';
 
 /**
- * Aşama 2b — "has this install already been walked through
+ * "Has this install already been walked through
  * /setup/local-server once?"
  *
  * Revised after review: this used to be a plain localStorage flag, exactly
- * like the original (pre-Faz-19) locale/settings storage. That's broken for
+ * like the original (pre-i18n) locale/settings storage. That's broken for
  * the same reason ui-prefs-store.ts's doc comment already documents for
  * those: the Tauri desktop build spawns the Node sidecar with PORT=0, so
  * the webview's origin (and therefore localStorage) is different on EVERY

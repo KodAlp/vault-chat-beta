@@ -193,8 +193,7 @@ hesaplamasını iste. Matematik/hesaplama içeren kaynaklarda örnek: "$f(x) = x
 noktasındaki türevini hesapla" YAZ, "türev nasıl hesaplanır?" YAZMA — cevap somut bir sayı/ifade olmalı (answer
 alanına o sonucu yaz), açıklama değil.`;
 
-	// Non-overridable, appended after any user skills — see userSkills.ts and
-	// the user-skills skill doc's "assembly order" section.
+	// Non-overridable, appended after any user skills — see userSkills.ts's assembly order.
 	const invariants = `Kurallar:
 - SADECE <context> bloğundaki bilgiye dayanarak sorular hazırla. Context dışında hiçbir bilgi
   kullanma — context'te olmayan bir konuda soru sorma, kendi bilgin olsa bile.

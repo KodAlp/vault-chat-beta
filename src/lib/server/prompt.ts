@@ -13,7 +13,7 @@ import { decideResponseLanguage, responseLanguageDirective } from './response-la
 export const DEFAULT_ALLOWED_LANGUAGES = ['Türkçe'];
 
 /** Language of the app's own core prompt text (coreIntro, CORE_INVARIANTS, no-sources notice). 'tr' is production;
- * 'en' exists for the #28 A/B (bench/run-generation.ts --prompt-lang) and is not wired to any setting. */
+ * 'en' exists for the prompt-language A/B and is not wired to any setting. */
 export type PromptLanguage = 'tr' | 'en';
 
 /** LibrarySettings.responseLanguage's two modes — see the type's own doc comment in
@@ -74,11 +74,10 @@ ${languageRule}${extraNote}`;
  */
 
 /**
- * Non-overridable, appended after any user skills — see userSkills.ts and
- * the user-skills skill doc's "assembly order" section. Local models weight
+ * Non-overridable, appended after any user skills — see userSkills.ts's assembly order. Local models weight
  * later instructions more heavily, so these must always be last.
  *
- * The last two bullets (F7) are a compressed, always-on version of the
+ * The last two bullets are a compressed, always-on version of the
  * `educational-agent` skill's epistemic-model.md — that file stays as the
  * more detailed, opt-in reinforcement (per-category sentence openers, the
  * two most common failure modes) for when the skill is actually enabled;
@@ -86,9 +85,9 @@ ${languageRule}${extraNote}`;
  * prose, not bracketed tags: a past attempt at machine-readable confidence
  * tags ([LOW]/[HIGH], "ConfidenceBadge") was abandoned because prompt.ts
  * never actually asked the model to produce them, so the parser had nothing
- * to parse — see .claude/ROADMAP.md. Character/token cost of these two
+ * to parse. Character/token cost of these two
  * lines was not measured live (no Ollama timing run for this specific
- * change); see the F7 section of the plan doc for the estimate.
+ * change).
  */
 export const CORE_INVARIANTS = `Kurallar:
 - Tüm matematiği kesinlikle $...$ (satır içi) veya $$...$$ (blok) içinde yaz.
@@ -177,11 +176,11 @@ export async function buildPromptMessages(
 			: '';
 
 	// Order matters: local models weight later instructions more heavily (see CORE_INVARIANTS's own doc comment).
-	// The memory block (F3, facts about the learner) sits below the user's own explicit skill customizations —
-	// it should outweigh nothing. The review block (F6), when this chat is in review mode, sits ABOVE the user's
+	// The memory block (facts about the learner) sits below the user's own explicit skill customizations —
+	// it should outweigh nothing. The review block, when this chat is in review mode, sits ABOVE the user's
 	// skills: it's a stronger, session-defining directive (what THIS conversation is for), but still yields to
 	// the hard invariants right below it. computeReviewBlock only runs for mode === 'review' — an ordinary
-	// free_chat turn does no extra work and produces the exact same prompt as before F6.
+	// free_chat turn does no extra work and produces the exact same prompt as before review mode existed.
 	const [skillsBlock, memoryBlock, reviewBlock] = await Promise.all([
 		renderUserSkillsBlock('chat', { includeFileNotes: opts?.toolsEnabled, language: promptLanguage }),
 		computeMemoryBlock(v),
@@ -219,7 +218,7 @@ export async function buildPromptMessages(
 		finalUserContent = `${finalUserContent}\n\n${responseLanguageDirective(decision)}`;
 	}
 
-	// F8 — bounded, not the whole conversation: a very long chat must not grow the prompt past the context
+	// Bounded, not the whole conversation: a very long chat must not grow the prompt past the context
 	// window and get silently truncated from the front, where CORE_INVARIANTS lives. The budget is what is left
 	// in the served window after the system prompt, the context block and the final question (history-limits.ts);
 	// without a known window (cloud providers) only the fixed ceiling applies.

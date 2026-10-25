@@ -5,7 +5,7 @@ import { buildMarpDeck, createSlidesMarp, type DeckSlide } from './slides-deck';
 import { Slides } from './slides-schema';
 
 /**
- * #74 — "quote" and "two-column" were never exercised with realistic content.
+ * "quote" and "two-column" were never exercised with realistic content.
  * Both layouts are plain Markdown + a theme `.{layout}` class (there is no
  * left/right schema field): quote = a `>` blockquote, two-column = a list /
  * paragraph flowed by CSS multi-column. These fixtures go through the real

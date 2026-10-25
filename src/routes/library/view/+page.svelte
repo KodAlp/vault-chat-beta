@@ -413,7 +413,7 @@
 		};
 	}
 
-	// Citation links carry the cited chunk's breadcrumb (`heading`, #33): once the note is rendered,
+	// Citation links carry the cited chunk's breadcrumb (`heading`): once the note is rendered,
 	// scroll to that heading and mark it briefly. Once per file + heading, so a save that re-renders
 	// the note does not yank the reader back.
 	let scrolledTo = '';

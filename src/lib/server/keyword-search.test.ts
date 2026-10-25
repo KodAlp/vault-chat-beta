@@ -5,7 +5,7 @@ import { hasKeywordIndex, keywordSearch, keywordSearchCoOccurring } from './keyw
 import { buildCoOccurrenceQuery } from './keyword-query';
 
 /**
- * F9 — RAG Retrieval, the deterministic half: keyword-search.ts (the FTS5 fallback, F5) had no direct test at
+ * RAG retrieval, the deterministic half: keyword-search.ts (the FTS5 fallback) had no direct test at
  * all before this — only its query-BUILDING logic (keyword-query.test.ts), never a real search against a real
  * FTS5 index. Unlike retrieve.ts's vector path, this needs no Ollama embedding call, so it can cover the
  * spec's exact RAG-retrieval scenario (§55: "Document A has the answer, Document B has similar but incorrect

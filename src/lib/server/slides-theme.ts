@@ -1,5 +1,5 @@
 /**
- * F13-2 (Aşama 9) — a Marpit theme CSS string, registered once per
+ * A Marpit theme CSS string, registered once per
  * generateSlides() call via `marp.themeSet.add(SLIDES_THEME_CSS)` and
  * selected by name in buildMarpDeck()'s frontmatter (`theme: <name>`).
  * Before this, `buildMarpDeck`'s header was just `marp: true` — no theme,
@@ -142,7 +142,7 @@ section.two-column p {
 	columns: 2;
 	column-gap: 48px;
 }
-/* #74 — a paragraph holding a display formula or an image must not be cut
+/* A paragraph holding a display formula or an image must not be cut
    into columns (the formula/image would be squeezed into half width); and
    code/formulas/images are width-bounded so a long line cannot push the
    flex item past the slide edge (flex items default to min-width:auto). */
@@ -195,14 +195,14 @@ section.quote blockquote {
 	max-width: 100%;
 	overflow-wrap: anywhere;
 }
-/* #74 — long quotations step the size down (class added by buildMarpDeck's
+/* Long quotations step the size down (class added by buildMarpDeck's
    densityClass); text is never dropped. */
 section.quote.dense blockquote { font-size: 28px; line-height: 1.3; }
 section.quote.xdense blockquote { font-size: 21px; line-height: 1.3; }
 section.quote.dense h1,
 section.quote.xdense h1 { font-size: 40px; }
 
-/* layout: diagram — F13-3 (Aşama 11): the section centers the deterministic
+/* layout: diagram — the section centers the deterministic
    inline SVG slides-diagram.ts renders (or, when the model didn't produce a
    valid node/edge structure and generate-slides.ts fell back to plain text,
    whatever markdown ended up in content_markdown instead). slides-diagram.ts

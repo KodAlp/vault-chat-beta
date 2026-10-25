@@ -4,7 +4,7 @@ Loads BAAI/bge-reranker-v2-m3 once and scores (query, passage) pairs sent as
 JSON lines on stdin, writing one JSON line per response to stdout. Meant to be
 spawned once and kept warm across many rerank() calls, since model load
 (safetensors, ~2.3 GB) dominates any single request's cost. Clients:
-src/lib/server/reranker.ts (the app) and bench/lib/reranker.ts (the benchmark).
+src/lib/server/reranker.ts (the app).
 
 Protocol:
   stdin  {"id": "...", "query": "...", "passages": ["...", ...]}

@@ -2,7 +2,7 @@
 // one-process-per-file path and convert-worker.ts, so neither imports the other
 // just for these.
 
-// A malformed/adversarial PDF (more likely once Faz 15 feeds this from
+// A malformed/adversarial PDF (more likely once link import feeds this from
 // arbitrary downloaded links, not just the user's own uploads) can hang
 // MarkItDown indefinitely. sharedJobMutex is shared with Ollama model-swap,
 // so a stuck child here blocks chat too — never wait forever.
@@ -10,7 +10,7 @@
 // This is the floor, used until convert.py's early `pageCount` progress
 // event (PDFs only) lets runConvert() replace it with a page-aware budget
 // below — a flat 120s is nowhere near enough for docling: measured on an
-// RTX 4050 (Aşama 7, 2026-09-23), CPU took 79 s/page and 23 s/page on an
+// RTX 4050 (2026-09-23), CPU took 79 s/page and 23 s/page on an
 // 8-page arXiv paper and a 12-page OSTEP chapter respectively (635s/271s
 // total — both already blow past 120s alone), and even GPU with Ollama's
 // qwen3:8b already resident (the worst realistic case, contention roughly

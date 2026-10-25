@@ -33,7 +33,7 @@ export type UiPrefs = {
 	locale?: Locale;
 	settings?: Partial<Settings>;
 	/**
-	 * Aşama 2b — "has this install already been walked through
+	 * "Has this install already been walked through
 	 * /setup/local-server once?" Same random-sidecar-port problem as
 	 * locale/settings above: a localStorage-only flag (see the original
 	 * localServerSetup.ts) reset to unset on every desktop launch, which
@@ -89,7 +89,7 @@ function sanitizeSettings(raw: unknown): Partial<Settings> | undefined {
 		out.motion = src.motion;
 	}
 	for (const key of STRING_FIELDS) {
-		// Aşama 4c: '' is a real value here ("no model/provider chosen — use the task chain"), and it must
+		// '' is a real value here ("no model/provider chosen — use the task chain"), and it must
 		// survive the merge in writeUiPrefs: dropping it would let an older saved pin (e.g. a provider that
 		// was just deleted) come back on the next load instead of staying cleared.
 		if (typeof src[key] === 'string' && (src[key] as string).length <= MAX_STRING_LEN) out[key] = src[key] as string;

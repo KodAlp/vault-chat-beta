@@ -347,7 +347,7 @@ body {
 	white-space: pre-wrap;
 }
 
-/* Faz 9 Adım 2 — preflight regression fix. Tailwind's preflight zeroes
+/* Preflight regression fix. Tailwind's preflight zeroes
    margins and list-style/border defaults globally (deliberately, via
    zero-specificity :where() so Svelte's scoped styles still win everywhere
    THEY apply) — but markdown.ts's rendered HTML is injected via {@html},

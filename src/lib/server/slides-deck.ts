@@ -3,7 +3,7 @@ import { SLIDES_THEME_NAME, SLIDES_THEME_CSS } from './slides-theme';
 import { isRenderableDiagram, renderDiagramSvg, SLIDE_DIAGRAM_HTML_ALLOWLIST, type DiagramSpec } from './slides-diagram';
 
 /**
- * F13-1/2 (Aşama 9): pulled out of generate-slides.ts into its own module —
+ * Pulled out of generate-slides.ts into its own module —
  * that file imports `chatWithFallback` from `./providers/registry`, which
  * itself imports SvelteKit's `$env/dynamic/private` (a Vite virtual module).
  * That makes generate-slides.ts unimportable from plain `tsx --test` (this
@@ -38,7 +38,7 @@ export interface DeckSlide {
 	layout: string;
 	heading: string;
 	content_markdown: string;
-	/** F13-3 (Aşama 11) — only consulted when layout === 'diagram'. Missing
+	/** Only consulted when layout === 'diagram'. Missing
 	 * or, after sanitizing, empty (isRenderableDiagram false) falls back to
 	 * content_markdown untouched, same graceful-degradation stance as
 	 * mindmap-validate.ts's soft checks: a provider/model that skips this
@@ -51,7 +51,7 @@ export interface DeckSlide {
  * that could accidentally merge a slide's trailing content into the next
  * separator line.
  *
- * F13-1/2 (Aşama 9): each slide gets a `<!-- _class: layout -->` LOCAL
+ * Each slide gets a `<!-- _class: layout -->` LOCAL
  * directive (underscore prefix — current slide only, per Marpit's directive
  * rules; a global `class:` would leak onto every following slide) selecting
  * one of slides-theme.ts's `.{layout}` selectors, then its own `# heading`
@@ -59,7 +59,7 @@ export interface DeckSlide {
  * longer writes the heading INTO content_markdown — see
  * generate-slides.ts's buildSystemPrompt invariant on that). */
 /**
- * #74 — a fixed 1280x720 slide cannot grow, and CSS alone cannot know how
+ * A fixed 1280x720 slide cannot grow, and CSS alone cannot know how
  * much text a quote/two-column slide holds, so long bodies get an extra
  * density class (`dense` / `xdense`, see slides-theme.ts) that steps the
  * font size down. Content is never dropped. Short bodies get no suffix, so
@@ -90,7 +90,7 @@ export function buildMarpDeck(slides: DeckSlide[]): string {
 /**
  * A fresh `Marp` instance, themed and configured — the one place that
  * constructs one, so generate-slides.ts and every test stay in sync on both
- * the theme registration and (F13-3, Aşama 11) the custom `html` allowlist
+ * the theme registration and the custom `html` allowlist
  * that lets the `diagram` layout's SVG through without being escaped. See
  * slides-diagram.ts's module doc comment for why `Marp.html`'s own 71-tag
  * default has no `svg`/`rect`/... entries at all, and why the merge here

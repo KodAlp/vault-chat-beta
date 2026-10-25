@@ -735,7 +735,7 @@
 		"flattenFoldersPlaceholder": "wiki",
 		"flattenFoldersHint": "이 루트 폴더 자체는 숨겨지고, 그 아래 폴더들이 트리의 루트에 바로 표시돼요. 경로는 바뀌지 않고 트리의 모양만 단순해져요.",
 		"libraryTreeTitle": "라이브러리 트리",
-		"libraryTreeDescription": "문서를 업로드하거나 이름을 바꾸거나 삭제해요. 채팅 화면의 출처 트리(Faz 9)는 범위 선택을 위해 이것의 별도 읽기 전용 사본을 사용해요.",
+		"libraryTreeDescription": "문서를 업로드하거나 이름을 바꾸거나 삭제해요. 채팅 화면의 출처 트리는 범위 선택을 위해 이것의 별도 읽기 전용 사본을 사용해요.",
 		"loadError": "설정을 불러오지 못했어요."
 	},
 	"ProvidersSettingsPage": {

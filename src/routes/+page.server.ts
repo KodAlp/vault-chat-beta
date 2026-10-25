@@ -4,8 +4,8 @@ import { countUnindexedFiles, checkEmbeddingMismatch } from '$lib/server/retriev
 import type { PageServerLoad } from './$types';
 
 /**
- * "Son vault'u hatırlama" — no new client state (see frontend-revamp
- * skill's Adım 5-7 plan, kullanıcı onayı): reuses Faz 8's existing
+ * "Son vault'u hatırlama" — no new client state, user-approved):
+ * reuses the existing
  * activeVaultId registry field, already kept up to date by
  * setActiveVault() calls in the vault/[id] routes. `?picker=1` is the
  * escape hatch — the header's "back to vault picker" link needs a way to
@@ -25,7 +25,7 @@ export const load: PageServerLoad = async ({ url }) => {
 
 	// unindexedCount, not stored on VaultRecord (see api/vaults/+server.ts's
 	// doc comment) — the vault picker's cards show it via VaultCard.svelte.
-	// embeddingMismatch (Aşama 3c) is the same kind of computed status.
+	// embeddingMismatch is the same kind of computed status.
 	return {
 		vaults: vaults.map((v) => {
 			const ctx = contextFor(v);

@@ -1,7 +1,7 @@
 /**
  * The cognitive level a quiz question targets (spec sections 24-25, reduced from six to four). EXPERIMENTAL and off by default
  * (Settings.quizLevelLabels): it asks a small model to write each question FOR a level, and measured on a 8B local model the
- * labels did not reliably describe the question that came out (see docs/plan-ogrenme-ajani-ve-performans.md, F1a).
+ * labels did not reliably describe the question that came out.
  *
  * Six levels (recall, understanding, application, analysis, synthesis, transfer) were tried first: an independent blind
  * re-labelling of 40 generated questions agreed with the generator only 40% of the time (chance 17%) and the upper three were

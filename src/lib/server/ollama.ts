@@ -8,7 +8,7 @@ import { fetchWithStartupWait } from './ollama-startup-wait';
  * is the only thing left in this file; chat/model-listing moved to
  * providers/ollama.ts.
  *
- * Aşama 3a (embedding-bagimsizligi): this is now a low-level, Ollama-only
+ * This is now a low-level, Ollama-only
  * implementation detail called through embeddings.ts's embedTexts() — the
  * single embed path every other caller (retrieve.ts, incrementalIndex.ts,
  * smalltalk-runtime.ts, the CLI indexer) uses, which resolves whichever
@@ -22,7 +22,7 @@ import { fetchWithStartupWait } from './ollama-startup-wait';
  * which runs outside Vite and can't resolve $env. See the mcp-server skill.
  *
  * Routed through ollamaGate like every other Ollama RAM access — it used to
- * bypass the single-large-model discipline entirely (Faz 11 audit finding).
+ * bypass the single-large-model discipline entirely (found in an audit).
  * nomic-embed-text is declared resident there, so this never waits on or
  * triggers a chat-model swap; it only keeps the gate's ledger honest.
  *

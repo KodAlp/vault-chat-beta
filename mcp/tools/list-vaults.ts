@@ -28,7 +28,7 @@ export function registerListVaults(server: McpServer): void {
 			try {
 				const vaults = await runSerialized(() => {
 					const activeId = getActiveVaultId();
-					// İ6 (Aşama 8): a closed vault is invisible here, not just
+					// A closed vault is invisible here, not just
 					// access-denied on a direct call — same-name-guessing (e.g.
 					// "default") must not work as a discovery bypass either.
 					return listVaults()
@@ -45,7 +45,7 @@ export function registerListVaults(server: McpServer): void {
 									noteCount: total,
 									// Files on disk index-vault.ts would walk but hasn't yet —
 									// a curation pass that finished without a `npm run index`
-									// afterward (E2). 0 for a vault with nothing pending.
+									// afterward. 0 for a vault with nothing pending.
 									unindexedCount: countUnindexedFiles(v),
 									domains: listDomains(v),
 									levels: listLevels(v),

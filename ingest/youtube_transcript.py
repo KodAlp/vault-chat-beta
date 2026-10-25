@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""YouTube transcript ingest sidecar — CLI contract owned by the
-source-ingest skill doc:
+"""YouTube transcript ingest sidecar — CLI contract:
 
     python ingest/youtube_transcript.py --url <url> --out-dir <dir> --lang tr,en
 
@@ -194,7 +193,7 @@ def main() -> int:
         # it downloads captions for every video in the list — youtubeQueue.ts
         # holds sharedJobMutex for the whole call, so an unbounded playlist
         # locks out every other conversion and the chat's own model swap
-        # until it finishes (2026-09-23 report).
+        # until it finishes (measured 2026-09-23).
         "noplaylist": True,
     }
     try:

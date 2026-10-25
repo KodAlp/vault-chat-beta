@@ -7,7 +7,7 @@ import { isProviderConsented } from '../provider-consent';
 import type { ModelCapsOverride } from './model-caps';
 
 /**
- * F14-4 — providers.json is now written more often (a checkbox toggle in the model-management UI writes on
+ * providers.json is now written more often (a checkbox toggle in the model-management UI writes on
  * every click, same "instant PATCH" pattern as the rest of this settings page), so a plain whole-file
  * writeFileSync is more likely to collide with a concurrent read. Same tmp+rename-with-retry shape as
  * vaults.ts's writeRegistry — Windows can transiently EPERM/EBUSY a rename right after a write.
@@ -56,7 +56,7 @@ export interface ProviderConfigEntry {
 	 * chain rather than asked for a model known to be wrong.
 	 */
 	defaultModel?: string;
-	/** F14-4 — a manual allow-list of model ids for this provider's pickers. Absent/empty means "show
+	/** A manual allow-list of model ids for this provider's pickers. Absent/empty means "show
 	 * everything model-filter.ts's approved list already contains" — this field only ever NARROWS that list
 	 * further, it never re-adds a model the filter rejected. Set the first time the user unchecks anything in
 	 * the settings page's "model listesini yönet" section. */
@@ -72,7 +72,7 @@ export interface ProviderConfigEntry {
 	 */
 	pinnedModels?: string[];
 	/**
-	 * Aşama 4b — per-model override of the capability flags model-caps.ts's table would otherwise decide
+	 * Per-model override of the capability flags model-caps.ts's table would otherwise decide
 	 * (tool-calling, reasoning), keyed by the model id exactly as the provider lists it. A flag that is
 	 * absent falls through to the table; the override wins flag by flag. Optional for the same reason every
 	 * field here is (an existing providers.json never gains new fields on its own).
@@ -89,14 +89,14 @@ export function isCloud(entry: Pick<ProviderConfigEntry, 'kind' | 'local'>): boo
 }
 
 /**
- * Aşama 3a (embedding-bagimsizligi) — which provider/model builds the vault
+ * Which provider/model builds the vault
  * index and embeds queries, now a config choice instead of the hardcoded
  * ollama/bge-m3 pair in embed-config.ts. Absent from providers.json entirely
  * means "never configured" — getEmbeddingConfig() below is the only place
  * that fills in the default (legacy ollama/bge-m3 when an 'ollama' provider
  * entry exists, otherwise null).
  *
- * Aşama 4a — `embedding: null` (explicit in the file, or the resolved result
+ * `embedding: null` (explicit in the file, or the resolved result
  * when nothing is configured and there is no ollama entry) is FTS-only mode:
  * no embedding provider at all, the index holds chunks + keyword (FTS5)
  * data only and retrieval is keyword search. Every reader of
@@ -161,8 +161,7 @@ export function getOllamaProviderId(): string | null {
 }
 
 /** Provider kinds embeddings.ts actually knows how to call — 'anthropic' and
- * 'azure-openai' have no embeddings adapter in this phase (see the plan's
- * scope note); validating this here, not just in embeddings.ts, means a bad
+ * 'azure-openai' have no embeddings adapter yet; validating this here, not just in embeddings.ts, means a bad
  * choice is rejected at save time instead of failing every retrieval later. */
 const EMBEDDING_CAPABLE_KINDS: ReadonlySet<ProviderConfigEntry['kind']> = new Set(['ollama', 'openai-compat']);
 
@@ -190,7 +189,7 @@ function isMissingFile(err: unknown): boolean {
 	return (err as NodeJS.ErrnoException)?.code === 'ENOENT';
 }
 
-/** Reads providers.json, falling back to the shipped defaults when the file is missing (#64: a skipped
+/** Reads providers.json, falling back to the shipped defaults when the file is missing (a skipped
  * wizard left no file and indexing died with ENOENT). Read-only: the file is created by the first
  * writer (writeFile), not by a read. */
 function readFile(): ProvidersFile {
@@ -262,7 +261,7 @@ export function updateProviderDefaultModel(id: string, defaultModel: string | nu
 	writeFile(data);
 }
 
-/** F14-4 — the manual model allow-list (see ProviderConfigEntry.enabledModels's doc comment). An empty array
+/** The manual model allow-list (see ProviderConfigEntry.enabledModels's doc comment). An empty array
  * is stored as-is, not deleted: "the user unchecked everything" is a real, distinct state from "never
  * curated" — the settings page can tell them apart to say "hiçbiri seçili değil" instead of silently falling
  * back to the filter's full approved list. `null` clears it back to that uncurated state. */
@@ -306,7 +305,7 @@ export function updatePinnedModels(id: string, modelIds: string[] | null): void 
 }
 
 /**
- * Aşama 4b — sets (or, with `caps === null`, clears) one model's capability override. Validates as it
+ * Sets (or, with `caps === null`, clears) one model's capability override. Validates as it
  * stores: the model id must be a non-empty string of at most 200 chars, and only boolean `tools` /
  * `reasoning` keys are kept (anything else is dropped); an override left with no flags is removed, and an
  * emptied `modelCaps` map is deleted from the entry, so a cleared state round-trips as "never set".
@@ -345,7 +344,7 @@ export function updateProviderLocal(id: string, local: boolean): void {
 }
 
 /**
- * Validates before writing (Aşama 4c — the first-run wizard now writes chains over HTTP): the task type must
+ * Validates before writing (the first-run wizard now writes chains over HTTP): the task type must
  * be a non-empty string, every id a string naming a provider that exists, and an id may appear only once.
  * An empty list is valid (a task with no provider — chatWithFallback then reports CHAT_NO_CHAIN).
  */
@@ -454,7 +453,7 @@ function slugify(s: string): string {
 export interface NewProviderInput {
 	label: string;
 	baseUrl: string;
-	/** 'ollama' (Aşama 4d) lets a deleted Ollama provider be added back; its baseUrl is the native one
+	/** 'ollama' lets a deleted Ollama provider be added back; its baseUrl is the native one
 	 * (http://127.0.0.1:11434, no /v1). */
 	kind: 'ollama' | 'openai-compat' | 'anthropic' | 'azure-openai';
 	reasoningDialect: 'think-tags' | 'reasoning_content' | 'none';
@@ -479,7 +478,7 @@ export function normalizeBaseUrl(raw: string): string {
 	return trimmed;
 }
 
-/** Faz 16A — adds an OpenAI-compatible (or native Anthropic, 16B) provider
+/** Adds an OpenAI-compatible (or native Anthropic) provider
  * with a generated id derived from the label, default cloud timeouts, and
  * the provider NOT enabled until the user flips it on (a provider with no
  * API key yet must not silently become the chat default). */

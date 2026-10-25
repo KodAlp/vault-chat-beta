@@ -50,7 +50,7 @@ export function validateDefaultProviders(parsed) {
  *    data/providers.json — with whatever keys/picks a developer set — must not be what ships);
  *  - dist-server/data/ holds nothing but providers.json;
  *  - dist-server/build/index.js (the server entry) and dist-server/ingest/convert.py (document import) and dist-server/mcp/vault-chat-mcp.mjs (the self-contained MCP server) exist.
- * On Windows the bundled runtimes must be there too (TODO #53): dist-server/node/node.exe and
+ * On Windows the bundled runtimes must be there too: dist-server/node/node.exe and
  * dist-server/python/python.exe. "stagedNodeExists" / "stagedPythonExists" are booleans on win32 and
  * null/undefined elsewhere (not bundled there, check skipped).
  * "stagedProviders" / "defaultProviders" are Buffers (or null when missing); "stagedDataEntries" the names

@@ -3,12 +3,12 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import { resolvePandocBin } from './pandoc-bin';
 
-const WIN32_DIRS = ['C:\\Windows\\system32', 'C:\\Users\\Alp\\AppData\\Local\\Microsoft\\WindowsApps'];
+const WIN32_DIRS = ['C:\\Windows\\system32', 'C:\\Users\\user\\AppData\\Local\\Microsoft\\WindowsApps'];
 
 function winEnv(overrides: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
 	return {
 		PATH: WIN32_DIRS.join(';'),
-		LOCALAPPDATA: 'C:\\Users\\Alp\\AppData\\Local',
+		LOCALAPPDATA: 'C:\\Users\\user\\AppData\\Local',
 		ProgramFiles: 'C:\\Program Files',
 		...overrides
 	};
@@ -39,7 +39,7 @@ test('skips a WindowsApps PATH entry rather than matching a redirector shim ther
 });
 
 test('falls back to the winget default install location (%LOCALAPPDATA%\\Pandoc) when PATH has nothing', () => {
-	const expected = path.win32.join('C:\\Users\\Alp\\AppData\\Local', 'Pandoc', 'pandoc.exe');
+	const expected = path.win32.join('C:\\Users\\user\\AppData\\Local', 'Pandoc', 'pandoc.exe');
 	const exists = (p: string) => p === expected;
 	const bin = resolvePandocBin(winEnv(), exists, 'win32');
 	assert.equal(bin, expected);

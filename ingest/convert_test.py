@@ -7,7 +7,7 @@ demotion, and the output-collision guard.
 Not part of `npm test` — same convention as postprocess_test.py/
 heading_repair_test.py/youtube_transcript_test.py. Every check here exists
 because of a real failure, mostly measured against real files (2026-09-23
-report, Aşama 6):
+report):
 
 - Five real PDFs came back titled "original"/"input" — the staged filename
   convert.py was invoked with, never the real one. title_from_fragments and
@@ -201,14 +201,14 @@ def test_unique_output_path() -> None:
         check("fresh stem needs no suffix", unique_output_path(d, "fresh").name == "fresh.md")
 
         (d / "note.md").write_text("x", encoding="utf-8")
-        check("K2: existing note.md is never silently overwritten", unique_output_path(d, "note").name == "note-2.md")
+        check("existing note.md is never silently overwritten", unique_output_path(d, "note").name == "note-2.md")
 
         (d / "note-2.md").write_text("x", encoding="utf-8")
         check("the next free suffix is found, not just -2 forever", unique_output_path(d, "note").name == "note-3.md")
 
 
 def test_split_existing_frontmatter() -> None:
-    # Ö6: a re-uploaded .md (a prior vault-chat export, an Obsidian note)
+    # A re-uploaded .md (a prior vault-chat export, an Obsidian note)
     # may already carry a frontmatter block — postprocess() must never see
     # it as body text, and its title (if any) should be readable back out.
     with_fm = '---\ntitle: "Var Olan Ba\\u015fl\\u0131k"\ntags: ["a", "b"]\n---\n\n# Body H1\n\nprose'
@@ -228,7 +228,7 @@ def test_split_existing_frontmatter() -> None:
 
 
 def test_parse_page_range() -> None:
-    # #37, Aşama 7: 1-indexed inclusive, matching docling's own convention
+    # 1-indexed inclusive, matching docling's own convention
     # so the value passes straight through with no reindexing.
     check("simple range parses", parse_page_range("1-50") == (1, 50))
     check("single-page range parses", parse_page_range("12-12") == (12, 12))
@@ -243,7 +243,7 @@ def test_parse_page_range() -> None:
 
 def test_looks_broken_unaffected_by_this_pass() -> None:
     # Regression guard: convert.py was restructured around looks_broken()
-    # (the S9 false-positive fallback wraps its caller, not looks_broken()
+    # (the false-positive fallback wraps its caller, not looks_broken()
     # itself) — this must still flag the same things it always did.
     check("all-short-lines text still looks broken", looks_broken("a\nb\nc\nd\n", page_count=1))
     check(
@@ -257,7 +257,7 @@ def test_looks_broken_unaffected_by_this_pass() -> None:
 
 
 def test_convert_code_file() -> None:
-    # Kod dosyaları, Seçenek B (Aşama 11): the file becomes one fenced block,
+    # Kod dosyaları: the file becomes one fenced block,
     # nothing else — no heading, no title guess (main()'s title_fallback
     # already owns that, from --source-name).
     with tempfile.TemporaryDirectory() as d:
@@ -347,7 +347,7 @@ def test_pdf_damage_checks() -> None:
 
 
 def test_scanned_pdf_not_damaged() -> None:
-    """#7: an image-only scan opens in pypdf; a docling page shortfall on image-only
+    """An image-only scan opens in pypdf; a docling page shortfall on image-only
     pages is a conversion failure, not PDF_DAMAGED."""
     from PIL import Image, ImageDraw
 
@@ -384,7 +384,7 @@ def test_scanned_pdf_not_damaged() -> None:
 
 
 def test_pdf_title_rejects_junk() -> None:
-    """#10: junk /Title falls through to the next candidate."""
+    """Junk /Title falls through to the next candidate."""
     with tempfile.TemporaryDirectory() as d:
         pdf = Path(d) / "t.pdf"
         make_pdf(pdf, 1)
@@ -402,7 +402,7 @@ def test_pdf_title_rejects_junk() -> None:
 
 
 def test_image_cap_warning() -> None:
-    """#11: 538 found = 400 kept + 86 over_cap + 52 filtered; the numbers must add up."""
+    """538 found = 400 kept + 86 over_cap + 52 filtered; the numbers must add up."""
     stats = {"found": 538, "kept": 400, "tiny": 30, "unreadable": 2, "template": 20, "over_cap": 86}
     msg = image_cap_warning(stats) or ""
     check("cap warning: total = kept + over_cap (486)", "486" in msg and "538" not in msg)
@@ -434,7 +434,7 @@ def test_damaged_propagates_through_escalation() -> None:
     try:
         convert.convert_with_marker = raise_import
         convert.convert_with_docling = raise_damaged
-        convert.convert_with_markitdown = lambda _p: "x" * 500  # long enough for the S9 fallback
+        convert.convert_with_markitdown = lambda _p: "x" * 500  # long enough for the false-positive fallback
         convert.looks_broken = lambda _t, _n: True
         convert.pdf_page_count = lambda _p: 8
 
@@ -829,7 +829,7 @@ def test_ocr_segments() -> None:
 
 
 def test_chunk_segments() -> None:
-    """#83: long PDFs are converted in chunks of at most N pages."""
+    """Long PDFs are converted in chunks of at most N pages."""
     ch = convert.chunk_segments
     check("chunk_segments: short segment untouched", ch([(1, 150, False)], 150) == [(1, 150, False)])
     check("chunk_segments: 151 pages -> 150 + 1", ch([(1, 151, False)], 150) == [(1, 150, False), (151, 151, False)])
@@ -939,7 +939,8 @@ def test_textless_pages() -> None:
         junk.write_bytes(b"not a pdf")
         check("textless_pages: corrupt file -> []", convert.textless_pages(junk) == [])
 
-    real = Path(r"C:\Users\Alp\Desktop\Notebook verileri\Matematik\static_resources\e5f819f98b7ab0e42a38ff9ef5960c0d_exam4sol.pdf")
+    # Optional real-file check: set VAULT_CHAT_TEST_PDF_DIR to a folder holding this PDF.
+    real = Path(os.environ.get("VAULT_CHAT_TEST_PDF_DIR", "<unset>")) / "e5f819f98b7ab0e42a38ff9ef5960c0d_exam4sol.pdf"
     if real.exists():
         check("textless_pages: exam4sol.pdf (page 2 scanned) -> [2]", convert.textless_pages(real) == [2])
 

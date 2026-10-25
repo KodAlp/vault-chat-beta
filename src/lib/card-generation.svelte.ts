@@ -14,7 +14,7 @@ export type CardGenerationStatus =
  * started it closing (and the user navigating away) rather than blocking
  * the screen for the 20s-2min a real generation takes.
  *
- * An array, not a single `status` slot (Faz 13) — see
+ * An array, not a single `status` slot — see
  * quiz-generation.svelte.ts's doc comment for why: a second generation
  * starting used to silently overwrite the first one's still-unread "done"
  * status. Each entry carries its own client-generated `id`.

@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <img alt="Lisans: MIT" src="https://img.shields.io/badge/lisans-MIT-blue" />
+  <img alt="Lisans: Apache-2.0" src="https://img.shields.io/badge/lisans-Apache--2.0-blue" />
   <img alt="Sürüm" src="https://img.shields.io/github/v/tag/KodAlp/vault-chat-beta?sort=semver&label=s%C3%BCr%C3%BCm&color=informational" />
   <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey" />
   <img alt="Node.js 22" src="https://img.shields.io/badge/Node.js-22-339933?logo=nodedotjs&logoColor=white" />
@@ -83,7 +83,7 @@ npm run dev
 
 Ardından `http://localhost:5173` adresini aç. İlk açılıştaki kurulum sihirbazı yerel model sunucusunu bulur ve sohbet ile embedding modelini seçmene yardım eder. Ön koşullar (Node.js 22 ve bir model kaynağı), masaüstü paketi, MCP kurulumu ve sorun giderme aşağıdaki ayrıntılı bölümlerde.
 
-Katkıda bulunmak için [`CONTRIBUTING.md`](CONTRIBUTING.md); gizlilik, güvenlik ve kullanım koşulları için [`PRIVACY.md`](PRIVACY.md), [`SECURITY.md`](SECURITY.md) ve [`TERMS.md`](TERMS.md). Proje MIT lisanslıdır ([`LICENSE`](LICENSE)).
+Katkıda bulunmak için [`CONTRIBUTING.md`](CONTRIBUTING.md); gizlilik, güvenlik ve kullanım koşulları için [`PRIVACY.md`](PRIVACY.md), [`SECURITY.md`](SECURITY.md) ve [`TERMS.md`](TERMS.md). Proje Apache 2.0 lisanslıdır ([`LICENSE`](LICENSE), [`NOTICE`](NOTICE)).
 
 ---
 
@@ -173,7 +173,7 @@ temiz bir varsayılan olan `data/providers.default.json`'ı tohum olarak
 kullanır: tüm bulut sağlayıcılar kapalı, görev zincirleri boş, embedding yok
 (yalnızca anahtar kelime araması) — kurulum sihirbazı bunları doldurur.
 
-## Vault'lar (Faz 8)
+## Vault'lar
 
 Uygulama tek bir kütüphane yerine **birden fazla vault** tutabilir — her biri
 kendi kaynak klasörü ve arama indeksiyle, birbirinden tamamen izole
@@ -184,12 +184,12 @@ kaydeder.
 - Vault oluşturmak/silmek/yeniden adlandırmak için **Ayarlar → Vault'lar**.
 - Bir defada tek bir vault "aktif" — sohbet ekranı ve indeksleyici hep aktif
   vault üzerinde çalışır.
-- **Eski (Faz 8 öncesi) bir kurulumdan geliyorsan** hiçbir şey yapmana gerek
+- **Eski (çoklu vault öncesi) bir kurulumdan geliyorsan** hiçbir şey yapmana gerek
   yok — sunucu ilk açılışta `data/vaults.json` bulunmadığını görüp
   `LIBRARY_PATH`/`INDEX_DB_PATH`/`STUDY_DB_PATH` içeriğini otomatik olarak
   `data/vaults/default/` altına taşır ve "default" adında bir vault kaydeder;
   eski sohbetlerin hepsi bu vault'a bağlanır. **`VAULT_PATH` bilerek
-  taşınmaz** — Faz 5 öncesi mimaride bu, canlı bir Markdown not klasörünü
+  taşınmaz** — Eski mimaride bu, canlı bir Markdown not klasörünü
   (örn. bir Obsidian vault'unu) yerinde gösteren bir işaretçiydi (hiç kopyalanmazdı), app'e ait bir klasör değil.
   Sadece `VAULT_PATH` ayarlıysa (bu repodaki gibi — `data/library` boş,
   gerçek içerik `VAULT_PATH=..`'den yerinde indeksleniyor) "default" vault
@@ -664,14 +664,12 @@ sayılar, metin içeriği yok.
   yapılandırılmamış olabilir (anlamsal arama kapalı); Ayarlar → Sağlayıcılar'da bir
   embedding modeli seç, sonra vault'u yeniden indeksle.
 - **Kaynak bulunamıyor / cevaplar alakasız** → `npm run index` çalıştırıldı mı, index güncel mi?
-  Ayrıntılı teşhis sırası için `.claude/skills/vault-rag-index/SKILL.md` içindeki
-  "Quality debugging checklist" bölümüne bak. Birden fazla vault kullanıyorsan
+  Birden fazla vault kullanıyorsan
   ayrıca kontrol et: doğru vault aktif mi (Ayarlar → Vault'lar), `npm run index`
   aktif vault'u mu indeksledi yoksa başka bir vault'u mu (`--vault <id>` ile
   yanlış vault verilmiş olabilir)?
 - **Matematik render olmuyor / `f(x)` gibi çıplak kod görünüyor** →
-  `.claude/skills/svelte-vault-chat/SKILL.md` içindeki acid-test string'leriyle
-  `src/lib/markdown.ts` pipeline'ını doğrula.
+  `src/lib/markdown.ts` pipeline'ını `f(x)` gibi bir örnek metinle sına.
 - **MCP istemcisi "connected" göstermiyor / hemen kapanıyor** → `"command"`
   değeri gerçekten `"node"` mu (bkz. yukarıdaki not)? `npm run mcp:smoke`
   temiz geçiyor mu? Claude Desktop'ta `%APPDATA%\Claude\logs\mcp-server-vault-chat.log`'daki

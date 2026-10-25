@@ -3,7 +3,7 @@
  * Applies hand-checked formula fixes (each one compared with the source PDF)
  * to MinerU-converted raw books. Companion of katex-cleanup.mjs: that script
  * only does mechanical, provably safe rewrites; the rest is decided by a human
- * and recorded in a fixes file (see docs/dev/katex-elle-*.json).
+ * and recorded in a fixes file.
  *
  *   node scripts/katex-manual-fix.mjs <libraryDir> <fixes.json>                          # DRY (default)
  *   node scripts/katex-manual-fix.mjs <libraryDir> <fixes.json> --write --backup-dir <dir>

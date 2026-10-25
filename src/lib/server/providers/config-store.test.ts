@@ -240,7 +240,7 @@ test('updatePinnedModels on an unknown provider id throws', () => {
 	assert.throws(() => updatePinnedModels('no-such-provider', ['x']));
 });
 
-// Aşama 3a — getEmbeddingConfig()/setEmbeddingConfig()
+// getEmbeddingConfig()/setEmbeddingConfig()
 
 test('getEmbeddingConfig defaults to ollama/bge-m3/EMBED_DIMS when providers.json has no embedding block', () => {
 	useTmpProvidersFile();
@@ -328,7 +328,7 @@ test('setEmbeddingConfig on a cloud provider succeeds once consent is granted', 
 	assert.equal(getEmbeddingConfig()?.providerId, 'groq');
 });
 
-// Aşama 4a — Ollama is an ordinary provider now: no disable/delete guards, and embedding can be absent (FTS-only).
+// Ollama is an ordinary provider now: no disable/delete guards, and embedding can be absent (FTS-only).
 function writeProviders(data: ProvidersFile): void {
 	fs.writeFileSync(process.env.PROVIDERS_PATH!, JSON.stringify(data, null, 2) + '\n', 'utf-8');
 }
@@ -406,7 +406,7 @@ test('getOllamaBaseUrl reads the ollama entry baseUrl (trailing slash stripped) 
 	assert.equal(getOllamaBaseUrl(), 'http://127.0.0.1:11434');
 });
 
-// Aşama 4b — modelCaps override setter.
+// modelCaps override setter.
 test('updateModelCaps stores an override and it round-trips through a fresh read', () => {
 	useTmpProvidersFile();
 	updateModelCaps('local-compat', 'qwen/qwen3-8b', { tools: false, reasoning: true });
@@ -441,7 +441,7 @@ test('updateModelCaps rejects an unknown provider and an empty or oversized mode
 	assert.deepEqual(readProvidersFile().providers.find((p) => p.id === 'local-compat')?.modelCaps, { a: { tools: true } });
 });
 
-// Aşama 4c — updateChain validation, and the shipped default config.
+// updateChain validation, and the shipped default config.
 test('updateChain rejects an unknown provider id, a duplicate, a non-string id and an empty task type', () => {
 	useTmpProvidersFile();
 	assert.throws(() => updateChain('chat', ['groq', 'no-such']), (err: unknown) => err instanceof AppError && err.code === 'NOT_FOUND');
@@ -466,7 +466,7 @@ test('the shipped providers.default.json resolves to FTS-only (embedding null) e
 	assert.equal(readProvidersFile().providers.some((p) => p.id === 'ollama'), true);
 });
 
-// Aşama 4d — Ollama as an ordinary provider: re-adding it, and finding the one the model manager uses.
+// Ollama as an ordinary provider: re-adding it, and finding the one the model manager uses.
 test('addProvider can add an Ollama-kind provider (native base URL, local timeouts, reasoning_content dialect, disabled until enabled)', () => {
 	useTmpProvidersFile();
 	deleteProvider('ollama');
@@ -492,7 +492,7 @@ test('getOllamaProviderId: first ENABLED ollama-kind provider, preferring id "ol
 	assert.equal(getOllamaProviderId(), 'ollama');
 });
 
-test('a missing providers.json falls back to the shipped defaults instead of throwing ENOENT (#64)', () => {
+test('a missing providers.json falls back to the shipped defaults instead of throwing ENOENT', () => {
 	const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'config-store-missing-'));
 	process.env.PROVIDERS_PATH = path.join(dir, 'providers.json');
 	assert.equal(fs.existsSync(process.env.PROVIDERS_PATH), false);

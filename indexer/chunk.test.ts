@@ -98,7 +98,7 @@ test('a huge fenced code block is split under HARD_MAX_CHARS', () => {
 	}
 });
 
-// Ö4 (2026-09-23 report): the old splitter ran plain hardSplit() over an
+// The old splitter ran plain hardSplit() over an
 // oversized code block's raw text as if it were prose, so only the first
 // piece kept the opening ``` and only the last kept the closing ``` — a
 // 150-line C block over budget rendered as one real fenced block followed by
@@ -133,7 +133,7 @@ test('an oversized fenced code block splits into individually-fenced pieces with
 	);
 });
 
-// Ö3 (2026-09-23 report): `## ` is a common comment marker in Python/shell. A
+// `## ` is a common comment marker in Python/shell. A
 // `## not a heading` line inside a fenced code block used to be scanned as a
 // real section break, splitting the code block in two mid-block.
 
@@ -184,7 +184,7 @@ test('normalizeLevel leaves already-canonical and unknown values untouched', () 
 	assert.equal(normalizeLevel('meta'), 'meta');
 });
 
-// Ö2 (2026-09-23 report): hand-written YAML frontmatter has no runtime schema
+// Hand-written YAML frontmatter has no runtime schema
 // check. `level: 3` parses to a JS number, `level: [a, b]` to an array —
 // normalizeLevel used to call `.trim()` unconditionally and threw
 // `TypeError: level.trim is not a function`, which aborted the whole indexing

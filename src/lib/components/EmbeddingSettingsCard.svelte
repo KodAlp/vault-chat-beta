@@ -15,7 +15,7 @@
 	import { localizeError } from '$lib/server-error';
 
 	/**
-	 * Aşama 3c — "Embedding modeli" card. Lives on the providers settings
+	 * "Embedding modeli" card. Lives on the providers settings
 	 * page (not a page of its own, and not the vaults page) because it picks
 	 * FROM the same provider list that page already manages: the provider
 	 * select below is exactly "enabled ollama/openai-compat providers",
@@ -35,7 +35,7 @@
 
 	let embeddingCapable = $derived(providers.filter((p) => p.enabled && (p.kind === 'ollama' || p.kind === 'openai-compat')));
 
-	// config === null after loading means FTS-only mode (no embedding configured, Aşama 4a) — `loaded`
+	// config === null after loading means FTS-only mode (no embedding configured) — `loaded`
 	// is what distinguishes that from "still fetching".
 	let config = $state<EmbeddingConfig | null>(null);
 	let loaded = $state(false);
@@ -119,7 +119,7 @@
 		void loadActiveVault();
 	});
 
-	// İ2-style cloud consent gate, same shape as ModelPickerRow.svelte /
+	// Cloud consent gate, same shape as ModelPickerRow.svelte /
 	// GenerationDialog.svelte's own pendingModel dialogs — reused here for
 	// PUT /api/embedding and POST /api/embedding/test, both of which can come
 	// back EMBEDDING_CONSENT_REQUIRED for a cloud provider with no prior

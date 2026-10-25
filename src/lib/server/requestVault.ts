@@ -9,11 +9,11 @@ function vaultNotFound(e: unknown): never {
 }
 
 /**
- * Bridge until Faz 9's /vault/[id]/... routes exist: reads an explicit
+ * Bridge until the /vault/[id]/... routes exist: reads an explicit
  * `?vault=<id>` query param, falls back to the active vault when absent.
- * Faz 8's own UI never sends the param (single active-vault workflow) —
+ * The original single-vault UI never sends the param (single active-vault workflow) —
  * this only exists so route signatures don't have to change again once
- * Faz 9 starts sending it. See vault-registry skill.
+ * the per-vault routes start sending it.
  */
 export function vaultFromUrl(url: URL): VaultContext {
 	const id = url.searchParams.get('vault');

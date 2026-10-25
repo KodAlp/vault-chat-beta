@@ -59,7 +59,7 @@ def parse_trafilatura_metadata(output: str) -> tuple[dict[str, str], str]:
 
 
 def title_from_url(url: str) -> str:
-    """K2-5's URL-side fallback — mirrors link-import.ts's sourceNameFromUrl:
+    """URL-side title fallback — mirrors link-import.ts's sourceNameFromUrl:
     the last path segment is usually more descriptive than the bare
     technical string a raw URL is, which is what title_fallback=args.url
     used to hand straight to postprocess.py's derive_title()."""
@@ -88,7 +88,7 @@ def main() -> int:
     emit({"type": "progress", "stage": "extracting"})
     html = in_path.read_text(encoding="utf-8", errors="replace")
 
-    # Aşama 10 #2: trafilatura silently drops <math> elements (measured —
+    # trafilatura silently drops <math> elements (measured —
     # see mathml_convert.py's docstring), so every formula is turned into a
     # $...$/$$...$$ text placeholder BEFORE trafilatura ever sees the HTML.
     math_failed = 0
@@ -110,7 +110,7 @@ def main() -> int:
     meta, text = parse_trafilatura_metadata(raw)
     needs_review = len(text.strip()) < MIN_EXTRACTED_CHARS or math_failed > 0
 
-    # K2-5: sayfa <title>/og:title varsa ondan, yoksa URL'nin son path
+    # Sayfa <title>/og:title varsa ondan, yoksa URL'nin son path
     # segmentinden (link-import.ts'in sourceNameFromUrl'üyle aynı fikir) —
     # ham URL'nin tamamı title_fallback olarak kullanılmıyor artık, çünkü
     # postprocess.py'nin derive_title'ı H1 bulamazsa bunu olduğu gibi

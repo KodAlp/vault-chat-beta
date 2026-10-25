@@ -1,13 +1,13 @@
 import { MEMORY_MAX_CHARS, MEMORY_MAX_NOTE_CHARS } from './memory-limits';
 
 /**
- * F3 — formats the memory block spliced into the chat system prompt (prompt.ts). Pure and dependency-free, like
+ * Formats the memory block spliced into the chat system prompt (prompt.ts). Pure and dependency-free, like
  * learner-model.ts/learner-errors.ts: the caller (memory-store.ts) shapes plain data from the manual notes table
- * and from F1b/F2's already-computed, already-validated learner profile and weak-spot list — this module never
+ * and from the already-computed, already-validated learner profile and weak-spot list — this module never
  * touches a database and never calls an LLM.
  *
  * Nothing here is inferred: manual notes are exactly what the user typed (STATED), and the derived lines are a
- * direct, templated read of numbers F1b/F2 already computed and measured on real data. No new judgment call is
+ * direct, templated read of numbers the learner model and weak-spot list already computed and measured on real data. No new judgment call is
  * made in this module.
  */
 
@@ -18,7 +18,7 @@ export interface MemoryBlockInput {
 	/** Domains with a reliable (F1b) mastery estimate below the "worth mentioning" threshold — the caller decides
 	 * the threshold and which ones are reliable; this module only formats what it is given. */
 	weakDomains: readonly { name: string; masteryPct: number }[];
-	/** Notes with at least one open (unresolved) weak spot (F2), most open errors first. */
+	/** Notes with at least one open (unresolved) weak spot, most open errors first. */
 	openWeakSpots: readonly { noteName: string; openErrors: number }[];
 }
 

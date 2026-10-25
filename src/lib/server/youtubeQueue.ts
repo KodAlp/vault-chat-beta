@@ -17,7 +17,7 @@ const YOUTUBE_TRANSCRIPT_PY = path.resolve(process.cwd(), 'ingest', 'youtube_tra
 // walk every video in the list. sharedJobMutex is shared with Ollama
 // model-swap and document conversion, so a stuck child here locks out chat
 // too — never wait forever. Mirrors convertQueue.ts/webExtractQueue.ts's
-// identical guard (2026-09-23 report: this queue was the one process
+// identical guard (measured 2026-09-23: this queue was the one process
 // spawner in the app with no timeout at all).
 const PROCESS_TIMEOUT_MS = 120_000;
 

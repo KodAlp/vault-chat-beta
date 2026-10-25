@@ -17,7 +17,7 @@ test('the theme declares a 16:9 size', () => {
 
 // Every layout the schema can produce needs its own selector here — an
 // enum value with no matching CSS renders identically to plain `bullets`,
-// silently defeating Aşama 9's whole point (layout çeşitliliği).
+// silently defeating the whole point (layout çeşitliliği).
 test('every SLIDE_LAYOUTS value has a matching .{layout} selector in the theme CSS', () => {
 	for (const layout of SLIDE_LAYOUTS) {
 		if (layout === 'bullets') continue; // the unstyled default — base `section` rules cover it on purpose

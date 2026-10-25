@@ -143,7 +143,7 @@ function isProviderEnabled(providerId: string): boolean {
 	return getProviderEntry(providerId)?.enabled === true;
 }
 
-/** İ2 (Aşama 8): Ollama is always consented (local, nothing leaves the
+/** Ollama is always consented (local, nothing leaves the
  * device — the same distinction config-store.ts's isCloud() draws), and so
  * is problem A's local openai-compat provider for the same reason; a real
  * cloud provider needs an explicit "remember my choice" from the model
@@ -169,7 +169,7 @@ export type { FallbackEvent };
 
 /**
  * The chat route's single gating check for whether it's safe to attach
- * tools to a request. Aşama 4b: no longer Ollama-only — for every provider kind
+ * tools to a request. No longer Ollama-only — for every provider kind
  * it is model-caps.ts's family table (ids normalized across Ollama / llama.cpp /
  * LM Studio / vLLM / OpenRouter spellings) with the provider entry's per-model
  * `modelCaps` override on top. An unknown model with no override is still
@@ -186,7 +186,7 @@ export async function modelCaps(
 		if (!providerId) return { tools: false, reasoning: false };
 		const entry = loadConfig().providers.find((p) => p.id === providerId);
 		if (!entry) return { tools: false, reasoning: false };
-		// An empty model means "the provider's own default" (Aşama 4c) — judge capabilities for THAT model.
+		// An empty model means "the provider's own default" — judge capabilities for THAT model.
 		const effective = model || entry.defaultModel || '';
 		return capsFor(effective, entry.modelCaps?.[effective]);
 	} catch {

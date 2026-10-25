@@ -1,4 +1,4 @@
-// Phase 2 owner: the chat route (/api/chat, Chat.svelte, Message.svelte).
+// Owner: the chat route (/api/chat, Chat.svelte, Message.svelte).
 //
 // CHAT_FALLBACK_* / CHAT_NO_CHAIN / CHAT_CONTINUATION_UNAVAILABLE /
 // CHAT_NO_MODEL_RESOLVED come from chat-fallback.ts's provider-chain walk —

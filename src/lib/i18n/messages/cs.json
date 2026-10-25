@@ -744,7 +744,7 @@
 		"flattenFoldersPlaceholder": "wiki",
 		"flattenFoldersHint": "Tyto kořenové složky jsou samy skryté; složky pod nimi se místo toho zobrazí přímo v kořeni stromu. Cesty se nemění – zjednodušuje se jen vzhled stromu.",
 		"libraryTreeTitle": "Strom knihovny",
-		"libraryTreeDescription": "Nahrávání, přejmenování nebo mazání dokumentů. Vlastní strom zdrojů na obrazovce chatu (Faz 9) místo toho používá samostatnou kopii tohoto stromu jen pro čtení k výběru rozsahu.",
+		"libraryTreeDescription": "Nahrávání, přejmenování nebo mazání dokumentů. Vlastní strom zdrojů na obrazovce chatu místo toho používá samostatnou kopii tohoto stromu jen pro čtení k výběru rozsahu.",
 		"loadError": "Nastavení se nepodařilo načíst."
 	},
 	"ProvidersSettingsPage": {

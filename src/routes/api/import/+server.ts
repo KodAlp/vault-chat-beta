@@ -59,7 +59,7 @@ export const POST: RequestHandler = async ({ request }) => {
 	const v = vaultFromId(formData.get('vault') as string | null);
 
 	const fileBytes = Buffer.from(await file.arrayBuffer());
-	// E5: content-addressed duplicate check, computed before conversion so it
+	// Content-addressed duplicate check, computed before conversion so it
 	// costs nothing beyond a hash even on a hit. A confirm step still exists
 	// here (unlike the batch route, which skips outright) — the user might
 	// legitimately want a second copy under a different title/domain, so

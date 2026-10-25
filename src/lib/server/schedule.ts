@@ -16,9 +16,8 @@ function dueAtAfterDays(now: Date, days: number): string {
 }
 
 /**
- * SM-2, per the study-artifacts skill spec (updated Faz 11 — see
- * SESSION-LOG). `again`/`hard` lower ease, `easy` raises it, `good` leaves
- * it unchanged — the pre-Faz-11 version only ever lowered ease (`again`
+ * SM-2 (ease no longer only ratchets down). `again`/`hard` lower ease, `easy` raises it, `good` leaves
+ * it unchanged — the earlier version only ever lowered ease (`again`
  * -0.2, nothing else moved it), a one-way ratchet: a card mistapped a few
  * times got pushed to the 1.3 floor permanently and could never recover
  * even after being reliably remembered again, artificially inflating review

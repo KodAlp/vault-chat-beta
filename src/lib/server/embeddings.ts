@@ -7,7 +7,7 @@ import { isProviderConsented } from './provider-consent';
 import { AppError } from './app-error';
 
 /**
- * Aşama 3a (embedding-bagimsizligi) — the ONE place that turns text into
+ * The ONE place that turns text into
  * vectors for this app, resolving whichever provider/model is currently
  * configured (providers/config-store.ts's embedding block) instead of the
  * hardcoded ollama/bge-m3 pair embed-config.ts used to be the only source
@@ -26,7 +26,7 @@ import { AppError } from './app-error';
  * '' for bge-m3 today (a no-op), and prefixing is a property of the specific
  * embedding MODEL in use, not of this dispatch layer; a future model that
  * does want a prefix would need its own per-model table here, which is out
- * of scope for Aşama 3a (see the plan's design note on embed-config.ts).
+ * of scope for embedding-provider independence.
  */
 
 const BATCH_SIZE = 32;
@@ -195,7 +195,7 @@ export async function measureEmbeddingDims(providerId: string, model: string): P
 /**
  * The key smalltalk-store.ts's `embed_model` column is written/read under —
  * NOT simply `${providerId}/${model}/${dims}` for the default config, so an
- * install upgrading into Aşama 3a keeps its existing learned phrases (rows
+ * install upgrading into embedding-provider independence keeps its existing learned phrases (rows
  * written under the literal string 'bge-m3', embed-config.ts's old
  * EMBED_MODEL constant) usable instead of orphaning them and paying a
  * one-time re-embed for no config change at all. Any OTHER config (a real

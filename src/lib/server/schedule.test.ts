@@ -79,7 +79,7 @@ test('a card can recover from repeated "again" grades via later "easy" grades', 
 	card = schedule(card, 'easy', NOW);
 	// The old one-way-ratchet schedule() could never raise ease at all —
 	// this is the regression this bucket exists to fix.
-	assert.ok(card.ease > easeAfterDrops, 'ease should recover after "easy" grades, unlike the pre-Faz-11 ratchet');
+	assert.ok(card.ease > easeAfterDrops, 'ease should recover after "easy" grades, unlike the earlier ease-only-decreases ratchet');
 });
 
 test('hard/good/easy never produce an interval below 1 day', () => {

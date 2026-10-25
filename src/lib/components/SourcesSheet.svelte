@@ -33,7 +33,7 @@
 	 * Chat's ScopeIndicator even while closed.
 	 *
 	 * `includedPaths` is owned by the chat screen; undefined means "all"
-	 * (Faz 8's contract) and changes flow back out via `onSelectionChange`.
+	 * (the contract) and changes flow back out via `onSelectionChange`.
 	 */
 	let {
 		open = $bindable(false),

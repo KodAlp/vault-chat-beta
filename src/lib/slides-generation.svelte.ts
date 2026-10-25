@@ -8,7 +8,7 @@ export type SlidesGenerationStatus =
 	| { id: string; vaultId?: string; phase: 'done'; slideDeckId: string }
 	| { id: string; vaultId?: string; phase: 'error'; message: string; narrowScope?: boolean; embeddingMismatch?: boolean };
 
-/** Array of entries, not a single `status` slot (Faz 13) — see
+/** Array of entries, not a single `status` slot — see
  * quiz-generation.svelte.ts's doc comment for the full rationale. */
 export const slidesGeneration = $state<{ items: SlidesGenerationStatus[] }>({
 	items: []

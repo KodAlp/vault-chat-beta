@@ -11,6 +11,7 @@ part of a Type1 program (code -> glyph name table, as pdfTeX writes it); the
 real unit2_review.pdf check at the end runs only when that file exists.
 """
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -170,7 +171,8 @@ def test_patched_copy() -> None:
         check("missing file falls back instead of raising", Path(out6) == tmp / "missing.pdf")
 
 
-UNIT2 = Path(r"C:\Users\Alp\Desktop\Notebook verileri\Matematik\static_resources\942f311e64cea77db589a3557b062025_unit2_review.pdf")
+# Optional real-file check: set VAULT_CHAT_TEST_PDF_DIR to a folder holding this PDF.
+UNIT2 = Path(os.environ.get("VAULT_CHAT_TEST_PDF_DIR", "<unset>")) / "942f311e64cea77db589a3557b062025_unit2_review.pdf"
 
 
 def test_end_to_end() -> None:

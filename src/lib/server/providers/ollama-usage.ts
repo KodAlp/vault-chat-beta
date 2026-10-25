@@ -5,7 +5,7 @@ export type UsageChunk = Extract<Chunk, { type: 'usage' }>;
 /** The fields of Ollama's final `/api/chat` NDJSON line (`done: true`) this
  * app reads. Durations are nanoseconds. Deliberately no `prompt_eval_cached_count`:
  * Ollama 0.32.5's final line does not carry one (verified against a live
- * response — see docs/plan-ogrenme-ajani-ve-performans.md §3). */
+ * response). */
 export interface OllamaDoneLine {
 	done?: boolean;
 	prompt_eval_count?: number;

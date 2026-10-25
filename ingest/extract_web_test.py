@@ -6,7 +6,7 @@ parsing and the URL-based title fallback.
 
 Not part of `npm test` — same convention as postprocess_test.py/
 convert_test.py. Every check here exists because of a real failure
-(2026-09-23 report, Aşama 6, K2-5's HTML case):
+(2026-09-23, HTML case):
 
 - extract_web.py called trafilatura.extract() without with_metadata=True,
   so pages with no H1 fell back to title_fallback=args.url — the raw URL

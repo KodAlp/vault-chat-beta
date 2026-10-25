@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Aşama 3 — `--full` yeniden indekslemeden önce üç gerçek kasanın index.db'sini
+ * `--full` yeniden indekslemeden önce üç gerçek kasanın index.db'sini
  * yedekler. `--full` bu dosyaları silip sıfırdan yazıyor (index-vault.ts), bu
  * yüzden önce WAL-tutarlı bir yedek alınır (fs.copyFileSync değil,
  * better-sqlite3'ün .backup() metodu — WAL modundaki bir DB'yi dosya kopyalamak

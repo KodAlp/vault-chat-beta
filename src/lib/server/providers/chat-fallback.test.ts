@@ -177,7 +177,7 @@ test('a disabled provider never appears in the chain at all', async () => {
 	assert.deepEqual(calls, ['b']);
 });
 
-// İ2 (Aşama 8): consent is filtered exactly like the enabled toggle above —
+// Consent is filtered exactly like the enabled toggle above —
 // same three shapes (pin falls through, chain skips, all-filtered throws),
 // proving a non-consented provider can never be reached even silently via
 // chain fallback, not just when explicitly pinned.
@@ -418,7 +418,7 @@ test('a non-retryable failure of a continuation is still thrown as-is', async ()
 	await assert.rejects(collect(chatWithFallbackCore(deps, 'chat', continuationReq(), new AbortController().signal)), err);
 });
 
-// Aşama 4a — a dropped pin must not leak the pinned provider's model id into the chain head.
+// A dropped pin must not leak the pinned provider's model id into the chain head.
 function modelRecordingAdapter(id: string, seen: string[]): ProviderAdapter {
 	return {
 		id,
@@ -483,7 +483,7 @@ test('no pin at all still sends req.model unchanged to the chain head', async ()
 	assert.deepEqual(seen, ['requested-model']);
 });
 
-// Aşama 4c — an empty req.model (fresh install: the client has no pick yet) means "the provider's own default".
+// An empty req.model (fresh install: the client has no pick yet) means "the provider's own default".
 test('an empty req.model: hop 0 asks the chain head for its defaultModel', async () => {
 	const seen: string[] = [];
 	const deps = makeDeps({ getChain: () => ['a'], getAdapter: async (id) => modelRecordingAdapter(id, seen) });

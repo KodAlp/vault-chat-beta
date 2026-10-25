@@ -27,7 +27,7 @@ function failedItem(fileName: string, err: unknown): ImportResultItem {
 }
 
 /**
- * Küçük ilk dilim (Faz 15): PDF linkleri mevcut convert.py'ye, web sayfaları
+ * Küçük ilk dilim: PDF linkleri mevcut convert.py'ye, web sayfaları
  * yeni extract_web.py/trafilatura'ya gider. Sıralı (sharedJobMutex, batch
  * upload ile aynı desen). Güvenlik: assertPublicHost (SSRF), akış halinde
  * boyut sınırı (Content-Length'e güvenmeden), process timeout — bkz. plan.
@@ -55,7 +55,7 @@ export const POST: RequestHandler = async ({ request }) => {
 	return sseStream<ImportEvent>(async (send) => {
 		const items: ImportResultItem[] = [];
 		const alreadyImported = loadImportedUrls(importLogPath(v));
-		// #36: cross-run dedup (alreadyImported, from the persisted log) says
+		// Cross-run dedup (alreadyImported, from the persisted log) says
 		// nothing about the SAME url appearing twice in THIS submission (a
 		// pasted list with an accidental repeat, an OCW page linked from two
 		// different listings) — without this, both copies would fetch,

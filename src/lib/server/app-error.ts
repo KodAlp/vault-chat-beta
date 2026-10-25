@@ -1,5 +1,5 @@
 /**
- * Phase 1 (hardening) — the server-side half of the coded-error scheme.
+ * The server-side half of the coded-error scheme.
  * Every route/generator throws or reports through here instead of a
  * hardcoded Turkish string, so the client can render the failure through
  * `t()` regardless of the active locale. See src/lib/errors.ts (isomorphic

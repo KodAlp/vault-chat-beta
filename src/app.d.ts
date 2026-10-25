@@ -2,7 +2,7 @@
 // for information about these interfaces
 declare global {
 	namespace App {
-		// Phase 1 (hardening) — every server-thrown/handleError-returned error
+		// Every server-thrown/handleError-returned error
 		// carries a stable code (+ optional params) alongside its message, so
 		// the client can localize it via ServerErrors.<code> instead of
 		// rendering a hardcoded server-side string. See

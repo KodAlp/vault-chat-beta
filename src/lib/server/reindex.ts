@@ -9,7 +9,7 @@ import { scheduleConvertedImageSweep } from './converted-image-cleanup';
 import type { VaultContext } from './vaults';
 
 /**
- * Aşama 3b (embedding-bagimsizligi) — the app's in-process "reindex this
+ * The app's in-process "reindex this
  * vault" action (`POST /api/vaults/[id]/reindex`), sharing indexer/rebuild.ts's
  * walk/embed/write loop with the CLI's `npm run index -- --full` instead of
  * shelling out to it. Two things the CLI never had to worry about, because
@@ -186,7 +186,7 @@ export async function reindexVault(v: VaultContext, opts: ReindexOptions = {}): 
 	for (const suf of SUFFIXES) rmQuiet(`${tempPath}${suf}`);
 
 	const config = getEmbeddingConfig();
-	// null config = FTS-only rebuild (Aşama 4a): the new index gets chunks + keyword data, no vec table.
+	// null config = FTS-only rebuild (FTS-only mode): the new index gets chunks + keyword data, no vec table.
 	const embeddingMeta: IndexEmbeddingMeta | null = config
 		? { provider: config.providerId, model: config.model, dims: config.dims }
 		: null;

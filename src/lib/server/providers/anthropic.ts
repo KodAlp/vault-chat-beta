@@ -29,7 +29,7 @@ function classifyHttpStatus(status: number, bodyText: string): ProviderErrorKind
 }
 
 /**
- * Native Anthropic adapter (Faz 16B). Anthropic's Messages API is NOT
+ * Native Anthropic adapter. Anthropic's Messages API is NOT
  * OpenAI-compatible — it uses its own request shape (system top-level field,
  * max_tokens required, messages with content blocks), its own streaming
  * format (event types like content_block_delta/message_stop, SSE with

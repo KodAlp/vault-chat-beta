@@ -34,7 +34,7 @@ export interface OllamaGate {
 
 interface GateDeps {
 	/** Best-effort — a failure must never break the caller whose lease
-	 * triggered the swap. Matches the pre-Faz-11 OllamaAdapter.unload()'s
+	 * triggered the swap. Matches the earlier OllamaAdapter.unload()'s
 	 * contract, just relocated here since the gate is now the only caller. */
 	unload(model: string): Promise<void>;
 	reconcile(): Promise<Set<string>>;
@@ -84,7 +84,7 @@ interface ModelState {
  * Ref-counted lease over Ollama's RAM — every path that touches which
  * model(s) Ollama has loaded (chat, embed, title generation) goes through
  * this, replacing the old per-adapter `ensureModelLoaded()`/`currentModel`
- * pair that Faz 11's audit found broken three ways:
+ * pair that an audit found broken three ways:
  *
  *  1. The mutex only serialized the *swap decision*, not the generation
  *     itself — `unload(X)` could fire while a stream on X was still
@@ -104,7 +104,7 @@ interface ModelState {
  * Two callers requesting the *same* model run fully in parallel — the fast
  * path below never touches the mutex. Only a request for a *different*
  * model queues behind the shared job mutex (see jobMutex.ts — the same
- * queue Faz 5's document conversion uses, so a conversion and a model swap
+ * queue the document conversion uses, so a conversion and a model swap
  * still never run concurrently either).
  */
 export function createOllamaGate(
@@ -276,7 +276,7 @@ export function createOllamaGate(
  * residentModels is a function, not a fixed array, so this always reflects
  * WHATEVER model is currently configured for embedding (getEmbeddingConfig(),
  * providers/config-store.ts) rather than a name frozen at process start —
- * before Aşama 3a this was the EMBED_MODEL constant, which meant a user who
+ * before embedding-provider independence this was the EMBED_MODEL constant, which meant a user who
  * changed the embedding model at runtime would silently lose the
  * never-swaps exception for the new model (and keep it, wrongly, for the
  * old one) until the process restarted. A provider that isn't 'ollama' has

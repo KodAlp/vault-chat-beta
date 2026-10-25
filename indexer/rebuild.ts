@@ -13,7 +13,7 @@ import { DOC_PREFIX } from '../src/lib/server/embed-config';
 import { getEmbeddingConfig } from '../src/lib/server/providers/config-store';
 
 /**
- * Aşama 3b (embedding-bagimsizligi) — the walk/hash/chunk/embed/upsert loop
+ * Embedding independence — the walk/hash/chunk/embed/upsert loop
  * that used to live only inside indexer/index-vault.ts's main(), extracted
  * so the app's own in-process reindex (src/lib/server/reindex.ts, the
  * `POST /api/vaults/[id]/reindex` SSE route) can run the EXACT same logic
@@ -30,7 +30,7 @@ import { getEmbeddingConfig } from '../src/lib/server/providers/config-store';
  * must stay importable from the standalone CLI process with no SvelteKit
  * runtime. It does reach into src/lib/server/embeddings.ts (and
  * transitively config-store.ts/secrets.ts/provider-consent.ts/env.ts) —
- * all of those were already established in Aşama 3a to have zero `$env`
+ * all of those were already established earlier to have zero `$env`
  * dependency for exactly this reason (see embeddings.ts's own doc comment).
  */
 
@@ -46,7 +46,7 @@ function sha256(content: string): string {
 }
 
 /** Ported verbatim from index-vault.ts's own hasOversizedChunk — see its
- * original doc comment (Ö4/E4) for why an unchanged hash alone isn't enough
+ * original doc comment for why an unchanged hash alone isn't enough
  * to skip a file. */
 function hasOversizedChunk(db: Database.Database, relPath: string): boolean {
 	const row = db
@@ -61,8 +61,7 @@ export interface RebuildStats {
 	resplit: number;
 	deleted: number;
 	warnings: number;
-	/** Total chunks actually written this run (0 on a dry run) — new in
-	 * Aşama 3b, for the app's reindex 'done' SSE event; the CLI's own text
+	/** Total chunks actually written this run (0 on a dry run) — new, for the app's reindex 'done' SSE event; the CLI's own text
 	 * summary doesn't print it (unchanged output), but nothing stops it from
 	 * using it later. */
 	chunks: number;
@@ -117,7 +116,7 @@ export async function rebuildIndex(db: Database.Database | null, libraryRoot: st
 	const { dryRun = false, onProgress, signal, onInfo = () => {}, onWarn = () => {} } = opts;
 	const startedAt = Date.now();
 
-	// Aşama 4a: no embedding configured (FTS-only mode) — chunks and keyword data are still written, the
+	// No embedding configured (FTS-only mode) — chunks and keyword data are still written, the
 	// embed call and vec_chunks are skipped. An existing vectored index written to this way stops being
 	// recorded as vectored (markIndexFtsOnly), so choosing a provider later triggers the mismatch/reindex flow.
 	// Also FTS-only when sqlite-vec could not load on this connection (no vec_chunks to write to).

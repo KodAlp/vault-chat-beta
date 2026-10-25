@@ -10,6 +10,7 @@ review, where a short left-aligned line between centred display formulas
 made docling emit the title block after "Remarks."); they are skipped when
 the file is missing.
 """
+import os
 import re
 import sys
 from collections import Counter
@@ -315,8 +316,9 @@ def test_document_glue() -> None:
 
 
 # ---- end to end (real docling) ----
-UNIT2 = Path(r"C:\Users\Alp\Desktop\Notebook verileri\Matematik\static_resources\942f311e64cea77db589a3557b062025_unit2_review.pdf")
-RAFT = Path(r"C:\Users\Alp\Desktop\Notebook verileri\Bilgisayar Mühendisliği\Algoritmalar\raft.pdf")
+# Optional real-file checks: set VAULT_CHAT_TEST_PDF_DIR to a folder holding these PDFs.
+UNIT2 = Path(os.environ.get("VAULT_CHAT_TEST_PDF_DIR", "<unset>")) / "942f311e64cea77db589a3557b062025_unit2_review.pdf"
+RAFT = Path(os.environ.get("VAULT_CHAT_TEST_PDF_DIR", "<unset>")) / "raft.pdf"
 
 
 def words(md: str) -> Counter:

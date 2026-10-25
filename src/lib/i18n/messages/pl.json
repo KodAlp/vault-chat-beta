@@ -741,7 +741,7 @@
 		"flattenFoldersPlaceholder": "wiki",
 		"flattenFoldersHint": "Same te foldery główne są ukryte, a foldery pod nimi pokazywane są bezpośrednio w korzeniu drzewa. Ścieżki pozostają bez zmian — upraszcza się tylko wygląd drzewa.",
 		"libraryTreeTitle": "Drzewo biblioteki",
-		"libraryTreeDescription": "Wgrywaj, zmieniaj nazwy lub usuwaj dokumenty. Własne drzewo źródeł ekranu czatu (Faz 9) używa osobnej kopii tylko do odczytu do wyboru zakresu.",
+		"libraryTreeDescription": "Wgrywaj, zmieniaj nazwy lub usuwaj dokumenty. Własne drzewo źródeł ekranu czatu używa osobnej kopii tylko do odczytu do wyboru zakresu.",
 		"loadError": "Nie udało się wczytać ustawień."
 	},
 	"ProvidersSettingsPage": {

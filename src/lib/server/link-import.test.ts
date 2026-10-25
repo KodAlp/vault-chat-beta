@@ -59,13 +59,13 @@ test('assertPublicHost allows a public literal IP without any DNS lookup', async
 	await assert.doesNotReject(assertPublicHost(new URL('http://8.8.8.8/x')));
 });
 
-// 2026-09-23 report: SSRF guard bypassed by 8 address forms the hand-rolled
+// Measured 2026-09-23: SSRF guard bypassed by 8 address forms the hand-rolled
 // string-prefix/bit-mask version did not recognize as private. All measured
 // against a real isolated test server for the IPv4-mapped case (a service
 // bound only to 127.0.0.1 was reachable and its response got converted into
 // the vault). Rewritten on node:net's built-in BlockList, which normalizes
 // IPv4-mapped IPv6 natively — these are now all rejected.
-test('assertPublicHost rejects every bypass form from the 2026-09-23 report', async () => {
+test('assertPublicHost rejects every known bypass form', async () => {
 	const bypassed = [
 		'http://[::ffff:127.0.0.1]/x', // IPv4-mapped IPv6, dotted form — the one proven live
 		'http://[::ffff:7f00:1]/x', // IPv4-mapped IPv6, hex form (same address, different syntax)
@@ -174,7 +174,7 @@ test('isYoutubeUrl recognizes watch/shorts/youtu.be links, rejects everything el
 	assert.equal(isYoutubeUrl(new URL('https://youtube.com/watch?v=abc123')), true);
 	assert.equal(isYoutubeUrl(new URL('https://youtube.com/shorts/abc123')), true);
 	assert.equal(isYoutubeUrl(new URL('https://youtu.be/abc123')), true);
-	// #17: a channel/playlist page, or a lookalike domain, is not a video —
+	// A channel/playlist page, or a lookalike domain, is not a video —
 	// only the shapes yt-dlp can actually fetch a transcript from route here.
 	assert.equal(isYoutubeUrl(new URL('https://www.youtube.com/@somechannel')), false);
 	assert.equal(isYoutubeUrl(new URL('https://example.com/watch?v=abc123')), false);

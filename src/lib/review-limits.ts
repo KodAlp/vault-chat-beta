@@ -1,6 +1,6 @@
 /**
- * Constants for the REVIEW-mode block injected into the chat prompt when a chat is in review mode (F6).
- * Same split as memory-limits.ts and the same reason: picked, not measured — small on purpose given F12's
+ * Constants for the REVIEW-mode block injected into the chat prompt when a chat is in review mode.
+ * Same split as memory-limits.ts and the same reason: picked, not measured — small on purpose given the
  * documented prompt-size sensitivity on a 6 GB GPU, revisit once there is real usage to look at.
  */
 
@@ -21,7 +21,7 @@ export const REVIEW_MAX_OPEN_WEAK_SPOTS = 3;
 export const REVIEW_MAX_STALE_DOMAINS = 3;
 
 /**
- * F6 suggestion chip (TODO #77): on a new-chat composer the app OFFERS review mode (never switches it) when the
+ * Suggestion chip: on a new-chat composer the app OFFERS review mode (never switches it) when the
  * vault has something to review. Picked, not measured: any single signal is enough, because the chip is dismissible
  * and costs one line of screen. Due cards are counted up to the cap only so the number on the chip stays small and
  * the query cheap; the chip says "N cards", so the cap is also the largest number it can show.

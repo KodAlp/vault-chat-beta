@@ -43,7 +43,7 @@
 		activeProvider: string;
 		activeModel: string;
 		thinkMode: boolean;
-		/** F6 — this chat's mode toggle ('review' vs the default 'free_chat'), as a boolean pill like thinkMode.
+		/** This chat's mode toggle ('review' vs the default 'free_chat'), as a boolean pill like thinkMode.
 		 * Optional/bindable so a caller that doesn't care (there is none yet, but matches thinkMode's own shape)
 		 * can ignore it. */
 		reviewMode?: boolean;
@@ -59,7 +59,7 @@
 		class?: string;
 	} = $props();
 
-	// İ2 (Aşama 8): the cloud option the user just picked but hasn't
+	// The cloud option the user just picked but hasn't
 	// consented to yet — set instead of calling onModelChange immediately,
 	// so the confirmation dialog below can still cancel back to the
 	// current selection. null the rest of the time.

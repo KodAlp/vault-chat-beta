@@ -2,7 +2,7 @@ import { ProviderError } from './types';
 import { isCloud, type ProviderConfigEntry } from './config-store';
 
 /**
- * Aşama 4d — replaces the chat route's "providerId === 'ollama'" special case. A local server (an
+ * Replaces the chat route's "providerId === 'ollama'" special case. A local server (an
  * Ollama-kind provider, or an openai-compat one the user marked `local`) that cannot be connected to is the
  * single most likely failure of this product, and its actionable message ("is the local server running?")
  * is better than the generic PROVIDER_NETWORK / PROVIDER_TIMEOUT_CONNECT sentence. Returns the provider's

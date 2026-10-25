@@ -683,7 +683,7 @@
     "flattenFoldersPlaceholder": "wiki",
     "flattenFoldersHint": "这些根文件夹本身会被隐藏，其下的文件夹会直接显示在树的根部。路径保持不变——只是简化了树的外观。",
     "libraryTreeTitle": "资料库树",
-    "libraryTreeDescription": "上传、重命名或删除文档。聊天界面自己的来源树（阶段 9）使用其单独的只读副本来选择范围。",
+    "libraryTreeDescription": "上传、重命名或删除文档。聊天界面自己的来源树使用其单独的只读副本来选择范围。",
     "loadError": "无法加载设置。"
   },
   "ProvidersSettingsPage": {

@@ -25,7 +25,7 @@ export interface ThinkTagNormalizer {
  * splits reasoning into a separate structured field) inlines reasoning as
  * literal <think>...</think> markers in the content stream. Tags can split
  * across chunk boundaries ("<th" + "ink>") — the exact failure class behind
- * the Faz 0 ThinkingPanel bugs — so this buffers any tail that's still an
+ * the original ThinkingPanel bugs — so this buffers any tail that's still an
  * unresolved prefix of the marker it's currently watching for, and only
  * ever emits chunks for text it's actually sure about.
  */

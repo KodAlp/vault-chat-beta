@@ -11,7 +11,7 @@ function toView(n: ReturnType<typeof listMemory>[number]): MemoryNoteView {
 	return { id: n.id, type: n.type, domain: n.domain, value: n.value, createdAt: n.createdAt };
 }
 
-/** The user's manual memory notes (F3) — user-level, not per vault (see memory-store.ts). */
+/** The user's manual memory notes — user-level, not per vault (see memory-store.ts). */
 export const GET: RequestHandler = () => {
 	return json({ notes: listMemory().map(toView) });
 };

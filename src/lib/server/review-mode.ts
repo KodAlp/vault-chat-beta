@@ -15,12 +15,12 @@ import { logAppEvent } from './app-log';
 import type { VaultContext } from './vaults';
 
 /**
- * F6 — REVIEW mode: the block spliced into the chat prompt (prompt.ts) when a chat's mode is 'review'. Reuses
- * F1b (computeLearnerProfile), F2 (computeWeakSpots) and F3's deriveMemorySignals exactly as they already are —
+ * REVIEW mode: the block spliced into the chat prompt (prompt.ts) when a chat's mode is 'review'. Reuses
+ * computeLearnerProfile, computeWeakSpots and deriveMemorySignals exactly as they already are —
  * weak domains and open weak spots mean the same thing here as they do in the memory block, no second
  * definition. Only "long-unreviewed domains" (deriveStaleDomains below) and due cards are new for this mode.
  *
- * No LLM call, same discipline as F1b/F2/F3: the block is templated data, not a model-made judgment. The model
+ * No LLM call, same discipline as the learner profile, weak spots and memory notes: the block is templated data, not a model-made judgment. The model
  * does the actual asking/grading in the conversation, as instructed by the block's text.
  */
 

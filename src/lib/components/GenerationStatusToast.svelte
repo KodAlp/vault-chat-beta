@@ -4,12 +4,12 @@
 	import { t } from '$lib/i18n/index.svelte';
 
 	/**
-	 * Shared toast shell for the five generation status widgets — Faz 9
-	 * Adım 4. Each of the five *-generation.svelte.ts stores stays separate
+	 * Shared toast shell for the five generation status widgets.
+	 * Each of the five *-generation.svelte.ts stores stays separate
 	 * (state logic, not UI, see GenerationDialog.svelte's comment); this
 	 * component only owns the generic "generating / done / error" toast
 	 * chrome. The caller (+layout.svelte) renders one of these per *entry*
-	 * in a store's `items` array (Faz 13 — no more single-slot 'idle'
+	 * in a store's `items` array (no more single-slot 'idle'
 	 * variant; an idle generation simply isn't in the array, so every
 	 * instance of this component always has something to show), supplying
 	 * the status object plus the two navigation actions since only it
@@ -46,7 +46,7 @@
 		 * Optional so a caller mid-migration can still render this component
 		 * without wiring cancellation yet. */
 		onCancel?: () => void;
-		/** Aşama 3c — only rendered when status.embeddingMismatch is true
+		/** Only rendered when status.embeddingMismatch is true
 		 * (the server's EMBEDDING_MISMATCH, generate-errors.ts's
 		 * assertNoEmbeddingIssue): opens +layout.svelte's shared ReindexDialog
 		 * for this generation's vault. */

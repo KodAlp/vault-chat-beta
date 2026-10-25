@@ -1,11 +1,11 @@
 /**
- * Character budget for the memory block injected into every chat prompt (F3).
+ * Character budget for the memory block injected into every chat prompt.
  *
  * Lives in $lib rather than $lib/server/memory-store.ts, which owns the actual enforcement, the same reason
  * skill-limits.ts is split out of userSkills.ts: a future settings UI showing "how much room is left" needs the
  * same number the server enforces.
  *
- * Picked, not measured — deliberately small given F12's documented prompt-size sensitivity on a 6 GB GPU (every
+ * Picked, not measured — deliberately small given the documented prompt-size sensitivity on a 6 GB GPU (every
  * extra token here is paid on every single chat turn, not just when memory happens to be relevant). Revisit once
  * there is real usage to look at, the same way k=6/serveCtx are flagged as unmeasured defaults elsewhere.
  */

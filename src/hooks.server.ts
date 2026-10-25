@@ -18,7 +18,7 @@ import { installSystemCa } from '$lib/server/system-ca';
 
 // Runs once per server process start, before any request is handled —
 // exactly what a one-time "migrate legacy single-library layout to the
-// vault registry" step needs. See vault-registry skill.
+// vault registry" step needs.
 runVaultMigrationIfNeeded();
 
 // Nothing in this app installed these before — Node's default behavior for
@@ -276,7 +276,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 };
 
 /**
- * Phase 1 (hardening) — the last-resort catch for anything that reaches
+ * The last-resort catch for anything that reaches
  * SvelteKit's own error boundary uncaught: an unhandled exception in
  * load()/an endpoint, or a 404 for a route that doesn't exist. Whatever this
  * returns becomes `page.error` on the root +error.svelte (see

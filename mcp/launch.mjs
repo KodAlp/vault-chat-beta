@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 // Plain .mjs, zero TypeScript, so this starts with no loader involved.
-// MCP clients spawn this file directly — see the mcp-server skill for the
-// exact contract this follows.
+// MCP clients spawn this file directly.
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 

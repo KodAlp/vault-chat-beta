@@ -30,7 +30,7 @@ import { readIndexEmbedding, embeddingMismatches } from '../../../indexer/db';
 const EMBEDDING_ISSUE_CODES = new Set(['EMBEDDING_UNAVAILABLE', 'EMBEDDING_CONSENT_REQUIRED', 'EMBEDDING_DIMS_MISMATCH', 'NOT_FOUND']);
 
 /**
- * Aşama 3b — rate-limits the 'embedding_issue' app-log line. Before this, a
+ * Rate-limits the 'embedding_issue' app-log line. Before this, a
  * persisting mismatch/outage wrote one line per chat turn for as long as it
  * lasted — every one identical, burying the one useful signal ("this
  * started"/"this changed") in noise well before app-log.jsonl's own
@@ -61,7 +61,7 @@ function logEmbeddingIssueOnce(vaultId: string, signature: string, message: stri
  * from "indexed, but genuinely empty"). Lets an MCP tool return a distinct
  * NOT_INDEXED error instead of a silent empty result that reads exactly
  * like "no matches" (mcp/errors.ts already defined the code; nothing
- * produced it — Ö7). */
+ * produced it). */
 export function vaultIsIndexed(v: VaultContext): boolean {
 	return existsSync(v.indexDbPath);
 }
@@ -72,11 +72,10 @@ export function vaultIsIndexed(v: VaultContext): boolean {
  * the raw `files` table count, so a cards/frontier note that IS indexed
  * (just hidden from list_sources' output) is never miscounted as unindexed.
  *
- * E2 (2026-09-23 report): the knowledge-editor skill's curation flow only
- * ever *proposes* `npm run index` — see the plan's Aşama 4 skill-contract
- * item — and a proposal that never gets run looks, from both the app and
- * Claude's side, exactly like a vault with no new content at all. Measured
- * on the real yapay-zeka vault before this signal existed: 2 curated notes
+ * A curation pass (e.g. a knowledge-editor workflow) often only *proposes*
+ * `npm run index`, and a proposal that never gets run looks, from both the
+ * app and Claude's side, exactly like a vault with no new content at all.
+ * Measured on a real vault before this signal existed: 2 curated notes
  * sat unindexed with nothing surfacing it anywhere.
  */
 export function countUnindexedFiles(v: VaultContext): number {
@@ -134,7 +133,7 @@ function indexFileChanged(p: string, c: CachedDb): boolean {
  * old module-level singleton, just keyed by vault id now.
  */
 /** Returns null, not a throw, when the vault has never been indexed
- * (`npm run index` not yet run) — a routine state now that Faz 9 lets
+ * (`npm run index` not yet run) — a routine state now that multiple vaults let
  * users create a vault and land straight on its empty chat screen. */
 function getDb(v: VaultContext): Database.Database | null {
 	const cached = dbCache.get(v.id);
@@ -187,7 +186,7 @@ export interface EmbeddingMismatchInfo {
 }
 
 /**
- * Aşama 3c — GET /api/vaults' per-vault `embeddingMismatch` field reads
+ * GET /api/vaults' per-vault `embeddingMismatch` field reads
  * this: same comparison retrieve() itself makes (index_meta vs
  * getEmbeddingConfig()) on the same cached read-only connection getDb()
  * already maintains, so checking status for every vault on the vaults page
@@ -274,7 +273,7 @@ export async function retrieve(
 	const indexMeta = readIndexEmbedding(database);
 	const metaMismatch = embeddingMismatches(indexMeta, config);
 
-	// Aşama 3a: a config/index mismatch or a failed embed call means vector
+	// A config/index mismatch or a failed embed call means vector
 	// search cannot run at all this turn — `vector` stays null and every block
 	// below that needs it (KNN, the small-talk gate) is skipped, falling
 	// through to the keyword-only path near the bottom of this function
@@ -434,7 +433,7 @@ export async function retrieve(
 	// excluded: it means relevant content exists outside the user's chosen scope,
 	// which the UI answers with "kapsamı genişlet?" — a keyword hit must not
 	// paper over that. `embeddingIssue` forces the fallback regardless of
-	// opts.keywordFallback (Aşama 3a) — vector search genuinely could not run
+	// opts.keywordFallback — vector search genuinely could not run
 	// this turn, which is not a caller opt-in decision the way "try keyword
 	// after an empty vector result" is; every caller (chat AND the five
 	// generate-*.ts) gets a chance at keyword results, and generate-*.ts is
@@ -526,7 +525,7 @@ export function listDomainStats(v: VaultContext): DomainStats {
 /** Levels actually present in the index — same reasoning as listDomains():
  * mirrors reality instead of a hardcoded undergrad/grad/phd list, which
  * would silently misrepresent a vault using different terminology. Used
- * by Faz 10's list_vaults MCP tool. */
+ * by the list_vaults MCP tool. */
 export function listLevels(v: VaultContext): string[] {
 	const database = getDb(v);
 	if (!database) return [];
@@ -544,7 +543,7 @@ export interface SourceSummary {
 	chunks: number;
 }
 
-/** Faz 10's list_sources MCP tool — deliberately reads the index DB, not
+/** The list_sources MCP tool — deliberately reads the index DB, not
  * getLibraryTree()'s fs walk: one query gives title/level/domains/chunk
  * count for every file with zero per-file readFileSync+gray-matter, and
  * the semantics are honest about what an agent can actually retrieve
@@ -574,7 +573,7 @@ export function listSources(
 	if (opts.levels?.length) {
 		// normalizeLevel, not just lower() — a caller can reasonably type
 		// "undergraduate" and expect it to match the canonical "undergrad"
-		// depth values normalizeLevel folds every write to (Ö7).
+		// depth values normalizeLevel folds every write to.
 		conditions.push(`(${opts.levels.map(() => 'lower(f.depth) = lower(?)').join(' OR ')})`);
 		params.push(...opts.levels.map((l) => normalizeLevel(l)));
 	}

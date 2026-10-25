@@ -136,7 +136,7 @@ function getStatus(fresh: boolean): Promise<PythonSystemStatus> {
  * exposed over HTTP here since doctor.mjs is a standalone CLI script with
  * no route into the running server.
  *
- * Aşama 2b: extended with `modules` (every import in ingest/requirements.txt,
+ * Extended with `modules` (every import in ingest/requirements.txt,
  * checked in one python process — see checkModules) and `pandoc` (optional,
  * never a banner trigger — see PythonStatusBanner). `pythonInstalled` and
  * `markitdownInstalled` are kept for backward compat with any existing

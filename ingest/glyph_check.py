@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Silent glyph corruption detector (TODO #6).
+"""Silent glyph corruption detector.
 
 Seen on a Linear Algebra lecture PDF: docling emitted "↪" for ",", "▷" for ".",
 "♣" for "|" and "ÒÓ" for curly quotes (~107 glyphs) while pypdf's text layer of

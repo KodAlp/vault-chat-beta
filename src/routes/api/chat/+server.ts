@@ -170,7 +170,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			let embeddingIssue: 'mismatch' | 'unavailable' | undefined;
 			let finalContent = '';
 			let finalThinking = '';
-			// F8 — true once any model call this turn (across retries/tool-hops) came close to the context
+			// True once any model call this turn (across retries/tool-hops) came close to the context
 			// window; surfaced to the client so "the answer may be missing earlier context" is visible, not
 			// only logged. Ephemeral like narrowScope/smallTalk, not persisted (see Message.svelte).
 			let nearCtxLimit = false;

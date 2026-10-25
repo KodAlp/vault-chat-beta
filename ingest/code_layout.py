@@ -7,7 +7,7 @@ But the OCR engine already gives one box per code line; monospace code puts
 every character on a fixed pitch, so column = round((left - x0) / pitch)
 recovers indentation and line breaks. Measured 2026-10-13 (fonk1/dic1 scans):
 character accuracy 0.93-0.96 and 47-52 correctly indented lines, against 0 for
-the collapsed text. See docs/dev/arastirma-2026-10-13-propto-ve-taranmis-kod.md.
+the collapsed text.
 
 This module imports no docling at module level; only `rebuild_code_items`
 touches docling objects (duck-typed, so it is unit-testable with stand-ins).

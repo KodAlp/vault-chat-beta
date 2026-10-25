@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Formül modelinin açgözlü decode'unu CUDA grafiğiyle koşan generate (#82).
+"""Formül modelinin açgözlü decode'unu CUDA grafiğiyle koşan generate.
 
 Ölçüm (2026-10-16, RTX 4050 Laptop, Windows, docling 2.130, transformers 5.17,
 DavidTong_Electromagnetism s. 20-39, 71 formül): CodeFormulaV2 (Idefics3,

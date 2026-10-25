@@ -24,15 +24,14 @@
 	// see pending-message.ts. Undefined override falls back to the current
 	// task default, exactly like Chat.svelte's own header selector; this
 	// choice applies only to the new chat, never to the global settings
-	// defaults (per product decision — see study-artifacts/model-provider
-	// skill discussion this fixes: previously there was no way to pick
+	// defaults (per product decision). Previously there was no way to pick
 	// anything before the first message, so every new chat silently used
 	// whatever the default provider happened to be).
 	let modelOptions = $state<ProviderModelOption[]>([]);
 	let overrideModel = $state<string | undefined>(undefined);
 	let overrideProvider = $state<string | undefined>(undefined);
 	let thinkMode = $state(false);
-	/** F6 — carried into the new chat's initial mode via pending-message.ts's `mode`, same hand-off as
+	/** Carried into the new chat's initial mode via pending-message.ts's `mode`, same hand-off as
 	 * think/model/provider above. */
 	let reviewMode = $state(false);
 	let activeModel = $derived(overrideModel ?? (thinkMode ? settings.reasoningModel : settings.fastModel));
@@ -71,7 +70,7 @@
 	// the "view sources" link. 0 until fetched / on any failure.
 	let readyImports = $state(0);
 
-	// F6 suggestion chip (TODO #77): offered, never applied automatically. The decision is made server-side from
+	// Suggestion chip: offered, never applied automatically. The decision is made server-side from
 	// learning-state counts only (GET /api/study/review-suggestion); this page just shows it. Dismissal is
 	// remembered per vault per day in localStorage (a per-viewer convenience, so every access is try/catch'd).
 	type ReviewSuggestion = { suggest: boolean; dueCards: number; weakDomains: number; openWeakSpots: number; staleDomains: number };

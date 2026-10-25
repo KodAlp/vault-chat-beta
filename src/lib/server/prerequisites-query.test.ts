@@ -17,7 +17,7 @@ function indexWith(rows: [string, string][]): Database.Database {
 	return db;
 }
 
-test('an index built before F4 has no column, and every reader says null rather than "no prerequisites"', () => {
+test('an index built before the prerequisite column has no column, and every reader says null rather than "no prerequisites"', () => {
 	const db = new Database(':memory:');
 	db.exec('CREATE TABLE files (path TEXT PRIMARY KEY)');
 	db.prepare('INSERT INTO files (path) VALUES (?)').run('wiki/a/heaps.md');

@@ -55,7 +55,7 @@ test('copyAttachmentIntoLibrary is idempotent — a second call does not re-copy
 	assert.equal(destContent, 'first-version');
 });
 
-test('ATTACHMENT_EXT covers the image types the report scoped Görsel B for', () => {
+test('ATTACHMENT_EXT covers the supported image types', () => {
 	for (const ext of ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.pdf']) {
 		assert.equal(ATTACHMENT_EXT.has(ext), true);
 	}

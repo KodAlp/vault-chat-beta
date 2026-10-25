@@ -774,7 +774,7 @@
 		"flattenFoldersPlaceholder": "wiki",
 		"flattenFoldersHint": "These root folders themselves are hidden; the folders beneath them are shown directly at the tree's root instead. Paths are unchanged — only the tree's appearance is simplified.",
 		"libraryTreeTitle": "Library Tree",
-		"libraryTreeDescription": "Upload, rename, or delete documents. The chat screen's own source tree (Faz 9) uses a separate, read-only copy of this for scope selection instead.",
+		"libraryTreeDescription": "Upload, rename, or delete documents. The chat screen's own source tree uses a separate, read-only copy of this for scope selection instead.",
 		"loadError": "Couldn't load settings."
 	},
 

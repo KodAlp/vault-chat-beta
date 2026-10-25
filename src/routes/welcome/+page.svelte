@@ -11,7 +11,7 @@
 	// Auto-continue keeps this from becoming a click-through chore on every
 	// launch; the button just lets an impatient user skip the wait instead
 	// of forcing them to sit through it. Shortened back down from the 12s
-	// the previous pass used (İ1, Aşama 8) — that value assumed note1–3 sat
+	// the previous pass used — that value assumed note1–3 sat
 	// inline as always-visible text needing time to read; now they're
 	// collapsed behind the "Privacy & responsibility" <details>, so the
 	// default view is just a title/tagline/button and 6s is plenty. Opening
@@ -21,7 +21,7 @@
 
 	let timer: ReturnType<typeof setTimeout> | undefined;
 
-	// Aşama 2b — the desktop build's very first launch continues into the
+	// The desktop build's very first launch continues into the
 	// local-server setup wizard instead of the app itself; every later
 	// launch (localServerSetupDone() true) and every plain-browser session
 	// (isTauri() false — this page still shows there, but nothing about

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Tests for glyph_check.py (TODO #6) and ocr_math_check.py (TODO #9)."""
+"""Tests for glyph_check.py and ocr_math_check.py."""
 import sys
 from pathlib import Path
 

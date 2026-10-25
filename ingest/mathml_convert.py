@@ -1,4 +1,4 @@
-"""MathML -> LaTeX pre-processing for extract_web.py (Aşama 10, #2).
+"""MathML -> LaTeX pre-processing for extract_web.py .
 
 Measured (2026-09-24), not assumed: trafilatura.extract() silently drops
 every <math>...</math> element -- no error, no warning, the formula just
@@ -7,7 +7,7 @@ formulas vanished). This module replaces each <math> element with an
 inline ($...$) or display ($$...$$) LaTeX placeholder BEFORE the HTML is
 handed to trafilatura, so trafilatura sees ordinary text and keeps it.
 postprocess.py's own HTML-tag stripper already treats $.../$$ ... $$ as
-verbatim (Aşama 2, Ö1), so nothing downstream re-mangles the substitution.
+verbatim, so nothing downstream re-mangles the substitution.
 
 Three extraction strategies, tried in order, measured against a live
 Wikipedia page (en.wikipedia.org/wiki/Quadratic_formula, 209 formulas):
@@ -35,7 +35,7 @@ extracts correctly today, unchanged by this module.
 
 MIT OCW's own HTML pages (checked directly, three real course pages) carry
 no math markup at all -- their math-heavy content lives in linked PDFs,
-which is what Aşama 10 #1 (PDF link listing) is for, not this module.
+which is what the PDF link listing is for, not this module.
 """
 from __future__ import annotations
 

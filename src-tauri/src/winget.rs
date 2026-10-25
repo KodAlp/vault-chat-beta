@@ -1,4 +1,4 @@
-//! Aşama 2a — `winget install <id>` as a Tauri command, security-reviewed.
+//! `winget install <id>` as a Tauri command, security-reviewed.
 //!
 //! Windows only — lib.rs swaps in `winget_unsupported.rs` (same command
 //! names/signatures) on other platforms.
@@ -26,12 +26,12 @@ use tauri_plugin_dialog::{DialogExt, MessageDialogButtons};
 use crate::{log_line, platform};
 
 /// Package ids this command will install, beyond what `launchers.rs`'s own
-/// CATALOG already lists (see `is_allowlisted`) — things Aşama 2a's Node
-/// version check (Node.js itself) and future stages (Python, Pandoc, for the
+/// CATALOG already lists (see `is_allowlisted`) — things the Node
+/// version check (Node.js itself) and future features (Python, Pandoc, for the
 /// source-ingest pipeline) need to be able to offer a one-click winget
 /// install for, without themselves being a "local LLM server" launcher.
 /// `winget show --id <id> -e` was re-run against all three while building
-/// this module and all three resolved (see the Aşama 2a report).
+/// this module and all three resolved.
 const EXTRA_ALLOWLISTED_PACKAGES: &[(&str, &str)] = &[
     ("OpenJS.NodeJS.22", "https://nodejs.org/en/download"),
     ("Python.Python.3.12", "https://www.python.org/downloads/"),

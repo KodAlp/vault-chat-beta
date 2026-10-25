@@ -21,7 +21,7 @@ export function localizeError(e: { code?: string; params?: ErrorParams; message?
  * Accepts every shape this app's server side can produce:
  *  - SvelteKit's own error body: `{ message, code?, params? }` (see
  *    app-error.ts's `fail()`, and hooks.server.ts's `handleError`).
- *  - Legacy ad-hoc shapes still in use pre-Phase-2 conversion:
+ *  - Legacy ad-hoc shapes still in use before the error-code conversion:
  *    `{ error: string }` and `{ error: { code, params } }`.
  */
 export async function readResponseError(res: Response): Promise<string> {

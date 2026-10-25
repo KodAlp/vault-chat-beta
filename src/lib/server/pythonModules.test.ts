@@ -43,7 +43,7 @@ test('real ingest/requirements.txt shape parses to exactly the five expected mod
 	// this is the exact list PythonStatusBanner and the setup page's system
 	// check both depend on staying accurate.
 	const text = `
-# Faz 5 (scoped): MarkItDown only.
+# Scoped: MarkItDown only.
 markitdown[all]==0.1.6
 
 # YouTube transcript ingest

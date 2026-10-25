@@ -1,5 +1,5 @@
 // Windows only: puts a self-contained CPython at dist-server/python/ (python.exe directly inside) so the
-// installed app no longer needs the user to install Python (TODO #53). python-build-standalone's
+// installed app no longer needs the user to install Python. python-build-standalone's
 // `install_only_stripped` flavour is a plain relocatable tree (stdlib + venv + ensurepip/pip, no installer,
 // no registry, no admin rights). The light packages of ingest/requirements.txt are deliberately NOT
 // installed here: the app's "Şimdi kur" flow creates the app venv from this interpreter and pip-installs

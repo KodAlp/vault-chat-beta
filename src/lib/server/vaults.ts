@@ -17,7 +17,7 @@ export interface VaultRecord {
 	 * longer silently go stale with nothing surfacing when it last matched
 	 * the real Obsidian vault; see the vault-registry skill. */
 	lastSyncedAt?: string;
-	/** İ6 (Aşama 8, 2026-09-23): whether an external MCP client (Claude
+	/** 2026-09-23: whether an external MCP client (Claude
 	 * Desktop, Claude Code, any other MCP-speaking agent) can see and read
 	 * this vault at all. Absent/false means closed — mcp/vault-scope.ts's
 	 * withVault() rejects every tool call against a vault that isn't
@@ -46,10 +46,10 @@ export interface VaultContext {
 interface RegistryFile {
 	vaults: VaultRecord[];
 	activeVaultId: string | null;
-	/** İ6 migration (Aşama 8, 2026-09-23): true once the user has answered
+	/** MCP-exposure migration (2026-09-23): true once the user has answered
 	 * the one-time "keep existing vaults open to MCP, or close them?"
 	 * prompt — closed is the new field's default for every vault, which
-	 * would silently break an MCP setup (Aşama 0) that already worked
+	 * would silently break an MCP setup that already worked
 	 * against every vault implicitly. Absent/false on a registry written
 	 * before this field existed is exactly "needs asking"; a registry
 	 * created fresh after this field existed has nothing to migrate, so
@@ -68,7 +68,7 @@ export function vaultsRoot(): string {
 
 /**
  * Corrupt/missing registry is treated identically — never thrown as Err.
- * Same lesson as the Tauri config.json fix (Phase 7): a parse failure must
+ * Same lesson as the Tauri config.json fix: a parse failure must
  * never permanently lock the app out with no recovery path. Callers that
  * need to distinguish "genuinely empty" from "broken" don't exist yet; if
  * one shows up, log here first.
@@ -201,7 +201,7 @@ export function createVault(name: string): VaultRecord {
 	if (!trimmed) throw new AppError('VAULT_NAME_EMPTY');
 
 	const reg = readRegistry();
-	// İ6: a vault created into a genuinely empty registry never had implicit
+	// A vault created into a genuinely empty registry never had implicit
 	// MCP access to lose — nothing to migrate, so the one-time prompt is
 	// pre-answered rather than surfacing for a setup that's brand new.
 	const isFirstVaultEver = reg.vaults.length === 0;
@@ -250,7 +250,7 @@ export function renameVault(id: string, name: string): VaultRecord {
 	return record;
 }
 
-/** İ6: per-vault MCP exposure toggle. */
+/** Per-vault MCP exposure toggle. */
 export function setVaultMcpExposed(id: string, exposed: boolean): VaultRecord {
 	const reg = readRegistry();
 	const record = reg.vaults.find((v) => v.id === id);
@@ -289,7 +289,7 @@ export function isVaultMcpExposed(id: string): boolean {
 	return listVaults().find((v) => v.id === id)?.mcpExposed === true;
 }
 
-/** True when there are pre-existing vaults from before İ6 shipped whose
+/** True when there are pre-existing vaults from before MCP exposure was opt-in whose
  * exposure the user hasn't been asked about yet — see RegistryFile's
  * mcpMigrationAsked doc comment for why this can't just default silently. */
 export function needsMcpMigrationPrompt(): boolean {

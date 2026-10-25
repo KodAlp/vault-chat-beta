@@ -237,7 +237,7 @@ def _same_segments(chars):
 
 
 def test_segments_grid_equals_reference_random():
-    """Izgaralı _v2_segments eski sıralı taramayla birebir aynı bileşenleri aynı sırada verir (#82)."""
+    """Izgaralı _v2_segments eski sıralı taramayla birebir aynı bileşenleri aynı sırada verir."""
     import random
 
     rng = random.Random(7)

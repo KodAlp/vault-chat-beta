@@ -46,7 +46,7 @@ const TYPES: readonly string[] = ['multiple_choice', 'true_false', 'open'];
 
 /**
  * Whether a stored answer counts as evidence at all — shared by `pickEvidence` (F1b, what the person knows) and
- * `buildWeakSpots` (F2, where they got it wrong): both must agree on what a "real" answer is, or the two features would
+ * `buildWeakSpots` (where they got it wrong): both must agree on what a "real" answer is, or the two features would
  * quietly disagree about the same row.
  */
 export function isCountableAnswer(row: Pick<AnswerRow, 'given' | 'flaggedAt' | 'type' | 'options'>): boolean {

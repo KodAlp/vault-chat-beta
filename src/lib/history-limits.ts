@@ -1,5 +1,5 @@
 /**
- * F8 — a character budget for the prior-turn conversation history sent to the model (prompt.ts), so a very long
+ * A character budget for the prior-turn conversation history sent to the model (prompt.ts), so a very long
  * chat cannot grow the prompt past Ollama's context window and get silently truncated from the FRONT — where the
  * system rules (CORE_INVARIANTS) live (see prompt.ts / env.ts's serveCtxOverride doc comments; the nearCtxLimit
  * app-log flag exists precisely to detect this).

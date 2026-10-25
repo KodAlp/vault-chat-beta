@@ -774,7 +774,7 @@
 		"flattenFoldersPlaceholder": "wiki",
 		"flattenFoldersHint": "Bu kök klasörlerin kendisi gizlenir, altındaki klasörler doğrudan ağacın kökünde gösterilir. Yollar değişmez, sadece ağacın görünümü sadeleşir.",
 		"libraryTreeTitle": "Kütüphane Ağacı",
-		"libraryTreeDescription": "Belge yükle, yeniden adlandır veya sil. Sohbet ekranındaki kaynak ağacı (Faz 9) bunun yerine kapsam seçimi için ayrı, salt-görüntüleme bir kopyasını kullanır.",
+		"libraryTreeDescription": "Belge yükle, yeniden adlandır veya sil. Sohbet ekranındaki kaynak ağacı bunun yerine kapsam seçimi için ayrı, salt-görüntüleme bir kopyasını kullanır.",
 		"loadError": "Ayarlar alınamadı."
 	},
 

@@ -24,7 +24,7 @@ export const ALLOWED_EXTENSIONS = new Set([
 	'.md'
 ]);
 
-/** Kod dosyaları, Seçenek B (Aşama 11) — checked SEPARATELY from
+/** Kod dosyaları (code files) — checked SEPARATELY from
  * ALLOWED_EXTENSIONS (not merged into it) at each upload route, not folded
  * into it: ALLOWED_EXTENSIONS's own contract above is "what convert.py's
  * document converters route on", and a code file never reaches

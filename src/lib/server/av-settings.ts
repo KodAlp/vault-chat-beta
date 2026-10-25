@@ -4,7 +4,7 @@ import { dataDir } from './env';
 import { AppError } from './app-error';
 
 /**
- * DATA_DIR/av-settings.json — the user's antivirus-scan preference for imports (TODO #60).
+ * DATA_DIR/av-settings.json — the user's antivirus-scan preference for imports.
  * `avScan` is ON unless the user turned it off; a missing or corrupt file reads as ON (fail safe).
  * Exposed through GET/PUT /api/settings/av-scan (session-gated, like /api/settings/mcp).
  */

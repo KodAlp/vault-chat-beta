@@ -5,7 +5,7 @@ import path from 'node:path';
  * DATA_DIR/mcp-endpoint.json — how the MCP stdio process (mcp/, a separate
  * process started by Claude Desktop/Code) finds the RUNNING app so its write
  * tools can go through the app's local HTTP API instead of touching files
- * itself (see the mcp-server skill and docs/dev/arastirma-2026-10-tema-pptx-mcp.md §C).
+ * itself.
  *
  * Who writes it: the dev server (a Vite plugin in vite.config.ts) and the
  * Tauri shell (spawn_sidecar in src-tauri/src/lib.rs) — both after the port

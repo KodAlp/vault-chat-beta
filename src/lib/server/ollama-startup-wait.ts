@@ -1,5 +1,5 @@
 /**
- * #87 — the desktop shell starts the local Ollama in the background at app
+ * The desktop shell starts the local Ollama in the background at app
  * launch (src-tauri/src/launchers.rs startup()), so for the first seconds a
  * request can arrive before the port answers. Connection-level failures
  * (nothing listening yet) against a LOOPBACK Ollama are therefore retried for

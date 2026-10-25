@@ -1,8 +1,8 @@
 /**
- * Phase 2 owner: /settings/* routes (providers, vaults, library, skills,
+ * Owner: /settings/* routes (providers, vaults, library, skills,
  * memory, smalltalk) and their api/** backends, plus hooks.server.ts's own
  * two 403s (LOCAL_ONLY/CROSS_SITE_BLOCKED — not "settings" in the page
- * sense, but this is the only Phase-2 code list its owning agent has).
+ * sense, but this is the only domain code list its owner has).
  *
  * A lot of the original Turkish validation strings this phase replaced were
  * near-duplicates of the common codes in error-codes/common.ts (VALIDATION_

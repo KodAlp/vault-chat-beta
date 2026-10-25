@@ -10,7 +10,7 @@ import { createServer } from './create-server';
 import { writeMcpEndpoint, mcpEndpointPath } from '../src/lib/server/mcp-endpoint';
 
 /**
- * The workhorse verification from the mcp-server skill's Tier 1: a real
+ * The workhorse verification: a real
  * Client against a real McpServer, in one process, no stdio involved
  * (InMemoryTransport.createLinkedPair()). Run via `npm run mcp:smoke`.
  *
@@ -28,7 +28,7 @@ import { writeMcpEndpoint, mcpEndpointPath } from '../src/lib/server/mcp-endpoin
  * silent empty success; see retrieve.ts's vaultIsIndexed(). get_note works
  * regardless of indexing, since it reads the filesystem directly).
  *
- * `default` is seeded `mcpExposed: true` (İ6, Aşama 8) so the rest of this
+ * `default` is seeded `mcpExposed: true` so the rest of this
  * file keeps exercising every OTHER path (NOT_INDEXED, traversal, unknown
  * vault, ...) rather than every call short-circuiting on the new exposure
  * gate — `closed` below is the vault that actually tests that gate.
@@ -140,7 +140,7 @@ try {
 	}
 
 	// list_sources / search_library — unindexed vault reports NOT_INDEXED,
-	// not a silent empty success (Ö7, 2026-09-23 report: `{"results":[]},
+	// not a silent empty success (2026-09-23: `{"results":[]},
 	// isError:false` from an unindexed vault used to be indistinguishable
 	// from "searched, nothing matched" — NOT_INDEXED existed in errors.ts
 	// from the start, nothing ever produced it).
@@ -169,7 +169,7 @@ try {
 	}
 	console.log('ok - every vault-scoped tool reports VAULT_NOT_FOUND for an unknown vault id (never throws)');
 
-	// #39: local models pass the vault's NAME ("Fizik") or a differently-cased id.
+	// Local models pass the vault's NAME ("Fizik") or a differently-cased id.
 	// Only opened vaults take part in that match, and the not-found hint lists only them.
 	for (const vault of ['Smoke Test', 'smoke test', 'DEFAULT']) {
 		const result = await client.callTool({ name: 'get_note', arguments: { vault, path: 'note.md' } });
@@ -185,7 +185,7 @@ try {
 	}
 	console.log('ok - vault name / case-insensitive id resolves among opened vaults only; error lists opened vaults');
 
-	// İ6 (Aşama 8): a vault that exists but was never opened to external
+	// A vault that exists but was never opened to external
 	// clients must be both invisible to discovery (list_vaults, already
 	// asserted length 1 above — 'closed' is the second, unlisted vault) and
 	// unreachable by every other tool even when the id is known outright —

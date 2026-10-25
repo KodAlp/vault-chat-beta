@@ -656,7 +656,7 @@ async function main() {
 
 		printTable(results, cases);
 
-		const outDir = 'C:\\Users\\Alp\\AppData\\Local\\Temp\\claude\\c--Users-Alp-Desktop-vault-chat\\162e2506-ee04-4c4a-9825-05a82919a5aa\\scratchpad\\lang-eval';
+		const outDir = path.join(os.tmpdir(), 'lang-eval');
 		fs.mkdirSync(outDir, { recursive: true });
 		const outFile = path.join(outDir, `results-${Date.now()}.json`);
 		fs.writeFileSync(

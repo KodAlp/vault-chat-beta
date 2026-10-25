@@ -153,13 +153,13 @@ export function buildConvertArgs(
 	ocrLang?: string
 ): string[] {
 	const args = ['--in', inPath, '--out-dir', outDir, '--tool', tool];
-	// The real filename (E5/K2-5) — every caller stages the input under a
+	// The real filename — every caller stages the input under a
 	// generic name ("original.pdf") to keep the staging dir collision-free,
 	// which is why convert.py can no longer be trusted to know its own
 	// source_file/title fallback from --in alone. See convert.py's module
 	// docstring for the "original"/"input" title bug this fixes.
 	if (sourceName) args.push('--source-name', sourceName);
-	// #37 — see convert.py's parse_page_range for the "START-END" format.
+	// See convert.py's parse_page_range for the "START-END" format.
 	if (pages) args.push('--pages', pages);
 	// Fallback PDF reader, only for the retry after a native crash — see
 	// convert.py's module docstring (--pdf-backend).
@@ -243,7 +243,7 @@ function runConvertAttemptSpawn(
 			} catch {
 				return; // non-JSON stdout noise — ignore rather than crash the stream
 			}
-			// Aşama 7: convert.py's early pageCount event (PDFs only) replaces
+			// convert.py's early pageCount event (PDFs only) replaces
 			// the flat startup-hang floor with a budget sized to this document
 			// — a page count of 0 means pdf_page_count() itself failed
 			// (malformed PDF), which is exactly when the floor should stay in
@@ -315,7 +315,7 @@ function runConvertAttemptSpawn(
  * once Marker/Docling are added later); the skill doc is explicit that the
  * user's RAM/CPU belongs to Ollama first, so by default only one conversion
  * runs at a time regardless of how many uploads arrive at once.
- * Shares `sharedJobMutex` with Faz 6's Ollama model-swap logic — a model
+ * Shares `sharedJobMutex` with the Ollama model-swap logic — a model
  * load/unload and a running conversion must never overlap either. A
  * conversion takes a SHARED slot (sharedJobMutex.runShared): several may
  * overlap up to `concurrency`, but never an exclusive job (model swap,
@@ -330,11 +330,11 @@ function runConvertAttemptSpawn(
  *
  * `exclusiveGpu` (batch import): before this conversion starts, unload every
  * idle Ollama model (only when Ollama is configured — see gpu-evict.ts) so
- * docling has the 6 GB card to itself — measured (Aşama 7) at roughly 3x
+ * docling has the 6 GB card to itself — measured at roughly 3x
  * slower when qwen3 is resident. Runs while holding a shared slot, which is
  * safe: see ollamaGate.evictAllForExclusiveJob.
  *
- * Antivirus (TODO #60): every file is scanned HERE, before it takes a queue slot or reaches convert.py, so one call covers
+ * Antivirus: every file is scanned HERE, before it takes a queue slot or reaches convert.py, so one call covers
  * single, batch, link (stage-url) and MCP imports. A threat rejects with FILE_THREAT_DETECTED; no scanner / a failed scan
  * lets the import proceed (see av-guard.ts). `skipAvScan` is for re-conversions of an original that was already scanned
  * when it was first imported (api/library/reimport), so a file is never scanned twice.

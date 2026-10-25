@@ -16,7 +16,7 @@
 	 * visibilitychange (installed it in another window, switched back), and
 	 * right after the install-now action finishes.
 	 *
-	 * Aşama 2b: this used to check `markitdownInstalled` alone; it now
+	 * This used to check `markitdownInstalled` alone; it now
 	 * triggers on ANY module in GET /api/system/python's `modules` array
 	 * being missing (markitdown, yt_dlp, trafilatura, py_asciimath, pypdf —
 	 * see ingest/requirements.txt), since a missing yt_dlp/trafilatura/etc

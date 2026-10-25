@@ -3,8 +3,8 @@
  * only starts once everything queued before it has settled and nothing else
  * is running (Ollama model swaps, YouTube/web/link imports all use this).
  * `runShared()` jobs may overlap each other, up to a per-call limit, but
- * never overlap an exclusive job. Extracted from Faz 5 conversion queue
- * so it can be shared with Faz 6 Ollama model-swap logic: both are
+ * never overlap an exclusive job. Extracted from the conversion queue
+ * so it can be shared with the Ollama model-swap logic: both are
  * CPU/RAM-bound work that must never run concurrently with each other on
  * this machine (the user RAM/CPU belongs to Ollama first, see the
  * model-provider skill doc). One shared instance, not one per subsystem.

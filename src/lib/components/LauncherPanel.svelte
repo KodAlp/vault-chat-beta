@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Icon from '$lib/components/Icon.svelte';
 	/**
-	 * Aşama 2b — settings/providers' local-launcher control panel for ONE
+	 * Settings/providers' local-launcher control panel for ONE
 	 * catalog id (Ollama or any local openai-compat server the user's added
 	 * a provider for — see settings/providers/+page.svelte's usage). Wraps
 	 * src-tauri/src/launchers.rs's commands; every `id` passed to

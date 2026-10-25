@@ -88,13 +88,13 @@ test('linux does not apply the macOS /usr/bin shim rule', () => {
 
 const winBase = {
 	platform: 'win32' as const,
-	env: { PATH: 'C:\\Users\\Alp\\AppData\\Local\\Microsoft\\WindowsApps;C:\\Py' },
-	home: 'C:\\Users\\Alp',
+	env: { PATH: 'C:\\Users\\user\\AppData\\Local\\Microsoft\\WindowsApps;C:\\Py' },
+	home: 'C:\\Users\\user',
 	dataDir: 'C:\\data'
 };
 
 test('windows: PATH scan skips WindowsApps', () => {
-	const d = deps({ ...winBase, files: ['C:\\Users\\Alp\\AppData\\Local\\Microsoft\\WindowsApps\\python.exe', 'C:\\Py\\python.exe'] });
+	const d = deps({ ...winBase, files: ['C:\\Users\\user\\AppData\\Local\\Microsoft\\WindowsApps\\python.exe', 'C:\\Py\\python.exe'] });
 	assert.equal(resolvePythonBin(d), 'C:\\Py\\python.exe');
 });
 
@@ -104,7 +104,7 @@ test('windows: venv Scripts python preferred over PATH', () => {
 });
 
 test('windows: Programs\\Python numeric sort and last-resort fallback', () => {
-	const prog = 'C:\\Users\\Alp\\AppData\\Local\\Programs\\Python';
+	const prog = 'C:\\Users\\user\\AppData\\Local\\Programs\\Python';
 	const d = deps({
 		...winBase,
 		env: { PATH: '' },
@@ -170,7 +170,7 @@ test('pickSupportedPython prefers a supported interpreter over an older earlier 
 	assert.equal(await pickSupportedPython([], async (b) => table[b]), null);
 });
 
-// --- Windows: bundled Python + the "docling is never shadowed" invariant (TODO #53) ---
+// --- Windows: bundled Python + the "docling is never shadowed" invariant ---
 const BUNDLED = 'C:\\App\\_up_\\dist-server\\python\\python.exe';
 const VENV = 'C:\\data\\python-venv\\Scripts\\python.exe';
 const SYS = 'C:\\Py\\python.exe';
@@ -199,9 +199,9 @@ test('windows: a system Python with docling is never shadowed by bundled or a do
 });
 
 test('windows: docling is also found in the per-user site-packages', () => {
-	const user = 'C:\\Users\\Alp\\AppData\\Roaming\\Python';
+	const user = 'C:\\Users\\user\\AppData\\Roaming\\Python';
 	const d = win([BUNDLED, SYS, user, `${user}\\Python312\\site-packages\\docling`], {
-		env: { PATH: 'C:\\Py', APPDATA: 'C:\\Users\\Alp\\AppData\\Roaming' },
+		env: { PATH: 'C:\\Py', APPDATA: 'C:\\Users\\user\\AppData\\Roaming' },
 		dirs: { [user]: ['Python312'] }
 	});
 	assert.equal(resolvePythonBin(d), SYS);

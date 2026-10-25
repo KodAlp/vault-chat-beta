@@ -215,7 +215,7 @@ export class OpenAICompatAdapter implements ProviderAdapter {
 	 * non-standard `think` flag) — overridable without duplicating the
 	 * whole request/stream/timeout/error-handling machinery in chat(). */
 	protected extraBody(req: ChatRequest): Record<string, unknown> {
-		// Aşama 4b — a local OpenAI-compatible server (llama.cpp, vLLM, LM Studio) has no `think` flag, but
+		// A local OpenAI-compatible server (llama.cpp, vLLM, LM Studio) has no `think` flag, but
 		// serves a Qwen3-style chat template that takes `enable_thinking` as a template kwarg. Only when the
 		// caller explicitly turned thinking OFF (think === false), only for a model whose caps say it reasons
 		// (an unknown model might reject the unknown field), and never for a cloud entry (a cloud API may
@@ -452,11 +452,11 @@ export class OpenAICompatAdapter implements ProviderAdapter {
 	/** Best-effort — not every OpenAI-compatible endpoint implements /models
 	 * well; a failure here must never take down the whole registry.
 	 *
-	 * F14-1: this used to have no timeout at all — health() right below it already used
+	 * This used to have no timeout at all — health() right below it already used
 	 * AbortSignal.timeout(connectMs), but this one didn't, so one unreachable provider could hang the
 	 * whole /api/providers/models Promise.all indefinitely, independent of any filtering question.
 	 * Also now captures `created` (the one extra field this endpoint's response reliably has across
-	 * providers) as an age fallback for model-filter.ts when a model id isn't in the F14-2 catalog. */
+	 * providers) as an age fallback for model-filter.ts when a model id isn't in the model catalog. */
 	async listModels(): Promise<ModelInfo[]> {
 		try {
 			const res = await fetch(`${this.config.baseUrl}/models`, {
@@ -468,7 +468,7 @@ export class OpenAICompatAdapter implements ProviderAdapter {
 			return (body.data ?? []).map((m) => ({
 				id: m.id,
 				ctx: 8192,
-				// Aşama 4b: capability flags (and the embedding-only marker) come from the shared
+				// Capability flags (and the embedding-only marker) come from the shared
 				// model-caps.ts table + the provider's per-model override, not a blanket false.
 				...compatModelExtras(m.id, this.config.modelCaps?.[m.id]),
 				...(typeof m.created === 'number' ? { created: m.created } : {})

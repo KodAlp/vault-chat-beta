@@ -29,7 +29,7 @@ export interface ChatFallbackDeps {
 	/** registry.ts's providers.json "Etkin" toggle — see its own doc
 	 * comment for why routing must actually honor this. */
 	isProviderEnabled(providerId: string): boolean;
-	/** İ2 (Aşama 8, 2026-09-23): true for Ollama always (local, nothing
+	/** 2026-09-23: true for Ollama always (local, nothing
 	 * ever leaves the device) — for a cloud provider, true only once the
 	 * user has explicitly consented via the model picker's first-use
 	 * prompt (provider-consent.ts). Filtered exactly like isProviderEnabled
@@ -68,7 +68,7 @@ export interface ChatFallbackDeps {
  *   for the bug this fixes: "delete the provider" used to be the only
  *   action with routing consequences).
  *
- * `pinnedProviderId` (Faz 17 — providerId end-to-end) is the explicit
+ * `pinnedProviderId` (providerId end-to-end) is the explicit
  * choice a user made (the chat header's selector, a settings.svelte.ts
  * default*Provider, or a *GenerationRequest.provider) rather than the
  * task's default chain. A pin is a CONSTRAINT, not a preference: only that
@@ -112,7 +112,7 @@ export async function* chatWithFallbackCore(
 		};
 	}
 	// A dropped pin leaves hop 0 on the chain head with a req.model that belonged to the pinned provider —
-	// see resolveHopModel's requestedModelApplies. An EMPTY req.model (Aşama 4c: a fresh install's client
+	// see resolveHopModel's requestedModelApplies. An EMPTY req.model (a fresh install's client
 	// settings are blank, the caller sends no model) is the same situation: nothing was chosen, so hop 0
 	// asks its own provider for its defaultModel.
 	const modelRequested = req.model !== undefined && req.model !== null && req.model !== '';

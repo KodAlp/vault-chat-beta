@@ -1,4 +1,4 @@
-// One-time repair of EXISTING library notes (TODO #4):
+// One-time repair of EXISTING library notes:
 //   - Adobe-Symbol private-use codes (U+F0xx) -> Unicode,
 //   - `\infty` between two terms -> `\propto`.
 // The rules live in scripts/symbol-propto-repair.mjs (a port of ingest/postprocess.py).

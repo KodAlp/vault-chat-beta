@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Tests for ocr_lang.py (#8) and the --ocr-lang CLI flag.
+"""Tests for ocr_lang.py and the --ocr-lang CLI flag.
 
     cd ingest && python -m pytest ocr_lang_test.py -q
 

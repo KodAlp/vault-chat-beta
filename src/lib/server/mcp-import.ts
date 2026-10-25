@@ -72,7 +72,7 @@ export async function stageLocalFile(
 		const tempIn = path.join(workDir, `original${file.ext}`);
 		fs.copyFileSync(file.real, tempIn);
 
-		// E5: content-addressed duplicate check — a warning, not a block (the user decides at confirm time).
+		// Content-addressed duplicate check — a warning, not a block (the user decides at confirm time).
 		const alreadyImportedHash = loadImportedSourceHashes(importLogPath(v)).has(await sha256OfFile(tempIn));
 
 		const result = await enqueueConversion(tempIn, workDir, 'auto', onEvent, file.name, undefined, {

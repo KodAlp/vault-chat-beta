@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { foldToSlug, capSlug, MAX_SLUG_LENGTH } from './slug';
 
-// K4 (2026-09-23 report): Turkish dotless ı (U+0131) has no canonical
+// Turkish dotless ı (U+0131) has no canonical
 // Unicode decomposition, unlike ç/ğ/ö/ş/ü — NFKD leaves it untouched, and the
 // ascii-only replace at the end of foldToSlug then turns it into a bare
 // hyphen. "Kapalı" folded to "kapal" (the trailing ı silently vanished as a

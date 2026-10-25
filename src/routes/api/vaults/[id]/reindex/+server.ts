@@ -9,12 +9,12 @@ import type { ErrorCode } from '$lib/errors';
 import type { ReindexEvent } from '$lib/types';
 
 /**
- * Aşama 3b — full, in-process rebuild of one vault's index under the
+ * Full, in-process rebuild of one vault's index under the
  * currently configured embedding (src/lib/server/reindex.ts does the actual
  * temp-file-then-atomic-swap work; indexer/rebuild.ts is the shared
  * walk/embed/write loop the CLI's `npm run index -- --full` also uses).
  *
- * No UI consumes this yet (Aşama 3c) — this route settles the server
+ * No UI consumes this yet — this route settles the server
  * contract: SSE 'start' (total files) / 'progress' (done/total/path) /
  * 'done' (files/chunks/ms) / 'cancelled' / 'error' (coded), same shape as
  * every other long-running action in this app (see /api/import,

@@ -121,7 +121,7 @@ export function isPathInsideFolder(path: string, folderPath: string): boolean {
 	return path.startsWith(`${folderPath}/`);
 }
 
-/** Faz 8's contract: includedPaths === undefined means "all" — never an
+/** Contract: includedPaths === undefined means "all" — never an
  * array listing every single file. Collapses a full selection back down to
  * that canonical "all" form so a chat that starts unscoped stays unscoped
  * in storage even after the tree round-trips through the UI. */

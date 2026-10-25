@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import { providerConsentPath } from './env';
 
 /**
- * İ2 (Aşama 8, 2026-09-23): which providers the user has explicitly
+ * 2026-09-23: which providers the user has explicitly
  * consented to send chat data to — the model picker's first-use prompt
  * writes here, and chat-fallback.ts's isProviderConsented dependency reads
  * it before ever routing a request (base chain AND a pin) to a provider.

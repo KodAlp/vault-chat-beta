@@ -20,7 +20,7 @@ const OLLAMA: ProvidersFile['providers'][number] = {
 };
 
 /**
- * Aşama 3a — indexLibraryFile is the app's live single-file write path (used
+ * indexLibraryFile is the app's live single-file write path (used
  * by upload/import so a new document is searchable immediately); it must
  * refuse to mix vectors from the CURRENTLY configured embedding provider
  * into an index whose vec_chunks table was baked for a different one (the
@@ -114,7 +114,7 @@ test('indexLibraryFile succeeds when the config matches the index (including the
 	}
 });
 
-// Aşama 4a — FTS-only mode: no embedding configured.
+// FTS-only mode: no embedding configured.
 function hasVecTable(db: ReturnType<typeof openDb>): boolean {
 	return db.prepare("SELECT 1 FROM sqlite_master WHERE name = 'vec_chunks'").get() !== undefined;
 }

@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { t } from '$lib/i18n/index.svelte';
 
-	/** Restyle of Message.svelte's old bare `<p class="notice">` — see the
-	 * model-provider skill's fallback policy for when `type: 'notice'`
+	/** Restyle of Message.svelte's old bare `<p class="notice">` — see
+	 * the provider fallback policy for when `type: 'notice'`
 	 * actually streams (today's single-provider chains never trigger it,
 	 * but the mechanism is real, unlike the [LOW]/[HIGH] confidence-tag
-	 * idea from the original UI-PLAN, which has no producer anywhere in
-	 * prompt.ts and was left unbuilt for that reason — see Faz 9 Adım 6). */
+	 * idea from the original UI plan, which has no producer anywhere in
+	 * prompt.ts and was left unbuilt for that reason). */
 	let { message }: { message: string } = $props();
 </script>
 

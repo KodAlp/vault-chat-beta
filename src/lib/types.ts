@@ -23,7 +23,7 @@ export interface RetrievedChunk {
  * narrowScope distinguishes "nothing relevant in the vault" from "relevant
  * chunks exist but includedPaths filtered them all out" — the two look
  * identical as a bare empty array, but only the second should trigger a
- * "kapsamı genişlet?" suggestion in the UI (Faz 9).
+ * "kapsamı genişlet?" suggestion in the UI.
  */
 export interface RetrieveResult {
 	chunks: RetrievedChunk[];
@@ -39,9 +39,9 @@ export interface RetrieveResult {
 		| 'small-talk'
 		/** The reranker scored every candidate below RERANK_MIN_SCORE: the vault has nothing on this question (rerank-select.ts). */
 		| 'rerank-no-match'
-		/** Aşama 4a — vector search never ran: no embedding configured (FTS-only mode) and the keyword search found nothing. */
+		/** Vector search never ran: no embedding configured (FTS-only mode) and the keyword search found nothing. */
 		| 'fts-only'
-		/** Aşama 4a — vector search never ran because it could not (mismatch/unavailable) and the keyword fallback found nothing. */
+		/** Vector search never ran because it could not (mismatch/unavailable) and the keyword fallback found nothing. */
 		| 'embedding-unavailable';
 	/** True when the message was judged small talk (a greeting, slang, a test) and
 	 * retrieval was skipped on purpose — no sources, and the UI says why. Only ever
@@ -58,7 +58,7 @@ export interface RetrieveResult {
 		overridden?: boolean;
 	};
 	/** True when the vector search came back empty and these chunks are the
-	 * keyword fallback's (F5). Only ever set with opts.keywordFallback. */
+	 * keyword fallback's. Only ever set with opts.keywordFallback. */
 	keyword?: boolean;
 	/** Best cosine distance among the vector candidates, whether or not they
 	 * passed the filters — logging only (app-log.ts 'retrieval'). Absent when KNN
@@ -67,7 +67,7 @@ export interface RetrieveResult {
 	/** Highest reranker score among the candidates — set only when the reranker ran. */
 	rerankBest?: number;
 	/**
-	 * Aşama 3a — set when retrieve() could not run vector search at all against
+	 * Set when retrieve() could not run vector search at all against
 	 * the currently configured embedding provider/model: 'mismatch' means the
 	 * index's recorded embedding (index_meta) differs from the config (a
 	 * reindex is required before vectors are comparable again); 'unavailable'
@@ -78,7 +78,7 @@ export interface RetrieveResult {
 	 * un-vetted keyword hit (the five generate-*.ts, per NoSourcesError's own
 	 * "cite only what vector search actually found" rule) checks this FIRST
 	 * and fails with a coded EMBEDDING_MISMATCH/EMBEDDING_UNAVAILABLE error
-	 * instead of using `chunks`. 'fts-only' (Aşama 4a) is the EXPECTED state
+	 * instead of using `chunks`. 'fts-only' is the EXPECTED state
 	 * when no embedding provider is configured at all: keyword search is the
 	 * only retrieval, so the chat route does not forward it to the client as a
 	 * warning, and the generators proceed with the keyword hits (assertNoEmbeddingIssue). The chat route is the one caller that
@@ -124,15 +124,15 @@ export interface ChatMessage {
 	/** Hedge/uncertainty phrases detected in this message's reasoning trace (when there was one) and its
 	 * final answer text (always) — see $lib/server/hallucination.ts. Empty/absent means none found. */
 	hedges?: string[];
-	/** F8 — true when some model call this turn came close to the context window (see history-limits.ts /
+	/** True when some model call this turn came close to the context window (see history-limits.ts /
 	 * env.ts's serveCtxOverride). Client-only, never persisted — same footing as narrowScope/smallTalk. */
 	nearCtxLimit?: boolean;
 	/** Mirrors RetrieveResult.embeddingIssue for this message's answer — see
 	 * StreamEvent's 'done' variant. Client-only, never persisted, same footing
 	 * as narrowScope/smallTalk/nearCtxLimit above (a reload loses the banner,
 	 * not the answer, which already reflects whatever sources were actually
-	 * used). No UI reads this yet (Aşama 3c) — the field just carries the
-	 * signal through so that phase doesn't need another server round-trip. */
+	 * used). No UI reads this yet — the field just carries the
+	 * signal through so it doesn't need another server round-trip. */
 	embeddingIssue?: 'mismatch' | 'unavailable';
 	/** Client-only, never persisted — same footing as `notices` above: a
 	 * folder-skill's supporting file the model fetched mid-turn via the
@@ -148,7 +148,7 @@ export interface ChatRequestBody {
 	model: string;
 	/** Which provider `model` belongs to (see ProviderModelOption.providerId)
 	 * — omitted means "let the task's provider chain in providers.json
-	 * decide", the pre-Faz-17 behavior. Set whenever the user picked a
+	 * decide", the behavior before per-model providers. Set whenever the user picked a
 	 * model from Chat.svelte's header selector (which is already grouped by
 	 * provider) or a settings.svelte.ts default*Provider is in play — see
 	 * registry.ts's chatWithFallback pinnedProviderId param. */
@@ -165,15 +165,15 @@ export interface ChatRequestBody {
 	 * "deepseek-chat") could be requested from whatever the `title` chain's
 	 * own default provider happened to be. See registry.ts's resolveHopModel. */
 	titleProvider?: string;
-	/** Vault id — omitted in Faz 8 (single active-vault UI), sent by Faz 9's
+	/** Vault id — omitted by the old single active-vault UI, sent by the
 	 * vault-aware chat header. Server falls back to the active vault. */
 	vault?: string;
-	/** Tri-state source-tree selection (Faz 9 UI) — omitted means "all". */
+	/** Tri-state source-tree selection — omitted means "all". */
 	includedPaths?: string[];
 	/** "Yine de kaynak ara": retrieve even if the small-talk gate would skip it, and
 	 * record that this message is a question. */
 	forceSources?: boolean;
-	/** F6 — 'free_chat' (default, omit) | 'review'. Travels with every request the same way model/provider do
+	/** 'free_chat' (default, omit) | 'review'. Travels with every request the same way model/provider do
 	 * (Chat.svelte's chatMode) — see prompt.ts's buildPromptMessages. */
 	mode?: string;
 }
@@ -187,7 +187,7 @@ export interface OllamaModel {
 /** Client-safe mirror of chats-db.ts's ChatRow — that module is server-only
  * ($lib/server/), can't be imported from a component. Kept structurally
  * identical to what GET /api/chats actually returns (it sends the full row,
- * including vault_id/included_paths_json — Faz 8 added those columns
+ * including vault_id/included_paths_json — those columns were added
  * before any client type declared them). */
 export interface ChatSummary {
 	id: string;
@@ -205,8 +205,8 @@ export type StreamEvent =
 	| { type: 'delta'; content: string }
 	| { type: 'thinking'; content: string }
 	/** Provider fallback notice (e.g. "deepseek unavailable → switched to
-	 * local model") — see the model-provider skill's fallback policy.
-	 * Rendered via FallbackNotice.svelte (Faz 9 Adım 6); today's
+	 * local model").
+	 * Rendered via FallbackNotice.svelte; today's
 	 * single-provider chains never actually trigger it in practice. */
 	| { type: 'notice'; message: string; code?: string; params?: Record<string, string | number> }
 	/** A folder-skill's supporting file is about to be read via the
@@ -272,7 +272,7 @@ export type QuizGenerationEvent =
 	| { type: 'error'; message: string; narrowScope?: boolean; code?: string; params?: Record<string, string | number> };
 
 /** GET /api/study/{quizzes,decks,reports,mindmaps,slidedecks} response
- * item shape (Faz 13) — one per generated-material type, all structurally
+ * item shape — one per generated-material type, all structurally
  * identical (mirrors study-db.ts's StudyListRow). Lets a single
  * "recently generated" list component work across all five types. */
 export interface StudySummary {
@@ -459,7 +459,7 @@ export interface SlideDeckView {
 export interface SlideView {
 	id: string;
 	position: number;
-	/** F13-1 (Aşama 9) — see slides-schema.ts's SLIDE_LAYOUTS. */
+	/** See slides-schema.ts's SLIDE_LAYOUTS. */
 	layout: string;
 	heading: string;
 	content_markdown: string;
@@ -501,7 +501,7 @@ export interface VaultRecord {
 	path: string;
 	createdAt: string;
 	lastOpenedAt: string;
-	/** İ6 (Aşama 8) — see the server-side VaultRecord's own doc comment. */
+	/** See the server-side VaultRecord's own doc comment. */
 	mcpExposed?: boolean;
 	/** Set when an MCP client created the vault (server VaultRecord.createdVia). */
 	createdVia?: 'mcp';
@@ -514,7 +514,7 @@ export interface VaultRecord {
  * it never lives in vaults.json itself (see api/vaults/+server.ts's doc
  * comment). Files on disk that `npm run index` would walk but hasn't yet —
  * a curation pass that finished without a following reindex looked, before
- * this existed, identical to a vault with nothing new (E2). */
+ * this existed, identical to a vault with nothing new. */
 /** One row of GET /api/library/pending-imports (server: pending-imports.ts PendingImportMeta). */
 export interface PendingImportItem {
 	importId: string;
@@ -530,7 +530,7 @@ export interface PendingImportItem {
 
 export interface VaultWithStatus extends VaultRecord {
 	unindexedCount: number;
-	/** Aşama 3c — true when this vault's index was built under a different
+	/** True when this vault's index was built under a different
 	 * embedding provider/model/dims than the one currently configured
 	 * (providers/config-store.ts's `embedding` block, GET /api/embedding).
 	 * Vector search is skipped for this vault (retrieve.ts) until it's
@@ -551,7 +551,7 @@ export interface VaultWithStatus extends VaultRecord {
 }
 
 /**
- * Aşama 3c — client-facing mirror of providers/config-store.ts's
+ * Client-facing mirror of providers/config-store.ts's
  * EmbeddingConfig (server-only module, not importable from client code) —
  * the shape GET/PUT /api/embedding exchange.
  */
@@ -617,7 +617,7 @@ export interface ImportResultItem {
 	code?: string;
 	params?: Record<string, string | number>;
 	path?: string;
-	/** Only set when status is 'pending' (Aşama 6 #10): the links importer
+	/** Only set when status is 'pending' the links importer
 	 * now stages each result instead of writing it straight into the
 	 * library, matching the file/YouTube upload flow's staging → confirm
 	 * step — these three fields are what a per-item confirm/cancel UI needs,
@@ -633,7 +633,7 @@ export interface ImportSummary {
 
 /** SSE event shapes streamed by POST /api/import and /api/import/batch. */
 export type ImportEvent =
-	// pageCount/estimatedSeconds (Aşama 7, 2026-09-23): only present once
+	// pageCount/estimatedSeconds (2026-09-23): only present once
 	// convert.py's early PDF page-count event reaches convertQueue.ts —
 	// absent for non-PDF sources and for every progress event before it.
 	| { type: 'progress'; stage: string; fileName?: string; pageCount?: number; estimatedSeconds?: number }
@@ -665,7 +665,7 @@ export type PythonSetupEvent =
 	| { type: 'error'; message: string; code?: string; params?: Record<string, string | number> };
 
 /**
- * Aşama 3b — SSE event shapes streamed by POST /api/vaults/[id]/reindex (a
+ * SSE event shapes streamed by POST /api/vaults/[id]/reindex (a
  * full, in-process rebuild of that vault's index under the currently
  * configured embedding — see src/lib/server/reindex.ts). 'cancelled' is
  * distinct from 'error': a user-requested cancel (DELETE on the same route,
@@ -703,7 +703,7 @@ export interface PythonModuleStatus {
 	installed: boolean;
 }
 
-/** Aşama 2b — GET /api/system/python's full response shape. `pythonInstalled`
+/** GET /api/system/python's full response shape. `pythonInstalled`
  * and `markitdownInstalled` are kept for backward compat with any caller
  * that only read those two original fields; `modules`/`pandoc`/`pythonVersion`
  * are additions. `pandoc` is informational only — it's optional tooling
@@ -722,7 +722,7 @@ export interface PythonSystemStatus {
 	pandoc: boolean;
 }
 
-/** GET /api/study/errors (F2). Mirrors src/lib/server/learner-errors.ts's WeakSpot/ErrorItem — kept as a separate,
+/** GET /api/study/errors. Mirrors src/lib/server/learner-errors.ts's WeakSpot/ErrorItem — kept as a separate,
  * client-safe copy the same way LearnerProfile (learner-model.ts) is kept apart from the server's AnswerRow. */
 export interface WeakSpotView {
 	id: string;
@@ -752,7 +752,7 @@ export interface WeakSpotErrorView {
 	lastAt: string;
 }
 
-/** GET/POST /api/memory, PATCH/DELETE /api/memory/[id] (F3). Mirrors src/lib/server/memory-store.ts's MemoryRow —
+/** GET/POST /api/memory, PATCH/DELETE /api/memory/[id]. Mirrors src/lib/server/memory-store.ts's MemoryRow —
  * kept as a separate, client-safe copy, same pattern as WeakSpotView. */
 export interface MemoryNoteView {
 	id: string;
@@ -781,7 +781,7 @@ export interface ProviderStatus {
 	 * unset, so this provider gets skipped rather than asked for a wrong
 	 * model on that path. */
 	defaultModel: string | null;
-	/** Aşama 3c — set on whichever provider is actually CONFIGURED for
+	/** Set on whichever provider is actually CONFIGURED for
 	 * embedding right now (GET /api/embedding, providers/config-store.ts's
 	 * `embedding` block), not hardcoded to 'ollama' any more: embedding can
 	 * be a local/cloud openai-compat provider instead. Every other provider
@@ -810,14 +810,14 @@ export interface ProviderStatus {
 	} | null;
 }
 
-/** GET /api/providers/[id]/models (F14-4) response shape — settings page's "model listesini yönet" checkbox
+/** GET /api/providers/[id]/models response shape — settings page's "model listesini yönet" checkbox
  * list. `enabled` reflects the provider's enabledModels allow-list (true for everything when uncurated). */
 export interface ModelListItem {
 	id: string;
 	enabled: boolean;
-	/** Aşama 4b — effective capability flags (family table with the provider's override applied). */
+	/** Effective capability flags (family table with the provider's override applied). */
 	caps: { tools: boolean; reasoning: boolean };
-	/** Aşama 4b — the user's explicit per-model override, when one is set. */
+	/** The user's explicit per-model override, when one is set. */
 	capsOverride?: { tools?: boolean; reasoning?: boolean };
 }
 
@@ -829,7 +829,7 @@ export interface ProviderModelOption {
 	id: string;
 	ctx: number;
 	caps: { tools: boolean; reasoning: boolean };
-	/** İ2 (Aşama 8) — false for Ollama (local, nothing ever leaves the
+	/** False for Ollama (local, nothing ever leaves the
 	 * device); true for any cloud provider (config-store.ts's isCloud()).
 	 * ModelPickerRow/GenerationDialog gate switching onto a cloud option
 	 * with `consented: false` behind a first-use confirmation instead of
@@ -843,7 +843,7 @@ export interface ProviderModelOption {
 }
 
 // ---------------------------------------------------------------------------
-// Aşama 2b — Tauri local-server launcher commands (src-tauri/src/launchers.rs
+// Tauri local-server launcher commands (src-tauri/src/launchers.rs
 // and winget.rs). These are the JS-side mirrors of the #[tauri::command]
 // return/serde shapes; the Rust structs have NO `rename_all`, so field names
 // serialize verbatim as snake_case (unlike Tauri's own automatic command

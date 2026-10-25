@@ -18,7 +18,7 @@ export interface ChatRow {
 	provider: string | null;
 	vault_id: string;
 	included_paths_json: string | null;
-	/** F6 — which chat mode this conversation runs in ('free_chat' | 'review' so far). Travels with each
+	/** Which chat mode this conversation runs in ('free_chat' | 'review' so far). Travels with each
 	 * request the same way model/provider do (see Chat.svelte's chatMode); this column is what a reopened
 	 * chat remembers itself. */
 	mode: string;
@@ -46,12 +46,12 @@ let db: Database.Database | undefined;
  * Ordering matters here: `CREATE INDEX ... ON chats(vault_id)` must run
  * strictly AFTER the vault_id ALTER-guard below, never bundled into the
  * same exec() as `CREATE TABLE IF NOT EXISTS chats`. On a DB where `chats`
- * already exists without `vault_id` (a pre-Faz-8 DB, or one that reached
+ * already exists without `vault_id` (a pre-vault-registry DB, or one that reached
  * this function before scripts/migrate-vaults.mjs ran), CREATE TABLE IF
  * NOT EXISTS no-ops — the column is never added by it — so an index on
  * that column created in the same breath fails immediately with "no such
  * column: vault_id", before the guard ever gets a chance to run. This
- * exact bug shipped in Faz 8 and only surfaced once a real vault_id-less
+ * exact bug shipped with the vault registry and only surfaced once a real vault_id-less
  * chats.db reached it. See sqlite-schema.ts's doc comment for the general
  * rule this is an instance of.
  */
@@ -91,10 +91,10 @@ export function initChatsSchema(instance: Database.Database): void {
 	// table needs the column added explicitly, CREATE TABLE IF NOT EXISTS
 	// can't retrofit it.
 	ensureColumns(instance, 'messages', { hallucination_hedges_json: 'TEXT' });
-	// vault_id/included_paths_json didn't exist before Faz 8 — a DB created
+	// vault_id/included_paths_json didn't exist before the vault registry — a DB created
 	// by an older build won't have them yet. scripts/migrate-vaults.mjs
 	// handles the real one-time backfill (vault_id='default' for existing
-	// rows); this ALTER only guards a pre-Faz-8 DB that reaches getDb()
+	// rows); this ALTER only guards a pre-vault-registry DB that reaches getDb()
 	// before migration has run, so CREATE TABLE's DEFAULT can't help
 	// (defaults only apply to rows inserted after the column exists).
 	ensureColumns(instance, 'chats', {
@@ -108,7 +108,7 @@ export function initChatsSchema(instance: Database.Database): void {
 	instance.exec(`CREATE INDEX IF NOT EXISTS idx_chats_vault_id ON chats(vault_id);`);
 	// The user's own small-talk phrases (smalltalk-gate.ts): user-level like chats, not per vault.
 	initSmallTalkSchema(instance);
-	// Manual memory notes (F3, memory-store.ts): user-level for the same reason.
+	// Manual memory notes (memory-store.ts): user-level for the same reason.
 	initMemorySchema(instance);
 }
 
@@ -124,7 +124,7 @@ function getDb(): Database.Database {
 	const instance = new Database(dbPath);
 	// A pragma/exec failure here must not leave an open handle uncached —
 	// nothing would ever close it, and Windows refuses to rename/delete a
-	// file with an open handle (the exact EBUSY class Faz 8 hit).
+	// file with an open handle (the exact EBUSY class the vault-delete fix addressed).
 	try {
 		initChatsSchema(instance);
 	} catch (err) {

@@ -1,10 +1,10 @@
 import type Database from 'better-sqlite3';
 
 /**
- * F3 — manual memory notes (GLOBAL/PERSONAL, STATED origin only in v1) in chats.db, the user-level database, NOT a
+ * Manual memory notes (GLOBAL/PERSONAL, STATED origin only in v1) in chats.db, the user-level database, NOT a
  * vault's — same reasoning as smalltalk_phrases (smalltalk-store.ts): "I prefer short answers" or "I'm a working
  * professional" isn't tied to which vault happens to be open. DOMAIN/LEARNING_HISTORY memory is never stored at
- * all in v1 — it is computed live from F1b/F2 by memory-runtime.ts's computeMemoryBlock, exactly like the
+ * all in v1 — it is computed live from the learner profile and weak spots by memory-runtime.ts's computeMemoryBlock, exactly like the
  * progress and weak-spot pages already do, so no vault-scoped memory storage exists yet.
  *
  * Rows are immutable once written. Editing a note inserts a new row and points the old one's `superseded_by` at

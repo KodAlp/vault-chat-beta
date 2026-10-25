@@ -1,6 +1,6 @@
 // Re-imports a vault's markdown from its live Obsidian source, then
 // re-indexes it — the missing piece after the app's data model moved to an
-// imported *copy* of the vault (see vault-registry skill) rather than
+// imported *copy* of the vault rather than
 // reading the vault in place: nothing kept that copy honest. The real
 // library this app ships with went 6 weeks stale with no indicator anywhere
 // before this existed.

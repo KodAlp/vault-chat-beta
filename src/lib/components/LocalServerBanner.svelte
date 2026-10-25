@@ -12,7 +12,7 @@
 	import type { LauncherConfig, ProviderStatus } from '$lib/types';
 
 	/**
-	 * App-wide, not per-page, and provider-agnostic (Aşama 4d; it used to be hardcoded to the 'ollama' provider).
+	 * App-wide, not per-page, and provider-agnostic (it used to be hardcoded to the 'ollama' provider).
 	 * It looks at the provider chat will actually use — the client pin when it names an enabled provider, else
 	 * the head of the chat chain (resolveBannerTarget, localServerBanner.ts) — and shows:
 	 *  - "setup not finished" (link to the wizard / Settings > Providers) when nothing resolves — no polling;

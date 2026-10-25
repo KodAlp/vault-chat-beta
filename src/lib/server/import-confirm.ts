@@ -92,7 +92,7 @@ export async function confirmStagedImport(
 			...(input.autoConfirmed ? { autoConfirmed: true } : {})
 		});
 
-		// #11: indexLibraryFile can fail (a corrupt DB handle, an Ollama call that
+		// indexLibraryFile can fail (a corrupt DB handle, an Ollama call that
 		// errors mid-embedding) after the file already landed in the library tree
 		// — until now that left an unindexed orphan behind with no signal at all:
 		// not in the index, not back in staging, no log entry either way, and

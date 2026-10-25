@@ -33,7 +33,7 @@
 	// A video link is not a file, but it feeds the same single-item review flow.
 	let youtubeMode = $state(false);
 	let youtubeUrl = $state('');
-	// İ5 (Aşama 8): rights checkbox, YouTube only — a local file the user picks is already
+	// Rights checkbox, YouTube only — a local file the user picks is already
 	// theirs; a YouTube URL is fetched from outside.
 	let rightsConfirmed = $state(false);
 	let youtubeStarted = $state(false);

@@ -50,7 +50,7 @@ export function registerSearchLibrary(server: McpServer): void {
 			const start = Date.now();
 			try {
 				const { vaultId, result } = await withVault(vault, async (v) => {
-					// Ö7: an empty result set from an unindexed vault used to look
+					// An empty result set from an unindexed vault used to look
 					// exactly like "searched, nothing matched" — both are
 					// `{"results":[]}, isError:false`. NOT_INDEXED was defined in
 					// errors.ts from the start; nothing produced it.

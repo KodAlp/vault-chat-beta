@@ -29,7 +29,7 @@ export function registerListSources(server: McpServer): void {
 			const start = Date.now();
 			try {
 				const { vaultId, total, sources } = await withVault(vault, (v) => {
-					// Ö7: same NOT_INDEXED gap as search_library — an unindexed
+					// Same NOT_INDEXED gap as search_library — an unindexed
 					// vault returned `{"total":0,"sources":[]}, isError:false`,
 					// indistinguishable from "indexed, filter matched nothing".
 					if (!vaultIsIndexed(v)) {

@@ -18,7 +18,7 @@
 	// Stable per-instance id prefix for label/control association.
 	const uid = $props.id();
 
-	// Aşama 4d: the Ollama model manager (installed list / download / delete) only exists when an ENABLED
+	// The Ollama model manager (installed list / download / delete) only exists when an ENABLED
 	// ollama-kind provider does — Ollama is an ordinary, optional provider now.
 	let hasOllama = $state(false);
 	async function refreshHasOllama() {
@@ -51,7 +51,7 @@
 	}
 
 	/**
-	 * Faz 17 — providerId end-to-end. The three model selectors below used
+	 * providerId end-to-end. The three model selectors below used
 	 * to read /api/models (Ollama-only), so a model added under a newly
 	 * connected cloud provider (an API key saved on /settings/providers)
 	 * never showed up here at all — there was nowhere to actually pick it.

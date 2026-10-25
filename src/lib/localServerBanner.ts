@@ -1,5 +1,5 @@
 /**
- * Aşama 4d — which state the app-wide banner (LocalServerBanner.svelte) should be in, decided purely from data
+ * Which state the app-wide banner (LocalServerBanner.svelte) should be in, decided purely from data
  * the client already loads (GET /api/providers, GET /api/providers/chains, the settings pins) so it is
  * unit-testable. Replaces OllamaStatusBanner's hardcoded "provider id is ollama".
  */

@@ -20,7 +20,7 @@ export const GET: RequestHandler = async () => {
 		})
 	);
 	const lastErrors = getLastProviderErrors();
-	// Aşama 3c — which provider actually does embedding is now a config
+	// Which provider actually does embedding is now a config
 	// choice (GET/PUT /api/embedding), not always 'ollama' — see
 	// mapToStatus's embedModel field below.
 	const embeddingConfig = getEmbeddingConfig();
@@ -63,7 +63,7 @@ function mapToStatus(
 		keyStatus: hasKey ? 'connected' : 'none',
 		mask: key ? maskKey(key) : null,
 		defaultModel: p.defaultModel ?? null,
-		// Aşama 3c — attached to whichever provider is actually CONFIGURED for
+		// Attached to whichever provider is actually CONFIGURED for
 		// embedding (getEmbeddingConfig().providerId), not hardcoded to
 		// 'ollama': embedding can now be an openai-compat provider instead.
 		// Every other provider gets null.

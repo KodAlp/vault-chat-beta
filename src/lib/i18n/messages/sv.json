@@ -786,7 +786,7 @@
 		"flattenFoldersPlaceholder": "wiki",
 		"flattenFoldersHint": "De här rotmapparna döljs själva, och mapparna under dem visas i stället direkt i trädets rot. Sökvägarna är oförändrade – bara trädets utseende förenklas.",
 		"libraryTreeTitle": "Biblioteksträd",
-		"libraryTreeDescription": "Ladda upp, byt namn på eller ta bort dokument. Chattskärmens eget källträd (Faz 9) använder i stället en separat, skrivskyddad kopia av det här för att välja omfång.",
+		"libraryTreeDescription": "Ladda upp, byt namn på eller ta bort dokument. Chattskärmens eget källträd använder i stället en separat, skrivskyddad kopia av det här för att välja omfång.",
 		"loadError": "Kunde inte läsa in inställningarna."
 	},
 

@@ -10,11 +10,10 @@ import { ToolError } from './errors';
  * tool calls racing to open/close the same vault's handle would produce
  * "The database connection is not open". Without the close, the MCP
  * process would hold SQLite handles between calls and the app's
- * vault-delete route (Faz 8's EBUSY fix target) could fail again — this
- * time because of us, not the app itself. See the mcp-server skill.
+ * vault-delete route (the EBUSY fix target) could fail again — this
+ * time because of us, not the app itself.
  *
- * study.db is never touched here — see the skill's "Üretici araçların
- * erteleme şartları" for why the generator tools (and therefore study.db
+ * study.db is never touched here: the generator tools (and therefore study.db
  * writes) are out of scope for v1.
  */
 const gate = createMutex();
@@ -37,7 +36,7 @@ function fold(s: string): string[] {
  * bakmadan adıyla ("Fizik") verir, hata alınca da list_vaults'a dönmek yerine
  * pes eder. Yalnız DIŞA AÇIK kasalar arasında büyük/küçük harf duyarsız kimlik
  * ya da ad tek bir kasaya çıkıyorsa onun kimliği kullanılır. Kapalı kasalar
- * eşleşmeye hiç girmez (İ6 kapısı aynı), birden çok eşleşme belirsizdir.
+ * eşleşmeye hiç girmez (`mcpExposed` kapısı aynı), birden çok eşleşme belirsizdir.
  */
 export function normalizeVaultArg(arg: string | undefined): string | undefined {
 	if (arg === undefined) return undefined;
@@ -68,7 +67,7 @@ export async function withVault<T>(
 			const message = err instanceof Error ? err.message : String(err);
 			throw new ToolError('VAULT_NOT_FOUND', message + exposedHint());
 		}
-		// İ6 (Aşama 8): closed by default — an unset vaultId resolves to the
+		// Closed by default — an unset vaultId resolves to the
 		// active vault, which itself may be closed, so this rejects that path
 		// too rather than only ever gating an explicit id. A client that
 		// already knows or guesses an id (e.g. "default") gets the same

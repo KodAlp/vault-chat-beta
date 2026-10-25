@@ -193,7 +193,7 @@ test('vault registry', async (t) => {
 		assert.deepEqual(strays, []);
 	});
 
-	// İ6 (Aşama 8): a vault is closed to MCP by default, and a fresh
+	// A vault is closed to MCP by default, and a fresh
 	// install (no pre-existing vaults to migrate) never sees the prompt —
 	// only a registry that already had vaults before this field existed.
 	await t.test('a freshly created vault is closed to MCP by default', () => {

@@ -8,18 +8,18 @@ import {
 } from '../../../indexer/prerequisites';
 
 /**
- * Reads the prerequisite graph out of the index (F4). The names are stored as written in the note's
+ * Reads the prerequisite graph out of the index. The names are stored as written in the note's
  * frontmatter and turned into paths HERE, on every read, so a note added, renamed or moved after
  * its dependants were indexed is picked up without touching them (indexer/prerequisites.ts).
  *
  * Takes a Database like keyword-search.ts does, so it works with the app's read-only handle and with
  * `:memory:` in tests. The app cannot add the column itself (it opens the index read-only), and an index
- * built before F4 does not have it until `npm run index -- --prereqs`: every function returns `null` in
+ * built before the prerequisite column does not have it until `npm run index -- --prereqs`: every function returns `null` in
  * that case, which is NOT the same as "this note has no prerequisites" — callers should say the index needs
  * refreshing, not that the graph is empty.
  */
 
-/** Whether this index has the prerequisite column at all. False for one built before F4. */
+/** Whether this index has the prerequisite column at all. False for one built before the prerequisite column. */
 export function hasPrerequisitesColumn(db: Database.Database): boolean {
 	return (db.prepare('PRAGMA table_info(files)').all() as { name: string }[]).some((c) => c.name === 'prerequisites_json');
 }

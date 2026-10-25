@@ -1,7 +1,7 @@
 import { AppError } from './app-error';
 
 /**
- * docling-parse (#357): on Windows the MinGW build corrupts the heap while its
+ * docling-parse (upstream issue #357): on Windows the MinGW build corrupts the heap while its
  * render thread shuts down, so the converter process dies natively — most
  * often on PDFs that embed CMYK JPEGs, rarely on others. A retry usually
  * succeeds, so a native crash gets one automatic second attempt — and that

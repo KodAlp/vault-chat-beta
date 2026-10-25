@@ -4,7 +4,7 @@ import { computeReviewSuggestion } from '$lib/server/review-mode';
 import { vaultFromUrl } from '$lib/server/requestVault';
 
 /**
- * F6 — whether the new-chat composer should OFFER review mode for this vault (TODO #77). Read-only, derived only
+ * Whether the new-chat composer should OFFER review mode for this vault. Read-only, derived only
  * from learning state (due cards, weak/stale domains, open weak spots) — never from user text. Fails soft to
  * `suggest: false`.
  */

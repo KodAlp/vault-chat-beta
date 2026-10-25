@@ -576,7 +576,7 @@ def map_symbol_pua(text: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# \infty read where the PDF has "proportional to" (TODO #4, measured 2026-10-13)
+# \infty read where the PDF has "proportional to" (measured 2026-10-13)
 # ---------------------------------------------------------------------------
 # CodeFormula writes `\, \infty \,` for the symbol propto (and sometimes `\, \alpha \,`).
 # It is valid LaTeX, so no KaTeX/structure check ever flagged it. Measured on 18
@@ -783,7 +783,7 @@ def _apply_outside_verbatim(text: str, fn) -> str:
     """Runs `fn` on every span of `text` that is not fenced code, inline code,
     or math ($…$/$$…$$) — those spans are copied through untouched.
 
-    Ö5: the HTML-tag stripper used to run over the whole document, so
+    The HTML-tag stripper used to run over the whole document, so
     `#include <stdio.h>` inside a fenced code block and `$a<b$ … $c>d$` both
     lost content to a regex that had no idea it was looking at code or math.
     """
@@ -876,7 +876,7 @@ def is_junk_title(title: str | None) -> bool:
 
 
 def derive_title(text: str, fallback: str) -> str:
-    # K3-7: some web-book HTML wraps a self-referencing anchor around the
+    # Some web-book HTML wraps a self-referencing anchor around the
     # H1 (e.g. `# [Scanning4](#top)`), which without this would put the
     # literal "[Scanning4](#top)" — brackets, target and all — in the title.
     # The first H1 that is not junk wins; a junk-only body falls back.

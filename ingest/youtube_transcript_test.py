@@ -6,7 +6,7 @@
 Not part of `npm test` (plain Python, run separately — same convention as
 postprocess_test.py/heading_repair_test.py). Every check here exists
 because of a real failure, measured on a real MIT OCW video
-(ryLdyDrBfvI, 2026-09-23 report):
+(ryLdyDrBfvI, 2026-09-23):
 
 - Manual English captions existed but under the key `en-qlPKC2UN_YU`, not
   plain `en` — an exact `lang in manual` check missed them and fell through

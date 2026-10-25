@@ -17,7 +17,7 @@ export function isPdfBytes(buf: Buffer): boolean {
 	return buf.subarray(0, 5).toString('ascii') === '%PDF-';
 }
 
-/** Aşama 6 #17: a YouTube link pasted into the generic links importer used
+/** A YouTube link pasted into the generic links importer used
  * to be fetched as a plain web page — trafilatura extracting whatever
  * boilerplate/JS-shell HTML youtube.com serves, never the actual video
  * transcript. Shared with api/import/youtube/+server.ts's own check so the
@@ -28,7 +28,7 @@ export function isYoutubeUrl(url: URL): boolean {
 	return YOUTUBE_URL.test(url.href);
 }
 
-/** #19: a generic Error#message from a TLS/DNS failure is often just
+/** A generic Error#message from a TLS/DNS failure is often just
  * "fetch failed" — the actionable detail (CERT_HAS_EXPIRED,
  * UNABLE_TO_VERIFY_LEAF_SIGNATURE, ENOTFOUND, ...) lives one level down, on
  * Node's/undici's `cause`, which Error#message never includes. */
@@ -55,7 +55,7 @@ export function validateLinkUrl(raw: string): URL {
 	return url;
 }
 
-/** A stand-in filename for convert.py's --source-name (E5/K2-5) — a link
+/** A stand-in filename for convert.py's --source-name — a link
  * has no local file to name, but a PDF's own URL path is usually
  * descriptive ("/papers/cooley-tukey-fft.pdf"), which is exactly what a
  * `source_file` frontmatter field and a title fallback both want instead of
@@ -306,7 +306,7 @@ export function nextRedirectTarget(current: URL, status: number, location: strin
  * `LINK_FETCH_TIMEOUT_MS * MAX_REDIRECTS`, several minutes, instead of the
  * single request's usual 30s budget.
  *
- * Moved here from api/import/links/+server.ts (Aşama 6, #33) so it can be
+ * Moved here from api/import/links/+server.ts so it can be
  * unit-tested against a real local HTTP server — route files in this repo
  * are never imported by a test, only $lib/server/*.ts is.
  */
@@ -353,7 +353,7 @@ export async function fetchWithCap(url: URL): Promise<Buffer> {
 	}
 }
 
-/** #10: a URL ending in .pdf that comes back as something other than a real
+/** A URL ending in .pdf that comes back as something other than a real
  * PDF (no %PDF- magic signature) usually means a redirect chain landed on
  * an HTML error/login page, not the expected document — this says so,
  * rather than the caller silently importing that page as if it were the
@@ -362,7 +362,7 @@ export function pdfContentTypeMismatch(url: URL, isPdf: boolean): boolean {
 	return /\.pdf(?:[?#]|$)/i.test(url.pathname) && !isPdf;
 }
 
-/** Aşama 10 #4 (isteğe bağlı, cheap win): arXiv's abstract page and its PDF
+/** Optional cheap win: arXiv's abstract page and its PDF
  * live at predictable sibling paths — a user pasting the /abs/ page (the
  * one arXiv actually links from search results and citations) would
  * otherwise get an HTML abstract-only page imported instead of the paper.
@@ -382,7 +382,7 @@ export function rewriteArxivAbsToPdf(url: URL): URL {
 }
 
 /**
- * Aşama 10 #1: OCW-style course sites (and multi-page sites generally)
+ * OCW-style course sites (and multi-page sites generally)
  * often list several readings on one page. "List, then let the user
  * choose" (D2 — this app's hardware budgets one fetch/convert per link
  * tightly; crawling every linked page automatically would multiply that),
@@ -456,7 +456,7 @@ export function extractPdfLinks(html: string, baseUrl: URL): DiscoveredPdfLink[]
 }
 
 /**
- * Aşama 10 #3: robots.txt is fetched once per origin per run (cached in
+ * robots.txt is fetched once per origin per run (cached in
  * `cache`, keyed by origin) rather than once per link, so a batch of
  * several links from the same course site doesn't triple its request
  * count over robots.txt alone. A missing/unreachable robots.txt means "no
@@ -486,7 +486,7 @@ export function isAllowedByRobots(url: URL, robotsTxt: string | null, userAgent:
 }
 
 /**
- * Aşama 10 #3 (nezaket): don't fetch the same host back-to-back across a
+ * Politeness: don't fetch the same host back-to-back across a
  * batch of links without any gap between requests. Registry/clock/sleep
  * are injectable so tests don't have to actually wait a full second —
  * default state is shared across a whole process run (same reasoning as
@@ -529,7 +529,7 @@ export function isTransientFetchError(err: unknown): boolean {
 }
 
 /**
- * Aşama 10 #3 (sınırlı yeniden deneme): one retry, only for the transient
+ * Bounded retry: one retry, only for the transient
  * codes above, with a short backoff — not a general-purpose retry loop.
  * `sleep` is injectable for tests.
  */

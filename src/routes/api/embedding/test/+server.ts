@@ -5,9 +5,9 @@ import { AppError, fail, toCodedError } from '$lib/server/app-error';
 import type { ErrorCode } from '$lib/errors';
 
 /**
- * Aşama 3a — one real embed call against an arbitrary provider/model pair
+ * One real embed call against an arbitrary provider/model pair
  * (measureEmbeddingDims, embeddings.ts), so the future settings UI's "Test
- * et" button (Aşama 3c) can fill in `dims` before the user saves an
+ * et" button can fill in `dims` before the user saves an
  * embedding config, instead of asking them to know a model's vector size.
  * Deliberately separate from PUT /api/embedding: testing a pair must never
  * itself change the saved config.

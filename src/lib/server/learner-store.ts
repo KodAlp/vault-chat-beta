@@ -82,7 +82,7 @@ export function computeLearnerProfile(v: VaultContext, now: Date = new Date()): 
 	return buildProfile({ points, cards, now });
 }
 
-/** The weak-spot list of a vault (F2), computed fresh from the same stored answers and cards as the learner model.
+/** The weak-spot list of a vault, computed fresh from the same stored answers and cards as the learner model.
  * Read-only: it writes nothing. */
 export function computeWeakSpots(v: VaultContext): WeakSpot[] {
 	const domains = loadDomainsByPath(v);

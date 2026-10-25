@@ -11,7 +11,7 @@ import {
 import { AppError, fail, toCodedError } from '$lib/server/app-error';
 import type { ErrorCode } from '$lib/errors';
 
-/** F14-4 — enabledModels: string[] sets the manual allow-list (settings page's checkbox management), null
+/** enabledModels: string[] sets the manual allow-list (settings page's checkbox management), null
  * clears it back to "uncurated, show everything the filter approves" (see config-store.ts's doc comment on
  * ProviderConfigEntry.enabledModels — an empty array is a real, distinct state from unset/null).
  * Problem B — pinnedModels: string[] | null follows the same null-clears semantics, validated/deduped in
@@ -24,7 +24,7 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
 		enabledModels?: string[] | null;
 		pinnedModels?: string[] | null;
 		local?: boolean;
-		/** Aşama 4b — one model's capability override; `caps: null` clears it. */
+		/** One model's capability override; `caps: null` clears it. */
 		modelCaps?: { modelId: string; caps: { tools?: boolean; reasoning?: boolean } | null };
 	};
 	if (

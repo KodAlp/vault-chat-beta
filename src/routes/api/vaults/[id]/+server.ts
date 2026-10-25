@@ -38,7 +38,7 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
 		let vault = listVaults().find((v) => v.id === params.id);
 		if (!vault) throw new AppError('NOT_FOUND', { entity: 'vault', detail: params.id }, 404);
 		if (body.name !== undefined) vault = renameVault(params.id, body.name);
-		// İ6: a separate field, not folded into the name-rename above — a
+		// A separate field, not folded into the name-rename above — a
 		// caller flipping exposure alone must not also need to resend name.
 		if (body.mcpExposed !== undefined) vault = setVaultMcpExposed(params.id, body.mcpExposed);
 		// This route is session-gated and not under /api/mcp/*: an MCP token can never reach it, so only the

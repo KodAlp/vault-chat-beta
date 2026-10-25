@@ -11,7 +11,7 @@ pages, word recall against a ground-truth word list (if given), Markdown
 length, `$$` count and seconds.
 
 Not part of any test run — this is the re-measurement tool for
-docs/docling-saglamlik-olcum-2026-10-07.md. Re-run it on the same files
+the docling PDF backends (first measured 2026-10-07). Re-run it on the same files
 whenever docling / docling-parse is upgraded (hybrid_backend.py depends on
 docling internals). Needs the optional extras (requirements-optional.txt).
 

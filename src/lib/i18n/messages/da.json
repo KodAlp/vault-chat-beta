@@ -750,7 +750,7 @@
 		"flattenFoldersPlaceholder": "wiki",
 		"flattenFoldersHint": "Selve disse rodmapper skjules, og mapperne under dem vises i stedet direkte i træets rod. Stierne er uændrede – kun træets udseende forenkles.",
 		"libraryTreeTitle": "Bibliotekstræ",
-		"libraryTreeDescription": "Upload, omdøb eller slet dokumenter. Chatskærmens eget kildetræ (Faz 9) bruger i stedet en separat skrivebeskyttet kopi af dette til valg af omfang.",
+		"libraryTreeDescription": "Upload, omdøb eller slet dokumenter. Chatskærmens eget kildetræ bruger i stedet en separat skrivebeskyttet kopi af dette til valg af omfang.",
 		"loadError": "Kunne ikke indlæse indstillingerne."
 	},
 	"ProvidersSettingsPage": {

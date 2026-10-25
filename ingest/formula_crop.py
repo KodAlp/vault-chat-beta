@@ -12,7 +12,7 @@ bu, komşu satırları/denklem numarasını kırpıma sokar (CodeFormulaV2'yi ş
     etiketleri büyümeyi ENGELLER;
   * kenar payı <= 3.5 pt, kutunun dışındaki her karakterin 0.5 pt önünde durur.
 
-Geometri bench/formula/crop_experiment.py'deki adaptive_box_v3'ün birebir kopyasıdır (yalnız
+Geometri, deneysel adaptive_box_v3 kırpımının birebir kopyasıdır (yalnız
 görüntü ölçeği parametre oldu). Bağlama install() ile yapılır (formula_early_stop.py gibi):
 CodeFormulaVlmModel.prepare_element sarılır; herhangi bir uyuşmazlıkta stok kırpım kullanılır,
 dönüşüm asla bozulmaz.

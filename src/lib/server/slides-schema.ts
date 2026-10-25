@@ -2,7 +2,7 @@ import { z } from 'zod';
 import type { DiagramSpec } from './slides-diagram';
 
 /**
- * F13-1 (Aşama 9) — every layout `buildMarpDeck` (generate-slides.ts) and
+ * Every layout `buildMarpDeck` (generate-slides.ts) and
  * `slides-theme.ts` know how to render. Adding a value here without a
  * matching `.{layout}` selector in slides-theme.ts silently falls back to
  * that layout looking identical to plain `bullets` — see
@@ -28,7 +28,7 @@ export type SlideLayout = (typeof SLIDE_LAYOUTS)[number];
  */
 
 /**
- * F13-3 (Aşama 11) — only meaningful when `layout === 'diagram'`, optional
+ * Only meaningful when `layout === 'diagram'`, optional
  * everywhere else (same "superset schema, prompt + soft validation carry
  * the per-layout meaning" pattern the "4-6 madde" bullets rule already
  * uses — see generate-slides.ts). The model supplies structure and labels
