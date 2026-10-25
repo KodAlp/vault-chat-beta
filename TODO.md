@@ -50,7 +50,7 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 ## Yapılabilir
 
 ### 1. Güvenlik ve CI
-- [ ] **Public öncesi kalan.** GitHub: fork PR onayı, dal koruması (`docs/dev/public-oncesi.md`), "Keep my email private" + "Block command line pushes that expose my email", sonra public. Genel `~/.gitconfig` e-postası hâlâ Gmail (bu repoda yerel ayar noreply). ARM64 denenmedi. `K–O` · #51
+- [ ] **Public öncesi kalan.** (1) Public'ten önce: Settings → Actions → General izinleri (seçili eylem listesi, SHA sabitleme, salt okunur workflow izni), "Keep my email private" + "Block command line pushes that expose my email", genel `~/.gitconfig` e-postası noreply. (2) Public yap. (3) Sonra: Secret scanning + push protection ve Private vulnerability reporting aç; fork onayını "all external contributors" yap; ilk desktop derlemesini izle, `build (windows-x64)`'ü main ruleset'ine zorunlu kontrol ekle. ARM64 denenmedi. `K` · #51
 
 ### 2. Notebook verileri
 - [ ] **Rusça kasası onarımı.** 14 uyarılı bekleyen; İngilizce/Mandarin/İspanyolca kasa sorusu. `O` · #21
@@ -140,6 +140,7 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 
 Yalnız son iki haftanın kaydı tutulur; daha eskisi git geçmişindedir.
 
+- 2026-10-25: #51 GitHub ayarları (kullanıcı, denetlenmedi): fork PR'larına yazma jetonu ve sır gönderilmiyor, onay zorunlu; Dependency graph, Dependabot alerts, security updates (gruplu) açık; main için ruleset hazır.
 - 2026-10-25: #51 `desktop.yml` main ve `ci` push'u, `v*` etiketleri, PR ve elle tetikleniyor; işin `if` koşulu repo özelken main/etiket/PR çalışmalarını atlıyor (dakika harcanmaz), public olunca dokunmadan çalışır. Belge değişikliği derleme başlatmaz, yeni push eskisini iptal eder, Windows ARM64 `continue-on-error`. README, SECURITY.md ve `docs/dev/public-oncesi.md` güncel. YAML ayrıştırıldı; GitHub'da hiç çalıştırılmadı. `cb13846`
 - 2026-10-25: yerel repo yeni geçmişe geçti. Ana klasör `docs/readme-vitrin` dalından main'e alındı (commitsiz ikon değişiklikleri main'de `f0d3496` olarak zaten vardı; kişisel `data/providers.json` korundu). Eski geçmişteki 75 dalın hepsi main'de eşleşti ve silindi, 19 worktree kaldırıldı (tek junction `node_modules` önce `rmdir` ile ayrıldı). Yedek ve dal uçları `Desktop/vault-chat-yedek-2026-10-25/`. Kalan: boş `derleme-durumu-c945b2` klasörü bir işlem tarafından tutuluyor; eski geçmişten `stash@{0}` (2026-10-05 dizayn prototipi) duruyor.
 
