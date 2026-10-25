@@ -1,78 +1,82 @@
 <p align="center">
-  <img src="static/logo.png" alt="vault-chat logosu" width="140" />
+  <img src="static/logo.png" alt="vault-chat logo" width="140" />
 </p>
 
 <h1 align="center">Vault Chat</h1>
 
 <p align="center">
-  <b>Kendi notlarınla konuşan, yerelde çalışan bir çalışma asistanı.</b><br />
-  Belgelerini içe aktar, sorularına kaynak göstererek cevap alsın; aynı kaynaklardan test, kart, rapor ve slayt üretsin.
+  <b>English</b> · <a href="readme/README.tr.md">Türkçe</a> · <a href="readme/README.zh-CN.md">简体中文</a> · <a href="readme/README.de.md">Deutsch</a> · <a href="readme/README.es.md">Español</a> · <a href="readme/README.fr.md">Français</a> · <a href="readme/README.ja.md">日本語</a>
 </p>
 
 <p align="center">
-  <img alt="Lisans: Apache-2.0" src="https://img.shields.io/badge/lisans-Apache--2.0-blue" />
-  <img alt="Sürüm" src="https://img.shields.io/github/v/tag/KodAlp/vault-chat-beta?sort=semver&label=s%C3%BCr%C3%BCm&color=informational" />
+  <b>A local study assistant that chats with your own notes.</b><br />
+  Import your documents and get answers with cited sources; generate quizzes, flashcards, reports and slides from the same sources.
+</p>
+
+<p align="center">
+  <img alt="License: Apache-2.0" src="https://img.shields.io/badge/license-Apache--2.0-blue" />
+  <img alt="Version" src="https://img.shields.io/github/v/tag/KodAlp/vault-chat-beta?sort=semver&label=version&color=informational" />
   <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey" />
   <img alt="Node.js 22" src="https://img.shields.io/badge/Node.js-22-339933?logo=nodedotjs&logoColor=white" />
   <img alt="SvelteKit" src="https://img.shields.io/badge/SvelteKit-FF3E00?logo=svelte&logoColor=white" />
   <img alt="Tauri" src="https://img.shields.io/badge/Tauri-24C8DB?logo=tauri&logoColor=white" />
-  <img alt="Yerel öncelikli" src="https://img.shields.io/badge/veri-yerelde%20kal%C4%B1r-success" />
+  <img alt="Local-first" src="https://img.shields.io/badge/data-stays%20local-success" />
 </p>
 
 <p align="center">
-  <img src="docs/assets/demo-chat.gif" alt="Kasaya soru sorulur; yerel model ikili aramayı notlardaki kod ve formülle, kaynak çipleriyle açıklar" width="860" />
+  <img src="docs/assets/demo-chat.gif" alt="A question is asked about the vault; the local model explains binary search using code and a formula from the notes, with source chips" width="860" />
 </p>
 
-## Ne yapar?
+## What it does
 
-- **Kaynağa dayalı sohbet (RAG).** Cevaplar yalnızca kasandaki notlardan gelir; her cevabın altında hangi notun hangi bölümünün kullanıldığı görünür. Formüller KaTeX ile, kod sözdizimi renklendirmesiyle gösterilir.
-- **Her türden kaynağı içe aktarır.** PDF, DOCX, PPTX, XLSX, HTML, EPUB, TeX ve Markdown dosyaları, ayrıca bağlantılar ve Obsidian/Logseq/Joplin/Zettlr klasörleri Markdown'a dönüştürülüp kütüphaneye eklenir. Formül yoğun PDF'ler için docling ve MinerU yedekli bir hat kullanılır.
-- **Çalışma araçları.** Aynı kaynaklardan çoktan seçmeli test, SM-2 aralıklı tekrar kartları, kavram haritası, atıflı rapor ve slayt üretir; ilerlemeni konu konu izler.
-- **Birden fazla kasa.** Her kasanın kendi kütüphanesi ve arama indeksi vardır, birbirine karışmaz.
-- **Yerel öncelikli.** Varsayılan yol Ollama ya da OpenAI uyumlu herhangi bir yerel sunucudur (LM Studio, llama.cpp, vLLM, Jan). Bulut sağlayıcılar isteğe bağlıdır, varsayılan olarak kapalıdır ve her sohbette ayrıca onay ister.
-- **MCP sunucusu.** Claude Code/Desktop gibi MCP istemcileri kasanda arama yapabilir, not okuyabilir ve kaynak içe aktarabilir; içe aktarma, uygulamada onaylayınca (ya da kasa için otomatik onayı açarsan) kütüphaneye girer.
-- **16 arayüz dili**, açık/koyu ve sıcak tonlu temalar, masaüstü paketi (Tauri) ya da tarayıcıdan kullanım.
+- **Source-grounded chat (RAG).** Answers come only from the notes in your vault; under each answer you can see which section of which note was used. Formulas are rendered with KaTeX and code is syntax-highlighted.
+- **Imports any kind of source.** PDF, DOCX, PPTX, XLSX, HTML, EPUB, TeX and Markdown files, plus links and Obsidian/Logseq/Joplin/Zettlr folders, are converted to Markdown and added to the library. Formula-heavy PDFs go through a pipeline with docling and MinerU fallbacks.
+- **Study tools.** From the same sources it generates multiple-choice quizzes, SM-2 spaced-repetition cards, concept maps, cited reports and slides, and tracks your progress topic by topic.
+- **Multiple vaults.** Each vault has its own library and search index; they never mix.
+- **Local-first.** The default path is Ollama or any OpenAI-compatible local server (LM Studio, llama.cpp, vLLM, Jan). Cloud providers are optional, off by default, and ask for separate consent in every chat.
+- **MCP server.** MCP clients such as Claude Code/Desktop can search your vault, read notes and import sources; an import enters the library once you approve it in the app (or if you turn on auto-approve for the vault).
+- **23 interface languages**, light/dark and warm-toned themes, as a desktop package (Tauri) or in the browser.
 
-## Ekran görüntüleri
+## Screenshots
 
 <table>
   <tr>
     <td width="50%">
       <picture>
         <source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshots/home-dark.webp" />
-        <img src="docs/assets/screenshots/home-light.webp" alt="Kasa ana ekranı: soru kutusu ve geçmiş sohbetler" />
+        <img src="docs/assets/screenshots/home-light.webp" alt="Vault home screen: question box and past chats" />
       </picture>
-      <p align="center"><sub>Kasa ana ekranı (açık ve koyu tema)</sub></p>
+      <p align="center"><sub>Vault home screen (light and dark theme)</sub></p>
     </td>
     <td width="50%">
-      <img src="docs/assets/screenshots/chat-code.webp" alt="Kod bloğu ve formül içeren, kaynak çipli bir cevap" />
-      <p align="center"><sub>Kaynak çipli cevap: kod ve formül birlikte</sub></p>
+      <img src="docs/assets/screenshots/chat-code.webp" alt="An answer with source chips, containing a code block and a formula" />
+      <p align="center"><sub>Answer with source chips: code and formula together</sub></p>
     </td>
   </tr>
   <tr>
     <td width="50%">
-      <img src="docs/assets/screenshots/study-panel.webp" alt="Çalışma paneli: test, kartlar, rapor, harita, slayt, ilerleme" />
-      <p align="center"><sub>Çalışma paneli: test, kart, rapor, harita, slayt</sub></p>
+      <img src="docs/assets/screenshots/study-panel.webp" alt="Study panel: quiz, cards, report, map, slides, progress" />
+      <p align="center"><sub>Study panel: quiz, cards, report, map, slides</sub></p>
     </td>
     <td width="50%">
-      <img src="docs/assets/screenshots/source-viewer.webp" alt="Uygulama içi kaynak görüntüleyici, KaTeX ile işlenmiş formüller" />
-      <p align="center"><sub>Kaynak görüntüleyici: düzenleme ve önceki sürümler</sub></p>
+      <img src="docs/assets/screenshots/source-viewer.webp" alt="In-app source viewer with formulas rendered by KaTeX" />
+      <p align="center"><sub>Source viewer: editing and previous versions</sub></p>
     </td>
   </tr>
 </table>
 
-<sub>Görüntüler, örnek notlardan oluşan bir demo kasasında yerel <code>qwen3:8b</code> modeliyle, İngilizce arayüzde alındı.</sub>
+<sub>The screenshots were taken in the English interface, on a demo vault of sample notes, with the local <code>qwen3:8b</code> model.</sub>
 
-## Nasıl çalışır?
+## How it works
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/architecture-dark.webp" />
-  <img src="docs/assets/architecture-light.webp" alt="Vault Chat mimarisi: kaynaklar, dönüştürücü, kasa, uygulama, model sağlayıcılar ve istemciler" />
+  <img src="docs/assets/architecture-light.webp" alt="Vault Chat architecture: sources, converter, vault, app, model providers and clients" />
 </picture>
 
-Her şey tek bir Node sürecinde, `localhost`'ta çalışır. Docker ya da harici bir sunucu gerekmez. Notların, indeksin ve sohbet geçmişin kendi makinende kalır.
+Everything runs in a single Node process on `localhost`. No Docker or external server is needed. Your notes, the index and your chat history stay on your own machine.
 
-## Hızlı başlangıç
+## Quick start
 
 ```bash
 git clone https://github.com/KodAlp/vault-chat-beta.git
@@ -81,431 +85,422 @@ npm install
 npm run dev
 ```
 
-Ardından `http://localhost:5173` adresini aç. İlk açılıştaki kurulum sihirbazı yerel model sunucusunu bulur ve sohbet ile embedding modelini seçmene yardım eder. Ön koşullar (Node.js 22 ve bir model kaynağı), masaüstü paketi, MCP kurulumu ve sorun giderme aşağıdaki ayrıntılı bölümlerde.
+Then open `http://localhost:5173`. The setup wizard on first launch finds the local model server and helps you pick a chat model and an embedding model. Prerequisites (Node.js 22 and a model source), the desktop package, MCP setup and troubleshooting are covered in the detailed sections below.
 
-Katkıda bulunmak için [`CONTRIBUTING.md`](CONTRIBUTING.md); gizlilik, güvenlik ve kullanım koşulları için [`PRIVACY.md`](PRIVACY.md), [`SECURITY.md`](SECURITY.md) ve [`TERMS.md`](TERMS.md). Proje Apache 2.0 lisanslıdır ([`LICENSE`](LICENSE), [`NOTICE`](NOTICE)).
+To contribute, see [`CONTRIBUTING.md`](CONTRIBUTING.md); for privacy, security and terms of use, see [`PRIVACY.md`](PRIVACY.md), [`SECURITY.md`](SECURITY.md) and [`TERMS.md`](TERMS.md). The project is licensed under Apache 2.0 ([`LICENSE`](LICENSE), [`NOTICE`](NOTICE)).
 
 ---
 
-# Ayrıntılı kurulum
+# Detailed setup
 
-Yerel, Docker'sız bir SvelteKit çalışma/sohbet uygulaması. Kendi kütüphanendeki
-notlar ve belgeler üzerinde RAG yapar; yerel bir model sunucusuyla (Ollama önerilir ama zorunlu değil —
-LM Studio, llama.cpp, vLLM, Jan gibi herhangi bir OpenAI uyumlu sunucu da olur)
-ya da isteğe bağlı bir bulut sağlayıcıyla konuşur. Tek Node süreci,
-`localhost`'a bağlı.
+A local, Docker-free SvelteKit study/chat app. It does RAG over the
+notes and documents in your own library; it talks to a local model server (Ollama is recommended but not required —
+any OpenAI-compatible server such as LM Studio, llama.cpp, vLLM or Jan works too)
+or to an optional cloud provider. A single Node process,
+bound to `localhost`.
 
-## Ön koşullar
+## Prerequisites
 
-1. **Node.js 22** (`>=22 <23`; 20 ve 24 çalışmaz — kurulu sürümü `node --version` ile gör). Windows masaüstü paketi Node'u kendi içinde taşıdığı için orada ayrıca kurulmaz.
-2. **Bir sohbet modeli kaynağı** — **Ollama önerilir** (https://ollama.com), ama
-   zorunlu değil. Şunlardan biri yeter:
+1. **Node.js 22** (`>=22 <23`; 20 and 24 do not work — check the installed version with `node --version`). The Windows desktop package bundles Node, so you do not install it separately there.
+2. **A chat model source** — **Ollama is recommended** (https://ollama.com), but it is
+   not required. Any one of these is enough:
    - Ollama,
-   - OpenAI uyumlu başka bir yerel sunucu: llama.cpp, LM Studio, vLLM, Jan,
+   - another OpenAI-compatible local server: llama.cpp, LM Studio, vLLM, Jan,
      LocalAI,
-   - bir bulut sağlayıcı (DeepSeek, Google AI Studio, OpenRouter...; isteğe bağlı,
-     varsayılan kapalı, bkz. `PRIVACY.md`).
+   - a cloud provider (DeepSeek, Google AI Studio, OpenRouter...; optional,
+     off by default, see `PRIVACY.md`).
 
-   Hiçbiri kurulu değilse sohbet çalışmaz: uygulama "Kurulum tamamlanmadı"
-   uyarısı gösterir.
-3. **Embedding (arama) modeli — isteğe bağlı.** Embedding destekleyen herhangi
-   bir sağlayıcı olur; hiç seçmezsen arama yalnızca anahtar kelimeyle (FTS)
-   çalışır, anlamsal arama kapalı olur. Ollama kullanıyorsan önerilen model
-   `bge-m3` — `nomic-embed-text` DEĞİL (`src/lib/server/embed-config.ts`'teki
-   `EMBED_MODEL`; Türkçe sorgularda ölçülebilir şekilde daha iyi sonuç veriyor,
-   gerekçe embed-config.ts'in kendi yorumunda). Embedding yapılandırdığın bir
-   modeli sunucuda çekmezsen `npm run index` "model not found" ile patlar.
+   If none of them is installed, chat does not work: the app shows a
+   "Setup is not complete" warning.
+3. **Embedding (search) model — optional.** Any provider that supports
+   embeddings will do; if you pick none, search works with keywords only (FTS)
+   and semantic search is off. If you use Ollama, the recommended model is
+   `bge-m3` — NOT `nomic-embed-text` (`EMBED_MODEL` in `src/lib/server/embed-config.ts`;
+   it gives measurably better results on Turkish queries,
+   the rationale is in the comments of embed-config.ts itself). If you do not pull a
+   model you configured for embeddings on the server, `npm run index` fails with "model not found".
 
-**Ana yol: kurulum sihirbazı.** İlk açılışta (masaüstü paketinde) ya da
-tarayıcıda `/setup/local-server` adresinden, ayrıca **Ayarlar → Sağlayıcılar**
-sayfasındaki "Kurulum sihirbazını yeniden çalıştır" bağlantısından açılır ve üç
-adımda ilerler: (1) yerel sunucuyu bul/kur, (2) sohbet modelini seç, (3)
-embedding modelini seç **ya da "yalnızca anahtar kelime araması"nı** seç. Elle
-yapmak istersen Ollama için:
+**Main path: the setup wizard.** It opens on first launch (in the desktop package) or
+in the browser at `/setup/local-server`, and also from the "Re-run setup wizard" link
+on the **Settings → Providers** page. It has three steps: (1) find/install the local server, (2) pick the chat model, (3)
+pick the embedding model **or choose "keyword search only"**. If you
+prefer to do it by hand, for Ollama:
 ```bash
 ollama serve
-ollama pull qwen3:8b      # önerilen sohbet modeli
-ollama pull bge-m3        # önerilen embedding modeli (isteğe bağlı)
-# isteğe bağlı, derin oturumlar için:
+ollama pull qwen3:8b      # recommended chat model
+ollama pull bge-m3        # recommended embedding model (optional)
+# optional, for deep sessions:
 ollama pull qwen3:30b-a3b
 ```
 
-Bu maddeleri elle kontrol etmek yerine tek komutla doğrulamak için:
+To verify these items with one command instead of checking them by hand:
 ```bash
 npm run doctor
 ```
 
-## Kurulum
+## Installation
 
 ```bash
 cd vault-chat-beta
 npm install
 ```
 
-`.env` dosyası zaten `.env.example`'dan oluşturuldu. Gerekirse aç ve kontrol et:
+The `.env` file has already been created from `.env.example`. Open it and check it if needed:
 
 ```
 CHATS_DB_PATH=./data/chats.db
-PUBLIC_VAULT_NAME=Notlarım   # "default" vault'un ilk açılıştaki görünen adı
+PUBLIC_VAULT_NAME="My Notes"  # display name of the "default" vault on first launch
 ```
 
-`OLLAMA_URL` artık okunmuyor: Ollama'nın (ve diğer sunucuların) adresi
-Ayarlar → Sağlayıcılar'dan, yani `providers.json`'daki `baseUrl` alanından
-ayarlanır.
+`OLLAMA_URL` is no longer read: the address of Ollama (and of other servers) is
+set in Settings → Providers, that is, in the `baseUrl` field of `providers.json`.
 
-`PUBLIC_VAULT_NAME` yalnızca "default" vault ilk oluşturulurken (bkz.
-`migrateVaults.ts`) varsayılan görünen ad olarak okunur — sonraki
-çalıştırmalarda etkisi yok. Kaynaklar her zaman uygulamanın kendi
-görüntüleyicisinde açılır. Obsidian, Logseq, Joplin, Zettlr gibi not
-uygulamalarından gelen Markdown klasörleri yalnızca birer içe aktarma
-kaynağıdır (**Ayarlar → Kütüphane**).
+`PUBLIC_VAULT_NAME` is read only when the "default" vault is first created (see
+`migrateVaults.ts`) as the default display name — it has no effect on
+later runs. Sources always open in the app's own
+viewer. Markdown folders from note-taking apps such as Obsidian, Logseq, Joplin and Zettlr are only an import
+source (**Settings → Library**).
 
-`data/providers.json` bu repoyla birlikte gelen bir **tohum** dosya — yeni
-bir kurulum bulut sağlayıcılardan (DeepSeek, Google AI Studio) bazılarını
-`enabled: true` olarak bulur. Bunları gerçekten kullanmak yine de (a) o
-sağlayıcı için `data/secrets.json`'a bir API anahtarı girmenizi (Ayarlar →
-Sağlayıcılar) ve (b) her sohbette ayrı bir onay kutusunu kabul etmenizi
-gerektirir (bkz. `PRIVACY.md`) — yalnızca `enabled: true` olması hiçbir
-veri göndermez. Bulut sağlayıcıları arayüzde seçenek olarak dahi görmek
-istemiyorsanız, kendi `data/providers.json`'ınızda ilgili girdiyi
-`enabled: false` yapabilirsiniz. Paketli masaüstü sürümü ise bu dosyayı değil,
-temiz bir varsayılan olan `data/providers.default.json`'ı tohum olarak
-kullanır: tüm bulut sağlayıcılar kapalı, görev zincirleri boş, embedding yok
-(yalnızca anahtar kelime araması) — kurulum sihirbazı bunları doldurur.
+`data/providers.json` is a **seed** file shipped with this repo — a fresh
+install finds some of the cloud providers (DeepSeek, Google AI Studio)
+with `enabled: true`. Actually using them still requires (a) entering an API key for that
+provider in `data/secrets.json` (Settings →
+Providers) and (b) accepting a separate checkbox in every chat
+(see `PRIVACY.md`) — `enabled: true` alone sends no
+data. If you do not want to see the cloud providers even as an option in the
+UI, you can set the relevant entry to
+`enabled: false` in your own `data/providers.json`. The packaged desktop build does not use this file; it seeds from
+`data/providers.default.json`, a clean default:
+all cloud providers off, task chains empty, no embeddings
+(keyword search only) — the setup wizard fills these in.
 
-## Vault'lar
+## Vaults
 
-Uygulama tek bir kütüphane yerine **birden fazla vault** tutabilir — her biri
-kendi kaynak klasörü ve arama indeksiyle, birbirinden tamamen izole
-(`data/vaults/<id>/library/`, `data/vaults/<id>/index.db`). Sohbet geçmişi tek
-bir global DB'de kalır (`data/chats.db`), her sohbet hangi vault'a ait olduğunu
-kaydeder.
+Instead of a single library, the app can hold **multiple vaults** — each with its
+own source folder and search index, completely isolated from the others
+(`data/vaults/<id>/library/`, `data/vaults/<id>/index.db`). Chat history stays in one
+global DB (`data/chats.db`), and each chat records which vault it belongs to.
 
-- Vault oluşturmak/silmek/yeniden adlandırmak için **Ayarlar → Vault'lar**.
-- Bir defada tek bir vault "aktif" — sohbet ekranı ve indeksleyici hep aktif
-  vault üzerinde çalışır.
-- **Eski (çoklu vault öncesi) bir kurulumdan geliyorsan** hiçbir şey yapmana gerek
-  yok — sunucu ilk açılışta `data/vaults.json` bulunmadığını görüp
-  `LIBRARY_PATH`/`INDEX_DB_PATH`/`STUDY_DB_PATH` içeriğini otomatik olarak
-  `data/vaults/default/` altına taşır ve "default" adında bir vault kaydeder;
-  eski sohbetlerin hepsi bu vault'a bağlanır. **`VAULT_PATH` bilerek
-  taşınmaz** — Eski mimaride bu, canlı bir Markdown not klasörünü
-  (örn. bir Obsidian vault'unu) yerinde gösteren bir işaretçiydi (hiç kopyalanmazdı), app'e ait bir klasör değil.
-  Sadece `VAULT_PATH` ayarlıysa (bu repodaki gibi — `data/library` boş,
-  gerçek içerik `VAULT_PATH=..`'den yerinde indeksleniyor) "default" vault
-  **boş** başlar; içeriği Ayarlar → Kütüphane'deki içe aktarma ile
-  elle (yeniden) içe aktarman gerekir. Bunu elle, önizlemeli çalıştırmak
-  istersen:
+- To create/delete/rename vaults, use **Settings → Vaults**.
+- Only one vault is "active" at a time — the chat screen and the indexer always work on the active
+  vault.
+- **If you are coming from an old (pre-multi-vault) install** you do not need to do anything
+  — on first launch the server sees that `data/vaults.json` does not exist,
+  automatically moves the contents of `LIBRARY_PATH`/`INDEX_DB_PATH`/`STUDY_DB_PATH`
+  under `data/vaults/default/` and registers a vault named "default";
+  all old chats are attached to this vault. **`VAULT_PATH` is deliberately
+  not moved** — in the old architecture it was a pointer to a live Markdown note folder
+  (e.g. an Obsidian vault) used in place (it was never copied), not a folder owned by the app.
+  Only if `VAULT_PATH` is set (as in this repo — `data/library` is empty and
+  the real content is indexed in place from `VAULT_PATH=..`) does the "default" vault
+  start **empty**; you then have to import the content (again) by hand
+  through the import in Settings → Library. If you want to run this by hand,
+  with a preview:
   ```bash
-  npm run vault:migrate -- --dry-run   # ne taşınacağını raporlar, hiçbir şey yazmaz
-  npm run vault:migrate                # gerçekten taşır
+  npm run vault:migrate -- --dry-run   # reports what would be moved, writes nothing
+  npm run vault:migrate                # actually moves it
   ```
 
-## İlk indeksleme
+## First indexing
 
-Sohbet edebilmek için önce aktif vault'un içeriği vektör indeksine dönüşmeli:
+To be able to chat, the content of the active vault must first be turned into a vector index:
 
 ```bash
 npm run index
 ```
 
-Bu, aktif vault'un kütüphanesindeki tüm `.md` dosyalarını tarar,
-frontmatter'ı olmayanları uyarı ile atlar, geri kalanını parçalayıp
-yapılandırılmış embedding modeliyle (önerilen: `bge-m3`) gömer ve o vault'un
-`index.db`'sine yazar. Embedding yapılandırılmamışsa (yalnızca anahtar kelime
-modu) vektör adımı atlanır; parçalar ve anahtar kelime (FTS) verisi yine yazılır. sha256
-tabanlı artımlı çalışır — değişmeyen dosyaları atlar, `pdf2md.py` ile aynı mantık.
+This scans all `.md` files in the active vault's library,
+skips those without frontmatter with a warning, chunks the rest,
+embeds them with the configured embedding model (recommended: `bge-m3`) and writes them to that vault's
+`index.db`. If no embedding is configured (keyword-only
+mode), the vector step is skipped; chunks and keyword (FTS) data are still written. It is incremental, based on sha256
+— it skips unchanged files, using the same logic as `pdf2md.py`.
 
-Bayraklar:
-- `npm run index -- --vault <id>` — aktif vault yerine belirli bir vault'u
-  indeksler (id, Ayarlar → Vault'lar'da görünen kimlik).
-- `npm run index -- --full` — hepsini sıfırdan yeniden indeksler (embed modeli
-  değiştiyse bunu kullan).
-- `npm run index -- --dry-run` — hiçbir şey yazmadan neyin değişeceğini raporlar.
+Flags:
+- `npm run index -- --vault <id>` — indexes a specific vault instead of the active
+  one (the id is the identifier shown in Settings → Vaults).
+- `npm run index -- --full` — re-indexes everything from scratch (use this if the embedding
+  model changed).
+- `npm run index -- --dry-run` — reports what would change without writing anything.
 
-## Günlük kullanım
+## Everyday use
 
 ```bash
 npm run dev
 ```
 
-`http://localhost:5173` açılır. Ders çalışıp not güncelledikten sonra, istediğin
-an `npm run index` çalıştır — uygulama açıkken bile çakışma olmaz (WAL modu).
+`http://localhost:5173` opens. After studying and updating notes, run
+`npm run index` whenever you like — there is no conflict even while the app is open (WAL mode).
 
-Otomatik izleme istersen (opsiyonel, varsayılan değil):
+If you want automatic watching (optional, not the default):
 
 ```bash
 npm run index:watch
 ```
 
-## Kalıcı kullanım (geliştirme sunucusu olmadan)
+## Persistent use (without the dev server)
 
 ```bash
 npm run build
 BODY_SIZE_LIMIT=1G node build
 ```
 
-`BODY_SIZE_LIMIT` olmadan adapter-node istek gövdesini **512 KB** ile
-sınırlar (kendi varsayılanı) ve bu boyutu aşan her kaynak yüklemesi, route'a
-hiç ulaşmadan 413 ile reddedilir — küçük bir `.docx` geçer ama gerçek bir
-`.pdf`/`.pptx`/`.xlsx` geçmez. Masaüstü paketinde bu değişken sidecar'a
-otomatik veriliyor (`src-tauri/src/lib.rs`); `node build`'i elle
-çalıştırırken sen vermelisin. Bu akış `.env` okumaz, ortam değişkeni olarak
-geçmen gerekir.
+Without `BODY_SIZE_LIMIT`, adapter-node limits the request body to **512 KB**
+(its own default), and every source upload above that size is rejected with 413 before it
+ever reaches the route — a small `.docx` passes but a real
+`.pdf`/`.pptx`/`.xlsx` does not. In the desktop package this variable is passed to the sidecar
+automatically (`src-tauri/src/lib.rs`); when you run `node build` by hand
+you must pass it yourself. This flow does not read `.env`; you have to
+pass it as an environment variable.
 
-## Masaüstü (Tauri)
+## Desktop (Tauri)
 
-Aynı sunucuyu tarayıcı yerine yerel bir pencerede çalıştıran, Electron
-kullanmayan bir paket. **Windows paketi Node.js 22'yi ve Python 3.12'yi (python-build-standalone) kendi
-içinde taşır**: ikisi de ayrıca kurulmaz, uygulama her zaman gömülü Node'u kullanır (WebView2 yükleyicisi de
-pakette). Sohbet için bir model kaynağı (önerilen: Ollama, ya da başka bir yerel sunucu / bulut sağlayıcı)
-gerekir, pakete gömülmez. macOS/Linux paketlerinde Node (ve Python) hâlâ elle kurulur, aşağıya bak.
+A package that runs the same server in a native window instead of the browser, without
+Electron. **The Windows package bundles Node.js 22 and Python 3.12 (python-build-standalone)**:
+neither is installed separately, and the app always uses the bundled Node (the WebView2 installer is also
+in the package). For chat you need a model source (recommended: Ollama, or another local server / cloud provider),
+which is not bundled. In the macOS/Linux packages Node (and Python) are still installed by hand, see below.
 
 ```bash
-npm run desktop:dev      # canlı Vite dev sunucusuna karşı native pencere, HMR çalışır
-npm run desktop:build    # çalıştığın işletim sisteminin paketini üretir
+npm run desktop:dev      # native window against the live Vite dev server, HMR works
+npm run desktop:build    # builds the package for the operating system you are on
 ```
 
-**Sürüm numarası kendiliğinden artar.** `desktop:build`, derlemeden önce `scripts/release.mjs --auto`'yu çalıştırır: son `v*` etiketinden bu yana gelen commit'lere ([Conventional Commits](https://www.conventionalcommits.org)) bakar. `fix`/`perf`/`refactor` yama (0.1.0 → 0.1.1), `feat` küçük sürüm (0.1.x → 0.2.0), `!` ya da `BREAKING CHANGE` büyük sürüm (→ 1.0.0) demektir; `docs`, `chore`, `test`, `ci` sürümü değiştirmez. Yükseltme yalnız `main` dalında ve sürüm dosyaları temizken yapılır, `chore(release): vX.Y.Z` commit'i ve `vX.Y.Z` etiketi oluşur; göndermek için `git push --follow-tags`. Elle: `npm run release` (önizleme: `npm run release -- --dry-run`).
+**The version number bumps itself.** Before building, `desktop:build` runs `scripts/release.mjs --auto`: it looks at the commits ([Conventional Commits](https://www.conventionalcommits.org)) since the last `v*` tag. `fix`/`perf`/`refactor` mean a patch (0.1.0 → 0.1.1), `feat` a minor version (0.1.x → 0.2.0), `!` or `BREAKING CHANGE` a major version (→ 1.0.0); `docs`, `chore`, `test` and `ci` do not change the version. The bump happens only on the `main` branch and when the version files are clean; it creates a `chore(release): vX.Y.Z` commit and a `vX.Y.Z` tag; to publish, `git push --follow-tags`. By hand: `npm run release` (preview: `npm run release -- --dry-run`).
 
-Windows'ta `desktop:build` çıktısı: `src-tauri/target/release/bundle/nsis/vault-chat_<sürüm>_x64-setup.exe`
-(NSIS kurulum dosyası). Linux ve macOS paketleri aynı komutla, kendi işletim
-sisteminde üretilir (çapraz derleme yok); hedefler `src-tauri/tauri.linux.conf.json`
-(`deb`, `appimage`) ve `src-tauri/tauri.macos.conf.json`'da (`app`, `dmg`) — bkz.
-aşağıdaki "Linux ve macOS (yeni, beta)" bölümü. Hazır paketler için GitHub
-Actions'taki `desktop` iş akışı Windows x64, Linux x64, macOS arm64 ve macOS x64
-paketlerini derleyip her biri için `vault-chat-<hedef>` adlı bir artifact yükler
-(`.github/workflows/desktop.yml`; artifact'lar 7 gün saklanır). Windows ARM64 da
-deneniyor ama şimdilik başarısız olması bekleniyor ve sonucu kırmızıya çevirmiyor.
-İş akışı `main`'e ve `ci` dalına push'ta, `v*` sürüm etiketlerinde, PR'larda ve
-Actions sekmesinden elle ("Run workflow") çalışır; yalnız belge değişikliği
-(`*.md`, `docs/`) derleme başlatmaz. Repo özelken `main`, etiket ve PR derlemeleri
-atlanır (Actions dakikaları sınırlı); o sürede bir dalı derletmek için
-`git push origin <dal>:ci` (gerekirse `--force`) ya da elle çalıştırma.
+On Windows, the `desktop:build` output is: `src-tauri/target/release/bundle/nsis/vault-chat_<version>_x64-setup.exe`
+(an NSIS installer). The Linux and macOS packages are built with the same command, on their own operating
+system (no cross-compilation); the targets are in `src-tauri/tauri.linux.conf.json`
+(`deb`, `appimage`) and `src-tauri/tauri.macos.conf.json` (`app`, `dmg`) — see the
+"Linux and macOS (new, beta)" section below. For ready-made packages, the `desktop` workflow on GitHub
+Actions builds the Windows x64, Linux x64, macOS arm64 and macOS x64
+packages and uploads an artifact named `vault-chat-<target>` for each
+(`.github/workflows/desktop.yml`; artifacts are kept for 7 days). Windows ARM64 is also
+attempted, but it is expected to fail for now and does not turn the result red.
+The workflow runs on pushes to `main` and the `ci` branch, on `v*` version tags, on PRs,
+and manually from the Actions tab ("Run workflow"); documentation-only changes
+(`*.md`, `docs/`) do not start a build. While the repo is private, `main`, tag and PR builds
+are skipped (Actions minutes are limited); to get a branch built in the meantime, use
+`git push origin <branch>:ci` (with `--force` if needed) or run it manually.
 
-Windows kurulum konumu ve veri klasörü:
-Kurulum kullanıcı bazlı (yönetici gerektirmez), `%LOCALAPPDATA%\vault-chat\`
-altına gider. Uygulama verisi (sohbet geçmişi, vault registry, her vault'un
-kütüphanesi/indeksi, `config.json`) Windows'ta `%APPDATA%\Roaming\app.vaultchat.desktop\`
+Windows install location and data folder:
+The install is per-user (no admin rights needed) and goes under `%LOCALAPPDATA%\vault-chat\`.
+App data (chat history, vault registry, each vault's
+library/index, `config.json`) is kept on Windows under `%APPDATA%\Roaming\app.vaultchat.desktop\`
 (macOS: `~/Library/Application Support/app.vaultchat.desktop/`, Linux:
-`~/.local/share/app.vaultchat.desktop/`) altında tutulur — `data/` klasöründen tamamen ayrı, tarayıcı akışıyla
-paylaşılmaz. Vault registry buradaki `DATA_DIR`'e göre çözülür (sidecar'ın
-kendi ortam değişkeni, kullanıcının görmediği); `config.json`'daki tek
-`vault_path`/`vault_name` çifti ise ayrı bir şey — ilk kurulan **"default"**
-vault'un adını belirler, ek vault'lar sonradan uygulama içi Ayarlar → Vault'lar'dan
-oluşturulur.
+`~/.local/share/app.vaultchat.desktop/`) — completely separate from the `data/` folder and not
+shared with the browser flow. The vault registry is resolved against the `DATA_DIR` here (the sidecar's
+own environment variable, which the user does not see); the single
+`vault_path`/`vault_name` pair in `config.json` is something else — it determines the name of the first-created **"default"**
+vault, and additional vaults are created later in the app under Settings → Vaults.
 
-İlk açılışta bir klasör seçmen istenir (native klasör seçici) — bu, "default"
-vault'un görünen adı için sorulur,
-kütüphane içeriği oraya BAĞLANMAZ (kütüphane her zaman uygulamaya ait bir
-klasördür, bkz. yukarıdaki "Vault'lar" bölümü). Seçim `config.json`'a yazılır
-ve sonraki açılışlarda tekrar sorulmaz. Bu adı sonradan değiştirmek için
-**Ayarlar → Masaüstü — Kasa Konumu** kullan (değişiklik bir sonraki
-başlatmada etkili olur, çalışan sunucuyu yeniden başlatmaz).
+On first launch you are asked to pick a folder (native folder picker) — this is asked for the display name
+of the "default" vault;
+the library content is NOT tied to it (the library is always a folder owned by the app,
+see the "Vaults" section above). The choice is written to `config.json`
+and is not asked again on later launches. To change this name afterwards, use
+**Settings → Desktop — Vault Location** (the change takes effect at the next
+start; it does not restart the running server).
 
-`node build/index.js`'i doğrudan çağırdığından, kalıcı kullanım akışının
-gerektirdiği her şey (Node 22, `.env` değil ortam değişkenleri) burada da
-geçerli — bkz. yukarıdaki not.
+Since it calls `node build/index.js` directly, everything the persistent-use flow
+needs (Node 22, environment variables rather than `.env`) applies here as well —
+see the note above.
 
-## Başka bir Windows makinesinde çalıştırma
+## Running on another Windows machine
 
-Windows installer'ı Node.js 22'yi ve Python 3.12'yi kendi içinde taşır, ama yerel model sunucusunu
-(Ollama gibi) taşımaz — model kaynağı (önerilen Ollama, başka bir yerel sunucu ya da bir bulut sağlayıcı)
-hedef makinede ayrıca ayarlanmalı. Geliştirici akışında (`npm run dev` / `node build`) Node hâlâ elle kurulur. Hedef makinede kurulduktan sonra `npm run doctor`
-(geliştirici akışı) ya da uygulamanın kendi "Yerel sunucu … çalışmıyor" /
-"Kurulum tamamlanmadı" banner'ı (masaüstü paketi) eksik olanı söyler.
+The Windows installer bundles Node.js 22 and Python 3.12, but not the local model server
+(such as Ollama) — the model source (recommended Ollama, another local server or a cloud provider)
+must be set up separately on the target machine. In the developer flow (`npm run dev` / `node build`) Node is still installed by hand. After installing on the target machine, `npm run doctor`
+(developer flow) or the app's own "Local server … not running" /
+"Setup is not complete" banner (desktop package) tells you what is missing.
 
-| Bileşen | Zorunlu mu | Kim kuruyor |
+| Component | Required | Who installs it |
 |---|---|---|
-| Node.js 22.x (`>=22 <23`) | Evet | Windows masaüstü paketinde gömülü (uygulama hep onu kullanır); geliştirici akışı: elle — https://nodejs.org |
-| Ollama + `qwen3:8b` + `bge-m3` | **Önerilen** (başka yerel sunucu ya da bulut sağlayıcı da olur; embedding yoksa yalnızca anahtar kelime araması) | Elle — https://ollama.com, ya da kurulum sihirbazı |
-| WebView2 Runtime | Evet (yalnızca masaüstü paketi) | Otomatik — NSIS installer yoksa içindeki küçük yükleyiciyle (`embedBootstrapper`) kurar; kurulum sırasında internet gerekir |
-| Visual C++ Redistributable | Teknik olarak evet | Genelde Windows 10/11'de zaten var; eksikse elle |
-| Python 3.12+ (kararlı sürüm) | Hayır — yalnızca PDF/doküman/YouTube içe aktarma için | Windows masaüstü paketinde gömülü (3.12); docling'li bir sistem Python'u ya da `PYTHON_BIN` varsa o tercih edilir. Diğer akışlar: elle — https://python.org |
-| `markitdown` ve diğer hafif paketler (`pip install -r ingest/requirements.txt`) | Hayır — yalnızca PDF/doküman/YouTube içe aktarma için | Masaüstü paketinde uygulamanın kendi "Şimdi kur" banner'ı (gömülü Python'dan `python-venv` oluşturur, internet gerekir); diğer akışlar: elle |
-| docling (ağır PDF/OCR) | Hayır — isteğe bağlı | Elle (`pip install docling`) |
-| pandoc | Hayır — yalnızca `.tex` dönüştürme için | Elle |
+| Node.js 22.x (`>=22 <23`) | Yes | Bundled in the Windows desktop package (the app always uses it); developer flow: by hand — https://nodejs.org |
+| Ollama + `qwen3:8b` + `bge-m3` | **Recommended** (another local server or a cloud provider also works; without embeddings, keyword search only) | By hand — https://ollama.com, or the setup wizard |
+| WebView2 Runtime | Yes (desktop package only) | Automatic — if it is missing, the NSIS installer installs it with the small bootstrapper inside it (`embedBootstrapper`); internet is needed during installation |
+| Visual C++ Redistributable | Technically yes | Usually already present on Windows 10/11; if missing, by hand |
+| Python 3.12+ (stable release) | No — only for PDF/document/YouTube import | Bundled (3.12) in the Windows desktop package; a system Python with docling or `PYTHON_BIN` is preferred if present. Other flows: by hand — https://python.org |
+| `markitdown` and other lightweight packages (`pip install -r ingest/requirements.txt`) | No — only for PDF/document/YouTube import | In the desktop package, the app's own "Install now" banner (creates a `python-venv` from the bundled Python, internet needed); other flows: by hand |
+| docling (heavy PDF/OCR) | No — optional | By hand (`pip install docling`) |
+| pandoc | No — only for `.tex` conversion | By hand |
 
-Dikkat edilecek noktalar:
-- **ARM64 Windows desteklenmiyor.** `sqlite-vec`'in Windows için yalnızca
-  `win32-x64` prebuilt paketi var — ARM tabanlı bir Windows makinesinde
-  (Snapdragon vb.) `npm install` sqlite-vec için başarısız olur.
-- **Yanlış Node sürümü sessizce kurulur, çalışma anında patlar.** `engine-strict`
-  kapalı olduğu için `npm install` Node 20/24 ile de tamamlanır, ama
-  `better-sqlite3`'ün native binary'si Node 22'nin ABI'sine derli — hata ancak
-  ilk veritabanı erişiminde çıkar. `npm run doctor` bunu kurulumdan hemen
-  sonra yakalar.
-- **`secrets.json` taşınmaz.** Masaüstü paketinde AES-256-GCM ile
-  şifrelenir; şifreleme anahtarı işletim sisteminin deposundadır (Windows
-  DPAPI, macOS Keychain, Linux Secret Service) ve kullanıcı/makine profiline
-  bağlıdır — başka bir makineye/kullanıcıya kopyalanan bir `secrets.json`
-  çözülemez, "anahtar yok" gibi davranır. Bulut sağlayıcı (DeepSeek/Gemini/Groq/...) API anahtarlarını
-  hedef makinede Ayarlar → Sağlayıcılar'dan yeniden gir.
-- **Vault içerikleri elle taşınır.** `data/vaults.json` kendi yollarını her
-  okumada yeniden türettiği için taşınabilir, ama her vault'un asıl içeriği
-  (`data/vaults/<id>/library/`, `index.db`, `study.db`) ayrıca kopyalanmalı —
-  ya da hedef makinede içe aktarma + `npm run index` ile
-  yeniden oluşturulmalı.
-- **Windows masaüstü paketinde PDF/doküman/YouTube içe aktarma için yalnızca hafif
-  paketler eksiktir.** `ingest/` klasörü ve Python 3.12 kurulum paketine dahil
-  (bkz. `scripts/stage-server.mjs`, `scripts/fetch-python-runtime.mjs`); `markitdown`
-  ve diğer paketler pakette yok, ilk kullanımda uygulama `/api/system/python`
-  üzerinden bunu algılayıp turuncu bir banner'da "Şimdi kur" butonuyla
-  `pip install -r ingest/requirements.txt`'i veri klasöründeki `python-venv`'e
-  senin yerine kurar. Docling'li bir Python zaten varsa o tercih edilir.
+Things to watch out for:
+- **ARM64 Windows is not supported.** `sqlite-vec` has only a `win32-x64`
+  prebuilt package for Windows — on an ARM-based Windows machine
+  (Snapdragon etc.) `npm install` fails for sqlite-vec.
+- **The wrong Node version installs silently and breaks at run time.** Because `engine-strict`
+  is off, `npm install` also completes with Node 20/24, but
+  the native binary of `better-sqlite3` is built for Node 22's ABI — the error shows up only on
+  the first database access. `npm run doctor` catches this right after
+  installation.
+- **`secrets.json` is not portable.** In the desktop package it is
+  encrypted with AES-256-GCM; the encryption key is in the operating system's store (Windows
+  DPAPI, macOS Keychain, Linux Secret Service) and is tied to the user/machine profile —
+  a `secrets.json` copied to another machine/user cannot be decrypted and
+  behaves as if there were "no key". Re-enter the cloud provider (DeepSeek/Gemini/Groq/...) API keys
+  on the target machine in Settings → Providers.
+- **Vault contents are moved by hand.** `data/vaults.json` can be moved because it re-derives its own paths on every
+  read, but the actual content of each vault
+  (`data/vaults/<id>/library/`, `index.db`, `study.db`) must be copied separately —
+  or rebuilt on the target machine with import + `npm run index`.
+- **In the Windows desktop package, only the lightweight packages for PDF/document/YouTube
+  import are missing.** The `ingest/` folder and Python 3.12 are part of the install package
+  (see `scripts/stage-server.mjs`, `scripts/fetch-python-runtime.mjs`); `markitdown`
+  and the other packages are not in the package. On first use the app detects this via `/api/system/python`
+  and shows an orange banner with an "Install now" button that
+  installs `pip install -r ingest/requirements.txt` into the `python-venv` in the data folder
+  for you. If a Python with docling is already present, it is preferred.
 
-## Linux ve macOS (yeni, beta)
+## Linux and macOS (new, beta)
 
-> **Uyarı:** Linux ve macOS paketleri yeni. CI'da derleniyor ama **henüz gerçek
-> bir Linux/macOS makinesinde denenmedi**; macOS paketi ayrıca **imzasız ve
-> noter onaysız (notarize edilmemiş)**. Windows kadar olgun değil — sorun
-> görürsen veri klasöründeki `launch.log`'u (aşağıda) ekleyerek bildir. macOS
-> için adım adım deneme listesi: [`docs/macos-deneme-listesi.md`](docs/macos-deneme-listesi.md).
+> **Warning:** The Linux and macOS packages are new. They are built in CI but **have not yet
+> been tried on a real Linux/macOS machine**; the macOS package is also **unsigned and
+> not notarized**. They are not as mature as Windows — if you
+> hit a problem, report it with the `launch.log` from the data folder (below). For a step-by-step
+> macOS test checklist: [`docs/macos-deneme-listesi.md`](docs/macos-deneme-listesi.md) (Turkish).
 
-Desteklenen paket biçimleri (CI'da derlenir; bkz. "Masaüstü (Tauri)"):
+Supported package formats (built in CI; see "Desktop (Tauri)"):
 
-| Platform | Paket | Not |
+| Platform | Package | Note |
 |---|---|---|
-| Linux x64 | `.deb`, `.AppImage` | `.deb` şu paketlere bağlıdır: `libwebkit2gtk-4.1-0`, `libgtk-3-0`, `libayatana-appindicator3-1`, `libsecret-1-0` (`src-tauri/tauri.linux.conf.json`) |
-| macOS (Apple Silicon ve Intel) | `vault-chat.app` + `.dmg`, imzasız | macOS 11.0 ve üstü (`minimumSystemVersion`) |
+| Linux x64 | `.deb`, `.AppImage` | `.deb` depends on these packages: `libwebkit2gtk-4.1-0`, `libgtk-3-0`, `libayatana-appindicator3-1`, `libsecret-1-0` (`src-tauri/tauri.linux.conf.json`) |
+| macOS (Apple Silicon and Intel) | `vault-chat.app` + `.dmg`, unsigned | macOS 11.0 and later (`minimumSystemVersion`) |
 
-Kaynaktan derlemek için Linux'ta (CI'daki Ubuntu 22.04 paket listesi):
+To build from source on Linux (the Ubuntu 22.04 package list used in CI):
 ```bash
 sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev \
   librsvg2-dev patchelf libsecret-1-dev libdbus-1-dev
 npm install && npm run desktop:build
 ```
 
-| Bileşen | Zorunlu mu | Linux / macOS'ta nasıl kurulur |
+| Component | Required | How to install on Linux / macOS |
 |---|---|---|
-| Node.js 22.x (`>=22 <23`) | Evet — pakete gömülü değil | https://nodejs.org, Homebrew (`brew install node@22`), nvm/fnm/Volta veya dağıtımın paket yöneticisi |
-| Model kaynağı (Ollama önerilir, başka yerel sunucu ya da bulut sağlayıcı) | Sohbet için bir tanesi | Elle — https://ollama.com |
-| Python **3.10+** | Hayır — yalnızca PDF/doküman/YouTube içe aktarma için | macOS: `brew install python@3.12`; Linux: dağıtımın paket yöneticisi (Debian/Ubuntu'da `sudo apt install python3 python3-venv`) |
-| pandoc | Hayır — yalnızca `.tex` dönüştürme için | Homebrew ya da dağıtımın paket yöneticisi |
+| Node.js 22.x (`>=22 <23`) | Yes — not bundled in the package | https://nodejs.org, Homebrew (`brew install node@22`), nvm/fnm/Volta or your distribution's package manager |
+| Model source (Ollama recommended, another local server or a cloud provider) | One of them, for chat | By hand — https://ollama.com |
+| Python **3.10+** | No — only for PDF/document/YouTube import | macOS: `brew install python@3.12`; Linux: your distribution's package manager (on Debian/Ubuntu `sudo apt install python3 python3-venv`) |
+| pandoc | No — only for `.tex` conversion | Homebrew or your distribution's package manager |
 
-Bilmen gerekenler:
-- **Node nasıl bulunur?** GUI'den açılan uygulama kabuğunun PATH'ini
-  devralmaz. Bu yüzden `node` önce PATH'te (oturum/login kabuğunun PATH'i dahil)
-  ve sonra bilinen konumlarda aranır: `/usr/local/bin`, `/usr/bin`,
-  `/opt/homebrew/bin`, `~/.volta/bin`, nvm (`~/.nvm/versions/node`) ve fnm
-  sürüm klasörleri (`src-tauri/src/platform.rs`, `src-tauri/src/lib.rs`'teki
-  `resolve_node_binary`). Bulunan Node'un ana sürümü 22 değilse uygulama
-  açılışta uyarır.
-- **Python "Şimdi kur"** macOS/Linux'ta sistem Python'una `pip install` yapmaz
-  (Debian/Homebrew "externally managed" korumasına takılır). Bunun yerine veri
-  klasöründe uygulamaya ait bir sanal ortam (`python-venv`) oluşturup paketleri
-  oraya kurar (`src/routes/api/system/python/+server.ts`,
-  `src/lib/server/python-bin.ts`). Debian/Ubuntu'da `python3-venv` paketi
-  yoksa ortam oluşturulamaz ve uygulama bunu söyler. macOS'ta Komut Satırı
-  Araçları (CLT) kurulu değilse `/usr/bin/python3` yer tutucusu atlanır
-  (kurulum penceresi tetiklenmesin diye). `PYTHON_BIN` ortam değişkeniyle belirli
-  bir yorumlayıcı da verilebilir.
-- **winget yalnızca Windows'ta.** macOS/Linux'ta uygulama paket yöneticisini
-  kendisi çalıştırmaz; Homebrew / dağıtım paket yöneticisi komutlarını sen
-  çalıştırırsın.
-- **API anahtarları** işletim sisteminin deposuyla korunur: macOS'ta
-  Anahtar Zinciri (servis `app.vaultchat.desktop`, hesap `secrets-key`;
-  ilk açılışta bir izin sorusu çıkabilir — "Her Zaman İzin Ver"), Linux'ta
-  Secret Service (GNOME Keyring / KWallet). Linux'ta bu servis yoksa anahtarlar
-  şifrelenmeden (`0600` izinli dosyada) saklanır ve Ayarlar → Sağlayıcılar'da
-  bir uyarı görürsün; GNOME Keyring veya KWallet kurup uygulamayı yeniden
-  başlatınca şifrelenir. Anahtar var ama okunamıyorsa ("kilitli") hiçbir şey
-  yeniden üretilmez; **Ayarlar → Sağlayıcılar → "Kayıtlı API anahtarlarını
-  sıfırla"** eski dosyayı `secrets.json.locked-<tarih>` olarak yedekleyip
-  uygulamayı yeniden başlatır. Ayrıntı: `SECURITY.md`.
-- **Arka plan süreçleri:** Linux'ta uygulama çökse bile işletim sistemi çekirdeği Node
-  sunucusuna `SIGTERM` gönderir (`PR_SET_PDEATHSIG`). macOS'ta böyle bir
-  güvence yok: yalnızca normal çıkışta (Cmd+Q) sunucu süreci temizlenir;
-  uygulama çökerse ya da zorla sonlandırılırsa `node` süreci arkada kalabilir.
-- **Günlük dosyası:** açılış sorunlarında `launch.log` — macOS:
+What you should know:
+- **How is Node found?** An app launched from the GUI does not inherit the shell's
+  PATH. So `node` is looked up first in PATH (including the session/login shell's PATH)
+  and then in known locations: `/usr/local/bin`, `/usr/bin`,
+  `/opt/homebrew/bin`, `~/.volta/bin`, nvm (`~/.nvm/versions/node`) and fnm
+  version folders (`src-tauri/src/platform.rs`, `resolve_node_binary` in
+  `src-tauri/src/lib.rs`). If the major version of the Node it finds is not 22, the app
+  warns at startup.
+- **Python "Install now"** does not run `pip install` against the system Python on macOS/Linux
+  (it would run into the Debian/Homebrew "externally managed" protection). Instead it creates an app-owned
+  virtual environment (`python-venv`) in the data
+  folder and installs the packages there (`src/routes/api/system/python/+server.ts`,
+  `src/lib/server/python-bin.ts`). If the `python3-venv` package is missing on Debian/Ubuntu,
+  the environment cannot be created and the app says so. On macOS, if the Command Line
+  Tools (CLT) are not installed, the `/usr/bin/python3` placeholder is skipped
+  (so that the install dialog is not triggered). A specific
+  interpreter can also be given with the `PYTHON_BIN` environment variable.
+- **winget is Windows-only.** On macOS/Linux the app does not run the package manager
+  itself; you run the Homebrew / distribution package manager commands.
+- **API keys** are protected by the operating system's store: on macOS the
+  Keychain (service `app.vaultchat.desktop`, account `secrets-key`;
+  a permission prompt may appear on first launch — "Always Allow"), on Linux
+  Secret Service (GNOME Keyring / KWallet). If this service is missing on Linux, keys
+  are stored unencrypted (in a file with `0600` permissions) and you see a
+  warning in Settings → Providers; they get encrypted once you install GNOME Keyring or KWallet and restart
+  the app. If the key exists but cannot be read ("locked"), nothing is
+  regenerated; **Settings → Providers → "Reset saved API keys"** backs up the old file as
+  `secrets.json.locked-<date>` and restarts the
+  app. Details: `SECURITY.md`.
+- **Background processes:** On Linux, even if the app crashes, the operating system kernel sends
+  `SIGTERM` to the Node server (`PR_SET_PDEATHSIG`). On macOS there is no such
+  guarantee: the server process is cleaned up only on a normal exit (Cmd+Q);
+  if the app crashes or is force-quit, the `node` process may stay behind.
+- **Log file:** for startup problems, `launch.log` — macOS:
   `~/Library/Application Support/app.vaultchat.desktop/launch.log`, Linux:
   `~/.local/share/app.vaultchat.desktop/launch.log`.
 
-### macOS: imzasız uygulamayı açma (Gatekeeper)
+### macOS: opening the unsigned app (Gatekeeper)
 
-Uygulama Apple tarafından imzalanmadığı ve noter onayından geçmediği için
-macOS ilk açılışta engeller ("geliştirici doğrulanamadı" ya da "hasarlı").
-`.dmg`'den `vault-chat`'i **Applications**'a sürükle, sonra Finder'da uygulamaya
-**sağ tık → Aç → Aç** de. Yine açılmazsa karantina işaretini kaldır:
+Because the app is not signed by Apple and has not passed notarization,
+macOS blocks it on first launch ("developer cannot be verified" or "damaged").
+Drag `vault-chat` from the `.dmg` to **Applications**, then in Finder
+**right-click → Open → Open** the app. If it still does not open, remove the quarantine flag:
 
 ```bash
 xattr -dr com.apple.quarantine /Applications/vault-chat.app
 ```
 
-## MCP Sunucusu
+## MCP Server
 
-Kasandaki notları Claude Code/Desktop gibi MCP istemcilerine açan yerel bir
-sunucu — ayrı bir paket veya kurulum gerektirmez, `mcp/` bu repo'nun içinde
-`indexer/` ile aynı desende yaşar.
+A local server that exposes the notes in your vault to MCP clients such as Claude Code/Desktop
+— it needs no separate package or installation; `mcp/` lives inside this repo
+in the same pattern as `indexer/`.
 
-**Paketli masaüstü uygulamasında** sunucu tek dosyalık bir paket olarak gelir
-(`dist-server/mcp/vault-chat-mcp.mjs`, `scripts/build-mcp.mjs` üretir; `npm run stage:server`
-içinde otomatik): repo, `tsx` ya da başka bir kurulum gerekmez,
-sistemdeki Node 22 yeter. **Ayarlar → MCP istemcisine bağla** kartı bu dosyayı
-gösteren hazır yapılandırmayı verir. `node <kurulum>/_up_/dist-server/mcp/vault-chat-mcp.mjs --print-config` (Windows'ta kurulum klasörü `%LOCALAPPDATA%\vault-chat`)
-de aynı bloğu yazdırır. `DATA_DIR` verilmezse kurulu uygulamanın veri klasörü
-(`%APPDATA%\app.vaultchat.desktop`, macOS'ta `~/Library/Application Support/app.vaultchat.desktop`,
-Linux'ta `$XDG_DATA_HOME` ya da `~/.local/share` altında aynı ad) kullanılır. Kaynak koddan
-çalışırken `mcp/launch.mjs` yolu aynen geçerlidir. Paketi tek başına üretmek için: `npm run build:mcp`.
+**In the packaged desktop app** the server ships as a single-file bundle
+(`dist-server/mcp/vault-chat-mcp.mjs`, built by `scripts/build-mcp.mjs`; automatic
+within `npm run stage:server`): no repo, `tsx` or other installation is needed,
+the system's Node 22 is enough. The **Settings → Connect to an MCP client** card gives a ready-made configuration
+pointing to this file. `node <install>/_up_/dist-server/mcp/vault-chat-mcp.mjs --print-config` (on Windows the install folder is `%LOCALAPPDATA%\vault-chat`)
+prints the same block. If `DATA_DIR` is not given, the installed app's data folder is used
+(`%APPDATA%\app.vaultchat.desktop`, on macOS `~/Library/Application Support/app.vaultchat.desktop`,
+on Linux the same name under `$XDG_DATA_HOME` or `~/.local/share`). When running from
+source code, the `mcp/launch.mjs` path applies as before. To build the bundle on its own: `npm run build:mcp`.
 
-**Araçlar:**
+**Tools:**
 
-- `list_vaults` — MCP'ye açık kasaları listeler (kasa başına açma/kapama: **Ayarlar → Kasalar**).
-- `search_library` — kasada arar; varsayılan (`mode: "auto"`) vektör araması, embedding yoksa ya da sonuç vermezse anahtar kelime (FTS5) yedeğiyle. `mode`: `vector`, `keyword` (yalnız FTS5, embedding gerekmez) ya da `hybrid` (vektör + FTS5, reciprocal rank fusion). `domain`/`level` süzgeci alır.
-- `get_note` — bir notu okur; `heading` yalnız o başlığın bölümünü, `max_chars`/`offset` sayfalı okumayı verir (`hash` her zaman tüm dosyanınkidir).
-- `list_domains` — kasadaki domain değerlerini not sayısı ve son değişiklik zamanıyla listeler.
-- `list_sources` — kasadaki kaynakları, domain ve seviye değerleriyle listeler.
-- `create_vault` — yeni kasa oluşturur.
-- `import_source` — yerel dosya ya da URL'yi içe aktarmak üzere **bekleyenlere** ekler.
-- `list_pending_imports` — bekleyen içe aktarmaların durumunu gösterir.
-- `edit_note` — var olan bir notu düzenler (`get_note`'un `hash` değeri `expected_hash` olarak gerekir; frontmatter değişmez, önceki sürüm revizyon olarak saklanır). **Varsayılan olarak kapalıdır**: yalnızca **Ayarlar**'daki geliştirici anahtarıyla açılır, ajan açamaz; kapalıyken çağrı `MCP_EDIT_NOTE_DISABLED` hatası verir.
+- `list_vaults` — lists the vaults exposed to MCP (per-vault on/off: **Settings → Vaults**).
+- `search_library` — searches the vault; the default (`mode: "auto"`) is vector search, with a keyword (FTS5) fallback if there are no embeddings or it returns nothing. `mode`: `vector`, `keyword` (FTS5 only, no embeddings needed) or `hybrid` (vector + FTS5, reciprocal rank fusion). Accepts `domain`/`level` filters.
+- `get_note` — reads a note; `heading` returns only that heading's section, `max_chars`/`offset` give paged reading (`hash` is always that of the whole file).
+- `list_domains` — lists the domain values in the vault with note counts and last-modified times.
+- `list_sources` — lists the sources in the vault with their domain and level values.
+- `create_vault` — creates a new vault.
+- `import_source` — adds a local file or URL to the **pending** imports.
+- `list_pending_imports` — shows the status of pending imports.
+- `edit_note` — edits an existing note (needs `get_note`'s `hash` value as `expected_hash`; frontmatter is unchanged, the previous version is kept as a revision). **Off by default**: it is turned on only with the developer switch in **Settings**, the agent cannot turn it on; while it is off the call returns the `MCP_EDIT_NOTE_DISABLED` error.
 
-Yazma araçları uygulamanın API'si üzerinden çalışır, bu yüzden **uygulamanın
-açık olması** gerekir (uygulama, `DATA_DIR` içine `mcp-endpoint.json` yazar).
-İçe aktarılan kaynak, sen uygulamada onaylayana kadar kütüphaneye girmez; ajan
-bunu kendisi onaylayamaz ya da ayarı değiştiremez. Yerel dosyalar yalnızca
-**Ayarlar**'da izin verdiğin klasörlerden okunur; URL'ler normal web
-içe aktarmasından geçer. İstersen kasa başına **MCP içe aktarmalarını
-otomatik onayla** ayarını açabilirsin: `off` (varsayılan, her şeyi sen
-onaylarsın), `clean` (yalnızca uyarısız, inceleme işaretsiz, kopya olmayanlar)
-ya da `all` (başarılı her içe aktarma). `all` ajanın getirdiği içeriği sen
-görmeden aramaya katar — prompt injection riskini göz önünde bulundur.
+The write tools go through the app's API, so **the app must be
+open** (the app writes `mcp-endpoint.json` into `DATA_DIR`).
+An imported source does not enter the library until you approve it in the app; the agent
+cannot approve it itself or change the setting. Local files are read only from
+folders you allow in **Settings**; URLs go through the normal web
+import. If you want, you can turn on the per-vault **auto-approve MCP imports**
+setting: `off` (default, you approve everything), `clean` (only those with no warnings, no review flag and
+that are not duplicates) or `all` (every successful import). `all` adds content the agent
+brought to search before you have seen it — keep the prompt injection risk in mind.
 
-**Tek komutla kurulum.** Kaynak koddan (`npm install` sonrası) şu komut her şeyi yapar:
-
-```bash
-npx vault-chat-mcp setup      # ya da: npm run mcp:setup
-```
-
-Windows PowerShell'de betik çalıştırma kapalıysa (`npx.ps1 cannot be loaded`) `npx.cmd vault-chat-mcp setup` ya da `npm.cmd run mcp:setup` yaz.
-
-1. **Veri klasörünü seçer:** `--data-dir` > `DATA_DIR` ortam değişkeni (`.env` dahil) > kurulu masaüstü uygulamasının klasörü (varsa) > repo'nun `data/` klasörü.
-2. **Bulduğu MCP istemcilerine kaydeder:** Claude Desktop (Microsoft Store sürümünün sanal yapılandırma dosyası dahil), Claude Code (`claude` PATH'teyse) ve LM Studio (`~/.lmstudio` varsa). Dosyaların yedeğini `<dosya>.bak-YYYYMMDD-HHMMSS` olarak alır, başka anahtarlara ve başka sunuculara dokunmaz; geçersiz JSON'u asla ezmez. Claude Desktop'ı tamamen kapatıp yeniden başlatman gerekir. Jan ve diğer istemciler için sonda yapılandırma bloğu yazdırılır.
-3. **"Örnek Kasa" oluşturur:** 5 kısa ders notunu (Türkçe ve İngilizce) kopyalar, MCP'ye açar ve indeksler; hemen `search_library` / `get_note` deneyebilirsin. `vaults.json` uygulamaya ait olduğundan, uygulama açıkken bu adım atlanır: uygulamayı kapatıp komutu yeniden çalıştır. Gömme sunucusu (Ollama) yoksa indeks yalnız anahtar kelime (FTS5) aramasıyla kurulur; yapılandırdığın sağlayıcıya erişilemezse indeksleme hata verir ve ekrandaki ipucuyla `npm run index -- --vault ornek-kasa` çalıştırılır.
-
-Seçenekler: `--client claude-desktop,claude-code,lm-studio` (yalnız bunları kaydeder; klasörü yoksa oluşturur), `--data-dir <klasör>`, `--no-sample` (örnek kasa yok), `--dry-run` (hiçbir şey yazmadan ne yapacağını gösterir). `npx vault-chat-mcp config` yalnız yapılandırma bloğunu yazdırır. Komut tekrar çalıştırılabilir: güncel kayıt ve var olan örnek kasa olduğu gibi bırakılır.
-
-Elle kurmak istersen:
-
-**Bağlanmak.** Kurulu masaüstü uygulamasının verisi `%APPDATA%\Roaming\app.vaultchat.desktop\`
-altındadır (bkz. "Masaüstü (Tauri)"); `DATA_DIR` bu klasörü göstermelidir.
-Kaynak koddan çalıştırıyorsan varsayılan repo'nun `data/` klasörüdür. Claude
-Code için (`--scope user` olmadan kayıt yalnızca komutun çalıştırıldığı dizine
-bağlanır):
+**One-command setup.** From source (after `npm install`), this command does everything:
 
 ```bash
-claude mcp add --scope user vault-chat -- node "<bu repo>\mcp\launch.mjs"
+npx vault-chat-mcp setup      # or: npm run mcp:setup
 ```
 
-Claude Desktop için `%APPDATA%\Claude\claude_desktop_config.json`'a eklenecek
-bloğu, **mutlak** `DATA_DIR` ve `node` yoluyla hazır üretmek için:
+If script execution is disabled in Windows PowerShell (`npx.ps1 cannot be loaded`), type `npx.cmd vault-chat-mcp setup` or `npm.cmd run mcp:setup`.
+
+1. **Picks the data folder:** `--data-dir` > the `DATA_DIR` environment variable (including `.env`) > the installed desktop app's folder (if any) > the repo's `data/` folder.
+2. **Registers with the MCP clients it finds:** Claude Desktop (including the virtual config file of the Microsoft Store version), Claude Code (if `claude` is on PATH) and LM Studio (if `~/.lmstudio` exists). It backs the files up as `<file>.bak-YYYYMMDD-HHMMSS`, does not touch other keys or other servers, and never overwrites invalid JSON. You need to fully quit and restart Claude Desktop. For Jan and other clients, the configuration block is printed at the end.
+3. **Creates a sample vault ("Örnek Kasa"):** copies 5 short lecture notes (in Turkish and English), exposes it to MCP and indexes it; you can try `search_library` / `get_note` right away. Because `vaults.json` is owned by the app, this step is skipped while the app is open: close the app and run the command again. If there is no embedding server (Ollama), the index is built with keyword (FTS5) search only; if the provider you configured is unreachable, indexing fails and, with the hint on screen, `npm run index -- --vault ornek-kasa` is run.
+
+Options: `--client claude-desktop,claude-code,lm-studio` (registers only these; creates the folder if it does not exist), `--data-dir <folder>`, `--no-sample` (no sample vault), `--dry-run` (shows what it would do without writing anything). `npx vault-chat-mcp config` prints only the configuration block. The command can be re-run: the current registration and an existing sample vault are left as they are.
+
+If you want to set it up by hand:
+
+**Connecting.** The data of the installed desktop app is under `%APPDATA%\Roaming\app.vaultchat.desktop\`
+(see "Desktop (Tauri)"); `DATA_DIR` must point to this folder.
+If you run from source, the default is the repo's `data/` folder. For Claude
+Code (without `--scope user` the registration is tied only to the directory where the command is run):
+
+```bash
+claude mcp add --scope user vault-chat -- node "<this repo>\mcp\launch.mjs"
+```
+
+To generate the block to add to `%APPDATA%\Claude\claude_desktop_config.json` for Claude Desktop,
+ready-made with an **absolute** `DATA_DIR` and `node` path:
 
 ```bash
 npm run mcp:config
 ```
 
-Çıktı şu biçimdedir; kurulu uygulamanın verisini okutmak için `DATA_DIR`'ı
-yukarıdaki AppData klasörüyle değiştir:
+The output has this form; to make it read the installed app's data, replace `DATA_DIR`
+with the AppData folder above:
 
 ```json
 {
@@ -513,62 +508,62 @@ yukarıdaki AppData klasörüyle değiştir:
     "vault-chat": {
       "command": "node",
       "args": ["<repo>\mcp\launch.mjs"],
-      "env": { "DATA_DIR": "<veri klasörü>" }
+      "env": { "DATA_DIR": "<data folder>" }
     }
   }
 }
 ```
 
-`"command"` `node` (ya da `npm run mcp:config`'in yazdığı mutlak `node` yolu)
-olmalı, `"npx"`/`"tsx"` değil — Windows'ta ikisi de `.cmd` shim'i ve shell'siz
-spawn eden istemcilerde `ENOENT` verir.
+`"command"` must be `node` (or the absolute `node` path that `npm run mcp:config` prints),
+not `"npx"`/`"tsx"` — on Windows both are `.cmd` shims and give `ENOENT` in
+clients that spawn without a shell.
 
-Doğrulama:
+Verification:
 
 ```bash
-npm run mcp:smoke   # araçları tek süreçte, gerçek bir model sunucusuna dokunmadan test eder
+npm run mcp:smoke   # tests the tools in a single process, without touching a real model server
 ```
 
-Sunucu ayaktayken tanı için tek stderr satırı yeterli: `DATA_DIR=... vaults=N`.
-Claude Desktop'ta bu satır `%APPDATA%\Claude\logs\mcp-server-vault-chat.log`'a düşer.
+While the server is up, a single stderr line is enough for diagnosis: `DATA_DIR=... vaults=N`.
+In Claude Desktop this line lands in `%APPDATA%\Claude\logs\mcp-server-vault-chat.log`.
 
-## Sağlayıcılar ve model yetenekleri
+## Providers and model capabilities
 
-Sohbet için hangi sağlayıcının kullanılacağı **Ayarlar → Sağlayıcılar**'da
-(ya da ilk kurulumda sihirbazda) seçilir; Ollama yalnızca bir seçenektir. Bir
-modelin araç çağırma (tools) ve akıl yürütme (reasoning) yeteneği, model
-adından (Ollama `qwen3:8b`, llama.cpp `Qwen3-8B-Q4_K_M.gguf`, LM Studio/vLLM
-`qwen/qwen3-8b` gibi yazımlar aynı aileye eşlenir) tahmin edilir ve her sunucu
-türü için aynı tablodan gelir. Tahmin yanlışsa **Ayarlar → Sağlayıcılar →
-"model listesini yönet"** bölümünde her modelin **Araçlar** ve **Akıl
-yürütme** anahtarı vardır: bunlar tablonun varsayılanını gösterir ve
-değiştirince modele özel bir geçersiz kılma (`providers.json`'daki
-`modelCaps`) yazar. Yerel (`local`) işaretli OpenAI uyumlu sunucularda (llama.cpp,
-LM Studio, vLLM) düşünme kapatıldığında akıl yürüten modeller için isteğe
-`chat_template_kwargs: { enable_thinking: false }` eklenir (qwen3 şablonu);
-bulut sağlayıcılara hiçbir zaman gönderilmez.
+Which provider is used for chat is chosen in **Settings → Providers**
+(or in the wizard during first setup); Ollama is just one option. A
+model's tool-calling (tools) and reasoning capability is
+inferred from the model name (spellings such as Ollama `qwen3:8b`, llama.cpp `Qwen3-8B-Q4_K_M.gguf`, LM Studio/vLLM
+`qwen/qwen3-8b` map to the same family) and comes from the same table for every server
+type. If the inference is wrong, in **Settings → Providers →
+"manage model list"** each model has a **Tools** and a **Reasoning**
+switch: these show the table's default, and when you
+change one it writes a model-specific override (`modelCaps` in `providers.json`). On OpenAI-compatible
+servers marked local (`local`) (llama.cpp,
+LM Studio, vLLM), when thinking is turned off, `chat_template_kwargs: { enable_thinking: false }` is added to the request for reasoning
+models (the qwen3 template);
+it is never sent to cloud providers.
 
-## Küçük GPU'lar için performans ayarları
+## Performance settings for small GPUs
 
-> Bu bölüm yalnızca model sunucusu olarak **Ollama** kullanıyorsan geçerli
-> (`ollama ps`, `OLLAMA_*` değişkenleri, Modelfile). LM Studio, llama.cpp gibi
-> başka bir sunucuda bağlam penceresi ve GPU katmanı ayarları o sunucunun kendi
-> arayüzünden yapılır.
+> This section applies only if you use **Ollama** as the model server
+> (`ollama ps`, `OLLAMA_*` variables, Modelfile). On another server such as LM Studio or llama.cpp,
+> the context window and GPU layer settings are made in that server's own
+> interface.
 
-Yerel model yavaşsa önce şuna bak: bir model yüklüyken `ollama ps` çıktısındaki
-`PROCESSOR` sütunu `100% GPU` mu, yoksa `18%/82% CPU/GPU` gibi bir bölünme mi?
-Bölünme varsa model VRAM'e sığmıyor ve katmanların bir kısmı CPU'da koşuyor; hız
-büyük ölçüde CPU'da kalan katmanların oranına bağlı. Aşağıdaki ayarlar bu oranı
-düşürür. Bunlar **kalite değiştirmez** (aynı ağırlık, aynı hesap), yalnızca katmanların
-nerede koştuğunu değiştirir.
+If the local model is slow, first check this: while a model is loaded, is the
+`PROCESSOR` column in the `ollama ps` output `100% GPU`, or a split such as `18%/82% CPU/GPU`?
+If there is a split, the model does not fit in VRAM and some of the layers run on the CPU; speed
+depends largely on the share of layers left on the CPU. The settings below
+lower that share. They **do not change quality** (same weights, same computation); they only change
+where the layers run.
 
-> Tüm sayılar **tek makinede** ölçüldü (RTX 4050 Laptop 6 GB, `qwen3:8b`). Başka donanımda
-> sıralama aynı olabilir ama rakamlar farklı çıkar. Model zaten tamamen GPU'ya sığıyorsa
-> (`100% GPU`, genelde 12 GB+ kartlar) bu ayarların bir etkisi olmaz.
+> All numbers were measured on **a single machine** (RTX 4050 Laptop 6 GB, `qwen3:8b`). On other hardware
+> the ordering may be the same but the numbers will differ. If the model already fits entirely on the GPU
+> (`100% GPU`, usually 12 GB+ cards), these settings have no effect.
 
-### 1. Ollama tarafı (Ollama'nın ortamına yazılır)
+### 1. Ollama side (written to Ollama's environment)
 
-Üç kullanıcı-düzeyi ortam değişkeni, sonra Ollama'yı görev çubuğundan kapatıp yeniden aç:
+Three user-level environment variables, then quit Ollama from the taskbar and reopen it:
 
 ```powershell
 [Environment]::SetEnvironmentVariable('OLLAMA_FLASH_ATTENTION', '1',    'User')
@@ -576,121 +571,117 @@ nerede koştuğunu değiştirir.
 [Environment]::SetEnvironmentVariable('LLAMA_ARG_FIT_TARGET',   '256',  'User')
 ```
 
-- `OLLAMA_FLASH_ATTENTION=1` ve `OLLAMA_KV_CACHE_TYPE=q8_0`: KV önbelleğini yaklaşık yarıya
-  indirir, VRAM'de model katmanlarına yer açar.
-- `LLAMA_ARG_FIT_TARGET=256` (MiB): Ollama'nın motoru (`llama-server`) varsayılan olarak
-  **1024 MiB** VRAM'i boş bırakmaya çalışır; bu değer payı küçültür. Ölçülen etki, aynı
-  modelde katman sayısında artış ve bu makinede `qwen3:8b` Q4_K_M için ~%50 daha hızlı
-  üretim. Payı küçültmek, VRAM'i başka programlarla paylaşıyorsan bellek yetersizliği
-  riskini artırır; sorun görürsen değeri yükselt ya da değişkeni sil.
+- `OLLAMA_FLASH_ATTENTION=1` and `OLLAMA_KV_CACHE_TYPE=q8_0`: roughly halve the KV cache,
+  freeing room in VRAM for model layers.
+- `LLAMA_ARG_FIT_TARGET=256` (MiB): Ollama's engine (`llama-server`) by default
+  tries to leave **1024 MiB** of VRAM free; this value shrinks that margin. The measured effect is an increase
+  in the layer count on the same model and ~50% faster generation for `qwen3:8b` Q4_K_M on this machine.
+  Shrinking the margin raises the risk of running out of memory if you share VRAM with other programs;
+  if you see problems, raise the value or delete the variable.
 
-**Bilmen gerekenler**
+**Things to know**
 
-- `LLAMA_ARG_FIT_TARGET` Ollama'nın **belgelenmiş bir ayarı değil**; Ollama motoru alt süreç
-  olarak başlatırken ortamını miras bıraktığı için çalışıyor. Bir Ollama güncellemesi bunu
-  değiştirebilir. Güncellemeden sonra `ollama ps`'e yeniden bak.
-- Bu değişken makinedeki **tüm llama.cpp tabanlı programları** etkiler.
-- Doğrulama: bir model yükle ve `ollama ps`'e bak; ayrıca Ollama'nın sunucu logunda
-  (`%LOCALAPPDATA%\Ollama\server.log`) `free memory target of 256 MiB` satırı görünmeli.
-- Geri alma: her değişken için `[Environment]::SetEnvironmentVariable('<AD>', $null, 'User')`,
-  sonra Ollama'yı yeniden başlat.
+- `LLAMA_ARG_FIT_TARGET` is **not a documented Ollama setting**; it works because Ollama
+  passes its environment on when it starts the engine as a subprocess. An Ollama update may
+  change this. After an update, look at `ollama ps` again.
+- This variable affects **all llama.cpp-based programs** on the machine.
+- Verification: load a model and look at `ollama ps`; also the line `free memory target of 256 MiB`
+  should appear in Ollama's server log (`%LOCALAPPDATA%\Ollama\server.log`).
+- Rollback: for each variable `[Environment]::SetEnvironmentVariable('<NAME>', $null, 'User')`,
+  then restart Ollama.
 
-### 2. Uygulama tarafı
+### 2. App side
 
-| Ayar | Varsayılan | Ne yapar |
+| Setting | Default | What it does |
 |---|---|---|
-| `OLLAMA_SERVE_CTX` | model tablosu (`qwen3`: 8192) | Ollama'dan istenen bağlam penceresi (`num_ctx`), tüm modeller için |
-| `CHAT_RETRIEVAL_K` | 6 (1–50) | Sohbette soru başına getirilen kaynak parçası sayısı |
+| `OLLAMA_SERVE_CTX` | model table (`qwen3`: 8192) | The context window (`num_ctx`) requested from Ollama, for all models |
+| `CHAT_RETRIEVAL_K` | 6 (1–50) | Number of source chunks retrieved per question in chat |
 
-- **Nerede verilir:** `.env` yalnızca **`npm run dev`** için geçerli (bkz. `.env.example`).
-  **`node build` ("Kalıcı kullanım") ve paketli (Tauri) uygulama `.env` okumaz.** `node build`
-  için ayarı o komutu çalıştırdığın kabukta ver (`OLLAMA_SERVE_CTX=8192 node build`); paketli
-  uygulama için **işletim sistemi ortam değişkeni** olarak ver (yukarıdaki gibi `'User'` düzeyi)
-  ve uygulamayı kapatıp yeniden aç; sunucu süreci ortamı uygulamadan miras alır.
-- **`OLLAMA_SERVE_CTX`'i düşürmek tehlikeli olabilir.** Pencere küçülünce daha çok katman GPU'da
-  kalır ama prompt (k=6'da bile ~4k token'a çıkabiliyor) sığmazsa Ollama bağlamı kaydırır ve
-  **yalnızca ilk 4 token'ı korur**; sistem kuralları sessizce düşer. Varsayılan 8192'nin altına
-  inmeden önce `data/app-log.jsonl`'daki `llm_timing` kayıtlarında `nearCtxLimit: true` olup
-  olmadığına bak.
-- **Geniş VRAM'in varsa** ikisini birlikte yükselt (örn. `OLLAMA_SERVE_CTX=16384`,
-  `CHAT_RETRIEVAL_K=12`): daha çok kaynakla cevap verir. `k`'nın cevap kalitesine etkisi
-  ölçülemez, bir yargı meselesi; bir şey kötüleşirse eski değere dön.
+- **Where to set it:** `.env` applies only to **`npm run dev`** (see `.env.example`).
+  **`node build` ("Persistent use") and the packaged (Tauri) app do not read `.env`.** For `node build`
+  set it in the shell where you run that command (`OLLAMA_SERVE_CTX=8192 node build`); for the packaged
+  app set it as an **operating system environment variable** (at `'User'` level as above)
+  and quit and reopen the app; the server process inherits its environment from the app.
+- **Lowering `OLLAMA_SERVE_CTX` can be dangerous.** When the window shrinks, more layers stay on the GPU
+  but if the prompt (which can reach ~4k tokens even at k=6) does not fit, Ollama shifts the context and
+  **keeps only the first 4 tokens**; the system rules silently drop out. Before going
+  below the default 8192, check whether the `llm_timing` records in `data/app-log.jsonl` have `nearCtxLimit: true`.
+- **If you have plenty of VRAM**, raise both together (e.g. `OLLAMA_SERVE_CTX=16384`,
+  `CHAT_RETRIEVAL_K=12`): it answers with more sources. The effect of `k` on answer quality
+  cannot be measured; it is a matter of judgment. If something gets worse, go back to the old value.
 
-### 3. Daha küçük kuantizasyon (isteğe bağlı)
+### 3. Smaller quantization (optional)
 
-Model tamamen GPU'ya sığmıyorsa daha küçük bir kuantizasyon (ör. `IQ4_XS`, ~4.6 GB; `Q4_K_M`
-~5.0 GB) katmanların daha çoğunu GPU'da tutar. Yayınlanmış bir ölçüme göre (başka bir
-yayıncının özel kuantizasyonları, eğilim gösterir) `IQ4_XS`'in sapması `Q4_K_M`'e yakındır;
-3-bit kuantizasyonlarda (`IQ3_M`, `Q3_K_M`) sapma yaklaşık 2-3 kat artar. Yerelde kaliteyi
-ayırt edecek güçte bir test yapılmadı: kararı gerçek sorularla kendin ver.
+If the model does not fit entirely on the GPU, a smaller quantization (e.g. `IQ4_XS`, ~4.6 GB; `Q4_K_M`
+~5.0 GB) keeps more of the layers on the GPU. According to a published measurement (another
+publisher's custom quantizations, so indicative only), the divergence of `IQ4_XS` is close to `Q4_K_M`;
+for 3-bit quantizations (`IQ3_M`, `Q3_K_M`) the divergence rises about 2-3 times. No test strong enough to tell
+quality apart was run locally: make the decision yourself with real questions.
 
-**Ham GGUF'u doğrudan çekme.** Resmî `qwen3:8b`'in `tools` ve `thinking` yetenekleri modelin
-**şablonundan** gelir; başka bir kaynaktan ham GGUF çekmek bunları kaybettirir ve uygulamanın
-skill araçları/düşünme modu çalışmaz. Doğru yol, resmî modelin Modelfile'ını alıp yalnızca `FROM`
-satırını değiştirmektir:
+**Pulling a raw GGUF directly.** The `tools` and `thinking` capabilities of the official `qwen3:8b` come from the model's
+**template**; pulling a raw GGUF from another source loses them, and the app's
+skill tools/thinking mode do not work. The right way is to take the official model's Modelfile and change only the `FROM`
+line:
 
 ```powershell
 cmd /c "ollama show qwen3:8b --modelfile > Modelfile"
-# Modelfile içinde FROM satırını indirdiğin .gguf dosyasının yoluyla değiştir (ileri eğik çizgiyle),
-# başka hiçbir satıra dokunma. Sonra:
+# In the Modelfile, replace the FROM line with the path of the .gguf file you downloaded (with forward slashes),
+# do not touch any other line. Then:
 ollama create qwen3:8b-iq4xs -f Modelfile
-ollama show qwen3:8b-iq4xs      # Capabilities altında tools ve thinking görünmeli
+ollama show qwen3:8b-iq4xs      # tools and thinking should appear under Capabilities
 ```
 
-(`cmd /c` bilerek: Windows PowerShell 5.1'in `>` operatörü dosyayı UTF-16 yazar ve Ollama
-onu okuyamaz.)
+(`cmd /c` is deliberate: the `>` operator of Windows PowerShell 5.1 writes the file as UTF-16 and Ollama
+cannot read it.)
 
-İndirdiğin dosyanın SHA256'sını yayıncının sayfasındaki değerle karşılaştır.
+Compare the SHA256 of the file you downloaded with the value on the publisher's page.
 
-### 4. Ölçmek
+### 4. Measuring
 
-Her sohbet çağrısı `data/app-log.jsonl`'a bir `llm_timing` kaydı yazar: `promptTokens`,
-`completionTokens`, `promptMs`, `completionMs`, `loadMs`, `numCtx`, `nearCtxLimit`. Yalnızca
-sayılar, metin içeriği yok.
+Every chat call writes an `llm_timing` record to `data/app-log.jsonl`: `promptTokens`,
+`completionTokens`, `promptMs`, `completionMs`, `loadMs`, `numCtx`, `nearCtxLimit`. Numbers
+only, no text content.
 
-## Sorun giderme
+## Troubleshooting
 
-- **Yerel model yavaş** → yukarıdaki "Küçük GPU'lar için performans ayarları".
-- **"Yerel sunucu … çalışmıyor" uyarısı / "… sağlayıcısına ulaşılamıyor"** → Sohbetin
-  kullandığı yerel sunucu (Ollama, LM Studio, llama.cpp...) açık mı? Ollama için
-  `ollama serve`; adres yanlışsa Ayarlar → Sağlayıcılar'dan o sağlayıcının
-  `baseUrl`'ini düzelt (`OLLAMA_URL` artık okunmuyor).
-- **"Kurulum tamamlanmadı" uyarısı / sohbet yanıt vermiyor** → Sohbet zinciri
-  boş: kurulum sihirbazını (`/setup/local-server`) çalıştır ya da Ayarlar →
-  Sağlayıcılar'dan bir sağlayıcı ekleyip etkinleştir ve varsayılan modelini seç.
-- **Model listesi boş / ModelPicker hata veriyor** → Sunucuda yüklü bir model var
-  mı? (Ollama için `ollama pull qwen3:8b`; LM Studio/llama.cpp'de bir model yükle.)
-- **Arama sonuçları zayıf / yalnızca anahtar kelime çalışıyor** → Embedding
-  yapılandırılmamış olabilir (anlamsal arama kapalı); Ayarlar → Sağlayıcılar'da bir
-  embedding modeli seç, sonra vault'u yeniden indeksle.
-- **Kaynak bulunamıyor / cevaplar alakasız** → `npm run index` çalıştırıldı mı, index güncel mi?
-  Birden fazla vault kullanıyorsan
-  ayrıca kontrol et: doğru vault aktif mi (Ayarlar → Vault'lar), `npm run index`
-  aktif vault'u mu indeksledi yoksa başka bir vault'u mu (`--vault <id>` ile
-  yanlış vault verilmiş olabilir)?
-- **Matematik render olmuyor / `f(x)` gibi çıplak kod görünüyor** →
-  `src/lib/markdown.ts` pipeline'ını `f(x)` gibi bir örnek metinle sına.
-- **MCP istemcisi "connected" göstermiyor / hemen kapanıyor** → `"command"`
-  değeri gerçekten `"node"` mu (bkz. yukarıdaki not)? `npm run mcp:smoke`
-  temiz geçiyor mu? Claude Desktop'ta `%APPDATA%\Claude\logs\mcp-server-vault-chat.log`'daki
-  tek stderr satırını kontrol et — `DATA_DIR` beklediğin yeri mi gösteriyor?
-- **MCP `search_library` sonuç döndürmüyor ama uygulamanın kendi sohbeti
-  buluyor** → muhtemelen farklı bir `DATA_DIR`/vault okuyorlar; `list_vaults`
-  aracının döndürdüğü `indexed`/`noteCount` alanlarına bak.
-- **Bulut sağlayıcı (DeepSeek/OpenRouter/Groq/Google AI Studio/Mistral)
-  model listesi veya bağlantı testi rastgele başarısız oluyor, tarayıcıda
-  o API adresi sorunsuz açılıyor** → `data/app-log.jsonl`'da o sağlayıcı
-  için `"listModels: ... fetch failed (SELF_SIGNED_CERT_IN_CHAIN)"` gibi bir
-  satır ara. Bu, vault-chat'in kodunda bir hata değil — antivirüsünün
-  (Kaspersky, ESET, Avast/AVG, Bitdefender, Norton vb. hepsinde "şifrelenmiş
-  bağlantıları tara" özelliği var) giden HTTPS bağlantılarını kendi kök
-  sertifikasıyla araya girip incelediği, ama Node.js'in (tarayıcıların
-  aksine) Windows sertifika deposunu kullanmadığı için bu sertifikaya
-  güvenmediği anlamına gelir. Çözüm: `certmgr.msc` → *Trusted Root
-  Certification Authorities* içinden antivirüsünün kök sertifikasını
-  Base-64 `.cer`/`.pem` olarak dışa aktar, sonra `NODE_EXTRA_CA_CERTS`
-  ortam değişkenini o dosyanın yoluna ayarlayıp `npm run dev`'i (veya
-  masaüstü uygulamasını) yeniden başlat. Sertifika doğrulamasını
-  gevşetmek (`NODE_TLS_REJECT_UNAUTHORIZED=0`) **hiçbir zaman** bir çözüm
-  değildir — gerçek bir ortadaki-adam saldırısına karşı korumayı da
-  kaldırır.
+- **The local model is slow** → "Performance settings for small GPUs" above.
+- **"Local server … not running" warning / "… provider unreachable"** → Is the
+  local server chat uses (Ollama, LM Studio, llama.cpp...) running? For Ollama,
+  `ollama serve`; if the address is wrong, fix that provider's
+  `baseUrl` in Settings → Providers (`OLLAMA_URL` is no longer read).
+- **"Setup is not complete" warning / chat does not respond** → The chat chain
+  is empty: run the setup wizard (`/setup/local-server`) or add and enable a provider in Settings →
+  Providers and pick its default model.
+- **Model list is empty / ModelPicker errors** → Is there a model loaded on the server?
+  (For Ollama, `ollama pull qwen3:8b`; in LM Studio/llama.cpp, load a model.)
+- **Search results are weak / only keyword search works** → Embedding
+  may not be configured (semantic search is off); pick an embedding model in Settings → Providers,
+  then re-index the vault.
+- **Sources are not found / answers are irrelevant** → Was `npm run index` run, is the index current?
+  If you use multiple vaults,
+  also check: is the right vault active (Settings → Vaults), did `npm run index`
+  index the active vault or another one (the wrong vault may have been given with `--vault <id>`)?
+- **Math does not render / bare code like `f(x)` shows up** →
+  test the `src/lib/markdown.ts` pipeline with a sample text such as `f(x)`.
+- **The MCP client does not show "connected" / closes immediately** → Is the `"command"`
+  value really `"node"` (see the note above)? Does `npm run mcp:smoke`
+  pass cleanly? In Claude Desktop, check the single stderr line in `%APPDATA%\Claude\logs\mcp-server-vault-chat.log`
+  — does `DATA_DIR` point where you expect?
+- **MCP `search_library` returns no results but the app's own chat
+  finds them** → they are probably reading a different `DATA_DIR`/vault; look at the `indexed`/`noteCount` fields
+  returned by the `list_vaults`
+  tool.
+- **The model list or connection test of a cloud provider (DeepSeek/OpenRouter/Groq/Google AI Studio/Mistral)
+  fails at random, while that API address opens fine in the browser** → in `data/app-log.jsonl`, look for a line like
+  `"listModels: ... fetch failed (SELF_SIGNED_CERT_IN_CHAIN)"` for
+  that provider. This is not a bug in vault-chat's code — it means your antivirus
+  (Kaspersky, ESET, Avast/AVG, Bitdefender, Norton etc. all have a "scan encrypted
+  connections" feature) is intercepting outgoing HTTPS connections with its own root
+  certificate to inspect them, but Node.js does not trust this certificate because (unlike
+  browsers) it does not use the Windows certificate store. Fix: in `certmgr.msc` → *Trusted Root
+  Certification Authorities*, export your antivirus's root certificate
+  as Base-64 `.cer`/`.pem`, then set the `NODE_EXTRA_CA_CERTS`
+  environment variable to the path of that file and restart `npm run dev` (or
+  the desktop app). Loosening certificate verification
+  (`NODE_TLS_REJECT_UNAUTHORIZED=0`) is **never** a fix —
+  it also removes protection against a real man-in-the-middle attack.
