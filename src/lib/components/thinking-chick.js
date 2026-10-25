@@ -1,3 +1,5 @@
+// @ts-nocheck — framework-free animation core shared with a plain HTML prototype; its untyped
+// parameters became errors under TypeScript 6's checkJs. Behaviour is covered through ThinkingChick.svelte.
 // thinking-chick.js — "defter okuyan kuş" bekleme animasyonu (çerçeveden bağımsız çekirdek).
 // ThinkingChick.svelte ve prototipler/bekleme-animasyonu.html bunu kullanır.
 //

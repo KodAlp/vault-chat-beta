@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { computeReviewSuggestion } from '#lib/server/review-mode.js';
 import { vaultFromUrl } from '#lib/server/requestVault.js';
@@ -9,5 +8,5 @@ import { vaultFromUrl } from '#lib/server/requestVault.js';
  * `suggest: false`.
  */
 export const GET: RequestHandler = ({ url }) => {
-	return json(computeReviewSuggestion(vaultFromUrl(url)));
+	return Response.json(computeReviewSuggestion(vaultFromUrl(url)));
 };

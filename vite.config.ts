@@ -5,8 +5,8 @@ import tailwindcss from '@tailwindcss/vite';
 import { defineConfig, type Plugin } from 'vite';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { dataDir } from './src/lib/server/env';
-import { writeMcpEndpoint, removeMcpEndpoint } from './src/lib/server/mcp-endpoint';
+import { dataDir } from './src/lib/server/env.ts';
+import { writeMcpEndpoint, removeMcpEndpoint } from './src/lib/server/mcp-endpoint.ts';
 
 // src/lib/server/env.ts reads process.env directly (so it also works
 // outside Vite, for mcp/), but Vite's own .env loading only ever

@@ -1,7 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import matter from 'gray-matter';
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { readLibraryFile } from '#lib/server/library.js';
 import { originalPathForSourceSha } from '#lib/server/originals.js';
@@ -74,7 +73,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			crop: hasCrop ? cropAbs : null,
 			previousB64: block.previousB64
 		});
-		return json({
+		return Response.json({
 			page: result.page || block.page,
 			bbox_source: result.bboxSource,
 			candidates: result.candidates,

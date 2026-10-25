@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getQuiz, createAttempt } from '#lib/server/study-db.js';
 import { vaultFromId } from '#lib/server/requestVault.js';
@@ -10,5 +9,5 @@ export const POST: RequestHandler = async ({ request }) => {
 	if (!getQuiz(v, body.quizId)) fail('NOT_FOUND', { entity: 'quiz' }, 404);
 
 	const attemptId = createAttempt(v, body.quizId);
-	return json({ attemptId });
+	return Response.json({ attemptId });
 };

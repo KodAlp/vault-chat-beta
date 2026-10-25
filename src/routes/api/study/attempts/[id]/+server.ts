@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import {
 	getAttempt,
@@ -81,5 +80,5 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
 	finishAttempt(v, attempt.id, score);
 
 	const response: SubmitAttemptResponse = { score, items: results };
-	return json(response);
+	return Response.json(response);
 };

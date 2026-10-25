@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import {
 	updateProviderEnabled,
@@ -81,7 +80,7 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
 		if (body.modelCaps !== undefined) {
 			updateModelCaps(params.id, body.modelCaps.modelId, body.modelCaps.caps);
 		}
-		return json({
+		return Response.json({
 			id: params.id,
 			enabled: body.enabled,
 			defaultModel: body.defaultModel,

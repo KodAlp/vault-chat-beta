@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { resolveVault } from '#lib/server/vaults.js';
 import { reindexVault, cancelReindex } from '#lib/server/reindex.js';
@@ -75,7 +74,7 @@ export const POST: RequestHandler = async ({ params, request }) => {
 export const DELETE: RequestHandler = async ({ params }) => {
 	try {
 		const v = resolveVault(params.id);
-		return json({ cancelled: cancelReindex(v.id) });
+		return Response.json({ cancelled: cancelReindex(v.id) });
 	} catch (err) {
 		if (err instanceof AppError) fail(err.code, err.params, err.status);
 		const coded = toCodedError(err);

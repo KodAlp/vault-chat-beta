@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { measureEmbeddingDims } from '#lib/server/embeddings.js';
 import { AppError, fail, toCodedError } from '#lib/server/app-error.js';
@@ -19,7 +18,7 @@ export const POST: RequestHandler = async ({ request }) => {
 
 	try {
 		const dims = await measureEmbeddingDims(body.providerId, body.model);
-		return json({ dims });
+		return Response.json({ dims });
 	} catch (err) {
 		if (err instanceof AppError) fail(err.code, err.params, err.status);
 		const coded = toCodedError(err);

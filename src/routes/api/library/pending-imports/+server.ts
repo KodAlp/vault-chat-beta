@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { vaultFromUrl } from '#lib/server/requestVault.js';
 import { listPending } from '#lib/server/pending-imports.js';
@@ -7,5 +6,5 @@ import { listPending } from '#lib/server/pending-imports.js';
  * MCP imports alike (see pending-imports.ts). For the "pending imports" UI. */
 export const GET: RequestHandler = async ({ url }) => {
 	const v = vaultFromUrl(url);
-	return json({ vault: v.id, imports: listPending(v) });
+	return Response.json({ vault: v.id, imports: listPending(v) });
 };

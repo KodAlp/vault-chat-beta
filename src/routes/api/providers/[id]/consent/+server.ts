@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { isCloud, readProvidersFile } from '#lib/server/providers/config-store.js';
 import { grantProviderConsent, revokeProviderConsent } from '#lib/server/provider-consent.js';
@@ -20,11 +19,11 @@ function assertCloudProvider(id: string): void {
 export const POST: RequestHandler = async ({ params }) => {
 	assertCloudProvider(params.id);
 	grantProviderConsent(params.id);
-	return json({ id: params.id, consented: true });
+	return Response.json({ id: params.id, consented: true });
 };
 
 export const DELETE: RequestHandler = async ({ params }) => {
 	assertCloudProvider(params.id);
 	revokeProviderConsent(params.id);
-	return json({ id: params.id, consented: false });
+	return Response.json({ id: params.id, consented: false });
 };

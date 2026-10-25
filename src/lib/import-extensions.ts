@@ -3,7 +3,7 @@
  * something the converter would only ever fail on or mis-handle, so it's
  * rejected before a subprocess (and its memory/CPU cost) is spent on it.
  *
- * A hand-synced DUPLICATE of $lib/server/library.ts's own copy of these same
+ * A hand-synced DUPLICATE of #lib/server/library.ts's own copy of these same
  * three exports, not a shared source of truth re-exported from there: this
  * module exists so AddFilesDialog (a client component) can import
  * the exact lists for its pre-filter preview without pulling in a server

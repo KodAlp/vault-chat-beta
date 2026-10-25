@@ -111,7 +111,7 @@ export interface AppLogRecord {
 	 * module importing from providers/, which is not otherwise a dependency
 	 * of app-log.ts. */
 	errorKind?: string;
-	/** no_sources only — see RetrieveResult.reason ($lib/types.ts): which of
+	/** no_sources only — see RetrieveResult.reason (#lib/types.ts): which of
 	 * retrieve()'s empty-return paths caused it (unindexed vault, empty KNN
 	 * result, domain/distance filtering, or scope narrowing). */
 	reason?: string;

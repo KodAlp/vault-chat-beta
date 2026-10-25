@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { vaultFromId } from '#lib/server/requestVault.js';
 import { AppError, fail } from '#lib/server/app-error.js';
@@ -16,7 +15,7 @@ export const POST: RequestHandler = async ({ params, request }) => {
 
 	try {
 		const { path: relPath } = await confirmStagedImport(v, params.id, { title: body.title, domain: body.domain, level: body.level });
-		return json({ ok: true, path: relPath });
+		return Response.json({ ok: true, path: relPath });
 	} catch (err) {
 		if (err instanceof AppError) fail(err.code, err.params, err.status);
 		throw err;

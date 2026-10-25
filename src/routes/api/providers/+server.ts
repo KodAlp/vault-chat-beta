@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { addProvider, deleteProvider, readProvidersFile, DEFAULT_OLLAMA_BASE_URL, type NewProviderInput } from '#lib/server/providers/config-store.js';
 import { secretStore, maskKey } from '#lib/server/providers/secrets.js';
@@ -34,7 +33,7 @@ export const GET: RequestHandler = async () => {
 		})
 	);
 
-	return json(status);
+	return Response.json(status);
 };
 
 function mapToStatus(
@@ -110,7 +109,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			: 'reasoning_content';
 	try {
 		const entry = addProvider({ label: body.label, baseUrl, kind, reasoningDialect, local: body.local === true });
-		return json(entry, { status: 201 });
+		return Response.json(entry, { status: 201 });
 	} catch (err) {
 		if (err instanceof AppError) fail(err.code, err.params, err.status);
 		const coded = toCodedError(err);
@@ -123,7 +122,7 @@ export const DELETE: RequestHandler = async ({ request }) => {
 	if (!body?.id) fail('VALIDATION_REQUIRED', { field: 'id' });
 	try {
 		deleteProvider(body.id);
-		return json({ ok: true });
+		return Response.json({ ok: true });
 	} catch (err) {
 		if (err instanceof AppError) fail(err.code, err.params, err.status);
 		const coded = toCodedError(err);

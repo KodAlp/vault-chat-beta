@@ -3,7 +3,7 @@ import { MAX_SCAN_DEPTH, MAX_SCAN_ENTRIES, isJunkName, skipReasonFor, type SkipR
 /**
  * What the user handed the "Add files" dialog, independent of HOW they handed it
  * (file input, folder input, dropped files/folders, the Linux desktop's native
- * folder scan). Pure and isomorphic on purpose — no DOM globals, no $lib alias
+ * folder scan). Pure and isomorphic on purpose — no DOM globals, no #lib alias
  * (the test runner cannot resolve it) — so the routing rule and the dropped-folder
  * walk are unit-tested without a browser; the DOM types are described structurally.
  */

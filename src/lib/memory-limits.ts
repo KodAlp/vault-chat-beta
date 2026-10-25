@@ -1,7 +1,7 @@
 /**
  * Character budget for the memory block injected into every chat prompt.
  *
- * Lives in $lib rather than $lib/server/memory-store.ts, which owns the actual enforcement, the same reason
+ * Lives in #lib rather than #lib/server/memory-store.ts, which owns the actual enforcement, the same reason
  * skill-limits.ts is split out of userSkills.ts: a future settings UI showing "how much room is left" needs the
  * same number the server enforces.
  *

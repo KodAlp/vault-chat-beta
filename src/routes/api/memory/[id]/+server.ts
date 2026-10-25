@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { deleteMemory, editMemory } from '#lib/server/memory-runtime.js';
 import type { MemoryNoteView } from '#lib/types.js';
@@ -12,11 +11,11 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
 	const edited = editMemory(params.id, value);
 	if (!edited) fail('NOT_FOUND', { entity: 'memory' }, 404);
 	const note: MemoryNoteView = { id: edited.id, type: edited.type, domain: edited.domain, value: edited.value, createdAt: edited.createdAt };
-	return json({ note });
+	return Response.json({ note });
 };
 
 /** Soft delete: sets deleted_at, the row itself is kept (memory-store.ts). */
 export const DELETE: RequestHandler = async ({ params }) => {
 	if (!deleteMemory(params.id)) fail('NOT_FOUND', { entity: 'memory' }, 404);
-	return json({ ok: true });
+	return Response.json({ ok: true });
 };

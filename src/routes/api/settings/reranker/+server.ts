@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getRerankerConfig, setRerankerConfig } from '#lib/server/providers/config-store.js';
 import { downloadRerankerModel, rerankerModelPresent, rerankerStatus } from '#lib/server/reranker.js';
@@ -12,7 +11,7 @@ import { logAppEvent } from '#lib/server/app-log.js';
  * it; POST `{ action: 'download' }` fetches the ~2.3 GB model and answers when it is in the cache.
  */
 export const GET: RequestHandler = async () => {
-	return json(await rerankerStatus());
+	return Response.json(await rerankerStatus());
 };
 
 export const POST: RequestHandler = async ({ request }) => {
@@ -27,7 +26,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			logAppEvent({ kind: 'reranker_issue', message: `reranker modeli indirilemedi: ${detail}` });
 			fail('RERANKER_DOWNLOAD_FAILED', { detail });
 		}
-		return json(await rerankerStatus());
+		return Response.json(await rerankerStatus());
 	}
 
 	if (typeof body.enabled !== 'boolean') fail('VALIDATION_INVALID', { field: 'enabled' });
@@ -39,5 +38,5 @@ export const POST: RequestHandler = async ({ request }) => {
 		if (err instanceof AppError) fail(err.code, err.params, err.status);
 		throw err;
 	}
-	return json({ ...(await rerankerStatus()), enabled: getRerankerConfig().enabled });
+	return Response.json({ ...(await rerankerStatus()), enabled: getRerankerConfig().enabled });
 };

@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getAdapter } from '#lib/server/providers/registry.js';
 import { getOllamaProviderId } from '#lib/server/providers/config-store.js';
@@ -27,7 +26,7 @@ export const GET: RequestHandler = async () => {
 		// response shape unchanged from the client's perspective.
 		const adapter = await getOllamaAdapter();
 		const models = await adapter.listNativeModels();
-		return json(models);
+		return Response.json(models);
 	} catch (err) {
 		if (err instanceof AppError) fail(err.code, err.params, err.status);
 		const coded = toCodedError(err);
@@ -69,7 +68,7 @@ export const DELETE: RequestHandler = async ({ request }) => {
 	try {
 		const adapter = await getOllamaAdapter();
 		await adapter.delete(model);
-		return json({ ok: true });
+		return Response.json({ ok: true });
 	} catch (err) {
 		if (err instanceof AppError) fail(err.code, err.params, err.status);
 		const coded = toCodedError(err);

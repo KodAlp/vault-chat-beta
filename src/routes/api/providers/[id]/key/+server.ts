@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { secretStore, maskKey } from '#lib/server/providers/secrets.js';
 import { readProvidersFile } from '#lib/server/providers/config-store.js';
@@ -22,11 +21,11 @@ export const POST: RequestHandler = async ({ params, request }) => {
 	// adapter instance built from whatever key (or lack of one) existed
 	// before this save.
 	invalidateAdapter(params.id);
-	return json({ id: params.id, keyStatus: 'connected', mask: maskKey(body.key.trim()) });
+	return Response.json({ id: params.id, keyStatus: 'connected', mask: maskKey(body.key.trim()) });
 };
 
 export const DELETE: RequestHandler = async ({ params }) => {
 	await secretStore.delete(params.id);
 	invalidateAdapter(params.id);
-	return json({ id: params.id, keyStatus: 'none' });
+	return Response.json({ id: params.id, keyStatus: 'none' });
 };

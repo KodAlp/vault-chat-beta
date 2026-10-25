@@ -1,6 +1,6 @@
 /**
  * Isomorphic error-code registry — imported by both server code
- * ($lib/server/app-error.ts) and client code ($lib/server-error.ts,
+ * (#lib/server/app-error.ts) and client code (#lib/server-error.ts,
  * error-format.ts), so this file itself must stay free of rune/svelte
  * imports (see i18n/index.svelte.ts's own doc comment on why that module
  * can't be imported from a plain `tsx --test` unit test).

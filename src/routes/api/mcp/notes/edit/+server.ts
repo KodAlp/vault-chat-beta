@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { fail, toCodedError, AppError } from '#lib/server/app-error.js';
 import { readMcpSettings } from '#lib/server/mcp-settings.js';
@@ -61,7 +60,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		// The write re-checks the same hash against the file on disk, so a change between our read and the
 		// write is still a conflict, never a lost update.
 		const result = await writeLibraryFile(v, relPath, next, body.expectedHash, { by: 'mcp' });
-		return json({ path: relPath, hash: result.hash, indexPending: result.indexPending, bytes: Buffer.byteLength(next, 'utf8') });
+		return Response.json({ path: relPath, hash: result.hash, indexPending: result.indexPending, bytes: Buffer.byteLength(next, 'utf8') });
 	} catch (err) {
 		if (err instanceof AppError) fail(err.code as ErrorCode, err.params, err.status);
 		const c = toCodedError(err);

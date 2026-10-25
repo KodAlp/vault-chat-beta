@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { computeWeakSpots } from '#lib/server/learner-store.js';
 import { vaultFromUrl } from '#lib/server/requestVault.js';
@@ -10,5 +9,5 @@ import { vaultFromUrl } from '#lib/server/requestVault.js';
  * route is added here.
  */
 export const GET: RequestHandler = ({ url }) => {
-	return json(computeWeakSpots(vaultFromUrl(url)));
+	return Response.json(computeWeakSpots(vaultFromUrl(url)));
 };

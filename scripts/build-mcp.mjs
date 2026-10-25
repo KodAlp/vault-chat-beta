@@ -35,8 +35,7 @@ export async function buildMcpBundle({ root = process.cwd(), outDir = path.join(
 		format: 'esm',
 		target: NODE_TARGET,
 		external: MCP_EXTERNALS,
-		// `$lib/x` -> src/lib/x (SvelteKit's alias, used by a few server modules).
-		alias: { $lib: path.join(root, 'src', 'lib') },
+		// `#lib/x.js` resolves through package.json "imports" (esbuild reads it), no alias needed.
 		// Some CJS dependencies (ajv, gray-matter/js-yaml) call require() at runtime; an ESM bundle has no
 		// `require`, so provide one. Named with a prefix to never clash with a bundled identifier.
 		banner: {

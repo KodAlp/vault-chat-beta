@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { addMemory, listMemory } from '#lib/server/memory-runtime.js';
 import type { MemoryType } from '#lib/server/memory-store.js';
@@ -13,7 +12,7 @@ function toView(n: ReturnType<typeof listMemory>[number]): MemoryNoteView {
 
 /** The user's manual memory notes — user-level, not per vault (see memory-store.ts). */
 export const GET: RequestHandler = () => {
-	return json({ notes: listMemory().map(toView) });
+	return Response.json({ notes: listMemory().map(toView) });
 };
 
 export const POST: RequestHandler = async ({ request }) => {
@@ -23,5 +22,5 @@ export const POST: RequestHandler = async ({ request }) => {
 	if (typeof type !== 'string' || !TYPES.includes(type as MemoryType)) fail('MEMORY_TYPE_INVALID');
 	if (!value) fail('VALIDATION_REQUIRED', { field: 'value' });
 	const domain = typeof body?.domain === 'string' && body.domain.trim() ? body.domain.trim() : null;
-	return json({ note: toView(addMemory({ type: type as MemoryType, domain, value })) });
+	return Response.json({ note: toView(addMemory({ type: type as MemoryType, domain, value })) });
 };

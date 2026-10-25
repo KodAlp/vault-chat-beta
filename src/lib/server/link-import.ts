@@ -308,7 +308,7 @@ export function nextRedirectTarget(current: URL, status: number, location: strin
  *
  * Moved here from api/import/links/+server.ts so it can be
  * unit-tested against a real local HTTP server — route files in this repo
- * are never imported by a test, only $lib/server/*.ts is.
+ * are never imported by a test, only #lib/server/*.ts is.
  */
 export async function fetchWithCap(url: URL): Promise<Buffer> {
 	const deadline = Date.now() + LINK_FETCH_TIMEOUT_MS;

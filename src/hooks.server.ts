@@ -202,7 +202,7 @@ function logSecurityBlock(code: string, event: RequestEvent): void {
 export const handle: Handle = async ({ event, resolve }) => {
 	if (!LOOPBACK_HOSTNAMES.has(event.url.hostname)) {
 		logSecurityBlock('LOCAL_ONLY', event);
-		error(403, { message: 'LOCAL_ONLY', code: 'LOCAL_ONLY' });
+		error(403, 'LOCAL_ONLY', { code: 'LOCAL_ONLY' });
 	}
 
         // /api/mcp/* is the MCP process's write surface. It is authenticated ONLY by the MCP token
@@ -261,7 +261,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 
                 if (decision.kind === 'reject') {
                         logSecurityBlock('SESSION_REQUIRED', event);
-                        error(401, { message: 'SESSION_REQUIRED', code: 'SESSION_REQUIRED' });
+                        error(401, 'SESSION_REQUIRED', { code: 'SESSION_REQUIRED' });
                 }
         }
 
@@ -269,7 +269,7 @@ export const handle: Handle = async ({ event, resolve }) => {
                 const origin = event.request.headers.get('origin');
                 if (origin && !isSameLoopbackOrigin(origin, event.url)) {
                         logSecurityBlock('CROSS_SITE_BLOCKED', event);
-                        error(403, { message: 'CROSS_SITE_BLOCKED', code: 'CROSS_SITE_BLOCKED' });
+                        error(403, 'CROSS_SITE_BLOCKED', { code: 'CROSS_SITE_BLOCKED' });
                 }
         }
 
@@ -288,12 +288,17 @@ export const handle: Handle = async ({ event, resolve }) => {
  * noise up app-log.jsonl for e.g. browser favicon probes. Everything else is
  * a real failure and gets logged the same way uncaughtException above does.
  */
-export const handleError: HandleServerError = ({ error: err, status }) => {
-	if (status === 404) {
-		return { message: 'ROUTE_NOT_FOUND', code: 'ROUTE_NOT_FOUND' };
+export const handleError: HandleServerError = ({ kind, error: err }) => {
+	// Errors thrown with error(...) (kind 'app') keep the code and status they were thrown with.
+	// Validation errors only come from remote functions, which this app does not use.
+	if (kind === 'app' || kind === 'validation') return;
+	if (kind === 'framework') {
+		if (err.status === 404) return { message: 'ROUTE_NOT_FOUND', code: 'ROUTE_NOT_FOUND' };
+		// Other framework errors (e.g. 405) keep SvelteKit's own safe status and message.
+		return;
 	}
 
-        const text = err instanceof Error ? err.stack ?? err.message : String(err);
-        logAppEvent({ kind: 'fatal_error', message: `handleError: ${text}` });
-        return { message: 'INTERNAL', code: 'INTERNAL' };
+	const text = err instanceof Error ? (err.stack ?? err.message) : String(err);
+	logAppEvent({ kind: 'fatal_error', message: `handleError: ${text}` });
+	return { message: 'INTERNAL', code: 'INTERNAL' };
 };

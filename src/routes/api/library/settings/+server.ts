@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getLibrarySettings, saveLibrarySettings } from '#lib/server/library.js';
 import { vaultFromUrl, vaultFromId } from '#lib/server/requestVault.js';
@@ -6,7 +5,7 @@ import { fail } from '#lib/server/app-error.js';
 
 export const GET: RequestHandler = async ({ url }) => {
 	const v = vaultFromUrl(url);
-	return json(getLibrarySettings(v));
+	return Response.json(getLibrarySettings(v));
 };
 
 export const PUT: RequestHandler = async ({ request }) => {
@@ -29,5 +28,5 @@ export const PUT: RequestHandler = async ({ request }) => {
 		hiddenFolders: body.hiddenFolders,
 		flattenFolders: body.flattenFolders
 	});
-	return json({ ok: true });
+	return Response.json({ ok: true });
 };

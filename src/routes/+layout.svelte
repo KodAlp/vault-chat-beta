@@ -102,7 +102,7 @@
 	// guaranteed to run once per launch regardless of the landing route.
 	onMount(() => {
 		if (settings.showWelcomeScreen && page.url.pathname !== '/welcome' && !welcomeAlreadyShown()) {
-			goto('/welcome', { replaceState: true });
+			goto('/welcome', { replace: true });
 		}
 	});
 

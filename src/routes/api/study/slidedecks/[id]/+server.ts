@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getSlideDeck, getSlides, deleteSlideDeck } from '#lib/server/study-db.js';
 import { vaultFromUrl, vaultFromId } from '#lib/server/requestVault.js';
@@ -27,7 +26,7 @@ export const GET: RequestHandler = async ({ params, url }) => {
 		rendered_html: deck.rendered_html,
 		rendered_css: deck.rendered_css
 	};
-	return json({ deck: view, slides });
+	return Response.json({ deck: view, slides });
 };
 
 export const DELETE: RequestHandler = async ({ params, request }) => {
@@ -35,5 +34,5 @@ export const DELETE: RequestHandler = async ({ params, request }) => {
 	const v = vaultFromId(body.vault);
 	if (!getSlideDeck(v, params.id)) fail('NOT_FOUND', { entity: 'slidedeck' }, 404);
 	deleteSlideDeck(v, params.id);
-	return json({ ok: true });
+	return Response.json({ ok: true });
 };

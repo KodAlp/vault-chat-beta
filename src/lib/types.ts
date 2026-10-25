@@ -122,7 +122,7 @@ export interface ChatMessage {
 	 * banner. Client-only, never persisted — same footing as narrowScope/smallTalk. */
 	topicSpread?: string[];
 	/** Hedge/uncertainty phrases detected in this message's reasoning trace (when there was one) and its
-	 * final answer text (always) — see $lib/server/hallucination.ts. Empty/absent means none found. */
+	 * final answer text (always) — see #lib/server/hallucination.ts. Empty/absent means none found. */
 	hedges?: string[];
 	/** True when some model call this turn came close to the context window (see history-limits.ts /
 	 * env.ts's serveCtxOverride). Client-only, never persisted — same footing as narrowScope/smallTalk. */
@@ -185,7 +185,7 @@ export interface OllamaModel {
 }
 
 /** Client-safe mirror of chats-db.ts's ChatRow — that module is server-only
- * ($lib/server/), can't be imported from a component. Kept structurally
+ * (#lib/server/), can't be imported from a component. Kept structurally
  * identical to what GET /api/chats actually returns (it sends the full row,
  * including vault_id/included_paths_json — those columns were added
  * before any client type declared them). */
@@ -494,7 +494,7 @@ export interface UserSkillStatus {
 }
 
 /** Client-safe mirror of vaults.ts's VaultRecord — that module is server-only
- * ($lib/server/), can't be imported from a component. */
+ * (#lib/server/), can't be imported from a component. */
 export interface VaultRecord {
 	id: string;
 	name: string;
@@ -575,11 +575,11 @@ export interface LibrarySettings {
 	keepOriginals: boolean;
 	/** Sohbet sistem promptunun birincil yanıt dili (ilk eleman) + U+FFFD/CJK
 	 * sızıntı algılayıcının CJK muafiyet listesi (tüm elemanlar) — bkz.
-	 * $lib/server/prompt.ts'nin coreIntro()'su. Boş bırakılamaz, her zaman en
+	 * #lib/server/prompt.ts'nin coreIntro()'su. Boş bırakılamaz, her zaman en
 	 * az bir dil içerir. */
 	allowedLanguages: string[];
 	/** Sohbet yanıt dili modu. 'match' (varsayılan): son kullanıcı mesajının kendi dili
-	 * belirleyicidir (bkz. $lib/server/response-language.ts'nin decideResponseLanguage'ı) —
+	 * belirleyicidir (bkz. #lib/server/response-language.ts'nin decideResponseLanguage'ı) —
 	 * İngilizce bir soru İngilizce, Türkçe bir soru Türkçe cevaplanır, sohbetin önceki dili değil.
 	 * 'fixed': eski davranış, her zaman allowedLanguages[0] (birincil dil) kullanılır — dil
 	 * öğrenme kasaları için (ör. hedef dil Korece olan bir kasada her cevabın Korece kalması
@@ -613,7 +613,7 @@ export interface ImportResultItem {
 	 * `localizeError({ code, params, message: reason })`. */
 	reason?: string;
 	/** Present alongside `reason` once this item's failure has been
-	 * converted to the coded-error scheme (see $lib/errors.ts). */
+	 * converted to the coded-error scheme (see #lib/errors.ts). */
 	code?: string;
 	params?: Record<string, string | number>;
 	path?: string;

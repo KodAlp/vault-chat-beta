@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { renderUserSkillsBlock, ALL_SCOPES } from '#lib/server/userSkills.js';
 import { fail } from '#lib/server/app-error.js';
@@ -47,5 +46,5 @@ export const GET: RequestHandler = async ({ url }) => {
 		prompt = buildSlidesPrompt(PLACEHOLDER_CONTEXT, skillsBlock);
 	}
 
-	return json({ scope, prompt });
+	return Response.json({ scope, prompt });
 };

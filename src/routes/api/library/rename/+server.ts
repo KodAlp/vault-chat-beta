@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { renameLibraryEntry } from '#lib/server/library.js';
 import { vaultFromId } from '#lib/server/requestVault.js';
@@ -14,5 +13,5 @@ export const POST: RequestHandler = async ({ request }) => {
 		const c = toCodedError(err);
 		fail(c.code as ErrorCode, c.params, 400);
 	}
-	return json({ ok: true });
+	return Response.json({ ok: true });
 };

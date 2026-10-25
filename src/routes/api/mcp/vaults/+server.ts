@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { createVaultViaMcp } from '#lib/server/vaults.js';
 import { fail } from '#lib/server/app-error.js';
@@ -15,7 +14,7 @@ export const POST: RequestHandler = async ({ request }) => {
 	if (name.length > MAX_NAME_CHARS) fail('VALIDATION_INVALID', { field: 'name' });
 	try {
 		const vault = createVaultViaMcp(name);
-		return json({ id: vault.id, name: vault.name, mcpExposed: true, createdVia: 'mcp' });
+		return Response.json({ id: vault.id, name: vault.name, mcpExposed: true, createdVia: 'mcp' });
 	} catch (err) {
 		failFrom(err);
 	}

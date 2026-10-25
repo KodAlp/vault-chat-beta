@@ -13,7 +13,7 @@ import path from 'node:path';
  * MCP token ONLY (it grants /api/mcp/* and nothing else, see mcp-gate.ts);
  * the browser session token (VC_SESSION_TOKEN) never goes in here.
  *
- * Pure node: no SvelteKit/$lib imports, because vite.config.ts and mcp/ both
+ * Pure node: no SvelteKit/#lib imports, because vite.config.ts and mcp/ both
  * load this file by relative path outside the SvelteKit runtime.
  */
 export interface McpEndpointInfo {

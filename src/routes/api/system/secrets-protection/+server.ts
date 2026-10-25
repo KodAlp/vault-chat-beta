@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { secretStore } from '#lib/server/providers/secrets.js';
 import { secretsPath } from '#lib/server/env.js';
@@ -7,5 +6,5 @@ import { secretsPath } from '#lib/server/env.js';
  * banner. Never returns key material, only the protection level. Gated like
  * every other /api route by hooks.server.ts's loopback + session checks. */
 export const GET: RequestHandler = async () => {
-	return json({ mode: secretStore.mode(), platform: process.platform, secretsPath: secretsPath() });
+	return Response.json({ mode: secretStore.mode(), platform: process.platform, secretsPath: secretsPath() });
 };

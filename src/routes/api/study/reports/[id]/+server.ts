@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getReport, getReportSections, deleteReport } from '#lib/server/study-db.js';
 import { vaultFromUrl, vaultFromId } from '#lib/server/requestVault.js';
@@ -18,7 +17,7 @@ export const GET: RequestHandler = async ({ params, url }) => {
 	}));
 
 	const view: ReportView = { id: report.id, title: report.title, model: report.model };
-	return json({ report: view, sections });
+	return Response.json({ report: view, sections });
 };
 
 export const DELETE: RequestHandler = async ({ params, request }) => {
@@ -26,5 +25,5 @@ export const DELETE: RequestHandler = async ({ params, request }) => {
 	const v = vaultFromId(body.vault);
 	if (!getReport(v, params.id)) fail('NOT_FOUND', { entity: 'report' }, 404);
 	deleteReport(v, params.id);
-	return json({ ok: true });
+	return Response.json({ ok: true });
 };

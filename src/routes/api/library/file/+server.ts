@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { readLibraryFile, deleteLibraryEntry } from '#lib/server/library.js';
 import { vaultFromUrl, vaultFromId } from '#lib/server/requestVault.js';
@@ -13,7 +12,7 @@ export const GET: RequestHandler = async ({ url }) => {
 	try {
 		const raw = readLibraryFile(v, path);
 		// `hash` is the optimistic-lock token a later PUT sends back as baseHash.
-		return json({ path, raw, hash: sha256(raw) });
+		return Response.json({ path, raw, hash: sha256(raw) });
 	} catch {
 		// Conflates "path resolves outside the library" and "file doesn't
 		// exist" into one 404, same as before — not distinguishing the two
@@ -31,7 +30,7 @@ export const DELETE: RequestHandler = async ({ request }) => {
 		const c = toCodedError(err);
 		fail(c.code as ErrorCode, c.params, 400);
 	}
-	return json({ ok: true });
+	return Response.json({ ok: true });
 };
 
 /**
@@ -47,7 +46,7 @@ export const PUT: RequestHandler = async ({ request }) => {
 	if (!body.baseHash) fail('VALIDATION_REQUIRED', { field: 'baseHash' });
 	const v = vaultFromId(body.vault);
 	try {
-		return json(await writeLibraryFile(v, body.path, body.content, body.baseHash, { by: 'user' }));
+		return Response.json(await writeLibraryFile(v, body.path, body.content, body.baseHash, { by: 'user' }));
 	} catch (err) {
 		const c = toCodedError(err);
 		fail(c.code as ErrorCode, c.params, err instanceof AppError ? err.status : 500);

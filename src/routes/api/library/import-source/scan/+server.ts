@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { vaultFromId } from '#lib/server/requestVault.js';
 import { dataDir } from '#lib/server/env.js';
@@ -21,7 +20,7 @@ export const POST: RequestHandler = async ({ request }) => {
 	const body = (await request.json().catch(() => null)) as { vault?: string; path?: unknown; adapter?: unknown } | null;
 	const v = vaultFromId(body?.vault);
 	try {
-		return json(await scanSource(v, body?.path, body?.adapter, protectedDirsFor(v, dataDir())));
+		return Response.json(await scanSource(v, body?.path, body?.adapter, protectedDirsFor(v, dataDir())));
 	} catch (err) {
 		// Coded failures keep their code/params/status for the client.
 		if (err instanceof AppError) fail(err.code, err.params, err.status);

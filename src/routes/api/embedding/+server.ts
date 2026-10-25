@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getEmbeddingConfig, setEmbeddingConfig, type EmbeddingConfig } from '#lib/server/providers/config-store.js';
 import { AppError, fail, toCodedError } from '#lib/server/app-error.js';
@@ -21,14 +20,14 @@ import type { ErrorCode } from '#lib/errors.js';
  * contract is settled before that phase writes the settings card against it.
  */
 export const GET: RequestHandler = async () => {
-	return json(getEmbeddingConfig());
+	return Response.json(getEmbeddingConfig());
 };
 
 export const PUT: RequestHandler = async ({ request }) => {
 	const body = (await request.json().catch(() => null)) as (Partial<Omit<EmbeddingConfig, 'providerId'>> & { providerId?: string | null }) | null;
 	if (body && body.providerId === null) {
 		setEmbeddingConfig(null);
-		return json(getEmbeddingConfig());
+		return Response.json(getEmbeddingConfig());
 	}
 	if (!body?.providerId) fail('VALIDATION_REQUIRED', { field: 'providerId' });
 	if (!body?.model) fail('VALIDATION_REQUIRED', { field: 'model' });
@@ -41,7 +40,7 @@ export const PUT: RequestHandler = async ({ request }) => {
 			dims: body.dims,
 			...(body.distanceThreshold !== undefined ? { distanceThreshold: body.distanceThreshold } : {})
 		});
-		return json(getEmbeddingConfig());
+		return Response.json(getEmbeddingConfig());
 	} catch (err) {
 		if (err instanceof AppError) fail(err.code, err.params, err.status);
 		const coded = toCodedError(err);

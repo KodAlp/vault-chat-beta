@@ -41,7 +41,9 @@ function resolveImport(from: string, spec: string): string | null {
 	if (spec.startsWith('#lib/')) base = path.join(repo, 'src', 'lib', spec.slice(5));
 	else if (spec.startsWith('.')) base = path.resolve(path.dirname(from), spec);
 	else return null;
-	for (const cand of [base, base + '.ts', path.join(base, 'index.ts')]) {
+	// `#lib/x.js` and `./x.js` name the TypeScript source x.ts (TS ESM convention).
+	const ts = base.replace(/.js$/, '.ts');
+	for (const cand of [ts, base, base + '.ts', path.join(base, 'index.ts')]) {
 		if (fs.existsSync(cand) && fs.statSync(cand).isFile()) return cand;
 	}
 	return null;
