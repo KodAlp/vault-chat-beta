@@ -2,7 +2,7 @@
 
 Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncellenir.
 
-**Son güncelleme:** 2026-10-23 · Acil boş. Temiz geçmiş (e-posta noreply, FFL fontsuz, 521 commit) yeni özel repo `KodAlp/vault-chat-beta`'ya push edildi, sürüm 0.1.0 ve otomatik sürüm yükseltme (`npm run release`, `desktop:build` öncesi). Eski repo `vault-chat-alfa` (özel arşiv). Yerel repo ve worktree'ler hâlâ eski geçmişte.
+**Son güncelleme:** 2026-10-25 · Acil boş. Yerel main, `origin` ve etiketler yeni geçmişte; eski dallar ve ana klasördeki commitsiz değişiklikler kaldı. Temiz geçmiş (e-posta noreply, FFL fontsuz, 521 commit) yeni özel repo `KodAlp/vault-chat-beta`'ya push edildi, sürüm 0.1.0 ve otomatik sürüm yükseltme (`npm run release`, `desktop:build` öncesi). Eski repo `vault-chat-alfa` (özel arşiv). Yerel repo ve worktree'ler hâlâ eski geçmişte.
 
 ## Kurallar
 
@@ -50,7 +50,7 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 ## Yapılabilir
 
 ### 1. Güvenlik ve CI
-- [ ] **Public öncesi kalan.** (1) Yerel repoyu yeni geçmişe geçir: `origin` → `vault-chat-beta`, eski v0.1.0/v0.2.0-beta.1 etiketleri, ana klasördeki commitsiz değişiklikler ve açık worktree dalları. (2) `desktop.yml`'ye main/PR tetikleyicisi (izin denetimi düzenlemeyi reddetti) ve README'deki CI cümlesi. (3) GitHub: fork PR onayı, dal koruması (`docs/dev/public-oncesi.md`), "Keep my email private" + "Block command line pushes that expose my email", sonra public. Genel `~/.gitconfig` e-postası hâlâ Gmail (bu repoda yerel ayar noreply). ARM64 denenmedi. `K–O` · #51
+- [ ] **Public öncesi kalan.** (1) Eski geçmişten kalanlar: ana klasörde 6 commitsiz dosya (ChatSidebar, SourceTrigger, StudyPanel, sohbet sayfası, providers.json, neurology.svg) ve eski geçmişteki ~76 dal / 20 worktree (yeni main'e taşınacak ya da silinecek; main, `origin` ve etiketler geçti). (2) `desktop.yml`'ye main/PR tetikleyicisi (izin denetimi düzenlemeyi reddetti) ve README'deki CI cümlesi. (3) GitHub: fork PR onayı, dal koruması (`docs/dev/public-oncesi.md`), "Keep my email private" + "Block command line pushes that expose my email", sonra public. Genel `~/.gitconfig` e-postası hâlâ Gmail (bu repoda yerel ayar noreply). ARM64 denenmedi. `K–O` · #51
 
 ### 2. Notebook verileri
 - [ ] **Rusça kasası onarımı.** 14 uyarılı bekleyen; İngilizce/Mandarin/İspanyolca kasa sorusu. `O` · #21
