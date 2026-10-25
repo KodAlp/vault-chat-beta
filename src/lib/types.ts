@@ -679,7 +679,7 @@ export type ReindexEvent =
 	| { type: 'cancelled' }
 	| { type: 'error'; message: string; code?: string; params?: Record<string, string | number> };
 
-/** #61 - SSE events streamed by POST /api/settings/backup. */
+/** SSE events streamed by POST /api/settings/backup. */
 export type BackupEvent =
 	| { type: 'start'; total: number }
 	| { type: 'progress'; done: number; total: number; path: string }

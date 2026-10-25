@@ -2,7 +2,7 @@ import os from 'node:os';
 import { test, expect } from './fixtures';
 
 /**
- * #62 - key settings forms, English UI, isolated DATA_DIR (see e2e/serve.mjs). Serial: later tests build on
+ * key settings forms, English UI, isolated DATA_DIR (see e2e/serve.mjs). Serial: later tests build on
  * the vault the first one creates. No network calls to model providers, no real API keys.
  */
 test.describe.configure({ mode: 'serial' });

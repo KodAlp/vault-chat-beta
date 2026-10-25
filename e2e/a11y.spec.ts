@@ -3,7 +3,7 @@ import type { Page } from '@playwright/test';
 import { test, expect } from './fixtures';
 
 /**
- * #62 - axe-core scan of the main routes (WCAG 2.x A/AA tags), light and dark theme. Violations fail the
+ * axe-core scan of the main routes (WCAG 2.x A/AA tags), light and dark theme. Violations fail the
  * test with a readable list. axe is injected from node_modules, so no extra Playwright package is needed.
  */
 const require = createRequire(import.meta.url);

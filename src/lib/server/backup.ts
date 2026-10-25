@@ -7,7 +7,7 @@ import { listVaults, contextFor } from './vaults';
 import { AppError } from './app-error';
 
 /**
- * #61 - "Back up data" (Settings -> Vaults). Writes one timestamped folder:
+ * "Back up data" (Settings -> Vaults). Writes one timestamped folder:
  *
  *   <destination>/yedek-<stamp>/
  *     manifest.json            app version, date, per-vault counts, failures, what is excluded

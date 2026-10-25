@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures';
 
 /**
- * #62 - broken internal link scan: starting at the main pages, follow every same-origin <a href> (breadth
+ * broken internal link scan: starting at the main pages, follow every same-origin <a href> (breadth
  * first, bounded) and require each target to load without an error status. API routes and file downloads
  * are skipped; pages are SPA-rendered, so each link is opened in the browser rather than fetched.
  */

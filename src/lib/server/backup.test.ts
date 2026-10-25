@@ -11,7 +11,9 @@ import { AppError } from './app-error';
 // DATA_DIR is process-global, so everything runs inside one sequential test (same approach as vaults.test.ts).
 test('backup', async (t) => {
 	const savedEnv = { ...process.env };
-	const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'vc-backup-test-'));
+	// realpath: runBackup resolves the destination (macOS /var -> /private/var, Windows 8.3 short names
+	// such as RUNNER~1), so the expected paths must be in the same resolved form.
+	const tmpRoot = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'vc-backup-test-')));
 	const dataRoot = path.join(tmpRoot, 'data');
 	const destRoot = path.join(tmpRoot, 'dest');
 	fs.mkdirSync(dataRoot, { recursive: true });

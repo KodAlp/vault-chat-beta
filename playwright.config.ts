@@ -1,7 +1,7 @@
 import { defineConfig } from '@playwright/test';
 
 /**
- * #62 - e2e + accessibility suite. Run with `npm run test:e2e` (NOT part of `npm test`).
+ * e2e + accessibility suite. Run with `npm run test:e2e` (NOT part of `npm test`).
  * The dev server is started by e2e/serve.mjs against a throwaway DATA_DIR under the OS temp dir; no model
  * provider is ever contacted (tests never send chat messages or save real keys).
  * Needs a Playwright Chromium: `npx playwright install chromium` (not downloaded automatically).

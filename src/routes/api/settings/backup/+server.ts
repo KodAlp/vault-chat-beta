@@ -7,7 +7,7 @@ import { logAppEvent } from '$lib/server/app-log';
 import type { BackupEvent } from '$lib/types';
 
 /**
- * #61 - data backup. An ordinary session-gated /api/settings route (never under /api/mcp/, so an MCP client
+ * Data backup. An ordinary session-gated /api/settings route (never under /api/mcp/, so an MCP client
  * cannot make the app write files anywhere it likes).
  *
  * GET  -> { defaultDestination } for the settings card's prefilled field.

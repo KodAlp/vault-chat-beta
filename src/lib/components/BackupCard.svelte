@@ -11,7 +11,7 @@
 	import type { BackupEvent } from '$lib/types';
 
 	/**
-	 * #61 - "Back up data" card. Streams POST /api/settings/backup (src/lib/server/backup.ts does the
+	 * "Back up data" card. Streams POST /api/settings/backup (src/lib/server/backup.ts does the
 	 * copying) through the same fetch+SSE loop as ReindexDialog. On the desktop build a native folder
 	 * picker fills the destination; in a browser the typed path is the only way.
 	 */
