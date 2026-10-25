@@ -1,4 +1,5 @@
-import { error, redirect, type Handle, type HandleServerError, type RequestEvent } from '@sveltejs/kit';
+import { error, redirect, type RequestEvent } from '@sveltejs/kit';
+import type { Handle, HandleServerError } from '@sveltejs/kit/hooks';
 import { runVaultMigrationIfNeeded } from '$lib/server/migrateVaults';
 import { logAppEvent } from '$lib/server/app-log';
 import { sessionToken, mcpToken } from '$lib/server/env';
@@ -30,17 +31,17 @@ runVaultMigrationIfNeeded();
 // launch.log. logAppEvent's data/app-log.jsonl entry is the durable,
 // structured second copy, not the only copy.
 process.on('uncaughtException', (err) => {
-	const text = err instanceof Error ? (err.stack ?? err.message) : String(err);
-	process.stderr.write(`uncaughtException: ${text}\n`);
-	logAppEvent({ kind: 'fatal_error', message: `uncaughtException: ${text}` });
-	// Matches Node's own guidance: don't keep serving after a truly uncaught
-	// exception, state may be inconsistent.
-	process.exit(1);
+        const text = err instanceof Error ? err.stack ?? err.message : String(err);
+        process.stderr.write(`uncaughtException: ${text}\n`);
+        logAppEvent({ kind: 'fatal_error', message: `uncaughtException: ${text}` });
+        // Matches Node's own guidance: don't keep serving after a truly uncaught
+        // exception, state may be inconsistent.
+        process.exit(1);
 });
 process.on('unhandledRejection', (reason) => {
-	const text = reason instanceof Error ? (reason.stack ?? reason.message) : String(reason);
-	process.stderr.write(`unhandledRejection: ${text}\n`);
-	logAppEvent({ kind: 'fatal_error', message: `unhandledRejection: ${text}` });
+        const text = reason instanceof Error ? reason.stack ?? reason.message : String(reason);
+        process.stderr.write(`unhandledRejection: ${text}\n`);
+        logAppEvent({ kind: 'fatal_error', message: `unhandledRejection: ${text}` });
 });
 
 const STATE_CHANGING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
@@ -127,22 +128,22 @@ let securityBlockCountInWindow = 0;
  * token, never a cookie/header value, never the full URL.
  */
 function logSecurityBlock(code: string, event: RequestEvent): void {
-	const now = Date.now();
-	if (now - securityBlockWindowStart >= SECURITY_BLOCK_LOG_WINDOW_MS) {
-		securityBlockWindowStart = now;
-		securityBlockCountInWindow = 0;
-	}
-	securityBlockCountInWindow += 1;
-	if (securityBlockCountInWindow > SECURITY_BLOCK_LOG_CAP) return;
+        const now = Date.now();
+        if (now - securityBlockWindowStart >= SECURITY_BLOCK_LOG_WINDOW_MS) {
+                securityBlockWindowStart = now;
+                securityBlockCountInWindow = 0;
+        }
+        securityBlockCountInWindow += 1;
+        if (securityBlockCountInWindow > SECURITY_BLOCK_LOG_CAP) return;
 
-	logAppEvent({
-		kind: 'security_block',
-		code,
-		method: event.request.method,
-		path: event.url.pathname,
-		origin: event.request.headers.get('origin') ?? event.request.headers.get('host') ?? undefined,
-		message: `security_block: ${code}`
-	});
+        logAppEvent({
+                kind: 'security_block',
+                code,
+                method: event.request.method,
+                path: event.url.pathname,
+                origin: event.request.headers.get('origin') ?? event.request.headers.get('host') ?? undefined,
+                message: `security_block: ${code}`
+        });
 }
 
 /**
@@ -204,75 +205,75 @@ export const handle: Handle = async ({ event, resolve }) => {
 		error(403, { message: 'LOCAL_ONLY', code: 'LOCAL_ONLY' });
 	}
 
-	// /api/mcp/* is the MCP process's write surface. It is authenticated ONLY by the MCP token
-	// (x-vc-mcp-token, see mcp-gate.ts) and deliberately skips the browser session gate below —
-	// the MCP process never holds the session cookie, and the MCP token grants nothing outside
-	// this prefix. Read per request (not at module load): the dev server sets it after startup.
-	const mcpDecision = decideMcpGate({
-		pathname: event.url.pathname,
-		token: mcpToken(),
-		headerToken: event.request.headers.get(MCP_TOKEN_HEADER),
-		origin: event.request.headers.get('origin')
-	});
-	if (mcpDecision.kind === 'reject') {
-		logSecurityBlock(mcpDecision.code, event);
-		error(mcpDecision.status, { message: mcpDecision.code, code: mcpDecision.code });
-	}
-	if (mcpDecision.kind === 'allow') {
-		return resolve(event);
-	}
+        // /api/mcp/* is the MCP process's write surface. It is authenticated ONLY by the MCP token
+        // (x-vc-mcp-token, see mcp-gate.ts) and deliberately skips the browser session gate below —
+        // the MCP process never holds the session cookie, and the MCP token grants nothing outside
+        // this prefix. Read per request (not at module load): the dev server sets it after startup.
+        const mcpDecision = decideMcpGate({
+                pathname: event.url.pathname,
+                token: mcpToken(),
+                headerToken: event.request.headers.get(MCP_TOKEN_HEADER),
+                origin: event.request.headers.get('origin')
+        });
+        if (mcpDecision.kind === 'reject') {
+                logSecurityBlock(mcpDecision.code, event);
+                error(mcpDecision.status, { message: mcpDecision.code, code: mcpDecision.code });
+        }
+        if (mcpDecision.kind === 'allow') {
+                return resolve(event);
+        }
 
-	if (SESSION_TOKEN) {
-		const decision = decideSessionGate({
-			token: SESSION_TOKEN,
-			queryToken: event.url.searchParams.get('vc_session'),
-			cookieToken: event.cookies.get(SESSION_COOKIE) ?? null,
-			headerToken: event.request.headers.get('x-vc-session'),
-			pathname: event.url.pathname,
-			searchParams: event.url.searchParams
-		});
+        if (SESSION_TOKEN) {
+                const decision = decideSessionGate({
+                        token: SESSION_TOKEN,
+                        queryToken: event.url.searchParams.get('vc_session'),
+                        cookieToken: event.cookies.get(SESSION_COOKIE) ?? null,
+                        headerToken: event.request.headers.get('x-vc-session'),
+                        pathname: event.url.pathname,
+                        searchParams: event.url.searchParams
+                });
 
-		if (decision.kind === 'redirect') {
-			// Session cookie: httpOnly (never readable by page JS — this app has
-			// no legitimate reason for client code to see the token), sameSite
-			// 'lax', NOT 'strict': the first navigation comes from the splash
-			// page on the tauri:// origin, i.e. cross-site, and a browser never
-			// sends a Strict cookie on any hop of a cross-site-initiated
-			// navigation chain — so the 303 below landed on `/` WITHOUT the
-			// cookie it had just set and every packaged launch 401'd (seen live
-			// 2026-09-28, app-log.jsonl: SESSION_REQUIRED on GET / right after
-			// each spawn). Lax is still withheld on cross-site subresource and
-			// POST requests, CROSS_SITE_BLOCKED below still guards state-changing
-			// methods, and the cookie lives only in the app's own WebView2
-			// profile — no other browser ever holds it. secure: false (this server is
-			// plain http:// on loopback — 'secure' cookies are dropped outright
-			// over http), no maxAge/expires so it's a SESSION cookie, gone the
-			// moment the webview process ends, matching the token's own lifetime
-			// (a fresh one is minted every launch).
+                if (decision.kind === 'redirect') {
+                        // Session cookie: httpOnly (never readable by page JS — this app has
+                        // no legitimate reason for client code to see the token), sameSite
+                        // 'lax', NOT 'strict': the first navigation comes from the splash
+                        // page on the tauri:// origin, i.e. cross-site, and a browser never
+                        // sends a Strict cookie on any hop of a cross-site-initiated
+                        // navigation chain — so the 303 below landed on `/` WITHOUT the
+                        // cookie it had just set and every packaged launch 401'd (seen live
+                        // 2026-09-28, app-log.jsonl: SESSION_REQUIRED on GET / right after
+                        // each spawn). Lax is still withheld on cross-site subresource and
+                        // POST requests, CROSS_SITE_BLOCKED below still guards state-changing
+                        // methods, and the cookie lives only in the app's own WebView2
+                        // profile — no other browser ever holds it. secure: false (this server is
+                        // plain http:// on loopback — 'secure' cookies are dropped outright
+                        // over http), no maxAge/expires so it's a SESSION cookie, gone the
+                        // moment the webview process ends, matching the token's own lifetime
+                        // (a fresh one is minted every launch).
 			event.cookies.set(SESSION_COOKIE, SESSION_TOKEN, {
 				path: '/',
 				httpOnly: true,
 				sameSite: 'lax',
 				secure: false
 			});
-			redirect(303, decision.location);
-		}
+                        redirect(303, decision.location);
+                }
 
-		if (decision.kind === 'reject') {
-			logSecurityBlock('SESSION_REQUIRED', event);
-			error(401, { message: 'SESSION_REQUIRED', code: 'SESSION_REQUIRED' });
-		}
-	}
+                if (decision.kind === 'reject') {
+                        logSecurityBlock('SESSION_REQUIRED', event);
+                        error(401, { message: 'SESSION_REQUIRED', code: 'SESSION_REQUIRED' });
+                }
+        }
 
-	if (STATE_CHANGING_METHODS.has(event.request.method)) {
-		const origin = event.request.headers.get('origin');
-		if (origin && !isSameLoopbackOrigin(origin, event.url)) {
-			logSecurityBlock('CROSS_SITE_BLOCKED', event);
-			error(403, { message: 'CROSS_SITE_BLOCKED', code: 'CROSS_SITE_BLOCKED' });
-		}
-	}
+        if (STATE_CHANGING_METHODS.has(event.request.method)) {
+                const origin = event.request.headers.get('origin');
+                if (origin && !isSameLoopbackOrigin(origin, event.url)) {
+                        logSecurityBlock('CROSS_SITE_BLOCKED', event);
+                        error(403, { message: 'CROSS_SITE_BLOCKED', code: 'CROSS_SITE_BLOCKED' });
+                }
+        }
 
-	return resolve(event);
+        return resolve(event);
 };
 
 /**
@@ -292,7 +293,7 @@ export const handleError: HandleServerError = ({ error: err, status }) => {
 		return { message: 'ROUTE_NOT_FOUND', code: 'ROUTE_NOT_FOUND' };
 	}
 
-	const text = err instanceof Error ? (err.stack ?? err.message) : String(err);
-	logAppEvent({ kind: 'fatal_error', message: `handleError: ${text}` });
-	return { message: 'INTERNAL', code: 'INTERNAL' };
+        const text = err instanceof Error ? err.stack ?? err.message : String(err);
+        logAppEvent({ kind: 'fatal_error', message: `handleError: ${text}` });
+        return { message: 'INTERNAL', code: 'INTERNAL' };
 };
