@@ -22,7 +22,7 @@ marker-pdf==2.0.0
 # Preferred when the document's value is in its tables — best table detection
 # of the three. API used: docling.document_converter.DocumentConverter
 # (docling 2.x). Requires Python 3.10+.
-docling==2.131.0
+docling==2.132.0
 # docling itself only asks for docling-parse>=7.20,<8, so a fresh install
 # would pull 7.22.1+, which splits words at internal gaps ("Inflammation" ->
 # "Inf" + "lammation"; docling-parse#377, open, introduced in 7.22.1). 7.21.0
