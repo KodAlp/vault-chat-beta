@@ -2,7 +2,7 @@
 
 Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncellenir.
 
-**Son güncelleme:** 2026-10-25 · Acil boş. Yerel repo tamamen yeni geçmişte: ana klasör main'de, eski 75 dal ve 19 worktree silindi. Temiz geçmiş (e-posta noreply, FFL fontsuz, 521 commit) yeni özel repo `KodAlp/vault-chat-beta`'ya push edildi, sürüm 0.1.0 ve otomatik sürüm yükseltme (`npm run release`, `desktop:build` öncesi). Eski repo `vault-chat-alfa` (özel arşiv). Yerel repo ve worktree'ler hâlâ eski geçmişte.
+**Son güncelleme:** 2026-10-25 · Acil boş. Yerel repo tamamen yeni geçmişte (eski 75 dal ve 19 worktree silindi); `desktop.yml` main/etiket/PR'da tetikleniyor ama repo özelken atlıyor. Public öncesi yalnız GitHub ayarları kaldı. Temiz geçmiş (e-posta noreply, FFL fontsuz, 521 commit) yeni özel repo `KodAlp/vault-chat-beta`'ya push edildi, sürüm 0.1.0 ve otomatik sürüm yükseltme (`npm run release`, `desktop:build` öncesi). Eski repo `vault-chat-alfa` (özel arşiv). Yerel repo ve worktree'ler hâlâ eski geçmişte.
 
 ## Kurallar
 
@@ -50,7 +50,7 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 ## Yapılabilir
 
 ### 1. Güvenlik ve CI
-- [ ] **Public öncesi kalan.** (1) `desktop.yml`'ye main/PR tetikleyicisi (izin denetimi düzenlemeyi reddetti) ve README'deki CI cümlesi. (2) GitHub: fork PR onayı, dal koruması (`docs/dev/public-oncesi.md`), "Keep my email private" + "Block command line pushes that expose my email", sonra public. Genel `~/.gitconfig` e-postası hâlâ Gmail (bu repoda yerel ayar noreply). ARM64 denenmedi. `K–O` · #51
+- [ ] **Public öncesi kalan.** GitHub: fork PR onayı, dal koruması (`docs/dev/public-oncesi.md`), "Keep my email private" + "Block command line pushes that expose my email", sonra public. Genel `~/.gitconfig` e-postası hâlâ Gmail (bu repoda yerel ayar noreply). ARM64 denenmedi. `K–O` · #51
 
 ### 2. Notebook verileri
 - [ ] **Rusça kasası onarımı.** 14 uyarılı bekleyen; İngilizce/Mandarin/İspanyolca kasa sorusu. `O` · #21
@@ -140,6 +140,7 @@ Vault Chat'in hedef listesi. Her çalışma oturumunda denetlenir ve güncelleni
 
 Yalnız son iki haftanın kaydı tutulur; daha eskisi git geçmişindedir.
 
+- 2026-10-25: #51 `desktop.yml` main ve `ci` push'u, `v*` etiketleri, PR ve elle tetikleniyor; işin `if` koşulu repo özelken main/etiket/PR çalışmalarını atlıyor (dakika harcanmaz), public olunca dokunmadan çalışır. Belge değişikliği derleme başlatmaz, yeni push eskisini iptal eder, Windows ARM64 `continue-on-error`. README, SECURITY.md ve `docs/dev/public-oncesi.md` güncel. YAML ayrıştırıldı; GitHub'da hiç çalıştırılmadı. `cb13846`
 - 2026-10-25: yerel repo yeni geçmişe geçti. Ana klasör `docs/readme-vitrin` dalından main'e alındı (commitsiz ikon değişiklikleri main'de `f0d3496` olarak zaten vardı; kişisel `data/providers.json` korundu). Eski geçmişteki 75 dalın hepsi main'de eşleşti ve silindi, 19 worktree kaldırıldı (tek junction `node_modules` önce `rmdir` ile ayrıldı). Yedek ve dal uçları `Desktop/vault-chat-yedek-2026-10-25/`. Kalan: boş `derleme-durumu-c945b2` klasörü bir işlem tarafından tutuluyor; eski geçmişten `stash@{0}` (2026-10-05 dizayn prototipi) duruyor.
 
 - 2026-10-23: geçmiş git-filter-repo ile temizlendi (yazar e-postası noreply, Satoshi/Gambetta/FFL ve prototiplere gömülü fontlar tüm geçmişten çıktı, `.mailmap`/belgelerdeki adres; uç ağaç orijinalle aynı, gitleaks temiz) ve yeni `KodAlp/vault-chat-beta`'ya push edildi (`main` + `v0.1.0`). Sürüm 0.3.0 → 0.1.0; `scripts/release.mjs` Conventional Commits'ten patch/minor/major seçip `chore(release)` commit'i ve etiket oluşturuyor, `desktop:build` önce `--auto` ile çalıştırıyor (7 test). README rozeti etiketten otomatik. Bu repoda commit e-postası yerel ayarla noreply.
