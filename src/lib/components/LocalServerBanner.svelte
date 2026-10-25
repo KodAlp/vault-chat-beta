@@ -50,8 +50,8 @@
 		try {
 			const [providersRes, chainsRes] = await Promise.all([fetch('/api/providers'), fetch('/api/providers/chains')]);
 			if (!providersRes.ok || !chainsRes.ok) return;
-			providers = (await providersRes.json()) as ProviderStatus[];
-			const chains = (await chainsRes.json()) as Record<string, string[]>;
+			providers = await providersRes.json() as ProviderStatus[];
+			const chains = await chainsRes.json() as Record<string, string[]>;
 			target = resolveBannerTarget({
 				pins: [settings.fastProvider, settings.reasoningProvider, settings.defaultProvider],
 				providers,
@@ -103,7 +103,7 @@
 		try {
 			const modelsRes = await fetch('/api/models');
 			if (!modelsRes.ok) return;
-			const installed = ((await modelsRes.json()) as { name: string }[]).map((m) => m.name);
+			const installed = (await modelsRes.json() as { name: string }[]).map((m) => m.name);
 			const required = [ollama.defaultModel, ollama.embedModel].filter((m): m is string => !!m);
 			missingModels = required.filter((m) => !modelInstalled(installed, m));
 		} catch {
@@ -123,7 +123,7 @@
 				status = 'unreachable';
 				return;
 			}
-			const data = (await res.json()) as { status: Status };
+			const data = await res.json() as { status: Status };
 			status = data.status;
 			const entry = providers.find((p) => p.id === id);
 			if (status === 'ok' && entry?.kind === 'ollama') void checkModels(entry);
@@ -147,7 +147,9 @@
 	});
 
 	// Coming back from Settings > Providers / the wizard: the chain or the pin may have changed.
-	afterNavigate(() => {
+	afterNavigate(({ shallow, type }) => {
+		if (shallow && type === 'goto') return;
+
 		void loadTarget();
 	});
 

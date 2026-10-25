@@ -19,7 +19,9 @@
 	// The content pane is its own scroll container, which SvelteKit's scroll
 	// restoration doesn't reset — switching settings pages kept the old offset.
 	let mainEl: HTMLDivElement | undefined = $state();
-	afterNavigate(({ from, to }) => {
+
+	afterNavigate(({ from, to, shallow, type }) => {
+		if (shallow && type === 'goto') return;
 		if (from?.url?.pathname !== to?.url?.pathname) mainEl?.scrollTo(0, 0);
 	});
 

@@ -57,14 +57,13 @@
 	$effect(() => {
 		const mql = window.matchMedia('(prefers-color-scheme: dark)');
 		systemPrefersDark = mql.matches;
-		const handler = (e: MediaQueryListEvent) => (systemPrefersDark = e.matches);
+		const handler = (e: MediaQueryListEvent) => systemPrefersDark = e.matches;
 		mql.addEventListener('change', handler);
 		return () => mql.removeEventListener('change', handler);
 	});
 
 	$effect(() => {
-		document.documentElement.dataset.theme =
-			settings.theme === 'system' ? (systemPrefersDark ? 'dark' : 'light') : settings.theme;
+		document.documentElement.dataset.theme = settings.theme === 'system' ? systemPrefersDark ? 'dark' : 'light' : settings.theme;
 	});
 
 	// Animation setting: 'on' → full, 'off' → reduce, 'system' → follow the OS's prefers-reduced-motion
@@ -75,7 +74,7 @@
 	$effect(() => {
 		const mql = window.matchMedia('(prefers-reduced-motion: reduce)');
 		systemReducesMotion = mql.matches;
-		const handler = (e: MediaQueryListEvent) => (systemReducesMotion = e.matches);
+		const handler = (e: MediaQueryListEvent) => systemReducesMotion = e.matches;
 		mql.addEventListener('change', handler);
 		return () => mql.removeEventListener('change', handler);
 	});
@@ -90,7 +89,7 @@
 	});
 
 	$effect(() => {
-		const reduce = settings.motion === 'off' || (settings.motion !== 'on' && systemReducesMotion);
+		const reduce = settings.motion === 'off' || settings.motion !== 'on' && systemReducesMotion;
 		document.documentElement.dataset.motion = reduce ? 'reduce' : 'full';
 	});
 
@@ -115,7 +114,7 @@
 
 	onMount(() => {
 		if (!isTauri()) return;
-		showTitleBar = /Windows/i.test(navigator.userAgent);
+		showTitleBar = (/Windows/i).test(navigator.userAgent);
 		const win = getCurrentWindow();
 		let disposed = false;
 		let unlisten: (() => void) | undefined;
@@ -140,7 +139,7 @@
 			if (e.key === 'F11') {
 				e.preventDefault();
 				try {
-					const next = !(await win.isFullscreen());
+					const next = !await win.isFullscreen();
 					await win.setFullscreen(next);
 					fullscreen = next;
 				} catch {
@@ -201,6 +200,7 @@
 	// first thing a user sees. Not worth the risk for a splash screen that
 	// already animates its own content via svelte/transition.
 	onNavigate((navigation) => {
+		if (navigation.shallow && navigation.type === 'goto') return;
 		if (navigation.from?.url.pathname === '/welcome' || navigation.to?.url.pathname === '/welcome') return;
 		if (!document.startViewTransition) return;
 		return new Promise((resolve) => {
@@ -245,7 +245,7 @@
      card/quiz/report/mindmap views) lands in several independent
      components, and this catches every external link click across all of
      them from one place — see openExternalLink.ts's own doc comment. -->
-<svelte:document onclick={handleExternalLinkClick} />
+<svelte:document onclick={handleExternalLinkClick}></svelte:document>
 
 <!-- Column shell, not the banner rendered loose: LocalServerBanner (formerly OllamaStatusBanner) used to be
      position:fixed at the viewport top, which looked fine on scrolling pages
@@ -266,8 +266,11 @@
 
 {#each quizGeneration.items as status, i (status.id)}
 	<GenerationStatusToast
-		{status}
-		stageLabels={{ ...STAGE_LABELS, generating: t('GenerationLayout.quizGenerating') }}
+		status={status}
+		stageLabels={{
+			...STAGE_LABELS,
+			generating: t('GenerationLayout.quizGenerating')
+		}}
 		doneMessage={status.phase === 'done' && status.requested !== undefined && status.delivered !== undefined && status.delivered < status.requested
 			? t('GenerationLayout.quizDoneShort', { delivered: status.delivered, requested: status.requested })
 			: t('GenerationLayout.quizDone')}
@@ -289,8 +292,11 @@
 
 {#each cardGeneration.items as status, i (status.id)}
 	<GenerationStatusToast
-		{status}
-		stageLabels={{ ...STAGE_LABELS, generating: t('GenerationLayout.cardsGenerating') }}
+		status={status}
+		stageLabels={{
+			...STAGE_LABELS,
+			generating: t('GenerationLayout.cardsGenerating')
+		}}
 		doneMessage={t('GenerationLayout.cardsDone')}
 		errorPrefix={t('GenerationLayout.cardsErrorPrefix')}
 		stackIndex={cardBase + i}
@@ -309,8 +315,11 @@
 
 {#each reportGeneration.items as status, i (status.id)}
 	<GenerationStatusToast
-		{status}
-		stageLabels={{ ...STAGE_LABELS, generating: t('GenerationLayout.reportGenerating') }}
+		status={status}
+		stageLabels={{
+			...STAGE_LABELS,
+			generating: t('GenerationLayout.reportGenerating')
+		}}
 		doneMessage={t('GenerationLayout.reportDone')}
 		errorPrefix={t('GenerationLayout.reportErrorPrefix')}
 		stackIndex={reportBase + i}
@@ -330,8 +339,11 @@
 
 {#each mindmapGeneration.items as status, i (status.id)}
 	<GenerationStatusToast
-		{status}
-		stageLabels={{ ...STAGE_LABELS, generating: t('GenerationLayout.mindmapGenerating') }}
+		status={status}
+		stageLabels={{
+			...STAGE_LABELS,
+			generating: t('GenerationLayout.mindmapGenerating')
+		}}
 		doneMessage={t('GenerationLayout.mindmapDone')}
 		errorPrefix={t('GenerationLayout.mindmapErrorPrefix')}
 		stackIndex={mindmapBase + i}
@@ -351,8 +363,11 @@
 
 {#each slidesGeneration.items as status, i (status.id)}
 	<GenerationStatusToast
-		{status}
-		stageLabels={{ ...STAGE_LABELS, generating: t('GenerationLayout.slidesGenerating') }}
+		status={status}
+		stageLabels={{
+			...STAGE_LABELS,
+			generating: t('GenerationLayout.slidesGenerating')
+		}}
 		doneMessage={t('GenerationLayout.slidesDone')}
 		errorPrefix={t('GenerationLayout.slidesErrorPrefix')}
 		stackIndex={slidesBase + i}
