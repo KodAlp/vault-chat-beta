@@ -1,4 +1,2 @@
-# Yanlış pozitif: YouTube altyazı dil anahtarı (test verisi), sır değil.
-906c80d229e85f5ef5fc06a0bbac33ca7a85370c:ingest/youtube_transcript_test.py:generic-api-key:85
-# Aynı satır, geçmiş yeniden yazıldıktan (2026-10-23, e-posta + font temizliği) sonraki commit hash'iyle.
-b999e398952b0f3315202244765841545ed4f9ca:ingest/youtube_transcript_test.py:generic-api-key:85
+# False positive: a YouTube caption language key in test data, not a secret.
+7a3da995b354059c2813cdc058ec86fd28819186:ingest/youtube_transcript_test.py:generic-api-key:85
