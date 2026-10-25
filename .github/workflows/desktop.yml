@@ -1,20 +1,37 @@
 name: desktop
 
-# CI runs ONLY on the dedicated `ci` branch (and when started by hand from the Actions tab).
-# main, feature branches and pull requests never trigger it — GitHub Actions minutes are limited.
-# To build: git push origin <branch>:ci   (or Actions → desktop → Run workflow).
+# Triggers: pushes to main and `ci`, version tags (v*), pull requests, and by hand from the Actions tab.
+# While the repository is PRIVATE, only `ci` pushes and manual runs build: main, tag and PR runs
+# are skipped by the job's `if` (no runner starts, no Actions minutes used). Once the repo is
+# public they run automatically; no change to this file is needed.
+# Docs-only changes (*.md, docs/) do not trigger a build; tag pushes always do.
 on:
   workflow_dispatch:
   push:
-    branches: [ci]
+    branches: [main, ci]
+    tags: ["v*"]
+    paths-ignore: ["**.md", "docs/**"]
+  pull_request:
+    paths-ignore: ["**.md", "docs/**"]
 
 permissions:
   contents: read
 
+# A newer push to the same branch or PR cancels the older, still-running build.
+concurrency:
+  group: desktop-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     name: build (${{ matrix.label }})
+    if: >-
+      github.event.repository.private == false
+      || github.event_name == 'workflow_dispatch'
+      || github.ref == 'refs/heads/ci'
     runs-on: ${{ matrix.os }}
+    # Windows ARM64 is expected to fail for now (see the matrix); it must not turn main/PRs red.
+    continue-on-error: ${{ matrix.experimental == true }}
     strategy:
       fail-fast: false
       matrix:
@@ -26,7 +43,7 @@ jobs:
           # Native Windows ARM64 (TODO #51). Expected to FAIL until sqlite-vec ships a windows-arm64 build
           # (0.1.9 has none and indexer/db.ts + retrieve.ts load it unconditionally); the x64 installer already
           # runs on Windows 11 ARM under emulation. See docs/dev/public-oncesi.md.
-          - { os: windows-11-arm, label: windows-arm64 }
+          - { os: windows-11-arm, label: windows-arm64, experimental: true }
     defaults:
       run:
         shell: bash

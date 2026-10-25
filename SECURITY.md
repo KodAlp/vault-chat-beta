@@ -47,7 +47,7 @@ Yerelde tek komutla: `node scripts/security-audit.mjs` (yalnızca biri için: `-
 - `cargo audit` (`src-tauri/`, RustSec; `cargo install cargo-audit --locked` gerekir).
 - `gitleaks detect --source . --redact --no-banner` (tüm git geçmişi; `winget install Gitleaks.Gitleaks` / `brew install gitleaks`).
 
-Kurulu olmayan araç yerelde "skipped" olarak atlanır; `CI` ortam değişkeni tanımlıysa hata sayılır. `.github/workflows/security.yml` aynı betiği ubuntu üzerinde çalıştırır; Actions dakikaları sınırlı olduğundan yalnızca `ci` dalına push'ta veya elle (workflow_dispatch) tetiklenir, haftalık zamanlama repo public olana kadar yorumdadır.
+Kurulu olmayan araç yerelde "skipped" olarak atlanır; `CI` ortam değişkeni tanımlıysa hata sayılır. `.github/workflows/security.yml` aynı betiği ubuntu üzerinde çalıştırır: `main` ve `ci` dalına push'ta, pull request'lerde, haftada bir (pazartesi 06:00 UTC) ve elle (workflow_dispatch).
 
 ## Desteklenen sürümler
 
