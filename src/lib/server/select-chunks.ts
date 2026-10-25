@@ -1,4 +1,4 @@
-import type { RetrievedChunk, RetrieveResult } from '$lib/types';
+import type { RetrievedChunk, RetrieveResult } from '#lib/types.js';
 import { normalizeLevel } from '../../../indexer/chunk';
 
 /**

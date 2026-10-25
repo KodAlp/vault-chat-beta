@@ -1,8 +1,8 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { deleteMemory, editMemory } from '$lib/server/memory-runtime';
-import type { MemoryNoteView } from '$lib/types';
-import { fail } from '$lib/server/app-error';
+import { deleteMemory, editMemory } from '#lib/server/memory-runtime.js';
+import type { MemoryNoteView } from '#lib/types.js';
+import { fail } from '#lib/server/app-error.js';
 
 /** Edits a note: inserts a new row and supersedes the old one (memory-store.ts) — not a mutation. */
 export const PATCH: RequestHandler = async ({ params, request }) => {

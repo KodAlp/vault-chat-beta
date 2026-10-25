@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import type { ProviderStatus } from '$lib/types';
-	import EmbeddingSettingsCard from '$lib/components/EmbeddingSettingsCard.svelte';
-	import RerankerSettingsCard from '$lib/components/RerankerSettingsCard.svelte';
-	import { t } from '$lib/i18n/index.svelte';
+	import type { ProviderStatus } from '#lib/types.js';
+	import EmbeddingSettingsCard from '#lib/components/EmbeddingSettingsCard.svelte';
+	import RerankerSettingsCard from '#lib/components/RerankerSettingsCard.svelte';
+	import { t } from '#lib/i18n/index.svelte.js';
 
 	let providers = $state<ProviderStatus[]>([]);
 	let loadError = $state('');

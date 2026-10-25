@@ -1,14 +1,14 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { isTauri } from '@tauri-apps/api/core';
-	import { Button } from '$lib/components/ui/button';
-	import { Input } from '$lib/components/ui/input';
-	import { Label } from '$lib/components/ui/label';
-	import * as Card from '$lib/components/ui/card';
-	import { t } from '$lib/i18n/index.svelte';
-	import { localizeError, readResponseError } from '$lib/server-error';
-	import { runGenerationStream } from '$lib/generation-stream';
-	import type { BackupEvent } from '$lib/types';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
+	import { Label } from '#lib/components/ui/label/index.js';
+	import * as Card from '#lib/components/ui/card/index.js';
+	import { t } from '#lib/i18n/index.svelte.js';
+	import { localizeError, readResponseError } from '#lib/server-error.js';
+	import { runGenerationStream } from '#lib/generation-stream.js';
+	import type { BackupEvent } from '#lib/types.js';
 
 	/**
 	 * "Back up data" card. Streams POST /api/settings/backup (src/lib/server/backup.ts does the

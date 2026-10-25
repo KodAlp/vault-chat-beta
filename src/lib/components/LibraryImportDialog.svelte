@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { isTauri } from '@tauri-apps/api/core';
-	import type { ImportResultItem, LibraryImportEvent } from '$lib/types';
-	import type { AdapterId, LibraryImportScan, ReadySource } from '$lib/library-import-sources';
-	import { Button } from '$lib/components/ui/button';
-	import { Input } from '$lib/components/ui/input';
-	import * as Dialog from '$lib/components/ui/dialog';
-	import { t } from '$lib/i18n/index.svelte';
-	import { serverPlatform } from '$lib/serverPlatform.svelte';
-	import { localizeError, readResponseError } from '$lib/server-error';
+	import type { ImportResultItem, LibraryImportEvent } from '#lib/types.js';
+	import type { AdapterId, LibraryImportScan, ReadySource } from '#lib/library-import-sources.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
+	import * as Dialog from '#lib/components/ui/dialog/index.js';
+	import { t } from '#lib/i18n/index.svelte.js';
+	import { serverPlatform } from '#lib/serverPlatform.svelte.js';
+	import { localizeError, readResponseError } from '#lib/server-error.js';
 
 	/**
 	 * The one dialog behind every ready card of the Library import page:

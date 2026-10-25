@@ -5,7 +5,7 @@ import { detectAll, getAdapter, type Detected } from './adapters';
 import { importScanRegistry, type ImportScanRegistry } from './scan-registry';
 import { isAdapterId, type AdapterId, type ImportWarning } from './types';
 import type { LibraryImportScan } from '../../library-import-sources';
-import type { ImportResultItem, ImportSummary } from '$lib/types';
+import type { ImportResultItem, ImportSummary } from '#lib/types.js';
 import type { VaultContext } from '../vaults';
 
 /** What the client gets back from a scan: the plan WITHOUT its internal entries and lookup tables. */

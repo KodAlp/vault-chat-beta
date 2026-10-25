@@ -9,9 +9,9 @@ import {
 	politeDelay,
 	fetchWithRetry,
 	extractPdfLinks
-} from '$lib/server/link-import';
-import { AppError, fail, toCodedError } from '$lib/server/app-error';
-import type { ErrorCode } from '$lib/errors';
+} from '#lib/server/link-import.js';
+import { AppError, fail, toCodedError } from '#lib/server/app-error.js';
+import type { ErrorCode } from '#lib/errors.js';
 
 /**
  * "List this page's PDF links, then let the user choose" —

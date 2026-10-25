@@ -1,4 +1,4 @@
-import type { RetrievedChunk } from '$lib/types';
+import type { RetrievedChunk } from '#lib/types.js';
 import { candidateVerdict, MAX_CHUNKS_PER_FILE, type CandidateChunk, type CandidateFilters } from './select-chunks';
 
 /**

@@ -1,14 +1,14 @@
 <script lang="ts">
-	import Icon from '$lib/components/Icon.svelte';
+	import Icon from '#lib/components/Icon.svelte';
 	import { goto } from '$app/navigation';
-	import { motionFly } from '$lib/motion';
-	import type { VaultRecord, VaultWithStatus } from '$lib/types';
-	import VaultCard from '$lib/components/VaultCard.svelte';
-	import { Button } from '$lib/components/ui/button';
-	import { Input } from '$lib/components/ui/input';
-	import * as Dialog from '$lib/components/ui/dialog';
-	import { t } from '$lib/i18n/index.svelte';
-	import { readResponseError } from '$lib/server-error';
+	import { motionFly } from '#lib/motion.js';
+	import type { VaultRecord, VaultWithStatus } from '#lib/types.js';
+	import VaultCard from '#lib/components/VaultCard.svelte';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
+	import * as Dialog from '#lib/components/ui/dialog/index.js';
+	import { t } from '#lib/i18n/index.svelte.js';
+	import { readResponseError } from '#lib/server-error.js';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();

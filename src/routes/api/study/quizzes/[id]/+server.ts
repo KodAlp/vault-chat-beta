@@ -1,9 +1,9 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getQuiz, getQuizItems, deleteQuiz } from '$lib/server/study-db';
-import { vaultFromUrl, vaultFromId } from '$lib/server/requestVault';
-import { fail } from '$lib/server/app-error';
-import type { QuizItemView, QuizView } from '$lib/types';
+import { getQuiz, getQuizItems, deleteQuiz } from '#lib/server/study-db.js';
+import { vaultFromUrl, vaultFromId } from '#lib/server/requestVault.js';
+import { fail } from '#lib/server/app-error.js';
+import type { QuizItemView, QuizView } from '#lib/types.js';
 
 export const GET: RequestHandler = async ({ params, url }) => {
 	const v = vaultFromUrl(url);

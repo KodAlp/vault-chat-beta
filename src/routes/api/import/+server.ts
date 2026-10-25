@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import type { RequestHandler } from './$types';
-import { enqueueConversion } from '$lib/server/convertQueue';
+import { enqueueConversion } from '#lib/server/convertQueue.js';
 import {
 	stagingDir,
 	safeBasename,
@@ -11,16 +11,16 @@ import {
 	ALLOWED_EXTENSIONS,
 	CODE_EXTENSIONS,
 	MAX_UPLOAD_BYTES
-} from '$lib/server/library';
-import { keepOriginalCopy } from '$lib/server/originals';
-import { vaultFromId } from '$lib/server/requestVault';
-import { ocrLangArg } from '$lib/server/ocr-lang';
-import { getLibrarySettings } from '$lib/server/library-read';
-import { importConvertedImages, libraryRelPath } from '$lib/server/converted-images';
-import { sseStream } from '$lib/server/sse';
-import { logAppEvent } from '$lib/server/app-log';
-import { AppError, errorPayload } from '$lib/server/app-error';
-import type { ImportEvent } from '$lib/types';
+} from '#lib/server/library.js';
+import { keepOriginalCopy } from '#lib/server/originals.js';
+import { vaultFromId } from '#lib/server/requestVault.js';
+import { ocrLangArg } from '#lib/server/ocr-lang.js';
+import { getLibrarySettings } from '#lib/server/library-read.js';
+import { importConvertedImages, libraryRelPath } from '#lib/server/converted-images.js';
+import { sseStream } from '#lib/server/sse.js';
+import { logAppEvent } from '#lib/server/app-log.js';
+import { AppError, errorPayload } from '#lib/server/app-error.js';
+import type { ImportEvent } from '#lib/types.js';
 
 function sseEvent(event: ImportEvent): string {
 	return `data: ${JSON.stringify(event)}\n\n`;

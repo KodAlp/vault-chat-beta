@@ -1,8 +1,8 @@
 import type { LayoutLoad } from './$types';
-import { applyLocale, ensureLocaleLoaded, i18n, persistLocale, STORAGE_KEY as LOCALE_STORAGE_KEY } from '$lib/i18n/index.svelte';
-import { applySettings, persistSettings, settings, STORAGE_KEY as SETTINGS_STORAGE_KEY } from '$lib/settings.svelte';
-import { stalePinPatch } from '$lib/settings-reconcile';
-import { applyLocalServerSetupDone } from '$lib/localServerSetup.svelte';
+import { applyLocale, ensureLocaleLoaded, i18n, persistLocale, STORAGE_KEY as LOCALE_STORAGE_KEY } from '#lib/i18n/index.svelte.js';
+import { applySettings, persistSettings, settings, STORAGE_KEY as SETTINGS_STORAGE_KEY } from '#lib/settings.svelte.js';
+import { stalePinPatch } from '#lib/settings-reconcile.js';
+import { applyLocalServerSetupDone } from '#lib/localServerSetup.svelte.js';
 
 // markdown.ts uses the browser build of DOMPurify (needs `window`); no SSR benefit
 // for a local-only app, so keep this off everywhere rather than add jsdom.

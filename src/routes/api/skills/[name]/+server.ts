@@ -1,8 +1,8 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { readSkillRaw, writeSkill, patchSkillFrontmatter, deleteSkill } from '$lib/server/userSkills';
-import { AppError, fail, toCodedError } from '$lib/server/app-error';
-import type { ErrorCode } from '$lib/errors';
+import { readSkillRaw, writeSkill, patchSkillFrontmatter, deleteSkill } from '#lib/server/userSkills.js';
+import { AppError, fail, toCodedError } from '#lib/server/app-error.js';
+import type { ErrorCode } from '#lib/errors.js';
 
 export const GET: RequestHandler = async ({ params }) => {
 	const raw = readSkillRaw(params.name);

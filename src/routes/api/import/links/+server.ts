@@ -1,15 +1,15 @@
 import crypto from 'node:crypto';
 import type { RequestHandler } from './$types';
-import { validateLinkUrl, loadImportedUrls, rewriteArxivAbsToPdf } from '$lib/server/link-import';
-import { runPool } from '$lib/server/concurrency';
-import { linkManifestPath, appendManifestEntry } from '$lib/server/link-manifest';
-import { stageUrl } from '$lib/server/stage-url';
-import { importLogPath } from '$lib/server/library';
-import { vaultFromId } from '$lib/server/requestVault';
-import { sseStream } from '$lib/server/sse';
-import { logAppEvent } from '$lib/server/app-log';
-import { fail, toCodedError } from '$lib/server/app-error';
-import type { ImportEvent, ImportResultItem, ImportSummary } from '$lib/types';
+import { validateLinkUrl, loadImportedUrls, rewriteArxivAbsToPdf } from '#lib/server/link-import.js';
+import { runPool } from '#lib/server/concurrency.js';
+import { linkManifestPath, appendManifestEntry } from '#lib/server/link-manifest.js';
+import { stageUrl } from '#lib/server/stage-url.js';
+import { importLogPath } from '#lib/server/library.js';
+import { vaultFromId } from '#lib/server/requestVault.js';
+import { sseStream } from '#lib/server/sse.js';
+import { logAppEvent } from '#lib/server/app-log.js';
+import { fail, toCodedError } from '#lib/server/app-error.js';
+import type { ImportEvent, ImportResultItem, ImportSummary } from '#lib/types.js';
 
 const MAX_LINKS_PER_BATCH = 50;
 // Downloads overlap; conversion stays serialized by sharedJobMutex.

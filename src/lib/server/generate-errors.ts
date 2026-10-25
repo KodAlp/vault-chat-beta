@@ -7,7 +7,7 @@
  * "kapsamı genişlet?" suggestion, same distinction chat's own narrowScope
  * handling already makes (see Message.svelte).
  */
-import type { RetrieveResult } from '$lib/types';
+import type { RetrieveResult } from '#lib/types.js';
 import { AppError } from './app-error';
 
 /**

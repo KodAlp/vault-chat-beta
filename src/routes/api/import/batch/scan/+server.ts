@@ -1,11 +1,11 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { vaultFromId } from '$lib/server/requestVault';
-import { dataDir } from '$lib/server/env';
-import { libraryRoot } from '$lib/server/library';
-import { validateScanRoot, scanFolder } from '$lib/server/folder-scan';
-import { scanRegistry } from '$lib/server/scan-registry';
-import { AppError, fail } from '$lib/server/app-error';
+import { vaultFromId } from '#lib/server/requestVault.js';
+import { dataDir } from '#lib/server/env.js';
+import { libraryRoot } from '#lib/server/library.js';
+import { validateScanRoot, scanFolder } from '#lib/server/folder-scan.js';
+import { scanRegistry } from '#lib/server/scan-registry.js';
+import { AppError, fail } from '#lib/server/app-error.js';
 
 /**
  * Folder scan for the Linux desktop app, whose webview cannot pick folders

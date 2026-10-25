@@ -3,12 +3,12 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import matter from 'gray-matter';
 import type { RequestHandler } from './$types';
-import { enqueueConversion } from '$lib/server/convertQueue';
-import { importConvertedImages } from '$lib/server/converted-images';
-import { relDirToSegments } from '$lib/server/batch-paths';
-import { sanitizeDomain } from '$lib/server/domain-name';
-import { scanRegistry } from '$lib/server/scan-registry';
-import { resolveScannedFile } from '$lib/server/folder-scan';
+import { enqueueConversion } from '#lib/server/convertQueue.js';
+import { importConvertedImages } from '#lib/server/converted-images.js';
+import { relDirToSegments } from '#lib/server/batch-paths.js';
+import { sanitizeDomain } from '#lib/server/domain-name.js';
+import { scanRegistry } from '#lib/server/scan-registry.js';
+import { resolveScannedFile } from '#lib/server/folder-scan.js';
 import {
 	stagingDir,
 	resolveLibraryPath,
@@ -20,17 +20,17 @@ import {
 	ALLOWED_EXTENSIONS,
 	CODE_EXTENSIONS,
 	MAX_UPLOAD_BYTES
-} from '$lib/server/library';
-import { indexLibraryFile } from '$lib/server/incrementalIndex';
-import { inflightImportHashes } from '$lib/server/inflight-hashes';
-import { keepOriginalCopy } from '$lib/server/originals';
-import { vaultFromId } from '$lib/server/requestVault';
-import { ocrLangArg } from '$lib/server/ocr-lang';
-import { getLibrarySettings } from '$lib/server/library-read';
-import { sseStream } from '$lib/server/sse';
-import { logAppEvent } from '$lib/server/app-log';
-import { AppError, toCodedError, errorPayload } from '$lib/server/app-error';
-import type { ImportEvent, ImportResultItem, ImportSummary } from '$lib/types';
+} from '#lib/server/library.js';
+import { indexLibraryFile } from '#lib/server/incrementalIndex.js';
+import { inflightImportHashes } from '#lib/server/inflight-hashes.js';
+import { keepOriginalCopy } from '#lib/server/originals.js';
+import { vaultFromId } from '#lib/server/requestVault.js';
+import { ocrLangArg } from '#lib/server/ocr-lang.js';
+import { getLibrarySettings } from '#lib/server/library-read.js';
+import { sseStream } from '#lib/server/sse.js';
+import { logAppEvent } from '#lib/server/app-log.js';
+import { AppError, toCodedError, errorPayload } from '#lib/server/app-error.js';
+import type { ImportEvent, ImportResultItem, ImportSummary } from '#lib/types.js';
 
 /**
  * Batch upload — no per-file confirm step (would be tedious for N files):

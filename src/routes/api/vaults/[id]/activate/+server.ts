@@ -1,8 +1,8 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { setActiveVault } from '$lib/server/vaults';
-import { AppError, fail, toCodedError } from '$lib/server/app-error';
-import type { ErrorCode } from '$lib/errors';
+import { setActiveVault } from '#lib/server/vaults.js';
+import { AppError, fail, toCodedError } from '#lib/server/app-error.js';
+import type { ErrorCode } from '#lib/errors.js';
 
 export const POST: RequestHandler = async ({ params }) => {
 	try {

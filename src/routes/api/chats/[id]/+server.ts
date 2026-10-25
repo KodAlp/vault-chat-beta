@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { fail } from '$lib/server/app-error';
+import { fail } from '#lib/server/app-error.js';
 import {
 	getChat,
 	getMessages,
@@ -10,8 +10,8 @@ import {
 	updateChatMode,
 	setChatTitle,
 	deleteChat
-} from '$lib/server/chats-db';
-import type { ChatMessage, RetrievedChunk } from '$lib/types';
+} from '#lib/server/chats-db.js';
+import type { ChatMessage, RetrievedChunk } from '#lib/types.js';
 
 export const GET: RequestHandler = async ({ params }) => {
 	const chat = getChat(params.id);

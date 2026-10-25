@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { LibraryNode } from '$lib/types';
+	import type { LibraryNode } from '#lib/types.js';
 	import {
 		nodeState,
 		nodeMatchesFilter,
@@ -7,10 +7,10 @@
 		countFiles,
 		countSelected,
 		isPathInsideFolder
-	} from '$lib/sourceTree';
-	import { sourceHighlight } from '$lib/source-highlight.svelte';
-	import { prefersReducedMotion } from '$lib/motion';
-	import { t } from '$lib/i18n/index.svelte';
+	} from '#lib/sourceTree.js';
+	import { sourceHighlight } from '#lib/source-highlight.svelte.js';
+	import { prefersReducedMotion } from '#lib/motion.js';
+	import { t } from '#lib/i18n/index.svelte.js';
 	import SourceTreeNode from './SourceTreeNode.svelte';
 
 	let {

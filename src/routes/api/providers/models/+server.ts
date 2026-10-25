@@ -1,12 +1,12 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { listEnabledProviders, getAdapter } from '$lib/server/providers/registry';
-import { loadCatalog } from '$lib/server/providers/model-catalog';
-import { pickerModels } from '$lib/server/providers/model-filter';
-import { modelMaxAgeMonths } from '$lib/server/env';
-import { isCloud } from '$lib/server/providers/config-store';
-import { isProviderConsented } from '$lib/server/provider-consent';
-import type { ProviderModelOption } from '$lib/types';
+import { listEnabledProviders, getAdapter } from '#lib/server/providers/registry.js';
+import { loadCatalog } from '#lib/server/providers/model-catalog.js';
+import { pickerModels } from '#lib/server/providers/model-filter.js';
+import { modelMaxAgeMonths } from '#lib/server/env.js';
+import { isCloud } from '#lib/server/providers/config-store.js';
+import { isProviderConsented } from '#lib/server/provider-consent.js';
+import type { ProviderModelOption } from '#lib/types.js';
 
 /** Aggregates listModels() across every enabled provider, tagged with the
  * provider that owns each model — feeds both the chat header's per-chat

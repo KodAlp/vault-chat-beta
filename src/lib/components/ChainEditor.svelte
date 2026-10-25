@@ -1,10 +1,10 @@
 <script lang="ts">
-	import Icon from '$lib/components/Icon.svelte';
+	import Icon from '#lib/components/Icon.svelte';
 	import { onMount, tick } from 'svelte';
 	import { flip } from 'svelte/animate';
-	import { flipDuration, motionEase } from '$lib/motion';
-	import { t } from '$lib/i18n/index.svelte';
-	import { moveItem } from '$lib/reorder';
+	import { flipDuration, motionEase } from '#lib/motion.js';
+	import { t } from '#lib/i18n/index.svelte.js';
+	import { moveItem } from '#lib/reorder.js';
 
 	/** One fallback-chain row of the providers page: a fixed-height strip of
 	 * provider chips (overflow collapses into "+N") and a ⋮ button that opens a

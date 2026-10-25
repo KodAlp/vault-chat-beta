@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { onDestroy } from 'svelte';
-	import { motionFly } from '$lib/motion';
-	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
-	import Icon from '$lib/components/Icon.svelte';
+	import { motionFly } from '#lib/motion.js';
+	import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.js';
+	import Icon from '#lib/components/Icon.svelte';
 	import { isTauri, invoke } from '@tauri-apps/api/core';
-	import { t } from '$lib/i18n/index.svelte';
+	import { t } from '#lib/i18n/index.svelte.js';
 
 	let { chatId }: { chatId: string } = $props();
 	let errorMessage = $state('');

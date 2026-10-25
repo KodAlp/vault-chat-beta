@@ -1,11 +1,11 @@
 import type { RequestHandler } from './$types';
-import { generateQuiz } from '$lib/server/generate-quiz';
-import { vaultFromId } from '$lib/server/requestVault';
-import { NoSourcesError } from '$lib/server/generate-errors';
-import { logAppEvent } from '$lib/server/app-log';
-import { sseStream } from '$lib/server/sse';
-import { errorPayload } from '$lib/server/app-error';
-import type { QuizGenerationEvent, QuizGenerationRequest } from '$lib/types';
+import { generateQuiz } from '#lib/server/generate-quiz.js';
+import { vaultFromId } from '#lib/server/requestVault.js';
+import { NoSourcesError } from '#lib/server/generate-errors.js';
+import { logAppEvent } from '#lib/server/app-log.js';
+import { sseStream } from '#lib/server/sse.js';
+import { errorPayload } from '#lib/server/app-error.js';
+import type { QuizGenerationEvent, QuizGenerationRequest } from '#lib/types.js';
 
 export const POST: RequestHandler = async ({ request }) => {
 	const body = (await request.json()) as QuizGenerationRequest;

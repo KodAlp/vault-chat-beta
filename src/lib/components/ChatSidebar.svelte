@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { tick, onMount } from 'svelte';
-	import type { ChatSummary } from '$lib/types';
-	import { groupChatsByDate } from '$lib/chat-groups';
-	import { t } from '$lib/i18n/index.svelte';
+	import type { ChatSummary } from '#lib/types.js';
+	import { groupChatsByDate } from '#lib/chat-groups.js';
+	import { t } from '#lib/i18n/index.svelte.js';
 	import Icon from './Icon.svelte';
-	import { scopeSummary, type ScopeCounts } from '$lib/source-summary';
+	import { scopeSummary, type ScopeCounts } from '#lib/source-summary.js';
 	import AnimatedIcon from './AnimatedIcon.svelte';
 
 	/**

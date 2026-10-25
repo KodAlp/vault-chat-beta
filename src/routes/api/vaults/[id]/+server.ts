@@ -7,12 +7,12 @@ import {
 	renameVault,
 	setVaultMcpExposed,
 	setVaultMcpAutoConfirm
-} from '$lib/server/vaults';
-import { countChatsForVault, deleteChatsForVault } from '$lib/server/chats-db';
-import { closeVaultIndexDb } from '$lib/server/retrieve';
-import { closeVaultStudyDb } from '$lib/server/study-db';
-import { AppError, fail, toCodedError } from '$lib/server/app-error';
-import type { ErrorCode } from '$lib/errors';
+} from '#lib/server/vaults.js';
+import { countChatsForVault, deleteChatsForVault } from '#lib/server/chats-db.js';
+import { closeVaultIndexDb } from '#lib/server/retrieve.js';
+import { closeVaultStudyDb } from '#lib/server/study-db.js';
+import { AppError, fail, toCodedError } from '#lib/server/app-error.js';
+import type { ErrorCode } from '#lib/errors.js';
 
 /** Preview for the delete-confirm dialog — how many chats would be lost.
  * Never deletes anything by itself. */

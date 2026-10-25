@@ -1,9 +1,9 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { vaultFromId } from '$lib/server/requestVault';
-import { dataDir } from '$lib/server/env';
-import { scanSource, protectedDirsFor } from '$lib/server/library-import/service';
-import { AppError, fail } from '$lib/server/app-error';
+import { vaultFromId } from '#lib/server/requestVault.js';
+import { dataDir } from '#lib/server/env.js';
+import { scanSource, protectedDirsFor } from '#lib/server/library-import/service.js';
+import { AppError, fail } from '#lib/server/app-error.js';
 
 /**
  * Step 1 of the library import: detect the source app's format in a folder

@@ -1,21 +1,21 @@
 <script lang="ts">
-	import Icon from '$lib/components/Icon.svelte';
+	import Icon from '#lib/components/Icon.svelte';
 	import { onMount } from 'svelte';
 	import { isTauri, invoke } from '@tauri-apps/api/core';
-	import type { VaultRecord, VaultWithStatus } from '$lib/types';
-	import { AUTO_CONFIRM_MODES, type AutoConfirmMode } from '$lib/mcp-auto-confirm-policy';
-	import { Button } from '$lib/components/ui/button';
-	import { Input } from '$lib/components/ui/input';
-	import { Label } from '$lib/components/ui/label';
-	import { Badge } from '$lib/components/ui/badge';
-	import { Switch } from '$lib/components/ui/switch';
-	import * as Card from '$lib/components/ui/card';
-	import * as AlertDialog from '$lib/components/ui/alert-dialog';
-	import ReindexDialog from '$lib/components/ReindexDialog.svelte';
-	import BackupCard from '$lib/components/BackupCard.svelte';
-	import McpClientConnect from '$lib/components/McpClientConnect.svelte';
-	import { t } from '$lib/i18n/index.svelte';
-	import { readResponseError } from '$lib/server-error';
+	import type { VaultRecord, VaultWithStatus } from '#lib/types.js';
+	import { AUTO_CONFIRM_MODES, type AutoConfirmMode } from '#lib/mcp-auto-confirm-policy.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
+	import { Label } from '#lib/components/ui/label/index.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
+	import { Switch } from '#lib/components/ui/switch/index.js';
+	import * as Card from '#lib/components/ui/card/index.js';
+	import * as AlertDialog from '#lib/components/ui/alert-dialog/index.js';
+	import ReindexDialog from '#lib/components/ReindexDialog.svelte';
+	import BackupCard from '#lib/components/BackupCard.svelte';
+	import McpClientConnect from '#lib/components/McpClientConnect.svelte';
+	import { t } from '#lib/i18n/index.svelte.js';
+	import { readResponseError } from '#lib/server-error.js';
 
 	// Stable per-instance id prefix for label/control association.
 	const uid = $props.id();

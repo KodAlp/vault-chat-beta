@@ -1,17 +1,17 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import type { ChatSummary, LibraryNode, ProviderModelOption } from '$lib/types';
-	import { collectFilePaths } from '$lib/sourceTree';
-	import { setPendingMessage } from '$lib/pending-message';
-	import { parseSelectionKey } from '$lib/model-selection';
-	import { settings } from '$lib/settings.svelte';
-	import { i18n, t } from '$lib/i18n/index.svelte';
-	import { intlLocale } from '$lib/i18n/locales';
-	import { Badge } from '$lib/components/ui/badge';
-	import * as AlertDialog from '$lib/components/ui/alert-dialog';
-	import Icon from '$lib/components/Icon.svelte';
-	import ModelPickerRow from '$lib/components/ModelPickerRow.svelte';
+	import type { ChatSummary, LibraryNode, ProviderModelOption } from '#lib/types.js';
+	import { collectFilePaths } from '#lib/sourceTree.js';
+	import { setPendingMessage } from '#lib/pending-message.js';
+	import { parseSelectionKey } from '#lib/model-selection.js';
+	import { settings } from '#lib/settings.svelte.js';
+	import { i18n, t } from '#lib/i18n/index.svelte.js';
+	import { intlLocale } from '#lib/i18n/locales.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
+	import * as AlertDialog from '#lib/components/ui/alert-dialog/index.js';
+	import Icon from '#lib/components/Icon.svelte';
+	import ModelPickerRow from '#lib/components/ModelPickerRow.svelte';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();

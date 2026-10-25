@@ -1,8 +1,8 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getDeck, deleteDeck } from '$lib/server/study-db';
-import { vaultFromId } from '$lib/server/requestVault';
-import { fail } from '$lib/server/app-error';
+import { getDeck, deleteDeck } from '#lib/server/study-db.js';
+import { vaultFromId } from '#lib/server/requestVault.js';
+import { fail } from '#lib/server/app-error.js';
 
 /** GET lives at ./cards/+server.ts (deck + its cards together, what the
  * review page actually needs) — this route only adds DELETE, mirroring

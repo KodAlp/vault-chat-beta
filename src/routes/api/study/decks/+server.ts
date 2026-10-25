@@ -1,8 +1,8 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { listDecks } from '$lib/server/study-db';
-import { vaultFromUrl } from '$lib/server/requestVault';
-import type { StudySummary } from '$lib/types';
+import { listDecks } from '#lib/server/study-db.js';
+import { vaultFromUrl } from '#lib/server/requestVault.js';
+import type { StudySummary } from '#lib/types.js';
 
 /** See quizzes/+server.ts for the rationale. Not yet wired into
  * StudyPanel.svelte's UI: there's no /study/cards/[deckId] view route to

@@ -7,7 +7,7 @@ import { CORE_INVARIANTS, CORE_INVARIANTS_EN, DEFAULT_ALLOWED_LANGUAGES, NO_RELE
 import { renderUserSkillsBlock, writeSkill } from './userSkills';
 import { closeVaultStudyDb } from './study-db';
 import type { VaultContext } from './vaults';
-import type { ChatMessage, RetrievedChunk } from '$lib/types';
+import type { ChatMessage, RetrievedChunk } from '#lib/types.js';
 
 /**
  * A regression test for prompt.ts, which had none despite the memory, review-mode and history features all editing it

@@ -1,9 +1,9 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getCard, updateCardSchedule } from '$lib/server/study-db';
-import { schedule, type Grade } from '$lib/server/schedule';
-import { vaultFromId } from '$lib/server/requestVault';
-import { fail } from '$lib/server/app-error';
+import { getCard, updateCardSchedule } from '#lib/server/study-db.js';
+import { schedule, type Grade } from '#lib/server/schedule.js';
+import { vaultFromId } from '#lib/server/requestVault.js';
+import { fail } from '#lib/server/app-error.js';
 
 const VALID_GRADES: Grade[] = ['again', 'hard', 'good', 'easy'];
 

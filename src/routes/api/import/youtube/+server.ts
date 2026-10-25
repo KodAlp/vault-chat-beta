@@ -1,14 +1,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { RequestHandler } from './$types';
-import { enqueueYoutubeTranscript } from '$lib/server/youtubeQueue';
-import { stagingDir } from '$lib/server/library';
-import { vaultFromId } from '$lib/server/requestVault';
-import { sseStream } from '$lib/server/sse';
-import { logAppEvent } from '$lib/server/app-log';
-import { YOUTUBE_URL } from '$lib/server/link-import';
-import { AppError, errorPayload } from '$lib/server/app-error';
-import type { ImportEvent } from '$lib/types';
+import { enqueueYoutubeTranscript } from '#lib/server/youtubeQueue.js';
+import { stagingDir } from '#lib/server/library.js';
+import { vaultFromId } from '#lib/server/requestVault.js';
+import { sseStream } from '#lib/server/sse.js';
+import { logAppEvent } from '#lib/server/app-log.js';
+import { YOUTUBE_URL } from '#lib/server/link-import.js';
+import { AppError, errorPayload } from '#lib/server/app-error.js';
+import type { ImportEvent } from '#lib/types.js';
 
 function sseEvent(event: ImportEvent): string {
 	return `data: ${JSON.stringify(event)}\n\n`;

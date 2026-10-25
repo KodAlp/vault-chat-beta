@@ -1,13 +1,13 @@
 <script lang="ts">
-	import Icon from '$lib/components/Icon.svelte';
-	import { renderMarkdown, stabilizeForStreaming } from '$lib/markdown';
-	import type { ChatMessage } from '$lib/types';
+	import Icon from '#lib/components/Icon.svelte';
+	import { renderMarkdown, stabilizeForStreaming } from '#lib/markdown.js';
+	import type { ChatMessage } from '#lib/types.js';
 	import SourceChip from './SourceChip.svelte';
 	import ChatBubble from './ChatBubble.svelte';
 	import FallbackNotice from './FallbackNotice.svelte';
 	import ThinkingPanel from './ThinkingPanel.svelte';
-	import { t } from '$lib/i18n/index.svelte';
-	import { localizeError } from '$lib/server-error';
+	import { t } from '#lib/i18n/index.svelte.js';
+	import { localizeError } from '#lib/server-error.js';
 
 	let {
 		message,

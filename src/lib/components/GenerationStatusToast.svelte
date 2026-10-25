@@ -1,7 +1,7 @@
 <script lang="ts">
-	import Icon from '$lib/components/Icon.svelte';
-	import { motionFly } from '$lib/motion';
-	import { t } from '$lib/i18n/index.svelte';
+	import Icon from '#lib/components/Icon.svelte';
+	import { motionFly } from '#lib/motion.js';
+	import { t } from '#lib/i18n/index.svelte.js';
 
 	/**
 	 * Shared toast shell for the five generation status widgets.

@@ -2,7 +2,7 @@ import path from 'node:path';
 import { expandHome, indexKey, resolveSourceRoot, rewriteWikilinks, runImport, walkSource, type Indexer } from './library-import/common';
 import { markdownFolderAdapter } from './library-import/markdown-folder';
 import { protectedDirsFor } from './library-import/service';
-import type { ImportResultItem, ImportSummary } from '$lib/types';
+import type { ImportResultItem, ImportSummary } from '#lib/types.js';
 import type { VaultContext } from './vaults';
 
 /**

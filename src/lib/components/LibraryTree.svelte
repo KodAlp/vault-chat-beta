@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import type { LibraryNode } from '$lib/types';
+	import type { LibraryNode } from '#lib/types.js';
 	import AddFilesDialog from './AddFilesDialog.svelte';
 	import LibraryTreeNode from './LibraryTreeNode.svelte';
-	import { t } from '$lib/i18n/index.svelte';
+	import { t } from '#lib/i18n/index.svelte.js';
 
 	let tree = $state<LibraryNode[]>([]);
 	let loadError = $state('');

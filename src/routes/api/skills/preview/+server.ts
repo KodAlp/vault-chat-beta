@@ -1,14 +1,14 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { renderUserSkillsBlock, ALL_SCOPES } from '$lib/server/userSkills';
-import { fail } from '$lib/server/app-error';
-import { coreIntro, DEFAULT_ALLOWED_LANGUAGES, CORE_INVARIANTS } from '$lib/server/prompt';
-import { buildSystemPrompt as buildQuizPrompt } from '$lib/server/generate-quiz';
-import { buildSystemPrompt as buildCardsPrompt } from '$lib/server/generate-cards';
-import { buildSystemPrompt as buildReportPrompt } from '$lib/server/generate-report';
-import { buildSystemPrompt as buildMindMapPrompt } from '$lib/server/generate-mindmap';
-import { buildSystemPrompt as buildSlidesPrompt } from '$lib/server/generate-slides';
-import type { UserSkillScope } from '$lib/types';
+import { renderUserSkillsBlock, ALL_SCOPES } from '#lib/server/userSkills.js';
+import { fail } from '#lib/server/app-error.js';
+import { coreIntro, DEFAULT_ALLOWED_LANGUAGES, CORE_INVARIANTS } from '#lib/server/prompt.js';
+import { buildSystemPrompt as buildQuizPrompt } from '#lib/server/generate-quiz.js';
+import { buildSystemPrompt as buildCardsPrompt } from '#lib/server/generate-cards.js';
+import { buildSystemPrompt as buildReportPrompt } from '#lib/server/generate-report.js';
+import { buildSystemPrompt as buildMindMapPrompt } from '#lib/server/generate-mindmap.js';
+import { buildSystemPrompt as buildSlidesPrompt } from '#lib/server/generate-slides.js';
+import type { UserSkillScope } from '#lib/types.js';
 
 const PLACEHOLDER_CONTEXT = '(örnek bağlam — gerçek üretimde burada kaynak parçaları olur)';
 

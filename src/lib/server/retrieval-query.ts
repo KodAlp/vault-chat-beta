@@ -1,4 +1,4 @@
-import type { ChatMessage } from '$lib/types';
+import type { ChatMessage } from '#lib/types.js';
 
 /**
  * How many trailing user turns feed the embedding query. Not one, because

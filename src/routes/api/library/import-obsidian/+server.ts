@@ -1,12 +1,12 @@
 import type { RequestHandler } from './$types';
-import { importObsidianVault } from '$lib/server/importObsidian';
-import { protectedDirsFor } from '$lib/server/library-import/service';
-import { dataDir } from '$lib/server/env';
-import { vaultFromId } from '$lib/server/requestVault';
-import { sseStream } from '$lib/server/sse';
-import { logAppEvent } from '$lib/server/app-log';
-import { errorPayload } from '$lib/server/app-error';
-import type { LibraryImportEvent } from '$lib/types';
+import { importObsidianVault } from '#lib/server/importObsidian.js';
+import { protectedDirsFor } from '#lib/server/library-import/service.js';
+import { dataDir } from '#lib/server/env.js';
+import { vaultFromId } from '#lib/server/requestVault.js';
+import { sseStream } from '#lib/server/sse.js';
+import { logAppEvent } from '#lib/server/app-log.js';
+import { errorPayload } from '#lib/server/app-error.js';
+import type { LibraryImportEvent } from '#lib/types.js';
 
 /**
  * Kept as a thin wrapper (Markdown-folder adapter, scan + run in one step) for

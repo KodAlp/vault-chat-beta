@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { computeWeakSpots } from '$lib/server/learner-store';
-import { vaultFromUrl } from '$lib/server/requestVault';
+import { computeWeakSpots } from '#lib/server/learner-store.js';
+import { vaultFromUrl } from '#lib/server/requestVault.js';
 
 /**
  * Weak spots of a vault: notes (grouped by heading) where a quiz question keeps getting answered wrong or a card

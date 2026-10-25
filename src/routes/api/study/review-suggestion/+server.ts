@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { computeReviewSuggestion } from '$lib/server/review-mode';
-import { vaultFromUrl } from '$lib/server/requestVault';
+import { computeReviewSuggestion } from '#lib/server/review-mode.js';
+import { vaultFromUrl } from '#lib/server/requestVault.js';
 
 /**
  * Whether the new-chat composer should OFFER review mode for this vault. Read-only, derived only

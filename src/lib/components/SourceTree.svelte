@@ -1,8 +1,8 @@
 <script lang="ts">
-	import type { LibraryNode } from '$lib/types';
-	import { nodeMatchesFilter, nodeHasSelected } from '$lib/sourceTree';
+	import type { LibraryNode } from '#lib/types.js';
+	import { nodeMatchesFilter, nodeHasSelected } from '#lib/sourceTree.js';
 	import SourceTreeNode from './SourceTreeNode.svelte';
-	import { t } from '$lib/i18n/index.svelte';
+	import { t } from '#lib/i18n/index.svelte.js';
 
 	/**
 	 * Selection tree body (vc-tree) shown inside SourcesSheet. Purely

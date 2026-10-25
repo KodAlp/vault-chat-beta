@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { t } from '$lib/i18n/index.svelte';
+	import { t } from '#lib/i18n/index.svelte.js';
 
 	let { thinking, streaming }: { thinking: string; streaming: boolean } = $props();
 

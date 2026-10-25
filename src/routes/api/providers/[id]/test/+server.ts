@@ -1,8 +1,8 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getAdapter } from '$lib/server/providers/registry';
-import { AppError, fail, toCodedError } from '$lib/server/app-error';
-import type { ErrorCode } from '$lib/errors';
+import { getAdapter } from '#lib/server/providers/registry.js';
+import { AppError, fail, toCodedError } from '#lib/server/app-error.js';
+import type { ErrorCode } from '#lib/errors.js';
 
 export const POST: RequestHandler = async ({ params }) => {
 	try {

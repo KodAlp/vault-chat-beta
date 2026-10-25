@@ -1,9 +1,9 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { vaultFromId } from '$lib/server/requestVault';
-import { AppError, fail } from '$lib/server/app-error';
-import { IMPORT_ID_RE } from '$lib/server/pending-imports';
-import { confirmStagedImport } from '$lib/server/import-confirm';
+import { vaultFromId } from '#lib/server/requestVault.js';
+import { AppError, fail } from '#lib/server/app-error.js';
+import { IMPORT_ID_RE } from '#lib/server/pending-imports.js';
+import { confirmStagedImport } from '#lib/server/import-confirm.js';
 
 /** The user's confirm click. The work itself lives in import-confirm.ts, shared with the app's auto-confirm of MCP imports. */
 export const POST: RequestHandler = async ({ params, request }) => {

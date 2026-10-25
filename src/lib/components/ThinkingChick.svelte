@@ -14,7 +14,7 @@
 -->
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { t } from '$lib/i18n/index.svelte';
+	import { t } from '#lib/i18n/index.svelte.js';
 	import { createChick, type Chick, type ChickConfig } from './thinking-chick.js';
 
 	type Phase = 'idle' | 'thinking' | 'done';

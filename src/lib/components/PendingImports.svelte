@@ -1,15 +1,15 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import type { PendingImportItem } from '$lib/types';
-	import { Button } from '$lib/components/ui/button';
-	import { Input } from '$lib/components/ui/input';
-	import { Badge } from '$lib/components/ui/badge';
-	import * as Select from '$lib/components/ui/select';
-	import * as Card from '$lib/components/ui/card';
-	import { t } from '$lib/i18n/index.svelte';
-	import { localizeError, readResponseError } from '$lib/server-error';
-	import { pendingImports, refreshPendingImports } from '$lib/pending-imports.svelte';
-	import { hasActiveImports } from '$lib/pending-imports-view';
+	import type { PendingImportItem } from '#lib/types.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
+	import * as Select from '#lib/components/ui/select/index.js';
+	import * as Card from '#lib/components/ui/card/index.js';
+	import { t } from '#lib/i18n/index.svelte.js';
+	import { localizeError, readResponseError } from '#lib/server-error.js';
+	import { pendingImports, refreshPendingImports } from '#lib/pending-imports.svelte.js';
+	import { hasActiveImports } from '#lib/pending-imports-view.js';
 
 	/**
 	 * Staged imports waiting in the active vault's staging area — MCP agent imports and orphaned browser

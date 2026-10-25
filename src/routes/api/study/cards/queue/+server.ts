@@ -1,8 +1,8 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getDueCards } from '$lib/server/study-db';
-import { vaultFromUrl } from '$lib/server/requestVault';
-import type { CardView } from '$lib/types';
+import { getDueCards } from '#lib/server/study-db.js';
+import { vaultFromUrl } from '#lib/server/requestVault.js';
+import type { CardView } from '#lib/types.js';
 
 const DEFAULT_LIMIT = 50;
 

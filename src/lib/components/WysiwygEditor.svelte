@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Icon from '$lib/components/Icon.svelte';
+	import Icon from '#lib/components/Icon.svelte';
 	/**
 	 * Visual (WYSIWYG) Markdown editor on Milkdown 7. Imported ONLY via dynamic
 	 * import() from the library viewer when the user enters edit mode, like
@@ -13,11 +13,11 @@
 	import '@milkdown/kit/prose/view/style/prosemirror.css';
 	import '@milkdown/kit/prose/tables/style/tables.css';
 	import { onMount } from 'svelte';
-	import { t } from '$lib/i18n/index.svelte';
-	import { createVisualEditor, type VisualEditor, type FormatState, type MathTarget, type ToolbarCommand } from '$lib/wysiwyg/visual-editor';
-	import MathPopover from '$lib/components/MathPopover.svelte';
-	import { readResponseError } from '$lib/server-error';
-	import { relativeLibraryLink } from '$lib/attachment-link';
+	import { t } from '#lib/i18n/index.svelte.js';
+	import { createVisualEditor, type VisualEditor, type FormatState, type MathTarget, type ToolbarCommand } from '#lib/wysiwyg/visual-editor.js';
+	import MathPopover from '#lib/components/MathPopover.svelte';
+	import { readResponseError } from '#lib/server-error.js';
+	import { relativeLibraryLink } from '#lib/attachment-link.js';
 
 	let {
 		value,

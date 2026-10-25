@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import * as Card from '$lib/components/ui/card';
-	import { Button } from '$lib/components/ui/button';
-	import { Switch } from '$lib/components/ui/switch';
-	import { t } from '$lib/i18n/index.svelte';
-	import { localizeError } from '$lib/server-error';
+	import * as Card from '#lib/components/ui/card/index.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Switch } from '#lib/components/ui/switch/index.js';
+	import { t } from '#lib/i18n/index.svelte.js';
+	import { localizeError } from '#lib/server-error.js';
 
 	/**
 	 * Chat reranker card (Ayarlar > Gömme). GET /api/settings/reranker also reports whether this

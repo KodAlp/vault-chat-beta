@@ -1,12 +1,12 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getAdapter } from '$lib/server/providers/registry';
-import { getOllamaProviderId } from '$lib/server/providers/config-store';
-import { OllamaAdapter } from '$lib/server/providers/ollama';
-import { sseStream } from '$lib/server/sse';
-import { logAppEvent } from '$lib/server/app-log';
-import { AppError, fail, toCodedError, errorPayload } from '$lib/server/app-error';
-import type { ErrorCode, ErrorParams } from '$lib/errors';
+import { getAdapter } from '#lib/server/providers/registry.js';
+import { getOllamaProviderId } from '#lib/server/providers/config-store.js';
+import { OllamaAdapter } from '#lib/server/providers/ollama.js';
+import { sseStream } from '#lib/server/sse.js';
+import { logAppEvent } from '#lib/server/app-log.js';
+import { AppError, fail, toCodedError, errorPayload } from '#lib/server/app-error.js';
+import type { ErrorCode, ErrorParams } from '#lib/errors.js';
 
 type PullEvent = { type: string; status?: string; error?: string; code?: string; params?: ErrorParams };
 

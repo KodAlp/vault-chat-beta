@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { settings, persistSettings } from '$lib/settings.svelte';
-	import LanguageCombobox from '$lib/components/LanguageCombobox.svelte';
-	import { Switch } from '$lib/components/ui/switch';
-	import { t } from '$lib/i18n/index.svelte';
+	import { settings, persistSettings } from '#lib/settings.svelte.js';
+	import LanguageCombobox from '#lib/components/LanguageCombobox.svelte';
+	import { Switch } from '#lib/components/ui/switch/index.js';
+	import { t } from '#lib/i18n/index.svelte.js';
 
 	type ThemeValue = typeof settings.theme;
 

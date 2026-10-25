@@ -1,10 +1,10 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { runBackup, defaultBackupDestination, validateBackupDestination } from '$lib/server/backup';
-import { sseStream } from '$lib/server/sse';
-import { AppError, errorPayload, fail } from '$lib/server/app-error';
-import { logAppEvent } from '$lib/server/app-log';
-import type { BackupEvent } from '$lib/types';
+import { runBackup, defaultBackupDestination, validateBackupDestination } from '#lib/server/backup.js';
+import { sseStream } from '#lib/server/sse.js';
+import { AppError, errorPayload, fail } from '#lib/server/app-error.js';
+import { logAppEvent } from '#lib/server/app-log.js';
+import type { BackupEvent } from '#lib/types.js';
 
 /**
  * Data backup. An ordinary session-gated /api/settings route (never under /api/mcp/, so an MCP client

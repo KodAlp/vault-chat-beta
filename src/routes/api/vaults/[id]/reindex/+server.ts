@@ -1,12 +1,12 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { resolveVault } from '$lib/server/vaults';
-import { reindexVault, cancelReindex } from '$lib/server/reindex';
-import { sseStream } from '$lib/server/sse';
-import { AppError, errorPayload, fail, toCodedError } from '$lib/server/app-error';
-import { logAppEvent } from '$lib/server/app-log';
-import type { ErrorCode } from '$lib/errors';
-import type { ReindexEvent } from '$lib/types';
+import { resolveVault } from '#lib/server/vaults.js';
+import { reindexVault, cancelReindex } from '#lib/server/reindex.js';
+import { sseStream } from '#lib/server/sse.js';
+import { AppError, errorPayload, fail, toCodedError } from '#lib/server/app-error.js';
+import { logAppEvent } from '#lib/server/app-log.js';
+import type { ErrorCode } from '#lib/errors.js';
+import type { ReindexEvent } from '#lib/types.js';
 
 /**
  * Full, in-process rebuild of one vault's index under the

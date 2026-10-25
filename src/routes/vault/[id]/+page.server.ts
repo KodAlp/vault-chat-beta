@@ -1,6 +1,6 @@
-import { vaultFromId } from '$lib/server/requestVault';
-import { markVaultUsed } from '$lib/server/vaults';
-import { logAppEvent } from '$lib/server/app-log';
+import { vaultFromId } from '#lib/server/requestVault.js';
+import { markVaultUsed } from '#lib/server/vaults.js';
+import { logAppEvent } from '#lib/server/app-log.js';
 import type { PageServerLoad } from './$types';
 
 /** Visiting a vault's chat list is "using" that vault — same reasoning as

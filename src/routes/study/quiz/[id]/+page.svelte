@@ -1,21 +1,21 @@
 <script lang="ts">
-	import Icon from '$lib/components/Icon.svelte';
+	import Icon from '#lib/components/Icon.svelte';
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
-	import { renderMarkdown } from '$lib/markdown';
-	import { settings } from '$lib/settings.svelte';
-	import { libraryViewerUrl } from '$lib/sourceLink';
-	import { resolveBackHref } from '$lib/back-link';
-	import { t } from '$lib/i18n/index.svelte';
-	import { readResponseError, localizeError } from '$lib/server-error';
-	import { scoreExcludingFlagged } from '$lib/study-answers';
+	import { renderMarkdown } from '#lib/markdown.js';
+	import { settings } from '#lib/settings.svelte.js';
+	import { libraryViewerUrl } from '#lib/sourceLink.js';
+	import { resolveBackHref } from '#lib/back-link.js';
+	import { t } from '#lib/i18n/index.svelte.js';
+	import { readResponseError, localizeError } from '#lib/server-error.js';
+	import { scoreExcludingFlagged } from '#lib/study-answers.js';
 	import type { PageProps } from './$types';
 	import type {
 		QuizItemView,
 		QuizView,
 		SubmitAttemptResponse,
 		AttemptResultItem
-	} from '$lib/types';
+	} from '#lib/types.js';
 
 	let { data }: PageProps = $props();
 

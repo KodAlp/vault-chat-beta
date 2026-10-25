@@ -1,7 +1,7 @@
 <script lang="ts">
-	import LibraryImportDialog from '$lib/components/LibraryImportDialog.svelte';
-	import { READY_SOURCES, SOON_SOURCES, type ReadySource } from '$lib/library-import-sources';
-	import { t } from '$lib/i18n/index.svelte';
+	import LibraryImportDialog from '#lib/components/LibraryImportDialog.svelte';
+	import { READY_SOURCES, SOON_SOURCES, type ReadySource } from '#lib/library-import-sources.js';
+	import { t } from '#lib/i18n/index.svelte.js';
 
 	// The card that opened the dialog; null = closed. The dialog is created per click so every
 	// import starts from a clean folder step.

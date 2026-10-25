@@ -1,9 +1,9 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getDeck, getDeckCards } from '$lib/server/study-db';
-import { vaultFromUrl } from '$lib/server/requestVault';
-import { fail } from '$lib/server/app-error';
-import type { CardView } from '$lib/types';
+import { getDeck, getDeckCards } from '#lib/server/study-db.js';
+import { vaultFromUrl } from '#lib/server/requestVault.js';
+import { fail } from '#lib/server/app-error.js';
+import type { CardView } from '#lib/types.js';
 
 /** Backs /study/cards/[id] — the previously-unused getDeckCards() (see its
  * own doc comment for why this is unfiltered by due date, unlike

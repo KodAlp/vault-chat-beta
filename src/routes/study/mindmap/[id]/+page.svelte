@@ -1,14 +1,14 @@
 <script lang="ts">
-	import Icon from '$lib/components/Icon.svelte';
+	import Icon from '#lib/components/Icon.svelte';
 	import { onDestroy, onMount } from 'svelte';
 	import { page } from '$app/state';
-	import { buildTree, treeToMarkdownOutline } from '$lib/mindmap-tree';
-	import { libraryViewerUrl } from '$lib/sourceLink';
-	import { resolveBackHref } from '$lib/back-link';
-	import { t } from '$lib/i18n/index.svelte';
-	import { readResponseError, localizeError } from '$lib/server-error';
+	import { buildTree, treeToMarkdownOutline } from '#lib/mindmap-tree.js';
+	import { libraryViewerUrl } from '#lib/sourceLink.js';
+	import { resolveBackHref } from '#lib/back-link.js';
+	import { t } from '#lib/i18n/index.svelte.js';
+	import { readResponseError, localizeError } from '#lib/server-error.js';
 	import type { PageProps } from './$types';
-	import type { MindMapNodeView, MindMapView } from '$lib/types';
+	import type { MindMapNodeView, MindMapView } from '#lib/types.js';
 
 	let { data }: PageProps = $props();
 

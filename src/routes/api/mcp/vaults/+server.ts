@@ -1,8 +1,8 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { createVaultViaMcp } from '$lib/server/vaults';
-import { fail } from '$lib/server/app-error';
-import { failFrom } from '$lib/server/mcp-import';
+import { createVaultViaMcp } from '#lib/server/vaults.js';
+import { fail } from '#lib/server/app-error.js';
+import { failFrom } from '#lib/server/mcp-import.js';
 
 const MAX_NAME_CHARS = 100;
 

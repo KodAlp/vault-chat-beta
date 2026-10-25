@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Icon from '$lib/components/Icon.svelte';
+	import Icon from '#lib/components/Icon.svelte';
 	/**
 	 * Settings/providers' local-launcher control panel for ONE
 	 * catalog id (Ollama or any local openai-compat server the user's added
@@ -22,13 +22,13 @@
 	 */
 	import { onMount } from 'svelte';
 	import { invoke } from '@tauri-apps/api/core';
-	import { Button } from '$lib/components/ui/button';
-	import { Input } from '$lib/components/ui/input';
-	import { Label } from '$lib/components/ui/label';
-	import { Switch } from '$lib/components/ui/switch';
-	import { Badge } from '$lib/components/ui/badge';
-	import { t } from '$lib/i18n/index.svelte';
-	import type { LauncherConfig, LauncherStatusValue } from '$lib/types';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
+	import { Label } from '#lib/components/ui/label/index.js';
+	import { Switch } from '#lib/components/ui/switch/index.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
+	import { t } from '#lib/i18n/index.svelte.js';
+	import type { LauncherConfig, LauncherStatusValue } from '#lib/types.js';
 
 	let {
 		serverId,

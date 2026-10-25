@@ -1,6 +1,6 @@
 import { redirect } from '@sveltejs/kit';
-import { listVaults, getActiveVaultId, contextFor } from '$lib/server/vaults';
-import { countUnindexedFiles, checkEmbeddingMismatch } from '$lib/server/retrieve';
+import { listVaults, getActiveVaultId, contextFor } from '#lib/server/vaults.js';
+import { countUnindexedFiles, checkEmbeddingMismatch } from '#lib/server/retrieve.js';
 import type { PageServerLoad } from './$types';
 
 /**

@@ -7,7 +7,7 @@ import * as store from './smalltalk-store';
 import { DEFAULT_THRESHOLDS, decideSmallTalk, isGateCalibratedFor, smallTalkGateEnabled, type GateDecision, type GateThresholds } from './smalltalk-gate';
 import { PROBE_QUESTIONS, calibrationSignature, deriveThresholds } from './smalltalk-calibration';
 import { SMALLTALK_SEEDS } from './smalltalk-seeds';
-import type { RetrieveResult } from '$lib/types';
+import type { RetrieveResult } from '#lib/types.js';
 
 /**
  * SvelteKit-side glue for the small-talk gate: the gate itself (smalltalk-gate.ts) and the

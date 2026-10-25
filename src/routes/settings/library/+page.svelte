@@ -1,14 +1,14 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import LinksImportDialog from '$lib/components/LinksImportDialog.svelte';
-	import NoteAppSourceGrid from '$lib/components/NoteAppSourceGrid.svelte';
-	import LibraryTree from '$lib/components/LibraryTree.svelte';
-	import PendingImports from '$lib/components/PendingImports.svelte';
-	import type { LibrarySettings } from '$lib/types';
-	import { Switch } from '$lib/components/ui/switch';
-	import { Input } from '$lib/components/ui/input';
-	import * as Card from '$lib/components/ui/card';
-	import { t } from '$lib/i18n/index.svelte';
+	import LinksImportDialog from '#lib/components/LinksImportDialog.svelte';
+	import NoteAppSourceGrid from '#lib/components/NoteAppSourceGrid.svelte';
+	import LibraryTree from '#lib/components/LibraryTree.svelte';
+	import PendingImports from '#lib/components/PendingImports.svelte';
+	import type { LibrarySettings } from '#lib/types.js';
+	import { Switch } from '#lib/components/ui/switch/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
+	import * as Card from '#lib/components/ui/card/index.js';
+	import { t } from '#lib/i18n/index.svelte.js';
 
 	let settings = $state<LibrarySettings>({
 		keepOriginals: true,

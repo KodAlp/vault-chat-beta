@@ -1,25 +1,25 @@
 <script lang="ts">
-	import Icon from '$lib/components/Icon.svelte';
+	import Icon from '#lib/components/Icon.svelte';
 	import { onMount } from 'svelte';
 	import { isTauri, invoke } from '@tauri-apps/api/core';
-	import type { ProviderStatus, ProviderModelOption, ModelListItem, DetectedServer } from '$lib/types';
-	import { catalogIdForBaseUrl } from '$lib/localServerMatch';
-	import LauncherPanel from '$lib/components/LauncherPanel.svelte';
-	import { Checkbox } from '$lib/components/ui/checkbox';
-	import { Button } from '$lib/components/ui/button';
-	import { Input } from '$lib/components/ui/input';
-	import { Switch } from '$lib/components/ui/switch';
-	import { Badge } from '$lib/components/ui/badge';
-	import * as Card from '$lib/components/ui/card';
-	import * as Select from '$lib/components/ui/select';
-	import * as AlertDialog from '$lib/components/ui/alert-dialog';
-	import ChainEditor from '$lib/components/ChainEditor.svelte';
-	import { Label } from '$lib/components/ui/label';
-	import { t, i18n } from '$lib/i18n/index.svelte';
-	import { providerDisplayLabel } from '$lib/provider-label';
+	import type { ProviderStatus, ProviderModelOption, ModelListItem, DetectedServer } from '#lib/types.js';
+	import { catalogIdForBaseUrl } from '#lib/localServerMatch.js';
+	import LauncherPanel from '#lib/components/LauncherPanel.svelte';
+	import { Checkbox } from '#lib/components/ui/checkbox/index.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
+	import { Switch } from '#lib/components/ui/switch/index.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
+	import * as Card from '#lib/components/ui/card/index.js';
+	import * as Select from '#lib/components/ui/select/index.js';
+	import * as AlertDialog from '#lib/components/ui/alert-dialog/index.js';
+	import ChainEditor from '#lib/components/ChainEditor.svelte';
+	import { Label } from '#lib/components/ui/label/index.js';
+	import { t, i18n } from '#lib/i18n/index.svelte.js';
+	import { providerDisplayLabel } from '#lib/provider-label.js';
 	const pLabel = (id: string, label: string) => providerDisplayLabel(id, label, t);
-	import { relativeTime } from '$lib/relative-time';
-	import { readResponseError } from '$lib/server-error';
+	import { relativeTime } from '#lib/relative-time.js';
+	import { readResponseError } from '#lib/server-error.js';
 
 	// Stable per-instance id prefix for label/control association (see
 	// craft-floor's accessibility pass) — $props.id() rather than a literal

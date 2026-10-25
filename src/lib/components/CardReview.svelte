@@ -1,11 +1,11 @@
 <script lang="ts">
-	import Icon from '$lib/components/Icon.svelte';
+	import Icon from '#lib/components/Icon.svelte';
 	import { onMount, untrack } from 'svelte';
-	import { renderMarkdown } from '$lib/markdown';
-	import { libraryViewerUrl } from '$lib/sourceLink';
-	import { t } from '$lib/i18n/index.svelte';
-	import { readResponseError, localizeError } from '$lib/server-error';
-	import type { CardView, Grade } from '$lib/types';
+	import { renderMarkdown } from '#lib/markdown.js';
+	import { libraryViewerUrl } from '#lib/sourceLink.js';
+	import { t } from '#lib/i18n/index.svelte.js';
+	import { readResponseError, localizeError } from '#lib/server-error.js';
+	import type { CardView, Grade } from '#lib/types.js';
 
 	/**
 	 * The flashcard review session — front/reveal/grade, spaced-repetition

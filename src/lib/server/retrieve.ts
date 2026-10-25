@@ -9,7 +9,7 @@ import { selectChunks, type CandidateChunk } from './select-chunks';
 import { RERANK_CANDIDATES, pickRerankCandidates, rerankPassage, selectReranked } from './rerank-select';
 import { rerank } from './reranker';
 import { getLibrarySettings } from './library-read';
-import type { RetrieveResult } from '$lib/types';
+import type { RetrieveResult } from '#lib/types.js';
 import type { VaultContext } from './vaults';
 import { logAppEvent } from './app-log';
 import { buildCoOccurrenceQuery, buildFallbackQuery, buildFtsQuery, extractTerms } from './keyword-query';

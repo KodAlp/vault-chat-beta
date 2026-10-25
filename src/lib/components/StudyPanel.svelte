@@ -2,13 +2,13 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
-	import * as Sheet from '$lib/components/ui/sheet';
-	import * as AlertDialog from '$lib/components/ui/alert-dialog';
-	import { Badge } from '$lib/components/ui/badge';
-	import Icon from '$lib/components/Icon.svelte';
-	import AnimatedIcon from '$lib/components/AnimatedIcon.svelte';
-	import type { StudySummary } from '$lib/types';
-	import { t } from '$lib/i18n/index.svelte';
+	import * as Sheet from '#lib/components/ui/sheet/index.js';
+	import * as AlertDialog from '#lib/components/ui/alert-dialog/index.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
+	import Icon from '#lib/components/Icon.svelte';
+	import AnimatedIcon from '#lib/components/AnimatedIcon.svelte';
+	import type { StudySummary } from '#lib/types.js';
+	import { t } from '#lib/i18n/index.svelte.js';
 
 	type StudyKind = 'quizzes' | 'reports' | 'mindmaps' | 'slidedecks' | 'decks';
 

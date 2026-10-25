@@ -1,7 +1,7 @@
 import type { RequestHandler } from './$types';
-import { fail } from '$lib/server/app-error';
-import { getChat, getMessages, type MessageRow } from '$lib/server/chats-db';
-import type { RetrievedChunk } from '$lib/types';
+import { fail } from '#lib/server/app-error.js';
+import { getChat, getMessages, type MessageRow } from '#lib/server/chats-db.js';
+import type { RetrievedChunk } from '#lib/types.js';
 
 function safeFilename(title: string | null, id: string): string {
 	const base = (title ?? id).replace(/[^\p{L}\p{N}\-_ ]/gu, '').trim();

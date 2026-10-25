@@ -1,12 +1,12 @@
 import { error, redirect, type RequestEvent } from '@sveltejs/kit';
 import type { Handle, HandleServerError } from '@sveltejs/kit/hooks';
-import { runVaultMigrationIfNeeded } from '$lib/server/migrateVaults';
-import { logAppEvent } from '$lib/server/app-log';
-import { sessionToken, mcpToken } from '$lib/server/env';
-import { decideSessionGate } from '$lib/server/session-gate';
-import { decideMcpGate, MCP_TOKEN_HEADER } from '$lib/server/mcp-gate';
+import { runVaultMigrationIfNeeded } from '#lib/server/migrateVaults.js';
+import { logAppEvent } from '#lib/server/app-log.js';
+import { sessionToken, mcpToken } from '#lib/server/env.js';
+import { decideSessionGate } from '#lib/server/session-gate.js';
+import { decideMcpGate, MCP_TOKEN_HEADER } from '#lib/server/mcp-gate.js';
 import tls from 'node:tls';
-import { installSystemCa } from '$lib/server/system-ca';
+import { installSystemCa } from '#lib/server/system-ca.js';
 
 // Before any cloud provider call: trust the OS certificate store too, so antivirus / corporate HTTPS
 // inspection doesn't break every provider with SELF_SIGNED_CERT_IN_CHAIN. See system-ca.ts.

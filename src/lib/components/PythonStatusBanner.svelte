@@ -1,9 +1,9 @@
 <script lang="ts">
-	import Icon from '$lib/components/Icon.svelte';
-	import { motionFly } from '$lib/motion';
-	import { t } from '$lib/i18n/index.svelte';
-	import { localizeError, readResponseError } from '$lib/server-error';
-	import type { PythonSetupEvent, PythonSystemStatus } from '$lib/types';
+	import Icon from '#lib/components/Icon.svelte';
+	import { motionFly } from '#lib/motion.js';
+	import { t } from '#lib/i18n/index.svelte.js';
+	import { localizeError, readResponseError } from '#lib/server-error.js';
+	import type { PythonSetupEvent, PythonSystemStatus } from '#lib/types.js';
 
 	/**
 	 * Only PDF/document/YouTube import depends on Python + its required

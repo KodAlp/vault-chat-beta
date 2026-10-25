@@ -1,11 +1,11 @@
 <script lang="ts">
-	import Icon from '$lib/components/Icon.svelte';
+	import Icon from '#lib/components/Icon.svelte';
 	import { page } from '$app/state';
 	import { afterNavigate } from '$app/navigation';
-	import { t } from '$lib/i18n/index.svelte';
+	import { t } from '#lib/i18n/index.svelte.js';
 	import { onMount } from 'svelte';
-	import { pendingImports, refreshPendingImports } from '$lib/pending-imports.svelte';
-	import { attentionCount } from '$lib/pending-imports-view';
+	import { pendingImports, refreshPendingImports } from '#lib/pending-imports.svelte.js';
+	import { attentionCount } from '#lib/pending-imports-view.js';
 
 	let { children } = $props();
 

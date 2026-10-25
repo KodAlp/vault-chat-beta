@@ -1,8 +1,8 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getLibrarySettings, saveLibrarySettings } from '$lib/server/library';
-import { vaultFromUrl, vaultFromId } from '$lib/server/requestVault';
-import { fail } from '$lib/server/app-error';
+import { getLibrarySettings, saveLibrarySettings } from '#lib/server/library.js';
+import { vaultFromUrl, vaultFromId } from '#lib/server/requestVault.js';
+import { fail } from '#lib/server/app-error.js';
 
 export const GET: RequestHandler = async ({ url }) => {
 	const v = vaultFromUrl(url);

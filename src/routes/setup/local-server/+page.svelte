@@ -23,20 +23,20 @@
 	 * calling into `@tauri-apps/api/core` — nothing here throws outside Tauri.
 	 */
 	import { onMount } from 'svelte';
-	import { installHint, showWingetNote } from '$lib/install-hints';
-	import { serverPlatform } from '$lib/serverPlatform.svelte';
+	import { installHint, showWingetNote } from '#lib/install-hints.js';
+	import { serverPlatform } from '#lib/serverPlatform.svelte.js';
 	import { goto } from '$app/navigation';
 	import { isTauri, invoke } from '@tauri-apps/api/core';
-	import { Button } from '$lib/components/ui/button';
-	import { Badge } from '$lib/components/ui/badge';
-	import { Input } from '$lib/components/ui/input';
-	import * as Card from '$lib/components/ui/card';
-	import { t } from '$lib/i18n/index.svelte';
-	import { markLocalServerSetupDone } from '$lib/localServerSetup.svelte';
-	import { openExternalLink } from '$lib/openExternalLink';
-	import { readResponseError } from '$lib/server-error';
-	import { settings, persistSettings } from '$lib/settings.svelte';
-	import { autoPickModel, emptyChainTasks, chooseEmbeddingCandidate, modelListed } from '$lib/setup-choices';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
+	import * as Card from '#lib/components/ui/card/index.js';
+	import { t } from '#lib/i18n/index.svelte.js';
+	import { markLocalServerSetupDone } from '#lib/localServerSetup.svelte.js';
+	import { openExternalLink } from '#lib/openExternalLink.js';
+	import { readResponseError } from '#lib/server-error.js';
+	import { settings, persistSettings } from '#lib/settings.svelte.js';
+	import { autoPickModel, emptyChainTasks, chooseEmbeddingCandidate, modelListed } from '#lib/setup-choices.js';
 	import type {
 		DetectedServer,
 		ProviderStatus,
@@ -44,7 +44,7 @@
 		PythonSystemStatus,
 		WingetDoneEvent,
 		WingetProgressEvent
-	} from '$lib/types';
+	} from '#lib/types.js';
 
 	// Only these four are offered as fresh installs when nothing local is
 	// detected at all — llamacpp-embed/localai/vllm are advanced/manual

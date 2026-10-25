@@ -1,10 +1,10 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { listVaults, createVault, getActiveVaultId, contextFor, needsMcpMigrationPrompt } from '$lib/server/vaults';
-import { countUnindexedFiles, checkEmbeddingMismatch } from '$lib/server/retrieve';
-import { AppError, fail, toCodedError } from '$lib/server/app-error';
-import type { ErrorCode } from '$lib/errors';
-import type { VaultWithStatus } from '$lib/types';
+import { listVaults, createVault, getActiveVaultId, contextFor, needsMcpMigrationPrompt } from '#lib/server/vaults.js';
+import { countUnindexedFiles, checkEmbeddingMismatch } from '#lib/server/retrieve.js';
+import { AppError, fail, toCodedError } from '#lib/server/app-error.js';
+import type { ErrorCode } from '#lib/errors.js';
+import type { VaultWithStatus } from '#lib/types.js';
 
 /**
  * unindexedCount is computed here, not stored on VaultRecord — that type is

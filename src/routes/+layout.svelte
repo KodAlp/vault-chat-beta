@@ -6,22 +6,22 @@
 	import { page } from '$app/state';
 	import { isTauri } from '@tauri-apps/api/core';
 	import { getCurrentWindow } from '@tauri-apps/api/window';
-	import WindowTitleBar from '$lib/components/WindowTitleBar.svelte';
-	import { settings } from '$lib/settings.svelte';
-	import { welcomeAlreadyShown } from '$lib/welcome';
-	import { quizGeneration, dismissQuizGeneration, cancelQuizGeneration } from '$lib/quiz-generation.svelte';
-	import { cardGeneration, dismissCardGeneration, cancelCardGeneration } from '$lib/card-generation.svelte';
-	import { reportGeneration, dismissReportGeneration, cancelReportGeneration } from '$lib/report-generation.svelte';
-	import { mindmapGeneration, dismissMindMapGeneration, cancelMindMapGeneration } from '$lib/mindmap-generation.svelte';
-	import { slidesGeneration, dismissSlidesGeneration, cancelSlidesGeneration } from '$lib/slides-generation.svelte';
-	import GenerationStatusToast from '$lib/components/GenerationStatusToast.svelte';
-	import ReindexDialog from '$lib/components/ReindexDialog.svelte';
-	import LocalServerBanner from '$lib/components/LocalServerBanner.svelte';
-	import PythonStatusBanner from '$lib/components/PythonStatusBanner.svelte';
-	import { requestScopeExpand } from '$lib/scope-expand.svelte';
-	import { handleExternalLinkClick } from '$lib/openExternalLink';
-	import { i18n, t } from '$lib/i18n/index.svelte';
-	import { localeInfo } from '$lib/i18n/locales';
+	import WindowTitleBar from '#lib/components/WindowTitleBar.svelte';
+	import { settings } from '#lib/settings.svelte.js';
+	import { welcomeAlreadyShown } from '#lib/welcome.js';
+	import { quizGeneration, dismissQuizGeneration, cancelQuizGeneration } from '#lib/quiz-generation.svelte.js';
+	import { cardGeneration, dismissCardGeneration, cancelCardGeneration } from '#lib/card-generation.svelte.js';
+	import { reportGeneration, dismissReportGeneration, cancelReportGeneration } from '#lib/report-generation.svelte.js';
+	import { mindmapGeneration, dismissMindMapGeneration, cancelMindMapGeneration } from '#lib/mindmap-generation.svelte.js';
+	import { slidesGeneration, dismissSlidesGeneration, cancelSlidesGeneration } from '#lib/slides-generation.svelte.js';
+	import GenerationStatusToast from '#lib/components/GenerationStatusToast.svelte';
+	import ReindexDialog from '#lib/components/ReindexDialog.svelte';
+	import LocalServerBanner from '#lib/components/LocalServerBanner.svelte';
+	import PythonStatusBanner from '#lib/components/PythonStatusBanner.svelte';
+	import { requestScopeExpand } from '#lib/scope-expand.svelte.js';
+	import { handleExternalLinkClick } from '#lib/openExternalLink.js';
+	import { i18n, t } from '#lib/i18n/index.svelte.js';
+	import { localeInfo } from '#lib/i18n/locales.js';
 
 	let { children } = $props();
 

@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { readUiPrefs, writeUiPrefs, type UiPrefs } from '$lib/server/ui-prefs-store';
-import { fail } from '$lib/server/app-error';
+import { readUiPrefs, writeUiPrefs, type UiPrefs } from '#lib/server/ui-prefs-store.js';
+import { fail } from '#lib/server/app-error.js';
 
 /** Desktop-launch persistence for locale/theme/model picks — see
  * ui-prefs-store.ts's doc comment for why localStorage alone isn't enough

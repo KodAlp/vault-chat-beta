@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { dataDir } from './env';
-import type { Settings } from '$lib/settings.svelte';
+import type { Settings } from '#lib/settings.svelte.js';
 // Relative, not $lib: this module also runs under plain tsx --test where the alias isn't resolved.
 import { migrateLocale, type Locale } from '../i18n/locales';
 

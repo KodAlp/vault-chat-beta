@@ -1,8 +1,8 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getEmbeddingConfig, setEmbeddingConfig, type EmbeddingConfig } from '$lib/server/providers/config-store';
-import { AppError, fail, toCodedError } from '$lib/server/app-error';
-import type { ErrorCode } from '$lib/errors';
+import { getEmbeddingConfig, setEmbeddingConfig, type EmbeddingConfig } from '#lib/server/providers/config-store.js';
+import { AppError, fail, toCodedError } from '#lib/server/app-error.js';
+import type { ErrorCode } from '#lib/errors.js';
 
 /**
  * Settings surface for providers/config-store.ts's embedding

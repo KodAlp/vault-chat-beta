@@ -3,8 +3,8 @@ import { execFile, spawn } from 'node:child_process';
 import path from 'node:path';
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { pythonBin, resetPythonBinCache } from '$lib/server/convertQueue';
-import { dataDir } from '$lib/server/env';
+import { pythonBin, resetPythonBinCache } from '#lib/server/convertQueue.js';
+import { dataDir } from '#lib/server/env.js';
 import {
 	checkPythonVersion,
 	defaultPythonDeps,
@@ -19,13 +19,13 @@ import {
 	venvCreateCommand,
 	venvDirPath,
 	venvPythonPath
-} from '$lib/server/python-bin';
-import { resolvePandocBin } from '$lib/server/pandoc-bin';
-import { sseStream } from '$lib/server/sse';
-import { logAppEvent } from '$lib/server/app-log';
-import { AppError, errorPayload } from '$lib/server/app-error';
-import { parseRequirementsImportNames, buildModuleCheckScript } from '$lib/server/pythonModules';
-import type { PythonModuleStatus, PythonSetupEvent, PythonSystemStatus } from '$lib/types';
+} from '#lib/server/python-bin.js';
+import { resolvePandocBin } from '#lib/server/pandoc-bin.js';
+import { sseStream } from '#lib/server/sse.js';
+import { logAppEvent } from '#lib/server/app-log.js';
+import { AppError, errorPayload } from '#lib/server/app-error.js';
+import { parseRequirementsImportNames, buildModuleCheckScript } from '#lib/server/pythonModules.js';
+import type { PythonModuleStatus, PythonSetupEvent, PythonSystemStatus } from '#lib/types.js';
 
 const REQUIREMENTS_TXT = path.resolve(process.cwd(), 'ingest', 'requirements.txt');
 

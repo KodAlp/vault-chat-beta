@@ -2,11 +2,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { stagingDir } from '$lib/server/library';
-import { vaultFromUrl } from '$lib/server/requestVault';
-import { deleteMeta, IMPORT_ID_RE } from '$lib/server/pending-imports';
-import { fail } from '$lib/server/app-error';
-import { discardStagedNote } from '$lib/server/converted-image-cleanup';
+import { stagingDir } from '#lib/server/library.js';
+import { vaultFromUrl } from '#lib/server/requestVault.js';
+import { deleteMeta, IMPORT_ID_RE } from '#lib/server/pending-imports.js';
+import { fail } from '#lib/server/app-error.js';
+import { discardStagedNote } from '#lib/server/converted-image-cleanup.js';
 
 export const POST: RequestHandler = async ({ params, url }) => {
 	// params.id goes straight into path.join(stagingDir(v), `${id}.md`) below; a staging id is always a
