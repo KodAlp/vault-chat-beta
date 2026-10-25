@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { settings } from '$lib/settings.svelte';
-	import { cardGeneration, startCardGeneration } from '$lib/card-generation.svelte';
-	import type { CardGenerationRequest } from '$lib/types';
+	import { settings } from '#lib/settings.svelte.js';
+	import { cardGeneration, startCardGeneration } from '#lib/card-generation.svelte.js';
+	import type { CardGenerationRequest } from '#lib/types.js';
 	import GenerationDialog from './GenerationDialog.svelte';
-	import { Button } from '$lib/components/ui/button';
-	import { Input } from '$lib/components/ui/input';
-	import { t } from '$lib/i18n/index.svelte';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
+	import { t } from '#lib/i18n/index.svelte.js';
 
 	let {
 		chatId,

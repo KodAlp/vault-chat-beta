@@ -16,7 +16,7 @@ import { MAX_UPLOAD_BYTES } from '../../import-extensions';
 // importObsidian.ts): a copied-in folder the indexer excludes would be
 // indexed on import and silently pruned by the next full reindex.
 import { EXCLUDED_DIRS } from '../../../../indexer/excluded-dirs';
-import type { ImportResultItem, ImportSummary } from '$lib/types';
+import type { ImportResultItem, ImportSummary } from '#lib/types.js';
 import type { VaultContext } from '../vaults';
 import type {
 	ImportPlan,

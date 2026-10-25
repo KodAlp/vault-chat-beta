@@ -1,8 +1,8 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { listQuizzes } from '$lib/server/study-db';
-import { vaultFromUrl } from '$lib/server/requestVault';
-import type { StudySummary } from '$lib/types';
+import { listQuizzes } from '#lib/server/study-db.js';
+import { vaultFromUrl } from '#lib/server/requestVault.js';
+import type { StudySummary } from '#lib/types.js';
 
 /** The collection-level counterpart to [id]/+server.ts's
  * get-by-id: lets the UI show what's already been generated in this

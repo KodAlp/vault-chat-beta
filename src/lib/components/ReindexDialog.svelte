@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { onDestroy } from 'svelte';
-	import * as Dialog from '$lib/components/ui/dialog';
-	import { Button } from '$lib/components/ui/button';
-	import { t } from '$lib/i18n/index.svelte';
-	import { localizeError, readResponseError } from '$lib/server-error';
-	import { runGenerationStream } from '$lib/generation-stream';
-	import type { ReindexEvent } from '$lib/types';
+	import * as Dialog from '#lib/components/ui/dialog/index.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { t } from '#lib/i18n/index.svelte.js';
+	import { localizeError, readResponseError } from '#lib/server-error.js';
+	import { runGenerationStream } from '#lib/generation-stream.js';
+	import type { ReindexEvent } from '#lib/types.js';
 
 	/**
 	 * Reusable full-reindex dialog: opens, immediately starts

@@ -1,6 +1,6 @@
 import { redirect } from '@sveltejs/kit';
-import { getChat } from '$lib/server/chats-db';
-import { fail } from '$lib/server/app-error';
+import { getChat } from '#lib/server/chats-db.js';
+import { fail } from '#lib/server/app-error.js';
 import type { PageServerLoad } from './$types';
 
 /** Older bookmarks/links pointed at /chat/[id] directly, with no vault

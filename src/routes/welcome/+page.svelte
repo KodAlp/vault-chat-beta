@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { motionFly, MOTION } from '$lib/motion';
+	import { motionFly, MOTION } from '#lib/motion.js';
 	import { goto } from '$app/navigation';
 	import { isTauri } from '@tauri-apps/api/core';
-	import { Button } from '$lib/components/ui/button';
-	import { markWelcomeShown } from '$lib/welcome';
-	import { localServerSetupDone } from '$lib/localServerSetup.svelte';
-	import { t } from '$lib/i18n/index.svelte';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { markWelcomeShown } from '#lib/welcome.js';
+	import { localServerSetupDone } from '#lib/localServerSetup.svelte.js';
+	import { t } from '#lib/i18n/index.svelte.js';
 
 	// Auto-continue keeps this from becoming a click-through chore on every
 	// launch; the button just lets an impatient user skip the wait instead

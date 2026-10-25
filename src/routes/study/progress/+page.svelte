@@ -1,12 +1,12 @@
 <script lang="ts">
-	import Icon from '$lib/components/Icon.svelte';
+	import Icon from '#lib/components/Icon.svelte';
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
-	import { resolveBackHref } from '$lib/back-link';
-	import { i18n, t } from '$lib/i18n/index.svelte';
-	import { intlLocale } from '$lib/i18n/locales';
-	import { UNKNOWN_DOMAIN, type LearnerProfile, type MasteryEstimate, type RetentionEstimate, type SkillNode } from '$lib/learner-model';
-	import type { WeakSpotErrorView, WeakSpotView } from '$lib/types';
+	import { resolveBackHref } from '#lib/back-link.js';
+	import { i18n, t } from '#lib/i18n/index.svelte.js';
+	import { intlLocale } from '#lib/i18n/locales.js';
+	import { UNKNOWN_DOMAIN, type LearnerProfile, type MasteryEstimate, type RetentionEstimate, type SkillNode } from '#lib/learner-model.js';
+	import type { WeakSpotErrorView, WeakSpotView } from '#lib/types.js';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();

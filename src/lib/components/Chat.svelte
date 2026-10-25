@@ -1,17 +1,17 @@
 <script lang="ts">
 	import { onDestroy, onMount, untrack, type Snippet } from 'svelte';
-	import type { ChatMessage, ChatRequestBody, ProviderModelOption, StreamEvent } from '$lib/types';
+	import type { ChatMessage, ChatRequestBody, ProviderModelOption, StreamEvent } from '#lib/types.js';
 	import Message from './Message.svelte';
 	import ModelPickerRow from './ModelPickerRow.svelte';
 	import ReindexDialog from './ReindexDialog.svelte';
-	import { settings } from '$lib/settings.svelte';
-	import { parseSelectionKey } from '$lib/model-selection';
-	import { t } from '$lib/i18n/index.svelte';
-	import { providerDisplayLabel } from '$lib/provider-label';
-	import { localizeError, readResponseError } from '$lib/server-error';
-	import { takePendingMessage } from '$lib/pending-message';
-	import { shouldOfferNotRelevant } from '$lib/smalltalk-limits';
-	import Icon from '$lib/components/Icon.svelte';
+	import { settings } from '#lib/settings.svelte.js';
+	import { parseSelectionKey } from '#lib/model-selection.js';
+	import { t } from '#lib/i18n/index.svelte.js';
+	import { providerDisplayLabel } from '#lib/provider-label.js';
+	import { localizeError, readResponseError } from '#lib/server-error.js';
+	import { takePendingMessage } from '#lib/pending-message.js';
+	import { shouldOfferNotRelevant } from '#lib/smalltalk-limits.js';
+	import Icon from '#lib/components/Icon.svelte';
 
 	let {
 		chatId,

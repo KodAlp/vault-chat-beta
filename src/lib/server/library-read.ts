@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import matter from 'gray-matter';
-import type { LibraryNode, LibrarySettings } from '$lib/types';
+import type { LibraryNode, LibrarySettings } from '#lib/types.js';
 import type { VaultContext } from './vaults';
 
 const META_DIR = '_meta';

@@ -1,8 +1,8 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { listMindMaps } from '$lib/server/study-db';
-import { vaultFromUrl } from '$lib/server/requestVault';
-import type { StudySummary } from '$lib/types';
+import { listMindMaps } from '#lib/server/study-db.js';
+import { vaultFromUrl } from '#lib/server/requestVault.js';
+import type { StudySummary } from '#lib/types.js';
 
 /** See quizzes/+server.ts for the rationale. */
 export const GET: RequestHandler = async ({ url }) => {

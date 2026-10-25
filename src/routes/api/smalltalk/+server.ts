@@ -1,8 +1,8 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { clearSmallTalk, listSmallTalk, smallTalkGateActive, teachSmallTalk } from '$lib/server/smalltalk-runtime';
-import { MAX_PHRASE_CHARS } from '$lib/server/smalltalk-store';
-import { fail } from '$lib/server/app-error';
+import { clearSmallTalk, listSmallTalk, smallTalkGateActive, teachSmallTalk } from '#lib/server/smalltalk-runtime.js';
+import { MAX_PHRASE_CHARS } from '#lib/server/smalltalk-store.js';
+import { fail } from '#lib/server/app-error.js';
 
 /** The user's learned small-talk phrases (see smalltalk-gate.ts) — user-level, not per vault. */
 export const GET: RequestHandler = async () => {

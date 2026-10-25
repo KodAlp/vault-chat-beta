@@ -3,8 +3,8 @@ import path from 'node:path';
 import matter from 'gray-matter';
 import { z } from 'zod';
 import { skillsDir } from './env';
-import type { UserSkillScope, UserSkillStatus } from '$lib/types';
-import { MAX_SKILL_FILE_CHARS as MAX_FILE_CHARS, MAX_SKILL_TOTAL_CHARS as MAX_TOTAL_CHARS } from '$lib/skill-limits';
+import type { UserSkillScope, UserSkillStatus } from '#lib/types.js';
+import { MAX_SKILL_FILE_CHARS as MAX_FILE_CHARS, MAX_SKILL_TOTAL_CHARS as MAX_TOTAL_CHARS } from '#lib/skill-limits.js';
 import { AppError } from './app-error';
 
 const SCOPES: UserSkillScope[] = ['chat', 'quiz', 'flashcards', 'mindmap', 'report', 'slides'];

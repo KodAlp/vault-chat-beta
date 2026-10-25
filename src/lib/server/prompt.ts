@@ -1,4 +1,4 @@
-import type { ChatMessage, RetrievedChunk } from '$lib/types';
+import type { ChatMessage, RetrievedChunk } from '#lib/types.js';
 import type { ChatMessage as ProviderChatMessage } from './providers/types';
 import { renderUserSkillsBlock } from './userSkills';
 import { computeMemoryBlock } from './memory-runtime';

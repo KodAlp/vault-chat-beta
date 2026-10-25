@@ -1,11 +1,11 @@
 <script lang="ts">
-	import Icon from '$lib/components/Icon.svelte';
+	import Icon from '#lib/components/Icon.svelte';
 	import { page } from '$app/state';
-	import { libraryViewerUrl } from '$lib/sourceLink';
-	import type { RetrievedChunk } from '$lib/types';
-	import * as HoverCard from '$lib/components/ui/hover-card';
-	import { t } from '$lib/i18n/index.svelte';
-	import { setHighlight, clearHighlight } from '$lib/source-highlight.svelte';
+	import { libraryViewerUrl } from '#lib/sourceLink.js';
+	import type { RetrievedChunk } from '#lib/types.js';
+	import * as HoverCard from '#lib/components/ui/hover-card/index.js';
+	import { t } from '#lib/i18n/index.svelte.js';
+	import { setHighlight, clearHighlight } from '#lib/source-highlight.svelte.js';
 
 	let here = $derived(page.url.pathname + page.url.search);
 

@@ -1,8 +1,8 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { readProvidersFile, updateChain } from '$lib/server/providers/config-store';
-import { AppError, fail, toCodedError } from '$lib/server/app-error';
-import type { ErrorCode } from '$lib/errors';
+import { readProvidersFile, updateChain } from '#lib/server/providers/config-store.js';
+import { AppError, fail, toCodedError } from '#lib/server/app-error.js';
+import type { ErrorCode } from '#lib/errors.js';
 
 export const GET: RequestHandler = async () => {
 	return json(readProvidersFile().chains);

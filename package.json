@@ -99,5 +99,9 @@
   "overrides": {
     "cookie": "^0.7.0",
     "@xmldom/xmldom": "^0.9.11"
+  },
+  "imports": {
+    "#lib": "./src/lib/index.js",
+    "#lib/*": "./src/lib/*"
   }
 }

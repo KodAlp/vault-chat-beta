@@ -4,7 +4,7 @@ import { removeLibraryFileFromIndex, renameLibraryFileInIndex } from './incremen
 import { foldToSlug, capSlug } from './slug';
 import { resolveLibraryPath, settingsPath } from './library-read';
 import { AppError } from './app-error';
-import type { LibrarySettings } from '$lib/types';
+import type { LibrarySettings } from '#lib/types.js';
 import type { VaultContext } from './vaults';
 
 const META_DIR = '_meta';
@@ -77,7 +77,7 @@ export function safeBasename(name: string): string {
 // Read-only tree/file-read/settings-read functions moved to library-read.ts
 // (a leaf module with no incrementalIndex/./ollama dependency — see its own
 // doc comment and the mcp-server skill for why). Re-exported here so every
-// existing call site (`$lib/server/library`) keeps working unchanged.
+// existing call site (`#lib/server/library.js`) keeps working unchanged.
 export { resolveLibraryPath, getLibraryTree, readLibraryFile, getLibrarySettings } from './library-read';
 
 /**

@@ -1,19 +1,19 @@
 <script lang="ts">
-	import Icon from '$lib/components/Icon.svelte';
-	import Chat from '$lib/components/Chat.svelte';
-	import ExportMenu from '$lib/components/ExportMenu.svelte';
-	import QuizDialog from '$lib/components/QuizDialog.svelte';
-	import CardsDialog from '$lib/components/CardsDialog.svelte';
-	import ReportDialog from '$lib/components/ReportDialog.svelte';
-	import MindMapDialog from '$lib/components/MindMapDialog.svelte';
-	import SlidesDialog from '$lib/components/SlidesDialog.svelte';
-	import SourcesSheet, { type SourceCounts } from '$lib/components/SourcesSheet.svelte';
-	import SourceTrigger from '$lib/components/SourceTrigger.svelte';
-	import ChatSidebar from '$lib/components/ChatSidebar.svelte';
-	import AnimatedIcon from '$lib/components/AnimatedIcon.svelte';
-	import StudyPanel from '$lib/components/StudyPanel.svelte';
-	import { scopeExpandSignal } from '$lib/scope-expand.svelte';
-	import { t } from '$lib/i18n/index.svelte';
+	import Icon from '#lib/components/Icon.svelte';
+	import Chat from '#lib/components/Chat.svelte';
+	import ExportMenu from '#lib/components/ExportMenu.svelte';
+	import QuizDialog from '#lib/components/QuizDialog.svelte';
+	import CardsDialog from '#lib/components/CardsDialog.svelte';
+	import ReportDialog from '#lib/components/ReportDialog.svelte';
+	import MindMapDialog from '#lib/components/MindMapDialog.svelte';
+	import SlidesDialog from '#lib/components/SlidesDialog.svelte';
+	import SourcesSheet, { type SourceCounts } from '#lib/components/SourcesSheet.svelte';
+	import SourceTrigger from '#lib/components/SourceTrigger.svelte';
+	import ChatSidebar from '#lib/components/ChatSidebar.svelte';
+	import AnimatedIcon from '#lib/components/AnimatedIcon.svelte';
+	import StudyPanel from '#lib/components/StudyPanel.svelte';
+	import { scopeExpandSignal } from '#lib/scope-expand.svelte.js';
+	import { t } from '#lib/i18n/index.svelte.js';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();

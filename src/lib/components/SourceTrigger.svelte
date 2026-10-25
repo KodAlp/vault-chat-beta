@@ -1,7 +1,7 @@
 <script lang="ts">
 	import AnimatedIcon from './AnimatedIcon.svelte';
-	import { t } from '$lib/i18n/index.svelte';
-	import { scopeSummary } from '$lib/source-summary';
+	import { t } from '#lib/i18n/index.svelte.js';
+	import { scopeSummary } from '#lib/source-summary.js';
 
 	/**
 	 * Chip showing the current source scope ("Tüm kasa" / "13 / 14 alan"); a

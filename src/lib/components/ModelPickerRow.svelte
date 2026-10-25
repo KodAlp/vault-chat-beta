@@ -1,11 +1,11 @@
 <script lang="ts">
-	import Icon from '$lib/components/Icon.svelte';
-	import type { ProviderModelOption } from '$lib/types';
-	import { selectionKey } from '$lib/model-selection';
-	import { t } from '$lib/i18n/index.svelte';
-	import { providerDisplayLabel } from '$lib/provider-label';
+	import Icon from '#lib/components/Icon.svelte';
+	import type { ProviderModelOption } from '#lib/types.js';
+	import { selectionKey } from '#lib/model-selection.js';
+	import { t } from '#lib/i18n/index.svelte.js';
+	import { providerDisplayLabel } from '#lib/provider-label.js';
 	const pLabel = (id: string, label: string) => providerDisplayLabel(id, label, t);
-	import * as AlertDialog from '$lib/components/ui/alert-dialog';
+	import * as AlertDialog from '#lib/components/ui/alert-dialog/index.js';
 
 	/**
 	 * The model/provider pill + "Derin düşün" pill row — extracted from

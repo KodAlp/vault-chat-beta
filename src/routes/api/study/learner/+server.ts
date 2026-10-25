@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { computeLearnerProfile } from '$lib/server/learner-store';
-import { vaultFromUrl } from '$lib/server/requestVault';
+import { computeLearnerProfile } from '#lib/server/learner-store.js';
+import { vaultFromUrl } from '#lib/server/requestVault.js';
 
 /**
  * F1b — the learner profile of a vault: for the whole vault, each domain and each note, how the quiz answers look (`quiz`), how

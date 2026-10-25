@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Icon from '$lib/components/Icon.svelte';
+	import Icon from '#lib/components/Icon.svelte';
 	/**
 	 * Formula editor popover (MathLive). Imported only when the user opens a
 	 * formula in the WYSIWYG editor, so MathLive (~220 KB gzip) never loads
@@ -10,8 +10,8 @@
 	 * until the user edits it, so merely opening and applying is a no-op.
 	 */
 	import { onMount, tick } from 'svelte';
-	import { t, i18n } from '$lib/i18n/index.svelte';
-	import { loadMathlive } from '$lib/wysiwyg/mathlive-locale';
+	import { t, i18n } from '#lib/i18n/index.svelte.js';
+	import { loadMathlive } from '#lib/wysiwyg/mathlive-locale.js';
 
 	let {
 		latex,

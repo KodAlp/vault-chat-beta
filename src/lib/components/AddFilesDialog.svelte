@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { isTauri } from '@tauri-apps/api/core';
-	import { serverPlatform } from '$lib/serverPlatform.svelte';
-	import { ALLOWED_EXTENSIONS, CODE_EXTENSIONS } from '$lib/import-extensions';
+	import { serverPlatform } from '#lib/serverPlatform.svelte.js';
+	import { ALLOWED_EXTENSIONS, CODE_EXTENSIONS } from '#lib/import-extensions.js';
 	import {
 		readDroppedRoots,
 		routeFor,
@@ -9,14 +9,14 @@
 		selectionFromFileList,
 		type ScanEntry,
 		type Selection
-	} from '$lib/import-selection';
-	import { Button } from '$lib/components/ui/button';
-	import { Input } from '$lib/components/ui/input';
-	import * as Dialog from '$lib/components/ui/dialog';
+	} from '#lib/import-selection.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
+	import * as Dialog from '#lib/components/ui/dialog/index.js';
 	import SingleFileImport from './SingleFileImport.svelte';
 	import BatchImport from './BatchImport.svelte';
-	import { t } from '$lib/i18n/index.svelte';
-	import { readResponseError } from '$lib/server-error';
+	import { t } from '#lib/i18n/index.svelte.js';
+	import { readResponseError } from '#lib/server-error.js';
 
 	/**
 	 * The ONE upload entry point. The user only says WHAT (files, a folder, a video link); which

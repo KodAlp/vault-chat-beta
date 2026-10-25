@@ -1,9 +1,9 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { secretStore, maskKey } from '$lib/server/providers/secrets';
-import { readProvidersFile } from '$lib/server/providers/config-store';
-import { invalidateAdapter } from '$lib/server/providers/registry';
-import { fail } from '$lib/server/app-error';
+import { secretStore, maskKey } from '#lib/server/providers/secrets.js';
+import { readProvidersFile } from '#lib/server/providers/config-store.js';
+import { invalidateAdapter } from '#lib/server/providers/registry.js';
+import { fail } from '#lib/server/app-error.js';
 
 export const POST: RequestHandler = async ({ params, request }) => {
 	const body = (await request.json()) as { key?: string };

@@ -1,12 +1,12 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { readProvidersFile } from '$lib/server/providers/config-store';
-import { getAdapter } from '$lib/server/providers/registry';
-import { loadCatalog } from '$lib/server/providers/model-catalog';
-import { filterModels, skipsCatalog } from '$lib/server/providers/model-filter';
-import { modelMaxAgeMonths } from '$lib/server/env';
-import type { ModelListItem } from '$lib/types';
-import { fail } from '$lib/server/app-error';
+import { readProvidersFile } from '#lib/server/providers/config-store.js';
+import { getAdapter } from '#lib/server/providers/registry.js';
+import { loadCatalog } from '#lib/server/providers/model-catalog.js';
+import { filterModels, skipsCatalog } from '#lib/server/providers/model-filter.js';
+import { modelMaxAgeMonths } from '#lib/server/env.js';
+import type { ModelListItem } from '#lib/types.js';
+import { fail } from '#lib/server/app-error.js';
 
 /**
  * The settings page's "model listesini yönet" section: unlike GET /api/providers/models (which only

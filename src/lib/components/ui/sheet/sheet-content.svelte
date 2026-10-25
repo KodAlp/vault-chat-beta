@@ -1,12 +1,12 @@
 <script lang="ts" module>
-	import Icon from '$lib/components/Icon.svelte';
+	import Icon from '#lib/components/Icon.svelte';
 	export type Side = "top" | "right" | "bottom" | "left";
 </script>
 
 <script lang="ts">
 	import { Dialog as SheetPrimitive } from "bits-ui";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { cn, type WithoutChildrenOrChild } from "$lib/utils.js";
+	import { Button } from "#lib/components/ui/button/index.js";
+	import { cn, type WithoutChildrenOrChild } from "#lib/utils.js";
 	import SheetOverlay from "./sheet-overlay.svelte";
 	import SheetPortal from "./sheet-portal.svelte";
 	import type { Snippet } from "svelte";

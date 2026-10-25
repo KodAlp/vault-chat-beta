@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { settings } from '$lib/settings.svelte';
-	import { mindmapGeneration, startMindMapGeneration } from '$lib/mindmap-generation.svelte';
-	import type { MindMapGenerationRequest } from '$lib/types';
+	import { settings } from '#lib/settings.svelte.js';
+	import { mindmapGeneration, startMindMapGeneration } from '#lib/mindmap-generation.svelte.js';
+	import type { MindMapGenerationRequest } from '#lib/types.js';
 	import GenerationDialog from './GenerationDialog.svelte';
-	import { t } from '$lib/i18n/index.svelte';
+	import { t } from '#lib/i18n/index.svelte.js';
 
 	let {
 		chatId,

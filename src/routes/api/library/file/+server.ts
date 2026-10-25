@@ -1,10 +1,10 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { readLibraryFile, deleteLibraryEntry } from '$lib/server/library';
-import { vaultFromUrl, vaultFromId } from '$lib/server/requestVault';
-import { fail, toCodedError, AppError } from '$lib/server/app-error';
-import { sha256, writeLibraryFile } from '$lib/server/library-write';
-import type { ErrorCode } from '$lib/errors';
+import { readLibraryFile, deleteLibraryEntry } from '#lib/server/library.js';
+import { vaultFromUrl, vaultFromId } from '#lib/server/requestVault.js';
+import { fail, toCodedError, AppError } from '#lib/server/app-error.js';
+import { sha256, writeLibraryFile } from '#lib/server/library-write.js';
+import type { ErrorCode } from '#lib/errors.js';
 
 export const GET: RequestHandler = async ({ url }) => {
 	const v = vaultFromUrl(url);

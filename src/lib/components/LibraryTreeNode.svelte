@@ -1,10 +1,10 @@
 <script lang="ts">
-	import Icon from '$lib/components/Icon.svelte';
+	import Icon from '#lib/components/Icon.svelte';
 	import { goto } from '$app/navigation';
-	import type { LibraryNode } from '$lib/types';
+	import type { LibraryNode } from '#lib/types.js';
 	import LibraryTreeNode from './LibraryTreeNode.svelte';
-	import * as AlertDialog from '$lib/components/ui/alert-dialog';
-	import { t } from '$lib/i18n/index.svelte';
+	import * as AlertDialog from '#lib/components/ui/alert-dialog/index.js';
+	import { t } from '#lib/i18n/index.svelte.js';
 
 	let { node, onchange }: { node: LibraryNode; onchange: () => void } = $props();
 

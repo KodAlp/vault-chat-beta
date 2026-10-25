@@ -1,9 +1,9 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { listRevisions, readRevision, restoreRevision } from '$lib/server/library-write';
-import { vaultFromUrl, vaultFromId } from '$lib/server/requestVault';
-import { fail, toCodedError, AppError } from '$lib/server/app-error';
-import type { ErrorCode } from '$lib/errors';
+import { listRevisions, readRevision, restoreRevision } from '#lib/server/library-write.js';
+import { vaultFromUrl, vaultFromId } from '#lib/server/requestVault.js';
+import { fail, toCodedError, AppError } from '#lib/server/app-error.js';
+import type { ErrorCode } from '#lib/errors.js';
 
 function failFrom(err: unknown): never {
 	const c = toCodedError(err);

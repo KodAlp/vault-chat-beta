@@ -1,9 +1,9 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getRerankerConfig, setRerankerConfig } from '$lib/server/providers/config-store';
-import { downloadRerankerModel, rerankerModelPresent, rerankerStatus } from '$lib/server/reranker';
-import { AppError, fail } from '$lib/server/app-error';
-import { logAppEvent } from '$lib/server/app-log';
+import { getRerankerConfig, setRerankerConfig } from '#lib/server/providers/config-store.js';
+import { downloadRerankerModel, rerankerModelPresent, rerankerStatus } from '#lib/server/reranker.js';
+import { AppError, fail } from '#lib/server/app-error.js';
+import { logAppEvent } from '#lib/server/app-log.js';
 
 /**
  * Chat reranker settings (reranker.ts). Session-gated and same-origin-checked by hooks.server.ts like

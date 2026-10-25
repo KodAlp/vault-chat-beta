@@ -1,21 +1,21 @@
 <script lang="ts">
-	import Icon from '$lib/components/Icon.svelte';
+	import Icon from '#lib/components/Icon.svelte';
 	import { page } from '$app/state';
 	import { beforeNavigate, goto } from '$app/navigation';
 	import { onDestroy, tick, untrack, type Component } from 'svelte';
-	import { renderMarkdown } from '$lib/markdown';
-	import { planBySize } from '$lib/wysiwyg/block-safety';
-	import { detectEol } from '$lib/wysiwyg/note-blocks';
-	import { resolveBackHref } from '$lib/back-link';
-	import { t, i18n } from '$lib/i18n/index.svelte';
-	import { intlLocale } from '$lib/i18n/locales';
-	import { relativeTime } from '$lib/relative-time';
-	import { localizeError, readResponseError } from '$lib/server-error';
-	import * as AlertDialog from '$lib/components/ui/alert-dialog';
-	import type { ReimportEvent } from '$lib/types';
-	import { findUnreadableFormulas, replaceUnreadableFormula } from '$lib/formula-repair';
-	import { findHeadingElement } from '$lib/heading-target';
-	import FormulaRepairDialog, { type RepairCandidateView } from '$lib/components/FormulaRepairDialog.svelte';
+	import { renderMarkdown } from '#lib/markdown.js';
+	import { planBySize } from '#lib/wysiwyg/block-safety.js';
+	import { detectEol } from '#lib/wysiwyg/note-blocks.js';
+	import { resolveBackHref } from '#lib/back-link.js';
+	import { t, i18n } from '#lib/i18n/index.svelte.js';
+	import { intlLocale } from '#lib/i18n/locales.js';
+	import { relativeTime } from '#lib/relative-time.js';
+	import { localizeError, readResponseError } from '#lib/server-error.js';
+	import * as AlertDialog from '#lib/components/ui/alert-dialog/index.js';
+	import type { ReimportEvent } from '#lib/types.js';
+	import { findUnreadableFormulas, replaceUnreadableFormula } from '#lib/formula-repair.js';
+	import { findHeadingElement } from '#lib/heading-target.js';
+	import FormulaRepairDialog, { type RepairCandidateView } from '#lib/components/FormulaRepairDialog.svelte';
 
 	type Revision = { id: string; at: string; bytes: number };
 	type EditorProps = { value: string; onchange: (next: string) => void };
@@ -203,8 +203,8 @@
 		if (!needVisual && !needSource) return;
 		editorLoading = true;
 		try {
-			if (needVisual) VisualComp = (await import('$lib/components/WysiwygEditor.svelte')).default as unknown as Component<VisualProps, VisualApi>;
-			else EditorComp = (await import('$lib/components/MarkdownEditor.svelte')).default as Component<EditorProps>;
+			if (needVisual) VisualComp = (await import('#lib/components/WysiwygEditor.svelte')).default as unknown as Component<VisualProps, VisualApi>;
+			else EditorComp = (await import('#lib/components/MarkdownEditor.svelte')).default as Component<EditorProps>;
 		} catch {
 			saveError = t('LibraryViewPage.editorLoadFailed');
 		} finally {

@@ -1,9 +1,9 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { addMemory, listMemory } from '$lib/server/memory-runtime';
-import type { MemoryType } from '$lib/server/memory-store';
-import type { MemoryNoteView } from '$lib/types';
-import { fail } from '$lib/server/app-error';
+import { addMemory, listMemory } from '#lib/server/memory-runtime.js';
+import type { MemoryType } from '#lib/server/memory-store.js';
+import type { MemoryNoteView } from '#lib/types.js';
+import { fail } from '#lib/server/app-error.js';
 
 const TYPES: readonly MemoryType[] = ['GLOBAL', 'PERSONAL'];
 

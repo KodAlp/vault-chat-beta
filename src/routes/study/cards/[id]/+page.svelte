@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { resolveBackHref } from '$lib/back-link';
-	import { t } from '$lib/i18n/index.svelte';
-	import CardReview from '$lib/components/CardReview.svelte';
+	import { resolveBackHref } from '#lib/back-link.js';
+	import { t } from '#lib/i18n/index.svelte.js';
+	import CardReview from '#lib/components/CardReview.svelte';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();

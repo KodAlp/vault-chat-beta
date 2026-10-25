@@ -1,13 +1,13 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { addProvider, deleteProvider, readProvidersFile, DEFAULT_OLLAMA_BASE_URL, type NewProviderInput } from '$lib/server/providers/config-store';
-import { secretStore, maskKey } from '$lib/server/providers/secrets';
-import { getRateLimitInfo } from '$lib/server/providers/registry';
-import { getLastProviderErrors } from '$lib/server/app-log';
-import { getEmbeddingConfig } from '$lib/server/providers/config-store';
-import type { ProviderStatus } from '$lib/types';
-import { AppError, fail, toCodedError } from '$lib/server/app-error';
-import type { ErrorCode } from '$lib/errors';
+import { addProvider, deleteProvider, readProvidersFile, DEFAULT_OLLAMA_BASE_URL, type NewProviderInput } from '#lib/server/providers/config-store.js';
+import { secretStore, maskKey } from '#lib/server/providers/secrets.js';
+import { getRateLimitInfo } from '#lib/server/providers/registry.js';
+import { getLastProviderErrors } from '#lib/server/app-log.js';
+import { getEmbeddingConfig } from '#lib/server/providers/config-store.js';
+import type { ProviderStatus } from '#lib/types.js';
+import { AppError, fail, toCodedError } from '#lib/server/app-error.js';
+import type { ErrorCode } from '#lib/errors.js';
 
 export const GET: RequestHandler = async () => {
 	const { providers } = readProvidersFile();

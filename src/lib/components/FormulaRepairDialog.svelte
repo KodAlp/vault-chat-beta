@@ -1,9 +1,9 @@
 <script lang="ts">
-	import * as Dialog from '$lib/components/ui/dialog';
-	import { Button } from '$lib/components/ui/button';
-	import { Badge } from '$lib/components/ui/badge';
-	import { renderMarkdown } from '$lib/markdown';
-	import { t } from '$lib/i18n/index.svelte';
+	import * as Dialog from '#lib/components/ui/dialog/index.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
+	import { renderMarkdown } from '#lib/markdown.js';
+	import { t } from '#lib/i18n/index.svelte.js';
 
 	/**
 	 * "Re-read this formula": the stored crop of the original page on top, every LaTeX candidate of

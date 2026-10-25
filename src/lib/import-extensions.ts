@@ -9,8 +9,8 @@
  * the exact lists for its pre-filter preview without pulling in a server
  * module (fs/child_process, which don't bundle for the browser) — but
  * library.ts itself can't import FROM here either, because a real (value)
- * `$lib/*` import breaks `npm test`'s tsx runner outside a Vite/SvelteKit
- * context (tsx resolves `$lib` only via .svelte-kit's generated tsconfig). Update
+ * `#lib/*` import breaks `npm test`'s tsx runner outside a Vite/SvelteKit
+ * context (tsx resolves `#lib` only via .svelte-kit's generated tsconfig). Update
  * BOTH copies together. */
 export const ALLOWED_EXTENSIONS = new Set([
 	'.pdf',

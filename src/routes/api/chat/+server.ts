@@ -1,15 +1,15 @@
 import type { RequestHandler } from './$types';
-import { fail, errorPayload } from '$lib/server/app-error';
-import type { ErrorCode, ErrorParams } from '$lib/errors';
-import { retrieve } from '$lib/server/retrieve';
-import { buildRetrievalQuery } from '$lib/server/retrieval-query';
-import { topicSpread } from '$lib/server/topic-spread';
-import { buildPromptMessages } from '$lib/server/prompt';
-import { chatLocalModel, chatWithFallback, modelCaps, servedContext, supportsPrefixResume } from '$lib/server/providers/registry';
-import { startFlight, endFlight } from '$lib/server/providers/inflight';
-import type { ChatMessage as ProviderChatMessage } from '$lib/server/providers/types';
-import { getRerankerConfig, readProvidersFile } from '$lib/server/providers/config-store';
-import { unreachableLocalServerLabel } from '$lib/server/providers/local-unreachable';
+import { fail, errorPayload } from '#lib/server/app-error.js';
+import type { ErrorCode, ErrorParams } from '#lib/errors.js';
+import { retrieve } from '#lib/server/retrieve.js';
+import { buildRetrievalQuery } from '#lib/server/retrieval-query.js';
+import { topicSpread } from '#lib/server/topic-spread.js';
+import { buildPromptMessages } from '#lib/server/prompt.js';
+import { chatLocalModel, chatWithFallback, modelCaps, servedContext, supportsPrefixResume } from '#lib/server/providers/registry.js';
+import { startFlight, endFlight } from '#lib/server/providers/inflight.js';
+import type { ChatMessage as ProviderChatMessage } from '#lib/server/providers/types.js';
+import { getRerankerConfig, readProvidersFile } from '#lib/server/providers/config-store.js';
+import { unreachableLocalServerLabel } from '#lib/server/providers/local-unreachable.js';
 import {
 	canRetryResume,
 	createSeamTrimmer,
@@ -19,21 +19,21 @@ import {
 	type CorruptionKind,
 	type SeamPlan,
 	type SeamTrimmer
-} from '$lib/server/resume-plan';
-import { closeOpenFence, findRepetitionLoop, findStrayThinkClose } from '$lib/server/repetition-guard';
-import { isNearCtxLimit } from '$lib/server/providers/ollama-usage';
-import { chatRetrievalK } from '$lib/server/env';
-import { afterSmallTalkGate, checkSmallTalk } from '$lib/server/smalltalk-runtime';
-import { createChat, getChat, insertMessage, updateMessage, touchChat } from '$lib/server/chats-db';
-import { generateTitle } from '$lib/server/title';
-import { vaultFromId } from '$lib/server/requestVault';
-import { logAppEvent } from '$lib/server/app-log';
-import { detectHallucinationHedges, mergeHedgeMatches } from '$lib/server/hallucination';
-import { getLibrarySettings } from '$lib/server/library';
-import { hasFetchableFolderSkills } from '$lib/server/userSkills';
-import { READ_SKILL_FILE_TOOL, executeReadSkillFile } from '$lib/server/skillTool';
-import { decideResponseLanguage } from '$lib/server/response-language';
-import type { ChatRequestBody, RetrievedChunk, StreamEvent } from '$lib/types';
+} from '#lib/server/resume-plan.js';
+import { closeOpenFence, findRepetitionLoop, findStrayThinkClose } from '#lib/server/repetition-guard.js';
+import { isNearCtxLimit } from '#lib/server/providers/ollama-usage.js';
+import { chatRetrievalK } from '#lib/server/env.js';
+import { afterSmallTalkGate, checkSmallTalk } from '#lib/server/smalltalk-runtime.js';
+import { createChat, getChat, insertMessage, updateMessage, touchChat } from '#lib/server/chats-db.js';
+import { generateTitle } from '#lib/server/title.js';
+import { vaultFromId } from '#lib/server/requestVault.js';
+import { logAppEvent } from '#lib/server/app-log.js';
+import { detectHallucinationHedges, mergeHedgeMatches } from '#lib/server/hallucination.js';
+import { getLibrarySettings } from '#lib/server/library.js';
+import { hasFetchableFolderSkills } from '#lib/server/userSkills.js';
+import { READ_SKILL_FILE_TOOL, executeReadSkillFile } from '#lib/server/skillTool.js';
+import { decideResponseLanguage } from '#lib/server/response-language.js';
+import type { ChatRequestBody, RetrievedChunk, StreamEvent } from '#lib/types.js';
 
 function sseEvent(event: StreamEvent): string {
 	return `data: ${JSON.stringify(event)}\n\n`;

@@ -1,8 +1,8 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getQuiz, createAttempt } from '$lib/server/study-db';
-import { vaultFromId } from '$lib/server/requestVault';
-import { fail } from '$lib/server/app-error';
+import { getQuiz, createAttempt } from '#lib/server/study-db.js';
+import { vaultFromId } from '#lib/server/requestVault.js';
+import { fail } from '#lib/server/app-error.js';
 
 export const POST: RequestHandler = async ({ request }) => {
 	const body = (await request.json()) as { quizId: string; vault?: string };

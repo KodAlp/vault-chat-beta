@@ -7,9 +7,9 @@ import {
 	updatePinnedModels,
 	updateProviderLocal,
 	updateModelCaps
-} from '$lib/server/providers/config-store';
-import { AppError, fail, toCodedError } from '$lib/server/app-error';
-import type { ErrorCode } from '$lib/errors';
+} from '#lib/server/providers/config-store.js';
+import { AppError, fail, toCodedError } from '#lib/server/app-error.js';
+import type { ErrorCode } from '#lib/errors.js';
 
 /** enabledModels: string[] sets the manual allow-list (settings page's checkbox management), null
  * clears it back to "uncurated, show everything the filter approves" (see config-store.ts's doc comment on

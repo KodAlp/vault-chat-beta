@@ -1,11 +1,11 @@
 import type { RequestHandler } from './$types';
-import { generateSlides } from '$lib/server/generate-slides';
-import { vaultFromId } from '$lib/server/requestVault';
-import { NoSourcesError } from '$lib/server/generate-errors';
-import { logAppEvent } from '$lib/server/app-log';
-import { sseStream } from '$lib/server/sse';
-import { errorPayload } from '$lib/server/app-error';
-import type { SlidesGenerationEvent, SlidesGenerationRequest } from '$lib/types';
+import { generateSlides } from '#lib/server/generate-slides.js';
+import { vaultFromId } from '#lib/server/requestVault.js';
+import { NoSourcesError } from '#lib/server/generate-errors.js';
+import { logAppEvent } from '#lib/server/app-log.js';
+import { sseStream } from '#lib/server/sse.js';
+import { errorPayload } from '#lib/server/app-error.js';
+import type { SlidesGenerationEvent, SlidesGenerationRequest } from '#lib/types.js';
 
 export const POST: RequestHandler = async ({ request }) => {
 	const body = (await request.json()) as SlidesGenerationRequest;

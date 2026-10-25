@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getDueCount } from '$lib/server/study-db';
-import { vaultFromUrl } from '$lib/server/requestVault';
+import { getDueCount } from '#lib/server/study-db.js';
+import { vaultFromUrl } from '#lib/server/requestVault.js';
 
 export const GET: RequestHandler = async ({ url }) => {
 	const v = vaultFromUrl(url);

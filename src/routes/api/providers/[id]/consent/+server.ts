@@ -1,8 +1,8 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { isCloud, readProvidersFile } from '$lib/server/providers/config-store';
-import { grantProviderConsent, revokeProviderConsent } from '$lib/server/provider-consent';
-import { fail } from '$lib/server/app-error';
+import { isCloud, readProvidersFile } from '#lib/server/providers/config-store.js';
+import { grantProviderConsent, revokeProviderConsent } from '#lib/server/provider-consent.js';
+import { fail } from '#lib/server/app-error.js';
 
 /** The model picker's first-use confirmation (ModelPickerRow,
  * GenerationDialog) POSTs here the moment the user accepts sending chat data

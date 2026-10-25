@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { readMcpSettings, writeMcpSettings } from '$lib/server/mcp-settings';
-import { AppError, fail } from '$lib/server/app-error';
+import { readMcpSettings, writeMcpSettings } from '#lib/server/mcp-settings.js';
+import { AppError, fail } from '#lib/server/app-error.js';
 
 /**
  * What the USER allows MCP clients to do (today: which folders import_source may read local files from).

@@ -1,12 +1,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { RequestHandler } from './$types';
-import { resolveLibraryPath } from '$lib/server/library-read';
-import { ATTACHMENT_EXT, META_DIR, ATTACHMENTS_SUBDIR, sniffAttachmentContentType } from '$lib/server/attachments';
-import { vaultFromUrl } from '$lib/server/requestVault';
-import { AppError, fail } from '$lib/server/app-error';
-import { storeUploadedImage, MAX_IMAGE_UPLOAD_BYTES } from '$lib/server/attachment-upload';
-import { vaultFromId } from '$lib/server/requestVault';
+import { resolveLibraryPath } from '#lib/server/library-read.js';
+import { ATTACHMENT_EXT, META_DIR, ATTACHMENTS_SUBDIR, sniffAttachmentContentType } from '#lib/server/attachments.js';
+import { vaultFromUrl } from '#lib/server/requestVault.js';
+import { AppError, fail } from '#lib/server/app-error.js';
+import { storeUploadedImage, MAX_IMAGE_UPLOAD_BYTES } from '#lib/server/attachment-upload.js';
+import { vaultFromId } from '#lib/server/requestVault.js';
 
 const ATTACHMENT_PREFIX = `${META_DIR}/${ATTACHMENTS_SUBDIR}/`;
 

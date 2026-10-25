@@ -34,7 +34,7 @@ function listTs(dir: string): string[] {
 
 function resolveImport(from: string, spec: string): string | null {
 	let base: string;
-	if (spec.startsWith('$lib/')) base = path.join(repo, 'src', 'lib', spec.slice(5));
+	if (spec.startsWith('#lib/')) base = path.join(repo, 'src', 'lib', spec.slice(5));
 	else if (spec.startsWith('.')) base = path.resolve(path.dirname(from), spec);
 	else return null; // bare package specifier
 	for (const cand of [base, base + '.ts', path.join(base, 'index.ts')]) {

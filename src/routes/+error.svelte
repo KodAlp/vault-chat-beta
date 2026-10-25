@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { Button } from '$lib/components/ui/button';
-	import { t } from '$lib/i18n/index.svelte';
-	import { localizeError } from '$lib/server-error';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { t } from '#lib/i18n/index.svelte.js';
+	import { localizeError } from '#lib/server-error.js';
 
 	let isNotFound = $derived(page.status === 404);
 	// A coded 404 (e.g. a deleted vault) names what's missing; only an

@@ -1,19 +1,19 @@
 <script lang="ts">
-	import Icon from '$lib/components/Icon.svelte';
+	import Icon from '#lib/components/Icon.svelte';
 	import { onMount } from 'svelte';
-	import { settings, persistSettings } from '$lib/settings.svelte';
-	import type { OllamaModel, ProviderModelOption } from '$lib/types';
-	import { selectionKey, parseSelectionKey } from '$lib/model-selection';
-	import { Button } from '$lib/components/ui/button';
-	import { Input } from '$lib/components/ui/input';
-	import { Label } from '$lib/components/ui/label';
-	import { Switch } from '$lib/components/ui/switch';
-	import * as Select from '$lib/components/ui/select';
-	import * as AlertDialog from '$lib/components/ui/alert-dialog';
-	import { t } from '$lib/i18n/index.svelte';
-	import { providerDisplayLabel } from '$lib/provider-label';
+	import { settings, persistSettings } from '#lib/settings.svelte.js';
+	import type { OllamaModel, ProviderModelOption } from '#lib/types.js';
+	import { selectionKey, parseSelectionKey } from '#lib/model-selection.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
+	import { Label } from '#lib/components/ui/label/index.js';
+	import { Switch } from '#lib/components/ui/switch/index.js';
+	import * as Select from '#lib/components/ui/select/index.js';
+	import * as AlertDialog from '#lib/components/ui/alert-dialog/index.js';
+	import { t } from '#lib/i18n/index.svelte.js';
+	import { providerDisplayLabel } from '#lib/provider-label.js';
 	const pLabel = (id: string, label: string) => providerDisplayLabel(id, label, t);
-	import { localizeError, readResponseError } from '$lib/server-error';
+	import { localizeError, readResponseError } from '#lib/server-error.js';
 
 	// Stable per-instance id prefix for label/control association.
 	const uid = $props.id();

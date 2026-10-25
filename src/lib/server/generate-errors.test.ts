@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { NoSourcesError, assertNoEmbeddingIssue } from './generate-errors';
 import { AppError } from './app-error';
-import type { RetrieveResult } from '$lib/types';
+import type { RetrieveResult } from '#lib/types.js';
 
 test('assertNoEmbeddingIssue does nothing when embeddingIssue is absent', () => {
 	const result: RetrieveResult = { chunks: [], narrowScope: false };

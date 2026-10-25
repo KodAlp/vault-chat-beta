@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
-	import { t } from '$lib/i18n/index.svelte';
+	import { t } from '#lib/i18n/index.svelte.js';
 	import ThinkingChick from './ThinkingChick.svelte';
 
 	/** Assistant answers render as plain text on the canvas (.vc-msg-assistant);

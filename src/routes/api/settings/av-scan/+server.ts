@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { readAvSettings, writeAvSettings } from '$lib/server/av-settings';
-import { AppError, fail } from '$lib/server/app-error';
+import { readAvSettings, writeAvSettings } from '#lib/server/av-settings.js';
+import { AppError, fail } from '#lib/server/app-error.js';
 
 /** Antivirus scan of imported files: `{ avScan: boolean }`, on by default. Session-gated like /api/settings/mcp. */
 export const GET: RequestHandler = async () => {

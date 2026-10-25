@@ -4,19 +4,19 @@ import crypto from 'node:crypto';
 import matter from 'gray-matter';
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { enqueueConversion } from '$lib/server/convertQueue';
-import { ocrLangArg } from '$lib/server/ocr-lang';
-import { getLibrarySettings } from '$lib/server/library-read';
-import { stagingDir, readLibraryFile, safeBasename, ALLOWED_EXTENSIONS, CODE_EXTENSIONS } from '$lib/server/library';
-import { originalPathForSourceSha } from '$lib/server/originals';
-import { importConvertedImages } from '$lib/server/converted-images';
-import { buildReimportedNote } from '$lib/server/reimport';
-import { vaultFromUrl, vaultFromId } from '$lib/server/requestVault';
-import type { VaultContext } from '$lib/server/vaults';
-import { sseStream } from '$lib/server/sse';
-import { logAppEvent } from '$lib/server/app-log';
-import { AppError, errorPayload, fail } from '$lib/server/app-error';
-import type { ReimportEvent } from '$lib/types';
+import { enqueueConversion } from '#lib/server/convertQueue.js';
+import { ocrLangArg } from '#lib/server/ocr-lang.js';
+import { getLibrarySettings } from '#lib/server/library-read.js';
+import { stagingDir, readLibraryFile, safeBasename, ALLOWED_EXTENSIONS, CODE_EXTENSIONS } from '#lib/server/library.js';
+import { originalPathForSourceSha } from '#lib/server/originals.js';
+import { importConvertedImages } from '#lib/server/converted-images.js';
+import { buildReimportedNote } from '#lib/server/reimport.js';
+import { vaultFromUrl, vaultFromId } from '#lib/server/requestVault.js';
+import type { VaultContext } from '#lib/server/vaults.js';
+import { sseStream } from '#lib/server/sse.js';
+import { logAppEvent } from '#lib/server/app-log.js';
+import { AppError, errorPayload, fail } from '#lib/server/app-error.js';
+import type { ReimportEvent } from '#lib/types.js';
 
 /** `<sha16>-<name>` -> `<name>` (see originals.ts). */
 function displayName(storedName: string): string {

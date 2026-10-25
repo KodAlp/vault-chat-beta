@@ -1,13 +1,13 @@
 <script lang="ts">
-	import Icon from '$lib/components/Icon.svelte';
+	import Icon from '#lib/components/Icon.svelte';
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
-	import { libraryViewerUrl } from '$lib/sourceLink';
-	import { resolveBackHref } from '$lib/back-link';
-	import { t } from '$lib/i18n/index.svelte';
-	import { readResponseError, localizeError } from '$lib/server-error';
+	import { libraryViewerUrl } from '#lib/sourceLink.js';
+	import { resolveBackHref } from '#lib/back-link.js';
+	import { t } from '#lib/i18n/index.svelte.js';
+	import { readResponseError, localizeError } from '#lib/server-error.js';
 	import type { PageProps } from './$types';
-	import type { SlideDeckView, SlideView } from '$lib/types';
+	import type { SlideDeckView, SlideView } from '#lib/types.js';
 
 	let { data }: PageProps = $props();
 

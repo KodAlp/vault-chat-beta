@@ -1,8 +1,8 @@
 <script lang="ts">
-	import type { VaultWithStatus } from '$lib/types';
-	import { Badge } from '$lib/components/ui/badge';
-	import { i18n, t } from '$lib/i18n/index.svelte';
-	import { relativeTime } from '$lib/relative-time';
+	import type { VaultWithStatus } from '#lib/types.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
+	import { i18n, t } from '#lib/i18n/index.svelte.js';
+	import { relativeTime } from '#lib/relative-time.js';
 
 	let { vault }: { vault: VaultWithStatus } = $props();
 </script>

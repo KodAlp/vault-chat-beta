@@ -1,18 +1,18 @@
 <script lang="ts">
 	import { onMount, untrack } from 'svelte';
 	import type { Snippet } from 'svelte';
-	import Icon from '$lib/components/Icon.svelte';
-	import { Button } from '$lib/components/ui/button';
-	import { Textarea } from '$lib/components/ui/textarea';
-	import { Checkbox } from '$lib/components/ui/checkbox';
-	import * as Dialog from '$lib/components/ui/dialog';
-	import * as Select from '$lib/components/ui/select';
-	import * as AlertDialog from '$lib/components/ui/alert-dialog';
-	import { t } from '$lib/i18n/index.svelte';
-	import { providerDisplayLabel } from '$lib/provider-label';
+	import Icon from '#lib/components/Icon.svelte';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Textarea } from '#lib/components/ui/textarea/index.js';
+	import { Checkbox } from '#lib/components/ui/checkbox/index.js';
+	import * as Dialog from '#lib/components/ui/dialog/index.js';
+	import * as Select from '#lib/components/ui/select/index.js';
+	import * as AlertDialog from '#lib/components/ui/alert-dialog/index.js';
+	import { t } from '#lib/i18n/index.svelte.js';
+	import { providerDisplayLabel } from '#lib/provider-label.js';
 	const pLabel = (id: string, label: string) => providerDisplayLabel(id, label, t);
-	import { selectionKey, parseSelectionKey } from '$lib/model-selection';
-	import type { ProviderModelOption } from '$lib/types';
+	import { selectionKey, parseSelectionKey } from '#lib/model-selection.js';
+	import type { ProviderModelOption } from '#lib/types.js';
 
 	/**
 	 * Shared shell for the five generation dialogs (quiz/cards/report/

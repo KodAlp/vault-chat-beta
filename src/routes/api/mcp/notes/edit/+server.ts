@@ -1,12 +1,12 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { fail, toCodedError, AppError } from '$lib/server/app-error';
-import { readMcpSettings } from '$lib/server/mcp-settings';
-import { requireMcpVault } from '$lib/server/mcp-import';
-import { readLibraryFile } from '$lib/server/library-read';
-import { writeLibraryFile } from '$lib/server/library-write';
-import { applyNoteEdit, type NoteEdit } from '$lib/server/mcp-edit-note';
-import type { ErrorCode } from '$lib/errors';
+import { fail, toCodedError, AppError } from '#lib/server/app-error.js';
+import { readMcpSettings } from '#lib/server/mcp-settings.js';
+import { requireMcpVault } from '#lib/server/mcp-import.js';
+import { readLibraryFile } from '#lib/server/library-read.js';
+import { writeLibraryFile } from '#lib/server/library-write.js';
+import { applyNoteEdit, type NoteEdit } from '#lib/server/mcp-edit-note.js';
+import type { ErrorCode } from '#lib/errors.js';
 
 /**
  * edit_note: lets an MCP client change ONE existing .md note, and only while the user has switched

@@ -17,7 +17,7 @@
 	import { markdown } from '@codemirror/lang-markdown';
 	import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
 	import { tags as t } from '@lezer/highlight';
-	import { detectLineSeparator } from '$lib/line-separator';
+	import { detectLineSeparator } from '#lib/line-separator.js';
 
 	let { value, onchange }: { value: string; onchange: (next: string) => void } = $props();
 

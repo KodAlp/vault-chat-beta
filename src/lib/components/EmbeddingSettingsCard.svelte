@@ -1,18 +1,18 @@
 <script lang="ts">
-	import Icon from '$lib/components/Icon.svelte';
+	import Icon from '#lib/components/Icon.svelte';
 	import { onMount } from 'svelte';
-	import type { ProviderStatus, EmbeddingConfig } from '$lib/types';
-	import * as Card from '$lib/components/ui/card';
-	import * as Select from '$lib/components/ui/select';
-	import * as AlertDialog from '$lib/components/ui/alert-dialog';
-	import { Button } from '$lib/components/ui/button';
-	import { Input } from '$lib/components/ui/input';
-	import { Label } from '$lib/components/ui/label';
+	import type { ProviderStatus, EmbeddingConfig } from '#lib/types.js';
+	import * as Card from '#lib/components/ui/card/index.js';
+	import * as Select from '#lib/components/ui/select/index.js';
+	import * as AlertDialog from '#lib/components/ui/alert-dialog/index.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
+	import { Label } from '#lib/components/ui/label/index.js';
 	import ReindexDialog from './ReindexDialog.svelte';
-	import { t } from '$lib/i18n/index.svelte';
-	import { providerDisplayLabel } from '$lib/provider-label';
+	import { t } from '#lib/i18n/index.svelte.js';
+	import { providerDisplayLabel } from '#lib/provider-label.js';
 	const pLabel = (id: string, label: string) => providerDisplayLabel(id, label, t);
-	import { localizeError } from '$lib/server-error';
+	import { localizeError } from '#lib/server-error.js';
 
 	/**
 	 * "Embedding modeli" card. Lives on the providers settings

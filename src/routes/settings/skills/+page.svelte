@@ -1,17 +1,17 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import type { UserSkillStatus, UserSkillScope } from '$lib/types';
-	import { MAX_SKILL_FILE_CHARS } from '$lib/skill-limits';
-	import { Button, buttonVariants } from '$lib/components/ui/button';
-	import { Input } from '$lib/components/ui/input';
-	import { Textarea } from '$lib/components/ui/textarea';
-	import { Badge } from '$lib/components/ui/badge';
-	import * as Card from '$lib/components/ui/card';
-	import * as Dialog from '$lib/components/ui/dialog';
-	import * as Select from '$lib/components/ui/select';
-	import * as AlertDialog from '$lib/components/ui/alert-dialog';
-	import { t } from '$lib/i18n/index.svelte';
-	import { localizeError, readResponseError } from '$lib/server-error';
+	import type { UserSkillStatus, UserSkillScope } from '#lib/types.js';
+	import { MAX_SKILL_FILE_CHARS } from '#lib/skill-limits.js';
+	import { Button, buttonVariants } from '#lib/components/ui/button/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
+	import { Textarea } from '#lib/components/ui/textarea/index.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
+	import * as Card from '#lib/components/ui/card/index.js';
+	import * as Dialog from '#lib/components/ui/dialog/index.js';
+	import * as Select from '#lib/components/ui/select/index.js';
+	import * as AlertDialog from '#lib/components/ui/alert-dialog/index.js';
+	import { t } from '#lib/i18n/index.svelte.js';
+	import { localizeError, readResponseError } from '#lib/server-error.js';
 
 	let SCOPE_LABELS = $derived<Record<UserSkillScope, string>>({
 		chat: t('SkillsSettingsPage.scopeChat'),

@@ -1,8 +1,8 @@
 <script lang="ts">
-	import Icon from '$lib/components/Icon.svelte';
+	import Icon from '#lib/components/Icon.svelte';
 	import { tick } from 'svelte';
-	import { i18n, setLocale, t } from '$lib/i18n/index.svelte';
-	import { LOCALES, localeInfo, type Locale } from '$lib/i18n/locales';
+	import { i18n, setLocale, t } from '#lib/i18n/index.svelte.js';
+	import { LOCALES, localeInfo, type Locale } from '#lib/i18n/locales.js';
 
 	/**
 	 * Hand-rolled combobox (no shadcn Popover/Command exists under components/ui, and pulling in

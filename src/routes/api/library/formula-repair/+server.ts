@@ -3,15 +3,15 @@ import path from 'node:path';
 import matter from 'gray-matter';
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { readLibraryFile } from '$lib/server/library';
-import { originalPathForSourceSha } from '$lib/server/originals';
-import { attachmentsDir, META_DIR, ATTACHMENTS_SUBDIR } from '$lib/server/attachments';
-import { findUnreadableFormulas } from '$lib/formula-repair';
-import { runFormulaRepair } from '$lib/server/formula-repair-run';
-import { vaultFromId } from '$lib/server/requestVault';
-import type { VaultContext } from '$lib/server/vaults';
-import { logAppEvent } from '$lib/server/app-log';
-import { AppError, fail } from '$lib/server/app-error';
+import { readLibraryFile } from '#lib/server/library.js';
+import { originalPathForSourceSha } from '#lib/server/originals.js';
+import { attachmentsDir, META_DIR, ATTACHMENTS_SUBDIR } from '#lib/server/attachments.js';
+import { findUnreadableFormulas } from '#lib/formula-repair.js';
+import { runFormulaRepair } from '#lib/server/formula-repair-run.js';
+import { vaultFromId } from '#lib/server/requestVault.js';
+import type { VaultContext } from '#lib/server/vaults.js';
+import { logAppEvent } from '#lib/server/app-log.js';
+import { AppError, fail } from '#lib/server/app-error.js';
 
 /** The note's text, or a 404 that does not tell "outside the library" from "missing" (same as /api/library/file). */
 function readNote(v: VaultContext, notePath: string): string {

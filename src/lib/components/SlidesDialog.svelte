@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { settings } from '$lib/settings.svelte';
-	import { slidesGeneration, startSlidesGeneration } from '$lib/slides-generation.svelte';
-	import type { SlidesGenerationRequest } from '$lib/types';
+	import { settings } from '#lib/settings.svelte.js';
+	import { slidesGeneration, startSlidesGeneration } from '#lib/slides-generation.svelte.js';
+	import type { SlidesGenerationRequest } from '#lib/types.js';
 	import GenerationDialog from './GenerationDialog.svelte';
-	import { t } from '$lib/i18n/index.svelte';
+	import { t } from '#lib/i18n/index.svelte.js';
 
 	let {
 		chatId,

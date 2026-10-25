@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	import Icon from '$lib/components/Icon.svelte';
+	import Icon from '#lib/components/Icon.svelte';
 	export type SourceCounts = {
 		selected: number;
 		total: number;
@@ -11,7 +11,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { Dialog as DialogPrimitive } from 'bits-ui';
-	import type { LibraryNode, LibrarySettings } from '$lib/types';
+	import type { LibraryNode, LibrarySettings } from '#lib/types.js';
 	import {
 		applyDisplayRules,
 		collectFilePaths,
@@ -19,11 +19,11 @@
 		toIncludedPaths,
 		selectOnly,
 		selectedAreas
-	} from '$lib/sourceTree';
-	import * as Sheet from '$lib/components/ui/sheet';
-	import * as AlertDialog from '$lib/components/ui/alert-dialog';
+	} from '#lib/sourceTree.js';
+	import * as Sheet from '#lib/components/ui/sheet/index.js';
+	import * as AlertDialog from '#lib/components/ui/alert-dialog/index.js';
 	import SourceTree from './SourceTree.svelte';
-	import { t } from '$lib/i18n/index.svelte';
+	import { t } from '#lib/i18n/index.svelte.js';
 
 	/**
 	 * The source-scope picker: a large centered sheet (see SourcesSheet.html)

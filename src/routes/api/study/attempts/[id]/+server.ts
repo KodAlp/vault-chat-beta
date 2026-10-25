@@ -5,12 +5,12 @@ import {
 	getQuizItem,
 	insertAttemptAnswer,
 	finishAttempt
-} from '$lib/server/study-db';
-import { gradeOpenAnswer } from '$lib/server/grade-open';
-import { isAnswered } from '$lib/study-answers';
-import { vaultFromId } from '$lib/server/requestVault';
-import { fail } from '$lib/server/app-error';
-import type { AttemptResultItem, SubmitAttemptRequest, SubmitAttemptResponse } from '$lib/types';
+} from '#lib/server/study-db.js';
+import { gradeOpenAnswer } from '#lib/server/grade-open.js';
+import { isAnswered } from '#lib/study-answers.js';
+import { vaultFromId } from '#lib/server/requestVault.js';
+import { fail } from '#lib/server/app-error.js';
+import type { AttemptResultItem, SubmitAttemptRequest, SubmitAttemptResponse } from '#lib/types.js';
 
 export const PATCH: RequestHandler = async ({ params, request }) => {
 	const body = (await request.json()) as SubmitAttemptRequest;

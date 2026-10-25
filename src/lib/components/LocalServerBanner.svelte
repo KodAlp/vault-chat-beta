@@ -1,15 +1,15 @@
 <script lang="ts">
-	import Icon from '$lib/components/Icon.svelte';
+	import Icon from '#lib/components/Icon.svelte';
 	import { untrack } from 'svelte';
-	import { motionFly } from '$lib/motion';
+	import { motionFly } from '#lib/motion.js';
 	import { isTauri, invoke } from '@tauri-apps/api/core';
 	import { afterNavigate } from '$app/navigation';
-	import { t } from '$lib/i18n/index.svelte';
-	import { providerDisplayLabel } from '$lib/provider-label';
+	import { t } from '#lib/i18n/index.svelte.js';
+	import { providerDisplayLabel } from '#lib/provider-label.js';
 	const pLabel = (id: string, label: string) => providerDisplayLabel(id, label, t);
-	import { settings } from '$lib/settings.svelte';
-	import { resolveBannerTarget, findLauncherId, type BannerTarget } from '$lib/localServerBanner';
-	import type { LauncherConfig, ProviderStatus } from '$lib/types';
+	import { settings } from '#lib/settings.svelte.js';
+	import { resolveBannerTarget, findLauncherId, type BannerTarget } from '#lib/localServerBanner.js';
+	import type { LauncherConfig, ProviderStatus } from '#lib/types.js';
 
 	/**
 	 * App-wide, not per-page, and provider-agnostic (it used to be hardcoded to the 'ollama' provider).

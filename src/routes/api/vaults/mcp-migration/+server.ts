@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { resolveMcpMigration } from '$lib/server/vaults';
+import { resolveMcpMigration } from '#lib/server/vaults.js';
 
 /** One-time migration answer — see vaults.ts's RegistryFile doc comment.
  * Idempotent: calling it again after mcpMigrationAsked is already true just

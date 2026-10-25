@@ -4,9 +4,9 @@ import { json } from '@sveltejs/kit';
 import matter from 'gray-matter';
 import { unzipSync, type UnzipFileInfo } from 'fflate';
 import type { RequestHandler } from './$types';
-import { skillsDir } from '$lib/server/env';
-import { Frontmatter, assertSafeSkillName } from '$lib/server/userSkills';
-import { AppError, fail } from '$lib/server/app-error';
+import { skillsDir } from '#lib/server/env.js';
+import { Frontmatter, assertSafeSkillName } from '#lib/server/userSkills.js';
+import { AppError, fail } from '#lib/server/app-error.js';
 
 const MAX_ZIP_RAW_BYTES = 20 * 1024 * 1024;
 const MAX_ZIP_ENTRY_COUNT = 500;

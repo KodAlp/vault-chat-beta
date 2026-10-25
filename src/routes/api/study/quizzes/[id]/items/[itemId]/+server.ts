@@ -1,8 +1,8 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getQuizItem, setQuizItemFlagged } from '$lib/server/study-db';
-import { vaultFromId } from '$lib/server/requestVault';
-import { fail } from '$lib/server/app-error';
+import { getQuizItem, setQuizItemFlagged } from '#lib/server/study-db.js';
+import { vaultFromId } from '#lib/server/requestVault.js';
+import { fail } from '#lib/server/app-error.js';
 
 /**
  * "Bu soru hatalı": the user marks a generated question as faulty (a wrong answer key, an ambiguous or source-specific

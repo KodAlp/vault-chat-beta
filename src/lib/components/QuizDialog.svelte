@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { settings } from '$lib/settings.svelte';
-	import { quizGeneration, startQuizGeneration } from '$lib/quiz-generation.svelte';
-	import type { QuizGenerationRequest } from '$lib/types';
+	import { settings } from '#lib/settings.svelte.js';
+	import { quizGeneration, startQuizGeneration } from '#lib/quiz-generation.svelte.js';
+	import type { QuizGenerationRequest } from '#lib/types.js';
 	import GenerationDialog from './GenerationDialog.svelte';
-	import { Input } from '$lib/components/ui/input';
-	import { t } from '$lib/i18n/index.svelte';
+	import { Input } from '#lib/components/ui/input/index.js';
+	import { t } from '#lib/i18n/index.svelte.js';
 
 	let {
 		chatId,

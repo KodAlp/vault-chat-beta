@@ -7,7 +7,7 @@
  * ServerErrors.* in the i18n catalogs.
  *
  * ProviderError/NoSourcesError are imported by relative path (not the
- * `$lib/...` alias) so this file — and its `toCodedError` classification
+ * `#lib/...` alias) so this file — and its `toCodedError` classification
  * logic — can be loaded and unit-tested directly under plain `tsx --test`,
  * the same reasoning config-store.test.ts etc. already rely on.
  */

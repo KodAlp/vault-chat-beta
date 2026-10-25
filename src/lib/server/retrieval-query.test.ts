@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { buildRetrievalQuery } from './retrieval-query';
-import type { ChatMessage } from '$lib/types';
+import type { ChatMessage } from '#lib/types.js';
 
 function user(content: string): ChatMessage {
 	return { role: 'user', content } as ChatMessage;

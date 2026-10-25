@@ -1,15 +1,15 @@
 <script lang="ts">
-	import type { ImportEvent, ImportResultStatus } from '$lib/types';
-	import type { SkipReason } from '$lib/import-filter';
-	import { seedsFromSelection, type Selection } from '$lib/import-selection';
-	import { Button } from '$lib/components/ui/button';
-	import { Input } from '$lib/components/ui/input';
-	import { Badge } from '$lib/components/ui/badge';
-	import * as Select from '$lib/components/ui/select';
-	import { Switch } from '$lib/components/ui/switch';
-	import * as Dialog from '$lib/components/ui/dialog';
-	import { t } from '$lib/i18n/index.svelte';
-	import { localizeError, readResponseError } from '$lib/server-error';
+	import type { ImportEvent, ImportResultStatus } from '#lib/types.js';
+	import type { SkipReason } from '#lib/import-filter.js';
+	import { seedsFromSelection, type Selection } from '#lib/import-selection.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
+	import * as Select from '#lib/components/ui/select/index.js';
+	import { Switch } from '#lib/components/ui/switch/index.js';
+	import * as Dialog from '#lib/components/ui/dialog/index.js';
+	import { t } from '#lib/i18n/index.svelte.js';
+	import { localizeError, readResponseError } from '#lib/server-error.js';
 
 	/**
 	 * The several-files / folder flow inside AddFilesDialog (formerly the body of BatchUploadDialog):

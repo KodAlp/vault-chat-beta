@@ -1,10 +1,10 @@
 import type { RequestHandler } from './$types';
-import { vaultFromId } from '$lib/server/requestVault';
-import { runScanned } from '$lib/server/library-import/service';
-import { sseStream } from '$lib/server/sse';
-import { logAppEvent } from '$lib/server/app-log';
-import { errorPayload } from '$lib/server/app-error';
-import type { LibraryImportEvent } from '$lib/types';
+import { vaultFromId } from '#lib/server/requestVault.js';
+import { runScanned } from '#lib/server/library-import/service.js';
+import { sseStream } from '#lib/server/sse.js';
+import { logAppEvent } from '#lib/server/app-log.js';
+import { errorPayload } from '#lib/server/app-error.js';
+import type { LibraryImportEvent } from '#lib/types.js';
 
 /**
  * Step 2: import the plan a previous scan recorded. SSE stream with the same

@@ -1,11 +1,11 @@
 <script lang="ts">
-	import type { ImportEvent, ImportResultItem } from '$lib/types';
-	import { Button } from '$lib/components/ui/button';
-	import { Input } from '$lib/components/ui/input';
-	import { Badge } from '$lib/components/ui/badge';
-	import * as Dialog from '$lib/components/ui/dialog';
-	import { t } from '$lib/i18n/index.svelte';
-	import { localizeError, readResponseError } from '$lib/server-error';
+	import type { ImportEvent, ImportResultItem } from '#lib/types.js';
+	import { Button } from '#lib/components/ui/button/index.js';
+	import { Input } from '#lib/components/ui/input/index.js';
+	import { Badge } from '#lib/components/ui/badge/index.js';
+	import * as Dialog from '#lib/components/ui/dialog/index.js';
+	import { t } from '#lib/i18n/index.svelte.js';
+	import { localizeError, readResponseError } from '#lib/server-error.js';
 
 	// Optional, unlike SingleFileImport's — this dialog lives on the library
 	// settings page next to LibraryTree, which refreshes itself on its own
