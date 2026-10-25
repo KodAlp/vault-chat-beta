@@ -21,7 +21,12 @@ import types
 from contextlib import redirect_stderr
 from pathlib import Path
 
-import torch
+try:
+    import torch
+except ModuleNotFoundError:
+    # torch is part of the optional GPU formula pipeline (requirements-optional.txt), not of CI.
+    print("skip: torch is not installed")
+    sys.exit(0)
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 

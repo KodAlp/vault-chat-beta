@@ -269,12 +269,25 @@ def test_segments_bad_boxes_fall_back_to_reference():
     assert len(new) == len(ref)
 
 
+# Heavy optional backends (requirements-optional.txt). A test that needs one is skipped when it
+# is missing (as in CI); any other error still fails the run.
+OPTIONAL_MODULES = {"docling", "docling_core", "torch", "transformers", "mineru_vl_utils", "cv2"}
+
+
 def main():
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
+    skipped = 0
     for t in tests:
-        t()
+        try:
+            t()
+        except ModuleNotFoundError as e:
+            if (e.name or "").split(".")[0] not in OPTIONAL_MODULES:
+                raise
+            skipped += 1
+            print(f"skip {t.__name__}: {e.name} is not installed")
+            continue
         print(f"ok {t.__name__}")
-    print(f"{len(tests)} passed")
+    print(f"{len(tests) - skipped} passed, {skipped} skipped")
 
 
 if __name__ == "__main__":

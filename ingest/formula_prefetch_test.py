@@ -17,6 +17,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+try:
+    import docling  # noqa: F401
+except ModuleNotFoundError:
+    # docling is an optional PDF backend (requirements-optional.txt), not installed in CI.
+    print("skip: docling is not installed")
+    sys.exit(0)
+
 import formula_prefetch as fp  # noqa: E402
 from docling.models.stages.code_formula.code_formula_vlm_model import CodeFormulaVlmModel  # noqa: E402
 from docling.pipeline.base_pipeline import BasePipeline  # noqa: E402
