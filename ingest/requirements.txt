@@ -31,7 +31,7 @@ py-asciimath==0.3.0
 # check silently never ran on real books. Lightweight, pure Python; markitdown
 # already pulls it transitively, pinned here because convert.py imports it
 # directly.
-pypdf==6.14.2
+pypdf==6.21.2
 
 # pdf_tounicode.py: reads glyph names from the embedded fonts of old TeX PDFs
 # (CFF tables via fontTools.cffLib, Adobe Glyph List via fontTools.agl) to give
