@@ -90,7 +90,7 @@
 	// Unreadable-formula blocks of whatever text is on screen (the draft while editing, else the saved note).
 	let unreadable = $derived(findUnreadableFormulas(editing ? draft : raw));
 	// The re-read needs the original PDF (the same lookup as re-import).
-	let repairAvailable = $derived(reimportAvailable && /\.pdf$/i.test(reimportOriginal));
+	let repairAvailable = $derived(reimportAvailable && (/\.pdf$/i).test(reimportOriginal));
 	let citedHeading = $derived(page.url.searchParams.get('heading') ?? '');
 	let backHref = $derived(resolveBackHref(page.url.searchParams.get('from'), vaultId ? `/vault/${vaultId}` : '/'));
 
@@ -119,7 +119,7 @@
 	async function fetchFile(): Promise<{ raw: string; hash: string }> {
 		const res = await fetch(fileUrl('/api/library/file'));
 		if (!res.ok) throw new Error();
-		return (await res.json()) as { raw: string; hash: string };
+		return await res.json() as { raw: string; hash: string };
 	}
 
 	async function load() {
@@ -158,7 +158,7 @@
 		try {
 			const res = await fetch(fileUrl('/api/library/reimport'));
 			if (!res.ok) return;
-			const info = (await res.json()) as { available: boolean; originalName?: string };
+			const info = await res.json() as { available: boolean; originalName?: string };
 			if (forPath !== filePath) return;
 			reimportAvailable = info.available;
 			reimportOriginal = info.originalName ?? '';
@@ -340,8 +340,20 @@
 				saveError = await readResponseError(res);
 				return;
 			}
-			const data = (await res.json()) as { page: number; cropUrl?: string; candidates: RepairCandidateView[] };
-			repairResult = { sha, page: data.page, cropUrl: data.cropUrl, candidates: data.candidates };
+
+			const data = await res.json() as { 
+				page: number;
+				cropUrl?: string;
+				candidates: RepairCandidateView[]
+			 };
+
+			repairResult = {
+				sha,
+				page: data.page,
+				cropUrl: data.cropUrl,
+				candidates: data.candidates
+			};
+
 			repairDialogOpen = true;
 		} catch (e) {
 			saveError = localizeError(e as Error);
@@ -391,7 +403,7 @@
 			for (const quote of node.querySelectorAll('blockquote')) {
 				const text = quote.textContent?.trim() ?? '';
 				if (!text.startsWith('⚠')) continue;
-				const page = Number(/s\.\s*(\d+)/.exec(text)?.[1]);
+				const page = Number((/s\.\s*(\d+)/).exec(text)?.[1]);
 				const at = pending.findIndex((i) => i.page === page);
 				if (at < 0) continue;
 				const [item] = pending.splice(at, 1);
@@ -454,7 +466,7 @@
 	function flash(message: string) {
 		savedFlash = message;
 		clearTimeout(flashTimer);
-		flashTimer = setTimeout(() => (savedFlash = ''), 4000);
+		flashTimer = setTimeout(() => savedFlash = '', 4000);
 	}
 	onDestroy(() => clearTimeout(flashTimer));
 
@@ -475,7 +487,7 @@
 	}
 
 	async function errorCode(res: Response): Promise<string | undefined> {
-		const body = (await res.clone().json().catch(() => null)) as { code?: string } | null;
+		const body = await res.clone().json().catch(() => null) as { code?: string } | null;
 		return body?.code;
 	}
 
@@ -488,7 +500,7 @@
 				body: JSON.stringify({ path: filePath, vault: vaultId || undefined, content, baseHash })
 			});
 			if (!res.ok) {
-				if (res.status === 409 && (await errorCode(res)) === 'LIBRARY_EDIT_CONFLICT') {
+				if (res.status === 409 && await errorCode(res) === 'LIBRARY_EDIT_CONFLICT') {
 					conflict = true;
 					return;
 				}
@@ -560,6 +572,7 @@
 	// link) can't be intercepted with our own dialog — cancel() there hands
 	// control to the browser's native "leave site?" prompt.
 	beforeNavigate((nav) => {
+		if (nav.shallow && nav.type === 'goto') return;
 		if (!dirty) return;
 		nav.cancel();
 		if (nav.willUnload || !nav.to) return;
@@ -588,7 +601,7 @@
 				saveError = await readResponseError(res);
 				revisions = [];
 			} else {
-				revisions = ((await res.json()) as { revisions: Revision[] }).revisions;
+				revisions = (await res.json() as { revisions: Revision[] }).revisions;
 			}
 		} catch (e) {
 			saveError = localizeError(e as Error);
@@ -605,7 +618,7 @@
 				saveError = await readResponseError(res);
 				return;
 			}
-			const data = (await res.json()) as { raw: string };
+			const data = await res.json() as { raw: string };
 			revPreview = { rev, raw: data.raw, html: await render(data.raw) };
 			showVersions = false;
 		} catch (e) {
@@ -645,7 +658,10 @@
 	<title>{filePath || t('LibraryViewPage.fallbackTitle')} — Vault Chat</title>
 </svelte:head>
 
-<svelte:window onkeydown={onWindowKeydown} onbeforeunload={onBeforeUnload} />
+<svelte:window
+	onkeydown={onWindowKeydown}
+	onbeforeunload={onBeforeUnload}
+></svelte:window>
 
 <div class="viewer" class:wide={editing}>
 	<a class="home-link" href={backHref}><Icon name="arrow-left" size="sm" class="rtl-flip" /> {t('Common.geriDon')}</a>
@@ -789,8 +805,8 @@
 				<VisualComp
 					bind:this={visualRef}
 					value={draft}
-					onchange={(next) => (draft = next)}
-					{vaultId}
+					onchange={(next) => draft = next}
+					vaultId={vaultId}
 					currentPath={filePath}
 					onfallback={visualFallback}
 				/>
@@ -803,7 +819,7 @@
 		<div class="split">
 			<section class="pane editor-pane" aria-label={t('LibraryViewPage.editorLabel')}>
 				{#if EditorComp}
-					<EditorComp value={draft} onchange={(next) => (draft = next)} />
+					<EditorComp value={draft} onchange={(next) => draft = next} />
 				{:else if editorLoading}
 					<p class="pane-note">{t('LibraryViewPage.editorLoading')}</p>
 				{/if}
@@ -818,8 +834,18 @@
 			<div class="rev-banner">
 				<div class="d">{t('LibraryViewPage.previewingVersion', { when: new Date(revPreview.rev.at).toLocaleString(intlLocale(i18n.locale)) })}</div>
 				<div class="conflict-actions">
-					<button type="button" class="vc-btn primary" onclick={restoreRevision} disabled={restoring}>{t('LibraryViewPage.restore')}</button>
-					<button type="button" class="vc-btn ghost" onclick={() => (revPreview = null)}>{t('LibraryViewPage.closeVersionPreview')}</button>
+					<button
+						type="button"
+						class="vc-btn primary"
+						onclick={restoreRevision}
+						disabled={restoring}
+					>{t('LibraryViewPage.restore')}</button>
+
+					<button
+						type="button"
+						class="vc-btn ghost"
+						onclick={() => revPreview = null}
+					>{t('LibraryViewPage.closeVersionPreview')}</button>
 				</div>
 			</div>
 		</div>
@@ -827,11 +853,20 @@
 	{:else}
 		<div
 			class="content markdown-body"
-			use:repairButtons={{ html: html, items: unreadable, enabled: repairAvailable, busy: repairingSha, label: t('LibraryViewPage.formulaRepair'), run: runFormulaRepair }}
-			use:headingTarget={{ html, heading: citedHeading, key: `${vaultId}|${filePath}|${citedHeading}` }}
-		>
-			{@html html}
-		</div>
+			use:repairButtons={{
+				html,
+				items: unreadable,
+				enabled: repairAvailable,
+				busy: repairingSha,
+				label: t('LibraryViewPage.formulaRepair'),
+				run: runFormulaRepair
+			}}
+			use:headingTarget={{
+				html,
+				heading: citedHeading,
+				key: `${vaultId}|${filePath}|${citedHeading}`
+			}}
+		>{@html html}</div>
 	{/if}
 </div>
 
@@ -1076,7 +1111,7 @@
 		cursor: pointer;
 	}
 
-	.mode-switch button[aria-pressed='true'] {
+	.mode-switch button[aria-pressed="true"] {
 		background: var(--bg-elevated);
 		color: var(--label);
 		box-shadow: 0 0 0 1px var(--separator-strong);
