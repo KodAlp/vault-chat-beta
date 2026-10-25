@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { runBackup, defaultBackupDestination, validateBackupDestination } from '#lib/server/backup.js';
 import { sseStream } from '#lib/server/sse.js';
@@ -17,7 +16,7 @@ import type { BackupEvent } from '#lib/types.js';
  *      any stream starts.
  */
 export const GET: RequestHandler = async () => {
-	return json({ defaultDestination: defaultBackupDestination() });
+	return Response.json({ defaultDestination: defaultBackupDestination() });
 };
 
 export const POST: RequestHandler = async ({ request }) => {

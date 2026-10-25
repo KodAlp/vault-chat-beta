@@ -1,7 +1,7 @@
 /**
  * Decides which language the model should answer in for a single chat turn — lifted verbatim
  * (V4's decision function, see scripts/eval-response-language.ts's doc comment for the full
- * measurement history) from that eval script into product code. Pure: no $env/$lib runtime
+ * measurement history) from that eval script into product code. Pure: no $env/#lib runtime
  * dependency, no DB, no fetch — just franc-min (already a dependency) and Intl.DisplayNames.
  *
  * The bug this fixes: coreIntro() in prompt.ts used to hardcode "Her zaman Türkçe dilinde cevap

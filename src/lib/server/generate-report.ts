@@ -15,7 +15,7 @@ export interface GenerateReportInput {
 	chatId?: string;
 	prompt: string;
 	model: string;
-	/** See ChatRequestBody.provider's doc comment ($lib/types.ts) — same
+	/** See ChatRequestBody.provider's doc comment (#lib/types.ts) — same
 	 * optional pin, threaded into every chatWithFallback call below. */
 	provider?: string;
 	/** Chat's own source-tree scope selection — see ChatRequestBody.includedPaths. */

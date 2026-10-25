@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { listVaults, createVault, getActiveVaultId, contextFor, needsMcpMigrationPrompt } from '#lib/server/vaults.js';
 import { countUnindexedFiles, checkEmbeddingMismatch } from '#lib/server/retrieve.js';
@@ -46,7 +45,7 @@ export const GET: RequestHandler = async () => {
 	// Whether the one-time "keep existing vaults open to MCP, or close
 	// them?" prompt still needs answering — see vaults.ts's RegistryFile doc
 	// comment for why this can't just silently default.
-	return json({ vaults, activeVaultId: getActiveVaultId(), needsMcpMigrationPrompt: needsMcpMigrationPrompt() });
+	return Response.json({ vaults, activeVaultId: getActiveVaultId(), needsMcpMigrationPrompt: needsMcpMigrationPrompt() });
 };
 
 export const POST: RequestHandler = async ({ request }) => {
@@ -54,7 +53,7 @@ export const POST: RequestHandler = async ({ request }) => {
 	if (!body.name?.trim()) fail('VALIDATION_REQUIRED', { field: "'name'" });
 	try {
 		const vault = createVault(body.name);
-		return json({ vault });
+		return Response.json({ vault });
 	} catch (err) {
 		if (err instanceof AppError) fail(err.code, err.params, err.status);
 		const coded = toCodedError(err);

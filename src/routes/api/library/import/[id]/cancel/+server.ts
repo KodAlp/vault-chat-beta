@@ -1,6 +1,5 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { stagingDir } from '#lib/server/library.js';
 import { vaultFromUrl } from '#lib/server/requestVault.js';
@@ -18,5 +17,5 @@ export const POST: RequestHandler = async ({ params, url }) => {
 	await discardStagedNote(v, path.join(stagingDir(v), `${params.id}.md`));
 	// MCP imports also keep a status sidecar next to the note (pending-imports.ts).
 	deleteMeta(v, params.id);
-	return json({ ok: true });
+	return Response.json({ ok: true });
 };

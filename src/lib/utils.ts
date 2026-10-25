@@ -9,7 +9,7 @@ export function cn(...inputs: ClassValue[]): string {
 }
 
 /** Standard shadcn-svelte (Svelte 5) prop-type helpers — every generated
- * ui/ component imports one or more of these from $lib/utils, not from
+ * ui/ component imports one or more of these from #lib/utils, not from
  * bits-ui. Bound to a real DOM ref instead of Svelte 4's exported
  * component-instance binding. */
 export type WithElementRef<T, U extends HTMLElement = HTMLElement> = T & { ref?: U | null };

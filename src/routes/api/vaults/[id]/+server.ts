@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import {
 	describeVaultDeletion,
@@ -19,7 +18,7 @@ import type { ErrorCode } from '#lib/errors.js';
 export const GET: RequestHandler = async ({ params }) => {
 	try {
 		const info = describeVaultDeletion(params.id, countChatsForVault);
-		return json(info);
+		return Response.json(info);
 	} catch (err) {
 		if (err instanceof AppError) fail(err.code, err.params, err.status);
 		const coded = toCodedError(err);
@@ -44,7 +43,7 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
 		// This route is session-gated and not under /api/mcp/*: an MCP token can never reach it, so only the
 		// user (settings page) can switch the app's auto-confirm on. The value is validated strictly there.
 		if (body.mcpAutoConfirm !== undefined) vault = setVaultMcpAutoConfirm(params.id, body.mcpAutoConfirm);
-		return json({ vault });
+		return Response.json({ vault });
 	} catch (err) {
 		if (err instanceof AppError) fail(err.code, err.params, err.status);
 		const coded = toCodedError(err);
@@ -76,5 +75,5 @@ export const DELETE: RequestHandler = async ({ params, url }) => {
 		const coded = toCodedError(err);
 		fail(coded.code as ErrorCode, coded.params, 500);
 	}
-	return json({ ok: true });
+	return Response.json({ ok: true });
 };

@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getDueCards } from '#lib/server/study-db.js';
 import { vaultFromUrl } from '#lib/server/requestVault.js';
@@ -22,5 +21,5 @@ export const GET: RequestHandler = async ({ url }) => {
 		source_path: row.source_path,
 		heading_path: row.heading_path
 	}));
-	return json({ cards });
+	return Response.json({ cards });
 };

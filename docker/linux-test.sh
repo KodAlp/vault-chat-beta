@@ -12,7 +12,7 @@ step() {
 }
 
 step "node/rust versions" bash -c 'node -v && npm -v && rustc -V && cargo -V'
-# .svelte-kit/tsconfig.json provides the $lib alias the tests import through.
+# package.json "imports" provides the #lib alias the tests import through.
 step "svelte-kit sync"    npx svelte-kit sync
 step "npm test"           npm test
 step "vite build"         npm run build

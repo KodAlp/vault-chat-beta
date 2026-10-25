@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getMindMap, getMindMapNodes, deleteMindMap } from '#lib/server/study-db.js';
 import { vaultFromUrl, vaultFromId } from '#lib/server/requestVault.js';
@@ -24,7 +23,7 @@ export const GET: RequestHandler = async ({ params, url }) => {
 		model: mindmap.model,
 		rootSummary: mindmap.root_summary
 	};
-	return json({ mindmap: view, nodes });
+	return Response.json({ mindmap: view, nodes });
 };
 
 export const DELETE: RequestHandler = async ({ params, request }) => {
@@ -32,5 +31,5 @@ export const DELETE: RequestHandler = async ({ params, request }) => {
 	const v = vaultFromId(body.vault);
 	if (!getMindMap(v, params.id)) fail('NOT_FOUND', { entity: 'mindmap' }, 404);
 	deleteMindMap(v, params.id);
-	return json({ ok: true });
+	return Response.json({ ok: true });
 };

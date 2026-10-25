@@ -2,7 +2,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import matter from 'gray-matter';
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { enqueueConversion } from '#lib/server/convertQueue.js';
 import { ocrLangArg } from '#lib/server/ocr-lang.js';
@@ -52,7 +51,7 @@ export const GET: RequestHandler = async ({ url }) => {
 	const notePath = url.searchParams.get('path');
 	if (!notePath) fail('VALIDATION_REQUIRED', { field: 'path' });
 	const original = findOriginal(v, readNote(v, notePath));
-	return json(original ? { available: true, originalName: displayName(path.basename(original)) } : { available: false });
+	return Response.json(original ? { available: true, originalName: displayName(path.basename(original)) } : { available: false });
 };
 
 /** Converts the note's kept original again and streams the fresh note text as a `ready` event.

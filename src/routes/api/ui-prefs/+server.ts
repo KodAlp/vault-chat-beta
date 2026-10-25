@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { readUiPrefs, writeUiPrefs, type UiPrefs } from '#lib/server/ui-prefs-store.js';
 import { fail } from '#lib/server/app-error.js';
@@ -7,7 +6,7 @@ import { fail } from '#lib/server/app-error.js';
  * ui-prefs-store.ts's doc comment for why localStorage alone isn't enough
  * under the Tauri build's random sidecar port. */
 export const GET: RequestHandler = async () => {
-	return json(readUiPrefs());
+	return Response.json(readUiPrefs());
 };
 
 /** Sanitization happens inside writeUiPrefs()/sanitizeSettings() — this only
@@ -18,5 +17,5 @@ export const PUT: RequestHandler = async ({ request }) => {
 	if (typeof body !== 'object' || body === null || Array.isArray(body)) {
 		fail('VALIDATION_INVALID', { field: 'body' }, 400);
 	}
-	return json(writeUiPrefs(body as UiPrefs));
+	return Response.json(writeUiPrefs(body as UiPrefs));
 };

@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import {
 	validateLinkUrl,
@@ -64,5 +63,5 @@ export const POST: RequestHandler = async ({ request }) => {
 
 	const html = bytes.toString('utf-8');
 	const links = extractPdfLinks(html, url);
-	return json({ links });
+	return Response.json({ links });
 };

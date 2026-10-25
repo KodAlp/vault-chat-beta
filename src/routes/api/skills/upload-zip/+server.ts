@@ -1,6 +1,5 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { json } from '@sveltejs/kit';
 import matter from 'gray-matter';
 import { unzipSync, type UnzipFileInfo } from 'fflate';
 import type { RequestHandler } from './$types';
@@ -230,5 +229,5 @@ export const POST: RequestHandler = async ({ request }) => {
 		fail('SKILL_ZIP_WRITE_FAILED', { detail: err instanceof Error ? err.message : String(err) });
 	}
 
-	return json({ name: derivedName });
+	return Response.json({ name: derivedName });
 };

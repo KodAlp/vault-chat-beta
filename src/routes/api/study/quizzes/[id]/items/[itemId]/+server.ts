@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getQuizItem, setQuizItemFlagged } from '#lib/server/study-db.js';
 import { vaultFromId } from '#lib/server/requestVault.js';
@@ -17,5 +16,5 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
 	const item = getQuizItem(v, params.itemId);
 	if (!item || item.quiz_id !== params.id) fail('NOT_FOUND', { entity: 'question' }, 404);
 	setQuizItemFlagged(v, item.id, body.flagged);
-	return json({ ok: true, flagged: body.flagged });
+	return Response.json({ ok: true, flagged: body.flagged });
 };

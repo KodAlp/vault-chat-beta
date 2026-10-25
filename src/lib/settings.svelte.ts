@@ -33,7 +33,7 @@ export interface Settings {
 	 */
 	allowConcurrentGeneration: boolean;
 	/** Whether /welcome shows once per app launch before the vault picker —
-	 * see $lib/welcome.ts for the per-session "already shown" flag this
+	 * see #lib/welcome.ts for the per-session "already shown" flag this
 	 * gates alongside. On by default; a user who finds it slows down
 	 * getting to their vault can turn it off from /settings. */
 	showWelcomeScreen: boolean;

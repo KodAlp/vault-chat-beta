@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { readMcpSettings, writeMcpSettings } from '#lib/server/mcp-settings.js';
 import { AppError, fail } from '#lib/server/app-error.js';
@@ -9,7 +8,7 @@ import { AppError, fail } from '#lib/server/app-error.js';
  * its own allowlist (see mcp-gate.ts). The settings page that calls this comes in a later change.
  */
 export const GET: RequestHandler = async () => {
-	return json(readMcpSettings());
+	return Response.json(readMcpSettings());
 };
 
 export const PUT: RequestHandler = async ({ request }) => {
@@ -18,7 +17,7 @@ export const PUT: RequestHandler = async ({ request }) => {
 		fail('VALIDATION_INVALID', { field: 'body' });
 	}
 	try {
-		return json(writeMcpSettings(body as { allowedImportRoots?: unknown; allowEditNote?: unknown }));
+		return Response.json(writeMcpSettings(body as { allowedImportRoots?: unknown; allowEditNote?: unknown }));
 	} catch (err) {
 		if (err instanceof AppError) fail(err.code, err.params, err.status);
 		throw err;

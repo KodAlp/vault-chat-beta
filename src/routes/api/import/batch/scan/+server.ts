@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { vaultFromId } from '#lib/server/requestVault.js';
 import { dataDir } from '#lib/server/env.js';
@@ -31,7 +30,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			rootReal,
 			result.entries.filter((e) => !e.skip).map((e) => e.relPath)
 		);
-		return json({ scanId, folderName: result.folderName.normalize('NFC'), entries: result.entries });
+		return Response.json({ scanId, folderName: result.folderName.normalize('NFC'), entries: result.entries });
 	} catch (err) {
 		// Coded failures keep their code/params/status for the client.
 		if (err instanceof AppError) fail(err.code, err.params, err.status);

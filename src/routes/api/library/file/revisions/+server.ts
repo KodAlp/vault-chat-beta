@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { listRevisions, readRevision, restoreRevision } from '#lib/server/library-write.js';
 import { vaultFromUrl, vaultFromId } from '#lib/server/requestVault.js';
@@ -17,8 +16,8 @@ export const GET: RequestHandler = async ({ url }) => {
 	if (!path) fail('VALIDATION_REQUIRED', { field: 'path' });
 	const id = url.searchParams.get('id');
 	try {
-		if (id) return json({ raw: readRevision(v, path, id) });
-		return json({ revisions: listRevisions(v, path) });
+		if (id) return Response.json({ raw: readRevision(v, path, id) });
+		return Response.json({ revisions: listRevisions(v, path) });
 	} catch (err) {
 		failFrom(err);
 	}
@@ -32,7 +31,7 @@ export const POST: RequestHandler = async ({ request }) => {
 	if (!body.baseHash) fail('VALIDATION_REQUIRED', { field: 'baseHash' });
 	const v = vaultFromId(body.vault);
 	try {
-		return json(await restoreRevision(v, body.path, body.id, body.baseHash));
+		return Response.json(await restoreRevision(v, body.path, body.id, body.baseHash));
 	} catch (err) {
 		failFrom(err);
 	}

@@ -30,9 +30,9 @@
 	function proceed() {
 		markWelcomeShown();
 		if (isTauri() && !localServerSetupDone()) {
-			goto('/setup/local-server', { replaceState: true });
+			goto('/setup/local-server', { replace: true });
 		} else {
-			goto('/', { replaceState: true });
+			goto('/', { replace: true });
 		}
 	}
 

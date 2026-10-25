@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { computeLearnerProfile } from '#lib/server/learner-store.js';
 import { vaultFromUrl } from '#lib/server/requestVault.js';
@@ -10,5 +9,5 @@ import { vaultFromUrl } from '#lib/server/requestVault.js';
  * (scripts/learner-report.ts --snapshot), not a side effect of opening a page.
  */
 export const GET: RequestHandler = ({ url }) => {
-	return json(computeLearnerProfile(vaultFromUrl(url)));
+	return Response.json(computeLearnerProfile(vaultFromUrl(url)));
 };

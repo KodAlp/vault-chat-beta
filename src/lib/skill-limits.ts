@@ -1,7 +1,7 @@
 /**
  * Character budgets for user skill files (data/skills/*.md).
  *
- * Lives in $lib rather than $lib/server/userSkills.ts, which owns the actual
+ * Lives in #lib rather than #lib/server/userSkills.ts, which owns the actual
  * enforcement, because /settings/skills has to render the very same numbers —
  * and used to do it with three separate hardcoded 4000s. A server-side budget
  * change then left the UI quietly showing a limit that no longer existed.

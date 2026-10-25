@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { listReports } from '#lib/server/study-db.js';
 import { vaultFromUrl } from '#lib/server/requestVault.js';
@@ -13,5 +12,5 @@ export const GET: RequestHandler = async ({ url }) => {
 		model: r.model,
 		createdAt: r.created_at
 	}));
-	return json({ items });
+	return Response.json({ items });
 };

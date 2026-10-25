@@ -693,7 +693,7 @@
 
 	function finish() {
 		markLocalServerSetupDone();
-		void goto('/', { replaceState: true });
+		void goto('/', { replace: true });
 	}
 
 	function statusLabel(server: DetectedServer): string {

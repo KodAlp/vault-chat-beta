@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { listEnabledProviders, getAdapter } from '#lib/server/providers/registry.js';
 import { loadCatalog } from '#lib/server/providers/model-catalog.js';
@@ -49,5 +48,5 @@ export const GET: RequestHandler = async () => {
 			}
 		})
 	);
-	return json(results.flat());
+	return Response.json(results.flat());
 };

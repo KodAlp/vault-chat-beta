@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getCard, updateCardSchedule } from '#lib/server/study-db.js';
 import { schedule, type Grade } from '#lib/server/schedule.js';
@@ -27,5 +26,5 @@ export const POST: RequestHandler = async ({ params, request }) => {
 		body.grade
 	);
 	updateCardSchedule(v, card.id, next);
-	return json({ ok: true });
+	return Response.json({ ok: true });
 };

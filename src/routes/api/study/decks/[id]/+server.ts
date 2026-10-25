@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getDeck, deleteDeck } from '#lib/server/study-db.js';
 import { vaultFromId } from '#lib/server/requestVault.js';
@@ -12,5 +11,5 @@ export const DELETE: RequestHandler = async ({ params, request }) => {
 	const v = vaultFromId(body.vault);
 	if (!getDeck(v, params.id)) fail('NOT_FOUND', { entity: 'deck' }, 404);
 	deleteDeck(v, params.id);
-	return json({ ok: true });
+	return Response.json({ ok: true });
 };

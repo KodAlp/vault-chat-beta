@@ -1,6 +1,5 @@
 import crypto from 'node:crypto';
 import path from 'node:path';
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { dataDir } from '#lib/server/env.js';
 import { fail } from '#lib/server/app-error.js';
@@ -81,7 +80,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			return titleOverride ? { ...result, title: titleOverride } : result;
 		});
 		// Read-only: the agent is told what the user's setting will do with the import, it cannot change it.
-		return json({ vault: v.id, importId, status: 'queued', autoConfirm: getVaultMcpAutoConfirm(v.id) });
+		return Response.json({ vault: v.id, importId, status: 'queued', autoConfirm: getVaultMcpAutoConfirm(v.id) });
 	} catch (err) {
 		failFrom(err);
 	}
@@ -93,7 +92,7 @@ export const POST: RequestHandler = async ({ request }) => {
 export const GET: RequestHandler = async ({ url }) => {
 	try {
 		const v = requireMcpVault(url.searchParams.get('vault'));
-		return json({
+		return Response.json({
 			vault: v.id,
 			autoConfirm: getVaultMcpAutoConfirm(v.id),
 			imports: listPending(v),

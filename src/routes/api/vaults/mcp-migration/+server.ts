@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { resolveMcpMigration } from '#lib/server/vaults.js';
 
@@ -10,5 +9,5 @@ import { resolveMcpMigration } from '#lib/server/vaults.js';
 export const POST: RequestHandler = async ({ request }) => {
 	const body = (await request.json()) as { exposeAll: boolean };
 	resolveMcpMigration(body.exposeAll === true);
-	return json({ ok: true });
+	return Response.json({ ok: true });
 };

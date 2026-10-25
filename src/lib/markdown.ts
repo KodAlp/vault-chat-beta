@@ -1,9 +1,15 @@
 import MarkdownIt from 'markdown-it';
-import katexPlugin from '@vscode/markdown-it-katex';
+import katexPluginImport from '@vscode/markdown-it-katex';
 import DOMPurify from 'dompurify';
 import { createHighlighter, type Highlighter } from 'shiki';
 import { ABSOLUTE_SRC_RE, resolveRelativeLibraryPath } from './attachment-link';
 import { prepareMarkdown, normalizeMathDelimiters, hideMarkerComments } from './markdown-prepare';
+
+// @vscode/markdown-it-katex is CommonJS. Vite 8's dev server hands a default import its `exports`
+// object ({ default: plugin }) instead of the plugin itself, while Node and the production build
+// give the function; accept both.
+const katexPlugin: typeof katexPluginImport =
+	(katexPluginImport as unknown as { default?: typeof katexPluginImport }).default ?? katexPluginImport;
 
 const THEMES = { light: 'github-light', dark: 'github-dark' };
 const LANGS = [

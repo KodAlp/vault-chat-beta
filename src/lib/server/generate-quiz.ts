@@ -25,7 +25,7 @@ export interface GenerateQuizInput {
 	composition: { mc: number; tf: number; open: number };
 	/** Skill spec: generation defaults to the user's reasoning model. */
 	model: string;
-	/** See ChatRequestBody.provider's doc comment ($lib/types.ts) — same
+	/** See ChatRequestBody.provider's doc comment (#lib/types.ts) — same
 	 * optional pin, threaded into every chatWithFallback call below. */
 	provider?: string;
 	/** Chat's own source-tree scope selection — see ChatRequestBody.includedPaths. */

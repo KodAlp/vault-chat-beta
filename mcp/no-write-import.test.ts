@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
  * Structural lock for "the AI cannot write to the library". The MCP server is
  * the only door an AI client has into the vault; manual editing lives in
  * src/lib/server/library-write.ts, which must never be reachable from mcp/.
- * This walks every .ts file under mcp/ and follows relative and $lib imports
+ * This walks every .ts file under mcp/ and follows relative and #lib imports
  * transitively (static import/export-from and dynamic import('...')), so a
  * future indirect path (mcp -> X -> Y -> library-write) is caught too.
  *
@@ -37,7 +37,9 @@ function resolveImport(from: string, spec: string): string | null {
 	if (spec.startsWith('#lib/')) base = path.join(repo, 'src', 'lib', spec.slice(5));
 	else if (spec.startsWith('.')) base = path.resolve(path.dirname(from), spec);
 	else return null; // bare package specifier
-	for (const cand of [base, base + '.ts', path.join(base, 'index.ts')]) {
+	// `#lib/x.js` and `./x.js` name the TypeScript source x.ts (TS ESM convention).
+	const ts = base.replace(/.js$/, '.ts');
+	for (const cand of [ts, base, base + '.ts', path.join(base, 'index.ts')]) {
 		if (fs.existsSync(cand) && fs.statSync(cand).isFile()) return cand;
 	}
 	return null;
@@ -73,6 +75,14 @@ function reachable(entries: string[]): Map<string, string> {
 test('the walker follows the MCP read path (sanity: library-read is reachable)', () => {
 	const seen = reachable(listTs(here));
 	assert.ok(seen.has(path.join(repo, 'src', 'lib', 'server', 'library-read.ts')));
+});
+
+test('the walker resolves #lib imports written with a .js extension (sanity)', () => {
+	// SvelteKit 3 imports look like `#lib/server/x.js` for x.ts. If the resolver stopped following
+	// them, every transitive path through src/lib would silently drop out of the checks below.
+	const from = path.join(repo, 'src', 'lib', 'server', 'library-read.ts');
+	assert.equal(resolveImport(from, '#lib/server/library-write.js'), FORBIDDEN);
+	assert.equal(resolveImport(from, './library.js'), FORBIDDEN_LIBRARY);
 });
 
 test('nothing under mcp/ can reach library-write.ts', () => {

@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { fail } from '#lib/server/app-error.js';
 import {
@@ -26,7 +25,7 @@ export const GET: RequestHandler = async ({ params }) => {
 		hedges: row.hallucination_hedges_json ? (JSON.parse(row.hallucination_hedges_json) as string[]) : undefined
 	}));
 
-	return json({ chat, messages });
+	return Response.json({ chat, messages });
 };
 
 /** Chat-header per-chat model/provider override (Chat.svelte's overrideModel/
@@ -57,7 +56,7 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
 	if (body.includedPaths !== undefined) updateChatIncludedPaths(params.id, body.includedPaths);
 	if (body.title !== undefined) setChatTitle(params.id, body.title);
 	if (body.mode !== undefined) updateChatMode(params.id, body.mode);
-	return json({
+	return Response.json({
 		id: params.id,
 		model: body.model,
 		provider: body.provider,
@@ -71,7 +70,7 @@ export const DELETE: RequestHandler = async ({ params }) => {
 	if (!getChat(params.id)) fail('NOT_FOUND', { entity: 'chat' }, 404);
 	try {
 		deleteChat(params.id);
-		return json({ ok: true });
+		return Response.json({ ok: true });
 	} catch (err) {
 		fail('CHAT_DELETE_FAILED', { detail: err instanceof Error ? err.message : String(err) }, 400);
 	}

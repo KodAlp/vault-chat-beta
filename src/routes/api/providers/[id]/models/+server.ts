@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { readProvidersFile } from '#lib/server/providers/config-store.js';
 import { getAdapter } from '#lib/server/providers/registry.js';
@@ -45,5 +44,5 @@ export const GET: RequestHandler = async ({ params }) => {
 		...(p.modelCaps?.[m.id] ? { capsOverride: p.modelCaps[m.id] } : {})
 	});
 
-	return json({ approved: approved.map(toItem), other: other.map(toItem), pinned: p.pinnedModels ?? [], embedding });
+	return Response.json({ approved: approved.map(toItem), other: other.map(toItem), pinned: p.pinnedModels ?? [], embedding });
 };

@@ -10,7 +10,7 @@
 		"noEmit": true,
 		"types": ["node"],
 		"baseUrl": ".",
-		"paths": { "$lib/*": ["../src/lib/*"] }
+		"paths": { "#lib/*": ["../src/lib/*"] }
 	},
 	"include": [
 		"**/*.ts",

@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { readSkillRaw, writeSkill, patchSkillFrontmatter, deleteSkill } from '#lib/server/userSkills.js';
 import { AppError, fail, toCodedError } from '#lib/server/app-error.js';
@@ -7,7 +6,7 @@ import type { ErrorCode } from '#lib/errors.js';
 export const GET: RequestHandler = async ({ params }) => {
 	const raw = readSkillRaw(params.name);
 	if (raw === undefined) fail('NOT_FOUND', { entity: 'skill' }, 404);
-	return json({ name: params.name, raw });
+	return Response.json({ name: params.name, raw });
 };
 
 export const PUT: RequestHandler = async ({ params, request }) => {
@@ -19,7 +18,7 @@ export const PUT: RequestHandler = async ({ params, request }) => {
 		const coded = toCodedError(err);
 		fail(coded.code as ErrorCode, coded.params, 400);
 	}
-	return json({ ok: true });
+	return Response.json({ ok: true });
 };
 
 /** Quick-toggle path for the settings list — enable switch / priority
@@ -33,11 +32,11 @@ export const PATCH: RequestHandler = async ({ params, request }) => {
 		const coded = toCodedError(err);
 		fail(coded.code as ErrorCode, coded.params, 400);
 	}
-	return json({ ok: true });
+	return Response.json({ ok: true });
 };
 
 export const DELETE: RequestHandler = async ({ params }) => {
 	const deleted = deleteSkill(params.name);
 	if (!deleted) fail('NOT_FOUND', { entity: 'skill' }, 404);
-	return json({ ok: true });
+	return Response.json({ ok: true });
 };

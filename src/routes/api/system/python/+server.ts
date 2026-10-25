@@ -1,7 +1,6 @@
 import fs from 'node:fs';
 import { execFile, spawn } from 'node:child_process';
 import path from 'node:path';
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { pythonBin, resetPythonBinCache } from '#lib/server/convertQueue.js';
 import { dataDir } from '#lib/server/env.js';
@@ -142,7 +141,7 @@ function getStatus(fresh: boolean): Promise<PythonSystemStatus> {
  * `markitdownInstalled` are kept for backward compat with any existing
  * caller that only reads those two fields. */
 export const GET: RequestHandler = async ({ url }) => {
-	return json(await getStatus(url.searchParams.get('fresh') === '1'));
+	return Response.json(await getStatus(url.searchParams.get('fresh') === '1'));
 };
 
 /** Runs `python -m pip install -r ingest/requirements.txt` (on POSIX inside

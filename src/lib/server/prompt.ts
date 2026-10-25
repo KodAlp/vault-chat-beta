@@ -17,7 +17,7 @@ export const DEFAULT_ALLOWED_LANGUAGES = ['Türkçe'];
 export type PromptLanguage = 'tr' | 'en';
 
 /** LibrarySettings.responseLanguage's two modes — see the type's own doc comment in
- * $lib/types.ts. Exported so callers (chat route, tests) can reference the literal type. */
+ * #lib/types.ts. Exported so callers (chat route, tests) can reference the literal type. */
 export type ResponseLanguageMode = 'match' | 'fixed';
 
 /** Exported for /api/skills/preview alongside the analogous constants in
