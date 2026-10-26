@@ -31,6 +31,25 @@ export function hasSqliteVec(db: Database.Database): boolean {
 	return available.has(db);
 }
 
+let platformSupported: boolean | undefined;
+
+/**
+ * Whether sqlite-vec ships a binary for this platform and it is installed (false on windows-arm64).
+ * Tests that exercise vector search skip themselves on false; the app itself never needs this, it
+ * just falls back per connection through tryLoadSqliteVec().
+ */
+export function sqliteVecAvailableOnPlatform(): boolean {
+	if (platformSupported === undefined) {
+		try {
+			sqliteVec.getLoadablePath();
+			platformSupported = true;
+		} catch {
+			platformSupported = false;
+		}
+	}
+	return platformSupported;
+}
+
 /** Test seam: replaces the loader (null restores the real one) and re-arms the once-per-process warning. */
 export function setSqliteVecLoaderForTest(fn: ((db: Database.Database) => void) | null): void {
 	loader = fn ?? ((db) => sqliteVec.load(db));

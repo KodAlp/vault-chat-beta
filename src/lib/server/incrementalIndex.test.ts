@@ -8,6 +8,11 @@ import { setEmbeddingConfig, type ProvidersFile } from './providers/config-store
 import { AppError } from './app-error';
 import { openDb, readIndexEmbedding } from '../../../indexer/db';
 import type { VaultContext } from './vaults';
+import { sqliteVecAvailableOnPlatform } from './sqlite-vec-loader';
+
+// Vector-search tests need a sqlite-vec binary; there is none for some platforms (windows-arm64),
+// where the app runs FTS-only (covered by sqlite-vec-fallback.test.ts).
+const NO_VEC = sqliteVecAvailableOnPlatform() ? false : 'sqlite-vec is not available on this platform';
 
 const OLLAMA: ProvidersFile['providers'][number] = {
 	id: 'ollama',
@@ -74,7 +79,7 @@ test('indexLibraryFile writes chunks/vectors and records the current embedding c
 	}
 });
 
-test('indexLibraryFile refuses to write into an index built under a different embedding config (EMBEDDING_MISMATCH)', async () => {
+test('indexLibraryFile refuses to write into an index built under a different embedding config (EMBEDDING_MISMATCH)', { skip: NO_VEC }, async () => {
 	const { vault, notePath } = setup();
 	// Pre-create the index under a DIFFERENT embedding than what's configured now.
 	openDb(vault.indexDbPath, { provider: 'ollama', model: 'some-old-model', dims: 5 }).close();
@@ -150,7 +155,7 @@ test('indexLibraryFile in FTS-only mode writes chunks + keyword data, no vec tab
 	}
 });
 
-test('after FTS-only indexing, picking an embedding provider makes the next write refuse with EMBEDDING_MISMATCH (reindex needed)', async () => {
+test('after FTS-only indexing, picking an embedding provider makes the next write refuse with EMBEDDING_MISMATCH (reindex needed)', { skip: NO_VEC }, async () => {
 	const { vault, notePath } = setup();
 	setEmbeddingConfig(null);
 	const { restore } = noFetchAllowed();

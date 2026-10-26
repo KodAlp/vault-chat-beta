@@ -22,6 +22,11 @@ import {
 } from './db';
 import { EMBED_DIMS } from '../src/lib/server/embed-config';
 import { hasKeywordIndex, keywordSearch } from '../src/lib/server/keyword-search';
+import { sqliteVecAvailableOnPlatform } from '../src/lib/server/sqlite-vec-loader';
+
+// Vector-search tests need a sqlite-vec binary; there is none for some platforms (windows-arm64),
+// where the app runs FTS-only (covered by sqlite-vec-fallback.test.ts).
+const NO_VEC = sqliteVecAvailableOnPlatform() ? false : 'sqlite-vec is not available on this platform';
 
 function tmpDbPath(): string {
 	const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'vc-fts-'));
@@ -155,7 +160,7 @@ test('opening the index again is idempotent', () => {
 	}
 });
 
-test('a failed upsert rolls the keyword rows back with the rest', () => {
+test('a failed upsert rolls the keyword rows back with the rest', { skip: NO_VEC }, () => {
 	const db = openDb(tmpDbPath());
 	const bad = { insert: { path: 'a.md', heading_path: 'h', display_text: 'text that must not survive' }, embedding: [1, 2, 3] }; // wrong dimensions
 	assert.throws(() => upsertFile(db, file('a.md'), [bad]));
@@ -167,20 +172,20 @@ test('a failed upsert rolls the keyword rows back with the rest', () => {
 
 // index_meta (embedding provenance)
 
-test('a fresh index (no embedding config given) records the legacy assumption', () => {
+test('a fresh index (no embedding config given) records the legacy assumption', { skip: NO_VEC }, () => {
 	const db = openDb(tmpDbPath());
 	assert.deepEqual(readIndexEmbedding(db), LEGACY_INDEX_EMBEDDING);
 	assert.deepEqual(readIndexEmbeddingMeta(db), LEGACY_INDEX_EMBEDDING);
 	db.close();
 });
 
-test('a fresh index records the embedding config it was created with', () => {
+test('a fresh index records the embedding config it was created with', { skip: NO_VEC }, () => {
 	const db = openDb(tmpDbPath(), { provider: 'deepseek', model: 'embed-1', dims: 768 });
 	assert.deepEqual(readIndexEmbedding(db), { provider: 'deepseek', model: 'embed-1', dims: 768 });
 	db.close();
 });
 
-test('re-opening an existing index never overwrites its recorded meta, even with a different config passed in', () => {
+test('re-opening an existing index never overwrites its recorded meta, even with a different config passed in', { skip: NO_VEC }, () => {
 	const p = tmpDbPath();
 	let db = openDb(p, { provider: 'ollama', model: 'bge-m3', dims: 1024 });
 	db.close();
@@ -253,7 +258,7 @@ test('reopening an FTS-only index without an embedding (or with a real one) neit
 	}
 });
 
-test('openDb(path, null) on an index that already has vectors leaves its recorded meta alone; markIndexFtsOnly then retags it', () => {
+test('openDb(path, null) on an index that already has vectors leaves its recorded meta alone; markIndexFtsOnly then retags it', { skip: NO_VEC }, () => {
 	const p = tmpDbPath();
 	openDb(p, { provider: 'ollama', model: 'bge-m3', dims: 4 }).close();
 	const db = openDb(p, null);

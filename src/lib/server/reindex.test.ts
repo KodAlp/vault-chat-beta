@@ -8,6 +8,11 @@ import { setEmbeddingConfig, type ProvidersFile } from './providers/config-store
 import { readIndexEmbedding } from '../../../indexer/db';
 import { AppError } from './app-error';
 import type { VaultContext } from './vaults';
+import { sqliteVecAvailableOnPlatform } from './sqlite-vec-loader';
+
+// Vector-search tests need a sqlite-vec binary; there is none for some platforms (windows-arm64),
+// where the app runs FTS-only (covered by sqlite-vec-fallback.test.ts).
+const NO_VEC = sqliteVecAvailableOnPlatform() ? false : 'sqlite-vec is not available on this platform';
 
 const OLLAMA: ProvidersFile['providers'][number] = {
 	id: 'ollama',
@@ -55,7 +60,7 @@ function fakeEmbedFetch(dims = 4) {
 
 // --- reindexVault ---
 
-test('reindexVault builds a new index under the current config and replaces the old one', async () => {
+test('reindexVault builds a new index under the current config and replaces the old one', { skip: NO_VEC }, async () => {
 	const v = makeVault();
 	setEmbeddingConfig({ providerId: 'ollama', model: 'bge-m3', dims: 4 });
 	note(v.libraryRoot, 'a.md', 'First note.');
@@ -81,7 +86,7 @@ test('reindexVault builds a new index under the current config and replaces the 
 	}
 });
 
-test('reindexVault replaces a pre-existing index built under a different config entirely', async () => {
+test('reindexVault replaces a pre-existing index built under a different config entirely', { skip: NO_VEC }, async () => {
 	const v = makeVault();
 	// Build an "old" index under one config first.
 	setEmbeddingConfig({ providerId: 'ollama', model: 'old-model', dims: 4 });

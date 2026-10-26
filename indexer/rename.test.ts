@@ -6,6 +6,11 @@ import path from 'node:path';
 import Database from 'better-sqlite3';
 import { openDb, renameFileInIndex, upsertFile, type FileRow } from './db';
 import { EMBED_DIMS } from '../src/lib/server/embed-config';
+import { sqliteVecAvailableOnPlatform } from '../src/lib/server/sqlite-vec-loader';
+
+// Vector-search tests need a sqlite-vec binary; there is none for some platforms (windows-arm64),
+// where the app runs FTS-only (covered by sqlite-vec-fallback.test.ts).
+const NO_VEC = sqliteVecAvailableOnPlatform() ? false : 'sqlite-vec is not available on this platform';
 
 function tmpDbPath(): string {
 	return path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'vc-rename-')), 'index.db');
@@ -29,7 +34,7 @@ test('renaming an indexed file moves the file row and all of its chunks', () => 
 	db.close();
 });
 
-test('the chunk ids survive a rename, so the embeddings stay attached', () => {
+test('the chunk ids survive a rename, so the embeddings stay attached', { skip: NO_VEC }, () => {
 	const db = openDb(tmpDbPath());
 	upsertFile(db, file('old.md'), [chunk('old.md', 'one'), chunk('old.md', 'two')]);
 	const before = (db.prepare('SELECT id FROM chunks ORDER BY id').all() as { id: number }[]).map((r) => r.id);
