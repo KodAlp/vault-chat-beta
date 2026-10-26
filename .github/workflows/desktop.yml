@@ -87,10 +87,13 @@ jobs:
       # pdfminer.six + fontTools (ToUnicode repair) and pypdfium2. The heavy optional pipeline
       # (docling, torch, OpenCV, MinerU) is not installed; tests that need it skip themselves.
       # Test files written for pytest (they `import pytest`) run under pytest; the rest are scripts.
+      # pdfminer.six pulls cryptography; 46.0.3 is the last release with a Windows ARM64 wheel (newer
+      # ones need an OpenSSL source build there), so it is pinned on ARM64 only.
       - name: Python ingest tests
         run: |
           python -m pip install trafilatura==2.2.0 py-asciimath==0.3.0 pypdf==6.21.2 pytest==9.1.1 \
-            docling-core==2.98.0 "markitdown[pptx]==0.1.6" pdfminer.six==20260107 fonttools==4.63.0 pypdfium2==5.10.1
+            docling-core==2.98.0 "markitdown[pptx]==0.1.6" pdfminer.six==20260107 fonttools==4.63.0 pypdfium2==5.10.1 \
+            "cryptography==46.0.3; platform_machine == 'ARM64'"
           cd ingest
           failed=""
           for t in *_test.py; do
