@@ -7,6 +7,11 @@ import { retrieve, checkEmbeddingMismatch } from './retrieve';
 import { setEmbeddingConfig, type ProvidersFile } from './providers/config-store';
 import { openDb, upsertFile } from '../../../indexer/db';
 import type { VaultContext } from './vaults';
+import { sqliteVecAvailableOnPlatform } from './sqlite-vec-loader';
+
+// Vector-search tests need a sqlite-vec binary; there is none for some platforms (windows-arm64),
+// where the app runs FTS-only (covered by sqlite-vec-fallback.test.ts).
+const NO_VEC = sqliteVecAvailableOnPlatform() ? false : 'sqlite-vec is not available on this platform';
 
 const OLLAMA: ProvidersFile['providers'][number] = {
 	id: 'ollama',
@@ -65,7 +70,7 @@ function fakeFetch(handler: (url: string, init?: RequestInit) => Response) {
 	return () => (globalThis.fetch = real);
 }
 
-test('a normal query (config matches index, embed succeeds) returns vector matches with no embeddingIssue', async () => {
+test('a normal query (config matches index, embed succeeds) returns vector matches with no embeddingIssue', { skip: NO_VEC }, async () => {
 	const vault = setup({ provider: 'ollama', model: 'bge-m3', dims: 3 });
 	setEmbeddingConfig({ providerId: 'ollama', model: 'bge-m3', dims: 3 });
 	const restore = fakeFetch(() => new Response(JSON.stringify({ embeddings: [[1, 0, 0]] }), { status: 200 }));
@@ -80,7 +85,7 @@ test('a normal query (config matches index, embed succeeds) returns vector match
 	}
 });
 
-test('an index/config mismatch skips vector search, sets embeddingIssue:"mismatch", and falls back to keyword search', async () => {
+test('an index/config mismatch skips vector search, sets embeddingIssue:"mismatch", and falls back to keyword search', { skip: NO_VEC }, async () => {
 	const vault = setup({ provider: 'ollama', model: 'old-model', dims: 3 });
 	setEmbeddingConfig({ providerId: 'ollama', model: 'bge-m3', dims: 3 }); // different model than the index was built with
 	let fetchCalled = false;
@@ -99,7 +104,7 @@ test('an index/config mismatch skips vector search, sets embeddingIssue:"mismatc
 	}
 });
 
-test('an embed failure (EMBEDDING_UNAVAILABLE) sets embeddingIssue:"unavailable" and falls back to keyword search, even without opts.keywordFallback', async () => {
+test('an embed failure (EMBEDDING_UNAVAILABLE) sets embeddingIssue:"unavailable" and falls back to keyword search, even without opts.keywordFallback', { skip: NO_VEC }, async () => {
 	const vault = setup({ provider: 'ollama', model: 'bge-m3', dims: 3 });
 	setEmbeddingConfig({ providerId: 'ollama', model: 'bge-m3', dims: 3 }); // matches the index — the embed CALL itself fails
 	const restore = fakeFetch(() => new Response('boom', { status: 500 }));
@@ -113,7 +118,7 @@ test('an embed failure (EMBEDDING_UNAVAILABLE) sets embeddingIssue:"unavailable"
 	}
 });
 
-test('a mismatch with no keyword hit still reports embeddingIssue, with an empty chunk list', async () => {
+test('a mismatch with no keyword hit still reports embeddingIssue, with an empty chunk list', { skip: NO_VEC }, async () => {
 	const vault = setup({ provider: 'ollama', model: 'old-model', dims: 3 });
 	setEmbeddingConfig({ providerId: 'ollama', model: 'bge-m3', dims: 3 });
 	const restore = fakeFetch(() => new Response(JSON.stringify({ embeddings: [[1, 0, 0]] }), { status: 200 }));
@@ -196,7 +201,7 @@ test('a null embedding config on an index that still holds vectors is also FTS-o
 	}
 });
 
-test('checkEmbeddingMismatch: FTS-only index + null config is fine; choosing a provider afterwards mismatches', () => {
+test('checkEmbeddingMismatch: FTS-only index + null config is fine; choosing a provider afterwards mismatches', { skip: NO_VEC }, () => {
 	const vault = setupFtsOnly();
 	setEmbeddingConfig(null);
 	const idle = checkEmbeddingMismatch(vault);
@@ -208,7 +213,7 @@ test('checkEmbeddingMismatch: FTS-only index + null config is fine; choosing a p
 	assert.deepEqual(after.index, { provider: 'none', model: 'none', dims: 0 });
 });
 
-test('a configured provider that no longer exists (NOT_FOUND) falls back to keyword search instead of throwing', async () => {
+test('a configured provider that no longer exists (NOT_FOUND) falls back to keyword search instead of throwing', { skip: NO_VEC }, async () => {
 	const vault = setup({ provider: 'ghost', model: 'bge-m3', dims: 3 });
 	// setEmbeddingConfig() would reject an unknown provider, so write the dangling block directly —
 	// exactly the state a hand-edited or partially migrated providers.json leaves behind.
@@ -229,7 +234,7 @@ test('a configured provider that no longer exists (NOT_FOUND) falls back to keyw
 	}
 });
 
-test('an embedding outage with no keyword hit reports reason "embedding-unavailable", not "no-embedding-match"', async () => {
+test('an embedding outage with no keyword hit reports reason "embedding-unavailable", not "no-embedding-match"', { skip: NO_VEC }, async () => {
 	const vault = setup({ provider: 'ollama', model: 'bge-m3', dims: 3 });
 	setEmbeddingConfig({ providerId: 'ollama', model: 'bge-m3', dims: 3 });
 	const restore = fakeFetch(() => new Response('boom', { status: 500 }));
@@ -302,7 +307,7 @@ test('FTS-only mode: a greeting whose words co-occur in no chunk returns nothing
 	}
 });
 
-test('a transient failure (unavailable) keeps the strict AND: one missing term returns nothing', async () => {
+test('a transient failure (unavailable) keeps the strict AND: one missing term returns nothing', { skip: NO_VEC }, async () => {
 	const vault = setup({ provider: 'ollama', model: 'bge-m3', dims: 3 });
 	setEmbeddingConfig({ providerId: 'ollama', model: 'bge-m3', dims: 3 });
 	const restore = fakeFetch(() => new Response('boom', { status: 500 }));
