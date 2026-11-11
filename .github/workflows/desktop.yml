@@ -5,6 +5,7 @@ name: desktop
 # are skipped by the job's `if` (no runner starts, no Actions minutes used). Once the repo is
 # public they run automatically; no change to this file is needed.
 # Docs-only changes (*.md, docs/) do not trigger a build; tag pushes always do.
+# A `v*` tag push also publishes a GitHub Release with the installers (the `release` job at the bottom).
 on:
   workflow_dispatch:
   push:
@@ -152,3 +153,51 @@ jobs:
           path: src-tauri/target/release/bundle/**
           if-no-files-found: error
           retention-days: 7
+
+  # Runs only for `v*` tags, after every build finished (the experimental Windows ARM64 build may
+  # have failed; its installer is then simply missing from the release). Uses the preinstalled gh
+  # CLI, so no extra action is needed. Re-running the job re-uploads the files to the same release.
+  release:
+    name: release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      TAG: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      # A tag that does not match the built version would publish installers under the wrong name.
+      - name: Tag must match the app version
+        run: |
+          VERSION=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          if [ "v$VERSION" != "$TAG" ]; then
+            echo "::error::Tag $TAG does not match the app version $VERSION (src-tauri/tauri.conf.json)"
+            exit 1
+          fi
+
+      - name: Collect installers
+        run: |
+          gh run download "${{ github.run_id }}" --dir artifacts
+          mkdir release
+          find artifacts -type f \( -name '*-setup.exe' -o -name '*.deb' -o -name '*.AppImage' -o -name '*.dmg' \) -exec cp {} release/ \;
+          if [ -z "$(ls -A release)" ]; then echo "::error::No installers found in the build artifacts"; exit 1; fi
+          cd release
+          sha256sum * > SHA256SUMS.txt
+          ls -la
+
+      # A tag with a suffix (v1.2.0-beta.1) is published as a pre-release.
+      - name: Publish
+        run: |
+          flags=""
+          case "$TAG" in *-*) flags="--prerelease" ;; esac
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" release/* --clobber
+          else
+            gh release create "$TAG" release/* --title "$TAG" --generate-notes --verify-tag $flags
+          fi
